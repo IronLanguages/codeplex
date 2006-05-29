@@ -1,0 +1,73 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>IronPython 1.0 Beta FAQ</title>
+</head>
+
+<body>
+
+<h2>IronPython 1.0 Beta Frequently Asked Questions</h2>
+<h4>Q: Is this license OSI compliant?</h4>
+<p>A: This license has not been submitted to OSI, but it allows developers to take 
+full advantage of a dynamic language on the CLR and to have the freedom to distribute 
+their works for the benefit of the community at large. The license is half of a 
+page long and very straight forward. We believe it stands up to what developers 
+demand of an &quot;open&quot; license.</p>
+<h4>Q: What copyright rights does the license grant me?</h4>
+<p>A: The license grants you a copyright license to make unlimited copies of the 
+Software in source or object code form, as well as to create Derivative Works (as 
+that term is defined under US copyright law). This means that in addition to making 
+unlimited copies of the Software, you have a copyright license to modify the Software 
+and to use all or part of the Software to create a Derivative Work.</p>
+<h4>Q: What patent rights does the license grant me?</h4>
+A: This license grants you a patent license to use and distribute the Software under 
+any Microsoft patent claims that read on the Software itself. In other words, if 
+you create a modified version of the Software, you still retain the patent license 
+to use and distribute the original portions of the Software under the specific Microsoft 
+patent claims that read on the Software, but you do not have a patent license as 
+to the new functionality you may have added by modifying the Software. This result 
+is typical of many common open source licenses, including the Common Public License 
+(CPL) and the Mozilla Public License (MPL). In addition, this license grants no 
+rights to any Microsoft patents that read on other components or files not included 
+in the Software. This means that no patent license is granted to use or distribute 
+any other software or technology that may be needed to use the Software or was created 
+from the Software (for example, any compiled output of the Software, the combination 
+of the Software with other hardware or other software, or any additional enabling 
+technologies that may be necessary to make or use the Software or any final product 
+that includes the Software).
+<h4>Q: Why do you require .NET 2.0 to run IronPython 1.0 Beta?</h4>
+A: There are a lot of features in .NET 2.0 that we wanted to use in IronPython. 
+These include generics, DynamicMethods, new kinds of delegates, and more. We could 
+have supported these new features using #ifdefs to keep a version of the code base 
+that ran on 1.1. We decided that backwards compatibility wasn&rsquo;t worth complicating 
+the code base and development of IronPython at this time. We expect that when we 
+start working on adding support for new .NET 3.0 features to IronPython that we&rsquo;ll 
+do them in the #ifdef or similar way so that IronPython will continue to run on 
+.NET 2.0 for the foreseeable future.<br>
+<h4>Q: Why does IronPython not follow the standard C# naming conventions, why does 
+it have a lot of FxCop errors?</h4>
+A: This is IronPython 1.0 Beta. We want to drive this under the principles of &nbsp;&ldquo;release 
+early, release often&rdquo;. We will be moving forward quickly with resolving these kinds 
+of obvious issues to improve the quality and usability of the code base. However, 
+we thought that it was unnecessary to delay the release to take the time to do this 
+work first. These kinds of issues will be resolved in the near future as we work 
+towards IronPython 1.0.<h4>Q: Why am I getting errors when trying to use WinForms?</h4>
+<p>A: One common error that you may be getting is:</p>
+<pre>C:\IronPython&gt;IronPythonConsole.exe
+IronPython 1.0 (Beta) on .NET 2.0.50727.42
+Copyright (c) Microsoft Corporation. All rights reserved.
+&gt;&gt;&gt; import System.Windows.Forms as WinForms
+Traceback (most recent call last):
+File , line 0, in -toplevel-
+AttributeError: 'package#' object has no attribute 'Windows'</pre>
+<pre></pre>
+<p>The cause is that IronPython needs help finding any assemblies that are even 
+a little bit out of the ordinary. Built-in module clr provides functions to add 
+references to .NET modules (clr.AddReference). For more information, see the
+<a href="Tutorial/Tutorial.htm#T1.3">Loading .NET Libraries</a> exercise in the
+<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a>.</p>
+
+</body>
+
+</html>

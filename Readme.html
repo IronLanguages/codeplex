@@ -1,0 +1,128 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>IronPython ReadMe</title>
+</head>
+
+<body style="color: #000000">
+
+<h1></h1>
+    <h1>
+        </h1>
+    <h1>
+        IronPython 1.0 Beta</h1>
+    <p>
+            IronPython is the code name of the beta release 
+			of the new Implementation Running on .NET of the Python programming language. The .NET Framework
+                is a managed programming model for Windows; Microsoft standardized part of it in&nbsp;<a href="http://www.ecma-international.org/">ECMA</a>
+            several years ago as the 
+		<a href="http://www.ecma-international.org/publications/standards/Ecma-335.htm">Common Language Infrastructure</a> and 
+		<a href="http://www.ecma-international.org/publications/standards/Ecma-334.htm">C# Language Specification</a>
+            standards.</p>
+    <p>
+            IronPython is fast - up to 1.8x faster than Python-2.4 on the standard pystone benchmark. It supports an interactive interpreter
+            with fully dynamic compilation. It is well integrated with
+            the rest of the framework and makes all .NET libraries easily available to Python
+            programmers.</p>
+    <p>
+        IronPython 1.0 Beta is a beta release. It is suitable for 
+experimenting and playing with; however, a large amount of testing, packaging 
+and library development remains to be done before a production-quality 
+IronPython-1.0.&nbsp; We want to be sure to release IronPython in this early state in order to encourage feedback and discussion
+        in the community of IronPython's features and designs as early as possible so that
+        we can incorporate that into the final 1.0 design.</p>
+<h2>
+    Prerequisites</h2>
+    <p>
+        To run, IronPython 1.0 Beta requires .NET Framework version 2.0 to be installed
+        on your system. You can install the latest version from Microsoft:</p>
+    <ul>
+        <li>
+		<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=0856eacb-4362-4b0d-8edd-aab15c5e04f5&DisplayLang=en">
+		Microsoft .NET Framework Version 2.0 Redistributable Package</a></li></ul>
+    <p>
+        IronPython should also run on any platform that implements the CLI specification v2.0.</p>
+    <p>
+        There are <a href="#BuilFromSource">more prerequisites</a> if you want to build IronPython from source.</p>
+    <h2>
+        Running IronPython</h2>
+<p>After unpacking the distribution of IronPyhon, you can complete the installation by 
+adding the IronPython installation directory to your PATH. To test the installation, you 
+should launch the interactive interpreter as shown below:</p>
+<pre>
+C:\IronPython&gt;IronPythonConsole
+IronPython 1.0 Beta on .NET 2.0.50727.42
+Copyright (c) Microsoft Corporation. All rights reserved.
+&gt;&gt;&gt; 2+2
+4</pre>
+<p>You can use IronPython to run Python scripts by passing the script name on 
+the command-line just as with standard Python. Most of the standard Python 
+library is not currently implemented, so it is unlikely that many existing 
+Python scripts will run successfully under this release of IronPython 
+1.0 Beta:</p>
+    <pre>
+Hello.py:
+
+for i in range(3):
+    print "Hello World"
+
+
+C:\IronPython&gt;IronPythonConsole Hello.py
+Hello World
+Hello World
+Hello World
+</pre>
+
+This simple example shows how you can start using WinForms from IronPython:
+
+<pre>C:\IronPython&gt;IronPythonConsole
+IronPython 1.0 (Beta) on .NET 2.0.50727.42
+Copyright (c) Microsoft Corporation. All rights reserved.
+&gt;&gt;&gt; import clr
+&gt;&gt;&gt; clr.AddReference(&quot;System.Windows.Forms&quot;)
+&gt;&gt;&gt; import System.Windows.Forms as WinForms
+&gt;&gt;&gt; WinForms.MessageBox.Show(&quot;Hello&quot;, &quot;Hello World&quot;)
+OK
+</pre>
+<p>For more information on clr.AddReference function, see the
+<a href="Tutorial/Tutorial.htm#T1.3">Loading .NET Libraries</a> exercise in the
+<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a>.</p>
+<h2><a name="BuilFromSource"></a>Building IronPython from Source</h2>
+    <p>
+        To compile the IronPython 1.0 Beta from the source code, you can install either Visual
+        Studio 2005 or .NET Framework 2.0 SDK using one
+        of the following
+        links:</p>
+    <ul>
+        <li>
+		<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=fe6f2099-b7b4-4f47-a244-c96d69c35dec&DisplayLang=en">
+		.NET Framework 2.0 Software Development Kit (SDK)</a> (You must install 
+		<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=0856eacb-4362-4b0d-8edd-aab15c5e04f5&DisplayLang=en">
+		Microsoft .NET Framework Version 2.0 Redistributable Package</a>&nbsp;prior to
+            installing the SDK)</li><li>
+		<a href="http://msdn.microsoft.com/vstudio">Visual Studio 2005
+            </a> </li>
+    </ul>
+<p>
+    IronPython can be built using <a href="http://msdn.microsoft.com/vstudio">Visual
+        Studio 2005</a> or
+	<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=fe6f2099-b7b4-4f47-a244-c96d69c35dec&DisplayLang=en">
+	.NET Framework 2.0 Software Development Kit (SDK)</a></p>
+    <h3>
+        Building using Visual Studio 2005</h3>
+    <p>
+        Open IronPython.sln in the Visual Studio 2005 development environment and build (from menu: Build/Build Solution). Set IronPythonConsole as your startup project
+        in the Solution Explorer.</p>
+    <h3>
+        Building using .NET Framework 2.0 Software Development Kit</h3>
+    <p>
+        .NET Framework 2.0 SDK comes with the C# compiler and Microsoft's msbuild. After installing the SDK, open the .NET Framework SDK command prompt, go to the IronPython directory and execute:</p>
+    <pre>
+msbuild IronPython.sln</pre>
+<p>This will build IronPython.dll, IronMath.dll and IronPythonConsole.exe.</p>
+
+</body>
+
+</html>
