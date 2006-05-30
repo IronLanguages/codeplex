@@ -66,7 +66,6 @@ IronPythonTests = {
                 test_collections
                 test_datetime
                 test_errno
-                test_exceptions
                 test_gc
                 test_imp
                 test_itertools

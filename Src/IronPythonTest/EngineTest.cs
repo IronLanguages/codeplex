@@ -230,7 +230,7 @@ namespace IronPythonTest {
         }
 
         // AddToPath
-        public void Scenario7() {
+        public void xScenario7() { // BUG#1030
             PythonEngine pe = new PythonEngine();
             string tempFile1 = Path.GetTempFileName();
 

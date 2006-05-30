@@ -83,10 +83,8 @@ def write_to_file(filename, content=''):
     
 def delete_files(*files):
     for f in files: 
-        try: 
-            nt.remove(f)
-        except: 
-            pass
+        try:    nt.remove(f)
+        except: pass
         
 def get_parent_directory(path):
     pos = path[:-1].rfind(separator)

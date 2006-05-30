@@ -41,14 +41,13 @@ def get_temp_dir():
     
 class testpath:
     # find the ironpython root directory
-    ip_root             = nt.environ.get("IP_ROOT", None)
-    if not ip_root:     ip_root = get_parent_directory(sys.prefix)
+    ip_root             = get_parent_directory(sys.prefix)
 
     # get some directories and files
     external_dir        = path_combine(ip_root, r'External')
-    public_testdir      = path_combine(ip_root, r'Public\Src\Tests')
-    compat_testdir      = path_combine(ip_root, r'Public\Src\Tests\compat')
-    script_testdir      = path_combine(ip_root, r'Public\Src\Scripts')
+    public_testdir      = path_combine(sys.prefix, r'Src\Tests')
+    compat_testdir      = path_combine(sys.prefix, r'Src\Tests\compat')
+    script_testdir      = path_combine(sys.prefix, r'Src\Scripts')
 
     parrot_testdir      = path_combine(external_dir, r'parrotbench')
     lib_testdir         = path_combine(external_dir, r'Regress\Python24\Lib')
@@ -57,14 +56,14 @@ class testpath:
     temporary_dir       = path_combine(get_temp_dir(), "IronPython")
     
     iron_python_test_dll        = 'IronPythonTest.dll'
-    iron_python_test_src_dir    = path_combine(ip_root, r'Public\Src\IronPythonTest')
-    iron_python_test_dll_final  = path_combine(ip_root, 'public', iron_python_test_dll)
+    iron_python_test_src_dir    = path_combine(sys.prefix, r'Src\IronPythonTest')
+    iron_python_test_dll_final  = path_combine(sys.prefix, iron_python_test_dll)
     
     if is_cli: 
         ipython_executable  = sys.executable
         cpython_executable  = path_combine(external_dir, r'Regress\Python24\python.exe')
     else: 
-        ipython_executable  = path_combine(ip_root, r'public\ironpythonconsole.exe')
+        ipython_executable  = path_combine(sys.prefix, r'ironpythonconsole.exe')
         cpython_executable  = sys.executable
     
     team_dir            = path_combine(ip_root, r'Team')
