@@ -180,10 +180,6 @@ namespace IronPython.Runtime {
 
         #region ISequence Members
 
-        object __getitem__(int index) {
-            lock (this) return data[Ops.FixIndex(index, size)];
-        }
-
         [PythonName("__add__")]
         public virtual object AddSequence(object other) {
             List l = other as List;
@@ -512,7 +508,7 @@ namespace IronPython.Runtime {
 
                     Monitor.Exit(this);
                     try {
-                        if (Ops.EqualRetBool(data[i], item)) cnt++;
+                        if (Ops.EqualRetBool(val, item)) cnt++;
                     } finally {
                         Monitor.Enter(this);
                     }
@@ -531,11 +527,6 @@ namespace IronPython.Runtime {
                 i = other.GetEnumerator();
             }
             while (i.MoveNext()) Append(i.Current);
-        }
-
-        private int ErrorOnIndexNotFound(int index) {
-            if (index < 0) throw Ops.ValueError("list.index(x): x not in list");
-            return index;
         }
 
         [PythonName("index")]

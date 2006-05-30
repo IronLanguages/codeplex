@@ -1272,15 +1272,6 @@ namespace IronPython.Runtime {
             return ch == '+' || ch == '-';
         }
 
-        private static Encoding GetEncoding(SystemState state, string encoding) {
-            Encoding enc;
-            if (TryGetEncoding(state, encoding, out enc)) {
-                return enc;
-            }
-
-            throw Ops.LookupError("unknown encoding: {0}", encoding);
-        }
-
         private static string RawDecode(SystemState state, string s, string encoding, string errors) {
             if (encoding == "raw-unicode-escape") {
                 return LiteralParser.ParseString(s, true, true);
@@ -1409,18 +1400,6 @@ namespace IronPython.Runtime {
             }
             return ret;
         }
-
-        private static string FromByteArray(byte[] bytes1, byte[] bytes2) {
-            StringBuilder b = new StringBuilder(bytes1.Length + bytes2.Length);
-            for (int i = 0; i < bytes1.Length; i++) {
-                b.Append((char)bytes1[i]);
-            }
-            for (int i = 0; i < bytes2.Length; i++) {
-                b.Append((char)bytes2[i]);
-            }
-            return b.ToString();
-        }
-
 
         private static string FromByteArray(byte[] bytes) {
             StringBuilder b = new StringBuilder(bytes.Length);

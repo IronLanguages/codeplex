@@ -33,8 +33,8 @@ namespace IronPython.Runtime {
 
         public static string GetClassName(object self) {
             object cls;
-            if (Ops.TryGetAttr(DefaultContext.Default, self, SymbolTable.Class, out cls)) {
-                return Ops.GetAttr(DefaultContext.Default, cls, SymbolTable.Name).ToString();
+            if (Ops.TryGetAttr(DefaultContext.DefaultCLS, self, SymbolTable.Class, out cls)) {
+                return Ops.GetAttr(DefaultContext.DefaultCLS, cls, SymbolTable.Name).ToString();
             }
             return null;
         }
@@ -85,12 +85,12 @@ namespace IronPython.Runtime {
         }
 
         static IEnumerable<PropertyDescriptor> GetPropertiesImpl(object self) {
-            List attrNames = Ops.GetAttrNames(DefaultContext.Default, self);
+            List attrNames = Ops.GetAttrNames(DefaultContext.DefaultCLS, self);
             if (attrNames != null) {
                 foreach (object o in attrNames) {
                     string s = o as string;
                     if (s == null) continue;
-                    object attrVal = Ops.GetAttr(DefaultContext.Default, self, SymbolTable.StringToId(s));
+                    object attrVal = Ops.GetAttr(DefaultContext.DefaultCLS, self, SymbolTable.StringToId(s));
                     Type attrType = (attrVal == null) ? typeof(NoneType) : attrVal.GetType();
                     yield return new SuperDynamicObjectPropertyDescriptor(
                         s,
@@ -121,10 +121,10 @@ namespace IronPython.Runtime {
             }
 
             public override object GetValue(object component) {
-                return Ops.GetAttr(DefaultContext.Default, component, SymbolTable.StringToId(_name));
+                return Ops.GetAttr(DefaultContext.DefaultCLS, component, SymbolTable.StringToId(_name));
             }
             public override void SetValue(object component, object value) {
-                Ops.SetAttr(DefaultContext.Default, component, SymbolTable.StringToId(_name), value);
+                Ops.SetAttr(DefaultContext.DefaultCLS, component, SymbolTable.StringToId(_name), value);
             }
 
             public override bool CanResetValue(object component) {
@@ -144,7 +144,7 @@ namespace IronPython.Runtime {
             }
 
             public override void ResetValue(object component) {
-                Ops.DelAttr(DefaultContext.Default, component, SymbolTable.StringToId(_name));
+                Ops.DelAttr(DefaultContext.DefaultCLS, component, SymbolTable.StringToId(_name));
             }
 
             public override bool ShouldSerializeValue(object component) {

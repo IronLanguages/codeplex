@@ -501,7 +501,6 @@ namespace IronPython.Compiler {
                 argTypes[i + 1] = pis[i].ParameterType;
                 paramNames[i + 1] = pis[i].Name;
             }
-            int kwDict = -1, paramsArray = -1;
 
             ConstructorBuilder cb = tg.myType.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, argTypes);
 
@@ -513,11 +512,9 @@ namespace IronPython.Compiler {
                 if (pis[i].IsDefined(typeof(ParamArrayAttribute), false)) {
                     pb.SetCustomAttribute(new CustomAttributeBuilder(
                         typeof(ParamArrayAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
-                    paramsArray = i + paramOffset;
                 } else if (pis[i].IsDefined(typeof(ParamDictAttribute), false)) {
                     pb.SetCustomAttribute(new CustomAttributeBuilder(
                         typeof(ParamDictAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
-                    kwDict = i + paramOffset;
                 }
             }
 

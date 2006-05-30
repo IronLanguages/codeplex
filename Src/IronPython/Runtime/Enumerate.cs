@@ -122,7 +122,6 @@ namespace IronPython.Runtime {
     }
 
     public class ItemEnumerator : IEnumerator {
-        private readonly object baseEnumerator;
         private readonly object getItemMethod;
         private object current = null;
         private int index = 0;
@@ -131,7 +130,7 @@ namespace IronPython.Runtime {
             object getitem;
 
             if (Ops.TryGetAttr(baseObject, SymbolTable.GetItem, out getitem)) {
-                enumerator = new ItemEnumerator(baseObject, getitem);
+                enumerator = new ItemEnumerator(getitem);
                 return true;
             } else {
                 enumerator = null;
@@ -139,8 +138,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public ItemEnumerator(object baseObject, object getItemMethod) {
-            this.baseEnumerator = baseObject;
+        public ItemEnumerator(object getItemMethod) {
             this.getItemMethod = getItemMethod;
         }
 
@@ -183,14 +181,12 @@ namespace IronPython.Runtime {
 
     [PythonType("ReversedEnumerator")]
     public class ReversedEnumerator : IEnumerator {
-        private readonly object baseObject;
         private readonly object getItemMethod;
         private object current;
         private int index;
         private int savedIndex;
 
-        public ReversedEnumerator(object baseObject, int length, object getitem) {
-            this.baseObject = baseObject;
+        public ReversedEnumerator(int length, object getitem) {
             this.index = this.savedIndex = length;
             this.getItemMethod = getitem;
         }

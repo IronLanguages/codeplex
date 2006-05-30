@@ -423,17 +423,6 @@ namespace IronPythonConsole {
             cursor.Place(rendered);
         }
 
-        private void Render(int index) {
-            Console.Write(input[index]);
-            if (index < input.Length) {
-                int left = Console.CursorLeft;
-                int top = Console.CursorTop;
-                Console.Write(input.ToString(index + 1, input.Length - index - 1));
-                Console.CursorLeft = left;
-                Console.CursorTop = top;
-            }
-        }
-
         public string ReadLine(int autoIndentSizeInput) {
             Initialize();
 

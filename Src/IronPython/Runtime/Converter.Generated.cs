@@ -86,7 +86,7 @@ namespace IronPython.Runtime {
                 conversion = Conversion.Implicit;
                 return (int)(ushort)value;
             } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToInt32((Enum)value, out conversion);
+                return TryConvertEnumToInt32(e, out conversion);
             } else if (!Object.Equals((ef = value as ExtensibleFloat), null)) {
                 if (/*ExtensibleFloatVal*/ ef.value >= Int32.MinValue &&
                     /*ExtensibleFloatVal*/ef.value <= Int32.MaxValue) {
@@ -130,7 +130,7 @@ namespace IronPython.Runtime {
             ExtensibleString es;
             if (!Object.Equals((str = value as string), null)) {
                 conversion = Conversion.Identity;
-                return (string)value;
+                return str;
             } else if (value == null) {
                 conversion = Conversion.Identity;
                 return null;
@@ -222,7 +222,7 @@ namespace IronPython.Runtime {
             BigInteger bi;
             if (!Object.Equals((bi = value as BigInteger), null)) {
                 conversion = Conversion.Identity;
-                return (BigInteger)value;
+                return bi;
             } else if (value is int) {
                 conversion = Conversion.Identity;
                 return (BigInteger)(int)value;
@@ -270,13 +270,13 @@ namespace IronPython.Runtime {
                 return (int)value != 0;
             } else if (!Object.Equals((str = value as string), null)) {
                 conversion = Conversion.NonStandard;
-                return ((string)value).Length != 0;
+                return str.Length != 0;
             } else if (value is double) {
                 conversion = Conversion.NonStandard;
                 return (double)value != 0.0;
             } else if (!Object.Equals((bi = value as BigInteger), null)) {
                 conversion = Conversion.Implicit;
-                return (BigInteger)value != BigInteger.Zero;
+                return bi != BigInteger.Zero;
             } else if (value is Complex64) {
                 conversion = Conversion.NonStandard;
                 return !((Complex64)value).IsZero;
@@ -302,7 +302,7 @@ namespace IronPython.Runtime {
                 conversion = Conversion.NonStandard;
                 return (ushort)value != 0;
             } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToBoolean((Enum)value, out conversion);
+                return TryConvertEnumToBoolean(e, out conversion);
             } else if (value is float) {
                 conversion = Conversion.NonStandard;
                 return (float)value != 0.0;
@@ -526,7 +526,7 @@ namespace IronPython.Runtime {
                     return (byte)UInt16Val;
                 }
             } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToByte((Enum)value, out conversion);
+                return TryConvertEnumToByte(e, out conversion);
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= Byte.MinValue && DecimalVal <= Byte.MaxValue) {
@@ -603,7 +603,7 @@ namespace IronPython.Runtime {
                     return (sbyte)UInt16Val;
                 }
             } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToSByte((Enum)value, out conversion);
+                return TryConvertEnumToSByte(e, out conversion);
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= SByte.MinValue && DecimalVal <= SByte.MaxValue) {
@@ -676,7 +676,7 @@ namespace IronPython.Runtime {
                     return (short)UInt16Val;
                 }
             } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToInt16((Enum)value, out conversion);
+                return TryConvertEnumToInt16(e, out conversion);
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= Int16.MinValue && DecimalVal <= Int16.MaxValue) {
@@ -747,7 +747,7 @@ namespace IronPython.Runtime {
                 conversion = Conversion.Implicit;
                 return (uint)(ushort)value;
             } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToUInt32((Enum)value, out conversion);
+                return TryConvertEnumToUInt32(e, out conversion);
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= UInt32.MinValue && DecimalVal <= UInt32.MaxValue) {
@@ -817,7 +817,7 @@ namespace IronPython.Runtime {
                 conversion = Conversion.Implicit;
                 return (ulong)(ushort)value;
             } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToUInt64((Enum)value, out conversion);
+                return TryConvertEnumToUInt64(e, out conversion);
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= UInt64.MinValue && DecimalVal <= UInt64.MaxValue) {
@@ -887,7 +887,7 @@ namespace IronPython.Runtime {
                     return (ushort)UInt64Val;
                 }
             } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToUInt16((Enum)value, out conversion);
+                return TryConvertEnumToUInt16(e, out conversion);
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= UInt16.MinValue && DecimalVal <= UInt16.MaxValue) {
@@ -1052,7 +1052,7 @@ namespace IronPython.Runtime {
                 conversion = Conversion.Implicit;
                 return (long)(ushort)value;
             } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToInt64((Enum)value, out conversion);
+                return TryConvertEnumToInt64(e, out conversion);
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal <= Int64.MaxValue) {

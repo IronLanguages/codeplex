@@ -53,19 +53,11 @@ namespace IronPython.Compiler {
             }
         }
 
-        private static int index = 0;
         public static void DumpSnippets() {
             if (Options.SaveAndReloadBinaries) {
                 snippetAssembly.Dump();
             }
             snippetAssembly = CreateNewSnippetAssembly();
-        }
-
-        private static TypeGen MakeModuleSlotHolder() {
-            TypeGen tg = snippetAssembly.DefinePublicType("moduleHolder_" + Interlocked.Increment(ref index), typeof(object));
-            tg.AddModuleField(typeof(PythonModule));
-            tg.myType.DefineDefaultConstructor(MethodAttributes.Public);
-            return tg;
         }
 
         internal static FrameCode GenerateSnippet(CompilerContext context, Stmt body, bool printExprStmts) {
@@ -468,7 +460,6 @@ namespace IronPython.Compiler {
         private void MakeRawKeysMethod() {
             Slot rawKeysCache = tg.AddStaticField(typeof(SymbolId[]), "ExtraKeysCache");
             CodeGen init = tg.GetOrMakeInitializer();
-            SymbolId[] nameArray = new SymbolId[names.Slots.Count];
 
             init.EmitSymbolIdArray(new List<Name>(names.Slots.Keys));
 

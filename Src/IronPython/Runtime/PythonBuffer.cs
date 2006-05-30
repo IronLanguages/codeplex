@@ -24,7 +24,9 @@ namespace IronPython.Runtime {
         private int offset;
         private int size;
 
-        private bool isbuffer = false /*buffer of buffer*/, isstring = false, isarray = false;
+        private bool isbuffer;      /*buffer of buffer*/
+        private bool isstring;
+        private bool isarray;
 
         public PythonBuffer(object @object)
             : this(@object, 0) {
@@ -63,15 +65,14 @@ namespace IronPython.Runtime {
                 } else {
                     this.size = size;
                 }
-            }
-            else if (isstring) {
+            } else if (isstring) {
                 string strobj = ((string)o);
                 if (size >= strobj.Length || size == -1) {
                     this.size = strobj.Length;
                 } else {
                     this.size = size;
                 }
-            } else { // has to be an array at this point
+            } else if (isarray) { // has to be an array at this point
                 Array arr = (Array)o;
                 Type t = arr.GetType().GetElementType();
                 if (!t.IsPrimitive && t != typeof(string)) {
@@ -85,7 +86,7 @@ namespace IronPython.Runtime {
             }
             this.@object = o;
             this.offset = offset;
-            
+
             return true;
         }
 

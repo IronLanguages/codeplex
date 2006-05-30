@@ -68,14 +68,6 @@ namespace IronPython.Runtime {
 
         #region DynamicType overrides
 
-        #region Unsupported methods of DynamicType
-
-        private Exception Unsupported() {
-            return Ops.TypeError("operation not supported on COM object", this);
-        }
-
-        #endregion
-
         public override string Repr(object self) {
             ComObject com = ComObject.ObjectToComObject(self);
             return com.ToString();
@@ -684,10 +676,8 @@ namespace IronPython.Runtime {
     public class MetadataImport {
         IMetaDataImport m_import;
         IMetaDataDispenserEx m_dispenser;
-        string m_assembly;
 
         public MetadataImport(string assemblyPath) {
-            m_assembly = assemblyPath;
             m_dispenser = new MetaDataDispenserEx();
             object rawScope = null;
 

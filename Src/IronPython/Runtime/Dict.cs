@@ -69,10 +69,6 @@ namespace IronPython.Runtime {
             lock (this) data.Add(DictOps.NullToObj(key), value);
         }
 
-        void Replace(object key, object value) {
-            lock (this) data[DictOps.NullToObj(key)] = value;
-        }
-
         public bool ContainsKey(object key) {
             lock (this) return data.ContainsKey(DictOps.NullToObj(key));
         }

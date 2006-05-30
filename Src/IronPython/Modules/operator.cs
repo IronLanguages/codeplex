@@ -363,15 +363,13 @@ namespace IronPython.Modules {
 
         [PythonName("repeat")]
         public static object Repeat(object a, object b) {
-            System.Collections.IEnumerator enumerator;
-            object count;
             try {
-                enumerator = Ops.GetEnumerator(a);
+                Ops.GetEnumerator(a);
             } catch {
                 throw Ops.TypeError("object can't be repeated");
             }
             try {
-                count = IntOps.Make(b);
+                IntOps.Make(b);
             } catch {
                 throw Ops.TypeError("integer required");
             }

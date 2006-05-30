@@ -230,7 +230,7 @@ namespace IronPython.Runtime {
         #endregion
 
         #region ISet
-        [PythonName("len")]
+        [PythonName("__len__")]
         public int GetLength() {
             return items.Count;
         }

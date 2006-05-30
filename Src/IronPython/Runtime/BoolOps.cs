@@ -169,7 +169,7 @@ namespace IronPython.Runtime {
                 Conversion conv;
                 int iVal = Converter.TryConvertToInt32(y, out conv);
                 if (conv == Conversion.None) return Ops.NotImplemented;
-                res = ((x) ? 1 : 0) - Converter.ConvertToInt32(y);
+                res = ((x) ? 1 : 0) - iVal;
             }
 
             return res >= 1 ? 1 : res <= -1 ? -1 : 0;

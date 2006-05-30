@@ -303,6 +303,7 @@ class From:
                         "from_name":from_lc,
                         "value_name":"value",
                         "conversion" : self.ct,
+                        "local_name" : self.fromtype.localName,
                         "cc_value": ("%sVal" % from_cc)}
                 for custline in self.cust:
                     cw.writeline(custline % kwd)
@@ -315,9 +316,9 @@ class From:
                         cw.writeline("return (%s)value;" % to_lc)
                 else:
                     if (to_lc != from_lc):
-                        cw.writeline("return (%s)(%s)value;" % (to_lc, from_lc))
+                        cw.writeline("return (%s)%s;" % (to_lc, self.fromtype.localName))
                     else:
-                        cw.writeline("return (%s)value;" % to_lc)
+                        cw.writeline("return %s;" % self.fromtype.localName)
 
 
 class FromNull(From):
@@ -401,7 +402,7 @@ class FromEnum(From):
     def __init__(self):
         self.fromtype = alltypes["Enum"]
         self.cond=None
-        self.cust=["return TryConvertEnumTo%(to_cc)s((Enum)value, out conversion);"]
+        self.cust=["return TryConvertEnumTo%(to_cc)s(%(local_name)s, out conversion);"]
         self.ct = "None"
 
 class compare_from_cls:
@@ -482,7 +483,7 @@ conversions = [
             ),
         From("BigInteger", None, [
                 "conversion = Conversion.%(conversion)s;",
-                "return (%(from_name)s)%(value_name)s != BigInteger.Zero;",
+                "return %(local_name)s != BigInteger.Zero;",
                 ]
              ),
         From("uint", ct="NonStandard", cust=[
@@ -517,7 +518,7 @@ conversions = [
             ),
         From("string", ct="NonStandard", cust=[
                     "conversion = Conversion.%(conversion)s;",
-                    "return ((%(from_name)s)%(value_name)s).Length != 0;",
+                    "return %(local_name)s.Length != 0;",
                 ]
             ),
         From("Complex64", ct="NonStandard", cust=[

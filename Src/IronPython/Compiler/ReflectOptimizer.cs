@@ -772,7 +772,6 @@ namespace IronPython.Compiler {
                 init(curIndex);
 
                 Label searchLoop = cg.DefineLabel();
-                Label loopDone = cg.DefineLabel();
                 Label continueLoop = cg.DefineLabel();
 
                 cg.MarkLabel(searchLoop);

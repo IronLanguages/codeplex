@@ -116,7 +116,8 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        public object __reversed__() {
+        [PythonName("__reversed__")]
+        public object Reversed() {
             return new XRangeIterator(new XRange(stop - step, start - step, -step));
         }
 

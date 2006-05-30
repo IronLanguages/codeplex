@@ -937,7 +937,7 @@ namespace IronPython.Modules {
             if (!(length is int)) {
                 throw Ops.ValueError("__len__ must return int");
             }
-            return new ReversedEnumerator(o, (int)length, getitem);
+            return new ReversedEnumerator((int)length, getitem);
         }
 
         [PythonName("round")]

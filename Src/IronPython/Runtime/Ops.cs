@@ -584,34 +584,6 @@ namespace IronPython.Runtime {
             return EqualRetBool(x, y);
         }
 
-        private static bool TryCompare(object x, object y, out int res) {
-            object cmpFunc;
-            object ret;
-            if (Ops.TryGetAttr(x, SymbolTable.Cmp, out cmpFunc)) {
-                ret = Ops.Call(cmpFunc, y);
-                if (ret is int) {
-                    res = (int)ret;
-                } else if (ret is ExtensibleInt) {
-                    res = ((ExtensibleInt)ret).value;
-                } else {
-                    throw Ops.TypeError("comparison did not return an int");
-                }
-            } else if (Ops.TryGetAttr(y, SymbolTable.Cmp, out cmpFunc)) {
-                ret = Ops.Call(cmpFunc, x);
-                if (ret is int) {
-                    res = (int)ret;
-                } else if (ret is ExtensibleInt) {
-                    res = ((ExtensibleInt)ret).value;
-                } else {
-                    throw Ops.TypeError("comparison did not return an int");
-                }
-            } else {
-                res = 0;
-                return false;
-            }
-            return true;
-        }
-
         public static object Equal(object x, object y) {
             object ret = Ops.NotImplemented;
             if (x is int) {

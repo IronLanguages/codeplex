@@ -64,7 +64,7 @@ namespace IronPython.Compiler {
         public object MakeFunction(NameEnv env) {
             string[] names = Name.ToStrings(makeNames(parameters));
             object[] defaults = Expr.Evaluate(this.defaults, env);
-            return new InterpFunction(name.GetString(), names, defaults, body, env.globals);
+            return new InterpFunction(names, defaults, body, env.globals);
         }
 
         public override object Execute(NameEnv env) {

@@ -25,7 +25,6 @@ namespace IronPython.Runtime {
         static readonly IEqualityComparer<object> comparer = new WeakComparer<object>();
 
         IDictionary<object, TValue> dict = new Dictionary<object, TValue>();
-        object synchObject = new object();
         int version, cleanupVersion, cleanupGC;
 
         public WeakHash() {

@@ -54,11 +54,8 @@ namespace IronPython.Runtime {
         }
 
         public CallerContextFlags ContextFlags {
-            get {
-                return CallerContextFlags.ShowCls;
-            }
-            set {                
-            }
+            get { return flags; }
+            set { }
         }
 
         public bool TrueDivision {

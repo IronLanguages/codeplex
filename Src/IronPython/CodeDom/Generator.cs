@@ -56,7 +56,7 @@ namespace IronPython.CodeDom {
         string lastNamespace;
         Stack<TypeDeclInfo> typeStack = new Stack<TypeDeclInfo>();
         Stack<CodeNamespace> namespaceStack = new Stack<CodeNamespace>();
-        int col, row, lastCol, lastRow, suppressedCol, suppressedRow;
+        int col, row, lastCol, lastRow;
         CodeMerger merger;
         StringBuilder writeCache;   // when merging stores the output between output advancements
         bool suppressFlush = false;
@@ -1488,12 +1488,10 @@ namespace IronPython.CodeDom {
         }
 
         private void FlushOutput(CodeTypeMember ctm) {
-            int startingRow = 0;
             if (ctm.UserData["IPCreated"] != null && ctm.LinePragma != null) {
                 int line = ctm.LinePragma.LineNumber;
                 int column = (int)ctm.UserData["Column"];
 
-                startingRow = lastRow;
                 DoFlush(line, column);
             }
 
@@ -1530,31 +1528,6 @@ namespace IronPython.CodeDom {
             }
         }
 
-        /// <summary>
-        /// Flushes output to the merger based upon the location
-        /// of this object.
-        /// </summary>
-        private void FlushOutput(CodeStatement cs) {
-            int line = row;
-            if (cs.UserData["IPCreated"] != null) {
-                int column = (int)cs.UserData["Column"];
-                line = cs.LinePragma.LineNumber;
-                DoFlush(cs.LinePragma.LineNumber, column);
-            } else if(cs.LinePragma != null) {
-                line = cs.LinePragma.LineNumber;
-                DoFlush(cs.LinePragma.LineNumber, 0);
-            }
-
-            if (merger != null) {
-                AdvanceOutput(cs);
-
-                // update line information for round-tripping
-                cs.UserData["IPCreated"] = true;
-                cs.LinePragma = new CodeLinePragma(null, row);
-                cs.UserData["Column"] = col;
-            }
-        }
-
         /// <summary> Performs the actual work of flushing output </summary>
         private void DoFlush(int line, int column) {
             if (merger != null) {
@@ -1562,7 +1535,7 @@ namespace IronPython.CodeDom {
                     // last write was a merge only item, therefore we
                     // don't merge now, we just update lastRow/lastCol.
                     merger.DoMerge(lastRow, lastCol, line, col, writeCache.ToString());
-                    suppressedCol = suppressedRow = writeCache.Length = 0;
+                    writeCache.Length = 0;
                 } else {
                     // we've skipped the merged output, and now we're 
                     // writing where this new element starts, update

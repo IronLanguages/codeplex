@@ -857,8 +857,6 @@ namespace IronPython.Runtime {
                     continue;
                 }
                 baseType.Initialize();
-                string fieldname = (string)SymbolTable.IdToString(name);
-
                 current = (MethodWrapper)myField.GetValue(baseType);
             }
 

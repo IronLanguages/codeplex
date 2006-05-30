@@ -186,39 +186,6 @@ namespace IronPython.Compiler {
             return new CodeGen(this, cb, cb.GetILGenerator(), new ParameterInfo[0]);
         }
 
-        private static Type[] ExtractTypes(ParameterInfo[] ps) {
-            int len = ps.Length;
-            Type[] ret = new Type[len];
-            for (int i = 0; i < len; i++) {
-                ret[i] = ps[i].ParameterType;
-            }
-            return ret;
-        }
-
-        /*
-        public ConstructorInfo DefineChainedConstructor(ConstructorInfo parentConstructor) {
-            ParameterInfo[] pis = parentConstructor.GetParameters();
-            Type[] types = ExtractTypes(pis);
-            ConstructorBuilder cb = myType.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, types);
-            for (int i = 0; i < pis.Length; i++) {
-                ParameterBuilder pb = cb.DefineParameter(i + 1, pis[i].Attributes, pis[i].Name);
-                if (pis[i].IsDefined(typeof(ParamArrayAttribute), false)) {
-                    pb.SetCustomAttribute(new CustomAttributeBuilder(
-                        typeof(ParamArrayAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
-                }
-            }
-
-            ILGenerator ilg = cb.GetILGenerator();
-            ilg.Emit(OpCodes.Ldarg_0);
-
-            for (int i = 0; i < types.Length; i++) {
-                ilg.Emit(OpCodes.Ldarg, i + 1);
-            }
-            ilg.Emit(OpCodes.Call, parentConstructor);
-            ilg.Emit(OpCodes.Ret);
-            return cb;
-        }*/
-
         public void SetCustomAttribute(Type t, object [] values) {
             
             Type[] types = new Type[values.Length];

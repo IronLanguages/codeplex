@@ -902,17 +902,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        private Exception BadArgumentError(int realArgCount) {
-            int argCount = 1;
-            int defaults = 0;
-            PythonFunction funcfunc = func as PythonFunction;
-            if (funcfunc != null) {
-                argCount = funcfunc.ArgCount;
-            }
-
-            throw PythonFunction.TypeErrorForIncorrectArgumentCount(this.Name, argCount, defaults, realArgCount);
-        }
-
         private Exception BadSelf(object got) {
             DynamicType dt = DeclaringClass as DynamicType;
 
@@ -1085,14 +1074,12 @@ namespace IronPython.Runtime {
     [PythonType(typeof(PythonFunction))]
     public class InterpFunction : ICallable {
         string[] argNames;
-        string name;
         object[] defaults;
 
         Stmt body;
         PythonModule globals;
 
-        public InterpFunction(string name, string[] argNames, object[] defaults, Stmt body, PythonModule globals) {
-            this.name = name;
+        public InterpFunction(string[] argNames, object[] defaults, Stmt body, PythonModule globals) {
             this.argNames = argNames;
             this.defaults = defaults;
             this.body = body;
@@ -1104,8 +1091,6 @@ namespace IronPython.Runtime {
         #region ICallable Members
 
         public object Call(params object[] args) {
-            //if (argNames.Length != args.Length) throw new Exception("wrong number of args");
-
             NameEnv env = new NameEnv(globals, new Dict());
             int i = 0;
             for (; i < args.Length; i++) {

@@ -235,10 +235,6 @@ namespace IronPython.Compiler {
             ReportSyntaxError(GetStart(), GetEnd(), message);
         }
 
-        private void ReportSyntaxError(string message, int errorCode) {
-            ReportSyntaxError(GetStart(), GetEnd(), message, errorCode);
-        }
-
         internal void ReportSyntaxError(Location start, Location end, string message) {
             ReportSyntaxError(start, end, message, ErrorCodes.SyntaxError);
         }

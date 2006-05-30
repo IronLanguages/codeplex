@@ -57,7 +57,6 @@ namespace IronPython.Compiler {
             for (int i = 0; i < methods.Length; i++) {
                 if (methods[i].Method.ContainsGenericParameters) continue;
 
-                MethodBase curMethod = methods[i].Method;
                 int paramLen = GetPythonExposedArgCount(methods[i]);
 
                 if (methods[i].IsParamsMethod ) {
@@ -90,7 +89,6 @@ namespace IronPython.Compiler {
                 for (int i = 0; i < methods.Length; i++) {
                     if (methods[i].Method.ContainsGenericParameters) continue;
 
-                    MethodBase curMethod = methods[i].Method;
                     int paramLen = GetPythonExposedArgCount(methods[i]);
 
                     // skip params methods, we deal with them last...

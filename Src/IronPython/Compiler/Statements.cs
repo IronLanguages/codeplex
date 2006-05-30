@@ -123,19 +123,6 @@ namespace IronPython.Compiler {
             cg.MarkLabel(eoi);
         }
 
-        private CodeStatement[] GetStatements(CodeObject co) {
-            if (co is CodeObjectSuite) {
-                CodeObjectSuite cos = co as CodeObjectSuite;
-                CodeStatement[] res = new CodeStatement[cos.Count];
-                for (int i = 0; i < cos.Count; i++) {
-                    res[i] = cos[i] as CodeStatement;
-                }
-                return res;
-            } else {
-                return new CodeStatement[] { (CodeStatement)co };
-            }
-        }
-       
         public override void Walk(IAstWalker w) {
             if (w.Walk(this)) {
                 foreach (IfStmtTest t in tests) t.Walk(w);
@@ -523,11 +510,10 @@ namespace IronPython.Compiler {
             cg.BeginExceptionBlock();
 
             if (yieldTargets.Count > 0) {
-                int index = 0;
                 endOfTry = cg.DefineLabel();
-                foreach (YieldTarget yt in yieldTargets) {
+                for (int index = 0; index < yieldTargets.Count; index ++) {
                     choiceVar.EmitGet(cg);
-                    cg.EmitInt(index++);
+                    cg.EmitInt(index);
                     cg.Emit(OpCodes.Beq, endOfTry);
                 }
             }

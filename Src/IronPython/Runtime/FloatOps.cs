@@ -201,11 +201,6 @@ namespace IronPython.Runtime {
             return x / y;
         }
 
-        private static object TrueDivide(double x, Complex64 y) {
-            if (y.IsZero) throw Ops.ZeroDivisionError();
-            return x / y;
-        }
-
         [PythonName("__abs__")]
         public static object Abs(double x) {
             return Math.Abs(x);

@@ -45,8 +45,11 @@ namespace IronPython.Compiler {
         }
 
         public override EnvironmentReference MakeEnvironmentReference(Name name, Type type) {
-            Debug.Assert(index < size);
-            return new IndexEnvironmentReference(index++, type);
+            if (index < size) {
+                return new IndexEnvironmentReference(index++, type);
+            } else {
+                throw new InvalidOperationException("not enough environment references available");
+            }
         }
     }
 
