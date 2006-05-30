@@ -12,3 +12,24 @@
 #  You must not remove this notice, or any other, from this software.
 #
 ######################################################################################
+
+##
+## Test the datetime module
+## 
+
+from lib.assert_util import *
+import datetime
+
+def test_sanity():
+    x = datetime.date(2005,3,22)
+    AreEqual(x.year, 2005)
+    AreEqual(x.month, 3)
+    AreEqual(x.day, 22)
+
+    AreEqual(x.strftime("%y-%a-%b"), "05-Tue-Mar")
+    AreEqual(x.strftime("%Y-%A-%B"), "2005-Tuesday-March")
+
+    AssertError(ValueError, datetime.date, 2005, 4,31)
+    AssertError(ValueError, datetime.date, 2005, 3,32)
+
+run_test(__name__)

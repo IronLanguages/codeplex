@@ -13,11 +13,14 @@
 #
 ######################################################################################
 
+##
+## Testing list comprehension
+##
+
 from lib.assert_util import *
 
-
-#### test list comprehension
 ## positive
+
 AreEqual([x for x in ""], [])
 AreEqual([x for x in xrange(2)], [0, 1])
 AreEqual([x + 10 for x in [-11, 4]], [-1, 14])
@@ -39,6 +42,7 @@ AreEqual([x for x in "python" if y > 5], list("python"))
 AreEqual([x for x in "python" if y > 15], list())
 
 ## negative
+
 AssertError(SyntaxError, compile, "[x if x > 1 for x in range(3)]", "", "eval")
 AssertError(SyntaxError, compile, "[x for x in range(3);]", "", "eval")
 AssertError(SyntaxError, compile, "[x for x in range(3) for y]", "", "eval")

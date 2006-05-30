@@ -12,3 +12,8 @@
 #  You must not remove this notice, or any other, from this software.
 #
 ######################################################################################
+
+from lib.assert_util import *
+
+Assert("__name__" in dir())
+Assert("__builtins__" in dir())

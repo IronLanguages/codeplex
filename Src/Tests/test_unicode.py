@@ -12,3 +12,10 @@
 #  You must not remove this notice, or any other, from this software.
 #
 ######################################################################################
+
+from lib.assert_util import *
+
+# verify raw-unicode-escape works properly
+s = unicode('\u0663\u0661\u0664 ','raw-unicode-escape')
+AreEqual(len(s), 4)
+AreEqual(int(s), 314)

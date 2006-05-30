@@ -14,6 +14,112 @@
 ######################################################################################
 
 from lib.assert_util import *
+
+
+## coverage for set / frozenset 
+class myset(set): pass
+class myfrozenset(frozenset): pass
+
+s1 = [2, 4, 5]
+s2 = [4, 7, 9, 10]
+s3 = [2, 4, 5, 6]
+
+# equality
+for x in (set, frozenset, myset, myfrozenset):
+    for y in (set, frozenset, myset, myfrozenset):
+        AreEqual(x(s1), y(s1))
+
+for x in (set, frozenset, myset, myfrozenset):
+    # creating as default
+    y = x()
+    AreEqual(len(y), 0)
+    # creating with 2 args
+    AssertError(TypeError, x, range(3), 3)
+    AssertError(TypeError, x.__new__, str)
+    AssertError(TypeError, x.__new__, str, 'abc')
+
+    xs1, xs2, xs3 = x(s1), x(s2), x(s3)
+    
+    # membership
+    AreEqual(4 in xs1, True)
+    AreEqual(6 in xs1, False)    
+    
+    # relation with another of the same type
+    AreEqual(xs1.issubset(xs2), False)
+    AreEqual(xs1.issubset(xs3), True)
+    AreEqual(xs3.issuperset(xs1), True)
+    AreEqual(xs3.issuperset(xs2), False)
+
+    # equivalent op
+    AreEqual(xs1 <= xs2, False)
+    AreEqual(xs1 <= xs3, True)
+    AreEqual(xs3 >= xs1, True)
+    AreEqual(xs3 >= xs2, False)
+    
+    AreEqual(xs1.union(xs2), x([2, 4, 5, 7, 9, 10]))
+    AreEqual(xs1.intersection(xs2), x([4]))
+    AreEqual(xs1.difference(xs2), x([2, 5]))
+    AreEqual(xs2.difference(xs1), x([7, 9, 10]))
+    AreEqual(xs2.symmetric_difference(xs1), x([2, 5, 7, 9, 10]))
+    AreEqual(xs3.symmetric_difference(xs1), x([6]))
+
+    # equivalent op
+    AreEqual(xs1 | xs2, x([2, 4, 5, 7, 9, 10]))
+    AreEqual(xs1 & xs2, x([4]))
+    AreEqual(xs1 - xs2, x([2, 5]))
+    AreEqual(xs2 - xs1, x([7, 9, 10]))
+    AreEqual(xs2 ^ xs1, x([2, 5, 7, 9, 10]))
+    AreEqual(xs3 ^ xs1, x([6]))
+
+    # repeat with list
+    AreEqual(xs1.issubset(s2), False)
+    AreEqual(xs1.issubset(s3), True)
+    AreEqual(xs3.issuperset(s1), True)
+    AreEqual(xs3.issuperset(s2), False)
+    
+    AreEqual(xs1.union(s2), x([2, 4, 5, 7, 9, 10]))
+    AreEqual(xs1.intersection(s2), x([4]))
+    AreEqual(xs1.difference(s2), x([2, 5]))
+    AreEqual(xs2.difference(s1), x([7, 9, 10]))
+    AreEqual(xs2.symmetric_difference(s1), x([2, 5, 7, 9, 10]))
+    AreEqual(xs3.symmetric_difference(s1), x([6]))
+
+s1, s2, s3 = 'abcd', 'be', 'bdefgh'
+for t1 in (set, frozenset, myset, myfrozenset):
+    for t2 in (set, frozenset, myset, myfrozenset):
+        # set/frozenset creation
+        AreEqual(t1(t2(s1)), t1(s1))
+        
+        # ops
+        for (op, exp1, exp2) in [('&', 'b', 'bd'), ('|', 'abcde', 'abcdefgh'), ('-', 'acd', 'ac'), ('^', 'acde', 'acefgh')]:
+            
+            x1 = t1(s1)
+            exec "x1   %s= t2(s2)" % op
+            AreEqual(x1, t1(exp1))
+
+            x1 = t1(s1)
+            exec "x1   %s= t2(s3)" % op
+            AreEqual(x1, t1(exp2))
+            
+            x1 = t1(s1)            
+            exec "y = x1 %s t2(s2)" % op
+            AreEqual(y, t1(exp1))
+
+            x1 = t1(s1)            
+            exec "y = x1 %s t2(s3)" % op
+            AreEqual(y, t1(exp2))
+
+# set/frozenset related to None
+
+x, y = set([None, 'd']), set(['a', 'b', 'c', None])
+AreEqual(x | y, set([None, 'a', 'c', 'b', 'd']))
+AreEqual(y | x, set([None, 'a', 'c', 'b', 'd']))
+AreEqual(x & y, set([None]))
+AreEqual(y & x, set([None]))
+AreEqual(x - y, set('d'))
+AreEqual(y - x, set('abc'))
+
+
 import sys
 
 Assert(max([1,2,3]) == 3)
@@ -102,38 +208,6 @@ Assert(x.pop(3) == 8)
 Assert(x.pop(-1) == 7)
 Assert(x.pop(-2) == 2)
 Assert(x.pop() == 3)
-
-x="Hello Worllds"
-s = x.split("ll")
-Assert(s[0] == "He")
-Assert(s[1] == "o Wor")
-Assert(s[2] == "ds")
-
-Assert("1,2,3,4,5,6,7,8,9,0".split(",") == ['1','2','3','4','5','6','7','8','9','0'])
-Assert("1,2,3,4,5,6,7,8,9,0".split(",", -1) == ['1','2','3','4','5','6','7','8','9','0'])
-Assert("1,2,3,4,5,6,7,8,9,0".split(",", 2) == ['1','2','3,4,5,6,7,8,9,0'])
-Assert("1--2--3--4--5--6--7--8--9--0".split("--") == ['1','2','3','4','5','6','7','8','9','0'])
-Assert("1--2--3--4--5--6--7--8--9--0".split("--", -1) == ['1','2','3','4','5','6','7','8','9','0'])
-Assert("1--2--3--4--5--6--7--8--9--0".split("--", 2) == ['1', '2', '3--4--5--6--7--8--9--0'])
-AreEqual(''.split(), [])
-AreEqual(''.split(' '), [''])
-
-
-hw = "hello world"
-Assert(hw.startswith("hello"))
-Assert(not hw.startswith("heloo"))
-Assert(hw.startswith("llo", 2))
-Assert(not hw.startswith("lno", 2))
-Assert(hw.startswith("wor", 6, 9))
-Assert(not hw.startswith("wor", 6, 7))
-Assert(not hw.startswith("wox", 6, 10))
-Assert(not hw.startswith("wor", 6, 2))
-
-Assert("adadad".count("d") == 3)
-Assert("adbaddads".count("ad") == 3)
-
-Assert("\ttext\t".expandtabs(0) == "text")
-Assert("\ttext\t".expandtabs(-10) == "text")
 
 x = [1,2,3]
 x += [4,5,6]
@@ -325,36 +399,7 @@ f.close()
 test_newline(norm, "r")
 test_newline(unnorm, "rb")
 
-import re
 
-s = ''
-for i in range(32, 128):
-    if not chr(i).isalnum():
-        s = s + chr(i)
-x = re.escape(s)
-Assert(x == '\\ \\!\\"\\#\\$\\%\\&\\\'\\(\\)\\*\\+\\,\\-\\.\\/\\:\\;\\<\\=\\>\\?\\@\\[\\\\\\]\\^\\_\\`\\{\\|\\}\\~\\\x7f')
-
-reg = re.compile("\[(?P<header>.*?)\]")
-m = reg.search("[DEFAULT]")
-Assert( m.groups() == ('DEFAULT',))
-Assert( m.group('header') == 'DEFAULT' )
-
-reg2 = re.compile("(?P<grp>\S+)?")
-m2 = reg2.search("")
-Assert ( m2.groups() == (None,))
-Assert ( m2.groups('Default') == ('Default',))
-
-Assert(re.sub('([^aeiou])y$', r'\lies', 'vacancy') == 'vacan\\lies')
-Assert(re.sub('([^aeiou])y$', r'\1ies', 'vacancy') == 'vacancies')
-
-def TryReCall():
-    re.compile(None)
-AssertError(TypeError, TryReCall)
-
-ex = re.compile(r'\s+')
-
-m = ex.match('(object Petal', 7)
-Assert (m.end(0) == 8)
 
 success=False
 try:
@@ -721,108 +766,7 @@ except NameError:
     
     
 
-## coverage for set / frozenset 
-class myset(set): pass
-class myfrozenset(set): pass
 
-s1 = [2, 4, 5]
-s2 = [4, 7, 9, 10]
-s3 = [2, 4, 5, 6]
-
-# equality
-for x in (set, frozenset, myset, myfrozenset):
-    for y in (set, frozenset, myset, myfrozenset):
-        AreEqual(x(s1), y(s1))
-
-for x in (set, frozenset, myset, myfrozenset):
-    # creating as default
-    y = x()
-    AreEqual(len(y), 0)
-    # creating with 2 args
-    AssertError(TypeError, x, range(3), 3)
-    AssertError(TypeError, x.__new__, str)
-    AssertError(TypeError, x.__new__, str, 'abc')
-
-    xs1, xs2, xs3 = x(s1), x(s2), x(s3)
-    
-    # membership
-    AreEqual(4 in xs1, True)
-    AreEqual(6 in xs1, False)    
-    
-    # relation with another of the same type
-    AreEqual(xs1.issubset(xs2), False)
-    AreEqual(xs1.issubset(xs3), True)
-    AreEqual(xs3.issuperset(xs1), True)
-    AreEqual(xs3.issuperset(xs2), False)
-
-    # equivalent op
-    AreEqual(xs1 <= xs2, False)
-    AreEqual(xs1 <= xs3, True)
-    AreEqual(xs3 >= xs1, True)
-    AreEqual(xs3 >= xs2, False)
-    
-    AreEqual(xs1.union(xs2), x([2, 4, 5, 7, 9, 10]))
-    AreEqual(xs1.intersection(xs2), x([4]))
-    AreEqual(xs1.difference(xs2), x([2, 5]))
-    AreEqual(xs2.difference(xs1), x([7, 9, 10]))
-    AreEqual(xs2.symmetric_difference(xs1), x([2, 5, 7, 9, 10]))
-    AreEqual(xs3.symmetric_difference(xs1), x([6]))
-
-    # equivalent op
-    AreEqual(xs1 | xs2, x([2, 4, 5, 7, 9, 10]))
-    AreEqual(xs1 & xs2, x([4]))
-    AreEqual(xs1 - xs2, x([2, 5]))
-    AreEqual(xs2 - xs1, x([7, 9, 10]))
-    AreEqual(xs2 ^ xs1, x([2, 5, 7, 9, 10]))
-    AreEqual(xs3 ^ xs1, x([6]))
-
-    # repeat with list
-    AreEqual(xs1.issubset(s2), False)
-    AreEqual(xs1.issubset(s3), True)
-    AreEqual(xs3.issuperset(s1), True)
-    AreEqual(xs3.issuperset(s2), False)
-    
-    AreEqual(xs1.union(s2), x([2, 4, 5, 7, 9, 10]))
-    AreEqual(xs1.intersection(s2), x([4]))
-    AreEqual(xs1.difference(s2), x([2, 5]))
-    AreEqual(xs2.difference(s1), x([7, 9, 10]))
-    AreEqual(xs2.symmetric_difference(s1), x([2, 5, 7, 9, 10]))
-    AreEqual(xs3.symmetric_difference(s1), x([6]))
-
-s1, s2, s3 = 'abcd', 'be', 'bdefgh'
-for t1 in (set, frozenset, myset, myfrozenset):
-    for t2 in (set, frozenset, myset, myfrozenset):
-        # set/frozenset creation
-        AreEqual(t1(t2(s1)), t1(s1))
-        
-        # ops
-        for (op, exp1, exp2) in [('&', 'b', 'bd'), ('|', 'abcde', 'abcdefgh'), ('-', 'acd', 'ac'), ('^', 'acde', 'acefgh')]:
-            
-            x1 = t1(s1)
-            exec "x1   %s= t2(s2)" % op
-            AreEqual(x1, t1(exp1))
-
-            x1 = t1(s1)
-            exec "x1   %s= t2(s3)" % op
-            AreEqual(x1, t1(exp2))
-            
-            x1 = t1(s1)            
-            exec "y = x1 %s t2(s2)" % op
-            AreEqual(y, t1(exp1))
-
-            x1 = t1(s1)            
-            exec "y = x1 %s t2(s3)" % op
-            AreEqual(y, t1(exp2))
-
-# set/frozenset related to None
-
-x, y = set([None, 'd']), set(['a', 'b', 'c', None])
-AreEqual(x | y, set([None, 'a', 'c', 'b', 'd']))
-AreEqual(y | x, set([None, 'a', 'c', 'b', 'd']))
-AreEqual(x & y, set([None]))
-AreEqual(y & x, set([None]))
-AreEqual(x - y, set('d'))
-AreEqual(y - x, set('abc'))
 
 # TypeError: tuple.__new__(str): str is not a subtype of tuple 
 AssertError(TypeError, tuple.__new__, str)

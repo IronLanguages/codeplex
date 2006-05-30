@@ -14,41 +14,41 @@
 ######################################################################################
 
 from lib.assert_util import *
-
 import re
 
 # None tests
+def test_none():
+    AssertError(TypeError, re.compile, None)
+    AssertError(TypeError, re.compile, None, None)
 
-AssertError(TypeError, re.compile, None)
+    AssertError(TypeError, re.search, None, 'abc')
+    AssertError(TypeError, re.search, 'abc', None)
 
-AssertError(TypeError, re.search, None, 'abc')
-AssertError(TypeError, re.search, 'abc', None)
+    AssertError(TypeError, re.match, None, 'abc')
+    AssertError(TypeError, re.match, 'abc', None)
 
-AssertError(TypeError, re.match, None, 'abc')
-AssertError(TypeError, re.match, 'abc', None)
+    AssertError(TypeError, re.split, None, 'abc')
+    AssertError(TypeError, re.split, 'abc', None)
 
-AssertError(TypeError, re.split, None, 'abc')
-AssertError(TypeError, re.split, 'abc', None)
+    AssertError(TypeError, re.findall, None, 'abc')
+    AssertError(TypeError, re.findall, 'abc', None)
 
-AssertError(TypeError, re.findall, None, 'abc')
-AssertError(TypeError, re.findall, 'abc', None)
+    AssertError(TypeError, re.finditer,None, 'abc')
+    AssertError(TypeError, re.finditer, 'abc', None)
 
-AssertError(TypeError, re.finditer,None, 'abc')
-AssertError(TypeError, re.finditer, 'abc', None)
+    # Other exceptional input tests
 
-# Other exceptional input tests
+    AssertError(TypeError, re.sub, 'abc', None, 'abc')
+    AssertError(TypeError, re.sub, 'abc', None, None)
+    AssertError(TypeError, re.sub, None, 'abc', 'abc')
+    AssertError(TypeError, re.sub, 'abc', 'abc', None)
 
-AssertError(TypeError, re.sub, 'abc', None, 'abc')
-AssertError(TypeError, re.sub, 'abc', None, None)
-AssertError(TypeError, re.sub, None, 'abc', 'abc')
-AssertError(TypeError, re.sub, 'abc', 'abc', None)
+    AssertError(TypeError, re.subn, 'abc', None, 'abc')
+    AssertError(TypeError, re.subn, 'abc', None, None)
+    AssertError(TypeError, re.subn, None, 'abc', 'abc')
+    AssertError(TypeError, re.subn, 'abc', 'abc', None)
 
-AssertError(TypeError, re.subn, 'abc', None, 'abc')
-AssertError(TypeError, re.subn, 'abc', None, None)
-AssertError(TypeError, re.subn, None, 'abc', 'abc')
-AssertError(TypeError, re.subn, 'abc', 'abc', None)
-
-AssertError(TypeError, re.escape, None)
+    AssertError(TypeError, re.escape, None)
 
 x = '\n   #region Generated Foo\nblah\nblah#end region'
 a = re.compile("^([ \t]+)#region Generated Foo.*?#end region", re.MULTILINE|re.DOTALL)
@@ -216,9 +216,6 @@ for m in matches:
 	AreEqual("foo", m.group(0))
 Assert(num == 2)
 
-# -ve tests for compile
-AssertError(TypeError, re.compile, None)
-AssertError(TypeError, re.compile, None, None)
 
 # search
 sp = re.search('super', 'blahsupersuper').span()
@@ -249,3 +246,30 @@ Assert(tup == ('cdcdcdcdcdcd', 6))
 # bug 870
 AreEqual(re.search('b', 'abc').string, 'abc')
 #***** Above code are from 'regexp' *****
+
+s = ''
+for i in range(32, 128):
+    if not chr(i).isalnum():
+        s = s + chr(i)
+x = re.escape(s)
+Assert(x == '\\ \\!\\"\\#\\$\\%\\&\\\'\\(\\)\\*\\+\\,\\-\\.\\/\\:\\;\\<\\=\\>\\?\\@\\[\\\\\\]\\^\\_\\`\\{\\|\\}\\~\\\x7f')
+
+reg = re.compile("\[(?P<header>.*?)\]")
+m = reg.search("[DEFAULT]")
+Assert( m.groups() == ('DEFAULT',))
+Assert( m.group('header') == 'DEFAULT' )
+
+reg2 = re.compile("(?P<grp>\S+)?")
+m2 = reg2.search("")
+Assert ( m2.groups() == (None,))
+Assert ( m2.groups('Default') == ('Default',))
+
+Assert(re.sub('([^aeiou])y$', r'\lies', 'vacancy') == 'vacan\\lies')
+Assert(re.sub('([^aeiou])y$', r'\1ies', 'vacancy') == 'vacancies')
+
+ex = re.compile(r'\s+')
+
+m = ex.match('(object Petal', 7)
+Assert (m.end(0) == 8)
+
+run_test(__name__)

@@ -17,9 +17,17 @@
 
 from lib.assert_util import *
 
-AreEqual(__doc__, "module doc")
-__doc__ = "new module doc"
-AreEqual(__doc__, "new module doc")
+def test_sanity():
+    ## module
+    global __doc__
+    
+    AreEqual(__doc__, "module doc")
+    __doc__ = "new module doc"
+    AreEqual(__doc__, "new module doc")
+
+    ## builtin
+    Assert(min.__doc__ <> None)
+
 
 def f_1():
     "f 1 doc"
@@ -118,78 +126,43 @@ class d:
     AreEqual(m_4.__doc__, None)
 
 
-AreEqual(f_1.__doc__, "f 1 doc")
-AreEqual(f_2.__doc__, None)
-AreEqual(f_3.__doc__, "f 3 doc")
-AreEqual(f_4.__doc__, None)
+def test_func_meth_class():
+    AreEqual(f_1.__doc__, "f 1 doc")
+    AreEqual(f_2.__doc__, None)
+    AreEqual(f_3.__doc__, "f 3 doc")
+    AreEqual(f_4.__doc__, None)
 
-AreEqual(c_1.__doc__, "c 1 doc")
-AreEqual(c_2.__doc__, "c 2 doc")
-AreEqual(c_3.__doc__, "c 3 doc 2")
-AreEqual(c_4.__doc__, "c 4 doc")
+    AreEqual(c_1.__doc__, "c 1 doc")
+    AreEqual(c_2.__doc__, "c 2 doc")
+    AreEqual(c_3.__doc__, "c 3 doc 2")
+    AreEqual(c_4.__doc__, "c 4 doc")
 
-AreEqual(n_1.__doc__, "n 1 doc")
-AreEqual(n_2.__doc__, "n 2 doc")
-AreEqual(n_3.__doc__, "n 3 doc 2")
-AreEqual(n_4.__doc__, "n 4 doc")
+    AreEqual(n_1.__doc__, "n 1 doc")
+    AreEqual(n_2.__doc__, "n 2 doc")
+    AreEqual(n_3.__doc__, "n 3 doc 2")
+    AreEqual(n_4.__doc__, "n 4 doc")
 
-AreEqual(d.__doc__, "d doc 5")
-AreEqual(d.m_1.__doc__, "m 1 doc")
-AreEqual(d.m_2.__doc__, None)
-AreEqual(d.m_3.__doc__, "m 3 doc")
-AreEqual(d.m_4.__doc__, None)
+    AreEqual(d.__doc__, "d doc 5")
+    AreEqual(d.m_1.__doc__, "m 1 doc")
+    AreEqual(d.m_2.__doc__, None)
+    AreEqual(d.m_3.__doc__, "m 3 doc")
+    AreEqual(d.m_4.__doc__, None)
 
-
-result = f_1()
-result = f_2()
-result = f_3()
-result = f_4()
-
-result = c_1()
-result = c_2()
-result = c_3()
-result = c_4()
-
-result = n_1()
-result = n_2()
-result = n_3()
-result = n_4()
-
-dd = d()
-result = dd.m_1()
-result = dd.m_2()
-result = dd.m_3()
-result = dd.m_4()
-
-#***** Above code are from 'DocTest' *****
-
-#***** Copying from 'doc' *****
-
-#####################################################################################
-#
-#  Copyright (c) Microsoft Corporation. All rights reserved.
-#
-#  This source code is subject to terms and conditions of the Shared Source License
-#  for IronPython. A copy of the license can be found in the License.html file
-#  at the root of this distribution. If you can not locate the Shared Source License
-#  for IronPython, please send an email to ironpy@microsoft.com.
-#  By using this source code in any fashion, you are agreeing to be bound by
-#  the terms of the Shared Source License for IronPython.
-#
-#  You must not remove this notice, or any other, from this software.
-#
-######################################################################################
-
-from lib.assert_util import *
-
-Assert(min.__doc__ <> None)
+    dd = d()
+    for x in (f_1, f_2, f_3, f_4, 
+                c_1, c_2, c_3, c_4, 
+                n_1, n_2, n_3, n_4, 
+                dd.m_1, dd.m_2, dd.m_3, dd.m_4):
+        x()
 
 if is_cli: 
-    import System
+    def test_clr_doc():
+        import System
+        Assert(System.Collections.ArrayList.__new__.__doc__[:7] == "__new__")
+        Assert(System.Collections.ArrayList.Repeat.__doc__.startswith("static "))
 
-    Assert(System.Collections.ArrayList.__new__.__doc__[:7] == "__new__")
-    Assert(System.Collections.ArrayList.Repeat.__doc__.startswith("static "))
+        # static (bool, float) TryParse(str s)
+        Assert(System.Double.TryParse.__doc__.index('(bool, float)') > 0)
+        Assert(System.Double.TryParse.__doc__.index('(str s)') > 0)
 
-    # static (bool, float) TryParse(str s)
-    Assert(System.Double.TryParse.__doc__.index('(bool, float)') > 0)
-    Assert(System.Double.TryParse.__doc__.index('(str s)') > 0)
+run_test(__name__)

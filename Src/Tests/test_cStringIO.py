@@ -13,6 +13,10 @@
 #
 ######################################################################################
 
+##
+## Test the cStringIO module
+##
+
 from lib.assert_util import *
 import cStringIO
 
@@ -185,7 +189,11 @@ def test_i(init):
         t(i)
 
 def test_o(init):
-    for t in [ test_write, test_writelines, test_softspace ]:
+    for t in [ 
+        test_write, 
+        test_writelines, 
+        test_softspace 
+        ]:
         i = init()
         t(i)
 

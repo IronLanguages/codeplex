@@ -15,10 +15,6 @@
 
 from lib.assert_util import *
 
-
-#################
-# buffer method tests
-
 AssertError(TypeError, buffer, None)
 AssertError(TypeError, buffer, None, 0)
 AssertError(TypeError, buffer, None, 0, 0)
@@ -26,6 +22,7 @@ AssertError(ValueError, buffer, "abc", -1) #offset < 0
 AssertError(ValueError, buffer, "abc", -1, 0) #offset < 0
 #size < -1; -1 is allowed since that is the way to ask for the default value
 AssertError(ValueError, buffer, "abc", 0, -2)
+
 b = buffer("abc", 0, -1)
 AreEqual(str(b), "abc")
 AreEqual(len(b), 3)

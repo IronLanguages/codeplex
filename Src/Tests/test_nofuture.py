@@ -13,117 +13,67 @@
 #
 ######################################################################################
 
-from __future__ import division
+##
+## To test __future__ related areas where __future__ is NOT enabled
+## in the module scope
+##
+
 from lib.assert_util import *
+from lib.file_util import *
 
-# the following are alway true in current context
 def always_true():
-    exec "assert 1 / 2 == 0.5"
+    exec "assert 1 / 2 == 0"
     exec "from __future__ import division; assert 1/2 == 0.5"
-    AreEqual(1/2, 0.5)
-    AreEqual(eval("1/2"), 0.5)
+    AreEqual(1/2, 0)
+    AreEqual(eval("1/2"), 0)
 
-tempfile = "temp_future.py"
+tempfile = path_combine(testpath.temporary_dir, "temp_future.py")
 
 code1  = '''
-exec "assert 1/2 == 0.5"
-exec "from __future__ import division; assert 1/2 == 0.5"
-assert 1/2 == 0.5
-assert eval('1/2') == 0.5
-'''
-
-code2 = "from __future__ import division\n" + code1
-
-# this is true if the code is imported as module
-code0 = '''
 exec "assert 1/2 == 0"
 exec "from __future__ import division; assert 1/2 == 0.5"
 assert 1/2 == 0
 assert eval('1/2') == 0
 '''
 
+code2 = '''
+from __future__ import division
+exec "assert 1/2 == 0.5"
+exec "from __future__ import division; assert 1/2 == 0.5"
+assert 1/2 == 0.5
+assert eval('1/2') == 0.5
+'''
+
 def f1(): execfile(tempfile)
 def f2(): exec(compile(code, tempfile, "exec"))
 def f3(): exec(code)
-
+def f4():
+    if is_cli:
+        import IronPython
+        #pe = IronPython.Hosting.PythonEngine()
+        #issue around py hosting py again.
+        
 always_true()
 try: 
     import sys
     save = sys.path[:]
-    sys.path.append(".")
+    sys.path.append(testpath.temporary_dir)
     
-    for code in (code1, code2) :
-        text_to_file(code, tempfile)
-        
-        for f in (f1, f2, f3):
+    for code in (code1, code2):        
+        always_true()
+        write_to_file(tempfile, code)
+
+        for f in (f1, f2, f3, f4):
             f()
             always_true()
 
-
-    ## test import from file    
-    for code in (code0, code2):
-        text_to_file(code, tempfile)
-        
+        # test after importing
         import temp_future
         always_true()
-        reloaded_temp_future = reload(temp_future)
+        reloaded = reload(temp_future)
         always_true()
-    
-finally: 
+        
+finally:    
     sys.path = save
-    delete_files(tempfile)
+    delete_files(tempfile)  
     
-## carry context over class def
-class C:
-    def check(self):
-        exec "assert 1 / 2 == 0.5"
-        exec "from __future__ import division; assert 1/2 == 0.5"
-        AreEqual(1 / 2, 0.5)
-        AreEqual(eval("1/2"), 0.5)
-
-C().check()
-
-# Test future division operators for all numeric types and types inherited from them
-
-class myint(int): pass
-class mylong(long): pass
-class myfloat(float): pass
-class mycomplex(complex): pass
-
-l = [2, 10L, (1+2j), 3.4, myint(7), mylong(5), myfloat(2.32), mycomplex(3, 2), True]
-
-if is_cli:
-    import System
-    l.append(System.Int64.Parse("5"))
-
-
-for a in l:
-    for b in l:
-        try:
-            r = a / b
-        except:
-            Fail("True division failed: " + str(a) + " / " + str(b))
-
-# check division by zero exceptions for true
-
-threes = [ 3, 3L, 3.0 ]
-zeroes = [ 0, 0L, 0.0 ]
-
-if is_cli:
-    import System
-    threes.append(System.Int64.Parse("3"))
-    zeroes.append(System.Int64.Parse("0"))
-
-for i in threes:
-    for j in zeroes:
-        try:
-            r = i / j
-        except ZeroDivisionError:
-            pass
-        else:
-            Fail("Didn't get ZeroDivisionError %s, %s, %s, %s" % (type(i).__name__, type(j).__name__, str(i), str(j)))
-
-AreEqual( eval(compile("2/3", "<string>", "eval", 0, 1), {}), 0)
-AreEqual( eval(compile("2/3", "<string>", "eval", 0), {}), 2/3)
-
-#***** Above code are from 'future2' *****

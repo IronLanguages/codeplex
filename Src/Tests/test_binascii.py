@@ -13,31 +13,23 @@
 #
 ######################################################################################
 
+##
+## Test the binascii module
+##
+
 from lib.assert_util import *
-
-
 
 import binascii
 
 # verify extra characters are ignored, and that we require padding.
+def test_negative():
+    for x in ('A', 'AB', '%%%A', 'A%%%', '%A%%', '%AA%' ):
+        AssertError(TypeError, binascii.a2b_base64, x)     # Type Error , incorrect padding
 
-AssertError(TypeError, binascii.a2b_base64, 'AB')     # Type Error , incorrect padding
-AssertError(TypeError, binascii.a2b_base64, 'A')     # Type Error , incorrect padding
-AssertError(TypeError, binascii.a2b_base64, '%%%A')     # Type Error , incorrect padding
-AssertError(TypeError, binascii.a2b_base64, 'A%%%')     # Type Error , incorrect padding
-AssertError(TypeError, binascii.a2b_base64, '%A%%')     # Type Error , incorrect padding
-
-AssertError(TypeError, binascii.a2b_base64, '%AA%')     # Type Error , incorrect padding
-#AssertError(TypeError, binascii.a2b_base64, 'AAA=')     # Type Error , incorrect padding
-
-
-AreEqual(binascii.a2b_base64(''), '')
-
-AreEqual(binascii.a2b_base64('AAA='), '\x00\x00')
-
-AreEqual(binascii.a2b_base64('%%^^&&A%%&&**A**#%&A='), '\x00\x00')
+def test_positive():
+    AreEqual(binascii.a2b_base64(''), '')
+    AreEqual(binascii.a2b_base64('AAA='), '\x00\x00')
+    AreEqual(binascii.a2b_base64('%%^^&&A%%&&**A**#%&A='), '\x00\x00')
 
 
-
-
-#***** Above code are from 'binascii' *****
+run_test(__name__)

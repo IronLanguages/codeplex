@@ -12,3 +12,43 @@
 #  You must not remove this notice, or any other, from this software.
 #
 ######################################################################################
+
+from lib.assert_util import *
+
+# Disallow assignment to empty tuple
+def test_assign_to_empty():
+    y = ()
+    AssertError(SyntaxError, compile, "() = y", "Error", "exec")
+    AssertError(SyntaxError, compile, "(), t = y, 0", "Error", "exec")
+    AssertError(SyntaxError, compile, "((()))=((y))", "Error", "exec")
+    del y
+
+# Disallow unequal unpacking assignment
+def test_unpack():
+    tupleOfSize2 = (1, 2)
+
+    def f1(): (a, b, c) = tupleOfSize2
+    def f2(): del a
+
+    AssertError(ValueError, f1)
+    AssertError(NameError, f2)
+
+    (a) = tupleOfSize2
+    AreEqual(a, tupleOfSize2)
+    del a
+
+    (a, (b, c)) = (tupleOfSize2, tupleOfSize2)
+    AreEqual(a, tupleOfSize2)
+    AreEqual(b, 1)
+    AreEqual(c, 2)
+    del a, b, c
+
+    ((a, b), c) = (tupleOfSize2, tupleOfSize2)
+    AreEqual(a, 1)
+    AreEqual(b, 2)
+    AreEqual(c, tupleOfSize2)
+    del a, b, c
+
+
+
+run_test(__name__)

@@ -13,42 +13,57 @@
 #
 ######################################################################################
 
+##
+## Testing IronPython Engine
+##
+
 from lib.assert_util import *
-
-
-Assert("__name__" in dir())
-Assert("__builtins__" in dir())
-
 import sys
-import clr
-clr.AddReferenceToFileAndPath(sys.prefix + "\\IronPython.dll")
 import IronPython
-version = IronPython.Hosting.PythonEngine.Version
-Assert(version != "")
+pe = IronPython.Hosting.PythonEngine()
 
-save = IronPython.Compiler.Options.FastEval
-IronPython.Compiler.Options.FastEval = True
-AreEqual(eval("None"), None)
-AreEqual(eval("str(2)"), "2")
-IronPython.Compiler.Options.FastEval = save
+def test_trival():
+    Assert(IronPython.Hosting.PythonEngine.Version != "")
+
+def test_coverage():
+    # 1. fasteval 
+    save = IronPython.Compiler.Options.FastEval
+    IronPython.Compiler.Options.FastEval = True
+    AreEqual(eval("None"), None)
+    AreEqual(eval("str(2)"), "2")
+    IronPython.Compiler.Options.FastEval = save
+    
+    # 2. ...
 
 # verify no interferece between PythonEngine used in IronPythonConsole and user created one
-oldpath = sys.path
-pe = IronPython.Hosting.PythonEngine()
-AreEqual(sys.path, oldpath)
-
+def test_no_interference(): 
+    # 1. path
+    oldpath = sys.path
+    pe = IronPython.Hosting.PythonEngine()
+    AreEqual(sys.path, oldpath)
+    
+    # 2. how about other states...
 
 # now verify CLR loaded modules don't interfere 
-
-result = pe.Execute("""import clr
-
+def test_no_module_interference():
+    pe.Execute("""import clr
 clr.AddReferenceByPartialName('System.Security')
 import System.Security.Cryptography
-assert hasattr(System.Security.Cryptography, 'CryptographicAttributeObject')
+if not hasattr(System.Security.Cryptography, 'CryptographicAttributeObject'):
+    raise AssertionError("CryptographicAttributeObject not found")
 """)
 
-# verify our engine doesn't see it
-import System.Security
-Assert(not hasattr(System.Security.Cryptography, 'CryptographicAttributeObject'))
+    # verify our engine doesn't see it
+    import System.Security
+    Assert(not hasattr(System.Security.Cryptography, 'CryptographicAttributeObject'))
 
-#***** Above code are from 'Hosting' *****
+# tests wrote in C# EngineTest.cs
+def test_engine():
+    load_iron_python_test()
+    import IronPythonTest
+    et = IronPythonTest.EngineTest()
+    for s in dir(et):
+        if s.startswith("Scenario"):
+            getattr(et, s)()
+
+run_test(__name__)

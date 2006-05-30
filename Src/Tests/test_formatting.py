@@ -14,16 +14,6 @@
 ######################################################################################
 
 from lib.assert_util import *
-import datetime
-
-
-x = datetime.date(2005,3,22)
-AreEqual(x.year, 2005)
-AreEqual(x.month, 3)
-AreEqual(x.day, 22)
-
-AreEqual(x.strftime("%y-%a-%b"), "05-Tue-Mar")
-AreEqual(x.strftime("%Y-%A-%B"), "2005-Tuesday-March")
 
 ######################################################################################
 # Formatting of floats

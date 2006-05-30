@@ -17,14 +17,13 @@
 
 import nt
 import sys
-
 from file_util import *
 
 is_cli = sys.platform == 'cli'
 
 def usage(code, msg=''):
     print sys.modules['__main__'].__doc__ or 'No doc provided'
-    if msg: print msg
+    if msg: print 'Error message: "%s"' % msg
     sys.exit(code)
 
 def get_environ_variable(key):
@@ -37,7 +36,6 @@ def get_temp_dir():
     if temp == None: temp = get_environ_variable("TMP")
     if (temp == None) or (' ' in temp) : 
         temp = r"C:\temp"
-        ensure_directory_present(temp)
     return temp
     
 class testpath:
@@ -75,6 +73,8 @@ class testpath:
     my_dir              = my_name and path_combine(team_dir, my_name) or None
     my_profile          = my_dir and path_combine(my_dir, r'settings.py') or None
 
+ensure_directory_present(testpath.temporary_dir)
+
 class formatter:
     Number         = 60
     TestNameLen    = 40
@@ -106,7 +106,7 @@ def AreEqual(a, b):
 def AssertError(exc, func, *args):
     try:        func(*args)
     except exc: return
-    else :      Assert(False, "Expected %r but got no exception" % exc)
+    else :      Fail("Expected %r but got no exception" % exc)
 
 # Check that the exception is raised with the provided message
 
@@ -145,7 +145,6 @@ def AssertErrorWithMatch(exc, expectedMessage, func, *args):
 
 
 testdll_copied = False
-
 def copy_iron_python_test():
     global testdll_copied
     if testdll_copied: return 
@@ -198,22 +197,15 @@ def has_csc():
     except WindowsError: return False
     else:  return True
 
-# TO BE REMOVED
-def text_to_file(s, file):
-    f = open(file, "w")
-    f.write(s)
-    f.flush()
-    f.close()
-
-def run_test(name, verbose=False):
+def run_test(mod_name, verbose=False):
     import sys
-    module = sys.modules[name]
+    module = sys.modules[mod_name]
     for name in dir(module): 
         obj = getattr(module, name)
         if isinstance(obj, type(run_test)) and name.startswith("test_"): 
-            if verbose: print "Testing %s" % name
+            if verbose or mod_name == '__main__': print "Testing %s" % name
             obj()
 
-def run_class(name): 
+def run_class(mod_name, verbose=False): 
     pass
     

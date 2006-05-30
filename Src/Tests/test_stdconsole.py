@@ -16,8 +16,8 @@
 from lib.assert_util import *
 import sys
 import nt
-from System import *
 import re
+from System import *
 
 # Test that IronPythonConsole behaves as expected (command line argument processing etc.).
 

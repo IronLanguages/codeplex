@@ -31,8 +31,8 @@ IronPython Test Driver
   other arguments without leading '-' will be taken as categories
 '''
 
-import nt
 import sys
+import nt
 import time
 import categories
 
@@ -156,10 +156,6 @@ class TestResult:
 ##
 ## How each file gets run
 ##
-
-saved_modules = []
-def pervsere_module(): saved_modules[:] = sys.modules[:]
-def restore_module():  sys.modules = saved_modules[:]
 
 ##  1. simply import
 def ImportRunStep(file, timeLevel='med'): 

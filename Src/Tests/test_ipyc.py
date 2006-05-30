@@ -13,11 +13,18 @@
 #
 ######################################################################################
 
+##
+## Testing IronPython Compiler 
+##
+
 from lib.assert_util import *
+from lib.file_util import *
 from lib.process_util import *
+
 import sys
 import nt
 import System
+
 from System.Collections.Generic import List
 from IronPython.Hosting import PythonCompiler, CompilerSink
 
@@ -115,11 +122,11 @@ def RunPythonExe(file, *args):
 ## compile as dll
 source, assembly, pdbfile = "tempFile1.tpy", "tempFile1.dll", "tempFile1.pdb"
 
-text_to_file('''
+write_to_file(source, '''
 class B:
     def M1(self):
         return 20
-''', source)
+''')
 
 FileRemoval(assembly, pdbfile);
 CompileAsDll(source, assembly)
@@ -145,7 +152,7 @@ AssertError(Exception, CompileOneFileAsConsoleApp2, source, assembly)
 
 ## compile 2 files as exe
 source1, source2, assembly, pdbfile = "tempFile2.tpy", "tempFile1.tpy", "tempFile2.exe", "tempFile2.pdb"
-text_to_file('''
+write_to_file(source1, '''
 import tempFile1
 class D(tempFile1.B):
     def M2(self):
@@ -156,7 +163,7 @@ if (b.M1() != 20) :
 d= D()
 if (d.M2() !=  100):
     raise AssertionError("failed 2")
-''', source1)
+''')
 
 FileRemoval(assembly, pdbfile);
 CompileTwoFilesAsConsoleApp(source1, source2, assembly, True)
@@ -186,7 +193,7 @@ import clr
 clr.AddReferenceByPartialName("System.Xml")
 
 # sys.LoadAssembly...("System.xml") is emitted because of referenced assemblies specified
-text_to_file('''
+write_to_file(source, '''
 import System
 import System.Xml
 tw = System.Xml.XmlTextWriter("tempResult.xml",  System.Text.Encoding.ASCII)
@@ -195,7 +202,7 @@ tw.WriteStartElement("PythonCompiler")
 tw.WriteEndElement()
 tw.WriteEndDocument()
 tw.Close()
-''', source)
+''')
 
 fullTypeName = System.Type.GetType("System.Int32").AssemblyQualifiedName.split(',', 2)
 UsingReference(source, "System.Xml.XmlTextReader, System.Xml," + fullTypeName[2], assembly)
@@ -213,27 +220,10 @@ f.close()
 
 FileRemoval(tempXml)
 
-###  To cover PythonEngine APIs
-source, assembly, pdbfile = "tempFile1.tpy", "tempFile1.exe", "tempFile1.pdb"
-# This temp assembly is going to move to sbs with IronPython.dll/IronPythonTest.dll
-text_to_file('''
-import clr
-clr.AddReferenceByPartialName("IronPythonTest")
-import IronPythonTest
-et = IronPythonTest.EngineTest()
-for s in dir(et):
-    if s.startswith("Scenario"):
-#        print "testing", s
-        getattr(et, s)()
-''', source)
-
-CompileOneFileAsConsoleApp1(source, assembly, True)
-RunPythonExe(assembly)
 
 for filename in ['tempFile1', 'tempFile2', 'tempFile3']:
     for suffix in [ 'tpy', 'dll', 'exe', 'pdb']:
         FileRemoval(filename + '.' + suffix)
-
 
 #
 # verify that generated exe will run stand alone.
@@ -265,8 +255,8 @@ tempExeName2 = GetFullPath("tempFile2.exe")
 tempPdbName1 = GetFullPath("tempFile1.pdb")
 tempPdbName2 = GetFullPath("tempFile2.pdb")
 
-text_to_file(tempFile1, tempFileName1)
-text_to_file(tempFile2, tempFileName2)
+write_to_file(tempFileName1, tempFile1)
+write_to_file(tempFileName2, tempFile2)
 
 AreEqual(launch_ironpython_changing_extensions(tempFileName2, ["-X:SaveAssemblies"], ["-X:GenerateAsSnippets", "-X:AssembliesDir"]), 0)
 RunPythonExe(tempExeName2)
@@ -286,7 +276,7 @@ for file in files:
         raise AssertionError(file + " exists")
 """
 
-text_to_file(tempFile1, tempFileName1)
+write_to_file(tempFileName1, tempFile1)
 AreEqual(launch_ironpython_changing_extensions(tempFileName1, [], ["-X:SaveAssemblies"]), 0)
 FileRemoval(tempFileName1, tempExeName1, tempPdbName1)
 
@@ -295,16 +285,16 @@ source2  = "tempFile2.tpy"
 assembly = "tempFile1.exe"
 pdbfile  = "tempFile1.pdb"
 
-text_to_file("""
+write_to_file(source1, """
 import tempFile2
 if tempFile2.value != 8.0:
     raise AssertionError("failed import built-in")
-""", source1)
+""")
 
-text_to_file("""
+write_to_file(source2, """
 import math
 value = math.pow(2, 3)
-""", source2)
+""")
 
 CompileTwoFilesAsConsoleApp(source1, source2, assembly, True)
 Assert(FileExists(assembly))
@@ -313,11 +303,11 @@ RunPythonExe(assembly)
 FileRemoval(source1, source2, assembly)
 
 # verify arguments are passed through...
-text_to_file("""
+write_to_file(source1, """
 import sys
 assert sys.argv[0].lower() == sys.argv[4].lower()
 sys.exit(int(sys.argv[1]) + int(sys.argv[2]) + int(sys.argv[3]))
-""", source1)
+""")
 
 CompileOneFileAsConsoleApp1(source1, assembly, False)
 RunPythonExe(assembly, 24, -22, -2, System.IO.Path.Combine(sys.prefix, assembly))
@@ -331,10 +321,10 @@ class TestSink(CompilerSink):
 
 
 FileRemoval(source1, assembly)
-text_to_file("""
+write_to_file(source1, """
 class Class:zxvc
 	"Description of Class"cxvxcvb
-""", source1)
+""")
 sink = TestSink()
 CompileWithSink(source1, assembly, sink)
 Assert(len(sink.errors) > 0)

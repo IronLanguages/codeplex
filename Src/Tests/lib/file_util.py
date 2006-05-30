@@ -68,19 +68,18 @@ def ensure_directory_present(path):
     for x in path.split(separator):
         p += x + separator
         if not directory_exists(p):
-            try:     nt.mkdir(p)
-            except:  return False
-    return True
+            nt.mkdir(p)
         
 def write_to_file(filename, content=''):
     filename = fullpath(filename)
     pos = filename.rfind(separator)
-    if ensure_directory_present(filename[:pos]):
+    try:
+        ensure_directory_present(filename[:pos])
         f = file(filename, 'w')
         f.write(content)
         f.close()
-    else: 
-        raise AssertionError, 'unable to create directory'
+    except: 
+        raise AssertionError, 'unable to write to file'
     
 def delete_files(*files):
     for f in files: 
