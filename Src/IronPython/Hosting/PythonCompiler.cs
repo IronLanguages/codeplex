@@ -149,6 +149,13 @@ namespace IronPython.Hosting {
             set { includeDebugInformation = value; }
         }
 
+        private bool staticTypes = false;
+
+        public bool StaticTypes {
+            get { return staticTypes; }
+            set { staticTypes = value; }
+        }
+
         private bool autoImportAll = false;
         public bool AutoImportAll {
             get { return autoImportAll; }
@@ -198,7 +205,7 @@ namespace IronPython.Hosting {
 
             assemblyGen = new AssemblyGen(
                 Path.GetFileNameWithoutExtension(outputAssembly),
-                outDir, fileName, includeDebugInformation, executable, machine
+                outDir, fileName, includeDebugInformation, staticTypes, executable, machine
                 );
 
             bool entryPointSet = false;
@@ -267,7 +274,7 @@ namespace IronPython.Hosting {
                 init = OutputGenerator.GenerateModuleInitialize(context, gs, tg);
             } else {
                 // auto-import all compiled modules, useful for CodeDom scenarios.
-                init = OutputGenerator.GenerateModuleInitialize(context, gs, tg, delegate(CodeGen cg) {
+                init = OutputGenerator.GenerateModuleInitialize(context, gs, tg, staticTypes, delegate(CodeGen cg) {
                     for (int i = 0; i < sourceFiles.Count; i++) {
                         string otherModName = GetModuleFromFilename(sourceFiles[i]);
                         if (otherModName == moduleName) continue;

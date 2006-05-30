@@ -231,10 +231,10 @@ namespace IronPython.Compiler {
         internal delegate void CustomModuleInit(CodeGen cg);
 
         internal static CodeGen GenerateModuleInitialize(CompilerContext context, GlobalSuite gs, TypeGen tg) {
-            return GenerateModuleInitialize(context, gs, tg, null);
+            return GenerateModuleInitialize(context, gs, tg, false /*staticTypes*/, null);
         }
 
-        internal static CodeGen GenerateModuleInitialize(CompilerContext context, GlobalSuite gs, TypeGen tg, CustomModuleInit customInit) {
+        internal static CodeGen GenerateModuleInitialize(CompilerContext context, GlobalSuite gs, TypeGen tg, bool staticTypes, CustomModuleInit customInit) {
             CodeGen ncg = tg.DefineUserHiddenMethod(MethodAttributes.Public, "Initialize", typeof(void), Type.EmptyTypes);
             ncg.Context = context;
 
@@ -260,7 +260,7 @@ namespace IronPython.Compiler {
 
             if (customInit != null) customInit(ncg);
 
-            if (Options.StaticTypes) {
+            if (staticTypes) {
                 TypeGen finished = UserTypeGenerator.DoStaticCompilation(gs, ncg);
             } else {
                 gs.Emit(ncg);

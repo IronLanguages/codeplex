@@ -271,7 +271,6 @@ namespace IronPythonConsole {
             Console.WriteLine("  -X:SaveAssemblies      Save generated assemblies");
             Console.WriteLine("  -X:ShowCLSExceptions   Display CLS Exception information");
             Console.WriteLine("  -X:StaticMethods       Generate static methods only");
-            Console.WriteLine("  -X:StaticTypes         Generate static types for class defintitions when possible");
             Console.WriteLine("  -X:TabCompletion       Enable TabCompletion mode");
 #if DEBUG
             Console.WriteLine("  -X:TrackPerformance    Track performance sensitive areas");

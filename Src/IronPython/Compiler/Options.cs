@@ -39,8 +39,6 @@ namespace IronPython.Compiler {
         // Global module variables are implemented as CLI static fields
         public static bool StaticModules = true;
 
-        public static bool StaticTypes = false;
-
         public static bool TracebackSupport = (IntPtr.Size == 4);  // currently only enabled on 32-bit
 
         // Emit CheckInitialized calls

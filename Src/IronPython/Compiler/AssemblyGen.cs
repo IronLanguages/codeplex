@@ -36,20 +36,22 @@ namespace IronPython.Compiler {
         private readonly string outFileName;
         private readonly string outDir;
         private readonly bool emitDebugInfo;
+        private readonly bool staticTypes;
         private int index;
         private PortableExecutableKinds peKind;
         private ImageFileMachine machine;
 
         public AssemblyGen(string moduleName, string outDir, string outFile, bool emitDebugInfo)
-            : this(moduleName, outDir, outFile, emitDebugInfo,
+            : this(moduleName, outDir, outFile, emitDebugInfo, false /*staticTypes*/,
                    PortableExecutableKinds.ILOnly, ImageFileMachine.I386) {
         }
 
         public AssemblyGen(string moduleName, string outDir, string outFile, bool emitDebugInfo,
-            PortableExecutableKinds peKind, ImageFileMachine machine) {
+            bool staticTypes, PortableExecutableKinds peKind, ImageFileMachine machine) {
             this.outFileName = outFile;
             this.outDir = outDir;
             this.emitDebugInfo = emitDebugInfo;
+            this.staticTypes = staticTypes;
             this.peKind = peKind;
             this.machine = machine;
 
@@ -225,7 +227,7 @@ namespace IronPython.Compiler {
 
         public TypeGen DefinePublicType(string name, Type parent) {
             TypeAttributes attrs = TypeAttributes.Public;
-            if (Options.StaticTypes) attrs |= TypeAttributes.BeforeFieldInit;
+            if (staticTypes) attrs |= TypeAttributes.BeforeFieldInit;
             TypeBuilder tb = myModule.DefineType(name, attrs);
             tb.SetParent(parent);
             return new TypeGen(this, tb);

@@ -212,6 +212,7 @@ namespace IronPython.CodeDom {
             pc.IncludeDebugInformation = debugInfo;
             pc.TargetKind = peKind;
             pc.AutoImportAll = true;
+            pc.StaticTypes = true;
 
             foreach (string s in refs) {
                 pc.ReferencedAssemblies.Add(s);
