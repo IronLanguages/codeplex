@@ -330,7 +330,7 @@ namespace IronPythonConsole {
             try {
                 engine.Import("site");
             } catch (Exception e) {
-                engine.DumpException(e);
+                engine.MyConsole.Write(engine.FormatException(e), Style.Error);
             }
         }
 
@@ -343,7 +343,7 @@ namespace IronPythonConsole {
                     try {
                         return engine.ExecuteFile(startup);
                     } catch (Exception e) {
-                        engine.DumpException(e);
+                        engine.MyConsole.Write(engine.FormatException(e), Style.Error);
                     } finally {
                         engine.DumpDebugInfo();
                     }
@@ -388,7 +388,7 @@ namespace IronPythonConsole {
                 try {
                     result = engine.RunFileInNewModule(fileName, args, Options.Introspection, Options.SkipFirstLine);
                 } catch (Exception e) {
-                    engine.DumpException(e);
+                    engine.MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
                     engine.DumpDebugInfo();
                 }
@@ -421,7 +421,7 @@ namespace IronPythonConsole {
                 try {
                     result = engine.ExecuteToConsole(command);
                 } catch (Exception e) {
-                    engine.DumpException(e);
+                    engine.MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
                     engine.DumpDebugInfo();
                 }
@@ -466,9 +466,9 @@ namespace IronPythonConsole {
             return (int) result;
         }
 
-        public static void DefaultExceptionHandler(object sender, UnhandledExceptionEventArgs args) {
+        private static void DefaultExceptionHandler(object sender, UnhandledExceptionEventArgs args) {
             engine.MyConsole.WriteLine("Unhandled exception: ", Style.Error);
-            engine.DumpException((Exception)args.ExceptionObject);
+            engine.MyConsole.Write(engine.FormatException((Exception)args.ExceptionObject), Style.Error);
         }
     }
 }

@@ -274,6 +274,8 @@ namespace IronPython.Compiler {
             return ncg;
         }
 
+        static readonly Type[] ExecuteCompiledSignature = new Type[] { typeof(InitializeModule) };
+
         /// <summary>
         /// Generates a static entry point for stand-alone EXEs.  We just new up our module dstructure
         /// and then call into Ops to get running.
@@ -293,7 +295,7 @@ namespace IronPython.Compiler {
             main.EmitDelegate(init, typeof(InitializeModule), instance);    
 
             // Call ExecuteCompiled
-            main.EmitCall(typeof(IronPython.Hosting.PythonEngine), "ExecuteCompiled");
+            main.EmitCall(typeof(IronPython.Hosting.PythonEngine), "ExecuteCompiled", ExecuteCompiledSignature);
             
             main.EmitReturn();
 

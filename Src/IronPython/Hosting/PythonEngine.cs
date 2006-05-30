@@ -31,12 +31,15 @@ namespace IronPython.Hosting {
     public class PythonEngine {
 
         #region Static Public Members
+
         public const string Copyright = "Copyright (c) Microsoft Corporation. All rights reserved.";
+
         public static Version Version {
             get {
                 return typeof(PythonEngine).Assembly.GetName().Version;
             }
         }
+
         public static string VersionString {
             get {
                 Version pythonVersion = Version;
@@ -46,7 +49,51 @@ namespace IronPython.Hosting {
                 return version;
             }
         }
+
         public static object ExecWrapper = null;
+
+        public static int ExecuteCompiled(CustomSymbolDict compiled, InitializeModule init, string fullName) {
+            return ExecuteCompiled(compiled, init, fullName, null);
+        }
+
+        public static int ExecuteCompiled(CustomSymbolDict compiled, InitializeModule init, string fullName, string[] references) {
+            PythonEngine engine = new PythonEngine();
+            engine.AddToPath(Environment.CurrentDirectory);
+
+            engine.LoadAssembly(compiled.GetType().Assembly);
+            PythonModule module = new PythonModule(fullName, compiled, engine.engineContext.SystemState);
+            string executable = compiled.GetType().Assembly.Location;
+            module.InitializeBuiltins();
+            engine.Sys.prefix = System.IO.Path.GetDirectoryName(executable);
+            engine.Sys.executable = executable;
+            engine.Sys.exec_prefix = engine.Sys.prefix;
+            engine.Sys.modules[fullName] = module;
+
+            if (references != null) {
+                for (int i = 0; i < references.Length; i++) {
+                    engine.engineContext.SystemState.ClrModule.AddReference(references[i]);
+                }
+            }
+
+            // first arg is EXE 
+            List args = new List();
+            string[] fullArgs = Environment.GetCommandLineArgs();
+            args.Add(Path.GetFullPath(fullArgs[0]));
+            for (int i = 1; i < fullArgs.Length; i++)
+                args.Add(fullArgs[i]);
+            engine.Sys.argv = args;
+
+            try {
+                init();
+            } catch (PythonSystemExit x) {
+                return x.GetExitCode(engine.engineContext);
+            } catch (Exception e) {
+                engine.MyConsole.Write(engine.FormatException(e), Style.Error);
+                return -1;
+            }
+            return 0;
+        }
+
         #endregion
 
         #region Static Non-Public Members
@@ -85,7 +132,7 @@ namespace IronPython.Hosting {
                 } catch (Exception e) {
                     MyConsole.WriteLine("", Style.Error);
                     MyConsole.WriteLine("Error in sys.exitfunc:", Style.Error);
-                    DumpException(e);
+                    MyConsole.Write(FormatException(e), Style.Error);
                 }
             }
 
@@ -98,6 +145,12 @@ namespace IronPython.Hosting {
                     OutputGenerator.DumpSnippets();
                 } catch (NotSupportedException) { } //!!! usually not important info...
             }
+        }
+        public void InitializeModules(string prefix, string executable, string version) {
+            Sys.version = version;
+            Sys.prefix = prefix;
+            Sys.executable = executable;
+            Sys.exec_prefix = prefix;
         }
         #endregion
 
@@ -137,7 +190,7 @@ namespace IronPython.Hosting {
                 if (pki != null) {
                     Thread.ResetAbort();
                     bool endOfMscorlib = false;
-                    DumpException(tae, ExceptionConverter.ToPython(pki), delegate(StackFrame sf) {
+                    string ex = FormatException(tae, ExceptionConverter.ToPython(pki), delegate(StackFrame sf) {
                         // filter out mscorlib methods that show up on the stack initially, 
                         // for example ReadLine / ReadBuffer etc...
                         if (!endOfMscorlib &&
@@ -148,13 +201,14 @@ namespace IronPython.Hosting {
                         endOfMscorlib = true;
                         return true;
                     });
+                    MyConsole.Write(ex, Style.Error);
                     continueInteraction = true;
                 }
             } catch (Exception e) {
                 // There should be no unhandled exceptions in the interactive session
                 // We catch all exceptions here, and just display it,
                 // and keep on going
-                DumpException(e);
+                MyConsole.Write(FormatException(e), Style.Error);
                 continueInteraction = true;
             }
 
@@ -226,12 +280,14 @@ namespace IronPython.Hosting {
             }
         }
 
-        private void DumpPythonException(object python) {
+        private string FormatPythonException(object python) {
+            string result = "";
+
             // dump the python exception.
             if (python != null) {
                 string str = python as string;
                 if (str != null) {
-                    MyConsole.WriteLine(str, Style.Error);
+                    result += str + Environment.NewLine;
                 } else {
                     string className = "";
                     object val;
@@ -240,39 +296,45 @@ namespace IronPython.Hosting {
                             className = val.ToString();
                         }
                     }
-                    MyConsole.WriteLine(className + ": " + python.ToString(), Style.Error);
+                    result += className + ": " + python.ToString() + Environment.NewLine;
                 }
             }
+
+            return result;
         }
 
-        private void DumpCLSException(Exception e) {
-            MyConsole.WriteLine("CLR Exception: ", Style.Error);
+        private string FormatCLSException(Exception e) {
+            string result = string.Empty;
+            result += "CLR Exception: " + Environment.NewLine;
 
             while (e != null) {
                 if (!String.IsNullOrEmpty(e.Message)) {
-                    MyConsole.WriteLine("    " + e.GetType().Name + ": " + e.Message, Style.Error);
+                    result += "    " + e.GetType().Name + ": " + e.Message + Environment.NewLine;
                 } else {
-                    MyConsole.WriteLine("    " + e.GetType().Name, Style.Error);
+                    result += "    " + e.GetType().Name + Environment.NewLine;
                 }
 
                 e = e.InnerException;
             }
+
+            return result;
         }
 
-        private void DumpStackTraces(Exception e) {
+        private string FormatStackTraces(Exception e) {
             bool printedHeader = false;
 
-            DumpStackTraces(e, ref printedHeader);
+            return FormatStackTraces(e, ref printedHeader);
         }
 
-        private void DumpStackTraces(Exception e, ref bool printedHeader) {
-            DumpStackTraces(e, null, ref printedHeader);
+        private string FormatStackTraces(Exception e, ref bool printedHeader) {
+            return FormatStackTraces(e, null, ref printedHeader);
         }
 
-        private void DumpStackTraces(Exception e, FilterStackFrame fsf, ref bool printedHeader) {
+        private string FormatStackTraces(Exception e, FilterStackFrame fsf, ref bool printedHeader) {
+            string result = "";
             if (PythonEngine.options.ExceptionDetail) {
                 if (!printedHeader) {
-                    MyConsole.WriteLine(e.Message, Style.Error);
+                    result = e.Message + Environment.NewLine;
                     printedHeader = true;
                 }
                 List<System.Diagnostics.StackTrace> traces = ExceptionConverter.GetExceptionStackTraces(e);
@@ -282,34 +344,38 @@ namespace IronPython.Hosting {
                         for (int j = 0; j < traces[i].FrameCount; j++) {
                             StackFrame curFrame = traces[i].GetFrame(j);
                             if (fsf == null || fsf(curFrame))
-                                MyConsole.WriteLine(curFrame.ToString(), Style.Error);
+                                result += curFrame.ToString() + Environment.NewLine;
                         }
                     }
                 }
 
-                MyConsole.WriteLine(e.StackTrace.ToString(), Style.Error);
-                if (e.InnerException != null) DumpStackTraces(e.InnerException, ref printedHeader);
+                result += e.StackTrace.ToString() + Environment.NewLine;
+                if (e.InnerException != null) result += FormatStackTraces(e.InnerException, ref printedHeader);
             } else {
                 // dump inner most exception first, followed by outer most.
-                if (e.InnerException != null) DumpStackTraces(e.InnerException, ref printedHeader);
+                if (e.InnerException != null) result += FormatStackTraces(e.InnerException, ref printedHeader);
 
                 if (!printedHeader) {
-                    MyConsole.WriteLine("Traceback (most recent call last):", Style.Error);
+                    result += "Traceback (most recent call last):" + Environment.NewLine;
                     printedHeader = true;
                 }
-                DumpStackTrace(new StackTrace(e, true), fsf);
+                result += FormatStackTrace(new StackTrace(e, true), fsf);
                 List<StackTrace> traces = ExceptionConverter.GetExceptionStackTraces(e);
                 if (traces != null && traces.Count > 0) {
                     for (int i = 0; i < traces.Count; i++) {
-                        DumpStackTrace(traces[i], fsf);
+                        result += FormatStackTrace(traces[i], fsf);
                     }
                 }
             }
+
+            return result;
         }
 
-        private void DumpStackTrace(StackTrace st, FilterStackFrame fsf) {
+        private string FormatStackTrace(StackTrace st, FilterStackFrame fsf) {
+            string result = "";
+
             StackFrame[] frames = st.GetFrames();
-            if (frames == null) return;
+            if (frames == null) return result;
 
             for (int i = frames.Length - 1; i >= 0; i--) {
                 StackFrame frame = frames[i];
@@ -327,8 +393,10 @@ namespace IronPython.Hosting {
 
                 if (fsf != null && !fsf(frame)) continue;
 
-                MyConsole.WriteLine(FrameToString(frame), Style.Error);
+                result += FrameToString(frame) + Environment.NewLine;
             }
+
+            return result;
         }
 
         private string FrameToString(StackFrame frame) {
@@ -382,6 +450,23 @@ namespace IronPython.Hosting {
             return null; // null indicates that the execution completed normally, without a PythonSystemExit being raised
         }
 
+        private delegate bool FilterStackFrame(StackFrame frame);
+
+        private string FormatException(Exception e, object pythonException, FilterStackFrame fsf) {
+            Debug.Assert(pythonException != null);
+            Debug.Assert(e != null);
+
+            string result = string.Empty;
+            bool printedHeader = false;
+            result += FormatStackTraces(e, fsf, ref printedHeader);
+            result += FormatPythonException(pythonException);
+            if (PythonEngine.options.ShowCLSExceptions) {
+                result += FormatCLSException(e);
+            }
+
+            return result;
+        }
+
         internal delegate int InteractiveAction(out bool continueInteraction);
         #endregion
 
@@ -427,13 +512,6 @@ namespace IronPython.Hosting {
             return 0;
         }
 
-        public void InitializeModules(string prefix, string executable, string version) {
-            Sys.version = version;
-            Sys.prefix = prefix;
-            Sys.executable = executable;
-            Sys.exec_prefix = prefix;
-        }
-
         public IConsole MyConsole {
             get {
                 if (_console == null) {
@@ -459,7 +537,7 @@ namespace IronPython.Hosting {
 
                 if (ExecWrapper != null) {
                     CallTarget0 t = delegate() {
-                        try { code.Run(topFrame); } catch (Exception e) { DumpException(e); }
+                        try { code.Run(topFrame); } catch (Exception e) { MyConsole.Write(FormatException(e), Style.Error); }
                         return null;
                     };
                     object callable = new Function0(topFrame.__module__, "wrapper", t, new string[0], new object[0]);
@@ -504,8 +582,8 @@ namespace IronPython.Hosting {
         }
 
         internal static PythonEngine compiledEngine;
-        public static int ExecuteCompiled(InitializeModule init) {
 
+        public static int ExecuteCompiled(InitializeModule init) {
             // first arg is EXE 
             List args = new List();
             string[] fullArgs = Environment.GetCommandLineArgs();
@@ -519,7 +597,7 @@ namespace IronPython.Hosting {
             } catch (PythonSystemExit x) {
                 return x.GetExitCode(compiledEngine.engineContext);
             } catch (Exception e) {
-                compiledEngine.DumpException(e);
+                compiledEngine.MyConsole.Write(compiledEngine.FormatException(e), Style.Error);
                 return -1;
             }
             return 0;
@@ -645,33 +723,21 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Dump
-        public delegate bool FilterStackFrame(StackFrame frame);
-
-        public void DumpException(Exception e) {
+        public string FormatException(Exception e) {
             object pythonEx = ExceptionConverter.ToPython(e);
 
-            DumpStackTraces(e);
-            DumpPythonException(pythonEx);
+            string result = FormatStackTraces(e);
+            result += FormatPythonException(pythonEx);
             if (PythonEngine.options.ShowCLSExceptions) {
-                DumpCLSException(e);
+                result += FormatCLSException(e);
             }
-        }
 
-        public void DumpException(Exception e, object pythonException, FilterStackFrame fsf) {
-            Debug.Assert(pythonException != null);
-            Debug.Assert(e != null);
-
-            bool printedHeader = false;
-            DumpStackTraces(e, fsf, ref printedHeader);
-            DumpPythonException(pythonException);
-            if (PythonEngine.options.ShowCLSExceptions) {
-                DumpCLSException(e);
-            }
+            return result;
         }
         #endregion
 
         #region COM Support
-        public void AssociateComInterface(object o, object i) {
+        private void AssociateComInterface(object o, object i) {
             ComObject co = ComObject.ObjectToComObject(o);
             Type t = Converter.ConvertToType(i);
             if (co != null) {
@@ -679,7 +745,7 @@ namespace IronPython.Hosting {
             }
         }
 
-        public void AssociateHiddenComInterface(Type visibleInterface, Type hiddenInterface) {
+        private void AssociateHiddenComInterface(Type visibleInterface, Type hiddenInterface) {
             lock (ComObject.HiddenInterfaces) {
                 if (!ComObject.HiddenInterfaces.ContainsKey(visibleInterface))
                     ComObject.HiddenInterfaces[visibleInterface] = new List<Type>();
@@ -688,7 +754,7 @@ namespace IronPython.Hosting {
             }
         }
 
-        public void AssociateHiddenComAddInterface(Type visibleInterface, IList<Type> hiddenInterfaces) {
+        private void AssociateHiddenComAddInterface(Type visibleInterface, IList<Type> hiddenInterfaces) {
             lock (ComObject.HiddenInterfaces) {
                 if (!ComObject.HiddenInterfaces.ContainsKey(visibleInterface))
                     ComObject.HiddenInterfaces[visibleInterface] = new List<Type>();
