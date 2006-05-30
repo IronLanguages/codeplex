@@ -76,6 +76,7 @@ IronPythonTests = {
                 test_operator
                 test_re
                 test_struct
+                test_sys
                 test_thread
                 test_time
                 test_weakref
@@ -104,6 +105,7 @@ IronPythonTests = {
                 '''
                 test_closure
                 test_decorator
+                test_exec
                 test_exceptions
                 test_function
                 test_future
