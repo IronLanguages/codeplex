@@ -276,28 +276,28 @@ class RedirectTestRunner(TestRunner):
         self.testResult = TestResult(test, self.tc)
         self._save_original()
         self._redirect_output()
+        if self.detailLevel <> 'min':
+            self.saved_stdout.write(test.ljust(formatter.TestNameLen))
+        logstream.write('>>>> ' + test)
         try:
-            if self.detailLevel <> 'min':
-                self.saved_stdout.write(test.ljust(formatter.TestNameLen))
-            print '>>>>', test
-            print formatter.SeparatorMinus
-                        
             self.testResult.startTest()
             self.runstep(test, self.timeLevel)
             self.testResult.setSuccess()
+            logstream.write('\n') 
             if self.detailLevel == 'min':
                 self.saved_stdout.write(".")
             else:
                 self.saved_stdout.write(" PASS \n")
         except Exception, e: 
+            logstream.write('\t\t*FAIL*\n')
             self.testResult.setFailure((str(e.args), my_format_exc()))
             print 'exception:', str(e.args)
             print 'traceback:', my_format_exc()
-            
             if self.detailLevel == 'min':
                 self.saved_stdout.write("x(%s)" % test)
             else:
                 self.saved_stdout.write("*FAIL*\n")
+        logstream.write(formatter.SeparatorMinus + '\n')
         self._restore_original()
     
 # test configuration

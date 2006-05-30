@@ -19,6 +19,11 @@ from lib.assert_util import *
 from lib.file_util import *
 from lib.process_util import *
 
+try:
+    import this_module_does_not_exist
+except ImportError: pass
+else:  Fail("should already thrown")
+
 # generate test files on the fly
 _testdir    = 'ImportTestDir'
 _f_init     = path_combine(testpath.public_testdir, _testdir, '__init__.py')

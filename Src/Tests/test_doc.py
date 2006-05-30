@@ -27,6 +27,9 @@ def test_sanity():
 
     ## builtin
     Assert(min.__doc__ <> None)
+    
+    AreEqual(abs.__doc__, "abs(number) -> number\n\nReturn the absolute value of the argument.\r\n")
+    AreEqual(int.__add__.__doc__, "x.__add__(y) <==> x+y\r\n")
 
 
 def f_1():

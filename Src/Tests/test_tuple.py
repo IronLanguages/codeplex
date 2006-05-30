@@ -49,6 +49,9 @@ def test_unpack():
     AreEqual(c, tupleOfSize2)
     del a, b, c
 
-
+def test_add_mul():
+    AreEqual((1,2,3) + (4,5,6),  (1,2,3,4,5,6))
+    AreEqual((1,2,3) * 2, (1,2,3,1,2,3))
+    AreEqual(2 * (1,2,3), (1,2,3,1,2,3))
 
 run_test(__name__)

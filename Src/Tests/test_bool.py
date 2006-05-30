@@ -15,24 +15,11 @@
 
 from lib.assert_util import *
 
-def main():
-    root = testpath.public_testdir
-
-    execfile(root + "/Inc/toexec.py")
-    execfile(root + "/Inc/toexec.py")
-    execfile(root + "/doc.py")
-    execfile(root + "/Inc/toexec.py")
-
-if __name__ == "__main__":
-    __name__ = "execfile"
-    main()
-
-def test_negative():
-    AssertError(TypeError, execfile, None) # arg must be string
-    AssertError(TypeError, execfile, [])
-    AssertError(TypeError, execfile, 1)
-    AssertError(TypeError, execfile, "somefile", "")
+# types are always true.
+def test_types():    
+    for x in [str, int, long, float, bool]:
+        if not x: 
+            Fail("should be true: %r", x)
 
 
 run_test(__name__)
-

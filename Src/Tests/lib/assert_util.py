@@ -18,6 +18,7 @@
 import nt
 import sys
 from file_util import *
+from type_util import types
 
 is_cli = sys.platform == 'cli'
 
@@ -202,7 +203,7 @@ def run_test(mod_name, verbose=False):
     module = sys.modules[mod_name]
     for name in dir(module): 
         obj = getattr(module, name)
-        if isinstance(obj, type(run_test)) and name.startswith("test_"): 
+        if isinstance(obj, types.functionType) and name.startswith("test_"): 
             if verbose or mod_name == '__main__': print "Testing %s" % name
             obj()
 

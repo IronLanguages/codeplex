@@ -21,18 +21,20 @@ IronPythonTests = {
                 ''',
             'builtinfuncs':
                 '''
-                test_callable
+                test_builtinfunc
                 test_isinstance
                 test_execfile
                 ''',
             'builtintypes':
                 '''
                 test_bigint
+                test_bool
                 test_buffer
                 test_complex
                 test_dict
                 test_file
                 test_list
+                test_nonetype
                 test_set
                 test_slice
                 test_str

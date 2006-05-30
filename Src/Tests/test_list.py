@@ -104,6 +104,37 @@ def test_list_in_list():
     AreEqual( aList.index(anItem), 0 )
     Assert(anItem in aList)
 
+def test_pop():
+    x = [1,2,3,4,5,6,7,8,9,0]
+    Assert(x.pop() == 0)
+    Assert(x.pop(3) == 4)
+    Assert(x.pop(-5) == 5)
+    Assert(x.pop(0) == 1)
+    Assert(x.pop() == 9)
+    Assert(x.pop(2) == 6)
+    Assert(x.pop(3) == 8)
+    Assert(x.pop(-1) == 7)
+    Assert(x.pop(-2) == 2)
+    Assert(x.pop() == 3)
+
+def test_add_mul():
+    x = [1,2,3]
+    x += [4,5,6]
+    Assert(x == [1,2,3,4,5,6])
+    
+    x = [1,2,3]
+    AreEqual(x * 2, [1,2,3,1,2,3])
+    AreEqual(2 * x, [1,2,3,1,2,3])
+
+def test_reverse():
+    x = ["begin",1,2,3,4,5,6,7,8,9,0,"end"]
+    del x[6:]
+    x.reverse()
+    Assert(x == [5, 4, 3, 2, 1, "begin"])
+
+    x = list("iron python")
+    x.reverse()
+    Assert(x == ['n','o','h','t','y','p',' ','n','o','r','i'])
 
 ######################################################################
 # Verify behavior of index when the list changes...

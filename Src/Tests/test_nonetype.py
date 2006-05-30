@@ -15,5 +15,10 @@
 
 from lib.assert_util import *
 
-Assert("__name__" in dir())
-Assert("__builtins__" in dir())
+def test_trival():
+    AreEqual(type(None), None.__class__)
+    AreEqual(str(None), None.__str__())
+    AreEqual(repr(None), None.__repr__())
+    None.__init__('abc')
+    
+run_test(__name__)
