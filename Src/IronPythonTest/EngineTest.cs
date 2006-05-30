@@ -26,7 +26,7 @@ namespace IronPythonTest {
 
         static Common() {
             RuntimeDirectory = Path.GetDirectoryName(typeof(PythonEngine).Assembly.Location);
-            ScriptTestDirectory = Path.Combine(RuntimeDirectory, @"Src\Scripts\Tests");
+            ScriptTestDirectory = Path.Combine(RuntimeDirectory, @"Src\Tests");
         }
     }
 
@@ -235,7 +235,7 @@ namespace IronPythonTest {
             string tempFile1 = Path.GetTempFileName();
 
             try {
-                File.WriteAllText(tempFile1, "from Util.Debug import *");
+                File.WriteAllText(tempFile1, "from lib.assert_util import *");
 
                 try {
                     pe.ExecuteFile(tempFile1);
