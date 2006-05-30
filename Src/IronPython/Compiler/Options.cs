@@ -14,6 +14,7 @@
  * **********************************************************************************/
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace IronPython.Compiler {
@@ -30,6 +31,10 @@ namespace IronPython.Compiler {
         };
 
         #region Static options
+        // Will the command-line script be introspected after execution? Corresponds to the "-i" command-line argument
+        public static bool Introspection;
+
+        public static bool SkipFirstLine;
 
         // Global module variables are implemented as CLI static fields
         public static bool StaticModules = true;

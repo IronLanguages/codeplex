@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using SystemThread = System.Threading.Thread;
 
 using IronPython.Hosting;
 using IronPython.Compiler;
@@ -33,9 +34,8 @@ namespace IronPythonConsole {
         private static bool PressKeyToContinue = false;
         private static bool tabCompletion = false;
         private static bool colorfulConsole = false;
-        private static bool introspection = false;
-        private static bool skipLine = false;
         private static bool mta = false;
+        private static PythonEngine engine;
 
         public static bool TabCompletion {
             get {
@@ -84,7 +84,8 @@ namespace IronPythonConsole {
                 return 0;
             }
 
-            PythonEngine engine = new PythonEngine(options);
+            engine = new PythonEngine(options);
+
             try {
                 if (TabCompletion) {
                     UseSuperConsole(engine);
@@ -99,8 +100,8 @@ namespace IronPythonConsole {
 
                 if (mta) {
                     MTAParameters p = new MTAParameters(engine, args);
-                    System.Threading.Thread thread = new System.Threading.Thread(MTAThread);
-                    thread.SetApartmentState(System.Threading.ApartmentState.MTA);
+                    SystemThread thread = new SystemThread(MTAThread);
+                    thread.SetApartmentState(ApartmentState.MTA);
                     thread.Start(p);
                     thread.Join();
                     return p.result;
@@ -172,8 +173,8 @@ namespace IronPythonConsole {
                         Options.TrackPerformance = true;
 #endif
                         break;
-                    case "-i": introspection = true; break;
-                    case "-x": skipLine = true; break;
+                    case "-i": Options.Introspection = true; break;
+                    case "-x": Options.SkipFirstLine = true; break;
                     case "-v": options.Verbose = true; break;
                     case "-u": Options.UnbufferedStdOutAndError = true; break;
                     case "-c":
@@ -326,7 +327,11 @@ namespace IronPythonConsole {
             string site = System.Reflection.Assembly.GetExecutingAssembly().Location;
             site = Path.Combine(Path.GetDirectoryName(site), "Lib");
             engine.AddToPath(site);
-            engine.ImportSite();
+            try {
+                engine.Import("site");
+            } catch (Exception e) {
+                engine.DumpException(e);
+            }
         }
 
         private static int? RunStartup(PythonEngine engine) {
@@ -381,7 +386,7 @@ namespace IronPythonConsole {
 
             if (HandleExceptions) {
                 try {
-                    result = engine.RunFileInNewModule(fileName, args, introspection, skipLine);
+                    result = engine.RunFileInNewModule(fileName, args, Options.Introspection, Options.SkipFirstLine);
                 } catch (Exception e) {
                     engine.DumpException(e);
                 } finally {
@@ -389,7 +394,7 @@ namespace IronPythonConsole {
                 }
             } else {
                 try {
-                    result = engine.RunFileInNewModule(fileName, args, introspection, skipLine);
+                    result = engine.RunFileInNewModule(fileName, args, Options.Introspection, Options.SkipFirstLine);
                 } finally {
                     engine.DumpDebugInfo();
                 }
@@ -414,7 +419,7 @@ namespace IronPythonConsole {
 
             if (HandleExceptions) {
                 try {
-                    result = engine.Execute(command);
+                    result = engine.ExecuteToConsole(command);
                 } catch (Exception e) {
                     engine.DumpException(e);
                 } finally {
@@ -448,7 +453,7 @@ namespace IronPythonConsole {
             InitializePath(engine);
             ImportSite(engine);
 
-            AppDomain.CurrentDomain.UnhandledException += engine.DefaultExceptionHandler;
+            AppDomain.CurrentDomain.UnhandledException += DefaultExceptionHandler;
 
             engine.MyConsole.WriteLine(version, Style.Out);
             engine.MyConsole.WriteLine(PythonEngine.Copyright, Style.Out);
@@ -459,6 +464,11 @@ namespace IronPythonConsole {
             }
             engine.DumpDebugInfo();
             return (int) result;
+        }
+
+        public static void DefaultExceptionHandler(object sender, UnhandledExceptionEventArgs args) {
+            engine.MyConsole.WriteLine("Unhandled exception: ", Style.Error);
+            engine.DumpException((Exception)args.ExceptionObject);
         }
     }
 

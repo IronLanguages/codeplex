@@ -72,7 +72,8 @@ namespace IronPython.Hosting {
         }
         public PythonEngine(Options opts)
             : this() {
-            if (opts == null) throw new ArgumentNullException("No options specified for PythonEngine");
+            if (opts == null) 
+                throw new ArgumentNullException("No options specified for PythonEngine");
             // Save the options. Clone it first to prevent the client from unexpectedly mutating it
             options = opts.Clone();
         }
@@ -87,12 +88,16 @@ namespace IronPython.Hosting {
                     DumpException(e);
                 }
             }
+
+            DumpDebugInfo();
         }
-        public void InitializeModules(string prefix, string executable, string version) {
-            Sys.version = version;
-            Sys.prefix = prefix;
-            Sys.executable = executable;
-            Sys.exec_prefix = prefix;
+        public void DumpDebugInfo() {
+            if (PythonEngine.options.EngineDebug) {
+                PerfTrack.DumpStats();
+                try {
+                    OutputGenerator.DumpSnippets();
+                } catch (NotSupportedException) { } //!!! usually not important info...
+            }
         }
         #endregion
 
@@ -363,10 +368,72 @@ namespace IronPython.Hosting {
             }
         }
 
+        private int? Execute(Parser p, PythonModule m) {
+            Stmt s = p.ParseFileInput();
+
+            Frame topFrame = new Frame(m);
+            FrameCode code = OutputGenerator.GenerateSnippet(context, s, false);
+
+            try {
+                code.Run(topFrame);
+            } catch (PythonSystemExit e) {
+                return e.GetExitCode(engineContext);
+            }
+            return null; // null indicates that the execution completed normally, without a PythonSystemExit being raised
+        }
+
         internal delegate int InteractiveAction(out bool continueInteraction);
         #endregion
 
         #region Console Support
+        public int RunFileInNewModule(string fileName, ArrayList commandLineArgs, bool introspection, bool skipLine) {
+            // Publish the command line arguments
+            Sys.argv = new List(commandLineArgs);
+
+            if (introspection) {
+                bool continueInteraction;
+                int result = TryInteractiveAction(
+                    delegate(out bool continueInteractionArgument) {
+                        bool exitRaised;
+                        int res = RunFileInNewModule(fileName, "__main__", skipLine, out exitRaised);
+                        continueInteractionArgument = !exitRaised;
+                        return res;
+                    },
+                    out continueInteraction);
+
+                if (continueInteraction) {
+                    topFrame = new Frame(engineContext.Module);
+                    return RunInteractiveLoop();
+                } else {
+                    return result;
+                }
+            } else {
+                bool exitRaised;
+                return RunFileInNewModule(fileName, "__main__", skipLine, out exitRaised);
+            }
+        }
+
+        public int ExecuteToConsole(string text) {
+            Parser p = Parser.FromString(engineContext.SystemState, context, text);
+            Stmt s = p.ParseFileInput();
+
+            FrameCode code = OutputGenerator.GenerateSnippet(context, s, true);
+
+            try {
+                code.Run(new Frame(engineContext.Module));
+            } catch (PythonSystemExit e) {
+                return e.GetExitCode(engineContext);
+            }
+            return 0;
+        }
+
+        public void InitializeModules(string prefix, string executable, string version) {
+            Sys.version = version;
+            Sys.prefix = prefix;
+            Sys.executable = executable;
+            Sys.exec_prefix = prefix;
+        }
+
         public IConsole MyConsole {
             get {
                 if (_console == null) {
@@ -412,13 +479,11 @@ namespace IronPython.Hosting {
         }
         #endregion
 
-        #region Make Non-Public
         public SystemState Sys {
             get {
                 return engineContext.SystemState;
             }
         }
-        #endregion
 
         #region Loader Members
         public void AddToPath(string dirName) {
@@ -427,18 +492,6 @@ namespace IronPython.Hosting {
 
         public void LoadAssembly(Assembly assem) {
             engineContext.SystemState.TopPackage.LoadAssembly(engineContext.SystemState, assem);
-        }
-
-        public void ImportSite() {
-            try {
-                Import("site");
-            } catch (Exception e) {
-                if (options.Verbose) {
-                    DumpException(e);
-                } else {
-                    MyConsole.WriteLine("'import site' failed; use -v for traceback", Style.Error);
-                }
-            }
         }
 
         public object Import(string module) {
@@ -529,68 +582,18 @@ namespace IronPython.Hosting {
         #region Dynamic Execution\Evaluation
         public int Execute(string text) {
             Parser p = Parser.FromString(engineContext.SystemState, context, text);
-            Stmt s = p.ParseFileInput();
-
-            FrameCode code = OutputGenerator.GenerateSnippet(context, s, true);
-
-            try {
-                code.Run(new Frame(engineContext.Module));
-            } catch (PythonSystemExit e) {
-                return e.GetExitCode(engineContext);
-            }
-            return 0;
+            int? res = Execute(p, engineContext.Module);
+            return (res == null) ? 0 : (int)res;
         }
 
         public int? ExecuteFile(string fileName) {
             Parser p = Parser.FromFile(engineContext.SystemState, context.CopyWithNewSourceFile(fileName));
-            Stmt s = p.ParseFileInput();
-
-            Frame topFrame = new Frame(engineContext.Module);
-            FrameCode code = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false);
-            try {
-                code.Run(topFrame);
-            } catch (PythonSystemExit se) {
-                return se.GetExitCode(engineContext);
-            }
-            return null;
-        }
-
-        public int RunFileInNewModule(string fileName, ArrayList commandLineArgs, bool introspection, bool skipLine) {
-            // Publish the command line arguments
-            Sys.argv = new List(commandLineArgs);
-
-            if (introspection) {
-                bool continueInteraction;
-                int result = TryInteractiveAction(
-                    delegate(out bool continueInteractionArgument) {
-                        bool exitRaised;
-                        int res = RunFileInNewModule(fileName, "__main__", skipLine, out exitRaised);
-                        continueInteractionArgument = !exitRaised;
-                        return res;
-                    },
-                    out continueInteraction);
-
-                if (continueInteraction) {
-                    topFrame = new Frame(engineContext.Module);
-                    return RunInteractiveLoop();
-                } else {
-                    return result;
-                }
-            } else {
-                bool exitRaised;
-                return RunFileInNewModule(fileName, "__main__", skipLine, out exitRaised);
-            }
-        }
-
-        public int RunFileInNewModule(string fileName, string moduleName) {
-            bool exitRaised;
-            return RunFileInNewModule(fileName, moduleName, false, out exitRaised);
+            return Execute(p, engineContext.Module);
         }
 
         public int RunFile(string fileName) {
             Parser p = Parser.FromFile(engineContext.SystemState, context.CopyWithNewSourceFile(fileName));
             Stmt s = p.ParseFileInput();
-
             string moduleName = "tmp" + counter++;
 
             PythonModule mod = OutputGenerator.GenerateModule(engineContext.SystemState, p.CompilerContext, s, moduleName);
@@ -644,11 +647,6 @@ namespace IronPython.Hosting {
         #region Dump
         public delegate bool FilterStackFrame(StackFrame frame);
 
-        public void DefaultExceptionHandler(object sender, UnhandledExceptionEventArgs args) {
-            MyConsole.WriteLine("Unhandled exception: ", Style.Error);
-            DumpException((Exception)args.ExceptionObject);
-        }
-
         public void DumpException(Exception e) {
             object pythonEx = ExceptionConverter.ToPython(e);
 
@@ -668,15 +666,6 @@ namespace IronPython.Hosting {
             DumpPythonException(pythonException);
             if (PythonEngine.options.ShowCLSExceptions) {
                 DumpCLSException(e);
-            }
-        }
-
-        public void DumpDebugInfo() {
-            if (PythonEngine.options.EngineDebug) {
-                PerfTrack.DumpStats();
-                try {
-                    OutputGenerator.DumpSnippets();
-                } catch (NotSupportedException) { } //!!! usually not important info...
             }
         }
         #endregion
