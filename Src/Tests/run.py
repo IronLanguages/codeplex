@@ -14,13 +14,13 @@
 ######################################################################################
 
 '''
-This is mainly a wrapper to run iprun.py with IronPythonConsole.exe in 
-different extension switchs; two set of switches are run by default; 
-also you can specify the extension mode with
+This is mainly a wrapper to run iprun.py and IronPythonConsole.exe with
+different extension switchs. Two set of switches are run by default.
+You can specify the extension mode as shown below:
 
   -M option (Extension mode)
     -M:1 : launch ip with "-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 1001"
-    -M:2 : lanuch ip with "-O -D -X:SaveAssemblies"
+    -M:2 : launch ip with "-O -D -X:SaveAssemblies"
 
     -M:A : launch ip with different combinations (tbi)
     -M:D : launch ip twice with -M:1 and -M:2 
@@ -28,24 +28,24 @@ also you can specify the extension mode with
 
     -M:"-O -D -X:SaveAssemblies" (use DOUBLE QUOTE)
 
-The following arguments are passed to iprun.py directly;
+The following arguments are passed to iprun.py directly:
 
   -O option (to specify output detail)
     -O:min : try to keep the output in one screen; 
-             '.' for pass, 'x' for fail (with test name after)
+             '.' for pass, 'x' for fail (followed by test name)
     -O:med : show 'PASS' and 'FAIL' for each test
     -O:max : beside showing 'PASS' and 'FAIL' for each test, 
              print the exception message at the end
 
-  -T option (to specify time related)
+  -T option (to specify time related options)
     -T:min : 
     -T:med : this is default
     -T:max : 
     
   -h or -? : to show this help message
 
-other arguments without leading '-' will be taken as categories, 
-use categories.py to explore more category info.
+Other arguments without leading '-' will be considered as categories, 
+Use categories.py to explore more category info.
 
 To leverage your dual-proc machine, you may open two IP windows, and type
     run a1 (which run the set of iron, misc, lib, regress test)

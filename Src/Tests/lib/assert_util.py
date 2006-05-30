@@ -103,6 +103,9 @@ def Assert(c, m = "Assertion failed"):
 def AreEqual(a, b):
     Assert(a == b, "expected %r, but found %r" % (b, a))
 
+def AlmostEqual(a, b):
+    Assert(round(a-b, 6) == 0, "expected %r and %r almost same" % (a, b))    
+    
 def AssertError(exc, func, *args):
     try:        func(*args)
     except exc: return
