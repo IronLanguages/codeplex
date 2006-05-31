@@ -24,7 +24,7 @@ namespace IronPython.Runtime {
 
         // *** BEGIN GENERATED CODE ***
 
-        private static ReflectedType builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, method, enumerate;
+        private static ReflectedType builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, pythonmodule, method, enumerate;
         private static PythonType obj, intType;
 
         // *** END GENERATED CODE ***
@@ -151,6 +151,13 @@ namespace IronPython.Runtime {
             get {
                 if (pythonfile == null) pythonfile = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(PythonFile));
                 return pythonfile;
+            }
+        }
+
+        public static ReflectedType Module {
+            get {
+                if (pythonmodule == null) pythonmodule = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(PythonModule));
+                return pythonmodule;
             }
         }
 

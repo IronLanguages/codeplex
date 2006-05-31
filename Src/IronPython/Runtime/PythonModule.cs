@@ -264,15 +264,16 @@ namespace IronPython.Runtime {
             }
             if (name == SymbolTable.Dict) { value = __dict__; return true; }
             if (packageImported) return innerMod.TryGetAttr(context, name, out value);
+            if (TypeCache.Module.TryGetAttr(context, this, name, out value)) return true;
             return false;
         }
 
         public void SetAttr(ICallerContext context, SymbolId name, object value) {
-            __dict__[name] = value;
+            TypeCache.Module.SetAttrWithCustomDict(context, this, __dict__, name, value);
         }
 
         public void DeleteAttr(ICallerContext context, SymbolId name) {
-            __dict__.Remove(name);
+            TypeCache.Module.DeleteAttrWithCustomDict(context, this, __dict__, name);
         }
 
         public List GetAttrNames(ICallerContext context) {
@@ -300,10 +301,13 @@ namespace IronPython.Runtime {
         }
 
         public IDictionary<object, object> GetAttrDict(ICallerContext context) {
-            ///!!! reflected package?
-            return ((IDictionary<object, object>)__dict__);
+            return TypeCache.Module.GetAttrDictWithCustomDict(context, this, __dict__);
         }
         #endregion
+
+        internal void SetImportedAttr(ICallerContext context, SymbolId name, object value) {
+            __dict__[name] = value;
+        }
     }
 
     [Flags]

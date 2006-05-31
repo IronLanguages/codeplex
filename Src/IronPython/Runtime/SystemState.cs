@@ -54,7 +54,7 @@ namespace IronPython.Runtime {
         /// It is in it's own function so we can do reload(sys). On reload(sys), most of the attributes need to be
         /// reset. The following are left as they are - argv, exc_type, modules, path, path_hooks, path_importer_cache, ps1, ps2.
         /// </summary>
-        public void Initialize() {
+        internal void Initialize() {
             if (__dict__ == null) {
                 __dict__ = new FieldIdDict();
 
@@ -329,30 +329,19 @@ namespace IronPython.Runtime {
                 return true;
             }
 
+            if (__dict__.ContainsKey(name))
+                return __dict__.TryGetValue(name, out value);
             if (TypeCache.SystemState.TryGetAttr(context, this, name, out value)) return true;
-            return __dict__.TryGetValue(name, out value);
+
+            return false;
         }
 
         public void SetAttr(ICallerContext context, SymbolId name, object value) {
-            object dummy;
-            if (TypeCache.SystemState.TryGetAttr(context, this, name, out dummy)) {
-                TypeCache.SystemState.SetAttr(context, this, name, value);
-            } else {
-                __dict__[name] = value;
-            }
+            TypeCache.SystemState.SetAttrWithCustomDict(context, this, __dict__, name, value);
         }
 
         public void DeleteAttr(ICallerContext context, SymbolId name) {
-            object dummy;
-            if (TypeCache.SystemState.TryGetAttr(context, this, name, out dummy)) {
-                try {
-                    TypeCache.SystemState.SetAttr(context, this, name, new Uninitialized((string)SymbolTable.IdToString(name)));
-                } catch {
-                    throw new NotImplementedException("deleting from sys");
-                }
-            } else {
-                __dict__.Remove(name);
-            }
+            TypeCache.SystemState.DeleteAttrWithCustomDict(context, this, __dict__, name);
         }
                 
         public List GetAttrNames(ICallerContext context) {
@@ -362,12 +351,7 @@ namespace IronPython.Runtime {
         }
 
         public IDictionary<object, object> GetAttrDict(ICallerContext context) {
-            Dict res = new Dict(__dict__);
-            Dict append = TypeCache.SystemState.GetAttrDict(context, this);
-            foreach (KeyValuePair<object, object> pair in append) {
-                res.Add(pair);
-            }
-            return res;
+            return TypeCache.SystemState.GetAttrDictWithCustomDict(context, this, __dict__);
         }
 
         #endregion

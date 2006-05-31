@@ -74,6 +74,20 @@ namespace IronPython.Runtime {
 
             ctor = BuiltinFunction.Make(name, ctors.ToArray(), ctors.ToArray(), FunctionType.Function);
 
+            if (type.GetInterface("ICustomAttributes") == typeof(ICustomAttributes)) {
+                // ICustomAttributes is a well-known type. Ops.GetAttr etc first check for it, and dispatch to the
+                // ICustomAttributes implementation. At the same time, built-in types like PythonModule, PythonType, 
+                // Super, SystemState, etc implement ICustomAttributes. If a user type inherits from these,
+                // then Ops.GetAttr still dispatches to the ICustomAttributes implementation of the built-in types
+                // instead of checking the user-type.
+                if (dict.ContainsKey(SymbolTable.GetAttribute.ToString()))
+                    throw new NotImplementedException("Overriding __getattribute__ of built-in types is not implemented");
+                if (dict.ContainsKey(SymbolTable.SetAttr.ToString()))
+                    throw new NotImplementedException("Overriding __setattr__ of built-in types is not implemented");
+                if (dict.ContainsKey(SymbolTable.DelAttr.ToString()))
+                    throw new NotImplementedException("Overriding __delattr__ of built-in types is not implemented");
+            }
+
             IAttributesDictionary fastDict = (IAttributesDictionary)dict;
 
             this.__name__ = name;
@@ -170,7 +184,8 @@ namespace IronPython.Runtime {
                     if (!bases.ContainsValue(baseType)) throw Ops.TypeError("cannot add CLI type {0} to {1}.__bases__", baseType, this);
                 }
 
-                Tuple newMRO = CalculateMro(value);
+                // Ensure that the MRO is legal
+                CalculateMro(value);
 
                 lock (this) {
                     InitializeUserType(value, true);
@@ -180,9 +195,7 @@ namespace IronPython.Runtime {
                     // happening in between those reads.  The important thing is that bases.
                     // Same thing for all of our __* methods that are cached w/ MethodWrappers.
 
-                    MethodResolutionOrder = newMRO;
-
-                    UpdateFromBases();
+                    ReinitializeHierarchy();
                 }
             }
         }
@@ -300,7 +313,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public void BaseDelAttr(ICallerContext context, ISuperDynamicObject self, SymbolId name) {
+        internal override void BaseDelAttr(ICallerContext context, object self, SymbolId name) {
             object slot;
             if (!TryLookupSlot(context, name, out slot)) {
                 IAttributesDictionary d = GetInitializedDict((ISuperDynamicObject)self); //!!! forces dict init
@@ -379,8 +392,9 @@ namespace IronPython.Runtime {
 
         #region Internal implementation
 
-        //!!! private would be better, only called from PythonType
-        internal bool TryBaseGetAttr(ICallerContext context, ISuperDynamicObject self, SymbolId name, out object ret) {
+        internal override bool TryBaseGetAttr(ICallerContext context, object o, SymbolId name, out object ret) {
+            ISuperDynamicObject self = o as ISuperDynamicObject;
+
             if (name == SymbolTable.Dict) {
                 ret = GetInitializedDict(self);
                 return true;
@@ -409,16 +423,16 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        //!!! private would be better, only called from PythonType
-        internal void BaseSetAttr(ICallerContext context, ISuperDynamicObject self, SymbolId name, object value) {
+        internal override void BaseSetAttr(ICallerContext context, object self, SymbolId name, object value) {
             object slot;
             if (TryLookupSlot(context, name, out slot)) {
                 if (Ops.SetDescriptor(slot, self, value)) return;
             }
 
-            if (name == SymbolTable.WeakRef) throw Ops.TypeError("attribute '__weakref__' of '{0}' objects is not writable", __name__);
+            if (name == SymbolTable.WeakRef)
+                throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), SymbolTable.WeakRef);
 
-            IAttributesDictionary d = GetInitializedDict(self);
+            IAttributesDictionary d = GetInitializedDict((ISuperDynamicObject)self);
             d[name] = value;
         }
 

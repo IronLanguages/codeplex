@@ -50,6 +50,12 @@ def foo(): pass
 AreEqual(foo.func_code.co_filename.lower().endswith('test_function.py'), True)
 AreEqual(foo.func_code.co_firstlineno, 48)  # if you added lines to the top of this file you need to update this number.
 
+# Cannot inherit from a function
+def CreateSubType(t):
+    class SubType(t): pass
+    return SubType
+AssertErrorWithMatch(TypeError, ".*\n?.* is not an acceptable base type", CreateSubType, type(foo))
+
 def a(*args): return args
 def b(*args): return a(*args)
 AreEqual(b(1,2,3), (1,2,3))

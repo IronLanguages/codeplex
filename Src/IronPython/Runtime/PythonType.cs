@@ -178,39 +178,39 @@ namespace IronPython.Runtime {
             return Ops.Repr(self);
         }
 
+        // These are the default base implementations of attribute-access.
+        abstract internal bool TryBaseGetAttr(ICallerContext context, object self, SymbolId name, out object ret);
+        abstract internal void BaseSetAttr(ICallerContext context, object self, SymbolId name, object value);
+        abstract internal void BaseDelAttr(ICallerContext context, object self, SymbolId name);
+
         public static object GetAttributeMethod(object self, object name) {
             string strName = name as string;
             if (strName == null) throw Ops.TypeError("attribute name must be a string");
 
-            ISuperDynamicObject s = self as ISuperDynamicObject;
-            if (s != null) {
-                object ret;
-                if (((UserType)s.GetDynamicType()).TryBaseGetAttr(DefaultContext.Default, s, SymbolTable.StringToId(strName), out ret)) return ret;
-            }
+            PythonType pythonType = Ops.GetDynamicType(self) as PythonType;
+            object ret;
+            if (pythonType.TryBaseGetAttr(DefaultContext.Default, self, SymbolTable.StringToId(strName), out ret)) return ret;
             throw Ops.AttributeError("no attribute {0}", name); //??? better message
         }
 
         public static object SetAttrMethod(object self, object name, object value) {
             string strName = name as string;
-            if (strName == null) throw Ops.TypeError("attribute name must be a string"); 
+            if (strName == null) throw Ops.TypeError("attribute name must be a string");
 
-            ISuperDynamicObject s = self as ISuperDynamicObject;
-            if (s == null) throw new NotImplementedException();
-            ((UserType)s.GetDynamicType()).BaseSetAttr(DefaultContext.Default, s, SymbolTable.StringToId(strName), value);
+            PythonType pythonType = Ops.GetDynamicType(self) as PythonType;
+            pythonType.BaseSetAttr(DefaultContext.Default, self, SymbolTable.StringToId(strName), value);
             return null;
         }
 
         public static object DelAttrMethod(object self, object name) {
             string strName = name as string;
             if (strName == null) throw Ops.TypeError("attribute name must be a string");
-            
-            ISuperDynamicObject s = self as ISuperDynamicObject;
-            if (s == null) throw new NotImplementedException();
-            ((UserType)s.GetDynamicType()).DelAttr(DefaultContext.Default, s, SymbolTable.StringToId(strName));
+
+            PythonType pythonType = Ops.GetDynamicType(self) as PythonType;
+            pythonType.BaseDelAttr(DefaultContext.Default, self, SymbolTable.StringToId(strName));
             return null;
         }
 
-        
         /// <summary>
         /// Looks up a __xyz__ method in slots only (because we should never lookup
         /// in instance members for these)
@@ -332,6 +332,19 @@ namespace IronPython.Runtime {
             }
         }
 
+        /// <summary>
+        /// This is called when __bases__ changes. We need to initialize all the state of the type and its subtypes
+        /// </summary>
+        protected void ReinitializeHierarchy() {
+            MethodResolutionOrder = CalculateMro(BaseClasses);
+
+            UpdateFromBases();
+
+            foreach (UserType subUserType in __subclasses__()) {
+                subUserType.ReinitializeHierarchy();
+            }
+        }
+
         internal bool TryLookupBoundSlot(ICallerContext context, object inst, SymbolId name, out object ret) {
             if (TryLookupSlot(context, name, out ret)) {
                 ret = Ops.GetDescriptor(ret, inst, this);
@@ -428,6 +441,10 @@ namespace IronPython.Runtime {
 
         public virtual object Call(params object[] args) { throw new NotImplementedException(); }
         public virtual DynamicType GetDynamicType() { throw new NotImplementedException(); }
+
+        internal bool IsInstanceOfType(object o) {
+            return Ops.GetDynamicType(o).IsSubclassOf(this);
+        }
 
         public override string Repr(object self) {
             //!!!
@@ -533,40 +550,58 @@ namespace IronPython.Runtime {
         public virtual List GetAttrNames(ICallerContext context) {
             Initialize();
 
-            Dictionary<object, object> names = new Dictionary<object, object>();
+            List names = new List();
             if ((context.ContextFlags & CallerContextFlags.ShowCls) == 0) {
+                // Filter out the non-CLS attribute names
                 foreach (KeyValuePair<object, object> kvp in dict) {
                     IContextAwareMember icaa = kvp.Value as IContextAwareMember;
                     if (icaa == null || icaa.IsVisible(context)) {
-                        string strKey = kvp.Key as string;
-                        if (strKey == null) continue;
-
-                        names[strKey] = strKey;
+                        // This is a non-CLS attribute. Include it.
+                        names.AddNoLock(kvp.Key.ToString());
                     }
                 }
             } else {
-                foreach (object key in dict.Keys) {
-                    names[key] = null;
-                }
+                // Add all the attribute names
+                names.AddRange(dict.Keys);
             }
 
             foreach (DynamicType dt in BaseClasses) {
                 if (dt != TypeCache.Object) {
                     foreach (string name in Ops.GetAttrNames(context, dt)) {
                         if (name[0] == '_' && name[1] != '_') continue;
+                        if (names.Contains(name)) continue;
 
-                        names[name] = name;
+                        names.AddNoLock(name);
                     }
                 }
             }
 
-            names["__class__"] = "__class__";
-            return List.Make(names.Keys);
+            if (!names.Contains("__class__"))
+                names.AddNoLock("__class__");
+            return names;
         }
 
         public IDictionary<object, object> GetAttrDict(ICallerContext context) {
             Initialize();
-            return dict.AsObjectKeyedDictionary();
+
+            if ((context.ContextFlags & CallerContextFlags.ShowCls) != 0) {
+                // All the attributes should be displayed. Just return 'dict'
+                return dict.AsObjectKeyedDictionary();
+            }
+
+            // We need to filter out the non-CLS attributes. So we create a new Dict, and
+            // add just the non-CLS attributes
+            Dict res = new Dict();
+
+            foreach (KeyValuePair<object, object> kvp in dict) {
+                IContextAwareMember icaa = kvp.Value as IContextAwareMember;
+                if (icaa == null || icaa.IsVisible(context)) {
+                    // This is a non-CLS attribute. Include it.
+                    res[kvp.Key.ToString()] = kvp.Value;
+                }
+            }
+
+            return res;
         }
 
         #endregion
@@ -833,6 +868,10 @@ namespace IronPython.Runtime {
             this.isSuperTypeMethod = true;
         }
 
+        public override string ToString() {
+            return String.Format("MethodWrapper for {0}.{1} => {2}>", pythonType, name, func);
+        }
+
         public void SetDeclaredMethod(object m) {
             this.func = m;
             this.funcAsFunc = m as BuiltinFunction;
@@ -843,8 +882,6 @@ namespace IronPython.Runtime {
             //!!! the dictionary should be bound to this in a more sophisticated way
             pythonType.dict[this.name] = m;
         }
-
-
 
         public void UpdateFromBases(Tuple mro) {
             if (!isSuperTypeMethod) return;
@@ -919,7 +956,8 @@ namespace IronPython.Runtime {
         #region ICallable Members
 
         public object Call(params object[] args) {
-            if (func == null) throw Ops.AttributeError("{0} not defined on instance of {1}", name, pythonType.__name__);
+            if (func == null)
+                throw Ops.AttributeErrorForMissingAttribute(pythonType.__name__.ToString(), name);
             return Ops.Call(func, args);
         }
 
@@ -929,7 +967,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__get__")]
         public object GetAttribute(object instance, object owner) {
-            if (func == null) throw Ops.AttributeError("{0} not defined on instance of {1}", name, pythonType.__name__);
+            if (func == null) 
+                throw Ops.AttributeErrorForMissingAttribute(pythonType.__name__.ToString(), name);
             if (instance != null) return new Method(func, instance, owner);
             else return func;
         }

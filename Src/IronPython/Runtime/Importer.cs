@@ -168,7 +168,7 @@ namespace IronPython.Runtime {
 
             object ret = ImportFromPath(mod.SystemState, name, CreateFullName(baseName, name), path);
             if (ret != null) {
-                mod.SetAttr(mod, SymbolTable.StringToId(name), ret);
+                mod.SetImportedAttr(mod, SymbolTable.StringToId(name), ret);
                 return ret;
             }
             return null;
@@ -189,7 +189,7 @@ namespace IronPython.Runtime {
             if (path != null) {
                 ret = ImportFromPath(mod.SystemState, name, fullName, path);
                 if (ret != null) {
-                    mod.SetAttr(mod, SymbolTable.StringToId(name), ret);
+                    mod.SetImportedAttr(mod, SymbolTable.StringToId(name), ret);
                     return ret;
                 }
             }
@@ -331,7 +331,7 @@ namespace IronPython.Runtime {
             string fullPath = Path.GetFullPath(dirname);
             List __path__ = Ops.MakeList(fullPath);
             PythonModule mod = LoadFromSource(state, fullName, Path.Combine(dirname, "__init__.py"));
-            mod.SetAttr(DefaultContext.Default, SymbolTable.Path, __path__);
+            mod.SetImportedAttr(DefaultContext.Default, SymbolTable.Path, __path__);
             return InitializeModule(fullName, mod);
         }
 

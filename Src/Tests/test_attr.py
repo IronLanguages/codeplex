@@ -40,6 +40,9 @@ def CheckObjectKeys(mod):
     AreEqual(dir(mod).__contains__(1), True)
     AreEqual(repr(mod.__dict__).__contains__("1: '1'"), True)
 
+def SetDictionary(mod, dict):
+    mod.__dict__ = dict
+
 def CheckDictionary(mod): 
     # add a new attribute to the type...
     mod.newModuleAttr = 'xyz'
@@ -49,10 +52,11 @@ def CheckDictionary(mod):
     mod.__dict__[1] = '1'
     CheckObjectKeys(mod)
     
-    # replace a module dictionary (containing non-string keys) w/ a normal dictionary
-    AreEqual(hasattr(mod, 'newModuleAttr'), True)
-    mod.__dict__ = dict(mod.__dict__)  
-    AreEqual(hasattr(mod, 'newModuleAttr'), True)
+    # Try to replace __dict__
+    if is_cli: # CPython does not consistently use TypeError/AttributeError for read-only attributes
+        AssertErrorWithMessage(AttributeError, "attribute '__dict__' of 'module' object is read-only", SetDictionary, mod, dict(mod.__dict__))
+    else:
+        AssertErrorWithMessage(TypeError, "readonly attribute", SetDictionary, mod, dict(mod.__dict__))
 
 import sys
 me = sys.modules[__name__]
@@ -79,5 +83,44 @@ AreEqual(sm.__get__(1)(), 'default')
 AreEqual(p.__get__(1), 1)
 
 ######################################################################################
+# __getattribute__, __setattr__, __delattr__ on builtins
+
+if is_cli:
+	import System
+	dateTime = System.DateTime()
+
+	AreEqual(dateTime.ToString, dateTime.__getattribute__("ToString"))
+	AssertErrorWithMessage(AttributeError, "attribute 'ToString' of 'DateTime' object is read-only", dateTime.__setattr__, "ToString", "foo")
+	AssertErrorWithMessage(AttributeError, "attribute 'ToString' of 'DateTime' object is read-only", dateTime.__delattr__, "ToString")
+
+	arrayList = System.Collections.ArrayList()
+	arrayList.__setattr__("Capacity", 123)
+	AreEqual(arrayList.Capacity, 123)
+
+AreEqual(me.__file__, me.__getattribute__("__file__"))
+me.__setattr__("__file__", "foo")
+AreEqual(me.__file__, "foo")
+me.__delattr__("__file__")
+
+class C(object):
+    def foo(self): pass
+
+# C.foo is "unbound method" on IronPython but "function" on CPython
+if is_cli:
+    AreEqual(C.foo, C.__getattribute__(C, "foo"))
+else:
+    AreEqual(C.foo.im_func, C.__getattribute__(C, "foo"))
+AreEqual(C.__doc__, C.__getattribute__(C, "__doc__"))
+# IronPython incorrectly allows this because of MethodWrappers
+if is_cli == False:
+    AssertErrorWithMessage(TypeError, "can't apply this __setattr__ to type object", C.__setattr__, C, "__str__", "foo")
+    AssertErrorWithMessage(TypeError, "can't apply this __delattr__ to type object", C.__delattr__, C, "__str__")
+
+s = "hello"
+AreEqual(s.center, s.__getattribute__("center"))
+AssertErrorWithMessages(AttributeError, "attribute 'center' of 'str' object is read-only", 
+                                        "'str' object attribute 'center' is read-only", s.__setattr__, "center", "foo")
+AssertErrorWithMessages(AttributeError, "attribute 'center' of 'str' object is read-only", 
+                                        "'str' object attribute 'center' is read-only", s.__delattr__, "center")
 
 #***** Above code are from 'Attrs' *****

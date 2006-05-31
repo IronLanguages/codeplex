@@ -64,6 +64,7 @@ data = [
 	TypeData('WeakReference'),
 	TypeData('List'),
 	TypeData('PythonFile'),
+	TypeData('PythonModule', entryName="Module"),
 	TypeData('Method'),
 	TypeData('Enumerate'),
 	TypeData('Int32', 'intType', typeType='PythonType')

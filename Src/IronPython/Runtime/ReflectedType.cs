@@ -805,6 +805,11 @@ namespace IronPython.Runtime {
                 typeToExtend = typeof(UserType);
             }
 
+            if (typeToExtend == typeof(PythonFunction) || typeToExtend == typeof(Method)) {
+                // Disallow inheriting from "function" or "instance method"
+                typeToExtend = null;
+            }
+
             return typeToExtend;
         }
 
@@ -839,25 +844,36 @@ namespace IronPython.Runtime {
             return false;
         }
 
+        void ThrowAttributeError(bool slotExists, SymbolId attributeName) {
+            if (slotExists)
+                throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), attributeName);
+            else
+                throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), attributeName);
+        }
+
         public override void SetAttr(ICallerContext context, object self, SymbolId name, object value) {
             object slot;
-            bool success = TryGetSlot(context, name, out slot);
-            if (success) {
+            bool success = false;
+            bool slotExists = TryGetSlot(context, name, out slot);
+            if (slotExists) {
                 success = Ops.SetDescriptor(slot, self, value);
             }
 
             // Does the slot exist and could it be set successfully
-            if (!success) {
-                throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), name);
-            }
+            if (!success)
+                ThrowAttributeError(slotExists, name);
         }
 
         public override void DelAttr(ICallerContext context, object self, SymbolId name) {
-            throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), name);
+            object slot;
+            bool slotExists = TryGetSlot(context, name, out slot);
+            ThrowAttributeError(slotExists, name);
         }
 
         protected override void RawSetSlot(SymbolId name, object value) {
-            throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), name);
+            object slot;
+            bool slotExists = TryGetSlot(DefaultContext.Default, name, out slot);
+            ThrowAttributeError(slotExists, name);
         }
 
         public override object GetIndex(object self, object index) {
@@ -879,6 +895,61 @@ namespace IronPython.Runtime {
                 base.SetIndex(self, index, value);
             }
         }
+        #endregion
+
+        #region ICustomAttributes helpers
+        /// <summary>
+        /// Types implementing ICustomAttributes need special handling for attribute access since they have their own dictionary
+        /// </summary>
+
+        internal void SetAttrWithCustomDict(ICallerContext context, ICustomAttributes self, IAttributesDictionary selfDict, SymbolId name, object value) {
+            Debug.Assert(IsInstanceOfType(self));
+
+            if (name == SymbolTable.Dict)
+                throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), name);
+
+            object dummy;
+            if (TryLookupSlot(context, name, out dummy)) {
+                SetAttr(context, self, name, value);
+            } else {
+                selfDict[name] = value;
+            }
+        }
+
+        internal void DeleteAttrWithCustomDict(ICallerContext context, ICustomAttributes self, IAttributesDictionary selfDict, SymbolId name) {
+            Debug.Assert(IsInstanceOfType(self));
+
+            if (name == SymbolTable.Dict)
+                throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), name);
+
+            if (selfDict.ContainsKey(name)) {
+                selfDict.Remove(name);
+                return;
+            }
+
+            object dummy;
+            if (TryLookupSlot(context, name, out dummy)) {
+                selfDict[name] = new Uninitialized(name.ToString()); 
+            } else {
+                selfDict.Remove(name);
+            }
+        }
+
+        internal IDictionary<object, object> GetAttrDictWithCustomDict(ICallerContext context, ICustomAttributes self, IAttributesDictionary selfDict) {
+            Debug.Assert(IsInstanceOfType(self));
+
+            // Get the attributes from the instance
+            Dict res = new Dict(selfDict);
+
+            // Add the attributes from the type
+            Dict typeDict = base.GetAttrDict(context, self);
+            foreach (KeyValuePair<object, object> pair in typeDict) {
+                res.Add(pair);
+            }
+
+            return res;
+        }
+
         #endregion
 
         #region Object overrides
@@ -904,6 +975,35 @@ namespace IronPython.Runtime {
             else return base.GetHashCode();
         }
         #endregion
+
+        internal override bool TryBaseGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
+            ICustomAttributes ica = self as ICustomAttributes;
+            if (ica != null) {
+                return ica.TryGetAttr(context, name, out ret);
+            }
+
+            return TryGetAttr(context, self, name, out ret);
+        }
+
+        internal override void BaseSetAttr(ICallerContext context, object self, SymbolId name, object value) {
+            ICustomAttributes ica = self as ICustomAttributes;
+            if (ica != null) {
+                ica.SetAttr(context, name, value);
+                return;
+            }
+
+            SetAttr(context, self, name, value);
+        }
+
+        internal override void BaseDelAttr(ICallerContext context, object self, SymbolId name) {
+            ICustomAttributes ica = self as ICustomAttributes;
+            if (ica != null) {
+                ica.DeleteAttr(context, name);
+                return;
+            }
+
+            DelAttr(context, self, name);
+        }
 
         #region ICustomAttributes Overrides
 

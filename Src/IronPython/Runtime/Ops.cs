@@ -1816,7 +1816,7 @@ namespace IronPython.Runtime {
                         if (name == null) continue;
 
                         SymbolId fieldId = SymbolTable.StringToId(name);
-                        mod.SetAttr(mod, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
+                        mod.SetImportedAttr(mod, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
                     }
                     return;
                 }
@@ -1830,7 +1830,7 @@ namespace IronPython.Runtime {
                     if (name[0] == '_') continue;
 
                     SymbolId fieldId = SymbolTable.StringToId(name);
-                    mod.SetAttr(mod, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
+                    mod.SetImportedAttr(mod, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
                 }
             }
         }
@@ -2268,6 +2268,10 @@ namespace IronPython.Runtime {
 
         public static Exception TypeErrorForNonStringAttribute() {
             return TypeError("attribute name must be string");
+        }
+
+        public static Exception AttributeErrorForReadonlyAttribute(string typeName, SymbolId attributeName) {
+            return Ops.AttributeError("attribute '{0}' of '{1}' object is read-only", attributeName.ToString(), typeName);
         }
 
         public static Exception AttributeErrorForMissingAttribute(string typeName, SymbolId attributeName) {
