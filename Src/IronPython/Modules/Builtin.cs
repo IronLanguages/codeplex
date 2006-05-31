@@ -254,7 +254,12 @@ namespace IronPython.Modules {
 
         [PythonName("dir")]
         public static List Dir(ICallerContext context) {
-            return Dir(context, context.Module);
+            IDictionary dict = context.Locals as IDictionary;
+            if (dict != null) {
+                List list = List.Make(dict.Keys);
+                list.Sort();
+                return list;
+            } else return Dir(context, context.Module);
         }
 
         [PythonName("dir")]

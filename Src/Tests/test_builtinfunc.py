@@ -178,6 +178,9 @@ def test_zip():
     AreEqual(zip(bar(), foo()), [(2,2)])
     AreEqual(zip(foo(), bar()), [(2,2)])
    
+def test_dir():
+    local_var = 10
+    AreEqual(dir(), ['local_var'])
 
 Assert("__name__" in dir())
 Assert("__builtins__" in dir())
