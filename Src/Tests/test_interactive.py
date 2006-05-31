@@ -182,4 +182,16 @@ ipi.ExecutePartialLine("  ")
 response = ipi.ExecuteLine("  2")
 Assert("SyntaxError:" in response)
 ipi.End()
-#***** Above code are from 'Interactive' *****
+
+
+###########################################################
+# test the indentation error in the interactive mode
+ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+AreEqual(ipi.Start(), True)
+ipi.ExecutePartialLine("class C:pass")
+response = ipi.ExecuteLine("")
+AreEqual(response, "")
+ipi.ExecutePartialLine("class D(C):")
+response = ipi.ExecuteLine("")
+Assert("IndentationError:" in response)
+ipi.End()
