@@ -37,6 +37,7 @@ namespace IronPython.Runtime {
             BigInteger bi;
             Enum e;
             ExtensibleFloat ef;
+            ExtensibleLong el;
             if (value is int) {
                 conversion = Conversion.Identity;
                 return (int)value;
@@ -93,6 +94,12 @@ namespace IronPython.Runtime {
                     conversion = Conversion.Truncation;
                     return (int)ef.value;
                 }
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                int res;
+                if (el.Value.AsInt32(out res)) {
+                    conversion = Conversion.Implicit;
+                    return res;
+                }
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal <= Int32.MaxValue) {
@@ -107,9 +114,8 @@ namespace IronPython.Runtime {
                 }
             } else {
                 object ObjectVal;
-                if (Ops.TryGetAttr(value, SymbolTable.ConvertToInt, out ObjectVal)) {
+                if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out ObjectVal)) {
                     conversion = Conversion.Eval;
-                    ObjectVal = Ops.Call(ObjectVal);
                     if (ObjectVal is int)
                         return (int)ObjectVal;
                     if (ObjectVal is double)
@@ -149,6 +155,7 @@ namespace IronPython.Runtime {
             ExtensibleInt ei;
             BigInteger bi;
             ExtensibleFloat ef;
+            ExtensibleLong el;
             if (value is double) {
                 conversion = Conversion.Identity;
                 return (double)value;
@@ -192,6 +199,12 @@ namespace IronPython.Runtime {
             } else if (!Object.Equals((ef = value as ExtensibleFloat), null)) {
                 conversion = Conversion.Implicit;
                 return (double)ef.value;
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                double res;
+                if (el.Value.TryToFloat64(out res)) {
+                    conversion = Conversion.Implicit;
+                    return res;
+                }
             } else if (value is long) {
                 conversion = Conversion.Implicit;
                 return (double)(long)value;
@@ -200,9 +213,8 @@ namespace IronPython.Runtime {
                 return (double)(decimal)value;
             } else {
                 object ObjectVal;
-                if (Ops.TryGetAttr(value, SymbolTable.ConvertToFloat, out ObjectVal)) {
+                if (Ops.TryToInvoke(value, SymbolTable.ConvertToFloat, out ObjectVal)) {
                     conversion = Conversion.Eval;
-                    ObjectVal = Ops.Call(ObjectVal);
                     if (ObjectVal is double)
                         return (double)ObjectVal;
                     if (ObjectVal is int)
@@ -220,20 +232,23 @@ namespace IronPython.Runtime {
 
         public static BigInteger TryConvertToBigInteger(object value, out Conversion conversion) {
             BigInteger bi;
+            ExtensibleLong el;
             if (!Object.Equals((bi = value as BigInteger), null)) {
                 conversion = Conversion.Identity;
                 return bi;
             } else if (value is int) {
                 conversion = Conversion.Identity;
                 return (BigInteger)(int)value;
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                conversion = Conversion.Implicit;
+                return el.Value;
             } else if (value is long) {
                 conversion = Conversion.Identity;
                 return (BigInteger)(long)value;
             } else {
                 object ObjectVal;
-                if (Ops.TryGetAttr(value, SymbolTable.ConvertToLong, out ObjectVal)) {
+                if (Ops.TryToInvoke(value, SymbolTable.ConvertToLong, out ObjectVal)) {
                     conversion = Conversion.Eval;
-                    ObjectVal = Ops.Call(ObjectVal);
                     if (ObjectVal is BigInteger)
                         return (BigInteger)ObjectVal;
                     if (ObjectVal is int)
@@ -258,6 +273,7 @@ namespace IronPython.Runtime {
             Enum e;
             string str;
             ExtensibleInt ei;
+            ExtensibleLong el;
 
             if (value == null) {
                 conversion = Conversion.None;
@@ -340,6 +356,9 @@ namespace IronPython.Runtime {
             } else if (!Object.Equals((ei = value as ExtensibleInt), null)) {
                 conversion = Conversion.NonStandard;
                 return ei.value != 0;
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                conversion = Conversion.NonStandard;
+                return el.Value != 0;
             }
             conversion = Conversion.NonStandard;
             return (bool)true;
@@ -358,9 +377,8 @@ namespace IronPython.Runtime {
                 return ec.value;
             } else {
                 object ObjectVal;
-                if (Ops.TryGetAttr(value, SymbolTable.ConvertToComplex, out ObjectVal)) {
+                if (Ops.TryToInvoke(value, SymbolTable.ConvertToComplex, out ObjectVal)) {
                     conversion = Conversion.Eval;
-                    ObjectVal = Ops.Call(ObjectVal);
                     if (ObjectVal is Complex64)
                         return (Complex64)ObjectVal;
                     if (ObjectVal is int)
@@ -473,6 +491,7 @@ namespace IronPython.Runtime {
         public static byte TryConvertToByte(object value, out Conversion conversion) {
             BigInteger bi;
             Enum e;
+            ExtensibleLong el;
             if (value is byte) {
                 conversion = Conversion.Identity;
                 return (byte)value;
@@ -527,6 +546,12 @@ namespace IronPython.Runtime {
                 }
             } else if (!Object.Equals((e = value as Enum), null)) {
                 return TryConvertEnumToByte(e, out conversion);
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                if (el.Value >= BigInteger.Create(Byte.MinValue) &&
+                    el.Value <= BigInteger.Create(Byte.MaxValue)) {
+                    conversion = Conversion.Implicit;
+                    return (byte)(int)el.Value;
+                }
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= Byte.MinValue && DecimalVal <= Byte.MaxValue) {
@@ -550,6 +575,7 @@ namespace IronPython.Runtime {
         public static sbyte TryConvertToSByte(object value, out Conversion conversion) {
             BigInteger bi;
             Enum e;
+            ExtensibleLong el;
             if (value is sbyte) {
                 conversion = Conversion.Identity;
                 return (sbyte)value;
@@ -604,6 +630,12 @@ namespace IronPython.Runtime {
                 }
             } else if (!Object.Equals((e = value as Enum), null)) {
                 return TryConvertEnumToSByte(e, out conversion);
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                if (el.Value >= BigInteger.Create(SByte.MinValue) &&
+                    el.Value <= BigInteger.Create(SByte.MaxValue)) {
+                    conversion = Conversion.Implicit;
+                    return (sbyte)(int)el.Value;
+                }
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= SByte.MinValue && DecimalVal <= SByte.MaxValue) {
@@ -627,6 +659,7 @@ namespace IronPython.Runtime {
         public static short TryConvertToInt16(object value, out Conversion conversion) {
             BigInteger bi;
             Enum e;
+            ExtensibleLong el;
             if (value is short) {
                 conversion = Conversion.Identity;
                 return (short)value;
@@ -677,6 +710,12 @@ namespace IronPython.Runtime {
                 }
             } else if (!Object.Equals((e = value as Enum), null)) {
                 return TryConvertEnumToInt16(e, out conversion);
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                if (el.Value >= BigInteger.Create(Int16.MinValue) &&
+                    el.Value <= BigInteger.Create(Int16.MaxValue)) {
+                    conversion = Conversion.Implicit;
+                    return (short)(int)el.Value;
+                }
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= Int16.MinValue && DecimalVal <= Int16.MaxValue) {
@@ -698,6 +737,7 @@ namespace IronPython.Runtime {
             ExtensibleInt ei;
             BigInteger bi;
             Enum e;
+            ExtensibleLong el;
             if (value is uint) {
                 conversion = Conversion.Identity;
                 return (uint)value;
@@ -748,6 +788,12 @@ namespace IronPython.Runtime {
                 return (uint)(ushort)value;
             } else if (!Object.Equals((e = value as Enum), null)) {
                 return TryConvertEnumToUInt32(e, out conversion);
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                uint res;
+                if (el.Value.AsUInt32(out res)) {
+                    conversion = Conversion.Implicit;
+                    return res;
+                }
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= UInt32.MinValue && DecimalVal <= UInt32.MaxValue) {
@@ -769,6 +815,7 @@ namespace IronPython.Runtime {
             ExtensibleInt ei;
             BigInteger bi;
             Enum e;
+            ExtensibleLong el;
             if (value is ulong) {
                 conversion = Conversion.Identity;
                 return (ulong)value;
@@ -818,6 +865,12 @@ namespace IronPython.Runtime {
                 return (ulong)(ushort)value;
             } else if (!Object.Equals((e = value as Enum), null)) {
                 return TryConvertEnumToUInt64(e, out conversion);
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                ulong res;
+                if (el.Value.AsUInt64(out res)) {
+                    conversion = Conversion.Implicit;
+                    return res;
+                }
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= UInt64.MinValue && DecimalVal <= UInt64.MaxValue) {
@@ -838,6 +891,7 @@ namespace IronPython.Runtime {
         public static ushort TryConvertToUInt16(object value, out Conversion conversion) {
             BigInteger bi;
             Enum e;
+            ExtensibleLong el;
             if (value is ushort) {
                 conversion = Conversion.Identity;
                 return (ushort)value;
@@ -888,6 +942,12 @@ namespace IronPython.Runtime {
                 }
             } else if (!Object.Equals((e = value as Enum), null)) {
                 return TryConvertEnumToUInt16(e, out conversion);
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                if (el.Value >= BigInteger.Create(UInt16.MinValue) &&
+                    el.Value <= BigInteger.Create(UInt16.MaxValue)) {
+                    conversion = Conversion.Implicit;
+                    return (ushort)(int)bi;
+                }
             } else if (value is decimal) {
                 decimal DecimalVal = (decimal)value;
                 if (DecimalVal >= UInt16.MinValue && DecimalVal <= UInt16.MaxValue) {
@@ -909,6 +969,7 @@ namespace IronPython.Runtime {
             ExtensibleInt ei;
             BigInteger bi;
             ExtensibleFloat ef;
+            ExtensibleLong el;
             if (value is float) {
                 conversion = Conversion.Identity;
                 return (float)value;
@@ -955,6 +1016,10 @@ namespace IronPython.Runtime {
             } else if (!Object.Equals((ef = value as ExtensibleFloat), null)) {
                 conversion = Conversion.Implicit;
                 return (float)ef.value;
+            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
+                conversion = Conversion.Implicit;
+                double res;
+                if (el.Value.TryToFloat64(out res)) return (float)res;
             } else if (value is long) {
                 conversion = Conversion.Implicit;
                 return (float)(long)value;
@@ -1768,6 +1833,7 @@ namespace IronPython.Runtime {
             if (t == typeof(ExtensibleComplex) || t.IsSubclassOf(typeof(ExtensibleComplex))) return true;
             if (t == typeof(ExtensibleString) || t.IsSubclassOf(typeof(ExtensibleString))) return true;
             if (t == typeof(ExtensibleFloat) || t.IsSubclassOf(typeof(ExtensibleFloat))) return true;
+            if (t == typeof(ExtensibleLong) || t.IsSubclassOf(typeof(ExtensibleLong))) return true;
             if (t == typeof(Complex64) || t.IsSubclassOf(typeof(Complex64))) return true;
             if (t == typeof(Delegate) || t.IsSubclassOf(typeof(Delegate))) return true;
             if (t == typeof(IEnumerator) || t.IsSubclassOf(typeof(IEnumerator))) return true;

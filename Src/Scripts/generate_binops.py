@@ -39,11 +39,13 @@ public static object %(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) return x %(sym)s ((int)other);
     if (other is Complex64) return x %(sym)s ((Complex64)other);
     if (other is double) return x %(sym)s ((double)other);
     if ((object)(bi = other as BigInteger) != null) return x %(sym)s bi;
+    if ((el = other as ExtensibleLong) != null) return x %(sym)s el.Value;
     if (other is bool) return x %(sym)s ((bool) other ? 1 : 0);
     if (other is long) return x %(sym)s ((long)other);
     if ((object)(xi = other as ExtensibleInt) != null) return x %(sym)s (xi.value);
@@ -61,6 +63,7 @@ public static object %(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) return %(altname)s(x, (int)other);
     if (other is Complex64) {
@@ -72,6 +75,7 @@ public static object %(name)s(%(type)s x, object other) {
     if (other is bool) return %(altname)s(x, (bool)other ? 1 : 0);
     if (other is long) return %(altname)s(x, (long)other);
     if ((object)(bi = other as BigInteger) != null) return %(altname)s(x, bi);
+    if ((object)(el = other as ExtensibleLong) != null) return %(altname)s(x, el.Value);
     if ((object)(xi = other as ExtensibleInt) != null) return %(altname)s(x, xi.value);
     if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
@@ -90,6 +94,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) return IntOps.%(altname)s((int)other, x);
     if (other is Complex64) {
@@ -101,6 +106,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     if (other is bool) return %(altname)s((bool)other ? 1 : 0, x);
     if (other is long) return %(altname)s((long)other, x);
     if ((object)(bi = other as BigInteger) != null) return %(altname)s(bi, x);
+    if ((object)(el = other as ExtensibleLong) != null) return %(altname)s(el.Value, x);
     if ((object)(xi = other as ExtensibleInt) != null) return %(altname)s(xi.value, x);
     if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
@@ -119,12 +125,14 @@ long_code_integers = """
 public static object %(name)s(BigInteger x, object other) {
     BigInteger bi;
     ExtensibleInt xi;
+    ExtensibleLong xl;
 
     if ((object)(bi = other as BigInteger) != null) return x %(sym)s bi;
     if (other is long) return x %(sym)s (long)other;
     if (other is int) return x %(sym)s (int)other;
     if (other is bool) return x %(sym)s ((bool)other ? 1 : 0);
     if ((object)(xi = other as ExtensibleInt) != null) return x %(sym)s xi.value;
+    if ((object)(xl = other as ExtensibleLong) != null) return x %(sym)s xl.Value;
     if (other is byte) return x %(sym)s (int)((byte)other);
     return Ops.NotImplemented;
 }
@@ -137,9 +145,11 @@ public static object %(name)s(BigInteger x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong xl;
 
     if (other is int) return %(name)s(x, (int)other);
     if ((object)(bi = other as BigInteger) != null) return %(name)s(x, bi);
+    if ((xl = other as ExtensibleLong) != null) return %(name)s(x, xl.Value);
     if (other is double) return %(name)s(x, (double)other);
     if (other is Complex64) return ComplexOps.%(name)s(x, (Complex64)other);
     if (other is bool) return %(name)s(x, (bool)other ? 1 : 0);
@@ -159,6 +169,7 @@ public static object %(name)s(double x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong xl;
 
     if (other is double) return x %(sym)s ((double)other);
     if (other is int) return x %(sym)s ((int)other);
@@ -174,6 +185,7 @@ public static object %(name)s(double x, object other) {
     if (other is long) return x %(sym)s ((long)other);
     if ((object)(xi = other as ExtensibleInt) != null) return x %(sym)s xi.value;
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.%(name)s(Complex64.MakeReal(x), xc.value);
+    if ((object)(xl = other as ExtensibleLong) != null) return x %(sym)s xl.Value;
     return Ops.NotImplemented;
 }
 
@@ -184,6 +196,7 @@ public static object Reverse%(name)s(double x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong xl;
 
     if (other is double) return ((double)other) %(sym)s x;
     if (other is int) return ((int)other) %(sym)s x;
@@ -195,6 +208,7 @@ public static object Reverse%(name)s(double x, object other) {
     if (other is long) return ((long)other) %(sym)s x;
     if ((object)(xi = other as ExtensibleInt) != null) return xi.value %(sym)s x;
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.%(name)s(xc.value, Complex64.MakeReal(x));
+    if ((object)(xl = other as ExtensibleLong) != null) return xl.Value %(sym)s x;
     if (other is IConvertible) {
         double y = ((IConvertible)other).ToDouble(null);
         return x %(sym)s y;
@@ -210,6 +224,7 @@ public static object %(name)s(double x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong xl;
 
     if (other is double) return %(name)s(x, ((double)other));
     if (other is int) return %(name)s(x, ((int)other));
@@ -221,6 +236,7 @@ public static object %(name)s(double x, object other) {
     if (other is long) return %(name)s(x, ((long)other));
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.%(name)s(Complex64.MakeReal(x), xc.value);
     if ((object)(xi = other as ExtensibleInt) != null) return %(name)s(x, xi.value);
+    if ((object)(xl = other as ExtensibleLong) != null) return %(name)s(x, xl.Value);
     if (other is byte) return %(name)s(x, (int)((byte)other));
    return Ops.NotImplemented;
 }
@@ -231,6 +247,7 @@ public static object Reverse%(name)s(double x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong xl;
 
     if (other is double) return Reverse%(name)s(x, ((double)other));
     if (other is int) return Reverse%(name)s(x, ((int)other));
@@ -242,6 +259,7 @@ public static object Reverse%(name)s(double x, object other) {
     if (other is long) return Reverse%(name)s(x, ((long)other));
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), xc.value);
     if ((object)(xi = other as ExtensibleInt) != null) return Reverse%(name)s(x, xi.value);
+    if ((object)(xl = other as ExtensibleLong) != null) return Reverse%(name)s(x, xl.Value);
     if (other is byte) return Reverse%(name)s(x, (int)((byte)other));
    return Ops.NotImplemented;
 }
@@ -255,6 +273,7 @@ public static object %(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong xl;
 
     if (other is int) {
         return x %(sym)s (int)other;
@@ -272,6 +291,8 @@ public static object %(name)s(%(type)s x, object other) {
         return x %(sym)s xi.value;
     } else if ((object)(xf = other as ExtensibleFloat) != null) {
         return x %(sym)s xf.value;
+    } else if ((object)(xl = other as ExtensibleLong) != null) {
+        return x %(sym)s xl.Value;
     } else if(other is string) {
         return Ops.NotImplemented;
     } else if (other is IConvertible) {
@@ -288,6 +309,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong xl;
 
     if (other is int) {
         return (int)other %(sym)s x;
@@ -305,6 +327,8 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         return xi.value %(sym)s x;
     } else if ((object)(xf = other as ExtensibleFloat) != null) {
         return xf.value %(sym)s x;
+    } else if ((object)(xl = other as ExtensibleLong) != null) {
+        return xl.Value %(sym)s x;
     } else if(other is string) {
         return Ops.NotImplemented;
     } else if (other is IConvertible) {
@@ -322,6 +346,7 @@ public static object %(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong xl;
 
     if (other is int) return %(name)s(x, (Complex64) ((int)other));
     if (other is Complex64) return %(name)s(x, (Complex64) other);
@@ -332,6 +357,7 @@ public static object %(name)s(%(type)s x, object other) {
     if ((object)(xc = other as ExtensibleComplex) != null) return %(name)s(x, xc.value);
     if ((object)(xf = other as ExtensibleFloat) != null) return %(name)s(x, (Complex64)xf.value);
     if ((object)(xi = other as ExtensibleInt) != null) return %(name)s(x, (Complex64)xi.value);
+    if ((object)(xl = other as ExtensibleLong) != null) return %(name)s(x, (Complex64) xl.Value);
     if (other is byte) return %(name)s(x, (Complex64) (int)((byte)other));
     return Ops.NotImplemented;
 }
@@ -343,6 +369,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong xl;
 
     if (other is int) return Reverse%(name)s(x, (Complex64) ((int)other));
     if (other is Complex64) return Reverse%(name)s(x, (Complex64) other);
@@ -353,6 +380,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     if ((object)(xc = other as ExtensibleComplex) != null) return Reverse%(name)s(x, xc.value);
     if ((object)(xf = other as ExtensibleFloat) != null) return Reverse%(name)s(x, (Complex64)xf.value);
     if ((object)(xi = other as ExtensibleInt) != null) return Reverse%(name)s(x, (Complex64)xi.value);
+    if ((object)(xl = other as ExtensibleLong) != null) return Reverse%(name)s(x, (Complex64)xl.Value);
     if (other is byte) return Reverse%(name)s(x, (Complex64) (int)((byte)other));
     return Ops.NotImplemented;
 }
@@ -365,6 +393,7 @@ public static object %(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) {
         int y = (int)other;
@@ -404,6 +433,8 @@ public static object %(name)s(%(type)s x, object other) {
         return x %(sym)s xf.value;
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return ComplexOps.%(name)s(Complex64.MakeReal(x), xc);
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return BigInteger.Create(x) %(sym)s el.Value;
     } else if (other is byte) {
         int y = (byte)other;
         try {
@@ -423,6 +454,7 @@ public static object %(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) {
         int y = (int)other;
@@ -466,7 +498,10 @@ public static object %(name)s(%(type)s x, object other) {
         Complex64 y = xc.value;
         if(y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(Complex64.MakeReal(x), y);
-    }
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return LongOps.%(name)s(BigInteger.Create(x), el.Value);
+	}
+
     return Ops.NotImplemented;
 }
 
@@ -477,6 +512,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) {
         int y = (int)other;
@@ -520,7 +556,9 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         Complex64 y = xc.value;
         if(y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), y);
-    }
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return LongOps.Reverse%(name)s(BigInteger.Create(x), el.Value);
+	}
     return Ops.NotImplemented;
 }
 """
@@ -530,6 +568,7 @@ int_code_bitwise = """
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
     ExtensibleInt xi;
+    ExtensibleLong el;
 
     if (other is int) {
         return Ops.%(titleType)s2Object(x %(sym)s (int)other);
@@ -544,6 +583,8 @@ public static object %(name)s(%(type)s x, object other) {
         return Ops.%(titleType)s2Object(x %(sym)s xi.value);
     } else if (other is byte) {
         return Ops.%(titleType)s2Object(x %(sym)s (int)((byte)other));
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return BigInteger.Create(x) %(sym)s el.Value;
     }
     return Ops.NotImplemented;
 }
@@ -556,6 +597,7 @@ public static object %(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) {
         int y = (int)other;
@@ -597,6 +639,8 @@ public static object %(name)s(%(type)s x, object other) {
         return x %(sym)s xf.value;
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return Complex64.MakeReal(x) %(sym)s xc.value;
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return BigInteger.Create(x) %(sym)s el.Value;
     } else if (other is byte) {
         int y = (int)((byte)other);
         try {
@@ -614,6 +658,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) {
         int y = (int)other;
@@ -655,6 +700,8 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         return xf.value %(sym)s x;
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return xc.value %(sym)s Complex64.MakeReal(x);
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return el.Value %(sym)s BigInteger.Create(x);
     } else if (other is byte) {
         int y = (int)((byte)other);
         try {
@@ -674,6 +721,7 @@ public static object %(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) {
         int y = (int)other;
@@ -715,6 +763,8 @@ public static object %(name)s(%(type)s x, object other) {
         return FloatOps.%(name)s(x, xf.value);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return ComplexOps.%(name)s(Complex64.MakeReal(x), xc.value);
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return LongOps.%(name)s(BigInteger.Create(x), el.Value);
     } else if (other is byte) {
         int y = (int)((byte)other);
         try {
@@ -734,6 +784,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) {
         int y = (int)other;
@@ -775,6 +826,8 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         return FloatOps.Reverse%(name)s(x, xf.value);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), xc.value);
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return LongOps.Reverse%(name)s(BigInteger.Create(x), el.Value);
     } else if (other is byte) {
         int y = (int)((byte)other);
         try {
@@ -793,6 +846,7 @@ int64_code_bitwise = """
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
     ExtensibleInt xi;
+    ExtensibleLong el;
 
     if (other is int) {
         long y = (long)(int)other;
@@ -806,6 +860,8 @@ public static object %(name)s(%(type)s x, object other) {
     } else if ((object)(xi = other as ExtensibleInt) != null) {
         long y = (long)xi.value;
         return Ops.%(titleType)s2Object(x %(sym)s y);
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return BigInteger.Create(x) %(sym)s el.Value;
     } else if (other is byte) {
         return Ops.%(titleType)s2Object(x %(sym)s (long)((byte)other));
     }
@@ -820,6 +876,7 @@ public static object %(name)s(long x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) return %(name)s(x, (int)other);
     if ((object)(bi = other as BigInteger) != null) return %(name)s(x, bi);
@@ -831,6 +888,7 @@ public static object %(name)s(long x, object other) {
     if ((object)(xi = other as ExtensibleInt) != null) return %(name)s(x, xi.value);
     if ((object)(xf = other as ExtensibleFloat) != null) return %(name)s(x, xf.value);
     if ((object)(xc = other as ExtensibleComplex) != null) return %(name)s(x, xc.value);
+    if ((object)(el = other as ExtensibleLong) != null) return %(name)s(x, el.Value);
     if (other is byte) return %(name)s(x, (int)((byte)other));
     return Ops.NotImplemented;
 }
@@ -843,6 +901,7 @@ public static object %(name)s(int x, object other) {
     ExtensibleInt xi;
     ExtensibleFloat xf;
     ExtensibleComplex xc;
+    ExtensibleLong el;
 
     if (other is int) {
         return %(name)s(x, (int)other);
@@ -862,6 +921,8 @@ public static object %(name)s(int x, object other) {
         return %(name)s(x, xf.value);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return %(name)s(x, xc.value);
+    } else if ((object)(el = other as ExtensibleLong) != null) {
+        return %(name)s(x, el.Value);
     }
     return Ops.NotImplemented;
 }

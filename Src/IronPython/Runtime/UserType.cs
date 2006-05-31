@@ -201,7 +201,12 @@ namespace IronPython.Runtime {
             if (__repr__F.IsObjectMethod()) {
                 return self.ToString();
             } else {
-                return (string)__repr__F.Invoke(self);
+                Conversion conv;
+                object ret = __repr__F.Invoke(self);
+                string strRet = Converter.TryConvertToString(ret, out conv);
+                if (ret == null || conv == Conversion.None) throw Ops.TypeError("__repr__ returned non-string type ({0})", Ops.GetDynamicType(ret).__name__);
+
+                return strRet;
             }
         }
 
@@ -325,6 +330,42 @@ namespace IronPython.Runtime {
             return baseNames;
         }
 
+        public override object Invoke(object target, SymbolId name, params object[] args) {
+            object ret;
+            if (TryInvoke(target, name, out ret, args)) return ret;
+
+            throw Ops.TypeError("{0} object has no attribute '{1}'",
+                Ops.StringRepr(Ops.GetDynamicType(target)),
+                name.ToString());
+        }
+
+        public override bool TryInvoke(object target, SymbolId name, out object ret, params object[] args) {
+            object meth;
+            if (TryLookupBoundSlot(DefaultContext.Default, target, name, out meth)) {
+                ret = Ops.Call(meth, args);
+                return true;
+            } else {
+                ret = null;
+                return false;
+            }
+        }
+
+        public override bool TryFancyInvoke(object target, SymbolId name, object[] args, string[] names, out object ret) {
+            object meth;
+            if (TryLookupBoundSlot(DefaultContext.Default, target, name, out meth)) {
+                IFancyCallable ifc = target as IFancyCallable;
+                if (ifc != null) {
+                    ret = ifc.Call(DefaultContext.Default, args, names);
+                    return true;
+                }
+                ret = Ops.Call(meth, args, names);
+                return true;
+            } else {
+                ret = null;
+                return false;
+            }
+        }
+
         #endregion
 
         #region Object overrides
@@ -352,8 +393,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            if (TryLookupSlot(context, name, out ret)) {
-                ret = Ops.GetDescriptor(ret, self, this);
+            if (TryLookupBoundSlot(context, self, name, out ret)) {
                 return true;
             }
 
@@ -482,7 +522,7 @@ namespace IronPython.Runtime {
 
         public object Call(ICallerContext context, object[] args, string[] names) {
             object newMethod, newObject = null;
-            if (TryGetAttr(context, SymbolTable.NewInst, out newMethod)) {
+            if (TryLookupSlot(context, SymbolTable.NewInst, out newMethod)) {
                 IFancyCallable ifc = newMethod as IFancyCallable;
                 if (ifc != null) {
                     newObject = ifc.Call(context, PrependThis(args), names);
@@ -627,8 +667,12 @@ namespace IronPython.Runtime {
 
             object ret;
             UserType ut = o.GetDynamicType() as UserType;
-            if (ut.TryLookupSlot(DefaultContext.Default, SymbolTable.Repr, out ret)) {
-                return Converter.ConvertToString(Ops.Call(Ops.GetDescriptor(ret, o, ut)));
+            if (ut.TryLookupBoundSlot(DefaultContext.Default, o, SymbolTable.Repr, out ret)) {
+                Conversion conv;
+                string strRet = Converter.TryConvertToString(Ops.Call(Ops.GetDescriptor(ret, o, ut)), out conv);
+                if (ret == null || conv == Conversion.None) throw Ops.TypeError("__repr__ returned non-string type ({0})", Ops.GetDynamicType(ret).__name__);
+
+                return strRet;
             }
 
             return PythonType.ReprMethod(o).ToString();
@@ -640,7 +684,8 @@ namespace IronPython.Runtime {
 
         public override object Negate(object self) {
             object func;
-            if (Ops.TryGetAttr(self, SymbolTable.OpNegate, out func)) return Ops.Call(func);
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpNegate, out func)) 
+                return Ops.Call(func);
 
             return Ops.NotImplemented;
         }
@@ -654,13 +699,14 @@ namespace IronPython.Runtime {
 
         public override object OnesComplement(object self) {
             object func;
-            if (Ops.TryGetAttr(self, SymbolTable.OpOnesComplement, out func)) return Ops.Call(func);
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpOnesComplement, out func)) 
+                return Ops.Call(func);
             return Ops.NotImplemented;
         }
 
         public override object CompareTo(object self, object other) {
             object func;
-            if (PythonType.TryLookupSpecialMethod(self, SymbolTable.Cmp, out func)) {
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Cmp, out func)) {
                 return Ops.Call(func, other);
             }
 
@@ -669,12 +715,12 @@ namespace IronPython.Runtime {
 
         public override object Equal(object self, object other) {
             object func;
-            if (PythonType.TryLookupSpecialMethod(self, SymbolTable.OpEqual, out func)) {
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpEqual, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
 
-            if (PythonType.TryLookupSpecialMethod(self, SymbolTable.Cmp, out func) && func != __cmp__F) {
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Cmp, out func) && func != __cmp__F) {
                 object ret = Ops.Call(func, other);
                 if (ret != Ops.NotImplemented) return Ops.CompareToZero(ret) == 0;
 
@@ -691,12 +737,12 @@ namespace IronPython.Runtime {
 
         public override object NotEqual(object self, object other) {
             object func;
-            if (PythonType.TryLookupSpecialMethod(self, SymbolTable.OpNotEqual, out func)) {
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpNotEqual, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
 
-            if (PythonType.TryLookupSpecialMethod(self, SymbolTable.Cmp, out func) && func != __cmp__F) {
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Cmp, out func) && func != __cmp__F) {
                 object ret = Ops.Call(func, other);
                 if (ret != Ops.NotImplemented) return Ops.CompareToZero(ret) != 0;
 
@@ -899,7 +945,7 @@ namespace IronPython.Runtime {
                     // uncommon case - multiple inheritance only (maybe?)
                     for (int j = 0; j < keys.Length; j++) {
                         if (nd.keys[i] == keys[j]) {
-                            PropagateInheritedKey(j, i, nd);
+                            PropagateInheritedKey(i, j, nd);
                         }
                     }
                 }
@@ -911,7 +957,7 @@ namespace IronPython.Runtime {
                 // our parent didn't has an override, so we get
                 // their override too.  Both are user defined functions
                 // so we clear isInherited for this slot.
-                values[to] = parent.values[to];
+                values[to] = parent.values[from];
                 isInherited[to] = false;
             }
         }

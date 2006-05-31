@@ -129,16 +129,14 @@ namespace IronPython.Runtime {
         }
 
         private static object FastNew(object o) {
-            BigInteger bigInt;
+            ExtensibleLong el;
 
             if (o is string) return Make(null, (string)o, 10);
             if (o is double) return FloatOps.ToInteger((double)o);
             if (o is int || o is long) return o;
-            if (o.GetType() == typeof(BigInteger)) {
-                return o;
-            } else if (!Object.ReferenceEquals((bigInt = o as BigInteger), null)) {
-                return new BigInteger(bigInt);
-            }
+            if (o is BigInteger) return o;
+            if ((el = o as ExtensibleLong)!=null) return el.Value;
+
             if (o is Complex64) throw Ops.TypeError("can't convert complex to int; use int(abs(z))");
 
             return Converter.ConvertToInt32(o);
@@ -263,12 +261,15 @@ namespace IronPython.Runtime {
 
         [PythonName("__powmod__")]
         public static object PowerMod(int x, int y, object z) {
+            ExtensibleLong el;
             if (z is int) {
                 return PowerMod(x, y, (int)z);
             } else if (z is long) {
                 return Int64Ops.PowerMod(x, y, (long)z);
             } else if (z is BigInteger) {
                 return LongOps.PowerMod(BigInteger.Create(x), BigInteger.Create(y), (BigInteger)z);
+            } else if ((el = z as ExtensibleLong)!=null) {
+                return LongOps.PowerMod(BigInteger.Create(x), BigInteger.Create(y), el.Value);
             }
             return Ops.NotImplemented;
         }
@@ -398,6 +399,8 @@ namespace IronPython.Runtime {
         }
 
         private static bool TryEquals(int x, object other, out bool res) {
+            ExtensibleLong el;
+
             if (other is int) {
                 res = x == (int)other;
                 return true;
@@ -439,6 +442,9 @@ namespace IronPython.Runtime {
                 return true;
             }  else if (other is ExtensibleComplex) { 
                 res = x == ((ExtensibleComplex)other).value;
+                return true;
+            } else if ((el = other as ExtensibleLong)!=null) {
+                res = (BigInteger)x == el.Value;
                 return true;
             } else if (other is uint) {
                 uint val = (uint)other;
@@ -488,6 +494,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__lshift__")]
         public static object LeftShift(int x, object other) {
+            ExtensibleLong el;
+
             if (other is int) {
                 return LeftShift(x, (int)other);
             } else if (other is long) {
@@ -500,6 +508,8 @@ namespace IronPython.Runtime {
                 return LeftShift(x, ((ExtensibleInt)other).value);
             } else if (other is byte) {
                 return LeftShift(x, (byte)other);
+            } else if ((el = other as ExtensibleLong)!=null) {
+                return LongOps.LeftShift(BigInteger.Create(x), el.Value);
             }
             return Ops.NotImplemented;
         }
@@ -519,6 +529,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__rshift__")]
         public static object RightShift(int x, object other) {
+            ExtensibleLong el;
+
             if (other is int) {
                 return RightShift(x, (int)other);
             } else if (other is BigInteger) {
@@ -538,6 +550,8 @@ namespace IronPython.Runtime {
                 return RightShift(x, ((ExtensibleInt)other).value);
             } else if (other is byte) {
                 return RightShift(x, (byte)other);
+            } else if ((el = other as ExtensibleLong)!=null) {
+                return LongOps.RightShift(BigInteger.Create(x), el.Value);
             }
 
             return Ops.NotImplemented;
@@ -566,6 +580,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__pow__")]
         public static object Power(int x, object other) {
+            ExtensibleLong el;
+
             if (other is int) {
                 return Power(x, (int)other);
             } else if (other is BigInteger) {
@@ -604,6 +620,16 @@ namespace IronPython.Runtime {
                 return FloatOps.Power(x, ((ExtensibleFloat)other).value);
             } else if (other is ExtensibleComplex) {
                 return ComplexOps.Power(x, ((ExtensibleComplex)other).value);
+            } else if ((el = other as ExtensibleLong)!=null) {
+                BigInteger lexp = el.Value;
+                int iexp;
+                if (lexp.AsInt32(out iexp)) {
+                    return Power(x, iexp);
+                } else {
+                    if (x == 0) return 0;
+                    if (x == 1) return 1;
+                    throw Ops.ValueError("number too big");
+                }
             }
             return Ops.NotImplemented;
         }

@@ -345,8 +345,16 @@ namespace IronPython.Runtime {
             return s;
         }
 
+        public static object GetLength(object o) {
+            return Ops.NotImplemented;
+        }
+
+        public static object IsNonZero(object o) {
+            return Ops.NotImplemented;
+        }
+
         public static object Plus(object o) {
-            object call;
+            object ret;
 
             if (o is int) return o;
             else if (o is double) return o;
@@ -355,11 +363,9 @@ namespace IronPython.Runtime {
             else if (o is long) return o;
             else if (o is float) return o;
             else if (o is bool) return Int2Object((bool)o ? 1 : 0);
-            else if (Ops.TryGetAttr(o, SymbolTable.Positive, out call)) {
-                return Ops.Call(call);
-            }
+            else if(Ops.TryToInvoke(o, SymbolTable.Positive, out ret)) return ret;
 
-            object ret = GetDynamicType(o).Positive(o);
+            ret = GetDynamicType(o).Positive(o);
             if (ret != Ops.NotImplemented) return ret;
 
             throw Ops.TypeError("bad operand type for unary +");
@@ -431,8 +437,8 @@ namespace IronPython.Runtime {
             }
 
             object contains;
-            if (Ops.TryGetAttr(y, SymbolTable.Contains, out contains)) {
-                return Ops.IsTrue(Ops.Call(contains, x)) ? TRUE : FALSE;
+            if(Ops.TryToInvoke(y, SymbolTable.Contains, out contains, x)) {
+                return Ops.IsTrue(contains) ? TRUE : FALSE;
             }
 
             IEnumerator e = GetEnumerator(y);
@@ -461,8 +467,8 @@ namespace IronPython.Runtime {
             }
 
             object contains;
-            if (Ops.TryGetAttr(y, SymbolTable.Contains, out contains)) {
-                return Ops.IsTrue(Ops.Call(contains, x));
+            if (Ops.TryToInvoke(y, SymbolTable.Contains, out contains, x)) {
+                return Ops.IsTrue(contains);
             }
 
             IEnumerator e = GetEnumerator(y);
@@ -1197,8 +1203,8 @@ namespace IronPython.Runtime {
             else if (o is BigInteger) return LongOps.Hex((BigInteger)o);
 
             object hex;
-            if (TryGetAttr(o, SymbolTable.ConvertToHex, out hex)) {
-                return Call(hex);
+            if(TryToInvoke(o, SymbolTable.ConvertToHex, out hex)) {
+                return hex;
             }
             throw TypeError("hex() argument cannot be converted to hex");
         }
@@ -1212,9 +1218,9 @@ namespace IronPython.Runtime {
                 return LongOps.Oct((BigInteger)o);
             }
 
-            object hex;
-            if (TryGetAttr(o, SymbolTable.ConvertToOctal, out hex)) {
-                return Call(hex);
+            object octal;
+            if (TryToInvoke(o, SymbolTable.ConvertToOctal, out octal)) {
+                return octal;
             }
             throw TypeError("hex() argument cannot be converted to hex");
         }
@@ -1234,7 +1240,8 @@ namespace IronPython.Runtime {
             if (ic != null) return ic.Call(context, args, names);
 
             object callMeth;
-            if (Ops.TryGetAttr(func, SymbolTable.Call, out callMeth)) {
+
+            if (Ops.TryToInvoke(func, SymbolTable.Call, out callMeth)) {
                 ic = callMeth as IFancyCallable;
 
                 if (ic != null) return ic.Call(context, args, names);
@@ -1333,11 +1340,9 @@ namespace IronPython.Runtime {
             IFancyCallable ic = func as IFancyCallable;
             if (ic != null) return ic.Call(context, args, names);
 
-            object callMeth;
-            if (Ops.TryGetAttr(func, SymbolTable.Call, out callMeth)) {
-                ic = callMeth as IFancyCallable;
-
-                if (ic != null) return ic.Call(context, args, names);
+            object ret;
+            if (TryFancyInvoke(func, SymbolTable.Call, args, names, out ret)) {
+                return ret;
             }
 
             throw new Exception("this object is not callable with keyword parameters");
@@ -1682,19 +1687,15 @@ namespace IronPython.Runtime {
         }
 
         public static object Invoke(object target, SymbolId name, params object[] args) {
-            object meth = GetAttr(DefaultContext.Default, target, name);
-            return Call(meth, args);
+            return Ops.GetDynamicType(target).Invoke(target, name, args);
         }
 
         public static bool TryToInvoke(object target, SymbolId name, out object ret, params object[] args) {
-            object meth;
-            if (TryGetAttr(target, name, out meth)) {
-                ret = Call(meth, args);
-                return true;
-            } else {
-                ret = null;
-                return false;
-            }
+            return Ops.GetDynamicType(target).TryInvoke(target, name, out ret, args);
+        }
+
+        public static bool TryFancyInvoke(object target, SymbolId name, object[] args, string[] names, out object ret) {
+            return Ops.GetDynamicType(target).TryFancyInvoke(target, name, args, names, out ret);
         }
 
         private static void Write(SystemState state, object f, string text) {

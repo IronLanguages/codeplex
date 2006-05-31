@@ -47,6 +47,7 @@ alltypes = {
     'ExtensibleComplex' : Type('ExtensibleComplex', "ExtensibleComplex", 128, "0", False, "ec", False),
     'ExtensibleString' : Type('ExtensibleString', "ExtensibleString", 50, "", False, "es", False),
     'ExtensibleFloat' : Type('ExtensibleFloat', "ExtensibleFloat", 125, "", False, "ef", False),
+    'ExtensibleLong' : Type('ExtensibleLong', "ExtensibleLong", 129, "", False, "el", False),
     "Complex64" : Type("Complex64", "Complex64", 40, "new Complex64(0.0)", False, sealed=False),
     "Delegate"  : Type("Delegate", "Delegate", 46, "null", False, "dlg", False),
     "IEnumerator" : Type("IEnumerator", "IEnumerator", 47, "null", False, "ie", False),
@@ -196,12 +197,13 @@ class ToBool(To):
         cw.writeline("Enum e;")
         cw.writeline("string str;")
         cw.writeline("ExtensibleInt ei;")
+        cw.writeline("ExtensibleLong el;")
         cw.writeline("")
         cw.enter_block("if (value == null)")
         cw.writeline("conversion = Conversion.None;")
         cw.writeline("return false;")
         for f in self.fromlist:
-            if f.fromtype.lowercase == "ExtensibleInt": continue 
+            if f.fromtype.lowercase.startswith("Extensible"): continue 
             f.generate(cw, self.to, False)
         cw.else_block("if (value is IPythonContainer)")
         cw.writeline("conversion = Conversion.Eval;")
@@ -230,7 +232,7 @@ class ToBool(To):
         cw.exit_block()
         cw.writeline("else throw Ops.TypeError(\"an integer is required\");");
         for f in self.fromlist:
-            if f.fromtype.lowercase == "ExtensibleInt":  
+            if f.fromtype.lowercase.startswith("Extensible"):
                 f.generate(cw, self.to, False)                    
         cw.exit_block()
 
@@ -378,8 +380,8 @@ class FromCall(From):
         self.callName = callName
         self.callId = callId
         self.fromtype = alltypes["object"]
-        self.cond = [ "Ops.TryGetAttr(value, "+ self.callId + ", out %s)"]
-        self.cust = ["    %(value_name)s = Ops.Call(%(value_name)s);",
+        self.cond = [ "Ops.TryToInvoke(value, "+ self.callId + ", out %s)"]
+        self.cust = [
                      "    if (%(value_name)s is "+type+")",
                      "        return ("+type+")%(value_name)s;",
                     ]
@@ -454,6 +456,11 @@ conversions = [
         From("ExtensibleInt", ct="NonStandard", cust=[
                     "conversion = Conversion.%(conversion)s;",
                     "return ei.value != 0;",
+                ]
+            ),
+        From("ExtensibleLong", ct="NonStandard", cust=[
+                    "conversion = Conversion.%(conversion)s;",
+                    "return el.Value != 0;",
                 ]
             ),
         From("char", ct="NonStandard", cust=[
@@ -547,6 +554,14 @@ conversions = [
                  "}"
                  ]
              ),
+        From("ExtensibleLong", None,
+                ["int res;",
+                 "if (el.Value.AsInt32(out res)) {",
+                 "    conversion = Conversion.%(conversion)s;",
+                 "    return res;",
+                 "}"
+                 ]
+             ),
         From("bool", None,
                 ["conversion = Conversion.%(conversion)s;",
                  "return ((%(from_name)s)%(value_name)s) ? 1 : 0;",
@@ -618,6 +633,14 @@ conversions = [
                 ["conversion = Conversion.%(conversion)s;",
                 "return (%(to_name)s)ef.value;"]
                 ),
+        From("ExtensibleLong", None,
+                ["double res;",
+                 "if (el.Value.TryToFloat64(out res)) {",
+                 "    conversion = Conversion.%(conversion)s;",
+                 "    return res;",
+                 "}"
+                 ]
+             ),
         From("BigInteger", None,
                 ["conversion = Conversion.%(conversion)s;",
                 "double res;",
@@ -661,6 +684,14 @@ conversions = [
         FromLimit("uint", None, "Byte.MaxValue"),
         FromLimit("long", "Byte.MinValue", "Byte.MaxValue"),
         FromLimit("ulong", None, "Byte.MaxValue"),
+        From("ExtensibleLong", None,
+                [
+                "if (el.Value >= BigInteger.Create(Byte.MinValue) &&",
+                "    el.Value <= BigInteger.Create(Byte.MaxValue)) {",
+                "    conversion = Conversion.Implicit;",
+                "    return (byte)(int)el.Value;",
+                "}"]
+                ),
         From("BigInteger", None,
                 [
                 "if (bi >= BigInteger.Create(Byte.MinValue) &&",
@@ -689,6 +720,14 @@ conversions = [
         FromLimit("uint", None, "SByte.MaxValue"),
         FromLimit("long", "SByte.MinValue", "SByte.MaxValue"),
         FromLimit("ulong", None, "(ulong)SByte.MaxValue"),
+        From("ExtensibleLong", None,
+                [
+                "if (el.Value >= BigInteger.Create(SByte.MinValue) &&",
+                "    el.Value <= BigInteger.Create(SByte.MaxValue)) {",
+                "    conversion = Conversion.Implicit;",
+                "    return (sbyte)(int)el.Value;",
+                "}"]
+                ),
         From("BigInteger", None,
                 [
                 "if (bi >= BigInteger.Create(SByte.MinValue) &&",
@@ -717,6 +756,14 @@ conversions = [
         FromLimit("uint", None, "Int16.MaxValue"),
         FromLimit("long", "Int16.MinValue", "Int16.MaxValue"),
         FromLimit("ulong", None, "(ulong)Int16.MaxValue"),
+        From("ExtensibleLong", None,
+                [
+                "if (el.Value >= BigInteger.Create(Int16.MinValue) &&",
+                "    el.Value <= BigInteger.Create(Int16.MaxValue)) {",
+                "    conversion = Conversion.Implicit;",
+                "    return (short)(int)el.Value;",
+                "}"]
+                ),
         From("BigInteger", None,
                 [
                 "if (bi >= BigInteger.Create(Int16.MinValue) &&",
@@ -747,6 +794,13 @@ conversions = [
         From("ExtensibleInt", None,
                 ["conversion = Conversion.%(conversion)s;",
                 "return (%(to_name)s)ei.value;"]),
+        From("ExtensibleLong", None,
+                ["uint res;",
+                "if (el.Value.AsUInt32(out res)) {",
+                "    conversion = Conversion.%(conversion)s;",
+                "    return res;",
+                "}"]
+                ),
         From("bool", cust=[
                 "conversion = Conversion.%(conversion)s;",
                 "return ((%(from_name)s)%(value_name)s) ? 1u : 0u;",
@@ -779,6 +833,13 @@ conversions = [
                 [
                 "ulong res;",
                 "if (bi.AsUInt64(out res)) {",
+                "    conversion = Conversion.%(conversion)s;",
+                "    return res;",
+                "}"]),
+        From("ExtensibleLong", None,
+                [
+                "ulong res;",
+                "if (el.Value.AsUInt64(out res)) {",
                 "    conversion = Conversion.%(conversion)s;",
                 "    return res;",
                 "}"]),
@@ -816,6 +877,14 @@ conversions = [
                 "    return (ushort)(int)bi;",
                 "}"]
                 ),
+        From("ExtensibleLong", None,
+                [
+                "if (el.Value >= BigInteger.Create(UInt16.MinValue) &&",
+                "    el.Value <= BigInteger.Create(UInt16.MaxValue)) {",
+                "    conversion = Conversion.Implicit;",
+                "    return (ushort)(int)bi;",
+                "}"]
+                ),
 #        FromX("float"),
 #        FromX("double"),
         FromLimit("decimal", "UInt16.MinValue", "UInt16.MaxValue"),
@@ -844,6 +913,12 @@ conversions = [
                 "conversion = Conversion.%(conversion)s;",
                 "double res;",
                 "if (bi.TryToFloat64(out res)) return (float)res;"],
+                "Implicit"),
+        From("ExtensibleLong", None,
+                [
+                "conversion = Conversion.%(conversion)s;",
+                "double res;",
+                "if (el.Value.TryToFloat64(out res)) return (float)res;"],
                 "Implicit"),
         From("bool", cust=[
                 "conversion = Conversion.%(conversion)s;",
@@ -874,6 +949,10 @@ conversions = [
     ),
     ToInteger("BigInteger", [
         From("BigInteger", ct="Identity"),
+        From("ExtensibleLong", cust= [
+			"conversion = Conversion.%(conversion)s;",
+			"return el.Value;"
+			]),
         From("int", ct="Identity"),
         From("long", ct="Identity"),
         FromCall("__long__", "BigInteger", 'SymbolTable.ConvertToLong') 

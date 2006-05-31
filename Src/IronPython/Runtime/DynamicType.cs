@@ -142,6 +142,38 @@ namespace IronPython.Runtime {
         public virtual object Coerce(object self, object other) {
             return Ops.NotImplemented;
         }
+
+        public virtual object Invoke(object target, SymbolId name, params object[] args) {
+            return Ops.Call(Ops.GetAttr(DefaultContext.Default, target, name), args);
+        }
+
+        public virtual bool TryInvoke(object target, SymbolId name, out object ret, params object []args) {
+            object meth;
+            if (Ops.TryGetAttr(target, name, out meth)) {
+                ret = Ops.Call(meth, args);
+                return true;
+            } else {
+                ret = null;
+                return false;
+            }
+        }
+
+        public virtual bool TryFancyInvoke(object target, SymbolId name, object[] args, string[] names, out object ret) {
+            object meth;
+            if (Ops.TryGetAttr(target, name, out meth)) {
+                IFancyCallable ifc = meth as IFancyCallable;
+                if (ifc != null) {
+                    ret = ifc.Call(DefaultContext.Default, args, names);
+                    return true;
+                }
+
+                ret = Ops.Call(meth, args, names);
+                return true;
+            } else {
+                ret = null;
+                return false;
+            }
+        }
     }
 
     [PythonType("NoneType")]

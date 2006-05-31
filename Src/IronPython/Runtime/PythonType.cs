@@ -210,7 +210,7 @@ namespace IronPython.Runtime {
             return null;
         }
 
-
+        
         /// <summary>
         /// Looks up a __xyz__ method in slots only (because we should never lookup
         /// in instance members for these)
@@ -330,6 +330,14 @@ namespace IronPython.Runtime {
                     }
                 }
             }
+        }
+
+        internal bool TryLookupBoundSlot(ICallerContext context, object inst, SymbolId name, out object ret) {
+            if (TryLookupSlot(context, name, out ret)) {
+                ret = Ops.GetDescriptor(ret, inst, this);
+                return true;
+            }
+            return false;
         }
 
         protected bool TryLookupSlot(ICallerContext context, SymbolId name, out object ret) {

@@ -874,7 +874,7 @@ def ops_generator_usertype(cw, basicTemplate, cmpTemplate):
 USERTYPE = """
 public override object %(clrName)s(object self, object other) {
     object func;
-    if (Ops.TryGetAttr(self, SymbolTable.Op%(clrName)s, out func)) {
+    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Op%(clrName)s, out func)) {
         object ret;
         if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
     }
@@ -882,7 +882,7 @@ public override object %(clrName)s(object self, object other) {
 }
 public override object Reverse%(clrName)s(object self, object other) {
     object func;
-    if (Ops.TryGetAttr(self, SymbolTable.OpReverse%(clrName)s, out func)){
+    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverse%(clrName)s, out func)){
         object ret;
         if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
     }
@@ -891,7 +891,7 @@ public override object Reverse%(clrName)s(object self, object other) {
 }
 public override object InPlace%(clrName)s(object self, object other) {
     object func;
-    if (Ops.TryGetAttr(self, SymbolTable.OpInPlace%(clrName)s, out func)) {
+    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpInPlace%(clrName)s, out func)) {
         object ret;
         if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
     }
@@ -901,7 +901,7 @@ public override object InPlace%(clrName)s(object self, object other) {
 USERTYPE_CMP = """
 public override object %(clrName)s(object self, object other) {
     object func;
-    if (Ops.TryGetAttr(self, SymbolTable.Op%(clrName)s, out func)) {
+    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Op%(clrName)s, out func)) {
         object ret;
         if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
     }

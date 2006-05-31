@@ -102,6 +102,21 @@ namespace IronPython.Runtime {
             this.nameType = nt;
         }
 
+        public string Documentation {
+            [PythonName("__doc__")]
+            get {
+                object[] attrs = info.GetCustomAttributes(typeof(DocumentationAttribute), false);
+                if (attrs.Length == 0) return null;
+
+                StringBuilder docStr = new StringBuilder();
+                for (int i = 0; i < attrs.Length; i++) {
+                    docStr.Append(((DocumentationAttribute)attrs[i]).Value);
+                    docStr.Append(Environment.NewLine);
+                }
+                return docStr.ToString();
+            }
+        }
+
         [PythonName("__get__")]
         public object GetAttribute(object instance, object context) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);

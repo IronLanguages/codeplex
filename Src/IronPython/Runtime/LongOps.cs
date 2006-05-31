@@ -26,19 +26,27 @@ namespace IronPython.Runtime {
     /// the derived class from a base class, so we define ExtensibeLong
     /// and give it a new ctor.
     /// </summary>
-    public class ExtensibleLong : BigInteger, IRichComparable {
-        public ExtensibleLong()
-            : base(0, new uint[0]) {
+    public class ExtensibleLong : IRichComparable {
+        private BigInteger value;
+
+        public ExtensibleLong() {
+            value = BigInteger.Zero;
         }
 
-        public ExtensibleLong(BigInteger val)
-            : base(val) {
+        public ExtensibleLong(BigInteger val) {
+            value = val;
+        }
+
+        public BigInteger Value {
+            get {
+                return value;
+            }
         }
 
         #region IRichComparable Members
 
-        public new object CompareTo(object other) {
-            return LongOps.Compare(this, other);
+        public object CompareTo(object other) {
+            return LongOps.Compare(this.Value, other);
         }
 
         public object GreaterThan(object other) {
@@ -87,7 +95,7 @@ namespace IronPython.Runtime {
             if (other == null) return Ops.FALSE;
 
             BigInteger bi = other as BigInteger;
-            if (!object.ReferenceEquals(bi, null)) return Ops.Bool2Object(Equals(bi));
+            if (!object.ReferenceEquals(bi, null)) return value == bi;
 
             return Ops.NotImplemented;
         }
@@ -102,13 +110,28 @@ namespace IronPython.Runtime {
 
         #endregion
 
+        [PythonName("__str__")]
+        public override string ToString() {
+            return value.ToString();
+        }
+
+        public override bool Equals(object obj) {
+            return value.Equals(obj);
+        }
+
+        public override int GetHashCode() {
+            return value.GetHashCode();
+        }
     }
 
     public static partial class LongOps {
         static ReflectedType LongType;
         public static ReflectedType MakeDynamicType() {
             if (LongType == null) {
-                ReflectedType res = new OpsReflectedType("long", typeof(BigInteger), typeof(LongOps), typeof(ExtensibleLong));
+                ReflectedType res = new OpsReflectedType("long",
+                    typeof(BigInteger), 
+                    typeof(LongOps), 
+                    typeof(ExtensibleLong));
 
                 if (Interlocked.CompareExchange<ReflectedType>(ref LongType, res, null) == null)
                     return res;
@@ -136,9 +159,12 @@ namespace IronPython.Runtime {
 
         [PythonName("__new__")]
         public static object Make(PythonType cls, object x) {
+            ExtensibleLong el;
+
             if (cls == LongType) {
                 if (x is string) return ParseBigIntegerSign((string)x, 10);
                 if (x is IronMath.BigInteger) return (IronMath.BigInteger)x;
+                else if ((el = x as ExtensibleLong) != null) return el.Value;
                 else if (x is int) return (long)(int)x;
                 else if (x is double) return IronMath.BigInteger.Create((double)x);
                 else if (x is long) return x;
@@ -150,8 +176,10 @@ namespace IronPython.Runtime {
                 }
             } else {
                 BigInteger intVal = null;
+
                 if (x is string) intVal = ParseBigIntegerSign((string)x, 10);
                 else if (x is IronMath.BigInteger) intVal = (IronMath.BigInteger)x;
+                else if ((el = x as ExtensibleLong) != null) intVal = el.Value;
                 else if (x is int) intVal = (long)(int)x;
                 else if (x is double) intVal = IronMath.BigInteger.Create((double)x);
                 else if (x is long) intVal = (long)x;
@@ -168,7 +196,8 @@ namespace IronPython.Runtime {
 
             if (x is Complex64) throw Ops.TypeError("can't convert complex to long; use long(abs(z))");
 
-            throw Ops.ValueError("invalid value");
+            throw Ops.ValueError("long argument must be convertible to long (string, number, or type that defines __long__, got {0})",
+                Ops.StringRepr(Ops.GetDynamicType(x).__name__));
         }
 
         [PythonName("__new__")]
@@ -582,6 +611,8 @@ namespace IronPython.Runtime {
         
         [PythonName("__lshift__")]
         public static object LeftShift(BigInteger x, object other) {
+            ExtensibleLong el;
+
             if (other is int) {
                 return LeftShift(x, (int)other);
             } else if (other is BigInteger) {
@@ -595,6 +626,8 @@ namespace IronPython.Runtime {
                 return LeftShift(x, (bool)other ? 1 : 0);
             } else if (other is ExtensibleInt) {
                 return LeftShift(x, ((ExtensibleInt)other).value);
+            } else if ((el = other as ExtensibleLong) != null) {
+                return LeftShift(x, el.Value);
             } else if (other is byte) {
                 return LeftShift(x, (int)((byte)other));
             }
@@ -624,6 +657,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__rshift__")]
         public static object RightShift(BigInteger x, object other) {
+            ExtensibleLong el;
+
             if (other is int) {
                 return RightShift(x, (int)other);
             } else if (other is BigInteger) {
@@ -647,6 +682,8 @@ namespace IronPython.Runtime {
                 return RightShift(x, (bool)other ? 1 : 0);
             } else if (other is ExtensibleInt) {
                 return RightShift(x, ((ExtensibleInt)other).value);
+            } else if ((el = other as ExtensibleLong) != null) {
+                return RightShift(x, el.Value);
             } else if (other is byte) {
                 return RightShift(x, (int)((byte)other));
             }

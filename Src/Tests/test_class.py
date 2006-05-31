@@ -745,3 +745,209 @@ Assert(x.Count == 0)
 
 x = test.GetProperties(a)
 Assert(x.Count > 0)
+
+
+########################################################################################
+# new-style classes should only lookup methods from the class,
+# not from the instance
+class Strange(object):
+    def uselessMethod(self): pass
+
+obj = Strange()
+obj.__nonzero__ = lambda: False
+AreEqual(bool(obj), True)
+
+def twoargs(self, other): 
+    global twoArgsCalled 
+    twoArgsCalled = True
+    return self
+
+def onearg(self): 
+    return self
+
+# create methods that we can then stick into Strange
+twoargs = type(Strange.uselessMethod)(twoargs, None, Strange)
+onearg = type(Strange.uselessMethod)(onearg, None, Strange)
+
+
+class ForwardAndReverseTests:
+    testCases = [
+        #forward versions
+        ('__add__', 'obj + obj'), 
+        ('__sub__', 'obj - obj'),
+        ('__mul__', 'obj * obj'),
+        ('__floordiv__', 'obj // obj'),
+        ('__mod__', 'obj % obj'),
+        #('__divmod__', 'divmod(obj,obj)'), #bug 975, divmod alone doesn't work
+        ('__pow__', 'pow(obj, obj)'),
+        ('__lshift__', 'obj << obj'),
+        ('__rshift__', 'obj >> obj'),
+        ('__and__', 'obj & obj'),
+        ('__xor__', 'obj ^ obj'),
+        ('__or__', 'obj | obj'),
+        
+        # reverse versions
+        ('__radd__', '1 + obj'),
+        ('__rsub__', '1 - obj'),
+        ('__rmul__', '1 * obj'),
+        ('__rfloordiv__', '1 // obj'),
+        ('__rmod__', '1 % obj'),
+        #('__rdivmod__', '1 % obj'), #bug 975
+        ('__rpow__', 'pow(1, obj)'),
+        ('__rlshift__', '1 << obj'),
+        ('__rrshift__', '1 >> obj'),
+        ('__rand__', '1  & obj'),
+        ('__rxor__', '1 ^ obj'),
+        ('__ror__', '1 | obj'),      
+        ]
+    
+    @staticmethod
+    def NegativeTest(method, testCase):
+        setattr(obj, method, twoargs)
+        
+        try:
+            eval(testCase)    
+            AreEqual(True, False)
+        except TypeError, e:
+            pass
+        
+        delattr(obj, method)
+    
+    @staticmethod
+    def PositiveTest(method, testCase):
+        setattr(Strange, method, twoargs)
+        
+        AreEqual(eval(testCase), obj)
+        
+        delattr(Strange, method)
+
+
+class InPlaceTests:
+    # in-place versions require exec instead of eval
+    testCases = [
+        # inplace versions
+        ('__iadd__', 'obj += obj'),
+        ('__isub__', 'obj -= obj'),
+        ('__imul__', 'obj *= obj'),
+        ('__ifloordiv__', 'obj //= obj'),
+        ('__imod__', 'obj %= obj'),
+        ('__ipow__', 'obj **= obj'),
+        ('__ilshift__', 'obj <<= obj'),
+        ('__irshift__', 'obj >>= obj'),
+        ('__iand__', 'obj &= obj'),
+        ('__ixor__', 'obj ^= obj'),
+        ('__ior__', 'obj |= obj'),      
+    ]    
+    
+    @staticmethod
+    def NegativeTest(method, testCase):
+        setattr(obj, method, twoargs)
+        
+        try:
+            exec testCase
+            AreEqual(True, False)
+        except TypeError:
+            pass
+        
+        delattr(obj, method)
+    
+    @staticmethod
+    def PositiveTest(method, testCase):
+        setattr(Strange, method, twoargs)
+        
+        global twoArgsCalled
+        twoArgsCalled = False
+        exec testCase
+        AreEqual(twoArgsCalled, True)        
+        
+        delattr(Strange, method)
+
+
+class SingleArgTests:    
+    testCases = [
+        # one-argument versions
+        ('__neg__', '-obj'), 
+        ('__pos__', '+obj'),
+        ('__abs__', 'abs(obj)'),
+        ('__invert__', '~obj'),     
+        ('__oct__', 'oct(obj)'),
+        ('__hex__', 'hex(obj)'),
+        ]        
+    
+    @staticmethod
+    def NegativeTest(method, testCase):
+        setattr(obj, method, onearg)
+    
+        try:
+            eval(testCase)
+            AreEqual(True, False)
+        except TypeError:
+            pass
+        
+        delattr(obj, method)
+    
+    @staticmethod
+    def PositiveTest(method, testCase):
+        setattr(Strange, method, onearg)
+        
+        AreEqual(eval(testCase), obj)
+        
+        delattr(Strange, method)
+    
+class ConversionTests:
+    testCases = [
+        (('__complex__', 2+0j), 'complex(obj)'),
+        (('__int__', 1), 'int(obj)'),
+        (('__long__', 1L), 'long(obj)'),
+        (('__float__', 1.0), 'float(obj)'),
+      ]
+      
+    @staticmethod
+    def NegativeTest(method, testCase):
+        setattr(obj, method[0], onearg)
+    
+        try:
+            eval(testCase)
+            AreEqual(True, False)
+        except (TypeError, ValueError), e:
+            AreEqual(e.msg.find('returned') == -1, True)    # shouldn't have returned '__complex__ returned ...'
+            pass
+        
+        delattr(obj, method[0])
+        
+    @staticmethod
+    def PositiveTest(method, testCase):
+        def testMethod(self):
+            return method[1]
+            
+        testMethod = type(Strange.uselessMethod)(testMethod, None, Strange)
+        setattr(Strange, method[0], testMethod)
+
+        AreEqual(eval(testCase), method[1])
+        
+        delattr(Strange, method[0])
+    
+allTests = [ForwardAndReverseTests, InPlaceTests, SingleArgTests, ConversionTests]
+
+for test in allTests:
+    for method,testCase in test.testCases: 
+        test.NegativeTest(method, testCase)
+    for method,testCase in test.testCases: 
+        test.PositiveTest(method, testCase)
+
+# overriding a classes __repr__ and returning a
+# non-string should throw
+
+class C:
+    def __repr__(self):
+    	return None
+
+AssertError(TypeError, repr, C())
+
+class C(object):
+    def __repr__(self):
+    	return None
+
+AssertError(TypeError, repr, C())
+
+

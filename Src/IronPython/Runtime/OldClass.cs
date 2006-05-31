@@ -447,7 +447,13 @@ namespace IronPython.Runtime {
 
         public override string ToString() {
             object ret;
-            if (Ops.TryToInvoke(this, SymbolTable.String, out ret)) return ret.ToString();
+            if (Ops.TryToInvoke(this, SymbolTable.String, out ret)) {
+                Conversion conv;
+                string strRet = Converter.TryConvertToString(ret, out conv);
+                if (ret == null || conv == Conversion.None) throw Ops.TypeError("__str__ returned non-string type ({0})", Ops.GetDynamicType(ret).__name__);
+
+                return strRet;
+            }
 
             return ToCodeString();
         }
@@ -458,7 +464,13 @@ namespace IronPython.Runtime {
 
         public string ToCodeString() {
             object ret;
-            if (Ops.TryToInvoke(this, SymbolTable.Repr, out ret)) return ret.ToString();
+            if (Ops.TryToInvoke(this, SymbolTable.Repr, out ret)) {
+                Conversion conv;
+                string strRet = Converter.TryConvertToString(ret, out conv);
+                if (ret == null || conv == Conversion.None) throw Ops.TypeError("__repr__ returned non-string type ({0})", Ops.GetDynamicType(ret).__name__);
+
+                return strRet;
+            }
 
             return string.Format("<{0} instance at {1}>", __class__.FullName, Ops.HexId(this));
         }

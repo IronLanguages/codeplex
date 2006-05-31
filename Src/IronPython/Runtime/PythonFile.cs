@@ -945,6 +945,7 @@ namespace IronPython.Runtime {
             return null;
         }
 
+        [Documentation("True if the file is closed, False if the file is still open")]
         public object IsClosed {
             [PythonName("closed")]
             get {
@@ -976,6 +977,14 @@ namespace IronPython.Runtime {
         public bool IsTtyDevice() {
             ThrowIfClosed();
             return false;
+        }
+
+        [Documentation("gets the name of the file")]
+        public string FileName {
+            [PythonName("name")]
+            get {
+                return name;
+            }
         }
 
         [PythonName("read")]

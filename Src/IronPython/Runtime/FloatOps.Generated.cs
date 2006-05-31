@@ -32,6 +32,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is double) return x + ((double)other);
             if (other is int) return x + ((int)other);
@@ -47,6 +48,7 @@ namespace IronPython.Runtime {
             if (other is long) return x + ((long)other);
             if ((object)(xi = other as ExtensibleInt) != null) return x + xi.value;
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Add(Complex64.MakeReal(x), xc.value);
+            if ((object)(xl = other as ExtensibleLong) != null) return x + xl.Value;
             return Ops.NotImplemented;
         }
 
@@ -57,6 +59,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is double) return ((double)other) + x;
             if (other is int) return ((int)other) + x;
@@ -68,6 +71,7 @@ namespace IronPython.Runtime {
             if (other is long) return ((long)other) + x;
             if ((object)(xi = other as ExtensibleInt) != null) return xi.value + x;
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Add(xc.value, Complex64.MakeReal(x));
+            if ((object)(xl = other as ExtensibleLong) != null) return xl.Value + x;
             if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
                 return x + y;
@@ -82,6 +86,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is double) return x - ((double)other);
             if (other is int) return x - ((int)other);
@@ -97,6 +102,7 @@ namespace IronPython.Runtime {
             if (other is long) return x - ((long)other);
             if ((object)(xi = other as ExtensibleInt) != null) return x - xi.value;
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Subtract(Complex64.MakeReal(x), xc.value);
+            if ((object)(xl = other as ExtensibleLong) != null) return x - xl.Value;
             return Ops.NotImplemented;
         }
 
@@ -107,6 +113,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is double) return ((double)other) - x;
             if (other is int) return ((int)other) - x;
@@ -118,6 +125,7 @@ namespace IronPython.Runtime {
             if (other is long) return ((long)other) - x;
             if ((object)(xi = other as ExtensibleInt) != null) return xi.value - x;
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Subtract(xc.value, Complex64.MakeReal(x));
+            if ((object)(xl = other as ExtensibleLong) != null) return xl.Value - x;
             if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
                 return x - y;
@@ -132,6 +140,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is double) return x * ((double)other);
             if (other is int) return x * ((int)other);
@@ -147,6 +156,7 @@ namespace IronPython.Runtime {
             if (other is long) return x * ((long)other);
             if ((object)(xi = other as ExtensibleInt) != null) return x * xi.value;
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Multiply(Complex64.MakeReal(x), xc.value);
+            if ((object)(xl = other as ExtensibleLong) != null) return x * xl.Value;
             return Ops.NotImplemented;
         }
 
@@ -157,6 +167,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is double) return ((double)other) * x;
             if (other is int) return ((int)other) * x;
@@ -168,6 +179,7 @@ namespace IronPython.Runtime {
             if (other is long) return ((long)other) * x;
             if ((object)(xi = other as ExtensibleInt) != null) return xi.value * x;
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Multiply(xc.value, Complex64.MakeReal(x));
+            if ((object)(xl = other as ExtensibleLong) != null) return xl.Value * x;
             if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
                 return x * y;
@@ -182,6 +194,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is double) return TrueDivide(x, ((double)other));
             if (other is int) return TrueDivide(x, ((int)other));
@@ -193,6 +206,7 @@ namespace IronPython.Runtime {
             if (other is long) return TrueDivide(x, ((long)other));
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.TrueDivide(Complex64.MakeReal(x), xc.value);
             if ((object)(xi = other as ExtensibleInt) != null) return TrueDivide(x, xi.value);
+            if ((object)(xl = other as ExtensibleLong) != null) return TrueDivide(x, xl.Value);
             if (other is byte) return TrueDivide(x, (int)((byte)other));
            return Ops.NotImplemented;
         }
@@ -203,6 +217,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is double) return ReverseTrueDivide(x, ((double)other));
             if (other is int) return ReverseTrueDivide(x, ((int)other));
@@ -214,6 +229,7 @@ namespace IronPython.Runtime {
             if (other is long) return ReverseTrueDivide(x, ((long)other));
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.ReverseTrueDivide(Complex64.MakeReal(x), xc.value);
             if ((object)(xi = other as ExtensibleInt) != null) return ReverseTrueDivide(x, xi.value);
+            if ((object)(xl = other as ExtensibleLong) != null) return ReverseTrueDivide(x, xl.Value);
             if (other is byte) return ReverseTrueDivide(x, (int)((byte)other));
            return Ops.NotImplemented;
         }

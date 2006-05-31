@@ -1101,12 +1101,17 @@ namespace IronPython.Compiler {
             }
             //Console.WriteLine("Invoke: " + mi + ", " + mi.GetParameters().Length);
             cg.EmitCall(typeof(MethodWrapper), "Invoke", CompilerHelpers.MakeRepeatedArray(typeof(object), 1 + mi.GetParameters().Length));
-            cg.EmitCastFromObject(mi.ReturnType);
-            cg.EmitReturn();
+            MethodInfo object_ToString = typeof(object).GetMethod("ToString");
+
+            if (mi.MethodHandle != object_ToString.MethodHandle) {
+                cg.EmitCastFromObject(mi.ReturnType);
+                cg.EmitReturn();
+            } else {
+                EmitReturnNonNullString(cg);
+            }
 
             cg.MarkLabel(baseCall);
 
-            MethodInfo object_ToString = typeof(object).GetMethod("ToString");
             if (mi.MethodHandle == object_ToString.MethodHandle) {
                 // object.ToString() displays the CLI type name. However, __class__ is the real type for Python type instances
                 cg.EmitThis();
@@ -1121,6 +1126,46 @@ namespace IronPython.Compiler {
             }
                         
             cg.Finish();
+        }
+
+        private static void EmitReturnNonNullString(CodeGen cg) {
+            // need to check for null for ToString
+            Label badRet = cg.DefineLabel();
+            cg.Emit(OpCodes.Dup);
+            cg.Emit(OpCodes.Ldnull);
+            cg.Emit(OpCodes.Beq, badRet);
+
+            cg.Emit(OpCodes.Dup);
+            Slot s = cg.GetLocalTmp(typeof(Conversion));
+            cg.EmitTryCastFromObject(typeof(string), s);
+
+            Slot convertedVal = cg.GetLocalTmp(typeof(string));
+            convertedVal.EmitSet(cg);
+
+            s.EmitGet(cg);
+            cg.EmitInt((int)Conversion.None);
+            cg.Emit(OpCodes.Beq, badRet);
+            cg.Emit(OpCodes.Pop);   // remove unconverted value
+            convertedVal.EmitGet(cg);
+            cg.EmitReturn();    // value's good, return it
+
+            cg.FreeLocalTmp(s);
+            cg.FreeLocalTmp(convertedVal);
+
+            cg.MarkLabel(badRet);
+            // stack contains only unconverted value
+            Slot tmp = cg.GetLocalTmp(typeof(object));
+            tmp.EmitSet(cg);
+
+            cg.EmitString("__str__ returned non-string type ({0})");
+            cg.EmitObjectArray(1, delegate(int index) {
+                tmp.EmitGet(cg);
+                cg.EmitCall(typeof(Ops), "GetDynamicType");
+            });
+            cg.EmitCall(typeof(Ops), "TypeError");
+            cg.Emit(OpCodes.Throw);
+
+            cg.FreeLocalTmp(tmp);
         }
 
         internal static CodeGen CreateVirtualMethodHelper(TypeGen tg, MethodInfo mi) {

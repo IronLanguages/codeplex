@@ -32,6 +32,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -73,6 +74,8 @@ namespace IronPython.Runtime {
                 return x + xf.value;
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return Complex64.MakeReal(x) + xc.value;
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return BigInteger.Create(x) + el.Value;
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -90,6 +93,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -131,6 +135,8 @@ namespace IronPython.Runtime {
                 return xf.value + x;
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return xc.value + Complex64.MakeReal(x);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return el.Value + BigInteger.Create(x);
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -149,6 +155,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -190,6 +197,8 @@ namespace IronPython.Runtime {
                 return x - xf.value;
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return Complex64.MakeReal(x) - xc.value;
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return BigInteger.Create(x) - el.Value;
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -207,6 +216,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -248,6 +258,8 @@ namespace IronPython.Runtime {
                 return xf.value - x;
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return xc.value - Complex64.MakeReal(x);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return el.Value - BigInteger.Create(x);
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -266,6 +278,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) return Power(x, (int)other);
             if ((object)(bi = other as BigInteger) != null) return Power(x, bi);
@@ -277,6 +290,7 @@ namespace IronPython.Runtime {
             if ((object)(xi = other as ExtensibleInt) != null) return Power(x, xi.value);
             if ((object)(xf = other as ExtensibleFloat) != null) return Power(x, xf.value);
             if ((object)(xc = other as ExtensibleComplex) != null) return Power(x, xc.value);
+            if ((object)(el = other as ExtensibleLong) != null) return Power(x, el.Value);
             if (other is byte) return Power(x, (int)((byte)other));
             return Ops.NotImplemented;
         }
@@ -288,6 +302,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -329,6 +344,8 @@ namespace IronPython.Runtime {
                 return x * xf.value;
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return Complex64.MakeReal(x) * xc.value;
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return BigInteger.Create(x) * el.Value;
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -346,6 +363,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -387,6 +405,8 @@ namespace IronPython.Runtime {
                 return xf.value * x;
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return xc.value * Complex64.MakeReal(x);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return el.Value * BigInteger.Create(x);
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -405,6 +425,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -446,6 +467,8 @@ namespace IronPython.Runtime {
                 return FloatOps.Divide(x, xf.value);
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return ComplexOps.Divide(Complex64.MakeReal(x), xc.value);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return LongOps.Divide(BigInteger.Create(x), el.Value);
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -465,6 +488,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -506,6 +530,8 @@ namespace IronPython.Runtime {
                 return FloatOps.ReverseDivide(x, xf.value);
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return ComplexOps.ReverseDivide(Complex64.MakeReal(x), xc.value);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return LongOps.ReverseDivide(BigInteger.Create(x), el.Value);
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -525,6 +551,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -566,6 +593,8 @@ namespace IronPython.Runtime {
                 return FloatOps.FloorDivide(x, xf.value);
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return ComplexOps.FloorDivide(Complex64.MakeReal(x), xc.value);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return LongOps.FloorDivide(BigInteger.Create(x), el.Value);
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -585,6 +614,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -626,6 +656,8 @@ namespace IronPython.Runtime {
                 return FloatOps.ReverseFloorDivide(x, xf.value);
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return ComplexOps.ReverseFloorDivide(Complex64.MakeReal(x), xc.value);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return LongOps.ReverseFloorDivide(BigInteger.Create(x), el.Value);
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -645,6 +677,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) return TrueDivide(x, (int)other);
             if ((object)(bi = other as BigInteger) != null) return TrueDivide(x, bi);
@@ -656,6 +689,7 @@ namespace IronPython.Runtime {
             if ((object)(xi = other as ExtensibleInt) != null) return TrueDivide(x, xi.value);
             if ((object)(xf = other as ExtensibleFloat) != null) return TrueDivide(x, xf.value);
             if ((object)(xc = other as ExtensibleComplex) != null) return TrueDivide(x, xc.value);
+            if ((object)(el = other as ExtensibleLong) != null) return TrueDivide(x, el.Value);
             if (other is byte) return TrueDivide(x, (int)((byte)other));
             return Ops.NotImplemented;
         }
@@ -667,6 +701,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -708,6 +743,8 @@ namespace IronPython.Runtime {
                 return FloatOps.Mod(x, xf.value);
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return ComplexOps.Mod(Complex64.MakeReal(x), xc.value);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return LongOps.Mod(BigInteger.Create(x), el.Value);
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -727,6 +764,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong el;
 
             if (other is int) {
                 int y = (int)other;
@@ -768,6 +806,8 @@ namespace IronPython.Runtime {
                 return FloatOps.ReverseMod(x, xf.value);
             } else if ((object)(xc = other as ExtensibleComplex) != null) {
                 return ComplexOps.ReverseMod(Complex64.MakeReal(x), xc.value);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return LongOps.ReverseMod(BigInteger.Create(x), el.Value);
             } else if (other is byte) {
                 int y = (int)((byte)other);
                 try {
@@ -785,6 +825,7 @@ namespace IronPython.Runtime {
         public static object BitwiseAnd(long x, object other) {
             BigInteger bi;
             ExtensibleInt xi;
+            ExtensibleLong el;
 
             if (other is int) {
                 long y = (long)(int)other;
@@ -798,6 +839,8 @@ namespace IronPython.Runtime {
             } else if ((object)(xi = other as ExtensibleInt) != null) {
                 long y = (long)xi.value;
                 return Ops.Long2Object(x & y);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return BigInteger.Create(x) & el.Value;
             } else if (other is byte) {
                 return Ops.Long2Object(x & (long)((byte)other));
             }
@@ -809,6 +852,7 @@ namespace IronPython.Runtime {
         public static object BitwiseOr(long x, object other) {
             BigInteger bi;
             ExtensibleInt xi;
+            ExtensibleLong el;
 
             if (other is int) {
                 long y = (long)(int)other;
@@ -822,6 +866,8 @@ namespace IronPython.Runtime {
             } else if ((object)(xi = other as ExtensibleInt) != null) {
                 long y = (long)xi.value;
                 return Ops.Long2Object(x | y);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return BigInteger.Create(x) | el.Value;
             } else if (other is byte) {
                 return Ops.Long2Object(x | (long)((byte)other));
             }
@@ -833,6 +879,7 @@ namespace IronPython.Runtime {
         public static object Xor(long x, object other) {
             BigInteger bi;
             ExtensibleInt xi;
+            ExtensibleLong el;
 
             if (other is int) {
                 long y = (long)(int)other;
@@ -846,6 +893,8 @@ namespace IronPython.Runtime {
             } else if ((object)(xi = other as ExtensibleInt) != null) {
                 long y = (long)xi.value;
                 return Ops.Long2Object(x ^ y);
+            } else if ((object)(el = other as ExtensibleLong) != null) {
+                return BigInteger.Create(x) ^ el.Value;
             } else if (other is byte) {
                 return Ops.Long2Object(x ^ (long)((byte)other));
             }

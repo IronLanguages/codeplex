@@ -276,6 +276,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__rshift__")]
         public static object RightShift(long x, object other) {
+            ExtensibleLong el;
+
             if (other is int) {
                 return RightShift(x, (int)other);
             } else if (other is long) {
@@ -293,6 +295,11 @@ namespace IronPython.Runtime {
                 }
             } else if (other is ExtensibleInt) {
                 return RightShift(x, ((ExtensibleInt)other).value);
+            } else if ((el = other as ExtensibleLong) != null) {                
+                int y;
+                if (el.Value.AsInt32(out y)) {
+                    return RightShift(x, y);
+                }
             } else if (other is byte) {
                 return RightShift(x, (int)((byte)other));
             }
@@ -321,6 +328,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__lshift__")]
         public static object LeftShift(long x, object other) {
+            ExtensibleLong el;
+
             if (other is int) {
                 return LeftShift(x, (int)other);
             } else if (other is long) {
@@ -338,6 +347,11 @@ namespace IronPython.Runtime {
                 }
             } else if (other is ExtensibleInt) {
                 return LeftShift(x, ((ExtensibleInt)other).value);
+            } else if ((el = other as ExtensibleLong) != null) {
+                int y;
+                if (el.Value.AsInt32(out y)) {
+                    return LeftShift(x, y);
+                }
             } else if (other is byte) {
                 return LeftShift(x, (int)((byte)other));
             }

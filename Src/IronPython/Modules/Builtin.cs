@@ -138,9 +138,9 @@ namespace IronPython.Modules {
         }
 
         private static object TryCoerce(object x, object y) {
-            object func;
-            if (Ops.TryGetAttr(x, SymbolTable.Coerce, out func)) {
-                return Ops.Call(func, y);
+            object res;
+            if (Ops.TryToInvoke(x, SymbolTable.Coerce, out res, y)) {
+                return res;
             }
             return null;
         }

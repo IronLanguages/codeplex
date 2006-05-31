@@ -32,6 +32,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) {
                 return x + (int)other;
@@ -49,6 +50,8 @@ namespace IronPython.Runtime {
                 return x + xi.value;
             } else if ((object)(xf = other as ExtensibleFloat) != null) {
                 return x + xf.value;
+            } else if ((object)(xl = other as ExtensibleLong) != null) {
+                return x + xl.Value;
             } else if(other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
@@ -65,6 +68,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) {
                 return (int)other + x;
@@ -82,6 +86,8 @@ namespace IronPython.Runtime {
                 return xi.value + x;
             } else if ((object)(xf = other as ExtensibleFloat) != null) {
                 return xf.value + x;
+            } else if ((object)(xl = other as ExtensibleLong) != null) {
+                return xl.Value + x;
             } else if(other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
@@ -98,6 +104,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) {
                 return x - (int)other;
@@ -115,6 +122,8 @@ namespace IronPython.Runtime {
                 return x - xi.value;
             } else if ((object)(xf = other as ExtensibleFloat) != null) {
                 return x - xf.value;
+            } else if ((object)(xl = other as ExtensibleLong) != null) {
+                return x - xl.Value;
             } else if(other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
@@ -131,6 +140,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) {
                 return (int)other - x;
@@ -148,6 +158,8 @@ namespace IronPython.Runtime {
                 return xi.value - x;
             } else if ((object)(xf = other as ExtensibleFloat) != null) {
                 return xf.value - x;
+            } else if ((object)(xl = other as ExtensibleLong) != null) {
+                return xl.Value - x;
             } else if(other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
@@ -164,6 +176,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) return Power(x, (Complex64) ((int)other));
             if (other is Complex64) return Power(x, (Complex64) other);
@@ -174,6 +187,7 @@ namespace IronPython.Runtime {
             if ((object)(xc = other as ExtensibleComplex) != null) return Power(x, xc.value);
             if ((object)(xf = other as ExtensibleFloat) != null) return Power(x, (Complex64)xf.value);
             if ((object)(xi = other as ExtensibleInt) != null) return Power(x, (Complex64)xi.value);
+            if ((object)(xl = other as ExtensibleLong) != null) return Power(x, (Complex64) xl.Value);
             if (other is byte) return Power(x, (Complex64) (int)((byte)other));
             return Ops.NotImplemented;
         }
@@ -185,6 +199,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) return ReversePower(x, (Complex64) ((int)other));
             if (other is Complex64) return ReversePower(x, (Complex64) other);
@@ -195,6 +210,7 @@ namespace IronPython.Runtime {
             if ((object)(xc = other as ExtensibleComplex) != null) return ReversePower(x, xc.value);
             if ((object)(xf = other as ExtensibleFloat) != null) return ReversePower(x, (Complex64)xf.value);
             if ((object)(xi = other as ExtensibleInt) != null) return ReversePower(x, (Complex64)xi.value);
+            if ((object)(xl = other as ExtensibleLong) != null) return ReversePower(x, (Complex64)xl.Value);
             if (other is byte) return ReversePower(x, (Complex64) (int)((byte)other));
             return Ops.NotImplemented;
         }
@@ -206,6 +222,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) {
                 return x * (int)other;
@@ -223,6 +240,8 @@ namespace IronPython.Runtime {
                 return x * xi.value;
             } else if ((object)(xf = other as ExtensibleFloat) != null) {
                 return x * xf.value;
+            } else if ((object)(xl = other as ExtensibleLong) != null) {
+                return x * xl.Value;
             } else if(other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
@@ -239,6 +258,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) {
                 return (int)other * x;
@@ -256,6 +276,8 @@ namespace IronPython.Runtime {
                 return xi.value * x;
             } else if ((object)(xf = other as ExtensibleFloat) != null) {
                 return xf.value * x;
+            } else if ((object)(xl = other as ExtensibleLong) != null) {
+                return xl.Value * x;
             } else if(other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
@@ -272,6 +294,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) return TrueDivide(x, (Complex64) ((int)other));
             if (other is Complex64) return TrueDivide(x, (Complex64) other);
@@ -282,6 +305,7 @@ namespace IronPython.Runtime {
             if ((object)(xc = other as ExtensibleComplex) != null) return TrueDivide(x, xc.value);
             if ((object)(xf = other as ExtensibleFloat) != null) return TrueDivide(x, (Complex64)xf.value);
             if ((object)(xi = other as ExtensibleInt) != null) return TrueDivide(x, (Complex64)xi.value);
+            if ((object)(xl = other as ExtensibleLong) != null) return TrueDivide(x, (Complex64) xl.Value);
             if (other is byte) return TrueDivide(x, (Complex64) (int)((byte)other));
             return Ops.NotImplemented;
         }
@@ -293,6 +317,7 @@ namespace IronPython.Runtime {
             ExtensibleInt xi;
             ExtensibleFloat xf;
             ExtensibleComplex xc;
+            ExtensibleLong xl;
 
             if (other is int) return ReverseTrueDivide(x, (Complex64) ((int)other));
             if (other is Complex64) return ReverseTrueDivide(x, (Complex64) other);
@@ -303,6 +328,7 @@ namespace IronPython.Runtime {
             if ((object)(xc = other as ExtensibleComplex) != null) return ReverseTrueDivide(x, xc.value);
             if ((object)(xf = other as ExtensibleFloat) != null) return ReverseTrueDivide(x, (Complex64)xf.value);
             if ((object)(xi = other as ExtensibleInt) != null) return ReverseTrueDivide(x, (Complex64)xi.value);
+            if ((object)(xl = other as ExtensibleLong) != null) return ReverseTrueDivide(x, (Complex64)xl.Value);
             if (other is byte) return ReverseTrueDivide(x, (Complex64) (int)((byte)other));
             return Ops.NotImplemented;
         }
