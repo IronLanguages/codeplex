@@ -224,7 +224,7 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        private static object ImportBuiltin(PythonModule mod, string name) {
+        internal static object ImportBuiltin(PythonModule mod, string name) {
             mod.SystemState.TopPackage.Initialize(mod.SystemState);
 
             if (name.Equals("sys")) return mod.SystemState;
@@ -291,7 +291,7 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Initializes the specified module and returns the user-exposable PythonModule.
         /// </summary>
-        private static PythonModule InitializeModule(string fullName, PythonModule pmod) {
+        internal static PythonModule InitializeModule(string fullName, PythonModule pmod) {
             // if we have a collision (both a package & namespace)
             // then we could have already exposed the ReflectedPackage
             // out to the user.  Therefore the outer module will alway

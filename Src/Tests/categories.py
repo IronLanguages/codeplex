@@ -369,6 +369,7 @@ RegressionTests = {
                 test.test_grammar
                 test.test_hexoct
                 test.test_htmllib
+                test.test_imp
                 test.test_list
                 test.test_macpath
                 test.test_math
