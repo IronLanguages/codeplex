@@ -18,11 +18,14 @@ from lib.file_util import *
 
 import sys
 import imp
-x = imp.new_module('abc')
-sys.modules['abc'] = x
-x.foo = 'bar'
-import abc
-AreEqual(abc.foo, 'bar')
+
+
+def test_imp_new_module():
+    x = imp.new_module('abc')
+    sys.modules['abc'] = x
+    x.foo = 'bar'
+    import abc
+    AreEqual(abc.foo, 'bar')
 
 def test_imp_basic():
     magic = imp.get_magic()
@@ -32,8 +35,6 @@ def test_imp_basic():
         Assert(isinstance(suffix, tuple))
         AreEqual(len(suffix), 3)
     Assert((".py", "U", 1) in suffixes)
-
-test_imp_basic()
 
 _testdir = "ImpTest"
 _imptestdir = path_combine(testpath.public_testdir, _testdir)
@@ -51,6 +52,7 @@ def test_imp_package():
 
     save_sys_path = sys.path
     try:
+        sys.path = list(sys.path)
         sys.path.append(testpath.public_testdir)
         fm = imp.find_module(_testdir)
     finally:
@@ -63,8 +65,6 @@ def test_imp_package():
     AreEqual(pm, "")
     module = imp.load_module(_testdir, pf, pp, (px, pm, pt))
     AreEqual(module.my_name, 'imp package test')
-
-test_imp_package()
 
 _f_module = path_combine(_imptestdir, "imptestmod.py")
 
@@ -80,6 +80,7 @@ def test_imp_module():
 
     save_sys_path = sys.path
     try:
+        sys.path = list(sys.path)
         sys.path.append(_imptestdir)
         fm = imp.find_module("imptestmod")
     finally:
@@ -93,7 +94,7 @@ def test_imp_module():
     AreEqual(pm, "U")
     module = imp.load_module("imptestmod", pf, pp, (px, pm, pt))
     AreEqual(module.value, 'imp test module')
+    pf.close()
 
-test_imp_module()
-
+run_test(__name__)
 delete_all_f(__name__)
