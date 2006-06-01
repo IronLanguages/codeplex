@@ -721,10 +721,14 @@ namespace IronPython.Runtime {
     }
 
     internal static class PythonFileManager {
-        static WeakMapping<PythonFile> mapping = new WeakMapping<PythonFile>();
+        static HybridMapping<PythonFile> mapping = new HybridMapping<PythonFile>();
 
-        public static int AddToMapping(PythonFile pf) {
-            return mapping.Add(pf);
+        public static int AddToWeakMapping(PythonFile pf) {
+            return mapping.WeakAdd(pf);
+        }
+
+        public static int AddToStrongMapping(PythonFile pf) {
+            return mapping.StrongAdd(pf);
         }
 
         public static void Remove(PythonFile pf) {
@@ -828,7 +832,7 @@ namespace IronPython.Runtime {
             }
             if (seekEnd) stream.Seek(0, SeekOrigin.End);
 
-            if(cls == TypeCache.PythonFile) return new PythonFile(stream, context.SystemState.DefaultEncoding, name, inMode);
+            if (cls == TypeCache.PythonFile) return new PythonFile(stream, context.SystemState.DefaultEncoding, name, inMode);
 
             return cls.ctor.Call(cls, stream, context.SystemState.DefaultEncoding, name, inMode) as PythonFile;
         }
@@ -840,21 +844,21 @@ namespace IronPython.Runtime {
             else if (stream.CanWrite) mode = "w";
             else mode = "r";
 
-            if(cls == TypeCache.PythonFile) return new PythonFile(stream, context.SystemState.DefaultEncoding, mode);
+            if (cls == TypeCache.PythonFile) return new PythonFile(stream, context.SystemState.DefaultEncoding, mode);
 
             return cls.ctor.Call(cls, stream, context.SystemState.DefaultEncoding, mode) as PythonFile;
         }
 
         [PythonName("__new__")]
         public static PythonFile Make(ICallerContext context, PythonType cls, Stream stream, string mode) {
-            if(cls == TypeCache.PythonFile) return new PythonFile(stream, context.SystemState.DefaultEncoding, mode);
+            if (cls == TypeCache.PythonFile) return new PythonFile(stream, context.SystemState.DefaultEncoding, mode);
 
             return cls.ctor.Call(cls, stream, context.SystemState.DefaultEncoding, mode) as PythonFile;
         }
 
         private readonly Stream stream;
         private readonly string mode;
-        internal readonly string name;
+        private readonly string name;
 
         private readonly PythonStreamReader reader;
         private readonly PythonStreamWriter writer;
@@ -862,7 +866,11 @@ namespace IronPython.Runtime {
 
         public bool softspace = false;
 
-        internal PythonFile(Stream stream, Encoding encoding, string mode) {
+        public PythonFile(Stream stream, Encoding encoding, string mode)
+            : this(stream, encoding, mode, true) {
+        }
+
+        internal PythonFile(Stream stream, Encoding encoding, string mode, bool weakMapping) {
             this.stream = stream;
             this.mode = mode;
 
@@ -910,11 +918,17 @@ namespace IronPython.Runtime {
             } else {
                 this.name = "nul";
             }
-            PythonFileManager.AddToMapping(this);
+
+            if (weakMapping)
+                PythonFileManager.AddToWeakMapping(this);
         }
 
         public PythonFile(Stream stream, Encoding encoding, string name, string mode)
-            : this(stream, encoding, mode) {
+            : this(stream, encoding, name, mode, true) {
+        }
+
+        internal PythonFile(Stream stream, Encoding encoding, string name, string mode, bool weakMapping)
+            : this(stream, encoding, mode, weakMapping) {
             this.name = name;
         }
 

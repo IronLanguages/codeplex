@@ -82,7 +82,7 @@ namespace IronPython.Modules {
         [PythonName("fstat")]
         public static object GetFileFStats(int fd) {
             PythonFile pf = PythonFileManager.GetFileFromId(fd);
-            return GetFileStats(pf.name);
+            return GetFileStats(pf.FileName);
         }
 
         [PythonName("getcwd")]
@@ -138,8 +138,14 @@ namespace IronPython.Modules {
         [PythonName("open")]
         public static object Open(ICallerContext context, string filename, int flag, int mode) {
             FileStream fs = File.Open(filename, FileModeFromFlags(flag), FileAccessFromFlags(flag));
-            PythonFile pf = PythonFile.Make(context, TypeCache.PythonFile, fs);
-            return PythonFileManager.GetIdFromFile(pf);
+
+            string mode2;
+            if (fs.CanRead && fs.CanWrite) mode2 = "w+";
+            else if (fs.CanWrite) mode2 = "w";
+            else mode2 = "r";
+
+            PythonFile pf = new PythonFile(fs, context.SystemState.DefaultEncoding, filename, mode2, false);
+            return PythonFileManager.AddToStrongMapping(pf);
         }
 
         [PythonName("popen")]

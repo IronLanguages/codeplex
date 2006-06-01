@@ -378,6 +378,7 @@ RegressionTests = {
                 test.test_operator
                 test.test_opcodes
                 test.test_pep263
+                test.test_pkg
                 test.test_pkgimport
                 test.test_popen
                 test.test_popen2
@@ -400,7 +401,7 @@ RegressionTests = {
                 test.test_userstring
                 test.test_warnings
                 test.test_xrange
-                ''',  #test.test_pkg
+                ''',  
             'regression-withchange':
             [
     "test.test_bisect",     # doctest support

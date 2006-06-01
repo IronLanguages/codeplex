@@ -214,40 +214,65 @@ namespace IronPython.Runtime {
         }
     }
 
-    sealed class WeakMapping<T> {
-        Dictionary<int, WeakObject<T>> dict = new Dictionary<int, WeakObject<T>>();
+    sealed class HybridMapping<T> {
+        Dictionary<int, object> dict = new Dictionary<int, object>();
         readonly Object synchObject = new Object();
         readonly int SIZE = 4096;
-
         int current = 0;
 
-        public int Add(T value) {
+        public int WeakAdd(T value) {
             lock (synchObject) {
                 int saved = current;
                 while (dict.ContainsKey(current)) {
                     current = (current + 1) % SIZE;
                     if (current == saved)
-                        throw Ops.SystemError("WeakMapping is full");
+                        throw Ops.SystemError("HybridMapping is full");
                 }
                 dict.Add(current, new WeakObject<T>(value));
                 return current;
             }
         }
 
+        public int StrongAdd(T value) {
+            lock (synchObject) {
+                int saved = current;
+                while (dict.ContainsKey(current)) {
+                    current = (current + 1) % SIZE;
+                    if (current == saved)
+                        throw Ops.SystemError("HybridMapping is full");
+                }
+                dict.Add(current, value);
+                return current;
+            }
+        }
+
         public T GetObjectFromId(int id) {
-            WeakObject<T> ret;
-            if (dict.TryGetValue(id, out ret))
-                return ret.Target;
-            else
+            object ret;
+            if (dict.TryGetValue(id, out ret)) {
+                if (ret is WeakObject<T>) {
+                    return ((WeakObject<T>)ret).Target;
+                }
+                if (ret is T) {
+                    return (T)ret;
+                }
+
+                throw Ops.SystemError("Unexpected dictionary content: type {0}", ret.GetType());
+            } else
                 return default(T);
         }
 
         public int GetIdFromObject(T value) {
             lock (synchObject) {
-                foreach (KeyValuePair<int, WeakObject<T>> kv in dict) {
-                    object target = kv.Value.Target;
-                    if (target != null && target.Equals(value))
-                        return kv.Key;
+                foreach (KeyValuePair<int, object> kv in dict) {
+                    if (kv.Value is WeakObject<T>) {
+                        object target = ((WeakObject<T>)kv.Value).Target;
+                        if (target != null && target.Equals(value))
+                            return kv.Key;
+                    } else if (kv.Value is T) {
+                        object target = (T)(kv.Value);
+                        if (target.Equals(value))
+                            return kv.Key;
+                    }
                 }
             }
             return -1;
@@ -264,5 +289,4 @@ namespace IronPython.Runtime {
             RemoveOnId(id);
         }
     }
-
 }
