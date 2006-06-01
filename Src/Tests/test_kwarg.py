@@ -638,3 +638,22 @@ def Regress444(**kw):
     return kw['kw']
 Assert(100 == Regress444(kw=100))
 #***** Above code are from 'KwArgs' *****
+
+
+# using __call__ w/ keyword args should be the same as doing a call w/ kw-args
+
+# user defined function
+def f(a): return a
+
+AreEqual(f.__call__(a='abc'), 'abc')
+
+
+# built-in function
+
+a = []
+a.append.__call__(item='abc')
+AreEqual(a, ['abc'])
+
+# types
+
+AreEqual(list.__call__(sequence='abc'), ['a', 'b', 'c'])

@@ -52,48 +52,6 @@ namespace IronPython.Hosting {
 
         public static object ExecWrapper = null;
 
-        public static int ExecuteCompiled(CustomSymbolDict compiled, InitializeModule init, string fullName) {
-            return ExecuteCompiled(compiled, init, fullName, null);
-        }
-
-        public static int ExecuteCompiled(CustomSymbolDict compiled, InitializeModule init, string fullName, string[] references) {
-            PythonEngine engine = new PythonEngine();
-            engine.AddToPath(Environment.CurrentDirectory);
-
-            engine.LoadAssembly(compiled.GetType().Assembly);
-            PythonModule module = new PythonModule(fullName, compiled, engine.engineContext.SystemState);
-            string executable = compiled.GetType().Assembly.Location;
-            module.InitializeBuiltins();
-            engine.Sys.prefix = System.IO.Path.GetDirectoryName(executable);
-            engine.Sys.executable = executable;
-            engine.Sys.exec_prefix = engine.Sys.prefix;
-            engine.Sys.modules[fullName] = module;
-
-            if (references != null) {
-                for (int i = 0; i < references.Length; i++) {
-                    engine.engineContext.SystemState.ClrModule.AddReference(references[i]);
-                }
-            }
-
-            // first arg is EXE 
-            List args = new List();
-            string[] fullArgs = Environment.GetCommandLineArgs();
-            args.Add(Path.GetFullPath(fullArgs[0]));
-            for (int i = 1; i < fullArgs.Length; i++)
-                args.Add(fullArgs[i]);
-            engine.Sys.argv = args;
-
-            try {
-                init();
-            } catch (PythonSystemExit x) {
-                return x.GetExitCode(engine.engineContext);
-            } catch (Exception e) {
-                engine.MyConsole.Write(engine.FormatException(e), Style.Error);
-                return -1;
-            }
-            return 0;
-        }
-
         #endregion
 
         #region Static Non-Public Members

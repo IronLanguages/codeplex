@@ -30,19 +30,17 @@ namespace IronPython.Runtime {
     /// null is returned and GetError() can be called to get the binding failure.
     /// </summary>
     class KwArgBinder {
-        object[] arguments;
-        string[] kwNames; // keyword argument names provided at the call site
-        object[] realArgs;
-        bool[] haveArg;
-        int kwDictIndex = -1;
-        int paramArrayIndex = -1;
-
-        string methodName = "unknown";
-
-        bool fAllowUnboundArgs;
-        List<UnboundArgument> unboundArgs;
-
-        Exception error;
+        private object[] arguments;
+        private string[] kwNames;       // keyword argument names provided at the call site
+        private object[] realArgs;
+        private bool[] haveArg;
+        private int kwDictIndex = -1;
+        private int paramArrayIndex = -1;
+        private bool targetsCls;       // true if we target a CLS method, false if we target a Python function
+        private string methodName = "unknown";
+        private bool fAllowUnboundArgs; 
+        private List<UnboundArgument> unboundArgs;
+        private Exception error;
 
         public KwArgBinder(object[] args, string[] keyNames)
             : this(args, keyNames, false) {
@@ -63,6 +61,7 @@ namespace IronPython.Runtime {
             string[] argNames = new string[pis.Length];
             object[] defaultVals = new object[pis.Length];
             methodName = target.Name;
+            targetsCls = true;
             int kwDict = -1, paramsArray = -1;
 
             if (pis.Length > 0) {
@@ -148,7 +147,7 @@ namespace IronPython.Runtime {
             return (-1);
         }
 
-        bool BindNormalArgs(string[] argNames, int kwDict, int paramArrayIndex) {
+        private bool BindNormalArgs(string[] argNames, int kwDict, int paramArrayIndex) {
             int maxNormalArgs = arguments.Length - kwNames.Length;
 
             for (int i = 0; i < maxNormalArgs; i++) {
@@ -158,7 +157,7 @@ namespace IronPython.Runtime {
                     for (int j = i; j < maxNormalArgs; j++) {
                         paramArray[j - i] = arguments[j];
                     }
-                    realArgs[i] = Tuple.MakeTuple(paramArray);
+                    realArgs[i] = targetsCls ? (object)paramArray : (object)Tuple.MakeTuple(paramArray);
                     return true;
                 } else if (i == kwDict) {
                     // we shouldn't bind to the kwDict during normal arg binding
@@ -173,7 +172,7 @@ namespace IronPython.Runtime {
                 realArgs[i] = arguments[i];
             }
             if (paramArrayIndex != -1 && !haveArg[paramArrayIndex]) {
-                realArgs[paramArrayIndex] = Tuple.MakeTuple(new object[] { });
+                realArgs[paramArrayIndex] = targetsCls ? (object)new object[0] : (object)Tuple.MakeTuple(new object[] { });
                 haveArg[paramArrayIndex] = true;
             }
             return true;

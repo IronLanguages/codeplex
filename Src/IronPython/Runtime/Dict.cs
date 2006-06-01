@@ -36,12 +36,21 @@ namespace IronPython.Runtime {
             this.data = new Dictionary<object, object>(Comparer);
         }
 
-        public Dict(object o)
+        internal Dict(object o)
             : this() {
             Update(o);
         }
 
         internal Dict(int size) { data = new Dictionary<object, object>(size, Comparer); }
+
+        [PythonName("__init__")]
+        public void Initialize(object o) {
+            Update(o);
+        }
+
+        [PythonName("__init__")]
+        public void Initialize() {
+        }
 
         /// <summary>
         /// Helper function for creating a dictionary of the specified type (either

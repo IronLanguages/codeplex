@@ -232,12 +232,12 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__iter__")]
-        public object __iter__() {
+        public object GetIterator() {
             return this;
         }
 
-        [PythonName("__next__")]
-        public object next() {
+        [PythonName("next")]
+        public object Next() {
             if (MoveNext()) {
                 return Current;
             } else {

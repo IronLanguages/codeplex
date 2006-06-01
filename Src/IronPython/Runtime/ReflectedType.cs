@@ -314,7 +314,7 @@ namespace IronPython.Runtime {
             if (typeof(IDescriptor).IsAssignableFrom(type)) {
                 AddProtocolMethod("__get__", "GetMethod", NameType.PythonMethod);
             }
-            if (typeof(ICallable).IsAssignableFrom(type)) {
+            if (typeof(ICallable).IsAssignableFrom(type) && !dict.ContainsKey(SymbolTable.Call)) {
                 AddProtocolMethod("__call__", "CallMethod", NameType.PythonMethod);
             }
         }
@@ -531,6 +531,10 @@ namespace IronPython.Runtime {
                 case NameType.Method: StoreReflectedMethod(name, mi, nt); break;
                 case NameType.ClassMethod: StoreClassMethod(name, mi); break;
                 default: Debug.Assert(false, "Unexpected name type for reflected method"); break;
+            }
+
+            if (name != mi.Name) {
+                StoreReflectedMethod(mi.Name, mi, NameType.Method);
             }
         }
 
@@ -1021,6 +1025,13 @@ namespace IronPython.Runtime {
                 ret = Documentation;
                 return true;
             }
+
+            if (name == SymbolTable.Call) {
+                MethodWrapper mw =  new MethodWrapper(this, SymbolTable.Call);
+                mw.SetDeclaredMethod(this);
+                ret = mw;
+                return true;
+            }
             return false;
         }
 
@@ -1049,6 +1060,7 @@ namespace IronPython.Runtime {
 
         #region ICallableWithCallerContext Members
 
+        [PythonName("__call__")]
         public virtual object Call(ICallerContext context, object[] args) {
             Initialize();
 
@@ -1073,7 +1085,7 @@ namespace IronPython.Runtime {
         #endregion
 
         #region ICallable Members
-
+        [PythonName("__call__")]
         public override object Call(params object[] args) {
             return Call(DefaultContext.Default, args);
         }
@@ -1082,6 +1094,7 @@ namespace IronPython.Runtime {
 
         #region IFancyCallable Members
 
+        [PythonName("__call__")]
         object IronPython.Runtime.IFancyCallable.Call(ICallerContext context, object[] args, string[] names) {
             Initialize();
 

@@ -55,3 +55,9 @@ def test_add_mul():
     AreEqual(2 * (1,2,3), (1,2,3,1,2,3))
 
 run_test(__name__)
+
+# verify you can call ToString on a tuple after importing clr
+import clr
+a = (0,)
+
+AreEqual(str(a), a.ToString())

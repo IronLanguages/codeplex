@@ -255,6 +255,23 @@ namespace IronPython.Runtime {
             throw Ops.TypeError("bad number of arguments for function {0}", FriendlyName);
         }
 
+        [PythonName("__call__")]
+        public object Call(ICallerContext context, [ParamDict]Dict dictArgs, params object[] args) {
+            object[] realArgs = new object[args.Length + dictArgs.Count];
+            string[] argNames = new string[dictArgs.Count];
+
+            Array.Copy(args, realArgs, args.Length);
+
+            int index = 0;
+            foreach (KeyValuePair<object, object> kvp in dictArgs) {
+                argNames[index] = kvp.Key as string;
+                realArgs[index + args.Length] = kvp.Value;
+                index++;
+            }
+
+            return Ops.Call(context, this, realArgs, argNames);
+        }
+
         [PythonName("__str__")]
         public override string ToString() {
             if (inst != null) {

@@ -394,7 +394,7 @@ namespace IronPython.Compiler {
                             EmitEmptyParamsCheck(param+outParams, okConv);
 
                             if ((node.Flags & ParamTree.NodeFlags.Params) != 0) {
-                                EmitNullParamsCheck(param, okConv);
+                                EmitNullParamsCheck(param, node, okConv);
                             }
 
                             EmitTypeCheck(cg, GetArgumentSlot(param), outConv, node);
@@ -502,11 +502,19 @@ namespace IronPython.Compiler {
                 }
             }
 
-            private void EmitNullParamsCheck(int param, Label okConv) {
+            private void EmitNullParamsCheck(int param, ParamTreeNode node, Label okConv) {
                 if (param == (argCnt - 1)) {
                     EmitArgument(param);
                     cg.Emit(OpCodes.Ldnull);
                     cg.Emit(OpCodes.Beq, okConv);
+                } else if (param == argCnt) {
+                    // check to see if we're passing an array to params array
+                    EmitArgument(param);
+                    cg.Emit(OpCodes.Dup);
+                    cg.EmitCall(typeof(object), "GetType");
+                    cg.EmitType(node.ParamType);
+                    cg.Emit(OpCodes.Beq, okConv);
+                    cg.Emit(OpCodes.Pop);   // pop off argument value
                 }
             }
 
@@ -1262,13 +1270,24 @@ namespace IronPython.Compiler {
 
                 if (paramOffset + paramIndex == pis.Length) {
                     Label emitConv = cg.DefineLabel();
+                    Label checkArray = cg.DefineLabel();
                     EmitArgument(paramOffset + paramIndex - outParams);
                     cg.Emit(OpCodes.Ldnull);
-                    cg.Emit(OpCodes.Bne_Un, emitConv);
+                    cg.Emit(OpCodes.Bne_Un, checkArray);
 
                     cg.EmitInt(0);
                     cg.Emit(OpCodes.Newarr, arrType);
 
+                    cg.Emit(OpCodes.Br, done);
+
+                    cg.MarkLabel(checkArray);
+                    // check and see if we're just passing an array in...
+                    EmitArgument(paramOffset + paramIndex - outParams);
+                    cg.EmitCall(typeof(object), "GetType");
+                    cg.EmitType(pis[paramIndex].ParameterType);
+                    cg.Emit(OpCodes.Bne_Un, emitConv);
+
+                    EmitArgument(paramOffset + paramIndex - outParams);
                     cg.Emit(OpCodes.Br, done);
 
                     cg.MarkLabel(emitConv);
@@ -1276,7 +1295,7 @@ namespace IronPython.Compiler {
 
                 cg.EmitInt(argCnt - paramOffset);
                 cg.Emit(OpCodes.Newarr, arrType);
-                for (int i = paramOffset; i < argCnt; i++) {
+                for (int i = paramOffset+paramIndex-outParams; i < argCnt; i++) {
                     cg.Emit(OpCodes.Dup);
                     cg.EmitInt(i-paramOffset);
                     EmitArgument(paramOffset);

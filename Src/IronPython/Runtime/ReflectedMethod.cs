@@ -514,7 +514,14 @@ namespace IronPython.Runtime {
 
                 if (result.arguments[paramArrayIndex] == null) {
                     // first param value to be stored, allocate the param array
-                    result.arguments[paramArrayIndex] = CreateParamsArray(newArgIndex+1, pis);
+                    if (val != null && newArgIndex == 0 && pis[paramArrayIndex].ParameterType == val.GetType()) {
+                        // array stored into param array...
+                        result.arguments[paramArrayIndex] = val;
+                        curArg--;
+                        return;
+                    } else {
+                        result.arguments[paramArrayIndex] = CreateParamsArray(newArgIndex + 1, pis);
+                    }
                 }
 
                 Array a = (Array)result.arguments[paramArrayIndex];

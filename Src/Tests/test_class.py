@@ -951,3 +951,10 @@ class C(object):
 AssertError(TypeError, repr, C())
 
 
+# setting __name__ on a class should work
+
+class C(object): pass
+
+C.__name__ = 'abc'
+AreEqual(C.__name__, 'abc')
+

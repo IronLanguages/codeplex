@@ -428,6 +428,10 @@ namespace IronPython.Runtime {
             }
         }
         protected virtual void RawSetSlot(SymbolId name, object value) {
+            if (name == SymbolTable.Name) {
+                __name__ = value;
+                return;
+            }
             dict[name] = value;
         }
        
@@ -808,7 +812,7 @@ namespace IronPython.Runtime {
     /// base classes) changes we update the value.  That way we can always quickly
     /// get the correct value.
     /// </summary>
-    public sealed class MethodWrapper : ICallable, IDataDescriptor {
+    public sealed class MethodWrapper : ICallable, IFancyCallable, IDataDescriptor {
         FieldInfo myField;
         private PythonType pythonType;
         internal SymbolId name;
@@ -955,10 +959,21 @@ namespace IronPython.Runtime {
 
         #region ICallable Members
 
+        [PythonName("__call__")]
         public object Call(params object[] args) {
             if (func == null)
                 throw Ops.AttributeErrorForMissingAttribute(pythonType.__name__.ToString(), name);
             return Ops.Call(func, args);
+        }
+
+        #endregion
+
+        #region IFancyCallable Members
+
+        [PythonName("__call__")]
+        public object Call(ICallerContext context, object[] args, string[] names) {
+            if (func == null) throw Ops.AttributeError("{0} not defined on instance of {1}", name, pythonType.__name__);
+            return Ops.Call(context, func, args, names);
         }
 
         #endregion
@@ -993,7 +1008,7 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        #endregion
+        #endregion        
     }
 
 }

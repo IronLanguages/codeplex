@@ -585,3 +585,21 @@ Assert(d2 <= d1)
 #####################################################################
 
 #***** Above code are from 'Dictionary' *****
+
+
+# subclassing dict, overriding __init__
+
+class foo(dict):
+    def __init__(self, abc):
+        self.abc = abc
+        
+a = foo('abc')
+AreEqual(a.abc, 'abc')
+
+# make sure dict.__init__ works
+
+a = {}
+a.__init__({'abc':'def'})
+AreEqual(a, {'abc':'def'})
+a.__init__({'abcd':'defg'})
+AreEqual(a, {'abc':'def', 'abcd':'defg'})

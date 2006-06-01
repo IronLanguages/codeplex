@@ -366,6 +366,7 @@ namespace IronPython.Runtime {
             }
         }
 
+        [PythonName("__call__")]
         public virtual object Call(ICallerContext context, object[] args, string[] kwNames) {
             int nparams = argNames.Length;
             int nargs = args.Length - kwNames.Length;
@@ -400,6 +401,23 @@ namespace IronPython.Runtime {
             }
 
             return Call(args);
+        }
+
+        [PythonName("__call__")]
+        public object Call(ICallerContext context, [ParamDict]Dict dictArgs, params object[] args) {
+            object[] realArgs = new object[args.Length + dictArgs.Count];
+            string[] argNames = new string[dictArgs.Count];
+
+            Array.Copy(args, realArgs, args.Length);
+
+            int index = 0;
+            foreach (KeyValuePair<object, object> kvp in dictArgs) {
+                argNames[index] = kvp.Key as string;
+                realArgs[index + args.Length] = kvp.Value;
+                index++;
+            }
+
+            return Ops.Call(context, this, realArgs, argNames);
         }
 
         public int ArgCount {
