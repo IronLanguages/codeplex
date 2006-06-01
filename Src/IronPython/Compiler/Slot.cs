@@ -666,4 +666,62 @@ namespace IronPython.Compiler {
             get { return typeof(object); }
         }
     }
+
+    internal class EnvironmentBackedSlot : Slot {
+        Slot global;
+        Slot environment;
+        Name name;
+
+        public EnvironmentBackedSlot(Slot global, Slot environment, Name name) {
+            this.global = global;
+            this.environment = environment;
+            this.name = name;
+        }
+
+        public override void EmitGet(CodeGen cg) {
+            //
+            // if ($env.TryGetValue(name, out local) && !(local is Uninitialized)) {
+            //     local
+            // } else {
+            //     global
+            // }
+
+            Slot local = cg.GetLocalTmp(typeof(object));
+            Label notFound = cg.DefineLabel();
+            Label found = cg.DefineLabel();
+            environment.EmitGet(cg);
+            cg.EmitName(name);
+            local.EmitGetAddr(cg);
+            cg.EmitCall(typeof(IDictionary<object, object>).GetMethod("TryGetValue"));
+            cg.Emit(OpCodes.Brfalse_S, notFound);
+            local.EmitGet(cg);
+            cg.Emit(OpCodes.Isinst, typeof(Uninitialized));
+            cg.Emit(OpCodes.Brtrue_S, notFound);
+            local.EmitGet(cg);
+            cg.Emit(OpCodes.Br_S, found);
+            cg.MarkLabel(notFound);
+            global.EmitGet(cg);
+            cg.MarkLabel(found);
+            cg.FreeLocalTmp(local);
+        }
+
+        // This slot is only used for free variables, therefore as such they
+        // should never be set.
+
+        public override void EmitSet(CodeGen cg) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public override void EmitSet(CodeGen cg, Slot val) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public override void EmitGetAddr(CodeGen cg) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public override Type Type {
+            get { return typeof(object); }
+        }
+    }
 }

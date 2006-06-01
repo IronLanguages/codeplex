@@ -60,16 +60,29 @@ namespace IronPython.Compiler {
         public override bool Walk(TupleExpr node) {
             return true;
         }
+
+        public override bool Walk(ListExpr node) {
+            return true;
+        }
     }
 
-    public class ParameterBinder : DefineBinder {
-        public ParameterBinder(Binder binder)
-            : base(binder) {
+    public class ParameterBinder : AstWalkerNonRecursive {
+        private Binder binder;
+        public ParameterBinder(Binder binder) {
+            this.binder = binder;
         }
 
         public override bool Walk(NameExpr node) {
             binder.DefineParameter(node.name);
             return false;
+        }
+
+        public override bool Walk(ParenExpr node) {
+            return true;
+        }
+
+        public override bool Walk(TupleExpr node) {
+            return true;
         }
     }
 
@@ -146,6 +159,9 @@ namespace IronPython.Compiler {
                     }
                     if (func.ContainsUnqualifiedExec && func.ContainsNestedFreeVariables) {
                         ReportSyntaxError(String.Format("unqualified exec is not allowed in function '{0}' it contains a nested function with free variables", func.name.GetString()), func);
+                    }
+                    if (func.ContainsUnqualifiedExec && func.IsClosure) {
+                        ReportSyntaxError(String.Format("unqualified exec is not allowed in function '{0}' it is a nested function", func.name.GetString()), func);
                     }
                 }
 
@@ -231,7 +247,7 @@ namespace IronPython.Compiler {
 
         // ExecStmt
         public override bool Walk(ExecStmt node) {
-            if (node.locals == null) {
+            if (node.locals == null && node.globals == null) {
                 Debug.Assert(current != null);
                 current.ContainsUnqualifiedExec = true;
             }

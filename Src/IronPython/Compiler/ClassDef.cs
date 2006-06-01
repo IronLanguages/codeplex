@@ -115,9 +115,9 @@ namespace IronPython.Compiler {
             Debug.Assert(cg != null, "null codegen");
             Debug.Assert(icg != null, "null init codegen");
 
-            CreateGlobalSlots(icg, cg);
             PromoteLocalsToEnvironment();
             icg.ContextSlot = icg.EnvironmentSlot = CreateEnvironment(icg);
+            CreateGlobalSlots(icg, cg);
             CreateClosureSlots(icg);
 
             // Detect class locals that may be used uninitialized

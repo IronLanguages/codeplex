@@ -284,11 +284,15 @@ namespace IronPython.Modules {
 
         [PythonName("eval")]
         public static object Eval(ICallerContext context, FunctionCode code, IDictionary<object, object> globals) {
-            IDictionary<object, object> glob;
-            if (globals == null) glob = Builtin.Globals(context);
-            else glob = globals;
-            PythonModule mod = new PythonModule(context.Module.ModuleName, glob, context.SystemState, null, context.ContextFlags);
-            return code.Call(new Frame(mod, glob, glob));
+            return Eval(context, code, globals, globals);
+        }
+
+        [PythonName("eval")]
+        public static object Eval(ICallerContext context, FunctionCode code, IDictionary<object, object> globals, object locals) {
+            if (globals == null) globals = Globals(context);
+            if (locals == null) locals = Locals(context);
+            PythonModule mod = new PythonModule(context.Module.ModuleName, globals, context.SystemState, null, context.ContextFlags);
+            return code.Call(new Frame(mod, globals, locals));
         }
 
         [PythonName("eval")]
@@ -310,6 +314,9 @@ namespace IronPython.Modules {
             CompilerContext cc = context.CreateCompilerContext();
             Parser p = Parser.FromString(context.SystemState, cc, expression.TrimStart(' ', '\t'));
             Expr e = p.ParseTestListAsExpression();
+
+            if (globals == null) globals = Globals(context);
+            if (locals == null) locals = Locals(context);
 
             PythonModule mod = new PythonModule("<eval>", globals, context.SystemState, null, context.ContextFlags);
             if (Options.FastEval) {//!!! experimenting with a HUGE (>100x) performance boost to simple evals

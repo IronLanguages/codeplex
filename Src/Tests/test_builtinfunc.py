@@ -186,4 +186,19 @@ Assert("__name__" in dir())
 Assert("__builtins__" in dir())
 
 
+x = 10
+y = 20
+
+def test_eval():
+    d1 = { 'y' : 3 }
+    d2 = { 'x' : 4 }
+
+    AreEqual(eval("x + y", None, d1), 13)
+    AreEqual(eval("x + y", None, None), 30)
+    AreEqual(eval("x + y", None), 30)
+    AreEqual(eval("x + y", None, d2), 24)
+
+    AssertError(NameError, eval, "x + y", d1)
+    AssertError(NameError, eval, "x + y", d1, None)
+
 run_test(__name__)

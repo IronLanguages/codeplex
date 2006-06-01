@@ -281,4 +281,52 @@ def f():
 AreEqual(f(), 123456)
 
 
-#***** Above code are from 'Closures' *****
+y = 654321
+def f():
+    [x, y] = 3, 7
+    def g():
+        AreEqual(x, 3)
+        AreEqual(y, 7)
+    g()
+    AreEqual(x, 3)
+    AreEqual(y, 7)
+    return x, y
+AreEqual(f(), (3, 7))
+AreEqual(x, 123456)
+AreEqual(y, 654321)
+
+
+def f():
+    def f1():
+        [a, b] = [2,3]
+        AreEqual(a, 2)
+        AreEqual(b, 3)
+    f1()
+    a = 3
+    AreEqual(a, 3)
+    del a
+f()
+
+
+x = "global x"
+y = "global y"
+z = "global z"
+
+def test():
+    AreEqual(y, "global y")
+    exec "y = 10"
+    AreEqual(y, 10)
+test()
+
+def test2():
+    AreEqual(x, "global x")
+    exec "x = 5"
+    AreEqual(x, 5)
+    yield x
+
+AreEqual(test2().next(), 5)
+
+class C:
+    AreEqual(z, "global z")
+    exec "z = 7"
+    AreEqual(z, 7)

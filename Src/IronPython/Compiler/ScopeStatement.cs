@@ -397,7 +397,13 @@ namespace IronPython.Compiler {
 
             foreach (KeyValuePair<Name, Binding> kv in names) {
                 if (kv.Value.IsGlobal) {
-                    to.Names.SetSlot(kv.Key, to.Names.Globals.GetSlot(kv.Key));
+                    Slot global = to.Names.Globals.GetSlot(kv.Key);
+                    // if unbound global (free variable not defined in outer scope),
+                    // create backed environment slot
+                    if (!kv.Value.IsBound && this.ContainsUnqualifiedExec) {
+                        global = new EnvironmentBackedSlot(global, to.EnvironmentSlot, kv.Key);
+                    }
+                    to.Names.SetSlot(kv.Key, global);
                 }
             }
         }

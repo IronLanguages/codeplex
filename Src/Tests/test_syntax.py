@@ -304,6 +304,11 @@ AssertError(SyntaxWarning, compile, "x = 10\nglobal x\n", "", "exec")
 
 c = compile("def f():\n    global a\n    global a\n    a = 1\n", "", "exec")
 
+# unqualified exec in nested function
+AssertError(SyntaxError, compile, "def f():\n    x = 1\n    def g():\n        exec 'pass'\n        print x", "", "exec")
+# correct case - qualified exec in nested function
+c = compile("def f():\n    x = 10\n    def g():\n        exec 'pass' in {}\n        print x\n", "", "exec")
+
 # private names test
 
 class C:
