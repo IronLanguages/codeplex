@@ -270,6 +270,9 @@ for enum in enum_types:
                         Assert(False)
                 EnumTest.TestEnumBoolean(ev)
 
+AreEqual(int(Single.Parse("3.14159")), 3)
+
+
 #***** Above code are from 'conversions' *****
 
 #***** Copying from 'Arithmetics' *****

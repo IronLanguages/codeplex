@@ -136,6 +136,7 @@ namespace IronPython.Runtime {
             if (o is int || o is long) return o;
             if (o is BigInteger) return o;
             if ((el = o as ExtensibleLong)!=null) return el.Value;
+            if (o is float) return FloatOps.ToInteger((double)(float)o);
 
             if (o is Complex64) throw Ops.TypeError("can't convert complex to int; use int(abs(z))");
 
