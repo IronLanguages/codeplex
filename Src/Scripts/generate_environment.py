@@ -21,8 +21,8 @@ def gen_one_env(cw, i):
     for j in range(i):
         cw.writeline("[EnvironmentIndex(%i)] public object value%i;" % (j, j))
     cw.writeline()
-    cw.writeline("public FunctionEnvironment%iDictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names)" % i)
-    cw.enter_block("    : base(parent, frame, names)")
+    cw.writeline("public FunctionEnvironment%iDictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names, SymbolId[] outer)" % i)
+    cw.enter_block("    : base(parent, frame, names, outer)")
     cw.exit_block()
     cw.enter_block("public override bool TrySetExtraValue(SymbolId key, object value)")
     if i > 4:
@@ -63,8 +63,19 @@ def gen_one_env(cw, i):
         for j in range(i):
             cw.exit_block()
 
-    cw.writeline("value = null;")
-    cw.writeline("return false;")
+    cw.writeline("return TryGetOuterValue(key, out value);")
+    cw.exit_block()
+
+    cw.enter_block("protected override object GetValueAtIndex(int index)")
+    if i > 4:
+        cw.writeline("return GetAtIndex(index);")
+    else:
+        cw.enter_block("switch (index)")
+        for j in range(i):
+            cw.writeline("case %i: return value%i;" % (j, j))
+        cw.writeline("default: throw OutOfRange(index);")
+        cw.exit_block()
+    
     cw.exit_block()
 
     if i > 4:
@@ -114,12 +125,12 @@ def gen_pf(cw):
     gen_one_pf(cw, ssizes[-1], False, True)
 
     cw.exit_block()
-    cw.writeline("ctor = envType.GetConstructor(new Type[] { typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]) });")
+    cw.writeline("ctor = envType.GetConstructor(new Type[] { typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]), typeof(SymbolId[]) });")
     cw.writeline("ef = new FieldEnvironmentFactory(envType);")
     cw.else_block()
     cw.writeline("cg.EmitInt(size);");
     cw.writeline("envType = typeof(FunctionEnvironmentNDictionary);")
-    cw.writeline("ctor = envType.GetConstructor(new Type[] { typeof(int), typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]) });")
+    cw.writeline("ctor = envType.GetConstructor(new Type[] { typeof(int), typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]), typeof(SymbolId[]) });")
     cw.writeline("ef = new IndexEnvironmentFactory(size);")
     cw.exit_block()
 

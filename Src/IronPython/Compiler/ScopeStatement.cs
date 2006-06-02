@@ -321,15 +321,54 @@ namespace IronPython.Compiler {
             return environmentSize;
         }
 
+        private void EmitOuterLocalIDs(CodeGen cg) {
+            int size = 0;
+            foreach (KeyValuePair<Name, Binding> kv in names) {
+                if (kv.Value.IsFree) size++;
+            }
+            // Emit null if no outer symbol IDs
+            if (size == 0) {
+                cg.EmitExprOrNone(null);
+            } else {
+                cg.EmitInt(size);
+                cg.Emit(OpCodes.Newarr, typeof(SymbolId));
+                int index = 0;
+                foreach (KeyValuePair<Name, Binding> kv in names) {
+                    if (kv.Value.IsFree) {
+                        cg.Emit(OpCodes.Dup);
+                        cg.EmitInt(index++);
+                        cg.Emit(OpCodes.Ldelema, typeof(SymbolId));
+                        cg.EmitSymbolIdInt(kv.Key.GetString());
+                        cg.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
+                    }
+                }
+            }
+        }
+
+        private void EmitEnvironmentIDs(CodeGen cg) {
+            int size = 0;
+            foreach (KeyValuePair<Name, Binding> kv in names) {
+                if (kv.Value.IsEnvironment) size++;
+            }
+            // Create the array for the names
+            cg.EmitInt(size);
+            cg.Emit(OpCodes.Newarr, typeof(SymbolId));
+
+            int index = 0;
+            foreach (KeyValuePair<Name, Binding> kv in names) {
+                if (kv.Value.IsEnvironment) {
+                    cg.Emit(OpCodes.Dup);
+                    cg.EmitInt(index++);
+                    cg.Emit(OpCodes.Ldelema, typeof(SymbolId));
+                    cg.EmitSymbolIdInt(kv.Key.GetString());
+                    cg.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
+                }
+            }
+        }
+
         protected Slot CreateEnvironment(CodeGen cg) {
             // Get the environment size
             int size = CalculateEnvironmentSize();
-
-            // Create the array for the names
-            Slot namesSlot = cg.GetLocalTmp(typeof(SymbolId[]));
-            cg.EmitInt(size - tempsCount);
-            cg.Emit(System.Reflection.Emit.OpCodes.Newarr, typeof(SymbolId));
-            namesSlot.EmitSet(cg);
 
             // Find the right environment type
             ConstructorInfo ctor;
@@ -340,7 +379,8 @@ namespace IronPython.Compiler {
             cg.EmitStaticLinkOrNull();
             cg.EmitCallerContext();
             // Emit the names array for the environment constructor
-            namesSlot.EmitGet(cg);
+            EmitEnvironmentIDs(cg);
+            EmitOuterLocalIDs(cg);
             cg.EmitNew(ctor);
 
             // Store the environment reference in the local
@@ -364,13 +404,6 @@ namespace IronPython.Compiler {
                 } else {
                     slot.EmitSetUninitialized(cg, name);
                 }
-
-                // Set the name into the array
-                namesSlot.EmitGet(cg);
-                cg.EmitInt(er.Index);
-                cg.Emit(OpCodes.Ldelema, typeof(SymbolId));
-                cg.EmitSymbolIdInt(name.GetString());
-                cg.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
 
                 // The full slot goes to the codegen's namespace
                 cg.Names.SetSlot(name, slot);

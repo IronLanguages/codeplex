@@ -30,21 +30,63 @@ namespace IronPython.Runtime {
         [PythonHiddenField] public FunctionEnvironmentDictionary parent;
         [PythonHiddenField] public IFrameEnvironment context;
         [PythonHiddenField] protected SymbolId[] names;
+        private SymbolId[] outer;       // outer scopes
+        private SymbolId[] extra;       // extra keys
 
-        protected FunctionEnvironmentDictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment context, SymbolId[] names) {
+        protected FunctionEnvironmentDictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment context, SymbolId[] names, SymbolId[] outer) {
             this.parent = parent;
             this.context = context;
             this.names = names;
+            this.outer = outer;
+
+            if (names != null) {
+                if (outer != null) {
+                    extra = new SymbolId[names.Length + outer.Length];
+                    Array.Copy(names, extra, names.Length);
+                    Array.Copy(outer, 0, extra, names.Length, outer.Length);
+                } else extra = names;
+            } else extra = outer;
         }
 
         public override SymbolId[] GetExtraKeys() {
-            return names;
+            return extra;
         }
         
         protected static Exception OutOfRange(int index) {
             string msg = string.Format("FunctionEnvironment - index out of range: {0}", index);
             Debug.Fail(msg);
             throw new IndexOutOfRangeException(msg);
+        }
+
+        protected bool TryGetOuterValue(SymbolId key, out object value) {
+            if (outer != null) {
+                // Does the key belong to any of the outer scopes?
+                for (int index = 0; index < outer.Length; index++) {
+                    if (outer[index] == key) {
+                        FunctionEnvironmentDictionary current = parent;
+
+                        while (current != null) {
+                            if (current.TryGetExtraValueRaw(key, out value)) return true;
+                            current = current.parent;
+                        }
+                    }
+                }
+            }
+            value = null;
+            return false;
+        }
+
+        protected abstract object GetValueAtIndex(int index);
+
+        private bool TryGetExtraValueRaw(SymbolId key, out object value) {
+            for (int index = 0; index < names.Length; index++) {
+                if (names[index] == key) {
+                    value = GetValueAtIndex(index);
+                    return true;
+                }
+            }
+            value = null;
+            return false;
         }
 
         #region ICallerContext Members
@@ -114,11 +156,15 @@ namespace IronPython.Runtime {
         // Array of the variables in the environment
         [PythonHiddenField]public object[] environmentValues;
 
-        public FunctionEnvironmentNDictionary(int size, FunctionEnvironmentDictionary parent, IFrameEnvironment context, SymbolId[] names)
-            : base(parent, context, names) {
+        public FunctionEnvironmentNDictionary(int size, FunctionEnvironmentDictionary parent, IFrameEnvironment context, SymbolId[] names, SymbolId[] outer)
+            : base(parent, context, names, outer) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Temporary, "FuncEnv " + size.ToString());
             Debug.Assert(names.Length == size);
             this.environmentValues = new object[size];
+        }
+
+        protected override object GetValueAtIndex(int index) {
+            return GetAtIndex(index);
         }
 
         private object GetAtIndex(int index) {
@@ -145,8 +191,7 @@ namespace IronPython.Runtime {
                     return true;
                 }
             }
-            value = null;
-            return false;
+            return TryGetOuterValue(key, out value);
         }
     }
 }

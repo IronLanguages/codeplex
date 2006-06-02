@@ -41,12 +41,12 @@ namespace IronPython.Compiler {
                 } else {
                     envType = typeof(FunctionEnvironment32Dictionary);
                 }
-                ctor = envType.GetConstructor(new Type[] { typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]) });
+                ctor = envType.GetConstructor(new Type[] { typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]), typeof(SymbolId[]) });
                 ef = new FieldEnvironmentFactory(envType);
             } else {
                 cg.EmitInt(size);
                 envType = typeof(FunctionEnvironmentNDictionary);
-                ctor = envType.GetConstructor(new Type[] { typeof(int), typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]) });
+                ctor = envType.GetConstructor(new Type[] { typeof(int), typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]), typeof(SymbolId[]) });
                 ef = new IndexEnvironmentFactory(size);
             }
 

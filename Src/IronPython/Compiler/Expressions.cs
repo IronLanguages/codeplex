@@ -97,7 +97,7 @@ namespace IronPython.Compiler {
                 if (nameExpr.name == VarsName) return true;
                 if (nameExpr.name == DirName) return true;
                 return false;
-            } else if (args.Length == 1) {
+            } else {
                 if (nameExpr.name == EvalName) return true;
             }
             return false;

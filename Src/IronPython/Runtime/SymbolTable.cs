@@ -880,8 +880,7 @@ namespace IronPython.Runtime {
                     if (key.Id < 0) break;
 
                     object dummy;
-                    TryGetExtraValue(key, out dummy);
-                    if (!(dummy is Uninitialized)) {
+                    if (TryGetExtraValue(key, out dummy) && !(dummy is Uninitialized)) {
                         res.Add(SymbolTable.IdToString(key));
                     }
                 }
@@ -950,8 +949,7 @@ namespace IronPython.Runtime {
                     if (key.Id < 0) break;
 
                     object value;
-                    TryGetExtraValue(key, out value);
-                    if (!(value is Uninitialized)) {
+                    if (TryGetExtraValue(key, out value) && !(value is Uninitialized)) {
                         res.Add(value);
                     }
                 }
@@ -1050,8 +1048,7 @@ namespace IronPython.Runtime {
                         if (key.Id < 0) break;
 
                         object dummy;
-                        TryGetExtraValue(key, out dummy);
-                        if (!(dummy is Uninitialized)) count++;
+                        if (TryGetExtraValue(key, out dummy) && !(dummy is Uninitialized)) count++;
                     }
                 }
 
@@ -1084,8 +1081,7 @@ namespace IronPython.Runtime {
                 if (o.Id < 0) break;
 
                 object val;
-                TryGetExtraValue(o, out val);
-                if (!(val is Uninitialized)) {
+                if (TryGetExtraValue(o, out val) && !(val is Uninitialized)) {
                     yield return new KeyValuePair<object, object>(SymbolTable.IdToString(o), val);
                 }
             }

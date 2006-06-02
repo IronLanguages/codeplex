@@ -26,8 +26,8 @@ namespace IronPython.Runtime {
         [EnvironmentIndex(0)] public object value0;
         [EnvironmentIndex(1)] public object value1;
 
-        public FunctionEnvironment2Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names)
-            : base(parent, frame, names) {
+        public FunctionEnvironment2Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names, SymbolId[] outer)
+            : base(parent, frame, names, outer) {
         }
         public override bool TrySetExtraValue(SymbolId key, object value) {
             if(names.Length >= 1) {
@@ -57,8 +57,14 @@ namespace IronPython.Runtime {
                     }
                 }
             }
-            value = null;
-            return false;
+            return TryGetOuterValue(key, out value);
+        }
+        protected override object GetValueAtIndex(int index) {
+            switch (index) {
+                case 0: return value0;
+                case 1: return value1;
+                default: throw OutOfRange(index);
+            }
         }
     }
 
@@ -69,8 +75,8 @@ namespace IronPython.Runtime {
         [EnvironmentIndex(2)] public object value2;
         [EnvironmentIndex(3)] public object value3;
 
-        public FunctionEnvironment4Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names)
-            : base(parent, frame, names) {
+        public FunctionEnvironment4Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names, SymbolId[] outer)
+            : base(parent, frame, names, outer) {
         }
         public override bool TrySetExtraValue(SymbolId key, object value) {
             if(names.Length >= 1) {
@@ -124,8 +130,16 @@ namespace IronPython.Runtime {
                     }
                 }
             }
-            value = null;
-            return false;
+            return TryGetOuterValue(key, out value);
+        }
+        protected override object GetValueAtIndex(int index) {
+            switch (index) {
+                case 0: return value0;
+                case 1: return value1;
+                case 2: return value2;
+                case 3: return value3;
+                default: throw OutOfRange(index);
+            }
         }
     }
 
@@ -140,8 +154,8 @@ namespace IronPython.Runtime {
         [EnvironmentIndex(6)] public object value6;
         [EnvironmentIndex(7)] public object value7;
 
-        public FunctionEnvironment8Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names)
-            : base(parent, frame, names) {
+        public FunctionEnvironment8Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names, SymbolId[] outer)
+            : base(parent, frame, names, outer) {
         }
         public override bool TrySetExtraValue(SymbolId key, object value) {
             for (int i = 0; i < names.Length; i++) {
@@ -159,8 +173,10 @@ namespace IronPython.Runtime {
                     return true;
                 }
             }
-            value = null;
-            return false;
+            return TryGetOuterValue(key, out value);
+        }
+        protected override object GetValueAtIndex(int index) {
+            return GetAtIndex(index);
         }
         private object GetAtIndex(int index) {
             switch (index) {
@@ -209,8 +225,8 @@ namespace IronPython.Runtime {
         [EnvironmentIndex(14)] public object value14;
         [EnvironmentIndex(15)] public object value15;
 
-        public FunctionEnvironment16Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names)
-            : base(parent, frame, names) {
+        public FunctionEnvironment16Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names, SymbolId[] outer)
+            : base(parent, frame, names, outer) {
         }
         public override bool TrySetExtraValue(SymbolId key, object value) {
             for (int i = 0; i < names.Length; i++) {
@@ -228,8 +244,10 @@ namespace IronPython.Runtime {
                     return true;
                 }
             }
-            value = null;
-            return false;
+            return TryGetOuterValue(key, out value);
+        }
+        protected override object GetValueAtIndex(int index) {
+            return GetAtIndex(index);
         }
         private object GetAtIndex(int index) {
             switch (index) {
@@ -310,8 +328,8 @@ namespace IronPython.Runtime {
         [EnvironmentIndex(30)] public object value30;
         [EnvironmentIndex(31)] public object value31;
 
-        public FunctionEnvironment32Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names)
-            : base(parent, frame, names) {
+        public FunctionEnvironment32Dictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names, SymbolId[] outer)
+            : base(parent, frame, names, outer) {
         }
         public override bool TrySetExtraValue(SymbolId key, object value) {
             for (int i = 0; i < names.Length; i++) {
@@ -329,8 +347,10 @@ namespace IronPython.Runtime {
                     return true;
                 }
             }
-            value = null;
-            return false;
+            return TryGetOuterValue(key, out value);
+        }
+        protected override object GetValueAtIndex(int index) {
+            return GetAtIndex(index);
         }
         private object GetAtIndex(int index) {
             switch (index) {
