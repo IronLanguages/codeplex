@@ -30,6 +30,9 @@ def file_exists(file):
     except:
         return False
 
+def Assert(c):
+    if not c: raise AssertionError("Assertion Failed")
+
 def get_all_paths():
     if sys.platform == "cli":
         ipython_executable = sys.executable
@@ -51,10 +54,10 @@ def get_all_paths():
     else:
         raise AssertionError
     
-    assert file_exists(cpython_executable)
-    assert file_exists(cpython_lib_path)
-    assert file_exists(ipython_executable)
-    assert file_exists(compat_test_path)
+    Assert(file_exists(cpython_executable))
+    Assert(file_exists(cpython_lib_path))
+    Assert(file_exists(ipython_executable))
+    Assert(file_exists(compat_test_path))
     
     return cpython_executable, cpython_lib_path, ipython_executable, compat_test_path
 

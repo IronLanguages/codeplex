@@ -30,7 +30,7 @@ def evalTest(N):
     return endMem-startMem
 
 list = [
-    "assert (1+2) == 3",
+    "if not 1 + 2 == 3: raise AssertionError('Assertion Failed')",
     "(a,b) = (0, 1)",
     "2+"*10 + "2",
 

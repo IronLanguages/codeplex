@@ -115,8 +115,8 @@ def xgen2(x):
         100 / x
         yield "try 2"
     except AssertionError:
-        yield "assert"
-        yield "assert 2"
+        yield "error"
+        yield "error 2"
     except:
         yield "exc"
         yield "exc 2"
@@ -132,7 +132,7 @@ testxgen2(0, ['first', 'try', 'exc', 'exc 2', 'last'])
 testxgen2(1, ['first', 'try', 'try 2', 'else', 'else 2', 'last'])
 testxgen2(2, ['first', 'try', 'try 2', 'else', 'else 2', 'last'])
 testxgen2(3, ['first', 'try', 'try 2', 'else', 'else 2', 'last'])
-testxgen2(4, ['first', 'try', 'assert', 'assert 2', 'last'])
+testxgen2(4, ['first', 'try', 'error', 'error 2', 'last'])
 
 
 def xgen3():

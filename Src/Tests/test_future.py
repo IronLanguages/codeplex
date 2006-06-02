@@ -22,28 +22,34 @@ from lib.assert_util import *
 
 # the following are alway true in current context
 def always_true():
-    exec "assert 1 / 2 == 0.5"
-    exec "from __future__ import division; assert 1/2 == 0.5"
+    exec "AreEqual(1 / 2, 0.5)"
+    exec "from __future__ import division; AreEqual(1 / 2, 0.5)"
     AreEqual(1/2, 0.5)
     AreEqual(eval("1/2"), 0.5)
 
 tempfile = path_combine(testpath.temporary_dir, "temp_future.py")
 
-code1  = '''
-exec "assert 1/2 == 0.5"
-exec "from __future__ import division; assert 1/2 == 0.5"
-assert 1/2 == 0.5
-assert eval('1/2') == 0.5
+assert_code = '''
+def CustomAssert(c):
+    if not c: raise AssertionError("Assertion Failed")
+
+'''
+
+code1  = assert_code + '''
+exec "CustomAssert(1/2 == 0.5)"
+exec "from __future__ import division; CustomAssert(1/2 == 0.5)"
+CustomAssert(1/2 == 0.5)
+CustomAssert(eval('1/2') == 0.5)
 '''
 
 code2 = "from __future__ import division\n" + code1
 
 # this is true if the code is imported as module
-code0 = '''
-exec "assert 1/2 == 0"
-exec "from __future__ import division; assert 1/2 == 0.5"
-assert 1/2 == 0
-assert eval('1/2') == 0
+code0 = assert_code + '''
+exec "CustomAssert(1/2 == 0)"
+exec "from __future__ import division; CustomAssert(1/2 == 0.5)"
+CustomAssert(1/2 == 0)
+CustomAssert(eval('1/2') == 0)
 '''
 
 def f1(): execfile(tempfile)
@@ -80,8 +86,8 @@ finally:
 ## carry context over class def
 class C:
     def check(self):
-        exec "assert 1 / 2 == 0.5"
-        exec "from __future__ import division; assert 1/2 == 0.5"
+        exec "AreEqual(1 / 2, 0.5)"
+        exec "from __future__ import division; AreEqual(1/2, 0.5)"
         AreEqual(1 / 2, 0.5)
         AreEqual(eval("1/2"), 0.5)
 

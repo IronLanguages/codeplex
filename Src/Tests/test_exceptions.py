@@ -51,9 +51,11 @@ except Exception, e:
     Assert(False, "FAILED!")
 
 try:
-     assert False, "Message"
+     Fail("Message")
 except AssertionError, e:
      AreEqual(e.__str__(), e.args[0])
+else:
+    Fail("Expected exception")
 
 try:
     def Raise3():
@@ -348,13 +350,15 @@ except:
     AreEqual(sys.exc_info()[1].__class__, exceptions.Exception)
     
 try:
-    assert False, "message"
+    Fail("message")
 except AssertionError, e:
     import exceptions
     
     AreEqual(e.__class__, exceptions.AssertionError)
     AreEqual(len(e.args), 1)
     AreEqual(e.args[0], "message")
+else:
+    Fail("Expected exception")
 
 #####################################################################################
 # __str__ behaves differently for exceptions because of implementation (ExceptionConverter.ExceptionToString)

@@ -305,7 +305,10 @@ FileRemoval(source1, source2, assembly)
 # verify arguments are passed through...
 write_to_file(source1, """
 import sys
-assert sys.argv[0].lower() == sys.argv[4].lower()
+def CustomAssert(c):
+    if not c: raise AssertionError("Assertin Failed")
+    
+CustomAssert(sys.argv[0].lower() == sys.argv[4].lower())
 sys.exit(int(sys.argv[1]) + int(sys.argv[2]) + int(sys.argv[3]))
 """)
 
