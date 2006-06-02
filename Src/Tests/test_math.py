@@ -192,6 +192,54 @@ AssertError(ZeroDivisionError, (lambda: (0L ** -(2 ** 65))))
 AssertError(ZeroDivisionError, (lambda: (0j ** -1)))
 AssertError(ZeroDivisionError, (lambda: (0j ** 1j)))
 
+def test_extensible_math():
+    operators = ['__add__', '__sub__', '__pow__', '__mul__', '__div__', '__floordiv__', '__truediv__', '__mod__']
+    opSymbol  = ['+',       '-',       '**',      '*',       '/',       '//',           '/',           '%']
+    
+    types = []
+    for baseType in [(int, (100,2)), (long, (100L, 2L)), (float, (100.0, 2.0))]:
+    # (complex, (100+0j, 2+0j)) - cpython doesn't call reverse ops for complex ?
+        class prototype(baseType[0]):
+            for op in operators:                
+                exec '''def %s(self, other): 
+    global opCalled
+    opCalled.append('%s')
+    return super(self.__class__, self).%s(other)
+
+def %s(self, other): 
+    global opCalled
+    opCalled.append('%s')
+    return super(self.__class__, self).%s(other)''' % (op, op, op, op[:2] + 'r' + op[2:], op[:2] + 'r' + op[2:], op[:2] + 'r' + op[2:])
+        
+        types.append( (prototype, baseType[1]) )
+    
+    global opCalled
+    opCalled = []
+    for op in opSymbol:
+            for typeInfo in types:
+                ex = typeInfo[0](typeInfo[1][0])
+                ey = typeInfo[0](typeInfo[1][1])
+                nx = typeInfo[0].__bases__[0](typeInfo[1][0])
+                ny = typeInfo[0].__bases__[0](typeInfo[1][1])
+                                
+                print 'nx %s ey' % op, type(nx), type(ey)
+                res1 = eval('nx %s ey' % op)
+                res2 = eval('nx %s ny' % op)
+                AreEqual(res1, res2)
+                AreEqual(len(opCalled), 1)
+                opCalled = []
+                
+                print 'ex %s ny' % op, type(ex), type(ny)
+                res1 = eval('ex %s ny' % op)
+                res2 = eval('nx %s ny' % op)
+                AreEqual(res1, res2)
+                AreEqual(len(opCalled), 1)
+                opCalled = []
+                
+
+                        
+test_extensible_math()
+    
 def test_dot_net_types():
     from System import Byte, UInt16, UInt32, UInt64, SByte, Int16
     from operator import add, sub, mul, div, mod, and_, or_, xor, floordiv

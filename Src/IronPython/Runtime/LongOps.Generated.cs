@@ -20,6 +20,134 @@ using System.Text;
 using IronMath;
 
 namespace IronPython.Runtime {
+    public partial class ExtensibleLong {
+        #region Generated Extensible LongOps
+
+        // *** BEGIN GENERATED CODE ***
+
+        [PythonName("__add__")]
+        public virtual object Add(object other) {
+            return LongOps.Add(value, other);
+        }
+
+        [PythonName("__radd__")]
+        public virtual object ReverseAdd(object other) {
+            return LongOps.ReverseAdd(value, other);
+        }
+        [PythonName("__sub__")]
+        public virtual object Subtract(object other) {
+            return LongOps.Subtract(value, other);
+        }
+
+        [PythonName("__rsub__")]
+        public virtual object ReverseSubtract(object other) {
+            return LongOps.ReverseSubtract(value, other);
+        }
+        [PythonName("__pow__")]
+        public virtual object Power(object other) {
+            return LongOps.Power(value, other);
+        }
+
+        [PythonName("__rpow__")]
+        public virtual object ReversePower(object other) {
+            return LongOps.ReversePower(value, other);
+        }
+        [PythonName("__mul__")]
+        public virtual object Multiply(object other) {
+            return LongOps.Multiply(value, other);
+        }
+
+        [PythonName("__rmul__")]
+        public virtual object ReverseMultiply(object other) {
+            return LongOps.ReverseMultiply(value, other);
+        }
+        [PythonName("__div__")]
+        public virtual object Divide(object other) {
+            return LongOps.Divide(value, other);
+        }
+
+        [PythonName("__rdiv__")]
+        public virtual object ReverseDivide(object other) {
+            return LongOps.ReverseDivide(value, other);
+        }
+        [PythonName("__floordiv__")]
+        public virtual object FloorDivide(object other) {
+            return LongOps.FloorDivide(value, other);
+        }
+
+        [PythonName("__rfloordiv__")]
+        public virtual object ReverseFloorDivide(object other) {
+            return LongOps.ReverseFloorDivide(value, other);
+        }
+        [PythonName("__truediv__")]
+        public virtual object TrueDivide(object other) {
+            return LongOps.TrueDivide(value, other);
+        }
+
+        [PythonName("__rtruediv__")]
+        public virtual object ReverseTrueDivide(object other) {
+            return LongOps.ReverseTrueDivide(value, other);
+        }
+        [PythonName("__mod__")]
+        public virtual object Mod(object other) {
+            return LongOps.Mod(value, other);
+        }
+
+        [PythonName("__rmod__")]
+        public virtual object ReverseMod(object other) {
+            return LongOps.ReverseMod(value, other);
+        }
+        [PythonName("__lshift__")]
+        public virtual object LeftShift(object other) {
+            return LongOps.LeftShift(value, other);
+        }
+
+        [PythonName("__rlshift__")]
+        public virtual object ReverseLeftShift(object other) {
+            return LongOps.ReverseLeftShift(value, other);
+        }
+        [PythonName("__rshift__")]
+        public virtual object RightShift(object other) {
+            return LongOps.RightShift(value, other);
+        }
+
+        [PythonName("__rrshift__")]
+        public virtual object ReverseRightShift(object other) {
+            return LongOps.ReverseRightShift(value, other);
+        }
+        [PythonName("__and__")]
+        public virtual object BitwiseAnd(object other) {
+            return LongOps.BitwiseAnd(value, other);
+        }
+
+        [PythonName("__rand__")]
+        public virtual object ReverseBitwiseAnd(object other) {
+            return LongOps.ReverseBitwiseAnd(value, other);
+        }
+        [PythonName("__or__")]
+        public virtual object BitwiseOr(object other) {
+            return LongOps.BitwiseOr(value, other);
+        }
+
+        [PythonName("__ror__")]
+        public virtual object ReverseBitwiseOr(object other) {
+            return LongOps.ReverseBitwiseOr(value, other);
+        }
+        [PythonName("__xor__")]
+        public virtual object Xor(object other) {
+            return LongOps.Xor(value, other);
+        }
+
+        [PythonName("__rxor__")]
+        public virtual object ReverseXor(object other) {
+            return LongOps.ReverseXor(value, other);
+        }
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+    }
+
     public static partial class LongOps {
         #region Generated LongOps
 
@@ -29,20 +157,16 @@ namespace IronPython.Runtime {
         [PythonName("__add__")]
         public static object Add(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
+            INumber num;
             ExtensibleComplex xc;
-            ExtensibleLong el;
 
             if (other is int) return x + ((int)other);
             if (other is Complex64) return x + ((Complex64)other);
             if (other is double) return x + ((double)other);
             if ((object)(bi = other as BigInteger) != null) return x + bi;
-            if ((el = other as ExtensibleLong) != null) return x + el.Value;
+            if ((num = other as INumber) != null) return num.ReverseAdd(x);
             if (other is bool) return x + ((bool) other ? 1 : 0);
             if (other is long) return x + ((long)other);
-            if ((object)(xi = other as ExtensibleInt) != null) return x + (xi.value);
-            if ((object)(xf = other as ExtensibleFloat) != null) return x + (xf.value);
             if ((object)(xc = other as ExtensibleComplex) != null) return x + xc.value;
             if (other is byte) return x + (int)((byte)other);
             return Ops.NotImplemented;
@@ -52,20 +176,16 @@ namespace IronPython.Runtime {
         [PythonName("__sub__")]
         public static object Subtract(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
+            INumber num;
             ExtensibleComplex xc;
-            ExtensibleLong el;
 
             if (other is int) return x - ((int)other);
             if (other is Complex64) return x - ((Complex64)other);
             if (other is double) return x - ((double)other);
             if ((object)(bi = other as BigInteger) != null) return x - bi;
-            if ((el = other as ExtensibleLong) != null) return x - el.Value;
+            if ((num = other as INumber) != null) return num.ReverseSubtract(x);
             if (other is bool) return x - ((bool) other ? 1 : 0);
             if (other is long) return x - ((long)other);
-            if ((object)(xi = other as ExtensibleInt) != null) return x - (xi.value);
-            if ((object)(xf = other as ExtensibleFloat) != null) return x - (xf.value);
             if ((object)(xc = other as ExtensibleComplex) != null) return x - xc.value;
             if (other is byte) return x - (int)((byte)other);
             return Ops.NotImplemented;
@@ -75,22 +195,36 @@ namespace IronPython.Runtime {
         [PythonName("__pow__")]
         public static object Power(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
             ExtensibleComplex xc;
-            ExtensibleLong xl;
+            INumber num;
 
             if (other is int) return Power(x, (int)other);
             if ((object)(bi = other as BigInteger) != null) return Power(x, bi);
-            if ((xl = other as ExtensibleLong) != null) return Power(x, xl.Value);
+            if ((num = other as INumber) != null) return num.ReversePower(x);
             if (other is double) return Power(x, (double)other);
             if (other is Complex64) return ComplexOps.Power(x, (Complex64)other);
             if (other is bool) return Power(x, (bool)other ? 1 : 0);
             if (other is long) return Power(x, (long)other);
-            if ((object)(xi = other as ExtensibleInt) != null) return Power(x, xi.value);
-            if ((object)(xf = other as ExtensibleFloat) != null) return Power(x, xf.value);
             if ((object)(xc = other as ExtensibleComplex) != null) return Power(x, xc.value);
             if (other is byte) return Power(x, (int)((byte)other));
+            return Ops.NotImplemented;
+        }
+
+        [PythonName("__rpow__")]
+        public static object ReversePower(BigInteger x, object other) {
+            BigInteger bi;
+            ExtensibleComplex xc;
+            INumber num;
+
+            if (other is int) return IntOps.Power((int)other, x);
+            if ((object)(bi = other as BigInteger) != null) return Power(bi, x);
+            if ((num = other as INumber) != null) return num.Power(x);
+            if (other is double) return FloatOps.Power((double)other, x);
+            if (other is Complex64) return ComplexOps.Power((Complex64)other, x);
+            if (other is bool) return IntOps.Power((bool)other ? 1 : 0, x);
+            if (other is long) return Int64Ops.Power((long)other, x);
+            if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Power(xc.value, x);
+            if (other is byte) return IntOps.Power((int)((byte)other), x);
             return Ops.NotImplemented;
         }
 
@@ -98,20 +232,16 @@ namespace IronPython.Runtime {
         [PythonName("__mul__")]
         public static object Multiply(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
+            INumber num;
             ExtensibleComplex xc;
-            ExtensibleLong el;
 
             if (other is int) return x * ((int)other);
             if (other is Complex64) return x * ((Complex64)other);
             if (other is double) return x * ((double)other);
             if ((object)(bi = other as BigInteger) != null) return x * bi;
-            if ((el = other as ExtensibleLong) != null) return x * el.Value;
+            if ((num = other as INumber) != null) return num.ReverseMultiply(x);
             if (other is bool) return x * ((bool) other ? 1 : 0);
             if (other is long) return x * ((long)other);
-            if ((object)(xi = other as ExtensibleInt) != null) return x * (xi.value);
-            if ((object)(xf = other as ExtensibleFloat) != null) return x * (xf.value);
             if ((object)(xc = other as ExtensibleComplex) != null) return x * xc.value;
             if (other is byte) return x * (int)((byte)other);
             return Ops.NotImplemented;
@@ -121,10 +251,8 @@ namespace IronPython.Runtime {
         [PythonName("__div__")]
         public static object Divide(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
+            INumber num;
             ExtensibleComplex xc;
-            ExtensibleLong el;
 
             if (other is int) return Divide(x, (int)other);
             if (other is Complex64) {
@@ -136,15 +264,13 @@ namespace IronPython.Runtime {
             if (other is bool) return Divide(x, (bool)other ? 1 : 0);
             if (other is long) return Divide(x, (long)other);
             if ((object)(bi = other as BigInteger) != null) return Divide(x, bi);
-            if ((object)(el = other as ExtensibleLong) != null) return Divide(x, el.Value);
-            if ((object)(xi = other as ExtensibleInt) != null) return Divide(x, xi.value);
+            if ((object)(num = other as INumber) != null) return num.ReverseDivide(x);
             if ((object)(xc = other as ExtensibleComplex) != null) {
                 Complex64 y = xc.value;
                 if(y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.Divide(Complex64.MakeReal(x), y);
             }
             if (other is byte) return Divide(x, (int)((byte)other));
-            if ((object)(xf = other as ExtensibleFloat) != null) return FloatOps.Divide(x, xf.value);
             return Ops.NotImplemented;
         }
 
@@ -152,10 +278,8 @@ namespace IronPython.Runtime {
         [PythonName("__rdiv__")]
         public static object ReverseDivide(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
             ExtensibleComplex xc;
-            ExtensibleLong el;
+            INumber num;
 
             if (other is int) return IntOps.Divide((int)other, x);
             if (other is Complex64) {
@@ -167,15 +291,13 @@ namespace IronPython.Runtime {
             if (other is bool) return Divide((bool)other ? 1 : 0, x);
             if (other is long) return Divide((long)other, x);
             if ((object)(bi = other as BigInteger) != null) return Divide(bi, x);
-            if ((object)(el = other as ExtensibleLong) != null) return Divide(el.Value, x);
-            if ((object)(xi = other as ExtensibleInt) != null) return Divide(xi.value, x);
+            if ((object)(num = other as INumber) != null) return num.Divide(x);
             if ((object)(xc = other as ExtensibleComplex) != null) {
                 Complex64 y = xc.value;
                 if(y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.Divide(y, Complex64.MakeReal(x));
             }
             if (other is byte) return IntOps.Divide((int)((byte)other), x);
-            if ((object)(xf = other as ExtensibleFloat) != null) return FloatOps.Divide(xf.value, x);
             return Ops.NotImplemented;
         }
 
@@ -184,10 +306,8 @@ namespace IronPython.Runtime {
         [PythonName("__floordiv__")]
         public static object FloorDivide(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
+            INumber num;
             ExtensibleComplex xc;
-            ExtensibleLong el;
 
             if (other is int) return Divide(x, (int)other);
             if (other is Complex64) {
@@ -199,15 +319,13 @@ namespace IronPython.Runtime {
             if (other is bool) return Divide(x, (bool)other ? 1 : 0);
             if (other is long) return Divide(x, (long)other);
             if ((object)(bi = other as BigInteger) != null) return Divide(x, bi);
-            if ((object)(el = other as ExtensibleLong) != null) return Divide(x, el.Value);
-            if ((object)(xi = other as ExtensibleInt) != null) return Divide(x, xi.value);
+            if ((object)(num = other as INumber) != null) return num.ReverseFloorDivide(x);
             if ((object)(xc = other as ExtensibleComplex) != null) {
                 Complex64 y = xc.value;
                 if(y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.FloorDivide(Complex64.MakeReal(x), y);
             }
             if (other is byte) return Divide(x, (int)((byte)other));
-            if ((object)(xf = other as ExtensibleFloat) != null) return FloatOps.FloorDivide(x, xf.value);
             return Ops.NotImplemented;
         }
 
@@ -215,10 +333,8 @@ namespace IronPython.Runtime {
         [PythonName("__rfloordiv__")]
         public static object ReverseFloorDivide(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
             ExtensibleComplex xc;
-            ExtensibleLong el;
+            INumber num;
 
             if (other is int) return IntOps.Divide((int)other, x);
             if (other is Complex64) {
@@ -230,15 +346,13 @@ namespace IronPython.Runtime {
             if (other is bool) return Divide((bool)other ? 1 : 0, x);
             if (other is long) return Divide((long)other, x);
             if ((object)(bi = other as BigInteger) != null) return Divide(bi, x);
-            if ((object)(el = other as ExtensibleLong) != null) return Divide(el.Value, x);
-            if ((object)(xi = other as ExtensibleInt) != null) return Divide(xi.value, x);
+            if ((object)(num = other as INumber) != null) return num.FloorDivide(x);
             if ((object)(xc = other as ExtensibleComplex) != null) {
                 Complex64 y = xc.value;
                 if(y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.FloorDivide(y, Complex64.MakeReal(x));
             }
             if (other is byte) return IntOps.Divide((int)((byte)other), x);
-            if ((object)(xf = other as ExtensibleFloat) != null) return FloatOps.FloorDivide(xf.value, x);
             return Ops.NotImplemented;
         }
 
@@ -247,22 +361,36 @@ namespace IronPython.Runtime {
         [PythonName("__truediv__")]
         public static object TrueDivide(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
             ExtensibleComplex xc;
-            ExtensibleLong xl;
+            INumber num;
 
             if (other is int) return TrueDivide(x, (int)other);
             if ((object)(bi = other as BigInteger) != null) return TrueDivide(x, bi);
-            if ((xl = other as ExtensibleLong) != null) return TrueDivide(x, xl.Value);
+            if ((num = other as INumber) != null) return num.ReverseTrueDivide(x);
             if (other is double) return TrueDivide(x, (double)other);
             if (other is Complex64) return ComplexOps.TrueDivide(x, (Complex64)other);
             if (other is bool) return TrueDivide(x, (bool)other ? 1 : 0);
             if (other is long) return TrueDivide(x, (long)other);
-            if ((object)(xi = other as ExtensibleInt) != null) return TrueDivide(x, xi.value);
-            if ((object)(xf = other as ExtensibleFloat) != null) return TrueDivide(x, xf.value);
             if ((object)(xc = other as ExtensibleComplex) != null) return TrueDivide(x, xc.value);
             if (other is byte) return TrueDivide(x, (int)((byte)other));
+            return Ops.NotImplemented;
+        }
+
+        [PythonName("__rtruediv__")]
+        public static object ReverseTrueDivide(BigInteger x, object other) {
+            BigInteger bi;
+            ExtensibleComplex xc;
+            INumber num;
+
+            if (other is int) return IntOps.TrueDivide((int)other, x);
+            if ((object)(bi = other as BigInteger) != null) return TrueDivide(bi, x);
+            if ((num = other as INumber) != null) return num.TrueDivide(x);
+            if (other is double) return FloatOps.TrueDivide((double)other, x);
+            if (other is Complex64) return ComplexOps.TrueDivide((Complex64)other, x);
+            if (other is bool) return IntOps.TrueDivide((bool)other ? 1 : 0, x);
+            if (other is long) return Int64Ops.TrueDivide((long)other, x);
+            if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.TrueDivide(xc.value, x);
+            if (other is byte) return IntOps.TrueDivide((int)((byte)other), x);
             return Ops.NotImplemented;
         }
 
@@ -270,10 +398,8 @@ namespace IronPython.Runtime {
         [PythonName("__mod__")]
         public static object Mod(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
+            INumber num;
             ExtensibleComplex xc;
-            ExtensibleLong el;
 
             if (other is int) return Mod(x, (int)other);
             if (other is Complex64) {
@@ -285,15 +411,13 @@ namespace IronPython.Runtime {
             if (other is bool) return Mod(x, (bool)other ? 1 : 0);
             if (other is long) return Mod(x, (long)other);
             if ((object)(bi = other as BigInteger) != null) return Mod(x, bi);
-            if ((object)(el = other as ExtensibleLong) != null) return Mod(x, el.Value);
-            if ((object)(xi = other as ExtensibleInt) != null) return Mod(x, xi.value);
+            if ((object)(num = other as INumber) != null) return num.ReverseMod(x);
             if ((object)(xc = other as ExtensibleComplex) != null) {
                 Complex64 y = xc.value;
                 if(y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.Mod(Complex64.MakeReal(x), y);
             }
             if (other is byte) return Mod(x, (int)((byte)other));
-            if ((object)(xf = other as ExtensibleFloat) != null) return FloatOps.Mod(x, xf.value);
             return Ops.NotImplemented;
         }
 
@@ -301,10 +425,8 @@ namespace IronPython.Runtime {
         [PythonName("__rmod__")]
         public static object ReverseMod(BigInteger x, object other) {
             BigInteger bi;
-            ExtensibleInt xi;
-            ExtensibleFloat xf;
             ExtensibleComplex xc;
-            ExtensibleLong el;
+            INumber num;
 
             if (other is int) return IntOps.Mod((int)other, x);
             if (other is Complex64) {
@@ -316,15 +438,13 @@ namespace IronPython.Runtime {
             if (other is bool) return Mod((bool)other ? 1 : 0, x);
             if (other is long) return Mod((long)other, x);
             if ((object)(bi = other as BigInteger) != null) return Mod(bi, x);
-            if ((object)(el = other as ExtensibleLong) != null) return Mod(el.Value, x);
-            if ((object)(xi = other as ExtensibleInt) != null) return Mod(xi.value, x);
+            if ((object)(num = other as INumber) != null) return num.Mod(x);
             if ((object)(xc = other as ExtensibleComplex) != null) {
                 Complex64 y = xc.value;
                 if(y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.Mod(y, Complex64.MakeReal(x));
             }
             if (other is byte) return IntOps.Mod((int)((byte)other), x);
-            if ((object)(xf = other as ExtensibleFloat) != null) return FloatOps.Mod(xf.value, x);
             return Ops.NotImplemented;
         }
 
@@ -340,8 +460,8 @@ namespace IronPython.Runtime {
             if (other is long) return x & (long)other;
             if (other is int) return x & (int)other;
             if (other is bool) return x & ((bool)other ? 1 : 0);
-            if ((object)(xi = other as ExtensibleInt) != null) return x & xi.value;
-            if ((object)(xl = other as ExtensibleLong) != null) return x & xl.Value;
+            if ((object)(xi = other as ExtensibleInt) != null) return xi.ReverseBitwiseAnd(x);
+            if ((object)(xl = other as ExtensibleLong) != null) return xl.ReverseBitwiseAnd(x);
             if (other is byte) return x & (int)((byte)other);
             return Ops.NotImplemented;
         }
@@ -357,8 +477,8 @@ namespace IronPython.Runtime {
             if (other is long) return x | (long)other;
             if (other is int) return x | (int)other;
             if (other is bool) return x | ((bool)other ? 1 : 0);
-            if ((object)(xi = other as ExtensibleInt) != null) return x | xi.value;
-            if ((object)(xl = other as ExtensibleLong) != null) return x | xl.Value;
+            if ((object)(xi = other as ExtensibleInt) != null) return xi.ReverseBitwiseOr(x);
+            if ((object)(xl = other as ExtensibleLong) != null) return xl.ReverseBitwiseOr(x);
             if (other is byte) return x | (int)((byte)other);
             return Ops.NotImplemented;
         }
@@ -374,8 +494,8 @@ namespace IronPython.Runtime {
             if (other is long) return x ^ (long)other;
             if (other is int) return x ^ (int)other;
             if (other is bool) return x ^ ((bool)other ? 1 : 0);
-            if ((object)(xi = other as ExtensibleInt) != null) return x ^ xi.value;
-            if ((object)(xl = other as ExtensibleLong) != null) return x ^ xl.Value;
+            if ((object)(xi = other as ExtensibleInt) != null) return xi.ReverseXor(x);
+            if ((object)(xl = other as ExtensibleLong) != null) return xl.ReverseXor(x);
             if (other is byte) return x ^ (int)((byte)other);
             return Ops.NotImplemented;
         }

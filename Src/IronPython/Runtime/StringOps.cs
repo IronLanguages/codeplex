@@ -68,24 +68,34 @@ namespace IronPython.Runtime {
         }
 
         public override object Multiply(object self, object other) {
+            ExtensibleLong el;
+            BigInteger bi;
+            ExtensibleInt ei;
+
             if (other is int) {
                 return StringOps.Multiply((string)self, (int)other);
             } else if (other is bool) {
                 return StringOps.Multiply((string)self, ((bool)other) ? 1 : 0);
-            } else if (other is BigInteger) {
-                BigInteger bi = other as BigInteger;
-                int size;
-                if (bi.AsInt32(out size))
-                    return StringOps.Multiply((string)self, size);
-                else
-                    throw Ops.OverflowError("long int too large to convert to int");
-            } else if (other is ExtensibleInt) {
-                return StringOps.Multiply((string)self, ((ExtensibleInt)other).value);
+            } else if (!Object.ReferenceEquals((bi = other as BigInteger), null)) {
+                return MultiplyBigInt(self, bi);
+            } else if ((el = other as ExtensibleLong) != null) {
+                return MultiplyBigInt(self, el.Value);
+            } else if ((ei = other as ExtensibleInt) != null) {
+                return StringOps.Multiply((string)self, ei.value);
             }
             return Ops.NotImplemented;
         }
 
+        private object MultiplyBigInt(object self, BigInteger value) {
+            int size;
+            if (value.AsInt32(out size))
+                return StringOps.Multiply((string)self, size);
+
+            throw Ops.OverflowError("long int too large to convert to int");
+        }
+
         public override object ReverseMultiply(object self, object other) {
+            ExtensibleLong el;
             if (other is int) {
                 return StringOps.Multiply((string)self, (int)other);
             } else if (other is bool) {
@@ -97,6 +107,8 @@ namespace IronPython.Runtime {
                     return StringOps.Multiply((string)self, size);
                 else
                     throw Ops.OverflowError("long int too large to convert to int");
+            } else if ((el = other as ExtensibleLong) != null) {
+                return ReverseMultiply(self, el.Value);
             } else if (other is ExtensibleInt) {
                 return StringOps.Multiply((string)self, ((ExtensibleInt)other).value);
             }

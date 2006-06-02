@@ -24,7 +24,7 @@ using IronMath;
 
 namespace IronPython.Runtime {
 
-    public class ExtensibleInt : IRichComparable, IComparable {
+    public partial class ExtensibleInt : IRichComparable, IComparable, INumber {
         public int value;
         public ExtensibleInt() { this.value = 0; }
         public ExtensibleInt(int _value) { this.value = _value; }
@@ -332,6 +332,10 @@ namespace IronPython.Runtime {
             return Divide(y, x);
         }
 
+        private static object ReverseDivide(int x, long y) {
+            return Int64Ops.Divide(y, x);
+        }
+
         [PythonName("__div__")]
         private static long Divide(int x, long y) {
             long q = checked(x / y);
@@ -382,6 +386,10 @@ namespace IronPython.Runtime {
 
         private static int ReverseMod(int x, int y) {
             return Mod(y, x);
+        }
+
+        private static object ReverseMod(int x, long y) {
+            return Int64Ops.Mod(y, x);
         }
 
         [PythonName("__eq__")]
@@ -496,6 +504,7 @@ namespace IronPython.Runtime {
         [PythonName("__lshift__")]
         public static object LeftShift(int x, object other) {
             ExtensibleLong el;
+            ExtensibleInt ei;
 
             if (other is int) {
                 return LeftShift(x, (int)other);
@@ -505,12 +514,12 @@ namespace IronPython.Runtime {
                 return LongOps.LeftShift(BigInteger.Create(x), other);
             } else if (other is bool) {
                 return LeftShift(x, (bool)other ? 1 : 0);
-            } else if (other is ExtensibleInt) {
-                return LeftShift(x, ((ExtensibleInt)other).value);
+            } else if ((ei = other as ExtensibleInt) != null) {
+                return ei.ReverseLeftShift(x);
             } else if (other is byte) {
                 return LeftShift(x, (byte)other);
             } else if ((el = other as ExtensibleLong)!=null) {
-                return LongOps.LeftShift(BigInteger.Create(x), el.Value);
+                return el.ReverseLeftShift(BigInteger.Create(x));
             }
             return Ops.NotImplemented;
         }
@@ -531,6 +540,7 @@ namespace IronPython.Runtime {
         [PythonName("__rshift__")]
         public static object RightShift(int x, object other) {
             ExtensibleLong el;
+            ExtensibleInt ei;
 
             if (other is int) {
                 return RightShift(x, (int)other);
@@ -547,12 +557,12 @@ namespace IronPython.Runtime {
                     return x > 0 ? 0 : 1;
                 }
                 return RightShift(x, (int)y);
-            } else if (other is ExtensibleInt) {
-                return RightShift(x, ((ExtensibleInt)other).value);
+            } else if ((ei = other as ExtensibleInt)!= null) {
+                return ei.ReverseRightShift(x);
             } else if (other is byte) {
                 return RightShift(x, (byte)other);
             } else if ((el = other as ExtensibleLong)!=null) {
-                return LongOps.RightShift(BigInteger.Create(x), el.Value);
+                return el.ReverseRightShift(BigInteger.Create(x));
             }
 
             return Ops.NotImplemented;
@@ -581,7 +591,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__pow__")]
         public static object Power(int x, object other) {
-            ExtensibleLong el;
+            INumber num;
+            ExtensibleComplex ec;
 
             if (other is int) {
                 return Power(x, (int)other);
@@ -615,13 +626,12 @@ namespace IronPython.Runtime {
                 return ComplexOps.Power(x, other);
             } else if (other is byte) {
                 return Power(x, (int)(byte)other);
-            } else if (other is ExtensibleInt) {
-                return Power(x, ((ExtensibleInt)other).value);
-            } else if (other is ExtensibleFloat) {
-                return FloatOps.Power(x, ((ExtensibleFloat)other).value);
-            } else if (other is ExtensibleComplex) {
-                return ComplexOps.Power(x, ((ExtensibleComplex)other).value);
-            } else if ((el = other as ExtensibleLong)!=null) {
+            } else if ((num = other as INumber)!=null) {
+                return num.ReversePower(x);
+            } else if ((ec = other as ExtensibleComplex) != null) {
+                return ec.Power(x);
+/*            } else if ((el = other as ExtensibleLong)!=null) {
+                return el.ReversePower(x);
                 BigInteger lexp = el.Value;
                 int iexp;
                 if (lexp.AsInt32(out iexp)) {
@@ -630,9 +640,151 @@ namespace IronPython.Runtime {
                     if (x == 0) return 0;
                     if (x == 1) return 1;
                     throw Ops.ValueError("number too big");
-                }
+                }*/
+            }            
+            return Ops.NotImplemented;
+        }
+
+        [PythonName("__rpow__")]
+        public static object ReversePower(int x, object other) {
+            ExtensibleLong el;
+
+            if (other is int) {
+                return Power((int)other, x);
+            } else if (other is BigInteger) {
+                BigInteger lexp = (BigInteger)other;
+                return LongOps.Power(lexp, x);
+            } else if (other is long) {
+                return Int64Ops.Power((long)(other), x);
+            } else if (other is double) {
+                return FloatOps.Power((double)other, x);
+            } else if (other is bool) {
+                return Power((bool)other ? 1 : 0, x);
+            } else if (other is float) {
+                return FloatOps.Power((float)other, x);
+            } else if (other is Complex64) {
+                return ComplexOps.Power((Complex64)other, x);
+            } else if (other is byte) {
+                return Power((int)(byte)other, x);
+            } else if (other is ExtensibleInt) {
+                return Power(((ExtensibleInt)other).value, x);
+            } else if (other is ExtensibleFloat) {
+                return FloatOps.Power(((ExtensibleFloat)other).value, x);
+            } else if (other is ExtensibleComplex) {
+                return ComplexOps.Power(((ExtensibleComplex)other).value, x);
+            } else if ((el = other as ExtensibleLong)!=null) {
+                return LongOps.Power(el.Value, x);
             }
             return Ops.NotImplemented;
+        }
+
+        [PythonName("__rtruediv__")]
+        public static object ReverseTrueDivide(int x, object other){
+            ExtensibleLong el;
+
+            if (other is int) {
+                return TrueDivide((int)other, x);
+            } else if (other is BigInteger) {
+                BigInteger lexp = (BigInteger)other;
+                return LongOps.TrueDivide(lexp, x);
+            } else if (other is long) {
+                return Int64Ops.TrueDivide((long)(other), x);
+            } else if (other is double) {
+                return FloatOps.TrueDivide((double)other, x);
+            } else if (other is bool) {
+                return TrueDivide((bool)other ? 1 : 0, x);
+            } else if (other is float) {
+                return FloatOps.TrueDivide((float)other, x);
+            } else if (other is Complex64) {
+                return ComplexOps.TrueDivide((Complex64)other, x);
+            } else if (other is byte) {
+                return TrueDivide((int)(byte)other, x);
+            } else if (other is ExtensibleInt) {
+                return TrueDivide(((ExtensibleInt)other).value, x);
+            } else if (other is ExtensibleFloat) {
+                return FloatOps.TrueDivide(((ExtensibleFloat)other).value, x);
+            } else if (other is ExtensibleComplex) {
+                return ComplexOps.TrueDivide(((ExtensibleComplex)other).value, x);
+            } else if ((el = other as ExtensibleLong) != null) {
+                return LongOps.TrueDivide(el.Value, x);
+            }
+            return Ops.NotImplemented;
+        }
+
+        [PythonName("__rlshift__")]
+        public static object ReverseLeftShift(int x, object other){
+            ExtensibleLong el;
+
+            if (other is int) {
+                return LeftShift((int)other, x);
+            } else if (other is BigInteger) {
+                BigInteger lexp = (BigInteger)other;
+                return LongOps.LeftShift(lexp, x);
+            } else if (other is long) {
+                return Int64Ops.LeftShift((long)(other), x);
+            } else if (other is bool) {
+                return LeftShift((bool)other ? 1 : 0, x);
+            } else if (other is byte) {
+                return LeftShift((int)(byte)other, x);
+            } else if (other is ExtensibleInt) {
+                return LeftShift(((ExtensibleInt)other).value, x);
+            } else if ((el = other as ExtensibleLong) != null) {
+                return LongOps.LeftShift(el.Value, x);
+            }
+            return Ops.NotImplemented;
+        }
+
+        [PythonName("__rrshift__")]
+        public static object ReverseRightShift(int x, object other){
+            ExtensibleLong el;
+
+            if (other is int) {
+                return RightShift((int)other, x);
+            } else if (other is BigInteger) {
+                BigInteger lexp = (BigInteger)other;
+                return LongOps.RightShift(lexp, x);
+            } else if (other is long) {
+                return Int64Ops.RightShift((long)(other), x);
+            } else if (other is bool) {
+                return RightShift((bool)other ? 1 : 0, x);
+            } else if (other is byte) {
+                return RightShift((int)(byte)other, x);
+            } else if (other is ExtensibleInt) {
+                return RightShift(((ExtensibleInt)other).value, x);
+            } else if ((el = other as ExtensibleLong) != null) {
+                return LongOps.RightShift(el.Value, x);
+            }
+            return Ops.NotImplemented;
+        }
+
+        [PythonName("__radd__")]
+        public static object ReverseAdd(int x, object y) {
+            return Add(x, y);
+        }
+
+        [PythonName("__rsub__")]
+        public static object ReverseSubtract(int x, object y) {
+            return Ops.Add(-x, y);
+        }
+
+        [PythonName("__rmul__")]
+        public static object ReverseMultiply(int x, object y) {
+            return Multiply(x, y);
+        }
+
+        [PythonName("__rand__")]
+        public static object ReverseBitwiseAnd(int x, object y){
+            return BitwiseAnd(x, y);
+        }
+
+        [PythonName("__ror__")]
+        public static object ReverseBitwiseOr(int x, object y){
+            return BitwiseOr(x, y);
+        }
+
+        [PythonName("__rxor__")]
+        public static object ReverseXor(int x, object y) {
+            return Xor(x, y);
         }
 
         [PythonName("__oct__")]

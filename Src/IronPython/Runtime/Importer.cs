@@ -83,7 +83,7 @@ namespace IronPython.Runtime {
                 // to make the assembly available now.
 
                 PythonModule pm = newmod as PythonModule;
-                if (pm.InnerModule != null) pm.PackageImported = true;
+                if (pm != null && pm.InnerModule != null) pm.PackageImported = true;
             }
 
             if (newmod == null) {
@@ -212,15 +212,15 @@ namespace IronPython.Runtime {
             throw Ops.ImportError("cannot find __import__");
         }
 
-        private static PythonModule MakePythonModule(PythonModule importer, string name, ReflectedType type) {
+        internal static PythonModule MakePythonModule(SystemState state, string name, ReflectedType type) {
             type.Initialize();
             FieldIdDict dict = new FieldIdDict();
             //!!! need a GetAttrIds 
             foreach (string attrName in type.GetAttrNames(DefaultContext.Default)) {
                 dict[SymbolTable.StringToId(attrName)] = type.GetAttr(DefaultContext.Default, null, SymbolTable.StringToId(attrName));
             }
-            PythonModule ret = new PythonModule(name, dict, importer.SystemState);
-            importer.SystemState.modules[name] = ret;
+            PythonModule ret = new PythonModule(name, dict, state);
+            state.modules[name] = ret;
             return ret;
         }
 
@@ -240,7 +240,7 @@ namespace IronPython.Runtime {
                         typeof(InitializeModule), dict, "Initialize");
                     return InitializeModule(name, new PythonModule(name, dict, mod.SystemState, init, CallerContextFlags.None));
                 } else {
-                    return MakePythonModule(mod, name, (ReflectedType)Ops.GetDynamicTypeFromType(ty));
+                    return MakePythonModule(mod.SystemState, name, (ReflectedType)Ops.GetDynamicTypeFromType(ty));
                 }
             }
             return null;

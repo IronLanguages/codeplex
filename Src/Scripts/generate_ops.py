@@ -411,6 +411,7 @@ public static object %(name)s(object x, object y) {
 BINOP = """
 public static object %(name)s(object x, object y) {
     object ret;
+    INumber inum;
 %(extra_vars)s
     if (x is int) {
         ret = IntOps.%(name)s((int)x, y);
@@ -431,8 +432,8 @@ public static object %(name)s(object x, object y) {
     } else if (x is float) {
         ret = FloatOps.%(name)s((float)x, y);
         if (ret != NotImplemented) return ret;
-    } else if (x is ExtensibleFloat) {
-        ret = FloatOps.%(name)s(((ExtensibleFloat)x).value, y);
+    } else if ((inum = x as INumber)!=null) {
+        ret = inum.%(name)s(y);
         if (ret != NotImplemented) return ret;
     } else if (x is bool) {
         ret = BoolOps.%(name)s((bool)x, y);

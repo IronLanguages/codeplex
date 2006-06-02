@@ -159,6 +159,31 @@ namespace IronPython.Runtime {
             return retType.ToString();
         }
 
+        public static string CreateEnumDoc(Type t) {
+            Debug.Assert(t.IsEnum);
+
+            string[] names = Enum.GetNames(t);
+            Array values = Enum.GetValues(t);
+            for (int i = 0; i < names.Length; i++) {
+                names[i] = String.Concat(names[i],
+                    " (",
+                    Convert.ChangeType(values.GetValue(i), Enum.GetUnderlyingType(t)).ToString(),
+                    ")");
+            }
+
+            Array.Sort<string>(names);
+            string comment = "";
+
+            if (t.IsDefined(typeof(FlagsAttribute), false))
+                comment = " (flags) ";
+
+            return String.Concat("enum ",
+                comment,
+                GetPythonTypeName(t),
+                ", values: ",
+                String.Join(", ", names));
+        }
+
         public static bool IsParamArray(ParameterInfo pi) {
             return pi.IsDefined(typeof(ParamArrayAttribute), false);
         }

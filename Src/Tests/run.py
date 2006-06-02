@@ -64,10 +64,17 @@ import sys
 from lib.assert_util import * 
 from lib.file_util import *
 from lib.process_util import *
+
+class ModeInfo:
+    def __init__(self, ipArgs, testArgs):
+        self.ipArgs = ipArgs
+        self.testArgs = testArgs
+    def __str__(self):
+        return self.ipArgs
         
 mode_mapping = { 
-    '1': '-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 1001', 
-    '2': '-O -D -X:SaveAssemblies -X:AssembliesDir %s' % testpath.temporary_dir,
+    '1': ModeInfo('-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 1001', ['Compat-']),
+    '2': ModeInfo('-O -D -X:SaveAssemblies -X:AssembliesDir %s' % testpath.temporary_dir, []),
 }
 
 def get_mode_list(modes):
@@ -94,6 +101,25 @@ shortcuts = {
     'b2': 'regress library',
 }
 
+def test_exit_code():
+    # first verify if we were to fail we'd get a good exit code back.
+    exitcode_py = 'exitcode.py'
+    write_to_file(exitcode_py, 'import sys\nsys.exit(99)\n')
+    exitRes = launch_ironpython(exitcode_py)
+    if exitRes != 99:
+        print '!!! sys.exit test failed, cannot run tests'
+        # apparently we won't propagate the exit code, but at least hopefully someone will notice tests aren't running!
+        sys.exit(1)    
+
+def clean_log_files():
+    # clean log files if i am the only one running ironpythonconsole.exe
+    try:
+        ipys = [x for x in nt.popen('tasklist.exe').readlines() if x.lower().startswith('ironpythonconsole.exe')]
+        if len(ipys) == 1:
+            for x in range(1, 20): 
+                delete_files('result%i.log' % x)
+    except: pass
+
 def main(args):
     # run options check
     if [x for x in args if x.lower() == '-h' or x == '-?']: 
@@ -105,22 +131,9 @@ def main(args):
             if not x2.startswith('-M:') and not x2.startswith('-O:') and not x2.startswith('-T:'):
                 usage(1, 'unknown option: %s' % x)
 
-    # first verify if we were to fail we'd get a good exit code back.
-    exitcode_py = 'exitcode.py'
-    write_to_file(exitcode_py, 'import sys\nsys.exit(99)\n')
-    exitRes = launch_ironpython(exitcode_py)
-    if exitRes != 99:
-        print '!!! sys.exit test failed, cannot run tests'
-        # apparently we won't propagate the exit code, but at least hopefully someone will notice tests aren't running!
-        sys.exit(1)    
-
-    # clean log files if i am the only one running ironpythonconsole.exe
-    try:
-        ipys = [x for x in nt.popen('tasklist.exe').readlines() if x.lower().startswith('ironpythonconsole.exe')]
-        if len(ipys) == 1:
-            for x in range(1, 20): 
-                delete_files('result%i.log' % x)
-    except: pass
+    test_exit_code()
+    
+    clean_log_files()
     
     # shortcuts
     tests = [x.lower() for x in args if not x.startswith('-')]
@@ -130,7 +143,7 @@ def main(args):
             tests2 = shortcuts[x].split()
             break
     if tests2: tests = tests2
-    
+        
     # run compat test under cpython
     if (not tests) or ('compat' in tests):
         print "\nRUNNING CPYTHON ON COMPATABILITY TESTS"
@@ -151,7 +164,8 @@ def main(args):
     for style in get_mode_list(rawModes):
         sstyle = str(style)
         print "\nRUNNING IRONPYTHON UNDER", sstyle
-        retval = launch_ironpython_with_extensions(iprunfile, style.split(), carryon)
+        if style.testArgs: print 'With test options ', style.testArgs
+        retval = launch_ironpython_with_extensions(iprunfile, sstyle.split(), carryon + style.testArgs)
         sumretval += retval
         results.append((sstyle, retval))
     

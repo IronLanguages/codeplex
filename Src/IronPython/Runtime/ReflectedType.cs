@@ -115,7 +115,11 @@ namespace IronPython.Runtime {
                     return ((DocumentationAttribute)docAttr[0]).Value;
                 }
                 NewMethod newMeth = ctor as NewMethod;
-                if (newMeth == null) return "no documentation available";
+                if (newMeth == null) {
+                    if (type.IsEnum) return ReflectionUtil.CreateEnumDoc(type);
+
+                    return "no documentation available";
+                }
                 return newMeth.Documentation;
             }
         }
@@ -204,7 +208,7 @@ namespace IronPython.Runtime {
 
         internal void StoreReflectedMethod(string name, MethodInfo mi, NameType nt) {
             FunctionType ft = CompilerHelpers.IsStatic(mi) ? FunctionType.Function : FunctionType.Method;
-            if (nt == NameType.PythonMethod || !IsPythonType) ft |= FunctionType.PythonVisible;
+            if (nt == NameType.PythonMethod || (!IsPythonType && !clsOnly)) ft |= FunctionType.PythonVisible;
 
             StoreMethod<ReflectedMethod>(name, mi, ft);
         }

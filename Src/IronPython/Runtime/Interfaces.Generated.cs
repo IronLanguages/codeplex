@@ -35,4 +35,39 @@ namespace IronPython.Runtime {
 
         #endregion
     }
+
+    public interface INumber {
+        #region Generated INumber Methods
+
+        // *** BEGIN GENERATED CODE ***
+
+        object Add(object other);
+        object ReverseAdd(object other);
+
+        object Subtract(object other);
+        object ReverseSubtract(object other);
+
+        object Power(object other);
+        object ReversePower(object other);
+
+        object Multiply(object other);
+        object ReverseMultiply(object other);
+
+        object Divide(object other);
+        object ReverseDivide(object other);
+
+        object FloorDivide(object other);
+        object ReverseFloorDivide(object other);
+
+        object TrueDivide(object other);
+        object ReverseTrueDivide(object other);
+
+        object Mod(object other);
+        object ReverseMod(object other);
+
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+    }
 }

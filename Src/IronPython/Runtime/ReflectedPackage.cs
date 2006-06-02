@@ -158,7 +158,11 @@ namespace IronPython.Runtime {
                 builtins.Add("posix", typeof(PythonNT));
                 builtins.Remove("nt");
             }
-            state.builtin_module_names = Tuple.Make(builtins.Keys);
+
+            state.modules["sys"] = state;
+            state.modules["__builtin__"] = Importer.MakePythonModule(state, "__builtin__", TypeCache.Builtin);
+
+            state.builtin_module_names = Tuple.Make(builtins.Keys);            
         }
 
         #endregion

@@ -181,6 +181,12 @@ def test_zip():
 def test_dir():
     local_var = 10
     AreEqual(dir(), ['local_var'])
+    
+def test_ord():
+    # ord of extensible string
+    class foo(str): pass
+    
+    AreEqual(ord(foo('A')), 65)
 
 Assert("__name__" in dir())
 Assert("__builtins__" in dir())
@@ -202,3 +208,4 @@ def test_eval():
     AssertError(NameError, eval, "x + y", d1, None)
 
 run_test(__name__)
+

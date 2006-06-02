@@ -65,12 +65,45 @@ namespace IronPython.Runtime {
                 return true;
             }
 
-            if (__thisclass__.TryLookupSlotInBases(context, name, out value)) {
-                value = Ops.GetDescriptor(value, __self__, __self_class__);
-                return true;
+            // first find where we are in the mro...
+            PythonType mroType = __self_class__ as PythonType;
+            if (mroType == null) mroType = __thisclass__;
+            Tuple mro = mroType.MethodResolutionOrder;
+
+            int lookupType;
+            for (lookupType = 0; lookupType < mro.Count; lookupType++) {
+                if (mro[lookupType] == __thisclass__) break;                
             }
 
+            
+            // then skip our class, and lookup in everything
+            // above us until we get a hit.
+            lookupType++;   
+            while (lookupType < mro.Count) {
+                PythonType pt = mro[lookupType] as PythonType;
+                if (pt != null) {
+                    // new-style class, or reflected type, lookup slot
+                    if (pt.TryGetSlot(context, name, out value)) {
+                        MethodWrapper mw = value as MethodWrapper;
+                        if (mw == null || !mw.IsSuperTypeMethod()) {
+                            value = Ops.GetDescriptor(value, __self__, __self_class__);
+                            return true;
+                        }
+                    }
+                } else {
+                    // old-style class, lookup attribute
+                    DynamicType dt = mro[lookupType] as DynamicType;
+                    System.Diagnostics.Debug.Assert(dt != null);
 
+                    if (Ops.TryGetAttr(context, dt, name, out value)) {
+                        value = Ops.GetDescriptor(value, __self__, __self_class__);
+                        return true;
+                    }
+                }
+
+                lookupType++;
+            }
+            
             return SuperType.TryGetAttr(context, this, name, out value);
         }
 

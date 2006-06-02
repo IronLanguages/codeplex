@@ -26,7 +26,7 @@ namespace IronPython.Runtime {
     /// the derived class from a base class, so we define ExtensibeLong
     /// and give it a new ctor.
     /// </summary>
-    public class ExtensibleLong : IRichComparable {
+    public partial class ExtensibleLong : IRichComparable, ICodeFormattable, INumber {
         private BigInteger value;
 
         public ExtensibleLong() {
@@ -122,6 +122,15 @@ namespace IronPython.Runtime {
         public override int GetHashCode() {
             return value.GetHashCode();
         }
+
+        #region ICodeFormattable Members
+
+        [PythonName("__repr__")]
+        public string ToCodeString() {            
+            return (string)Ops.Repr(value);
+        }
+
+        #endregion
     }
 
     public static partial class LongOps {
@@ -612,6 +621,7 @@ namespace IronPython.Runtime {
         [PythonName("__lshift__")]
         public static object LeftShift(BigInteger x, object other) {
             ExtensibleLong el;
+            ExtensibleInt ei;
 
             if (other is int) {
                 return LeftShift(x, (int)other);
@@ -624,10 +634,10 @@ namespace IronPython.Runtime {
                 }
             } else if (other is bool) {
                 return LeftShift(x, (bool)other ? 1 : 0);
-            } else if (other is ExtensibleInt) {
-                return LeftShift(x, ((ExtensibleInt)other).value);
+            } else if ((ei = other as ExtensibleInt)!= null) {
+                return ei.ReverseLeftShift(x);
             } else if ((el = other as ExtensibleLong) != null) {
-                return LeftShift(x, el.Value);
+                return el.ReverseLeftShift(x);
             } else if (other is byte) {
                 return LeftShift(x, (int)((byte)other));
             }
@@ -658,6 +668,7 @@ namespace IronPython.Runtime {
         [PythonName("__rshift__")]
         public static object RightShift(BigInteger x, object other) {
             ExtensibleLong el;
+            ExtensibleInt ei;
 
             if (other is int) {
                 return RightShift(x, (int)other);
@@ -680,12 +691,58 @@ namespace IronPython.Runtime {
                 }
             } else if (other is bool) {
                 return RightShift(x, (bool)other ? 1 : 0);
-            } else if (other is ExtensibleInt) {
-                return RightShift(x, ((ExtensibleInt)other).value);
+            } else if ((ei = other as ExtensibleInt)!=null) {
+                return ei.ReverseRightShift(x);
             } else if ((el = other as ExtensibleLong) != null) {
-                return RightShift(x, el.Value);
+                return el.ReverseRightShift(x);
             } else if (other is byte) {
                 return RightShift(x, (int)((byte)other));
+            }
+            return Ops.NotImplemented;
+        }
+
+        [PythonName("__rlshift__")]
+        public static object ReverseLeftShift(BigInteger x, object other) {
+            ExtensibleLong el;
+            ExtensibleInt ei;
+
+            if (other is int) {
+                return IntOps.LeftShift((int)other, x);
+            } else if (other is BigInteger) {
+                return LongOps.LeftShift((BigInteger)other, x);
+            } else if (other is long) {
+                return Int64Ops.LeftShift((long)other, x);
+            } else if (other is bool) {
+                return IntOps.LeftShift((bool)other ? 1 : 0, x);
+            } else if ((ei = other as ExtensibleInt) != null) {
+                return ei.LeftShift(x);
+            } else if ((el = other as ExtensibleLong) != null) {
+                return el.LeftShift(x);
+            } else if (other is byte) {
+                return IntOps.LeftShift((bool)other ? 1 : 0, x);
+            }
+            return Ops.NotImplemented;
+        }
+
+        [PythonName("__rrshift__")]
+        public static object ReverseRightShift(BigInteger x, object other) {
+            ExtensibleLong el;
+            ExtensibleInt ei;
+
+            if (other is int) {
+                return IntOps.RightShift((int)other, x);
+            } else if (other is BigInteger) {
+                return LongOps.RightShift((BigInteger)other, x);
+            } else if (other is long) {
+                return Int64Ops.RightShift((long)other, x);
+            } else if (other is bool) {
+                return IntOps.RightShift((bool)other ? 1 : 0, x);
+            } else if ((ei = other as ExtensibleInt) != null) {
+                return ei.RightShift(x);
+            } else if ((el = other as ExtensibleLong) != null) {
+                return el.RightShift(x);
+            } else if (other is byte) {
+                return IntOps.RightShift((bool)other ? 1 : 0, x);
             }
             return Ops.NotImplemented;
         }

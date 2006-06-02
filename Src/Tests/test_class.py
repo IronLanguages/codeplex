@@ -958,3 +958,64 @@ class C(object): pass
 C.__name__ = 'abc'
 AreEqual(C.__name__, 'abc')
 
+
+# super for multiple inheritance
+# we should follow the MRO as we go up
+# the super chain
+
+class F: 
+    def meth(self):
+        return 'F' 
+
+class G: pass
+
+def gmeth(self): return 'G'
+
+
+class A(object):
+    def meth(self):
+        if hasattr(super(A, self), 'meth'):
+            return 'A' + super(A, self).meth()
+        else:
+            return "A" 
+
+class B(A):
+    def __init__(self):
+        self.__super = super(B, self)
+        super(B, self).__init__()
+    def meth(self):
+        return "B" + self.__super.meth()
+
+class C(A):
+    def __init__(self):
+        self.__super = super(C, self)
+        super(C, self).__init__()
+    def meth(self):
+        return "C" + self.__super.meth()
+
+class D(C, B):
+    def meth(self):
+        return "D" + super(D, self).meth()
+
+AreEqual(D().meth(), 'DCBA')
+
+class D(C, F, B):
+    def meth(self):
+        return "D" + super(D, self).meth()
+
+AreEqual(D().meth(), 'DCF')
+
+class D(C, B, F):
+    def meth(self):
+        return "D" + super(D, self).meth()
+
+AreEqual(D().meth(), 'DCBAF')
+
+
+class D(C, B, G):
+    def meth(self):
+        return "D" + super(D, self).meth()
+
+d = D()
+d.meth = type(F.meth)(gmeth, d, G)
+AreEqual(d.meth(), 'G')

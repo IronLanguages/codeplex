@@ -260,7 +260,7 @@ namespace IronPython.Hosting {
             CodeGen init = CompileModuleInit(context, gs, tg, moduleName);
 
             if (createMain) {
-                CodeGen main = OutputGenerator.GenerateModuleEntryPoint(tg, init, Path.GetFileNameWithoutExtension(mainFile), referencedAssemblies);
+                CodeGen main = OutputGenerator.GenerateModuleEntryPoint(tg, init, moduleName, referencedAssemblies);
                 assemblyGen.SetEntryPoint(main.MethodInfo, targetKind);
             }
 

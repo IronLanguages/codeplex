@@ -31,25 +31,51 @@ binaries = [('+',   'add',      4,  'Add',          'Add',          '+'),
             ('|',   'or',       0,  'BitwiseOr',    'BitwiseOr',    '|'),
             ('^',   'xor',      1,  'Xor',          'Xor',          '^')]
 
+extensible_ops = """[PythonName("__%(pyOp)s__")]
+public virtual object %(cliOp)s(object other) {
+    return %(type)sOps.%(cliOp)s(value, other);
+}
+
+[PythonName("__r%(pyOp)s__")]
+public virtual object Reverse%(cliOp)s(object other) {
+    return %(type)sOps.Reverse%(cliOp)s(value, other);
+}"""
+
+class ExtensibleOpsGen:
+    def __init__(self, theType, excludes):
+        self.theType = theType
+        self.excludes = excludes
+    def __call__(self, cw):
+        for x in binaries:
+            if self.excludes.count(x[3]): continue
+            cw.write(extensible_ops, pyOp = x[1], type=self.theType, cliOp=x[3])
+
+floatExcludes = ['LeftShift', 'RightShift', 'BitwiseAnd', 'BitwiseOr', 'Xor']
+
+for theType in [('Int',[]) , ('Long', []), ('Float', floatExcludes)]: #('Complex', floatExcludes)
+    CodeGenerator("Extensible %sOps" % theType[0], ExtensibleOpsGen(theType[0], theType[1])).doit()
+
+def genInum(cw):
+    for op in binaries:
+        if floatExcludes.count(op[3]): continue
+        cw.write('object %s(object other);\nobject Reverse%s(object other);\n' % (op[3], op[3]))
+
+CodeGenerator("INumber Methods", genInum).doit()
 
 long_base_code = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
+    INumber num;
     ExtensibleComplex xc;
-    ExtensibleLong el;
 
     if (other is int) return x %(sym)s ((int)other);
     if (other is Complex64) return x %(sym)s ((Complex64)other);
     if (other is double) return x %(sym)s ((double)other);
     if ((object)(bi = other as BigInteger) != null) return x %(sym)s bi;
-    if ((el = other as ExtensibleLong) != null) return x %(sym)s el.Value;
+    if ((num = other as INumber) != null) return num.Reverse%(name)s(x);
     if (other is bool) return x %(sym)s ((bool) other ? 1 : 0);
     if (other is long) return x %(sym)s ((long)other);
-    if ((object)(xi = other as ExtensibleInt) != null) return x %(sym)s (xi.value);
-    if ((object)(xf = other as ExtensibleFloat) != null) return x %(sym)s (xf.value);
     if ((object)(xc = other as ExtensibleComplex) != null) return x %(sym)s xc.value;
     if (other is byte) return x %(sym)s (int)((byte)other);
     return Ops.NotImplemented;
@@ -60,10 +86,8 @@ long_code_altname = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
+    INumber num;
     ExtensibleComplex xc;
-    ExtensibleLong el;
 
     if (other is int) return %(altname)s(x, (int)other);
     if (other is Complex64) {
@@ -75,15 +99,13 @@ public static object %(name)s(%(type)s x, object other) {
     if (other is bool) return %(altname)s(x, (bool)other ? 1 : 0);
     if (other is long) return %(altname)s(x, (long)other);
     if ((object)(bi = other as BigInteger) != null) return %(altname)s(x, bi);
-    if ((object)(el = other as ExtensibleLong) != null) return %(altname)s(x, el.Value);
-    if ((object)(xi = other as ExtensibleInt) != null) return %(altname)s(x, xi.value);
+    if ((object)(num = other as INumber) != null) return num.Reverse%(name)s(x);
     if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
         if(y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(Complex64.MakeReal(x), y);
     }
     if (other is byte) return %(altname)s(x, (int)((byte)other));
-    if ((object)(xf = other as ExtensibleFloat) != null) return FloatOps.%(name)s(x, xf.value);
     return Ops.NotImplemented;
 }
 
@@ -91,10 +113,8 @@ public static object %(name)s(%(type)s x, object other) {
 [PythonName("__r%(pyName)s__")]
 public static object Reverse%(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) return IntOps.%(altname)s((int)other, x);
     if (other is Complex64) {
@@ -106,15 +126,13 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     if (other is bool) return %(altname)s((bool)other ? 1 : 0, x);
     if (other is long) return %(altname)s((long)other, x);
     if ((object)(bi = other as BigInteger) != null) return %(altname)s(bi, x);
-    if ((object)(el = other as ExtensibleLong) != null) return %(altname)s(el.Value, x);
-    if ((object)(xi = other as ExtensibleInt) != null) return %(altname)s(xi.value, x);
+    if ((object)(num = other as INumber) != null) return num.%(name)s(x);
     if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
         if(y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(y, Complex64.MakeReal(x));
     }
     if (other is byte) return IntOps.%(altname)s((int)((byte)other), x);
-    if ((object)(xf = other as ExtensibleFloat) != null) return FloatOps.%(name)s(xf.value, x);
     return Ops.NotImplemented;
 }
 
@@ -131,8 +149,8 @@ public static object %(name)s(BigInteger x, object other) {
     if (other is long) return x %(sym)s (long)other;
     if (other is int) return x %(sym)s (int)other;
     if (other is bool) return x %(sym)s ((bool)other ? 1 : 0);
-    if ((object)(xi = other as ExtensibleInt) != null) return x %(sym)s xi.value;
-    if ((object)(xl = other as ExtensibleLong) != null) return x %(sym)s xl.Value;
+    if ((object)(xi = other as ExtensibleInt) != null) return xi.Reverse%(name)s(x);
+    if ((object)(xl = other as ExtensibleLong) != null) return xl.Reverse%(name)s(x);
     if (other is byte) return x %(sym)s (int)((byte)other);
     return Ops.NotImplemented;
 }
@@ -142,22 +160,36 @@ long_code_m = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(BigInteger x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong xl;
+    INumber num;
 
     if (other is int) return %(name)s(x, (int)other);
     if ((object)(bi = other as BigInteger) != null) return %(name)s(x, bi);
-    if ((xl = other as ExtensibleLong) != null) return %(name)s(x, xl.Value);
+    if ((num = other as INumber) != null) return num.Reverse%(name)s(x);
     if (other is double) return %(name)s(x, (double)other);
     if (other is Complex64) return ComplexOps.%(name)s(x, (Complex64)other);
     if (other is bool) return %(name)s(x, (bool)other ? 1 : 0);
     if (other is long) return %(name)s(x, (long)other);
-    if ((object)(xi = other as ExtensibleInt) != null) return %(name)s(x, xi.value);
-    if ((object)(xf = other as ExtensibleFloat) != null) return %(name)s(x, xf.value);
     if ((object)(xc = other as ExtensibleComplex) != null) return %(name)s(x, xc.value);
     if (other is byte) return %(name)s(x, (int)((byte)other));
+    return Ops.NotImplemented;
+}
+
+[PythonName("__r%(pyName)s__")]
+public static object Reverse%(name)s(BigInteger x, object other) {
+    BigInteger bi;
+    ExtensibleComplex xc;
+    INumber num;
+
+    if (other is int) return IntOps.%(name)s((int)other, x);
+    if ((object)(bi = other as BigInteger) != null) return %(name)s(bi, x);
+    if ((num = other as INumber) != null) return num.%(name)s(x);
+    if (other is double) return FloatOps.%(name)s((double)other, x);
+    if (other is Complex64) return ComplexOps.%(name)s((Complex64)other, x);
+    if (other is bool) return IntOps.%(name)s((bool)other ? 1 : 0, x);
+    if (other is long) return Int64Ops.%(name)s((long)other, x);
+    if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.%(name)s(xc.value, x);
+    if (other is byte) return IntOps.%(name)s((int)((byte)other), x);
     return Ops.NotImplemented;
 }
 """
@@ -166,26 +198,22 @@ float_code = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(double x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong xl;
+    INumber num;
 
     if (other is double) return x %(sym)s ((double)other);
     if (other is int) return x %(sym)s ((int)other);
     if (other is Complex64) return ComplexOps.%(name)s(Complex64.MakeReal(x), (Complex64)other);
     if ((object)(bi = other as BigInteger) != null) return x %(sym)s bi;
     if (other is float) return x %(sym)s ((float)other);
-    if ((object)(xf = other as ExtensibleFloat) != null) return x %(sym)s xf.value;
+    if ((object)(num = other as INumber) != null) return num.Reverse%(name)s(x);
     if (other is string) return Ops.NotImplemented;
     if (other is IConvertible) {
         double y = ((IConvertible)other).ToDouble(null);
         return x %(sym)s y;
     }
     if (other is long) return x %(sym)s ((long)other);
-    if ((object)(xi = other as ExtensibleInt) != null) return x %(sym)s xi.value;
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.%(name)s(Complex64.MakeReal(x), xc.value);
-    if ((object)(xl = other as ExtensibleLong) != null) return x %(sym)s xl.Value;
     return Ops.NotImplemented;
 }
 
@@ -193,22 +221,18 @@ public static object %(name)s(double x, object other) {
 [PythonName("__r%(pyName)s__")]
 public static object Reverse%(name)s(double x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong xl;
+    INumber num;
 
     if (other is double) return ((double)other) %(sym)s x;
     if (other is int) return ((int)other) %(sym)s x;
     if (other is Complex64) return ComplexOps.%(name)s((Complex64)other, Complex64.MakeReal(x));
     if ((object)(bi = other as BigInteger) != null) return bi %(sym)s x;
     if (other is float) return ((float)other) %(sym)s x;
-    if ((object)(xf = other as ExtensibleFloat) != null) return xf.value %(sym)s x;
+    if ((object)(num = other as INumber) != null) return num.%(name)s(x);
     if (other is string) return Ops.NotImplemented;
     if (other is long) return ((long)other) %(sym)s x;
-    if ((object)(xi = other as ExtensibleInt) != null) return xi.value %(sym)s x;
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.%(name)s(xc.value, Complex64.MakeReal(x));
-    if ((object)(xl = other as ExtensibleLong) != null) return xl.Value %(sym)s x;
     if (other is IConvertible) {
         double y = ((IConvertible)other).ToDouble(null);
         return x %(sym)s y;
@@ -221,10 +245,8 @@ float_code_m = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(double x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong xl;
+    INumber num;
 
     if (other is double) return %(name)s(x, ((double)other));
     if (other is int) return %(name)s(x, ((int)other));
@@ -232,11 +254,9 @@ public static object %(name)s(double x, object other) {
     if ((object)(bi = other as BigInteger) != null) return %(name)s(x, bi);
     if (other is bool) return %(name)s(x, (bool)other ? 1.0 : 0.0);
     if (other is float) return %(name)s(x, ((float)other));
-    if ((object)(xf = other as ExtensibleFloat) != null) return %(name)s(x, xf.value);
+    if ((object)(num = other as INumber) != null) return num.Reverse%(name)s(x);
     if (other is long) return %(name)s(x, ((long)other));
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.%(name)s(Complex64.MakeReal(x), xc.value);
-    if ((object)(xi = other as ExtensibleInt) != null) return %(name)s(x, xi.value);
-    if ((object)(xl = other as ExtensibleLong) != null) return %(name)s(x, xl.Value);
     if (other is byte) return %(name)s(x, (int)((byte)other));
    return Ops.NotImplemented;
 }
@@ -244,10 +264,8 @@ public static object %(name)s(double x, object other) {
 [PythonName("__r%(pyName)s__")]
 public static object Reverse%(name)s(double x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong xl;
+    INumber num;
 
     if (other is double) return Reverse%(name)s(x, ((double)other));
     if (other is int) return Reverse%(name)s(x, ((int)other));
@@ -255,11 +273,9 @@ public static object Reverse%(name)s(double x, object other) {
     if ((object)(bi = other as BigInteger) != null) return Reverse%(name)s(x, bi);
     if (other is bool) return Reverse%(name)s(x, (bool)other ? 1.0 : 0.0);
     if (other is float) return Reverse%(name)s(x, ((float)other));
-    if ((object)(xf = other as ExtensibleFloat) != null) return Reverse%(name)s(x, xf.value);
+    if ((object)(num = other as INumber) != null) return num.Reverse%(name)s(x);
     if (other is long) return Reverse%(name)s(x, ((long)other));
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), xc.value);
-    if ((object)(xi = other as ExtensibleInt) != null) return Reverse%(name)s(x, xi.value);
-    if ((object)(xl = other as ExtensibleLong) != null) return Reverse%(name)s(x, xl.Value);
     if (other is byte) return Reverse%(name)s(x, (int)((byte)other));
    return Ops.NotImplemented;
 }
@@ -270,10 +286,8 @@ complex_code = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong xl;
+    INumber num;
 
     if (other is int) {
         return x %(sym)s (int)other;
@@ -287,12 +301,8 @@ public static object %(name)s(%(type)s x, object other) {
         return x %(sym)s (long)other;
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return x %(sym)s xc.value;
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        return x %(sym)s xi.value;
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return x %(sym)s xf.value;
-    } else if ((object)(xl = other as ExtensibleLong) != null) {
-        return x %(sym)s xl.Value;
+    } else if ((object)(num = other as INumber) != null) {
+        return num.Reverse%(name)s(x);
     } else if(other is string) {
         return Ops.NotImplemented;
     } else if (other is IConvertible) {
@@ -306,10 +316,8 @@ public static object %(name)s(%(type)s x, object other) {
 [PythonName("__r%(pyName)s__")]
 public static object Reverse%(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong xl;
+    INumber num;
 
     if (other is int) {
         return (int)other %(sym)s x;
@@ -323,12 +331,8 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         return (long)other %(sym)s x;
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return xc.value %(sym)s x;
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        return xi.value %(sym)s x;
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return xf.value %(sym)s x;
-    } else if ((object)(xl = other as ExtensibleLong) != null) {
-        return xl.Value %(sym)s x;
+    } else if ((object)(num = other as INumber) != null) {
+        return num.%(name)s(x);
     } else if(other is string) {
         return Ops.NotImplemented;
     } else if (other is IConvertible) {
@@ -343,10 +347,8 @@ complex_code_m = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
+    INumber num;
     ExtensibleComplex xc;
-    ExtensibleLong xl;
 
     if (other is int) return %(name)s(x, (Complex64) ((int)other));
     if (other is Complex64) return %(name)s(x, (Complex64) other);
@@ -355,9 +357,7 @@ public static object %(name)s(%(type)s x, object other) {
     if (other is bool) return %(name)s(x, (Complex64)((bool)other ? 1 : 0));
     if (other is long) return %(name)s(x, (Complex64)((long) other));
     if ((object)(xc = other as ExtensibleComplex) != null) return %(name)s(x, xc.value);
-    if ((object)(xf = other as ExtensibleFloat) != null) return %(name)s(x, (Complex64)xf.value);
-    if ((object)(xi = other as ExtensibleInt) != null) return %(name)s(x, (Complex64)xi.value);
-    if ((object)(xl = other as ExtensibleLong) != null) return %(name)s(x, (Complex64) xl.Value);
+    if ((object)(num = other as INumber) != null) return num.Reverse%(name)s(x);
     if (other is byte) return %(name)s(x, (Complex64) (int)((byte)other));
     return Ops.NotImplemented;
 }
@@ -366,10 +366,8 @@ public static object %(name)s(%(type)s x, object other) {
 [PythonName("__r%(pyName)s__")]
 public static object Reverse%(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong xl;
+    INumber num;
 
     if (other is int) return Reverse%(name)s(x, (Complex64) ((int)other));
     if (other is Complex64) return Reverse%(name)s(x, (Complex64) other);
@@ -378,9 +376,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     if (other is bool) return Reverse%(name)s(x, (Complex64)((bool)other ? 1 : 0));
     if (other is long) return Reverse%(name)s(x, (Complex64)((long) other));
     if ((object)(xc = other as ExtensibleComplex) != null) return Reverse%(name)s(x, xc.value);
-    if ((object)(xf = other as ExtensibleFloat) != null) return Reverse%(name)s(x, (Complex64)xf.value);
-    if ((object)(xi = other as ExtensibleInt) != null) return Reverse%(name)s(x, (Complex64)xi.value);
-    if ((object)(xl = other as ExtensibleLong) != null) return Reverse%(name)s(x, (Complex64)xl.Value);
+    if ((object)(num = other as INumber) != null) return num.%(name)s(x);
     if (other is byte) return Reverse%(name)s(x, (Complex64) (int)((byte)other));
     return Ops.NotImplemented;
 }
@@ -390,10 +386,8 @@ int_code = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) {
         int y = (int)other;
@@ -422,19 +416,10 @@ public static object %(name)s(%(type)s x, object other) {
         return x %(sym)s (float)other;
     } else if (other is byte) {
         return x %(sym)s (byte)other;
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        int y = xi.value;
-        try {
-            return Ops.%(titleType)s2Object(checked(x %(sym)s y));
-        } catch (OverflowException) {
-            return BigInteger.Create(x) %(sym)s y;
-        }
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return x %(sym)s xf.value;
+    } else if ((object)(num = other as INumber) != null) {
+        return num.Reverse%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return ComplexOps.%(name)s(Complex64.MakeReal(x), xc);
-    } else if ((object)(el = other as ExtensibleLong) != null) {
-        return BigInteger.Create(x) %(sym)s el.Value;
     } else if (other is byte) {
         int y = (byte)other;
         try {
@@ -451,10 +436,8 @@ int_code_divide = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) {
         int y = (int)other;
@@ -485,21 +468,12 @@ public static object %(name)s(%(type)s x, object other) {
         return FloatOps.%(name)s(x, (float)other);
     } else if (other is byte) {
         return Ops.%(titleType)s2Object(%(altname)s(x, (int)((byte)other)));
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        int y = xi.value;
-        try {
-            return Ops.%(titleType)s2Object(%(altname)s(x, y));
-        } catch (OverflowException) {
-            return LongOps.%(name)s(BigInteger.Create(x) , y);
-        }
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return FloatOps.%(name)s(x, xf.value);
+    } else if ((object)(num = other as INumber) != null) {
+        return num.Reverse%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
         if(y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(Complex64.MakeReal(x), y);
-    } else if ((object)(el = other as ExtensibleLong) != null) {
-        return LongOps.%(name)s(BigInteger.Create(x), el.Value);
 	}
 
     return Ops.NotImplemented;
@@ -509,10 +483,8 @@ public static object %(name)s(%(type)s x, object other) {
 [PythonName("__r%(pyName)s__")]
 public static object Reverse%(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) {
         int y = (int)other;
@@ -543,21 +515,12 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         return FloatOps.Reverse%(name)s(x, (float)other);
     } else if (other is byte) {
         return Ops.%(titleType)s2Object(Reverse%(altname)s(x, (int)((byte)other)));
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        int y = xi.value;
-        try {
-            return Ops.%(titleType)s2Object(Reverse%(altname)s(x, y));
-        } catch (OverflowException) {
-            return LongOps.Reverse%(name)s(BigInteger.Create(x) , y);
-        }
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return FloatOps.Reverse%(name)s(x, xf.value);
+    } else if ((object)(num = other as INumber) != null) {
+        return num.%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
         if(y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), y);
-    } else if ((object)(el = other as ExtensibleLong) != null) {
-        return LongOps.Reverse%(name)s(BigInteger.Create(x), el.Value);
 	}
     return Ops.NotImplemented;
 }
@@ -580,11 +543,11 @@ public static object %(name)s(%(type)s x, object other) {
     } else if (other is bool) {
         return Ops.%(titleType)s2Object(x %(sym)s ((bool)other ? 1 : 0));
     } else if ((object)(xi = other as ExtensibleInt) != null) {
-        return Ops.%(titleType)s2Object(x %(sym)s xi.value);
+        return xi.Reverse%(name)s(x);
     } else if (other is byte) {
         return Ops.%(titleType)s2Object(x %(sym)s (int)((byte)other));
     } else if ((object)(el = other as ExtensibleLong) != null) {
-        return BigInteger.Create(x) %(sym)s el.Value;
+        return el.Reverse%(name)s(x);
     }
     return Ops.NotImplemented;
 }
@@ -594,10 +557,8 @@ int64_code = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) {
         int y = (int)other;
@@ -628,19 +589,10 @@ public static object %(name)s(%(type)s x, object other) {
         }
     } else if (other is float) {
         return x %(sym)s (float)other;
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        int y = xi.value;
-        try {
-            return Ops.%(titleType)s2Object(checked(x %(sym)s y));
-        } catch (OverflowException) {
-            return BigInteger.Create(x) %(sym)s y;
-        }
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return x %(sym)s xf.value;
+    } else if ((object)(num = other as INumber) != null) {
+        return num.Reverse%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return Complex64.MakeReal(x) %(sym)s xc.value;
-    } else if ((object)(el = other as ExtensibleLong) != null) {
-        return BigInteger.Create(x) %(sym)s el.Value;
     } else if (other is byte) {
         int y = (int)((byte)other);
         try {
@@ -655,10 +607,8 @@ public static object %(name)s(%(type)s x, object other) {
 [PythonName("__r%(pyName)s__")]
 public static object Reverse%(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) {
         int y = (int)other;
@@ -689,19 +639,10 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         }
     } else if (other is float) {
         return (float)other %(sym)s x;
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        int y = xi.value;
-        try {
-            return Ops.%(titleType)s2Object(checked(y %(sym)s x));
-        } catch (OverflowException) {
-            return y %(sym)s BigInteger.Create(x);
-        }
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return xf.value %(sym)s x;
+    } else if ((object)(num = other as INumber) != null) {
+        return num.%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return xc.value %(sym)s Complex64.MakeReal(x);
-    } else if ((object)(el = other as ExtensibleLong) != null) {
-        return el.Value %(sym)s BigInteger.Create(x);
     } else if (other is byte) {
         int y = (int)((byte)other);
         try {
@@ -718,10 +659,8 @@ int64_code_altname = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) {
         int y = (int)other;
@@ -752,19 +691,10 @@ public static object %(name)s(%(type)s x, object other) {
         }
     } else if (other is float) {
         return FloatOps.%(name)s(x, (float)other);
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        int y = xi.value;
-        try {
-            return Ops.%(titleType)s2Object(%(altname)s(x, y));
-        } catch (OverflowException) {
-            return BigInteger.Create(x) %(altsym)s y;
-        }
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return FloatOps.%(name)s(x, xf.value);
+    } else if ((object)(num = other as INumber) != null) {
+        return num.Reverse%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return ComplexOps.%(name)s(Complex64.MakeReal(x), xc.value);
-    } else if ((object)(el = other as ExtensibleLong) != null) {
-        return LongOps.%(name)s(BigInteger.Create(x), el.Value);
     } else if (other is byte) {
         int y = (int)((byte)other);
         try {
@@ -781,10 +711,8 @@ public static object %(name)s(%(type)s x, object other) {
 [PythonName("__r%(pyName)s__")]
 public static object Reverse%(name)s(%(type)s x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) {
         int y = (int)other;
@@ -815,19 +743,10 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         }
     } else if (other is float) {
         return FloatOps.Reverse%(name)s(x, (float)other);
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        int y = xi.value;
-        try {
-            return Ops.%(titleType)s2Object(Reverse%(altname)s(x, y));
-        } catch (OverflowException) {
-            return y %(altsym)s BigInteger.Create(x);
-        }
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return FloatOps.Reverse%(name)s(x, xf.value);
+    } else if ((object)(num = other as INumber) != null) {
+        return num.%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), xc.value);
-    } else if ((object)(el = other as ExtensibleLong) != null) {
-        return LongOps.Reverse%(name)s(BigInteger.Create(x), el.Value);
     } else if (other is byte) {
         int y = (int)((byte)other);
         try {
@@ -858,10 +777,9 @@ public static object %(name)s(%(type)s x, object other) {
     } else if (other is bool) {
         return Ops.%(titleType)s2Object(x %(sym)s ((bool)other ? 1L : 0L));
     } else if ((object)(xi = other as ExtensibleInt) != null) {
-        long y = (long)xi.value;
-        return Ops.%(titleType)s2Object(x %(sym)s y);
+        return xi.Reverse%(name)s(x);
     } else if ((object)(el = other as ExtensibleLong) != null) {
-        return BigInteger.Create(x) %(sym)s el.Value;
+        return el.Reverse%(name)s(BigInteger.Create(x));
     } else if (other is byte) {
         return Ops.%(titleType)s2Object(x %(sym)s (long)((byte)other));
     }
@@ -873,10 +791,8 @@ int64_code_m = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(long x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) return %(name)s(x, (int)other);
     if ((object)(bi = other as BigInteger) != null) return %(name)s(x, bi);
@@ -885,10 +801,8 @@ public static object %(name)s(long x, object other) {
     if (other is Complex64) return ComplexOps.%(name)s(x, (Complex64)other);
     if (other is bool) return %(name)s(x, (bool)other ? 1 : 0); 
     if (other is float) return %(name)s(x, (float)other);
-    if ((object)(xi = other as ExtensibleInt) != null) return %(name)s(x, xi.value);
-    if ((object)(xf = other as ExtensibleFloat) != null) return %(name)s(x, xf.value);
+    if ((object)(num = other as INumber) != null) return num.Reverse%(name)s(x);
     if ((object)(xc = other as ExtensibleComplex) != null) return %(name)s(x, xc.value);
-    if ((object)(el = other as ExtensibleLong) != null) return %(name)s(x, el.Value);
     if (other is byte) return %(name)s(x, (int)((byte)other));
     return Ops.NotImplemented;
 }
@@ -898,10 +812,8 @@ int_code_m = """
 [PythonName("__%(pyName)s__")]
 public static object %(name)s(int x, object other) {
     BigInteger bi;
-    ExtensibleInt xi;
-    ExtensibleFloat xf;
     ExtensibleComplex xc;
-    ExtensibleLong el;
+    INumber num;
 
     if (other is int) {
         return %(name)s(x, (int)other);
@@ -915,14 +827,10 @@ public static object %(name)s(int x, object other) {
         return %(name)s(x, (bool)other ? 1 : 0);
     } else if (other is Complex64) {
         return %(name)s(x, (Complex64)other);
-    } else if ((object)(xi = other as ExtensibleInt) != null) {
-        return %(name)s(x, xi.value);
-    } else if ((object)(xf = other as ExtensibleFloat) != null) {
-        return %(name)s(x, xf.value);
+    } else if ((object)(num = other as INumber) != null) {
+        return num.Reverse%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         return %(name)s(x, xc.value);
-    } else if ((object)(el = other as ExtensibleLong) != null) {
-        return %(name)s(x, el.Value);
     }
     return Ops.NotImplemented;
 }

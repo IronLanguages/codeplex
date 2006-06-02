@@ -512,6 +512,7 @@ namespace IronPython.Runtime {
         private static Dictionary<Type, DynamicType> MakeDynamicTypesTable() {
             Dictionary<Type, DynamicType> ret = new Dictionary<Type, DynamicType>();
 
+            ret[typeof(ValueType)] = ReflectedType.FromClsOnlyType(typeof(ValueType));
             StringType = new StringDynamicType();
             ret[typeof(string)] = StringType;
             ret[typeof(ExtensibleString)] = StringType;
@@ -540,6 +541,7 @@ namespace IronPython.Runtime {
             ret[typeof(ushort)] = UInt16Ops.MakeDynamicType();
             ret[typeof(uint)] = UInt32Ops.MakeDynamicType();
             ret[typeof(ulong)] = UInt64Ops.MakeDynamicType();
+            
 
             return ret;
         }

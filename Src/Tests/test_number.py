@@ -2155,3 +2155,10 @@ def f():
     Assert(it.AreEqual(it.BooleanVal8,it.boolT(it.BooleanVal8)))
 
 f()
+
+
+def long_test():
+    class mylong(long):
+        def __str__(self): return 'mylong'
+        
+    AreEqual(repr(mylong(3L)), '3L')

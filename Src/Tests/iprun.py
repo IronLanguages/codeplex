@@ -29,6 +29,7 @@ IronPython Test Driver
     -T:max :
   
   other arguments without leading '-' will be taken as categories
+  Category- can be used to exclude an entire category (e.g. Compat-)
 '''
 
 import sys
@@ -392,7 +393,8 @@ class TestConfig:
         tests = set()
         for x in self.categories:
             for y in self.str2list(self.categories[x]):
-                tests.add(y)
+                if not y in self.notRunList:
+                    tests.add(y)
         return list(tests)        
 
     def applicableTests(self, reqs=None):
@@ -441,6 +443,11 @@ class RegressionTestConfig(TestConfig):
         self.runner     = RedirectTestRunner
         self.runstep    = RegressRunStep
         self.categories = categories.RegressionTests
+        if is_cli:
+            # traceback support disabled on 64-bit
+            from System import IntPtr
+            if IntPtr.Size == 8:
+                self.notRunList += ['test.test_traceback']
         
     def getAllTests(self):
         return self.getTestsShownInCategories()
@@ -463,9 +470,9 @@ class CompatTestConfig(TestConfig):
     def xgetAllTests(self):
         return ['sbs_builtin']
         
-def getAllConfigs():
+def getAllConfigs(exclude=[]):
     _module = sys.modules[__name__]
-    return [ getattr(_module, x)() for x in dir(_module) if x.endswith("TestConfig") ]
+    return [ getattr(_module, x)() for x in dir(_module) if x.endswith("TestConfig") and not exclude.count(x[:-10])]
 
 ## not used. leave it for future                    
 def getAllConfigs2():       
@@ -516,12 +523,14 @@ def main(args):
         elif x in ('full', ): timeLevel = 'full'
     
     # decide the set of tests
-    tests = [x.lower() for x in args if not x.startswith('-')]
-    
-    allTcs = getAllConfigs()
+    tests = [x.lower() for x in args if not x.startswith('-') and not x.endswith('-')]
+
+    # -- excludes an entire test config, e.g. Compat--    
+    allTcs = getAllConfigs([x[:-1] for x in args if x.endswith('-')])
     shortcuts = {}
     for x in allTcs: shortcuts[x.shortcut] = x
-    
+
+    print allTcs
     processed = []
     for x in tests: 
         for y in shortcuts.keys():
@@ -536,10 +545,8 @@ def main(args):
     if processed and not tests: tests = ['notexist']
     
     # now 'tests' is really category
+    print 'tests: ', tests
     
-    # TODO: use 'Hosting-' to specify not running hosting related tests
-    # excludeTests = [x for x in args if x.endswith('-')]
-
     # To figure out which config has the desire test categories first
     filteredTcs = [ tc for tc in allTcs if len(tc.applicableTests(tests)) > 0 ]
 

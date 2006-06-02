@@ -195,6 +195,7 @@ namespace IronPython.Runtime {
 
         public static object Add(object x, object y) {
             object ret;
+            INumber inum;
             string sx,sy;
             ExtensibleString es = null;
 
@@ -219,8 +220,8 @@ namespace IronPython.Runtime {
             } else if (x is float) {
                 ret = FloatOps.Add((float)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is ExtensibleFloat) {
-                ret = FloatOps.Add(((ExtensibleFloat)x).value, y);
+            } else if ((inum = x as INumber)!=null) {
+                ret = inum.Add(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Add((bool)x, y);
@@ -308,6 +309,7 @@ namespace IronPython.Runtime {
 
         public static object Subtract(object x, object y) {
             object ret;
+            INumber inum;
 
             if (x is int) {
                 ret = IntOps.Subtract((int)x, y);
@@ -328,8 +330,8 @@ namespace IronPython.Runtime {
             } else if (x is float) {
                 ret = FloatOps.Subtract((float)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is ExtensibleFloat) {
-                ret = FloatOps.Subtract(((ExtensibleFloat)x).value, y);
+            } else if ((inum = x as INumber)!=null) {
+                ret = inum.Subtract(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Subtract((bool)x, y);
@@ -406,6 +408,7 @@ namespace IronPython.Runtime {
 
         public static object Power(object x, object y) {
             object ret;
+            INumber inum;
 
             if (x is int) {
                 ret = IntOps.Power((int)x, y);
@@ -426,8 +429,8 @@ namespace IronPython.Runtime {
             } else if (x is float) {
                 ret = FloatOps.Power((float)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is ExtensibleFloat) {
-                ret = FloatOps.Power(((ExtensibleFloat)x).value, y);
+            } else if ((inum = x as INumber)!=null) {
+                ret = inum.Power(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Power((bool)x, y);
@@ -504,6 +507,7 @@ namespace IronPython.Runtime {
 
         public static object Multiply(object x, object y) {
             object ret;
+            INumber inum;
 
             if (x is int) {
                 ret = IntOps.Multiply((int)x, y);
@@ -524,8 +528,8 @@ namespace IronPython.Runtime {
             } else if (x is float) {
                 ret = FloatOps.Multiply((float)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is ExtensibleFloat) {
-                ret = FloatOps.Multiply(((ExtensibleFloat)x).value, y);
+            } else if ((inum = x as INumber)!=null) {
+                ret = inum.Multiply(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Multiply((bool)x, y);
@@ -608,6 +612,7 @@ namespace IronPython.Runtime {
 
         public static object FloorDivide(object x, object y) {
             object ret;
+            INumber inum;
 
             if (x is int) {
                 ret = IntOps.FloorDivide((int)x, y);
@@ -628,8 +633,8 @@ namespace IronPython.Runtime {
             } else if (x is float) {
                 ret = FloatOps.FloorDivide((float)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is ExtensibleFloat) {
-                ret = FloatOps.FloorDivide(((ExtensibleFloat)x).value, y);
+            } else if ((inum = x as INumber)!=null) {
+                ret = inum.FloorDivide(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.FloorDivide((bool)x, y);
@@ -706,6 +711,7 @@ namespace IronPython.Runtime {
 
         public static object Divide(object x, object y) {
             object ret;
+            INumber inum;
 
             if (x is int) {
                 ret = IntOps.Divide((int)x, y);
@@ -726,8 +732,8 @@ namespace IronPython.Runtime {
             } else if (x is float) {
                 ret = FloatOps.Divide((float)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is ExtensibleFloat) {
-                ret = FloatOps.Divide(((ExtensibleFloat)x).value, y);
+            } else if ((inum = x as INumber)!=null) {
+                ret = inum.Divide(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Divide((bool)x, y);
@@ -804,6 +810,7 @@ namespace IronPython.Runtime {
 
         public static object TrueDivide(object x, object y) {
             object ret;
+            INumber inum;
 
             if (x is int) {
                 ret = IntOps.TrueDivide((int)x, y);
@@ -824,8 +831,8 @@ namespace IronPython.Runtime {
             } else if (x is float) {
                 ret = FloatOps.TrueDivide((float)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is ExtensibleFloat) {
-                ret = FloatOps.TrueDivide(((ExtensibleFloat)x).value, y);
+            } else if ((inum = x as INumber)!=null) {
+                ret = inum.TrueDivide(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.TrueDivide((bool)x, y);
@@ -902,6 +909,7 @@ namespace IronPython.Runtime {
 
         public static object Mod(object x, object y) {
             object ret;
+            INumber inum;
 
             if (x is int) {
                 ret = IntOps.Mod((int)x, y);
@@ -922,8 +930,8 @@ namespace IronPython.Runtime {
             } else if (x is float) {
                 ret = FloatOps.Mod((float)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is ExtensibleFloat) {
-                ret = FloatOps.Mod(((ExtensibleFloat)x).value, y);
+            } else if ((inum = x as INumber)!=null) {
+                ret = inum.Mod(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Mod((bool)x, y);

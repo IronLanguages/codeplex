@@ -455,8 +455,131 @@ namespace IronPython.Modules {
         }
 
         [PythonName("help")]
-        public static void Help(object o) {
-            throw new NotImplementedException("help");
+        public static void Help(ICallerContext context, object o) {
+            StringBuilder doc = new StringBuilder();
+            ArrayList doced = new ArrayList();  // document things only once
+
+            Help(context, doced, doc, 0, o);
+
+            if (doc.Length == 0) {
+                doc.Append("no documentation found for ");
+                doc.Append(Ops.StringRepr(o));
+            }
+
+            string[] strings = doc.ToString().Split('\n');
+            for (int i = 0; i < strings.Length; i++) {
+                /* should read only a key, not a line, but we don't seem
+                 * to have a way to do that...
+                if ((i % Console.WindowHeight) == 0) {
+                    Ops.Print(context.SystemState, "-- More --");
+                    Ops.ReadLineFromSrc(context.SystemState);
+                }*/
+                Ops.Print(context.SystemState, strings[i]);
+            }
+        }
+
+        private static void Help(ICallerContext context, ArrayList doced, StringBuilder doc, int indent, object o) {
+            DynamicType dt;
+            BuiltinFunction bf;
+            PythonFunction pf;
+            BuiltinMethodDescriptor methodDesc;
+            string strVal;
+
+            if (doced.Contains(o)) return;  // document things only once
+            doced.Add(o);
+
+            if ((strVal = o as string) != null) {
+                // try and find things that string could refer to,
+                // then call help on them.
+                foreach (KeyValuePair<object, object> kvp in context.SystemState.modules) {
+                    object pm = kvp.Value;
+
+                    List attrs = Ops.GetAttrNames(context, pm);
+                    List candidates = new List();
+                    foreach (string s in attrs) {
+                        if (s == strVal) {
+                            object modVal;
+                            if(!Ops.TryGetAttr(context, pm, SymbolTable.StringToId(strVal), out modVal))
+                                continue;
+
+                            candidates.Add(modVal);
+                        }
+                    }
+
+                    // favor types, then built-in functions, then python functions,
+                    // and then only display help for one.
+                    dt = null;
+                    bf = null;
+                    pf = null;
+                    for (int i = 0; i < candidates.Count; i++) {
+                        if ((dt = candidates[i] as DynamicType) != null) {
+                            break;
+                        }
+
+                        if (bf == null && (bf = candidates[i] as BuiltinFunction) != null)
+                            continue;
+
+                        if (pf == null && (pf = candidates[i] as PythonFunction) != null)
+                            continue;
+                    }
+
+                    if (dt != null) Help(context, doced, doc, indent, dt);
+                    else if (bf != null) Help(context, doced, doc, indent, bf);
+                    else if (pf != null) Help(context, doced, doc, indent, pf);
+                }
+            } else if ((dt = o as DynamicType) != null) {
+                // find all the functions, and display their 
+                // documentation
+                if (indent == 0) doc.AppendFormat("Help on {0} in module {1}\n\n", dt.__name__, Ops.GetAttr(context, dt, SymbolTable.Module));
+                List names = dt.GetAttrNames(context, null);
+                names.Sort();
+                foreach (string name in names) {
+                    if (name == "__class__") continue;
+
+                    object value;
+                    if (Ops.TryGetAttr(context, o, SymbolTable.StringToId(name), out value))
+                        Help(context, doced, doc, indent + 1, value);
+                }
+            } else if ((methodDesc = o as BuiltinMethodDescriptor) != null) {
+                if (indent == 0) doc.AppendFormat("Help on method-descriptor {0}\n\n", methodDesc.Name);
+                AppendIndent(doc, indent);
+                doc.Append(methodDesc.Name);
+                doc.Append("(...)\n");
+
+                AppendMultiLine(doc, Converter.ConvertToString(methodDesc.Documentation), indent + 1);
+            } else if ((bf = o as BuiltinFunction) != null) {
+                if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", bf.Name);
+                AppendIndent(doc, indent);
+                doc.Append(bf.Name);
+                doc.Append("(...)\n");
+
+                AppendMultiLine(doc, bf.Documentation, indent + 1);
+            } else if ((pf = o as PythonFunction) != null) {
+                if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}\n\n", pf.Name, pf.Module.ModuleName);
+
+                AppendIndent(doc, indent);
+                doc.AppendFormat("{0}({1})\n", pf.Name, String.Join(", ", pf.argNames));
+                string pfDoc = Converter.ConvertToString(pf.Documentation);
+                if (!String.IsNullOrEmpty(pfDoc)) {
+                    AppendMultiLine(doc, pfDoc, indent);
+                }
+            } else if (o is PythonModule) {
+
+            }
+        }
+
+        private static void AppendMultiLine(StringBuilder doc, string multiline, int indent) {
+            string[] docs = multiline.Split('\n');
+            for (int i = 0; i < docs.Length; i++) {
+                AppendIndent(doc, indent + 1);
+                doc.Append(docs[i]);
+                doc.Append('\n');
+            }
+        }
+
+        private static void AppendIndent(StringBuilder doc, int indent) {
+            doc.Append(" |  ");
+            for (int i = 0; i < indent; i++) doc.Append("    ");
         }
 
         //??? type this to string
@@ -696,6 +819,10 @@ namespace IronPython.Modules {
                 ch = (char)value;
             } else {
                 string stringValue = value as string;
+                if (stringValue == null) {
+                    ExtensibleString es = value as ExtensibleString;
+                    if (es != null) stringValue = es.Value;
+                }
                 if (stringValue != null) {
                     if (stringValue.Length != 1) {
                         throw Ops.TypeError("expected a character, but string of length {0} found", stringValue.Length);

@@ -22,9 +22,10 @@ using IronMath;
 using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime {
-    public class ExtensibleComplex {
+    public partial class ExtensibleComplex {
         public Complex64 value;
-        public ExtensibleComplex() { this.value = new Complex64(); }
+        
+        public ExtensibleComplex() { this.value = new Complex64(0, 0); }
         public ExtensibleComplex(double real) { value = new Complex64(real); }
         public ExtensibleComplex(double real, double imag) {
             value = new Complex64(real, imag);
@@ -41,6 +42,10 @@ namespace IronPython.Runtime {
         public override int GetHashCode() {
             return value.GetHashCode();
         }
+
+        public virtual object Power(object other) {
+            return ComplexOps.Power(value, other);
+        }        
     }
 
     public static partial class ComplexOps {
@@ -63,6 +68,8 @@ namespace IronPython.Runtime {
             Conversion conv;
             Complex64 real2, imag2;
             real2 = imag2 = new Complex64();
+
+            if (real == null && imag == null && cls == ComplexType) throw Ops.TypeError("argument must be a string or a number");
 
             if (imag != null) {
                 if (real is string) throw Ops.TypeError("complex() can't take second arg if first is a string");
@@ -93,8 +100,16 @@ namespace IronPython.Runtime {
             }
         }
 
+        private static object ReversePower(Complex64 x, Complex64 y){
+            return Power(y, x);
+        }
+
         private static object TrueDivide(Complex64 x, Complex64 y) {
             return x / y;
+        }
+
+        private static object ReverseTrueDivide(Complex64 x, Complex64 y) {
+            return y / x;
         }
 
         public static object Abs(Complex64 x) {
@@ -220,6 +235,18 @@ namespace IronPython.Runtime {
         public static object LessThanEquals(Complex64 self, object other) {
             if (other == null) return Ops.NotImplemented;
             return Compare(self, other) <= 0;
+        }
+
+        [PythonName("__coerce__")]
+        public static object Coerce(object x, object y) {
+            if (!(x is Complex64)) throw Ops.TypeError("__coerce__ requires a complex object, but got {0}", Ops.StringRepr(Ops.GetDynamicType(x)));
+            Conversion conv;
+            Complex64 right = Converter.TryConvertToComplex64(y, out conv);
+            if(conv != Conversion.None) return Tuple.MakeTuple(x, right);
+
+            if (y is BigInteger || y is ExtensibleLong) throw Ops.OverflowError("long too large to convert");
+
+            return Ops.NotImplemented;
         }
 
         public static bool EqualsRetBool(Complex64 x, object other) {

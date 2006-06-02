@@ -44,13 +44,17 @@ def test_add_mul():
     AssertError(OverflowError, lambda: "a" * (sys.maxint + 1))
     AssertError(OverflowError, lambda: (sys.maxint + 1) * "a")
 
+    class mylong(long): pass
+
     # multiply
     AreEqual("aaaa", "a" * 4L)
+    AreEqual("aaaa", "a" * mylong(4L))
     AreEqual("aaa", "a" * 3)
     AreEqual("a", "a" * True)
     AreEqual("", "a" * False)
 
     AreEqual("aaaa", 4L * "a")
+    AreEqual("aaaa", mylong(4L) * "a")
     AreEqual("aaa", 3 * "a")
     AreEqual("a", True * "a")
     AreEqual("", False * "a" )
