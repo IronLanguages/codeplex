@@ -1413,6 +1413,15 @@ namespace IronPython.Runtime {
             return GetDynamicType(o).GetIndex(o, index);
         }
 
+        public static void SetIndexId(object o, SymbolId index, object value) {
+            IAttributesDictionary ad;
+            if ((ad = o as IAttributesDictionary) != null) {
+                ad[index] = value;
+            } else {
+                SetIndex(o, index.ToString(), value);
+            }
+        }
+
         public static void SetIndex(object o, object index, object value) {
             IMutableSequence seq = o as IMutableSequence;
             if (seq != null) {
@@ -1891,8 +1900,8 @@ namespace IronPython.Runtime {
 
 
         public static void Exec(ICallerContext context, object code) {
-            IDictionary<object, object> locals = (IDictionary<object, object>)context.Locals;
-            IDictionary<object, object> globals = (IDictionary<object, object>)context.Globals;
+            IAttributesDictionary locals = (IAttributesDictionary)context.Locals;
+            IAttributesDictionary globals = (IAttributesDictionary)context.Globals;
 
             // if the user passes us a tuple we'll extract the 3 values out of it            
             Tuple codeTuple = code as Tuple;
@@ -1900,12 +1909,12 @@ namespace IronPython.Runtime {
                 code = codeTuple[0];
 
                 if (codeTuple.Count > 1 && codeTuple[1] != null) {
-                    globals = codeTuple[1] as IDictionary<object, object>;
+                    globals = codeTuple[1] as IAttributesDictionary;
                     if (globals == null) throw Ops.TypeError("globals must be dictionary or none");
                 }
 
                 if (codeTuple.Count > 2 && codeTuple[2] != null) {
-                    locals = codeTuple[2] as IDictionary<object, object>;
+                    locals = codeTuple[2] as IAttributesDictionary;
                     if (locals == null) throw Ops.TypeError("locals must be dictionary or none");
                 } else if (globals != context.Globals)
                     locals = globals;
@@ -1914,11 +1923,11 @@ namespace IronPython.Runtime {
             Exec(context, code, locals, globals);
         }
 
-        public static void Exec(ICallerContext context, object code, IDictionary<object, object> locals) {
-            Exec(context, code, locals, (IDictionary<object, object>)(context.Module.__dict__));
+        public static void Exec(ICallerContext context, object code, IAttributesDictionary locals) {
+            Exec(context, code, locals, context.Module.__dict__);
         }
 
-        public static void Exec(ICallerContext context, object code, IDictionary<object, object> locals, IDictionary<object, object> globals) {
+        public static void Exec(ICallerContext context, object code, IAttributesDictionary locals, IAttributesDictionary globals) {
             if (code is PythonFile) {
                 PythonFile pf = code as PythonFile;
                 List lines = pf.ReadLines();

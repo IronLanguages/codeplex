@@ -518,7 +518,7 @@ namespace IronPython.Hosting {
         }
 
         public int RunInteractive() {
-            topFrame.SetGlobal("__doc__", null);
+            topFrame.SetGlobal(SymbolTable.Doc, null);
             Sys.modules[topFrame.Module.ModuleName] = topFrame.Module;
             return RunInteractiveLoop();
         }
@@ -543,7 +543,7 @@ namespace IronPython.Hosting {
             object mod = Importer.ImportModule(topFrame, module, true);
             if (mod != null) {
                 string[] names = module.Split('.');
-                topFrame.SetGlobal(names[names.Length - 1], mod);
+                topFrame.SetGlobal(SymbolTable.StringToId(names[names.Length - 1]), mod);
             }
             return mod;
         }

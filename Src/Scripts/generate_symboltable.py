@@ -18,7 +18,8 @@ reload(generate)
 from generate import CodeGenerator
 import operator
 
-startValue = 46 # ops come first, we see generate_ops to figure out where we start...
+nullValue = 0
+startValue = 47 # ops come first, we see generate_ops to figure out where we start...
 
 fieldList = [
     ('__neg__', 'OpNegate'),
@@ -98,14 +99,30 @@ fieldList = [
     ('next', 'GeneratorNext'),
     ('setdefaultencoding', 'SetDefaultEncoding'),
     ('exitfunc', 'SysExitFunc'),
+    ('None', 'None'),
     
     ('__metaclass__', 'MetaClass'),
     ('__mro__', 'MethodResolutionOrder'),
     ('__getslice__', 'GetSlice'),
     ('__setslice__', 'SetSlice'),
     ('__delslice__', 'DeleteSlice'),
-    ('__pos__', 'OpPositive'),
-    ('LastWellKnownId', 'LastWellKnownId')
+    ('__future__', 'Future'),
+    ('division', 'Division'),
+    ('nested_scopes', 'NestedScopes'),
+    ('generators', 'Generators'),
+    ('as', 'As'),
+    ('*', 'Star'),
+    ('**', 'StarStar'),
+    ('locals', 'Locals'),
+    ('vars', 'Vars'),
+    ('dir', 'Dir'),
+    ('eval', 'Eval'),
+    ('_', 'Underscore'),
+    ('__gen_$_parm__', 'GeneratorParmName'),
+    ('$env', 'EnvironmentParmName'),
+    ('iter', 'Iter'),
+
+    ('LastWellKnown', 'LastWellKnown')
     ]
 
 def generate_values(cw):
@@ -116,16 +133,16 @@ def generate_values(cw):
 
 def generate_symbols(cw):
     i = startValue
-    for x in fieldList:
+    for x in fieldList[:-1]:
+        cw.writeline("///<summary>Symbol for '%s'</summary> " % x[0])
         cw.writeline("public static readonly SymbolId %s = new SymbolId(%sId);" % (x[1],x[1]))
         i = i + 1
 
 def generate_added(cw):
     i = startValue
-    for x in fieldList:
+    for x in fieldList[:-1]:
         cw.writeline("StringToId(\"%s\");  // %d" % (x[0], i))
         i = i+1
- 
  
 CodeGenerator("SymbolTable Other Values", generate_values).doit()
 CodeGenerator("SymbolTable Other Added", generate_added).doit()

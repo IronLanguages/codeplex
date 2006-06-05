@@ -42,7 +42,7 @@ namespace IronPython.Compiler {
     // Note that for module-level code, globals and locals are the same.
 
     public class Namespace {
-        private Dictionary<Name, Slot> slots = new Dictionary<Name, Slot>();
+        private Dictionary<SymbolId, Slot> slots = new Dictionary<SymbolId, Slot>();
 
         private SlotFactory locals;
         private GlobalNamespace globals;
@@ -62,7 +62,7 @@ namespace IronPython.Compiler {
             set { globals = value; }
         }
 
-        public Slot this[Name name] {
+        public Slot this[SymbolId name] {
             get {
                 Debug.Assert(slots.ContainsKey(name), "undefined slot: "+name.GetString());
                 return slots[name];
@@ -73,19 +73,19 @@ namespace IronPython.Compiler {
             }
         }
 
-        public Dictionary<Name, Slot> Slots {
+        public Dictionary<SymbolId, Slot> Slots {
             get {
                 return slots;
             }
         }
 
-        internal Slot CreateGlobalSlot(Name name) {
+        internal Slot CreateGlobalSlot(SymbolId name) {
             Slot slot = Globals.GetOrMakeSlot(name);
             slots[name] = slot;
             return slot;
         }
 
-        internal Slot EnsureLocalSlot(Name name) {
+        internal Slot EnsureLocalSlot(SymbolId name) {
             Slot slot;
             if (!slots.TryGetValue(name, out slot)) {
                 slot = locals.MakeSlot(name);
@@ -98,14 +98,14 @@ namespace IronPython.Compiler {
             temps.Add(slot);
         }
 
-        public void SetSlot(Name name, Slot slot) {
+        public void SetSlot(SymbolId name, Slot slot) {
             slots[name] = slot;
         }
 
         private int tempCounter = 0;
         public Slot GetTempSlot(string prefix, Type type) {
             if (locals != null) {
-                return locals.MakeSlot(Name.Make(prefix + "$" + tempCounter++), type);
+                return locals.MakeSlot(SymbolTable.StringToId(prefix + "$" + tempCounter++), type);
             } else {
                 Debug.Assert(tempCounter < temps.Count);
                 return new CastSlot(temps[tempCounter++], type);

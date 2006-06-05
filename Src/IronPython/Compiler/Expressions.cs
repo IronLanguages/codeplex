@@ -67,13 +67,6 @@ namespace IronPython.Compiler {
     }
 
     public class CallExpr : Expr {
-        public static readonly Name ParamsName = Name.Make("*");
-        public static readonly Name DictionaryName = Name.Make("**");
-        private static readonly Name LocalsName = Name.Make("locals");
-        private static readonly Name VarsName = Name.Make("vars");
-        private static readonly Name DirName = Name.Make("dir");
-        private static readonly Name EvalName = Name.Make("eval");
-
         public readonly Expr target;
         public readonly Arg[] args;
         private bool hasArgsTuple, hasKeywordDict;
@@ -93,12 +86,12 @@ namespace IronPython.Compiler {
             if (nameExpr == null) return false;
 
             if (args.Length == 0) {
-                if (nameExpr.name == LocalsName) return true;
-                if (nameExpr.name == VarsName) return true;
-                if (nameExpr.name == DirName) return true;
+                if (nameExpr.name == SymbolTable.Locals) return true;
+                if (nameExpr.name == SymbolTable.Vars) return true;
+                if (nameExpr.name == SymbolTable.Dir) return true;
                 return false;
             } else {
-                if (nameExpr.name == EvalName) return true;
+                if (nameExpr.name == SymbolTable.Eval) return true;
             }
             return false;
         }
@@ -113,7 +106,7 @@ namespace IronPython.Compiler {
             object[] cargs = new object[args.Length];
             int index = 0;
             foreach (Arg arg in args) {
-                if (arg.name != null) throw new NotImplementedException("keywords");
+                if (arg.name != SymbolTable.Empty) throw new NotImplementedException("keywords");
                 cargs[index++] = arg.expr.Evaluate(env);
             }
 
@@ -138,11 +131,11 @@ namespace IronPython.Compiler {
             string[] keywordNames = new string[keywordCount];
             int index = 0, keywordIndex = 0;
             foreach (Arg arg in args) {
-                if (arg.name == ParamsName) {
+                if (arg.name == SymbolTable.Star) {
                     argsTuple = arg.expr; continue;
-                } else if (arg.name == DictionaryName) {
+                } else if (arg.name == SymbolTable.StarStar) {
                     keywordDict = arg.expr; continue;
-                } else if (arg.name != null) {
+                } else if (arg.name != SymbolTable.Empty) {
                     keywordNames[keywordIndex++] = arg.name.GetString();
                 }
                 exprs[index++] = arg.expr;
@@ -207,11 +200,11 @@ namespace IronPython.Compiler {
     }
 
     public class Arg : Node {
-        public readonly Name name;
+        public readonly SymbolId name;
         public readonly Expr expr;
-        public Arg(Expr expr) : this(null, expr) { }
+        public Arg(Expr expr) : this(SymbolTable.Empty, expr) { }
 
-        public Arg(Name name, Expr expr) {
+        public Arg(SymbolId name, Expr expr) {
             this.name = name;
             this.expr = expr;
         }
@@ -226,8 +219,8 @@ namespace IronPython.Compiler {
 
     public class FieldExpr : Expr {
         public readonly Expr target;
-        public readonly Name name;
-        public FieldExpr(Expr target, Name name) {
+        public readonly SymbolId name;
+        public FieldExpr(Expr target, SymbolId name) {
             this.target = target;
             this.name = name;
         }
@@ -246,14 +239,14 @@ namespace IronPython.Compiler {
             cg.EmitCallerContext();
             target.Emit(cg);
 
-            cg.EmitSymbolId(name.GetString());
+            cg.EmitSymbolId(name);
 
             cg.EmitCall(typeof(Ops), "GetAttr"); //, new Type[] { typeof(object), typeof(SymbolId) });
         }
 
         public override void EmitSet(CodeGen cg) {
             target.Emit(cg);
-            cg.EmitSymbolId(name.GetString());
+            cg.EmitSymbolId(name);
             cg.EmitCallerContext();
             cg.EmitCall(typeof(Ops), "SetAttrStackHelper");
         }
@@ -261,7 +254,7 @@ namespace IronPython.Compiler {
         public override void EmitDel(CodeGen cg) {
             cg.EmitCallerContext();
             target.Emit(cg);
-            cg.EmitSymbolId(name.GetString());
+            cg.EmitSymbolId(name);
             cg.EmitCall(typeof(Ops), "DelAttr");
         }
 
@@ -620,10 +613,10 @@ namespace IronPython.Compiler {
     }
 
     public class NameExpr : Expr {
-        public readonly Name name;
+        public readonly SymbolId name;
         public bool defined;
 
-        public NameExpr(Name name) { this.name = name; }
+        public NameExpr(SymbolId name) { this.name = name; }
 
         public override object Evaluate(NameEnv env) {
             return env.Get(name.GetString());

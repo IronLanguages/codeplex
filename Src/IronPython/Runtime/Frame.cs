@@ -33,8 +33,7 @@ namespace IronPython.Runtime {
         // This is usually the same as __module__.__dict__.
         // It differs for code which does:
         //     eval("someGlobal==someLocal", { "someGlobal":1 }, { "someLocal":1 })
-        private IDictionary<object, object> f_globals;
-
+        private IAttributesDictionary f_globals;
         private object f_locals; // can be any dictionary or IMapping.
 
         private bool trueDivision;
@@ -45,31 +44,38 @@ namespace IronPython.Runtime {
         public List<object> staticData;
 
         public static Frame MakeFrameForFunction(PythonModule context) {
-            return new Frame(context, ((IDictionary<object,object>)context.__dict__), new FieldIdDict());
+            return new Frame(context, context.__dict__, new FieldIdDict());
         }
 
         public Frame(PythonModule mod) {
             __module__ = mod;
-            f_globals = ((IDictionary<object,object>)mod.__dict__);
+            f_globals = mod.__dict__;
             f_locals = mod.__dict__;
             __builtin__ = TypeCache.Builtin;
         }
 
-        public Frame(PythonModule mod, IDictionary<object, object> globals, object locals) {
+        public Frame(PythonModule mod, IAttributesDictionary globals, object locals) {
             __module__ = mod;
             f_globals = globals;
             f_locals = locals;
             __builtin__ = TypeCache.Builtin;
         }
 
-        public object GetLocal(string name) {
+        public object GetLocal(SymbolId symbol) {
             object ret;
-            if (TryGetLocal(name, out ret)) { return ret; }
-            return GetGlobal(name);
+            if (TryGetLocal(symbol, out ret)) { return ret; }
+            return GetGlobal(symbol);
         }
 
-        private bool TryGetLocal(string name, out object ret) {
+        private bool TryGetLocal(SymbolId symbol, out object ret) {
             // couple of exception-free fast paths...
+            IAttributesDictionary ad = f_locals as IAttributesDictionary;
+            if (ad != null) {
+                if (ad.TryGetValue(symbol, out ret)) return true;
+            }
+
+            string name = symbol.ToString();
+
             IDictionary<object, object> dict = f_locals as IDictionary<object, object>;
             if (dict != null) {
                 if (dict.TryGetValue(name, out ret)) return true;
@@ -91,39 +97,43 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        public void DelLocal(string name) {
+        public void DelLocal(SymbolId symbol) {
             try {
-                Ops.DelIndex(f_locals, name);
+                Ops.DelIndex(f_locals, symbol.ToString());
             } catch(KeyNotFoundException) {                
-                throw Ops.NameError("name {0} is not defined", name);
+                throw Ops.NameError("name {0} is not defined", symbol);
             }
         }
 
-        public void SetLocal(string name, object value) {
-            Ops.SetIndex(f_locals, name, value);
+        public void SetLocal(SymbolId symbol, object value) {
+            Ops.SetIndexId(f_locals, symbol, value);
         }
 
-        public object GetGlobal(string name) {
+        #region IFrameEnvironment Members
+
+        public object GetGlobal(SymbolId symbol) {
             object ret;
 
-            if (f_globals.TryGetValue(name, out ret)) return ret;
+            if (f_globals.TryGetValue(symbol, out ret)) return ret;
 
             // In theory, we need to check if "__builtins__" has been set by the user
             // to some custom module. However, we do not do that for perf reasons.
-            if (__builtin__.TryGetAttr(this, SymbolTable.StringToId(name), out ret)) return ret;
+            if (__builtin__.TryGetAttr(this, symbol, out ret)) return ret;
 
-            throw Ops.NameError("name '{0}' not defined", name);
+            throw Ops.NameError("name '{0}' not defined", symbol);
         }
 
-        public void SetGlobal(string name, object value) {
-            Ops.SetIndex(f_globals, name, value);
+        public void SetGlobal(SymbolId symbol, object value) {
+            Ops.SetIndexId(f_globals, symbol, value);
         }
 
-        public void DelGlobal(string name) {
-            if (!f_globals.Remove(name)) {
-                throw Ops.NameError("name {0} not defined", name);
+        public void DelGlobal(SymbolId symbol) {
+            if (!f_globals.Remove(symbol)) {
+                throw Ops.NameError("name {0} not defined", symbol);
             }
         }
+
+        #endregion
 
         #region ICallerContext Members
 

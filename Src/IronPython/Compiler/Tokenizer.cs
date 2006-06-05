@@ -528,8 +528,8 @@ namespace IronPython.Compiler {
             }
             Backup();
             SetEnd();
-            Name name = Name.Make(this.data, start, end);
-            if (name == Name.None) return Tokens.NoneToken;
+            SymbolId name = SymbolTable.StringToId(new String(this.data, start, end - start));
+            if (name == SymbolTable.None) return Tokens.NoneToken;
 
             Token ret;
             if (Tokens.Keywords.TryGetValue(name, out ret)) return ret;

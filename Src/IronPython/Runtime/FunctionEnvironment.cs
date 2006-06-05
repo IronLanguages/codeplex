@@ -129,18 +129,18 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region IGlobalEnvironment Members
+        #region IFrameEnvironment Members
 
-        public object GetGlobal(string name) {
-            return context.GetGlobal(name);
+        public object GetGlobal(SymbolId symbol) {
+            return context.GetGlobal(symbol);
         }
 
-        public void SetGlobal(string name, object value) {
-            context.SetGlobal(name, value);
+        public void SetGlobal(SymbolId symbol, object value) {
+            context.SetGlobal(symbol, value);
         }
 
-        public void DelGlobal(string name) {
-            context.DelGlobal(name);
+        public void DelGlobal(SymbolId symbol) {
+            context.DelGlobal(symbol);
         }
 
         #endregion

@@ -167,7 +167,7 @@ def run_compile_test(code, msg, lineno):
         Assert(False, "Expected exception, got none")
 
 compile_tests = [
-    ("for x notin []:\n    pass", "unexpected token Name(notin)", 1),
+    ("for x notin []:\n    pass", "unexpected token notin", 1),
     ("global 1", "unexpected token 1", 1),
     ("x=10\nyield x\n", "'yield' outside function", 2),
     ("return\n", "'return' outside function", 1),

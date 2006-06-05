@@ -116,7 +116,6 @@
     <Compile Include="Compiler\FuncDef.cs" />
     <Compile Include="Compiler\FuncDef.Generated.cs" />
     <Compile Include="Compiler\MethodTracker.cs" />
-    <Compile Include="Compiler\Name.cs" />
     <Compile Include="Compiler\NameConverter.cs" />
     <Compile Include="Compiler\NameEnv.cs" />
     <Compile Include="Compiler\Namespace.cs" />
@@ -128,6 +127,8 @@
     <Compile Include="Compiler\OutputGenerator.cs" />
     <Compile Include="Runtime\ByteOps.cs" />
     <Compile Include="Runtime\ByteOps.Generated.cs" />
+    <Compile Include="Runtime\CustomSymbolDict.cs" />
+    <Compile Include="Runtime\FieldIdDict.cs" />
     <Compile Include="Runtime\ParamTree.cs" />
     <Compile Include="Compiler\Parser.cs" />
     <Compile Include="Compiler\ParserSink.cs" />

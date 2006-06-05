@@ -70,7 +70,7 @@ namespace IronPython.Compiler {
         // Any access to the Slot first checks if it is holding an "Uninitialized",
         // which means that it should virtually not exist
 
-        public virtual void EmitSetUninitialized(CodeGen cg, Name name) {
+        public virtual void EmitSetUninitialized(CodeGen cg, SymbolId name) {
             // Emit the following:
             //     <name> = new Uninitialized("<name>");
             // Including "name" helps with debugging
@@ -79,7 +79,7 @@ namespace IronPython.Compiler {
             EmitSet(cg);
         }
 
-        public virtual void EmitDelete(CodeGen cg, Name name, bool check) {
+        public virtual void EmitDelete(CodeGen cg, SymbolId name, bool check) {
             // First check that the Name exists. Otherwise, deleting it
             // should cause a NameError
             if (check && Options.CheckInitialized) {
@@ -113,17 +113,20 @@ namespace IronPython.Compiler {
     public sealed class NamedFrameSlot : Slot {
         // The Frame whose Namespace will be used to resolve the Name
         private readonly Slot frame;
-        private readonly Name name;
+        private readonly SymbolId name;
 
-        public NamedFrameSlot(Slot frame, Name name) {
+        public NamedFrameSlot(Slot frame, SymbolId name) {
             Debug.Assert(typeof(IFrameEnvironment).IsAssignableFrom(frame.Type), "invalid frame type");
             this.frame = frame;
             this.name = name;
         }
 
         public override void EmitGet(CodeGen cg) {
+            //
+            // frame.GetGlobal(symbol_id)
+            //
             frame.EmitGet(cg);
-            cg.EmitString(name.GetString());
+            cg.EmitSymbolId(name);
             cg.EmitCall(typeof(IFrameEnvironment), "GetGlobal");
         }
 
@@ -133,22 +136,24 @@ namespace IronPython.Compiler {
         }
 
         public override void EmitSet(CodeGen cg, Slot val) {
-            // Emit the following:
-            //    frame.SetGlobal("name", val)
+            //
+            // frame.SetGlobal(symbol_id, val)
+            //
             frame.EmitGet(cg);
-            cg.EmitString(name.GetString());
+            cg.EmitSymbolId(name);
             val.EmitGet(cg);
             cg.EmitCall(typeof(IFrameEnvironment), "SetGlobal");
         }
 
-        public override void EmitSetUninitialized(CodeGen cg, Name name) {
+        public override void EmitSetUninitialized(CodeGen cg, SymbolId name) {
         }
 
-        public override void EmitDelete(CodeGen cg, Name name, bool check) {
-            // Emit the following:
-            //    frame.DelGlobal("name")
+        public override void EmitDelete(CodeGen cg, SymbolId name, bool check) {
+            //
+            // frame.DelGlobal(symbol_id)
+            //
             frame.EmitGet(cg);
-            cg.EmitString(name.GetString());
+            cg.EmitSymbolId(name);
             cg.EmitCall(typeof(IFrameEnvironment), "DelGlobal");
         }
 
@@ -161,16 +166,16 @@ namespace IronPython.Compiler {
 
     public class LocalNamedFrameSlot : Slot {
         public readonly Slot frame;
-        public readonly Name name;
+        public readonly SymbolId name;
 
-        public LocalNamedFrameSlot(Slot frame, Name name) {
+        public LocalNamedFrameSlot(Slot frame, SymbolId name) {
             this.frame = frame;
             this.name = name;
         }
 
         public override void EmitGet(CodeGen cg) {
             frame.EmitGet(cg);
-            cg.EmitString(name.GetString());
+            cg.EmitSymbolId(name);
             cg.EmitCall(typeof(Frame), "GetLocal");
         }
 
@@ -181,21 +186,21 @@ namespace IronPython.Compiler {
 
         public override void EmitSet(CodeGen cg, Slot val) {
             // Emit the following:
-            //    frame.SetName("name", val)
+            //    frame.SetLocal(symbol_id, val)
             frame.EmitGet(cg);
-            cg.EmitString(name.GetString());
+            cg.EmitSymbolId(name);
             val.EmitGet(cg);
             cg.EmitCall(typeof(Frame), "SetLocal");
         }
 
-        public override void EmitSetUninitialized(CodeGen cg, Name name) {
+        public override void EmitSetUninitialized(CodeGen cg, SymbolId name) {
         }
 
-        public override void EmitDelete(CodeGen cg, Name name, bool check) {
+        public override void EmitDelete(CodeGen cg, SymbolId name, bool check) {
             // Emit the following:
-            //    frame.DelName("name")
+            //    frame.DelLocal(symbol_id)
             frame.EmitGet(cg);
-            cg.EmitString(name.GetString());
+            cg.EmitSymbolId(name);
             cg.EmitCall(typeof(Frame), "DelLocal");
         }
 
@@ -642,7 +647,7 @@ namespace IronPython.Compiler {
             cg.MarkLabel(initialized);
         }
 
-        public override void EmitDelete(CodeGen cg, Name name, bool check) {
+        public override void EmitDelete(CodeGen cg, SymbolId name, bool check) {
             attribute.EmitDelete(cg, name, check);
         }
 
@@ -654,7 +659,7 @@ namespace IronPython.Compiler {
             attribute.EmitSet(cg, val);
         }
 
-        public override void EmitSetUninitialized(CodeGen cg, Name name) {
+        public override void EmitSetUninitialized(CodeGen cg, SymbolId name) {
             attribute.EmitSetUninitialized(cg, name);
         }
 
@@ -670,9 +675,9 @@ namespace IronPython.Compiler {
     internal class EnvironmentBackedSlot : Slot {
         Slot global;
         Slot environment;
-        Name name;
+        SymbolId name;
 
-        public EnvironmentBackedSlot(Slot global, Slot environment, Name name) {
+        public EnvironmentBackedSlot(Slot global, Slot environment, SymbolId name) {
             this.global = global;
             this.environment = environment;
             this.name = name;

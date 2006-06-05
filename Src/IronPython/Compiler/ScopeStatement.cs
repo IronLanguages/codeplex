@@ -164,10 +164,10 @@ namespace IronPython.Compiler {
         protected ScopeFlags scopeInfo;
 
         // Names referenced in the scope with and their binding kind
-        protected Dictionary<Name, Binding> names = new Dictionary<Name, Binding>();
+        protected Dictionary<SymbolId, Binding> names = new Dictionary<SymbolId, Binding>();
 
         // Names that need to be promoted to the environment and their assigned index in the environment
-        protected Dictionary<Name, EnvironmentReference> environment;
+        protected Dictionary<SymbolId, EnvironmentReference> environment;
         protected EnvironmentFactory environmentFactory;
         public int tempsCount;
 
@@ -199,11 +199,11 @@ namespace IronPython.Compiler {
             set { if (value) scopeInfo |= ScopeFlags.ContainsNestedFreeVariables; else scopeInfo &= ~ScopeFlags.ContainsNestedFreeVariables; }
         }
 
-        public Dictionary<Name, Binding> Bindings {
+        public Dictionary<SymbolId, Binding> Bindings {
             get { return names; }
         }
 
-        protected Binding Get(Name name) {
+        protected Binding Get(SymbolId name) {
             Binding binding;
             if (!names.TryGetValue(name, out binding)) {
                 binding = new Binding();
@@ -212,36 +212,36 @@ namespace IronPython.Compiler {
             return binding;
         }
 
-        public void Bind(Name name) {
+        public void Bind(SymbolId name) {
             Get(name).Bind();
         }
 
-        public void BindParameter(Name name) {
+        public void BindParameter(SymbolId name) {
             Get(name).BindParameter();
         }
 
-        public void Reference(Name name) {
+        public void Reference(SymbolId name) {
             Get(name).Reference();
         }
 
-        public void BindGlobal(Name name) {
+        public void BindGlobal(SymbolId name) {
             Get(name).BindGlobal();
         }
 
-        public void BindDeleted(Name name) {
+        public void BindDeleted(SymbolId name) {
             Get(name).BindDeleted();
         }
 
-        private void MakeEnvironment(Name name) {
+        private void MakeEnvironment(SymbolId name) {
             Get(name).MakeEnvironment();
         }
 
-        public virtual bool TryGetBinding(Name name, out Binding binding) {
+        public virtual bool TryGetBinding(SymbolId name, out Binding binding) {
             binding = null;
             return false;
         }
 
-        public bool BindInParent(Name name, Binder binder) {
+        public bool BindInParent(SymbolId name, Binder binder) {
             Binding binding;
             ContainsNestedFreeVariables = true;
             if (TryGetBinding(name, out binding)) {
@@ -267,9 +267,9 @@ namespace IronPython.Compiler {
         }
 
         public void BindNames(GlobalSuite globals, Binder binder) {
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 Binding b = kv.Value;
-                Name n = kv.Key;
+                SymbolId n = kv.Key;
 
                 // Global binding
                 if (b.IsGlobal) {
@@ -304,7 +304,7 @@ namespace IronPython.Compiler {
 
         protected void PromoteLocalsToEnvironment() {
             HasEnvironment = true;
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (kv.Value.IsLocal) {
                     kv.Value.MakeEnvironment();
                 }
@@ -313,7 +313,7 @@ namespace IronPython.Compiler {
 
         private int CalculateEnvironmentSize() {
             int environmentSize = tempsCount;
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (kv.Value.IsEnvironment) {
                     environmentSize++;
                 }
@@ -323,7 +323,7 @@ namespace IronPython.Compiler {
 
         private void EmitOuterLocalIDs(CodeGen cg) {
             int size = 0;
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (kv.Value.IsFree) size++;
             }
             // Emit null if no outer symbol IDs
@@ -333,12 +333,12 @@ namespace IronPython.Compiler {
                 cg.EmitInt(size);
                 cg.Emit(OpCodes.Newarr, typeof(SymbolId));
                 int index = 0;
-                foreach (KeyValuePair<Name, Binding> kv in names) {
+                foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                     if (kv.Value.IsFree) {
                         cg.Emit(OpCodes.Dup);
                         cg.EmitInt(index++);
                         cg.Emit(OpCodes.Ldelema, typeof(SymbolId));
-                        cg.EmitSymbolIdInt(kv.Key.GetString());
+                        cg.EmitSymbolIdId(kv.Key);
                         cg.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
                     }
                 }
@@ -347,7 +347,7 @@ namespace IronPython.Compiler {
 
         private void EmitEnvironmentIDs(CodeGen cg) {
             int size = 0;
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (kv.Value.IsEnvironment) size++;
             }
             // Create the array for the names
@@ -355,12 +355,12 @@ namespace IronPython.Compiler {
             cg.Emit(OpCodes.Newarr, typeof(SymbolId));
 
             int index = 0;
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (kv.Value.IsEnvironment) {
                     cg.Emit(OpCodes.Dup);
                     cg.EmitInt(index++);
                     cg.Emit(OpCodes.Ldelema, typeof(SymbolId));
-                    cg.EmitSymbolIdInt(kv.Key.GetString());
+                    cg.EmitSymbolIdId(kv.Key);
                     cg.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
                 }
             }
@@ -391,11 +391,11 @@ namespace IronPython.Compiler {
             environmentFactory = esf;
 
             // Create environment references
-            environment = new Dictionary<Name, EnvironmentReference>();
+            environment = new Dictionary<SymbolId, EnvironmentReference>();
 
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (!kv.Value.IsEnvironment) continue;
-                Name name = kv.Key;
+                SymbolId name = kv.Key;
                 EnvironmentReference er = esf.MakeEnvironmentReference(name);
                 Slot slot = er.CreateSlot(environmentSlot);
                 Slot current;
@@ -415,7 +415,7 @@ namespace IronPython.Compiler {
         }
 
         protected void CreateLocalSlots(CodeGen cg) {
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (kv.Value.IsLocal) {
                     Slot local = cg.Names.EnsureLocalSlot(kv.Key);
                     local.Local = true;
@@ -428,7 +428,7 @@ namespace IronPython.Compiler {
         protected void CreateGlobalSlots(CodeGen to, CodeGen from) {
             to.Names.Globals = from.Names.Globals.Relocate(to.ContextSlot);
 
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (kv.Value.IsGlobal) {
                     Slot global = to.Names.Globals.GetSlot(kv.Key);
                     // if unbound global (free variable not defined in outer scope),
@@ -441,7 +441,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        private bool TryGetEnvironmentReference(Name name, out EnvironmentReference er) {
+        private bool TryGetEnvironmentReference(SymbolId name, out EnvironmentReference er) {
             Binding binding;
             if (TryGetBinding(name, out binding)) {
                 Debug.Assert(binding.IsBound);
@@ -458,7 +458,7 @@ namespace IronPython.Compiler {
         }
 
         private void CreateClosureSlots(Slot staticLink, Namespace nspace) {
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (!kv.Value.IsFree) continue;
 
                 // Find the slot
@@ -555,7 +555,7 @@ namespace IronPython.Compiler {
         }
 
         public void CreateGlobalSlots(CodeGen cg) {
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 Slot slot = cg.Names.Globals.GetOrMakeSlot(kv.Key);
                 if (kv.Value.IsGlobal) {
                     cg.Names.SetSlot(kv.Key, slot);

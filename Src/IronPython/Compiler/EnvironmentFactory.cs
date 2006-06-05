@@ -20,14 +20,14 @@ using IronPython.Runtime;
 
 namespace IronPython.Compiler {
     public abstract class EnvironmentFactory {
-        public EnvironmentReference MakeEnvironmentReference(Name name) {
+        public EnvironmentReference MakeEnvironmentReference(SymbolId name) {
             return MakeEnvironmentReference(name, typeof(object));
         }
         public Slot MakeParentSlot(Slot instance) {
             return new FieldSlot(instance, typeof(FunctionEnvironmentDictionary).GetField("parent"));
         }
         public abstract Type EnvironmentType { get; }
-        public abstract EnvironmentReference MakeEnvironmentReference(Name name, Type type);
+        public abstract EnvironmentReference MakeEnvironmentReference(SymbolId name, Type type);
     }
 
     public class IndexEnvironmentFactory : EnvironmentFactory {
@@ -44,7 +44,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        public override EnvironmentReference MakeEnvironmentReference(Name name, Type type) {
+        public override EnvironmentReference MakeEnvironmentReference(SymbolId name, Type type) {
             if (index < size) {
                 return new IndexEnvironmentReference(index++, type);
             } else {
@@ -75,7 +75,7 @@ namespace IronPython.Compiler {
             get { return type; }
         }
 
-        public override EnvironmentReference MakeEnvironmentReference(Name name, Type type) {
+        public override EnvironmentReference MakeEnvironmentReference(SymbolId name, Type type) {
             Debug.Assert(index < fields.Length);
             return new FieldEnvironmentReference(fields[index++], type);
         }
@@ -92,7 +92,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        public override EnvironmentReference MakeEnvironmentReference(Name name, Type type) {
+        public override EnvironmentReference MakeEnvironmentReference(SymbolId name, Type type) {
             return new NamedEnvironmentReference(name, type);
         }
     }

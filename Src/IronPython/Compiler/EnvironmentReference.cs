@@ -75,9 +75,9 @@ namespace IronPython.Compiler {
     }
 
     public sealed class NamedEnvironmentReference : EnvironmentReference {
-        public readonly Name name;
+        public readonly SymbolId name;
 
-        public NamedEnvironmentReference(Name name, Type type)
+        public NamedEnvironmentReference(SymbolId name, Type type)
             : base(type) {
             this.name = name;
         }

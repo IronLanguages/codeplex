@@ -436,7 +436,7 @@ namespace IronPython.Compiler {
             throw new InvalidOperationException("Attempt to define parameter on non-methodbuilder and non-dynamic methd");
         }
 
-        public void EmitGet(Name name, bool check) {
+        public void EmitGet(SymbolId name, bool check) {
             Slot s = names[name];
             s.EmitGet(this);
             if (check) {
@@ -444,16 +444,16 @@ namespace IronPython.Compiler {
             }
         }
 
-        public void EmitGetGlobal(Name name) {
+        public void EmitGetGlobal(SymbolId name) {
             Slot s = names.Globals.GetOrMakeSlot(name);
             s.EmitGet(this);
         }
 
-        public void EmitSet(Name name) {
+        public void EmitSet(SymbolId name) {
             names[name].EmitSet(this);
         }
 
-        public void EmitDel(Name name, bool check) {
+        public void EmitDel(SymbolId name, bool check) {
             names[name].EmitDelete(this, name, check);
         }
 
@@ -670,17 +670,27 @@ namespace IronPython.Compiler {
             }
         }
 
+        //[Obsolete("Replace string with SymbolId")]
+        public void EmitSymbolId(string name) {
+            SymbolId id = SymbolTable.StringToId(name);
+            EmitSymbolId(id);
+        }
+
         /// <summary>
         /// Emits a symbol id.  
         /// </summary>
-        public void EmitSymbolId(string name) {
-            EmitSymbolIdInt(name);
+        public void EmitSymbolId(SymbolId id) {
+            EmitSymbolIdId(id);
             EmitNew(typeof(SymbolId), new Type[] { typeof(int) });
         }
 
         public void EmitSymbolIdInt(string name) {
             SymbolId id = SymbolTable.StringToId(name);
-            if (id.Id >= SymbolTable.LastWellKnownIdId && typeGen != null) {
+            id = EmitSymbolIdId(id);
+        }
+
+        public SymbolId EmitSymbolIdId(SymbolId id) {
+            if (id.Id >= SymbolTable.LastWellKnownId && typeGen != null) {
                 // doing some form of static compilation, and the ID
                 // is not well known...  we need to emit an indirection...
                 typeGen.EmitIndirectedSymbol(this, id);
@@ -689,16 +699,17 @@ namespace IronPython.Compiler {
                 // a saved compilation.
                 EmitInt(id.Id);
             }
+            return id;
         }
 
-        public void EmitSymbolIdArray(IList<Name> items) {
+        public void EmitSymbolIdArray(IList<SymbolId> items) {
             EmitInt(items.Count);
             Emit(OpCodes.Newarr, typeof(SymbolId));
             for (int i = 0; i < items.Count; i++) {
                 Emit(OpCodes.Dup);
                 EmitInt(i);
                 Emit(OpCodes.Ldelema, typeof(SymbolId));
-                EmitSymbolIdInt(items[i].GetString());
+                EmitSymbolIdId(items[i]);
                 Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
             }
         }
@@ -777,7 +788,7 @@ namespace IronPython.Compiler {
             EmitCall(tp.GetMethod(name, paramTypes));
         }
 
-        public void EmitName(Name name) {
+        public void EmitName(SymbolId name) {
             EmitString(name.GetString());
         }
 
@@ -1085,9 +1096,6 @@ namespace IronPython.Compiler {
                 return;
             } else if (value is string) {
                 EmitString((string)value);
-            } else if (value is Name) {
-                EmitString(((Name)value).GetString());
-                EmitCall(typeof(Name), "make", new Type[] { typeof(string) });
             } else if (value is bool) {
                 if ((bool)value) {
                     Emit(OpCodes.Ldc_I4_1);
@@ -1216,7 +1224,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        public CodeGen DefineMethod(string name, Type retType, Type[] paramTypes, Name[] paramNames) {
+        public CodeGen DefineMethod(string name, Type retType, Type[] paramTypes, SymbolId[] paramNames) {
             string[] stringParamNames = new string[paramNames.Length];
             for (int i = 0; i < paramNames.Length; i++) {
                 stringParamNames[i] = paramNames[i].GetString();

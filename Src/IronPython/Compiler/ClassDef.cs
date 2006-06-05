@@ -32,10 +32,10 @@ namespace IronPython.Compiler {
     /// </summary>
     public class ClassDef : ScopeStatement {
         public Location header;
-        public Name name;
+        public SymbolId name;
         public Expr[] bases;
 
-        public ClassDef(Name name, Expr[] bases, Stmt body)
+        public ClassDef(SymbolId name, Expr[] bases, Stmt body)
             : base(body) {
             this.name = name;
             this.bases = bases;
@@ -53,7 +53,7 @@ namespace IronPython.Compiler {
                 cg.EmitModuleInstance();
 
                 // string modName (can't pull from context, could be changed)
-                cg.EmitGetGlobal(Name.Make("__name__"));
+                cg.EmitGetGlobal(SymbolTable.Name);
                 cg.Emit(OpCodes.Castclass, typeof(string));
 
                 // class name
@@ -128,12 +128,12 @@ namespace IronPython.Compiler {
             string doc = body.GetDocString();
             if (doc != null) {
                 icg.EmitString(doc);
-                icg.EmitSet(Name.Make("__doc__"));
+                icg.EmitSet(SymbolTable.Doc);
             }
         }
 
         private void CreateBackedSlots(CodeGen icg) {
-            foreach (KeyValuePair<Name, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (kv.Value.IsLocal && kv.Value.Uninitialized) {
                     Slot global = icg.Names.Globals.GetOrMakeSlot(kv.Key);
                     Slot attribute = icg.Names.Slots[kv.Key];

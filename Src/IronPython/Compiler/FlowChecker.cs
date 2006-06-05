@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using IronPython.Runtime;
 
 /*
  * The data flow.
@@ -119,7 +120,7 @@ namespace IronPython.Compiler {
     public class FlowChecker : AstWalker {
         private BitArray bits;
         private Stack<BitArray> loops;
-        private Dictionary<Name, ScopeStatement.Binding> bindings;
+        private Dictionary<SymbolId, ScopeStatement.Binding> bindings;
 
         ScopeStatement scope;
         FlowDefiner fdef;
@@ -129,7 +130,7 @@ namespace IronPython.Compiler {
             bindings = scope.Bindings;
             bits = new BitArray(bindings.Count * 2);
             int index = 0;
-            foreach (KeyValuePair<Name, ScopeStatement.Binding> binding in bindings) {
+            foreach (KeyValuePair<SymbolId, ScopeStatement.Binding> binding in bindings) {
                 binding.Value.Index = index++;
             }
             this.scope = scope;
@@ -144,7 +145,7 @@ namespace IronPython.Compiler {
                                                  scope is ClassDef ? ((ClassDef)scope).name.GetString() : "");
             sb.Append('{');
             bool comma = false;
-            foreach (KeyValuePair<Name, ScopeStatement.Binding> binding in bindings) {
+            foreach (KeyValuePair<SymbolId, ScopeStatement.Binding> binding in bindings) {
                 if (comma) sb.Append(", ");
                 else comma = true;
                 int index = 2 * binding.Value.Index;
@@ -164,7 +165,7 @@ namespace IronPython.Compiler {
             scope.Walk(fc);
         }
 
-        public void Define(Name name) {
+        public void Define(SymbolId name) {
             ScopeStatement.Binding binding;
             if (bindings.TryGetValue(name, out binding)) {
                 int index = binding.Index * 2;
@@ -173,7 +174,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        public void Delete(Name name) {
+        public void Delete(SymbolId name) {
             ScopeStatement.Binding binding;
             if (bindings.TryGetValue(name, out binding)) {
                 int index = binding.Index * 2;
@@ -314,7 +315,7 @@ namespace IronPython.Compiler {
         public override bool Walk(FromImportStmt node) {
             if (node.names != FromImportStmt.Star) {
                 for (int i = 0; i < node.names.Length; i++) {
-                    Define(node.asNames[i] != null ? node.asNames[i] : node.names[i]);
+                    Define(node.asNames[i] != SymbolTable.Empty ? node.asNames[i] : node.names[i]);
                 }
             }
             return true;
@@ -376,7 +377,7 @@ namespace IronPython.Compiler {
         // ImportStmt
         public override bool Walk(ImportStmt node) {
             for (int i = 0; i < node.names.Length; i++) {
-                Define(node.asNames[i] != null ? node.asNames[i] : node.names[i].names[0]);
+                Define(node.asNames[i] != SymbolTable.Empty ? node.asNames[i] : node.names[i].names[0]);
             }
             return true;
         }

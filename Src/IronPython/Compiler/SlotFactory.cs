@@ -22,10 +22,10 @@ using IronPython.Runtime;
 
 namespace IronPython.Compiler {
     public abstract class SlotFactory {
-        public Slot MakeSlot(Name name) {
+        public Slot MakeSlot(SymbolId name) {
             return MakeSlot(name, typeof(object));
         }
-        public abstract Slot MakeSlot(Name name, Type type);
+        public abstract Slot MakeSlot(SymbolId name, Type type);
     }
 
     public class LocalSlotFactory : SlotFactory {
@@ -35,7 +35,7 @@ namespace IronPython.Compiler {
             this.codeGen = codeGen;
         }
 
-        public override Slot MakeSlot(Name name, Type type) {
+        public override Slot MakeSlot(SymbolId name, Type type) {
             LocalBuilder b = codeGen.DeclareLocal(type);
             if (codeGen.EmitDebugInfo) b.SetLocalSymInfo(name.GetString());
             return new LocalSlot(b, codeGen);
@@ -50,14 +50,14 @@ namespace IronPython.Compiler {
             this.typeGen = typeGen;
             this.instance = instance;
         }
-        public override Slot MakeSlot(Name name, Type type) {
+        public override Slot MakeSlot(SymbolId name, Type type) {
             FieldBuilder fb = typeGen.myType.DefineField(name.GetString(), type, FieldAttributes.Public);
             return new FieldSlot(instance, fb);
         }
     }
 
     public class StaticFieldSlotFactory : SlotFactory {
-        Dictionary<Name, StaticFieldSlot> fields = new Dictionary<Name,StaticFieldSlot>();
+        Dictionary<SymbolId, StaticFieldSlot> fields = new Dictionary<SymbolId,StaticFieldSlot>();
         private TypeGen typeGen;
 
         public StaticFieldSlotFactory(TypeGen typeGen) {
@@ -69,7 +69,7 @@ namespace IronPython.Compiler {
         /// need to make BuiltinWrapper generic and update StaticFieldBuiltinSlot to get the correct
         /// type.
         /// </summary>
-        public override Slot MakeSlot(Name name, Type type) {
+        public override Slot MakeSlot(SymbolId name, Type type) {
             StaticFieldSlot fs;
             object builtin;
             if (!fields.TryGetValue(name, out fs)) {
@@ -100,7 +100,7 @@ namespace IronPython.Compiler {
             this.frame = frame;
         }
 
-        public override Slot MakeSlot(Name name, Type type) {
+        public override Slot MakeSlot(SymbolId name, Type type) {
             return new LocalNamedFrameSlot(frame, name);
         }
     }
@@ -119,7 +119,7 @@ namespace IronPython.Compiler {
             this.instance = instance;
         }
 
-        public override Slot MakeSlot(Name name, Type type) {
+        public override Slot MakeSlot(SymbolId name, Type type) {
             return new IndexSlot(instance, index++, type);
         }
     }

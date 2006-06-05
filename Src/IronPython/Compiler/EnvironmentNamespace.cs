@@ -22,22 +22,22 @@ using IronPython.Runtime;
 namespace IronPython.Compiler {
     public class EnvironmentNamespace {
         private EnvironmentFactory factory;
-        private Dictionary<Name, EnvironmentReference> references = new Dictionary<Name, EnvironmentReference>();
+        private Dictionary<SymbolId, EnvironmentReference> references = new Dictionary<SymbolId, EnvironmentReference>();
 
         public EnvironmentNamespace(EnvironmentFactory factory) {
             this.factory = factory;
         }
 
-        public EnvironmentReference GetReference(Name name) {
+        public EnvironmentReference GetReference(SymbolId name) {
             Debug.Assert(references.ContainsKey(name), "missing environment reference", name.GetString());
             return references[name];
         }
 
-        public EnvironmentReference GetOrMakeReference(Name name) {
+        public EnvironmentReference GetOrMakeReference(SymbolId name) {
             return GetOrMakeReference(name, typeof(object));
         }
 
-        public EnvironmentReference GetOrMakeReference(Name name, Type type) {
+        public EnvironmentReference GetOrMakeReference(SymbolId name, Type type) {
             EnvironmentReference er;
             if (!references.TryGetValue(name, out er)) {
                 er = factory.MakeEnvironmentReference(name, type);
@@ -50,11 +50,11 @@ namespace IronPython.Compiler {
     }
 
     public abstract class GlobalNamespace {
-        public Slot GetOrMakeSlot(Name name) {
+        public Slot GetOrMakeSlot(SymbolId name) {
             return GetOrMakeSlot(name, typeof(object));
         }
-        public abstract Slot GetSlot(Name name);
-        public abstract Slot GetOrMakeSlot(Name name, Type type);
+        public abstract Slot GetSlot(SymbolId name);
+        public abstract Slot GetOrMakeSlot(SymbolId name, Type type);
         public abstract GlobalNamespace Relocate(Slot instance);
     }
 
@@ -67,12 +67,12 @@ namespace IronPython.Compiler {
             this.instance = instance;
         }
 
-        public override Slot GetSlot(Name name) {
+        public override Slot GetSlot(SymbolId name) {
             EnvironmentReference es = en.GetReference(name);
             return es.CreateSlot(instance);
         }
 
-        public override Slot GetOrMakeSlot(Name name, Type type) {
+        public override Slot GetOrMakeSlot(SymbolId name, Type type) {
             EnvironmentReference es = en.GetOrMakeReference(name, type);
             return es.CreateSlot(instance);
         }
@@ -86,18 +86,18 @@ namespace IronPython.Compiler {
 
     public sealed class GlobalFieldNamespace : GlobalNamespace {
         private StaticFieldSlotFactory sfsf;
-        private Dictionary<Name, Slot> slots = new Dictionary<Name, Slot>();
+        private Dictionary<SymbolId, Slot> slots = new Dictionary<SymbolId, Slot>();
 
         public GlobalFieldNamespace(StaticFieldSlotFactory sfsf) {
             this.sfsf = sfsf;
         }
 
-        public override Slot GetSlot(Name name) {
+        public override Slot GetSlot(SymbolId name) {
             Debug.Assert(slots.ContainsKey(name), "missing global field slot", name.GetString());
             return slots[name];
         }
 
-        public override Slot GetOrMakeSlot(Name name, Type type) {
+        public override Slot GetOrMakeSlot(SymbolId name, Type type) {
             Slot slot;
             if (!slots.TryGetValue(name, out slot)) {
                 slot = sfsf.MakeSlot(name, type);

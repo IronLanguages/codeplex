@@ -329,7 +329,7 @@ namespace IronPython.Compiler {
                 bool fCantEmit = false;
                 for (int i = 0; i < rhsCall.args.Length; i++) {
                     // fget, fset, fdel, doc
-                    if (rhsCall.args[i].name != null) {
+                    if (rhsCall.args[i].name != SymbolTable.Empty) {
                         switch (rhsCall.args[i].name.GetString()) {
                             case "fget":
                                 ne = rhsCall.args[i].expr as NameExpr;

@@ -283,12 +283,12 @@ namespace IronPython.Modules {
         }
 
         [PythonName("eval")]
-        public static object Eval(ICallerContext context, FunctionCode code, IDictionary<object, object> globals) {
+        public static object Eval(ICallerContext context, FunctionCode code, IAttributesDictionary globals) {
             return Eval(context, code, globals, globals);
         }
 
         [PythonName("eval")]
-        public static object Eval(ICallerContext context, FunctionCode code, IDictionary<object, object> globals, object locals) {
+        public static object Eval(ICallerContext context, FunctionCode code, IAttributesDictionary globals, object locals) {
             if (globals == null) globals = Globals(context);
             if (locals == null) locals = Locals(context);
             PythonModule mod = new PythonModule(context.Module.ModuleName, globals, context.SystemState, null, context.ContextFlags);
@@ -301,12 +301,12 @@ namespace IronPython.Modules {
         }
 
         [PythonName("eval")]
-        public static object Eval(ICallerContext context, string expression, IDictionary<object, object> globals) {
+        public static object Eval(ICallerContext context, string expression, IAttributesDictionary globals) {
             return Eval(context, expression, globals, globals);
         }
 
         [PythonName("eval")]
-        public static object Eval(ICallerContext context, string expression, IDictionary<object, object> globals, object locals) {
+        public static object Eval(ICallerContext context, string expression, IAttributesDictionary globals, object locals) {
             if (locals != null && PythonOperator.IsMappingType(context, locals) == Ops.FALSE) {
                 throw Ops.TypeError("locals must be mapping");
             }
@@ -349,7 +349,7 @@ namespace IronPython.Modules {
             }
 
             string fname = Converter.ConvertToString(filename);
-            IDictionary<object, object> g = globals as IDictionary<object, object>;
+            IAttributesDictionary g = globals as IAttributesDictionary;
             if (g == null) {
                 throw Ops.TypeError("execfile: arg 2 must be dictionary");
             }
@@ -363,7 +363,7 @@ namespace IronPython.Modules {
             }
             Stmt s = p.ParseFileInput();
 
-            IDictionary<object, object> l = locals as IDictionary<object, object>;
+            IAttributesDictionary l = locals as IAttributesDictionary;
             if (l == null) {
                 throw Ops.TypeError("execfile: arg 3 must be dictionary");
             }
@@ -434,9 +434,9 @@ namespace IronPython.Modules {
         }
 
         [PythonName("globals")]
-        public static IDictionary<object, object> Globals(ICallerContext context) {
+        public static IAttributesDictionary Globals(ICallerContext context) {
             PythonModule mod = context.Module;
-            return ((IDictionary<object,object>)mod.__dict__);
+            return mod.__dict__;
         }
 
         [PythonName("hasattr")]

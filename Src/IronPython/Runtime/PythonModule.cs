@@ -50,21 +50,18 @@ namespace IronPython.Runtime {
 
         #region Public constructors
 
-        public PythonModule(string name, IDictionary<object, object> dict, SystemState state)
+        public PythonModule(string name, IAttributesDictionary dict, SystemState state)
             : this(name, dict, state, null, CallerContextFlags.None) {
         }
 
-        public PythonModule(string name, IDictionary<object, object> dict, SystemState state, InitializeModule init)
+        public PythonModule(string name, IAttributesDictionary dict, SystemState state, InitializeModule init)
             : this(name, dict, state, init, CallerContextFlags.None) {
         }
 
-        public PythonModule(string name, IDictionary<object, object> dict, SystemState state, InitializeModule init, CallerContextFlags callerContextFlags) {
+        public PythonModule(string name, IAttributesDictionary dict, SystemState state, InitializeModule init, CallerContextFlags callerContextFlags) {
             Debug.Assert(state != null);
 
-            if (dict is IAttributesDictionary)
-                __dict__ = (IAttributesDictionary)dict;
-            else
-                __dict__ = new FieldIdDict(dict);
+            __dict__ = dict;
             ModuleName = name;
             __dict__[SymbolTable.Builtins] = TypeCache.Builtin;
 
@@ -223,15 +220,15 @@ namespace IronPython.Runtime {
 
         #region IFrameEnvironment Members
 
-        public object GetGlobal(string name) {
+        public object GetGlobal(SymbolId symbol) {
             throw new InvalidOperationException("not supported on standard modules");
         }
 
-        public void SetGlobal(string name, object value) {
+        public void SetGlobal(SymbolId symbol, object value) {
             throw new InvalidOperationException("not supported on standard modules");
         }
 
-        public void DelGlobal(string name) {
+        public void DelGlobal(SymbolId symbol) {
             throw new InvalidOperationException("not supported on standard modules");
         }
 

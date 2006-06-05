@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
+using IronPython.Runtime;
 
 /*
  * The name binding:
@@ -218,14 +219,14 @@ namespace IronPython.Compiler {
             foreach (Expr b in node.bases) b.Walk(this);
 
             // And so is the __name__ reference
-            Reference(Name.Make("__name__"));
+            Reference(SymbolTable.Name);
 
             node.parent = current;
             current = node;
 
             // define the __doc__ and the __module__
-            Define(Name.Make("__doc__"));
-            Define(Name.Make("__module__"));
+            Define(SymbolTable.Doc);
+            Define(SymbolTable.Module);
 
             // Walk the body
             node.body.Walk(this);
@@ -267,7 +268,7 @@ namespace IronPython.Compiler {
         public override bool Walk(FromImportStmt node) {
             if (node.names != FromImportStmt.Star) {
                 for (int i = 0; i < node.names.Length; i++) {
-                    Define(node.asNames[i] != null ? node.asNames[i] : node.names[i]);
+                    Define(node.asNames[i] != SymbolTable.Empty ? node.asNames[i] : node.names[i]);
                 }
             } else {
                 Debug.Assert(current != null);
@@ -308,7 +309,7 @@ namespace IronPython.Compiler {
 
         // GlobalStmt
         public override bool Walk(GlobalStmt node) {
-            foreach (Name n in node.names) {
+            foreach (SymbolId n in node.names) {
                 if (current != null) {
                     ScopeStatement.Binding binding;
                     if (current.Bindings.TryGetValue(n, out binding)) {
@@ -334,7 +335,7 @@ namespace IronPython.Compiler {
         // ImportStmt
         public override bool Walk(ImportStmt node) {
             for (int i = 0; i < node.names.Length; i++) {
-                Define(node.asNames[i] != null ? node.asNames[i] : node.names[i].names[0]);
+                Define(node.asNames[i] != SymbolTable.Empty ? node.asNames[i] : node.names[i].names[0]);
             }
             return true;
         }
@@ -363,22 +364,22 @@ namespace IronPython.Compiler {
 
         #endregion
 
-        public void Define(Name name) {
+        public void Define(SymbolId name) {
             Debug.Assert(current != null);
             current.Bind(name);
         }
 
-        public void DefineParameter(Name name) {
+        public void DefineParameter(SymbolId name) {
             Debug.Assert(current != null);
             current.BindParameter(name);
         }
 
-        public void Reference(Name name) {
+        public void Reference(SymbolId name) {
             Debug.Assert(current != null);
             current.Reference(name);
         }
 
-        public void Deleted(Name name) {
+        public void Deleted(SymbolId name) {
             Debug.Assert(current != null);
             current.BindDeleted(name);
         }

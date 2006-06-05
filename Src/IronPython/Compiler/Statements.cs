@@ -590,7 +590,7 @@ namespace IronPython.Compiler {
                 cg.Emit(OpCodes.Ldnull);
                 cg.Emit(OpCodes.Beq, noSet);
                 cg.Emit(OpCodes.Dup);
-                cg.EmitSet(Name.Make("_"));
+                cg.EmitSet(SymbolTable.Underscore);
                 cg.MarkLabel(noSet);
 
                 // finally emit the call to print the value.
@@ -736,8 +736,8 @@ namespace IronPython.Compiler {
     }
 
     public class DottedName : Node {
-        public readonly Name[] names;
-        public DottedName(Name[] names) { this.names = names; }
+        public readonly SymbolId[] names;
+        public DottedName(SymbolId[] names) { this.names = names; }
 
         public string MakeString() {
             StringBuilder ret = new StringBuilder(names[0].GetString());
@@ -759,8 +759,8 @@ namespace IronPython.Compiler {
 
     public class ImportStmt : Stmt {
         public readonly DottedName[] names;
-        public readonly Name[] asNames;
-        public ImportStmt(DottedName[] names, Name[] asNames) {
+        public readonly SymbolId[] asNames;
+        public ImportStmt(DottedName[] names, SymbolId[] asNames) {
             this.names = names;
             this.asNames = asNames;
         }
@@ -772,7 +772,7 @@ namespace IronPython.Compiler {
                 DottedName name = names[i];
                 cg.EmitModuleInstance();
                 cg.EmitString(name.MakeString());
-                if (asNames[i] == null) {
+                if (asNames[i] == SymbolTable.Empty) {
                     cg.EmitCall(typeof(Ops), "Import");
                     cg.EmitSet(name.names[0]);
                 } else {
@@ -790,18 +790,18 @@ namespace IronPython.Compiler {
     }
 
     public class FromImportStmt : Stmt {
-        public static readonly Name[] Star = new Name[1];
+        public static readonly SymbolId[] Star = new SymbolId[1];
 
         public readonly DottedName root;
-        public readonly Name[] names;
-        public readonly Name[] asNames;
+        public readonly SymbolId[] names;
+        public readonly SymbolId[] asNames;
         private readonly bool fromFuture;
 
-        public FromImportStmt(DottedName root, Name[] names, Name[] asNames)
+        public FromImportStmt(DottedName root, SymbolId[] names, SymbolId[] asNames)
             : this(root, names, asNames, false) {
         }
 
-        public FromImportStmt(DottedName root, Name[] names, Name[] asNames, bool fromFuture) {
+        public FromImportStmt(DottedName root, SymbolId[] names, SymbolId[] asNames, bool fromFuture) {
             this.root = root;
             this.names = names;
             this.asNames = asNames;
@@ -809,7 +809,7 @@ namespace IronPython.Compiler {
         }
 
         public override object Execute(NameEnv env) {
-            Ops.ImportFrom(env.globals, root.MakeString(), Name.ToStrings(names));
+            Ops.ImportFrom(env.globals, root.MakeString(), SymbolTable.IdsToStrings(names));
 
             return NextStmt;
         }
@@ -823,10 +823,10 @@ namespace IronPython.Compiler {
                 cg.EmitCall(typeof(Ops), "ImportStar"); //!!! this is tricky
             } else {
                 Slot fromObj = cg.GetLocalTmp(typeof(object));
-                cg.EmitStringArray(Name.ToStrings(names));
+                cg.EmitStringArray(SymbolTable.IdsToStrings(names));
 
                 if (asNames != null) {
-                    cg.EmitStringArray(Name.ToStrings(asNames));
+                    cg.EmitStringArray(SymbolTable.IdsToStrings(asNames));
                     cg.EmitCall(typeof(Ops), "ImportFromAs");
                 } else {
                     cg.EmitCall(typeof(Ops), "ImportFrom");
@@ -840,8 +840,8 @@ namespace IronPython.Compiler {
                     cg.EmitString(names[i].GetString());
                     cg.EmitCall(typeof(Ops), "ImportOneFrom");
 
-                    Name asName;
-                    if (i < asNames.Length && asNames[i] != null)
+                    SymbolId asName;
+                    if (i < asNames.Length && asNames[i] != SymbolTable.Empty)
                         asName = asNames[i];
                     else
                         asName = names[i];
@@ -864,8 +864,8 @@ namespace IronPython.Compiler {
     }
 
     public class GlobalStmt : Stmt {
-        public readonly Name[] names;
-        public GlobalStmt(Name[] names) {
+        public readonly SymbolId[] names;
+        public GlobalStmt(SymbolId[] names) {
             this.names = names;
         }
 
@@ -988,27 +988,27 @@ namespace IronPython.Compiler {
                 } else {
                     // user provided only globals, this gets used as both dictionarys.
                     globals.Emit(cg);
-                    cg.EmitCastFromObject(typeof(IDictionary<object, object>));
+                    cg.EmitCastFromObject(typeof(IAttributesDictionary));
                     globals.Emit(cg);
-                    cg.EmitCastFromObject(typeof(IDictionary<object, object>));
+                    cg.EmitCastFromObject(typeof(IAttributesDictionary));
                     cg.EmitCall(typeof(Ops), "Exec", new Type[] {
                         typeof(ICallerContext),
                         typeof(object),
-                        typeof(System.Collections.Generic.IDictionary<object, object>),
-                        typeof(System.Collections.Generic.IDictionary<object, object>)
+                        typeof(IAttributesDictionary),
+                        typeof(IAttributesDictionary)
                     });
                 }
             } else {
                 // locals is last so both are defined
                 locals.Emit(cg);
-                cg.EmitCastFromObject(typeof(System.Collections.Generic.IDictionary<object, object>));
+                cg.EmitCastFromObject(typeof(IAttributesDictionary));
                 globals.Emit(cg);
-                cg.EmitCastFromObject(typeof(System.Collections.Generic.IDictionary<object, object>));
+                cg.EmitCastFromObject(typeof(IAttributesDictionary));
                 cg.EmitCall(typeof(Ops), "Exec", new Type[] {
                         typeof(ICallerContext),
                         typeof(object),
-                        typeof(System.Collections.Generic.IDictionary<object, object>),
-                        typeof(System.Collections.Generic.IDictionary<object, object>)
+                        typeof(IAttributesDictionary),
+                        typeof(IAttributesDictionary)
                     });
             }
         }

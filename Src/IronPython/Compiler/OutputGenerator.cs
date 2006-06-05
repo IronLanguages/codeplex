@@ -81,7 +81,7 @@ namespace IronPython.Compiler {
             cg.Context = context;
             cg.printExprStmts = printExprStmts;
             if (printExprStmts) {
-                cg.Names.EnsureLocalSlot(Name.Make("_"));
+                cg.Names.EnsureLocalSlot(SymbolTable.Underscore);
             }
 
             cg.ContextSlot.EmitGet(cg);
@@ -176,7 +176,7 @@ namespace IronPython.Compiler {
                 if (es != null) {
                     ConstantExpr ce = es.expr as ConstantExpr;
                     if (ce != null && ce.value is string) {
-                        suite.stmts[0] = new AssignStmt(new Expr[] { new NameExpr(Name.Make("__doc__")) }, ce);
+                        suite.stmts[0] = new AssignStmt(new Expr[] { new NameExpr(SymbolTable.Doc) }, ce);
                     }
                 }
             }
@@ -251,12 +251,12 @@ namespace IronPython.Compiler {
             }
 
             // Add __doc__ and __name__
-            ncg.Names.CreateGlobalSlot(Name.Make("__doc__"));
-            ncg.Names.CreateGlobalSlot(Name.Make("__name__"));
+            ncg.Names.CreateGlobalSlot(SymbolTable.Doc);
+            ncg.Names.CreateGlobalSlot(SymbolTable.Name);
 
             string doc = gs.GetDocString();
             ncg.EmitStringOrNull(doc);
-            ncg.EmitSet(Name.Make("__doc__"));
+            ncg.EmitSet(SymbolTable.Doc);
 
             if (customInit != null) customInit(ncg);
 
@@ -386,8 +386,8 @@ namespace IronPython.Compiler {
 
         private void MakeGetMethod() {
             CodeGen cg = tg.DefineMethodOverride(typeof(CustomSymbolDict).GetMethod("TryGetExtraValue"));
-            foreach (KeyValuePair<Name, Slot> entry in names.Slots) {
-                cg.EmitSymbolIdInt(entry.Key.GetString());
+            foreach (KeyValuePair<SymbolId, Slot> entry in names.Slots) {
+                cg.EmitSymbolIdId(entry.Key);
                 cg.EmitArgAddr(0);
                 cg.EmitFieldGet(typeof(SymbolId), "Id");
 
@@ -441,8 +441,8 @@ namespace IronPython.Compiler {
         private void MakeSetMethod() {
             CodeGen cg = tg.DefineMethodOverride(typeof(CustomSymbolDict).GetMethod("TrySetExtraValue"));
             Slot valueSlot = cg.GetArgumentSlot(1);
-            foreach (KeyValuePair<Name, Slot> entry in names.Slots) {
-                cg.EmitSymbolIdInt(entry.Key.GetString());
+            foreach (KeyValuePair<SymbolId, Slot> entry in names.Slots) {
+                cg.EmitSymbolIdId(entry.Key);
                 cg.EmitArgAddr(0);
                 cg.EmitFieldGet(typeof(SymbolId), "Id");
 
@@ -463,7 +463,7 @@ namespace IronPython.Compiler {
             Slot rawKeysCache = tg.AddStaticField(typeof(SymbolId[]), "ExtraKeysCache");
             CodeGen init = tg.GetOrMakeInitializer();
 
-            init.EmitSymbolIdArray(new List<Name>(names.Slots.Keys));
+            init.EmitSymbolIdArray(new List<SymbolId>(names.Slots.Keys));
 
             rawKeysCache.EmitSet(init);
 

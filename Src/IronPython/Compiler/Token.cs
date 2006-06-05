@@ -14,6 +14,7 @@
  * **********************************************************************************/
 
 using System;
+using IronPython.Runtime;
 
 namespace IronPython.Compiler {
     /// <summary>
@@ -103,8 +104,8 @@ namespace IronPython.Compiler {
     }
 
     public class NameToken : Token {
-        public readonly Name value;
-        public NameToken(Name value)
+        public readonly SymbolId value;
+        public NameToken(SymbolId value)
             : base(TokenKind.Name) {
             this.value = value;
         }

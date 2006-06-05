@@ -280,7 +280,7 @@ namespace IronPython.Hosting {
                         if (otherModName == moduleName) continue;
 
                         FromImportStmt stmt = new FromImportStmt(
-                            new DottedName(new Name[] { Name.Make(otherModName) }),
+                            new DottedName(new SymbolId[] { SymbolTable.StringToId(otherModName) }),
                             FromImportStmt.Star, null);
                         stmt.start = new Location(1, 1);
                         stmt.end = new Location(1, 1);

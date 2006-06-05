@@ -464,7 +464,7 @@ namespace IronPython.CodeDom {
             prop.Name = name;
             for (int i = 0; i < ce.args.Length; i++) {
                 Arg arg = ce.args[i];
-                if (arg.name != null) {
+                if (arg.name != SymbolTable.Empty) {
                     switch (arg.name.GetString()) {
                         case "fget": AddGetter(node, name, prop, arg.expr); break;
                         case "fset": AddSetter(node, name, prop, arg.expr); break;
@@ -1321,10 +1321,10 @@ namespace IronPython.CodeDom {
                 for (int i = 0; i < suite.stmts.Length; i++) {
                     AssignStmt assign = suite.stmts[i] as AssignStmt;
                     FieldExpr fe = assign.lhs[0] as FieldExpr;
-                    Name ne = fe.name;
+                    SymbolId name = fe.name;
 
                     for (int j = 0; j < this.CurrentType.Members.Count; j++) {
-                        if (ne.GetString() == CurrentType.Members[j].Name) {
+                        if (name.GetString() == CurrentType.Members[j].Name) {
                             CodeMemberField field = CurrentType.Members[j] as CodeMemberField;
                             Debug.Assert(field != null);
                             Debug.Assert(field.InitExpression == null);

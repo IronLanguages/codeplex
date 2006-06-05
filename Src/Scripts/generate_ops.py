@@ -130,11 +130,14 @@ class Operator(Symbol):
         return 3
         
     def genSymbolTableSymbols(self, cw, x):
+        cw.writeline("///<summary>SymbolId for '__%s__'</summary>" % self.name)
         cw.writeline("public static readonly SymbolId Op%s = new SymbolId(Op%sId);" % (self.title_name(),self.title_name()))
         
         if self.isCompare(): return 1
         
+        cw.writeline("///<summary>SymbolId for '__%s__'</summary>" % self.rname)
         cw.writeline("public static readonly SymbolId OpReverse%s = new SymbolId(OpReverse%sId);" % (self.title_name(),self.title_name()))
+        cw.writeline("///<summary>SymbolId for '__i%s__'</summary>" % self.name)
         cw.writeline("public static readonly SymbolId OpInPlace%s = new SymbolId(OpInPlace%sId);" % (self.title_name(),self.title_name()))
         
         return 3
@@ -195,13 +198,19 @@ class DivisionOperator(Operator):
         return 6
     
     def genSymbolTableSymbols(self, cw, x):
-        cw.writeline("public static readonly SymbolId Op%s = new SymbolId(%d);" % (self.title_name(),x))
-        cw.writeline("public static readonly SymbolId OpReverse%s = new SymbolId(%d);" % (self.title_name(),x+1))
-        cw.writeline("public static readonly SymbolId OpInPlace%s = new SymbolId(%d);" % (self.title_name(),x+2))
+        cw.writeline("///<summary>SymbolId for '__%s__'</summary>" % self.name)
+        cw.writeline("public static readonly SymbolId Op%s = new SymbolId(Op%sId);" % (self.title_name(),self.title_name()))
+        cw.writeline("///<summary>SymbolId for '__%s__'</summary>" % self.rname)
+        cw.writeline("public static readonly SymbolId OpReverse%s = new SymbolId(OpReverse%sId);" % (self.title_name(),self.title_name()))
+        cw.writeline("///<summary>SymbolId for '__i%s__'</summary>" % self.name)
+        cw.writeline("public static readonly SymbolId OpInPlace%s = new SymbolId(OpInPlace%sId);" % (self.title_name(),self.title_name()))
         
-        cw.writeline("public static readonly SymbolId Op%s = new SymbolId(%d);" % (self.tclrName,x+3))
-        cw.writeline("public static readonly SymbolId OpReverse%s = new SymbolId(%d);" % (self.tclrName,x+4))
-        cw.writeline("public static readonly SymbolId OpInPlace%s = new SymbolId(%d);" % (self.tclrName,x+5))
+        cw.writeline("///<summary>SymbolId for '__%s__'</summary>" % self.tname)
+        cw.writeline("public static readonly SymbolId Op%s = new SymbolId(Op%sId);" % (self.tclrName,self.tclrName))
+        cw.writeline("///<summary>SymbolId for '__%s__'</summary>" % self.trname)
+        cw.writeline("public static readonly SymbolId OpReverse%s = new SymbolId(OpReverse%sId);" % (self.tclrName,self.tclrName))
+        cw.writeline("///<summary>SymbolId for '__i%s__'</summary>" % self.tname)
+        cw.writeline("public static readonly SymbolId OpInPlace%s = new SymbolId(OpInPlace%sId);" % (self.tclrName,self.tclrName))
         
         return 6
 class Grouping(Symbol):
@@ -352,11 +361,11 @@ def tokens_generator(cw):
         cw.write("public static readonly Token Keyword%sToken = %s;" %
                (kw.title(), creator))
 
-        dict_init.append("Keywords[Compiler.Name.Make(\"%s\")] = Keyword%sToken;" %
+        dict_init.append("Keywords[SymbolTable.StringToId(\"%s\")] = Keyword%sToken;" %
                          (kw, kw.title()))
 
     cw.writeline()
-    cw.write("public static readonly Dictionary<Name, Token> Keywords = new Dictionary<Name, Token>();");
+    cw.write("public static readonly Dictionary<SymbolId, Token> Keywords = new Dictionary<SymbolId, Token>();");
     cw.writeline()
     cw.enter_block("static Tokens()")
     for l in dict_init: cw.write(l)
@@ -765,21 +774,21 @@ def dyn_ops(cw):
 CodeGenerator("DynamicType Binary Ops", dyn_ops).doit()
 
 def gen_SymbolTable_ops_values(cw):
-    x = 0
+    x = 1
     for op in ops:
         if not isinstance(op, Operator): continue
         
         x = x + op.genSymbolTableValues(cw, x)
         
 def gen_SymbolTable_ops_added(cw):
-    x = 0
+    x = 1
     for op in ops:
         if not isinstance(op, Operator): continue
         
         x = x + op.genSymbolTableAdd(cw, x)  
         
 def gen_SymbolTable_ops_symbols(cw):
-    x = 0
+    x = 1
     for op in ops:
         if not isinstance(op, Operator): continue
         

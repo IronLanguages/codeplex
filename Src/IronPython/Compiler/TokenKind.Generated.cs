@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using IronPython.Runtime;
 
 namespace IronPython.Compiler {
 
@@ -203,38 +204,38 @@ namespace IronPython.Compiler {
         public static readonly Token KeywordWhileToken = new SymbolToken(TokenKind.KeywordWhile, "while");
         public static readonly Token KeywordYieldToken = new SymbolToken(TokenKind.KeywordYield, "yield");
 
-        public static readonly Dictionary<Name, Token> Keywords = new Dictionary<Name, Token>();
+        public static readonly Dictionary<SymbolId, Token> Keywords = new Dictionary<SymbolId, Token>();
 
         static Tokens() {
-            Keywords[Compiler.Name.Make("and")] = KeywordAndToken;
-            Keywords[Compiler.Name.Make("assert")] = KeywordAssertToken;
-            Keywords[Compiler.Name.Make("break")] = KeywordBreakToken;
-            Keywords[Compiler.Name.Make("class")] = KeywordClassToken;
-            Keywords[Compiler.Name.Make("continue")] = KeywordContinueToken;
-            Keywords[Compiler.Name.Make("def")] = KeywordDefToken;
-            Keywords[Compiler.Name.Make("del")] = KeywordDelToken;
-            Keywords[Compiler.Name.Make("elif")] = KeywordElifToken;
-            Keywords[Compiler.Name.Make("else")] = KeywordElseToken;
-            Keywords[Compiler.Name.Make("except")] = KeywordExceptToken;
-            Keywords[Compiler.Name.Make("exec")] = KeywordExecToken;
-            Keywords[Compiler.Name.Make("finally")] = KeywordFinallyToken;
-            Keywords[Compiler.Name.Make("for")] = KeywordForToken;
-            Keywords[Compiler.Name.Make("from")] = KeywordFromToken;
-            Keywords[Compiler.Name.Make("global")] = KeywordGlobalToken;
-            Keywords[Compiler.Name.Make("if")] = KeywordIfToken;
-            Keywords[Compiler.Name.Make("import")] = KeywordImportToken;
-            Keywords[Compiler.Name.Make("in")] = KeywordInToken;
-            Keywords[Compiler.Name.Make("is")] = KeywordIsToken;
-            Keywords[Compiler.Name.Make("lambda")] = KeywordLambdaToken;
-            Keywords[Compiler.Name.Make("not")] = KeywordNotToken;
-            Keywords[Compiler.Name.Make("or")] = KeywordOrToken;
-            Keywords[Compiler.Name.Make("pass")] = KeywordPassToken;
-            Keywords[Compiler.Name.Make("print")] = KeywordPrintToken;
-            Keywords[Compiler.Name.Make("raise")] = KeywordRaiseToken;
-            Keywords[Compiler.Name.Make("return")] = KeywordReturnToken;
-            Keywords[Compiler.Name.Make("try")] = KeywordTryToken;
-            Keywords[Compiler.Name.Make("while")] = KeywordWhileToken;
-            Keywords[Compiler.Name.Make("yield")] = KeywordYieldToken;
+            Keywords[SymbolTable.StringToId("and")] = KeywordAndToken;
+            Keywords[SymbolTable.StringToId("assert")] = KeywordAssertToken;
+            Keywords[SymbolTable.StringToId("break")] = KeywordBreakToken;
+            Keywords[SymbolTable.StringToId("class")] = KeywordClassToken;
+            Keywords[SymbolTable.StringToId("continue")] = KeywordContinueToken;
+            Keywords[SymbolTable.StringToId("def")] = KeywordDefToken;
+            Keywords[SymbolTable.StringToId("del")] = KeywordDelToken;
+            Keywords[SymbolTable.StringToId("elif")] = KeywordElifToken;
+            Keywords[SymbolTable.StringToId("else")] = KeywordElseToken;
+            Keywords[SymbolTable.StringToId("except")] = KeywordExceptToken;
+            Keywords[SymbolTable.StringToId("exec")] = KeywordExecToken;
+            Keywords[SymbolTable.StringToId("finally")] = KeywordFinallyToken;
+            Keywords[SymbolTable.StringToId("for")] = KeywordForToken;
+            Keywords[SymbolTable.StringToId("from")] = KeywordFromToken;
+            Keywords[SymbolTable.StringToId("global")] = KeywordGlobalToken;
+            Keywords[SymbolTable.StringToId("if")] = KeywordIfToken;
+            Keywords[SymbolTable.StringToId("import")] = KeywordImportToken;
+            Keywords[SymbolTable.StringToId("in")] = KeywordInToken;
+            Keywords[SymbolTable.StringToId("is")] = KeywordIsToken;
+            Keywords[SymbolTable.StringToId("lambda")] = KeywordLambdaToken;
+            Keywords[SymbolTable.StringToId("not")] = KeywordNotToken;
+            Keywords[SymbolTable.StringToId("or")] = KeywordOrToken;
+            Keywords[SymbolTable.StringToId("pass")] = KeywordPassToken;
+            Keywords[SymbolTable.StringToId("print")] = KeywordPrintToken;
+            Keywords[SymbolTable.StringToId("raise")] = KeywordRaiseToken;
+            Keywords[SymbolTable.StringToId("return")] = KeywordReturnToken;
+            Keywords[SymbolTable.StringToId("try")] = KeywordTryToken;
+            Keywords[SymbolTable.StringToId("while")] = KeywordWhileToken;
+            Keywords[SymbolTable.StringToId("yield")] = KeywordYieldToken;
         }
 
         // *** END GENERATED CODE ***

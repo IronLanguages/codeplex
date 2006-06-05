@@ -887,7 +887,7 @@ namespace IronPython.Runtime {
 
         public override object Positive(object self) {
             object func;
-            if (Ops.TryGetAttr(self, SymbolTable.OpPositive, out func)) return Ops.Call(func);
+            if (Ops.TryGetAttr(self, SymbolTable.Positive, out func)) return Ops.Call(func);
             return Ops.NotImplemented;
         }
 

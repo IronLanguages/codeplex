@@ -39,7 +39,7 @@ namespace IronPython.Compiler {
         const string tupleArgHeader = "tupleArg#";
 
         public Location header;
-        public readonly Name name;
+        public readonly SymbolId name;
         public readonly Expr[] parameters;
         public readonly Expr[] defaults;
         public readonly FuncDefType flags;
@@ -47,11 +47,11 @@ namespace IronPython.Compiler {
         public string filename;
         public int yieldCount = 0;
 
-        public FuncDef(Name name, Expr[] parameters, Expr[] defaults, FuncDefType flags, string sourceFile)
+        public FuncDef(SymbolId name, Expr[] parameters, Expr[] defaults, FuncDefType flags, string sourceFile)
             : this(name, parameters, defaults, flags, null, sourceFile) {
         }
 
-        public FuncDef(Name name, Expr[] parameters, Expr[] defaults, FuncDefType flags, Stmt body, string sourceFile)
+        public FuncDef(SymbolId name, Expr[] parameters, Expr[] defaults, FuncDefType flags, Stmt body, string sourceFile)
             : base(body) {
             this.name = name;
             this.parameters = parameters;
@@ -62,7 +62,7 @@ namespace IronPython.Compiler {
         }
 
         public object MakeFunction(NameEnv env) {
-            string[] names = Name.ToStrings(makeNames(parameters));
+            string[] names = SymbolTable.IdsToStrings(makeNames(parameters));
             object[] defaults = Expr.Evaluate(this.defaults, env);
             return new InterpFunction(names, defaults, body, env.globals);
         }
@@ -177,16 +177,16 @@ namespace IronPython.Compiler {
         public SignatureInfo GetSignature(CodeGen cg) {
             int first = 0;
             Type[] paramTypes;
-            Name[] paramNames;
+            SymbolId[] paramNames;
             Slot contextSlot = GetContextSlot(cg);
 
             if (contextSlot != null) {
                 first = 1;          // Skip the first argument 
                 paramTypes = new Type[parameters.Length + 1];
-                paramNames = new Name[parameters.Length + 1];
+                paramNames = new SymbolId[parameters.Length + 1];
 
                 paramTypes[0] = contextSlot.Type;
-                paramNames[0] = Name.Make("$env");
+                paramNames[0] = SymbolTable.EnvironmentParmName;
 
                 for (int i = 1; i < paramTypes.Length; i++) {
                     paramTypes[i] = typeof(object);
@@ -365,13 +365,13 @@ namespace IronPython.Compiler {
 
         private void CreateGeneratorTemps(EnvironmentFactory ef, CodeGen cg) {
             for (int i = 0; i < tempsCount; i++) {
-                cg.Names.AddTempSlot(ef.MakeEnvironmentReference(Name.Make("temp$" + i)).CreateSlot(cg.EnvironmentSlot));
+                cg.Names.AddTempSlot(ef.MakeEnvironmentReference(SymbolTable.StringToId("temp$" + i)).CreateSlot(cg.EnvironmentSlot));
             }
         }
 
         private void InheritEnvironment(CodeGen cg) {
             if (environment == null) return;
-            foreach (KeyValuePair<Name, EnvironmentReference> kv in environment) {
+            foreach (KeyValuePair<SymbolId, EnvironmentReference> kv in environment) {
                 Slot slot = kv.Value.CreateSlot(cg.EnvironmentSlot);
                 cg.Names[kv.Key] = slot;
             }
@@ -408,19 +408,19 @@ namespace IronPython.Compiler {
             ncg.Finish();
         }
 
-        public override bool TryGetBinding(Name name, out Binding binding) {
+        public override bool TryGetBinding(SymbolId name, out Binding binding) {
             if (names.TryGetValue(name, out binding)) {
                 return binding.IsBound;
             } else return false;
         }
 
-        private static Name EncodeTupleParamName(TupleExpr param) {
+        private static SymbolId EncodeTupleParamName(TupleExpr param) {
             // we encode a tuple parameter so we can extract the compound
             // members back out of it's name.
             StringBuilder sb = new StringBuilder(tupleArgHeader);
             AppendTupleParamNames(sb, param);
 
-            return Name.Make(sb.ToString());
+            return SymbolTable.StringToId(sb.ToString());
         }
 
         private static void AppendTupleParamNames(StringBuilder sb, TupleExpr param) {
@@ -464,7 +464,7 @@ namespace IronPython.Compiler {
             return new Tuple(names);
         }
 
-        private static Name makeName(Expr param) {
+        private static SymbolId makeName(Expr param) {
             NameExpr ne = param as NameExpr;
             if (ne == null) {
                 return EncodeTupleParamName((TupleExpr)param);
@@ -473,8 +473,8 @@ namespace IronPython.Compiler {
             }
         }
 
-        private static Name[] makeNames(Expr[] parameters) {
-            Name[] ret = new Name[parameters.Length];
+        private static SymbolId[] makeNames(Expr[] parameters) {
+            SymbolId[] ret = new SymbolId[parameters.Length];
             for (int i = 0; i < parameters.Length; i++) {
                 ret[i] = makeName(parameters[i]);
             }
@@ -483,7 +483,7 @@ namespace IronPython.Compiler {
     }
 
     public class SignatureInfo {
-        public SignatureInfo(Type[] paramTypes, Name[] paramNames, bool hasContext, Slot contextSlot) {
+        public SignatureInfo(Type[] paramTypes, SymbolId[] paramNames, bool hasContext, Slot contextSlot) {
             ParamTypes = paramTypes;
             ParamNames = paramNames;
             HasContext = hasContext;
@@ -491,7 +491,7 @@ namespace IronPython.Compiler {
         }
 
         public readonly Type[] ParamTypes;
-        public readonly Name[] ParamNames;
+        public readonly SymbolId[] ParamNames;
         public readonly bool HasContext;
         public readonly Slot ContextSlot;
     }
