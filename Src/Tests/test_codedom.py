@@ -315,21 +315,21 @@ def runTest(test, log=False):
     
 
 def compileTest(test, log=False):
+    import _random
     
     txt = test.generate()
     if log: print 'generated:'
     if log: print txt
     
     parsed = parser.Parse(txt)
-    pathToExe = path_combine(testpath.public_testdir, 'test.exe')
+    pathToExe = path_combine(testpath.public_testdir, 'test' + str(_random.Random().random()*10000) +'.exe')
     co = SCC.CompilerParameters(['System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'], pathToExe, False)
     co.GenerateInMemory = False
     res = prov.CompileAssemblyFromDom(co, parsed)
     if log: print res.Errors.Count
     
-    if log:
-        for err in res.Errors:
-            print err
+    for err in res.Errors:
+        print err
             
     AreEqual(res.Errors.Count, 0)
     

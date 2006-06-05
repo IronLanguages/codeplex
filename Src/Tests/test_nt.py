@@ -154,4 +154,10 @@ nt.unlink(tmpfile)
 Assert(abs(t-mt) < 60)
 
 
+import nt
+nt.chmod('tmpfile.tmp', 256)
+nt.chmod('tmpfile.tmp', 128)
+nt.unlink('tmpfile.tmp')
+
 #***** Above code are from 'nt' *****
+

@@ -68,6 +68,20 @@ namespace IronPython.Runtime {
             return TryConvertWorker(value, to, out conversion);
         }
 
+        /// <summary>
+        /// Converts a value into an integer that can be used as a sequence length, throwing
+        /// if this isn't possible.  This conversion allows only non-floating point numbers
+        /// to be converted.
+        /// </summary>
+        public static int ConvertToSequenceLength(object count) {
+            Conversion conv;
+            int val = Converter.TryConvertToInt32(count, out conv);
+            if (conv > Conversion.Implicit) {
+                throw Ops.TypeError("can't multiply sequence by non-int");
+            }
+            return val;
+        }
+
         private static object TryConvertToArray(object value, Type to, out Conversion conversion) {
             int rank = to.GetArrayRank();
 

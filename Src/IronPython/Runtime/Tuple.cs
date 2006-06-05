@@ -95,7 +95,7 @@ namespace IronPython.Runtime {
         private readonly bool expandable;
 
         public Tuple(object o) {
-            this.data = MakeItems(o);
+            this.data = MakeItems(o); 
         }
 
         private Tuple(params object[] items) {
@@ -156,13 +156,15 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__mul__")]
-        public virtual object MultiplySequence(int count) {
-            if (count <= 0) return Tuple.EMPTY;
-            if (count == 1 && GetType() == typeof(Tuple)) return this;
-            return MakeTuple(ArrayOps.Multiply(data, data.Length, count));
+        public virtual object MultiplySequence(object count) {
+            int val = Converter.ConvertToSequenceLength(count);
+
+            if (val <= 0) return Tuple.EMPTY;
+            if (val == 1 && GetType() == typeof(Tuple)) return this;
+            return MakeTuple(ArrayOps.Multiply(data, data.Length, val));
         }
         [PythonName("__imul__")]
-        public virtual object __imul__(int count) {
+        public virtual object __imul__(object count) {
             return MultiplySequence(count);
         }
 

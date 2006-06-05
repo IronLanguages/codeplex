@@ -141,7 +141,7 @@ namespace IronPython.Modules {
         public static object EncodeHex(string data) {
             StringBuilder sb = new StringBuilder(data.Length * 2);
             for (int i = 0; i < data.Length; i++) {
-                sb.AppendFormat("{0:x}", (int)data[i]);
+                sb.AppendFormat("{0:x2}", (int)data[i]);
             }
             return sb.ToString();
         }

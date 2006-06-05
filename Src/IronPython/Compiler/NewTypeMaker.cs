@@ -195,70 +195,20 @@ namespace IronPython.Compiler {
     // they will just have different values for the __class__ field.
     // TypeInfo captures the minimal CLI information required for a Python object.
 
-    class TypeInfo {
-        // The CLI base-type.
-        private Type baseType;
-
-        private IList<Type> interfaceTypes;
-        private IList<OldClass> oldClassTypes;
-
-        public TypeInfo(Type baseType, IList<Type> interfaceTypes, IList<OldClass> oldClasses) {
-            this.baseType = baseType;
-            this.interfaceTypes = interfaceTypes;
-            this.oldClassTypes = oldClasses;
-        }
-
-        public Type BaseType {
-            get { return baseType; }
-        }
-
-        public IEnumerable<Type> InterfaceTypes {
-            get { return interfaceTypes; }
-        }
-
-        public IEnumerable<OldClass> OldClassTypes {
-            get {
-                return oldClassTypes;
-            }
-        }
-
-        public override int GetHashCode() {
-            return baseType.GetHashCode(); //??? might help hash to use interfaces too
-        }
-
-        public override bool Equals(object obj) {
-            TypeInfo other = obj as TypeInfo;
-            if (other == null) return false;
-
-            if (baseType.Equals(other.baseType) && 
-                interfaceTypes.Count == other.interfaceTypes.Count &&
-                oldClassTypes.Count == other.oldClassTypes.Count) {
-                for (int i = 0; i < interfaceTypes.Count; i++) {
-                    if (!interfaceTypes[i].Equals(other.interfaceTypes[i])) return false;
-                }
-
-                for (int i = 0; i < oldClassTypes.Count; i++) {
-                    if (!oldClassTypes[i].Equals(other.oldClassTypes[i])) return false;
-                }
-
-                return true;
-            }
-            return false;
-        }
-    }
-
-
-    public class NewTypeMaker {
+    class NewTypeMaker {
         public const string VtableNamesField = "#VTableNames#";
         public const string TypePrefix = "IronPython.NewTypes.";
-        private static Publisher<TypeInfo, Type> newTypes = new Publisher<TypeInfo, Type>();
+        private static Publisher<NewTypeInfo, Type> newTypes = new Publisher<NewTypeInfo, Type>();
         private static int typeCount = 0;
 
-        private TypeGen tg;
-        private Slot typeField, dictField;
-        private Type baseType;
-        private IEnumerable<Type> interfaceTypes;
+        protected Type baseType;
+        protected IList<string> slots;
+        protected TypeGen tg;
+        protected Slot typeField, dictField;
+        protected IEnumerable<Type> interfaceTypes;
+
         private bool hasBaseTypeField = false;
+        private IList<Slot> slotsSlots;
 
         private Dictionary<string, VTableSlot> vtable = new Dictionary<string, VTableSlot>();
 
@@ -267,18 +217,76 @@ namespace IronPython.Compiler {
             // and any slot information contained in dict
             // other info might be used for future optimizations
 
-            TypeInfo typeInfo = GetTypeInfo(typeName, bases);
-
+            Debug.Assert(bases != null);
+            NewTypeInfo typeInfo = GetTypeInfo(typeName, bases, GetSlots(dict));
+            
             if (typeInfo.BaseType.IsSealed || typeInfo.BaseType.IsValueType)
                 throw Ops.TypeError("cannot derive from sealed or value types");
 
-            //!!! next collect any slot information, this might force a new Type creation
 
-            return newTypes.GetOrCreateValue(typeInfo,
+            Type ret = newTypes.GetOrCreateValue(typeInfo,
                 delegate() {
-                    // creation code
-                    return new NewTypeMaker(typeName, typeInfo.BaseType, typeInfo.InterfaceTypes).CreateNewType();
+                    // creation code                    
+                    return GetTypeMaker(typeName, typeInfo).CreateNewType();
                 });
+
+            if (typeInfo.Slots != null) {
+                // update dict w/ slots that point at the correct fields.
+
+                for (int i = 0; i < typeInfo.Slots.Count; i++) {
+                    PropertyInfo pi = ret.GetProperty(typeInfo.Slots[i]);
+                    dict[typeInfo.Slots[i]] = new ReflectedSlotProperty(pi, pi.GetGetMethod(), pi.GetSetMethod(), NameType.PythonProperty);
+                }
+            }
+
+            return ret;
+        }
+
+        private static NewTypeMaker GetTypeMaker(string typeName, NewTypeInfo ti) {
+            if (IsInstanceType(ti.BaseType)) return new NewSubtypeMaker(typeName, ti);
+
+            return new NewTypeMaker(typeName, ti);
+        }
+
+        private static List<string> GetSlots(IDictionary<object, object> dict) {
+            List<string> res = null;
+            object slots;            
+            IAttributesDictionary attrDict = dict as IAttributesDictionary;
+            if (attrDict != null && attrDict.TryGetValue(SymbolTable.Slots, out slots)) {
+                ISequence seq = slots as ISequence;
+                if (seq != null && !(seq is ExtensibleString)) {
+                    res = new List<string>(seq.GetLength());
+                    for (int i = 0; i < seq.GetLength(); i++) {
+                        res.Add(GetSlotName(seq[i]));
+                    }
+
+                    res.Sort();
+                } else {
+                    res = new List<string>(1);
+                    res.Add(GetSlotName(slots));
+                }                
+            }
+
+            return res;
+        }
+
+
+        private static string GetSlotName(object o) {
+            Conversion conv;
+            string value = Converter.TryConvertToString(o, out conv);
+            if (conv == Conversion.None) throw Ops.TypeError("slots must be one string or a list of strings");
+
+            for (int i = 0; i < value.Length; i++) {
+                if ((value[i] >= 'a' && value[i] <= 'z') ||
+                    (value[i] >= 'A' && value[i] <= 'Z') ||
+                    (i != 0 && value[i] >= '0' && value[i] <= '9') ||
+                    value[i] == '_') {
+                    continue;
+                }
+                throw Ops.TypeError("__slots__ must be valid identifiers");
+            }
+
+            return value;
         }
 
         /// <summary>
@@ -302,7 +310,7 @@ namespace IronPython.Compiler {
         ///                                 cCLI1,           {iCLI1, iCLI2}
         /// (cCLI1, cCLI2)               => error
         /// </summary>
-        private static TypeInfo GetTypeInfo(string typeName, Tuple bases) {
+        private static NewTypeInfo GetTypeInfo(string typeName, Tuple bases, List<string> slots) {
             List<Type> interfaceTypes = new List<Type>();
             List<OldClass> oldClasses = new List<OldClass>();
             Type baseCLIType = typeof(object); // Pure Python object instances inherit from System.Object
@@ -326,7 +334,7 @@ namespace IronPython.Compiler {
                     }
 
                     if (curTypeToExtend != typeof(object)) {
-                        if (baseCLIType != typeof(object)) {
+                        if (baseCLIType != typeof(object) && baseCLIType != curTypeToExtend) {
                             throw Ops.TypeError(typeName + ": can only extend one CLI or builtin type, not both {0} (for {1}) and {2} (for {3})",
                                                 baseCLIType.FullName, basePythonType, curTypeToExtend.FullName, curBasePythonType);
                         }
@@ -347,12 +355,13 @@ namespace IronPython.Compiler {
                 throw Ops.TypeError(typeName + ": unsupported base type for new-style class: " + baseCLIType);                
             }
 
-            return new TypeInfo(baseCLIType, interfaceTypes, oldClasses);
+            return new NewTypeInfo(baseCLIType, interfaceTypes, oldClasses, slots);
         }
 
-        private NewTypeMaker(String name, Type baseType, IEnumerable<Type> interfaceTypes) {
-            this.baseType = baseType;
-            this.interfaceTypes = interfaceTypes;
+        protected NewTypeMaker(String name, NewTypeInfo typeInfo) {
+            this.baseType = typeInfo.BaseType;
+            this.interfaceTypes = typeInfo.InterfaceTypes;
+            this.slots = typeInfo.Slots;
         }
 
         private static string GetBaseName(MethodInfo mi, Dictionary<string,bool> specialNames){
@@ -376,7 +385,7 @@ namespace IronPython.Compiler {
         }
 
         // Build a name which is unique to this TypeInfo.
-        string GetName() {
+        protected virtual string GetName() {
             StringBuilder name = new StringBuilder(baseType.FullName);
             foreach (Type interfaceType in interfaceTypes) {
                 name.Append("#");
@@ -386,6 +395,17 @@ namespace IronPython.Compiler {
             name.Append("_");
             name.Append(System.Threading.Interlocked.Increment(ref typeCount));
             return name.ToString();
+
+        }
+
+        protected virtual void ImplementInterfaces() {
+            foreach (Type interfaceType in interfaceTypes) {
+                ImplementInterface(interfaceType);
+            }
+        }
+
+        protected void ImplementInterface(Type interfaceType) {
+            tg.myType.AddInterfaceImplementation(interfaceType);
         }
 
         private Type CreateNewType() {
@@ -394,56 +414,17 @@ namespace IronPython.Compiler {
             string name = GetName();
             tg = ag.DefinePublicType(TypePrefix + name, baseType);
 
-            foreach (Type interfaceType in interfaceTypes) {
-                tg.myType.AddInterfaceImplementation(interfaceType);
-            }
+            ImplementInterfaces(); 
 
-            FieldInfo baseTypeField = baseType.GetField("__class__");
-            if (baseTypeField == null) {
-                typeField = tg.AddField(typeof(UserType), "__class__");
-            } else {
-                Debug.Assert(baseTypeField.FieldType == typeof(UserType));
-                typeField = new FieldSlot(new ThisSlot(tg.myType), baseTypeField);
-                hasBaseTypeField = true;
-            }
+            GetOrDefineClass();
 
-            FieldInfo baseDictField = baseType.GetField("dict");
-            if (baseDictField == null) {
-                dictField = tg.AddField(typeof(IAttributesDictionary), "__dict__"); 
-            } else {
-                dictField = new FieldSlot(new ThisSlot(tg.myType), baseDictField);
-            }
+            GetOrDefineDict();
 
-            ImplementDynamicObject();
+            ImplementPythonObject();
 
-            ImplementCustomTypeDescriptor();
+            ImplementSlots();
 
-            ImplementPythonEquals();
-
-            ImplementPythonComparable();
-
-            ImplementWeakReference();
-
-            ConstructorInfo[] constructors;
-            constructors = baseType.GetConstructors(BindingFlags.Public |
-                                                    BindingFlags.NonPublic |
-                                                    BindingFlags.Instance
-                                                    );
-
-            
-            List<MethodTracker> newCtors = new List<MethodTracker>();
-            foreach (ConstructorInfo ci in constructors) {
-                if (!(ci.IsPublic || ci.IsFamily)) continue;
-
-                ParameterInfo[] argTypes = new ParameterInfo[ci.GetParameters().Length + 1];
-                
-                argTypes[0] = new TrackingParamInfo(typeField.Type);
-                Array.Copy(ci.GetParameters(), 0, argTypes, 1, argTypes.Length - 1);
-
-                newCtors.Add(new MethodTracker(OverrideConstructor(ci), argTypes));
-            }
-
-            ReflectOptimizer.EmitFunction(tg, newCtors.ToArray());
+            ImplementConstructors();
 
             Dictionary<string, bool> specialNames = new Dictionary<string, bool>();
 
@@ -466,6 +447,67 @@ namespace IronPython.Compiler {
             return ret;
         }
 
+        protected virtual void ImplementPythonObject() {
+            ImplementDynamicObject();
+
+            ImplementCustomTypeDescriptor();
+
+            ImplementPythonEquals();
+
+            ImplementPythonComparable();
+
+            ImplementWeakReference();
+        }
+
+        private void GetOrDefineDict() {
+            FieldInfo baseDictField = baseType.GetField("dict");
+            if (baseDictField == null) {
+                dictField = tg.AddField(typeof(IAttributesDictionary), "__dict__");
+            } else {
+                dictField = new FieldSlot(new ThisSlot(tg.myType), baseDictField);
+            }
+        }
+
+        private void GetOrDefineClass() {
+            FieldInfo baseTypeField = baseType.GetField("__class__");
+            if (baseTypeField == null) {
+                typeField = tg.AddField(typeof(UserType), "__class__");
+            } else {
+                Debug.Assert(baseTypeField.FieldType == typeof(UserType));
+                typeField = new FieldSlot(new ThisSlot(tg.myType), baseTypeField);
+                hasBaseTypeField = true;
+            }
+        }
+
+        protected virtual ParameterInfo[] GetOverrideCtorSignature(ParameterInfo[] original) {
+            ParameterInfo[] argTypes = new ParameterInfo[original.Length + 1];
+
+            argTypes[0] = new TrackingParamInfo(typeField.Type, "cls");
+            Array.Copy(original, 0, argTypes, 1, argTypes.Length - 1);
+            return argTypes;
+        }
+
+        private void ImplementConstructors() {
+            ConstructorInfo[] constructors;
+            constructors = baseType.GetConstructors(BindingFlags.Public |
+                                                    BindingFlags.NonPublic |
+                                                    BindingFlags.Instance
+                                                    );
+
+            List<MethodTracker> newCtors = new List<MethodTracker>();
+            foreach (ConstructorInfo ci in constructors) {
+                if (!(ci.IsPublic || ci.IsFamily)) continue;
+
+                newCtors.Add(new MethodTracker(OverrideConstructor(ci), GetOverrideCtorSignature(ci.GetParameters())));
+            }
+
+            ReflectOptimizer.EmitFunction(tg, newCtors.ToArray());
+        }
+
+        protected virtual bool ShouldOverrideVirtual(MethodInfo mi) {
+            return true;
+        }
+
         private void AddBaseMethods(Type finishedType, Dictionary<string,bool> specialNames) {            
             // "Adds" base methods to super type (!!!should really add to the derived type)
             // this makes super(...).xyz to work - otherwise we'd return a function that
@@ -474,6 +516,8 @@ namespace IronPython.Compiler {
             rt.Initialize();
 
             foreach (MethodInfo mi in finishedType.GetMethods()) {
+                if (!ShouldOverrideVirtual(mi)) continue;
+
                 string methodName = mi.Name;
                 if (methodName.StartsWith("#base#")) {
                     string newName = GetBaseName(mi, specialNames);
@@ -493,28 +537,31 @@ namespace IronPython.Compiler {
         
         private ConstructorBuilder OverrideConstructor(ConstructorInfo parentConstructor) {
             ParameterInfo[] pis = parentConstructor.GetParameters();
-            Type[] argTypes = new Type[pis.Length + 1];
-            string[] paramNames = new string[pis.Length + 1];
-            argTypes[0] = typeField.Type;
-            paramNames[0] = "cls";
-            for (int i = 0; i < pis.Length; i++) {
-                argTypes[i + 1] = pis[i].ParameterType;
-                paramNames[i + 1] = pis[i].Name;
+            ParameterInfo[] overrideParams = GetOverrideCtorSignature(pis);
+
+            Type[] argTypes = new Type[overrideParams.Length];
+            string[] paramNames = new string[overrideParams.Length];
+            for (int i = 0; i < overrideParams.Length; i++) {
+                argTypes[i] = overrideParams[i].ParameterType;
+                paramNames[i] = overrideParams[i].Name;
             }
 
             ConstructorBuilder cb = tg.myType.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, argTypes);
 
-            cb.DefineParameter(1, ParameterAttributes.None, "userType");
-            const int paramOffset = 2;  // +1 for user type, +1 for index from 1 of params.
-            for (int i = 0; i < pis.Length; i++) {
-                ParameterBuilder pb = cb.DefineParameter(i + paramOffset, pis[i].Attributes, pis[i].Name);
+            for (int i = 0; i < overrideParams.Length; i++) {
+                ParameterBuilder pb = cb.DefineParameter(i + 1, 
+                    overrideParams[i].Attributes, 
+                    overrideParams[i].Name);
 
-                if (pis[i].IsDefined(typeof(ParamArrayAttribute), false)) {
-                    pb.SetCustomAttribute(new CustomAttributeBuilder(
-                        typeof(ParamArrayAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
-                } else if (pis[i].IsDefined(typeof(ParamDictAttribute), false)) {
-                    pb.SetCustomAttribute(new CustomAttributeBuilder(
-                        typeof(ParamDictAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
+                int origIndex = i - (overrideParams.Length - pis.Length);
+                if (origIndex >= 0) {
+                    if (pis[origIndex].IsDefined(typeof(ParamArrayAttribute), false)) {
+                        pb.SetCustomAttribute(new CustomAttributeBuilder(
+                            typeof(ParamArrayAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
+                    } else if (pis[origIndex].IsDefined(typeof(ParamDictAttribute), false)) {
+                        pb.SetCustomAttribute(new CustomAttributeBuilder(
+                            typeof(ParamDictAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
+                    }
                 }
             }
 
@@ -524,17 +571,24 @@ namespace IronPython.Compiler {
             cg.EmitArgGet(0);
             typeField.EmitSet(cg); //???
 
+            // initialize all slots to Uninitialized
+            if (slots != null) {
+                for (int i = 0; i < slots.Count; i++) {
+                    cg.EmitString(slots[i]);
+                    cg.EmitNew(typeof(Uninitialized), new Type[] { typeof(string) });
+                    slotsSlots[i].EmitSet(cg);
+                }
+            }
+
             //!!! what about propagating custom attributes ?
-            CallBaseConstructor(parentConstructor, argTypes, cg);
+            CallBaseConstructor(parentConstructor, overrideParams.Length - pis.Length, overrideParams, cg);            
             return cb;
         }
 
-        private static void CallBaseConstructor(ConstructorInfo parentConstructor, Type[] argTypes, CodeGen cg) {
+        private static void CallBaseConstructor(ConstructorInfo parentConstructor, int offset, ParameterInfo[] pis, CodeGen cg) {
             cg.EmitThis();
-            //cg.emitArgGet(0);
-            //cg.emitArgGet(1);
 
-            for (int i = 1; i < argTypes.Length; i++) {
+            for (int i = offset; i < pis.Length; i++) {
                 cg.EmitArgGet(i);
             }
             cg.Emit(OpCodes.Call, parentConstructor);
@@ -585,29 +639,55 @@ namespace IronPython.Compiler {
 
             tg.myType.AddInterfaceImplementation(typeof(ISuperDynamicObject));
 
-            cg = tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("GetDict"));
-            dictField.EmitGet(cg);
-            cg.EmitReturn();
+            MethodAttributes attrs = (MethodAttributes)0;            
+            if (slots != null) attrs = MethodAttributes.Virtual;
+            
+            cg = tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("GetDict"));
+            if (slots == null) {
+                dictField.EmitGet(cg);
+                cg.EmitReturn();
+            } else {
+                cg.Emit(OpCodes.Ldnull);
+                cg.EmitReturn();
+            }
             cg.Finish();
 
-            cg = tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("SetDict"));
-            cg.EmitArgGet(0);
-            dictField.EmitSet(cg);
-            cg.EmitReturn();
+            cg = tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("SetDict"));
+            if (slots == null) {
+                cg.EmitArgGet(0);
+                dictField.EmitSet(cg);
+                cg.EmitRawConstant(true);
+                cg.EmitReturn();
+            } else {
+                cg.EmitRawConstant(false);
+                cg.EmitReturn();
+            }
             cg.Finish();
 
             if (hasBaseTypeField) return;
 
-            cg = tg.DefineMethodOverride(typeof(IDynamicObject).GetMethod("GetDynamicType"));
+            cg = tg.DefineMethodOverride(attrs, typeof(IDynamicObject).GetMethod("GetDynamicType"));
             typeField.EmitGet(cg);
             cg.EmitReturn();
             cg.Finish();
 
-            cg = tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("SetDynamicType"));
+            cg = tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("SetDynamicType"));
             cg.EmitArgGet(0);
             typeField.EmitSet(cg);
             cg.EmitReturn();
             cg.Finish();
+        }
+
+        private static void EmitNoDict(CodeGen cg) {
+            // can't set __dict__ on class w/ __slots__
+            cg.EmitString("{0} object has no attribute '__dict__'");
+            cg.EmitObjectArray(1, delegate(int index) {
+                cg.EmitThis();
+                cg.EmitCall(typeof(Ops), "GetDynamicType");
+                cg.EmitCall(typeof(Ops), "StringRepr");
+            });
+            cg.EmitCall(typeof(Ops), "AttributeError");
+            cg.Emit(OpCodes.Throw);
         }
 
         /// <summary>
@@ -648,11 +728,55 @@ namespace IronPython.Compiler {
         }
 
         private void ImplementWeakReference() {
-            DefineHelperInterface(typeof(IWeakReferenceable), true);
+            if (slots == null) {
+                DefineHelperInterface(typeof(IWeakReferenceable), true);
+            }
+        }
+
+        private void ImplementSlots() {
+            if (slots != null) {
+                slotsSlots = new List<Slot>();
+                for (int i = 0; i < slots.Count; i++) {
+                    // mangled w/ a . to never collide w/ any regular names
+                    Slot s = tg.AddField(typeof(object), "." + slots[i]);
+                    slotsSlots.Add(s);
+
+                    PropertyBuilder pb = tg.DefineProperty(slots[i], PropertyAttributes.None, typeof(object));
+
+                    CodeGen getter = tg.DefineMethod(MethodAttributes.Public, 
+                        "get_" + slots[i], 
+                        typeof(object), 
+                        new Type[0], 
+                        new string[0]);
+                    s.EmitGet(getter);
+                    getter.Emit(OpCodes.Dup);
+                    getter.EmitThis();
+                    getter.EmitCall(typeof(Ops), "CheckInitializedAttribute");                        
+                    getter.EmitReturn();                    
+                    getter.Finish();
+
+                    CodeGen setter = tg.DefineMethod(MethodAttributes.Public, 
+                        "set_" + slots[i], 
+                        typeof(void), 
+                        new Type[] { typeof(object) }, 
+                        new string[] { "value" });
+                    
+                    setter.EmitArgGet(0);
+                    s.EmitSet(setter);
+                    setter.EmitReturn();
+
+                    setter.Finish();
+
+                    pb.SetGetMethod(getter.MethodInfo as MethodBuilder);
+                    pb.SetSetMethod(setter.MethodInfo as MethodBuilder);
+                }
+            }
         }
 
         private void OverrideVirtualMethods(Type type, Dictionary<string, bool> specialNames) {
             foreach (MethodInfo mi in type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)) {
+                if (!ShouldOverrideVirtual(mi)) continue;
+
                 if (mi.IsPublic || mi.IsFamily || mi.IsFamilyOrAssembly) {
                     if (mi.IsSpecialName) {
                         OverrideSpecialName(mi, specialNames);
@@ -718,6 +842,7 @@ namespace IronPython.Compiler {
                 NameConverter.TryGetName(Ops.GetDynamicTypeFromType(baseType), mi, out name) == NameType.None) {
                 return;
             }
+            if (mi.DeclaringType == typeof(object) && mi.Name == "Finalize") return;
 
             specialNames[mi.Name] = false;
             Slot methField = GetOrMakeField(name);

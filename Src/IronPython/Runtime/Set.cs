@@ -42,7 +42,7 @@ namespace IronPython.Runtime {
         void PrivRemove(object o);
         void PrivFreeze();
 
-        void SetData(Dictionary<object, object> dict);
+        void SetData(Dict dict);
         void SetData(IEnumerator set);
     }
 
@@ -193,7 +193,7 @@ namespace IronPython.Runtime {
     /// </summary>
     [PythonType("set")]
     public class SetCollection : ISet, IRichComparable, IRichEquality {
-        IDictionary<object, object> items;
+        Dict items;
 
         #region Set contruction
 
@@ -223,7 +223,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal SetCollection(Dictionary<object, object> setData) {
+        internal SetCollection(Dict setData) {
             items = setData;
         }
 
@@ -274,12 +274,12 @@ namespace IronPython.Runtime {
             // nop for non-frozen sets.
         }
 
-        void ISet.SetData(Dictionary<object, object> dict) {
+        void ISet.SetData(Dict dict) {
             items = dict;
         }
 
         void ISet.SetData(IEnumerator set) {
-            items = new Dictionary<object, object>();
+            items = new Dict();
             while (set.MoveNext()) {
                 items[set.Current] = set.Current;
             }
@@ -334,7 +334,7 @@ namespace IronPython.Runtime {
         private void Init(params object[] o) {
             if (o.Length > 1) throw Ops.TypeError("set expected at most 1 arguments, got {0}", o.Length);
 
-            items = new Dictionary<object, object>();
+            items = new Dict();
             if (o.Length != 0) {
                 IEnumerator setData = Ops.GetEnumerator(o[0]);
                 while (setData.MoveNext()) {
@@ -439,24 +439,32 @@ namespace IronPython.Runtime {
 
         [PythonName("__iand__")]
         public SetCollection __iand__(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for &=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             IntersectionUpdate(s);
             return this;
         }
 
         [PythonName("__ior__")]
         public SetCollection __ior__(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for |=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             Update(s);
             return this;
         }
 
         [PythonName("__isub__")]
         public SetCollection __isub__(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for -=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             DifferenceUpdate(s);
             return this;
         }
 
         [PythonName("__ixor__")]
         public SetCollection __ixor__(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for ^=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             SymmetricDifferenceUpdate(s);
             return this;
         }
@@ -468,6 +476,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__and__")]
         public ISet __and__(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for &: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             if (s.GetLength() < GetLength()) {
                 return Intersection(s);
             }
@@ -482,6 +492,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__ror__")]
         public ISet __ror__(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for |: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             if (s.GetLength() < GetLength()) {
                 return Union(s);
             }
@@ -496,6 +508,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__rsub__")]
         public ISet __rsub__(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for -: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             SetCollection set = s as SetCollection;
             if (set != null) {
                 return set.Difference(this);
@@ -506,6 +520,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__rxor__")]
         public ISet __rxor__(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for ^: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             if (s.GetLength() < GetLength()) {
                 return SymmetricDifference(s);
             }
@@ -614,7 +630,7 @@ namespace IronPython.Runtime {
     /// </summary>
     [PythonType("frozenset")]
     public class FrozenSetCollection : ISet, IRichComparable, IRichEquality {
-        IDictionary<object, object> items;
+        Dict items;
         int hashCode;
 #if DEBUG
         int returnedHc;
@@ -667,7 +683,7 @@ namespace IronPython.Runtime {
 
 
         public FrozenSetCollection() {
-            items = new Dictionary<object, object>();
+            items = new Dict();
             // hash code is 0 for empty set
             CalculateHashCode();
         }
@@ -688,7 +704,7 @@ namespace IronPython.Runtime {
             CalculateHashCode();
         }
 
-        internal FrozenSetCollection(IDictionary<object, object> dict) {
+        internal FrozenSetCollection(Dict dict) {
             items = dict;
             CalculateHashCode();
         }
@@ -748,12 +764,12 @@ namespace IronPython.Runtime {
             items.Remove(o);
         }
 
-        void ISet.SetData(Dictionary<object, object> dict) {
+        void ISet.SetData(Dict dict) {
             items = dict;
         }
 
         void ISet.SetData(IEnumerator set) {
-            items = new Dictionary<object, object>();
+            items = new Dict();
             while (set.MoveNext()) {
                 items[set.Current] = set.Current;
             }
@@ -838,6 +854,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__and__")]
         public object OperatorAnd(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for &: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             if (s.GetLength() < GetLength()) {
                 return Intersection(s);
             }
@@ -854,6 +872,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__ior__")]
         public object OperatorInPlaceOr(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for |=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             if (s.GetLength() < GetLength()) {
                 return Union(s);
             }
@@ -870,11 +890,15 @@ namespace IronPython.Runtime {
 
         [PythonName("__isub__")]
         public object OperatorInPlaceSub(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for -=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             return Difference(s);
         }
 
         [PythonName("__ixor__")]
         public object OperatorInPlaceXor(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for ^=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             if (s.GetLength() < GetLength()) {
                 return SymmetricDifference(s);
             }
@@ -891,6 +915,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__ror__")]
         public object OperatorReverseOr(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for |: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             if (s.GetLength() < GetLength()) {
                 return Union(s);
             }
@@ -905,6 +931,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__rsub__")]
         public ISet OperatorReverseSubtract(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for -: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+            
             FrozenSetCollection fs = s as FrozenSetCollection;
             if (fs != null) {
                 return fs.Difference(this);
@@ -917,6 +945,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__rxor__")]
         public ISet OperatorReverseXor(ISet s) {
+            if (s == null) throw Ops.TypeError("unsupported operand type(s) for ^: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+
             if (s.GetLength() < GetLength()) {
                 return SymmetricDifference(s);
             }

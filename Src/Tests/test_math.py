@@ -222,14 +222,14 @@ def %s(self, other):
                 nx = typeInfo[0].__bases__[0](typeInfo[1][0])
                 ny = typeInfo[0].__bases__[0](typeInfo[1][1])
                                 
-                print 'nx %s ey' % op, type(nx), type(ey)
+                #print 'nx %s ey' % op, type(nx), type(ey)
                 res1 = eval('nx %s ey' % op)
                 res2 = eval('nx %s ny' % op)
                 AreEqual(res1, res2)
                 AreEqual(len(opCalled), 1)
                 opCalled = []
                 
-                print 'ex %s ny' % op, type(ex), type(ny)
+                #print 'ex %s ny' % op, type(ex), type(ny)
                 res1 = eval('ex %s ny' % op)
                 res2 = eval('nx %s ny' % op)
                 AreEqual(res1, res2)

@@ -560,8 +560,8 @@ namespace IronPython.Modules {
 
         #region Private implementation details
 
-        private const int S_IWRITE = 00200;
-        private const int S_IREAD = 00400;
+        private const int S_IWRITE = 0x200;
+        private const int S_IREAD = 0x400;
 
         private static void addBase(string[] files, List ret) {
             foreach (string file in files) {

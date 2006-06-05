@@ -530,7 +530,6 @@ def main(args):
     shortcuts = {}
     for x in allTcs: shortcuts[x.shortcut] = x
 
-    print allTcs
     processed = []
     for x in tests: 
         for y in shortcuts.keys():

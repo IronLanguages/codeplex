@@ -387,7 +387,7 @@ namespace IronPython.Runtime {
             Initialize();
 
             switch(name.Id){
-                case SymbolTable.DictId: ret = dict; return true;
+                case SymbolTable.DictId: ret = new DictWrapper(this); return true;
                 case SymbolTable.GetAttributeId:  ret = __getattribute__F;  return true;                    
                 case SymbolTable.GetAttrId: ret = __getattr__F; return true;
                 case SymbolTable.SetAttrId: ret = __setattr__F; return true;
@@ -467,7 +467,7 @@ namespace IronPython.Runtime {
             object initFunc;
 
             if (Ops.GetDynamicType(inst).IsSubclassOf(this)) {
-                if (TryGetAttr(DefaultContext.Default, inst, SymbolTable.Init, out initFunc)) {
+                if (TryLookupBoundSlot(DefaultContext.Default, inst, SymbolTable.Init, out initFunc)) {
                     //!!!initFunc = Ops.GetDescriptor(initFunc, newObject, this);
                     switch (args.Length) {
                         case 0: Ops.Call(initFunc); break;
@@ -484,7 +484,7 @@ namespace IronPython.Runtime {
         public void InvokeInit(object inst, object[] args, string[] names) {
             if (Ops.GetDynamicType(inst).IsSubclassOf(this)) {
                 object initFunc;
-                if (TryGetAttr(DefaultContext.Default, inst, SymbolTable.Init, out initFunc)) {
+                if (TryLookupBoundSlot(DefaultContext.Default, inst, SymbolTable.Init, out initFunc)) {
                     IFancyCallable ifc = initFunc as IFancyCallable;
                     if (ifc != null) {
                         ifc.Call(DefaultContext.Default, args, names);
@@ -782,9 +782,11 @@ namespace IronPython.Runtime {
 
             // recurse down to the bottom of the tree
             foreach (DynamicType lesser in mroInfo) {
-                if (classes[lesser].Processing) throw Ops.TypeError("invalid order for base classes: {0} and {1}", dt.__name__, lesser.__name__);
+                DynamicType lesserType = lesser;
 
-                PropagateBases(classes, lesser);
+                if (classes[lesserType].Processing) throw Ops.TypeError("invalid order for base classes: {0} and {1}", dt.__name__, lesserType.__name__);
+
+                PropagateBases(classes, lesserType);
             }
 
             // then propagate the bases up the tree as we go.
@@ -805,6 +807,53 @@ namespace IronPython.Runtime {
         #endregion
     }
 
+    /// <summary>
+    /// Provides a slot object for the dictionary to allow setting of the dictionary.
+    /// </summary>
+    public sealed class DictWrapper : IDataDescriptor {
+        PythonType type;
+
+        public DictWrapper(PythonType pt) {
+            type = pt;
+        }
+
+        #region IDataDescriptor Members
+
+        public bool SetAttribute(object instance, object value) {
+            ISuperDynamicObject sdo = instance as ISuperDynamicObject;
+            if (sdo != null) {
+                return sdo.SetDict((IAttributesDictionary)value);
+            }
+
+            return false;
+        }
+
+        public bool DeleteAttribute(object instance) {
+            ISuperDynamicObject sdo = instance as ISuperDynamicObject;
+            if (sdo != null) {
+                return sdo.SetDict(null);
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region IDescriptor Members
+
+        public object GetAttribute(object instance, object owner) {
+            ISuperDynamicObject sdo = instance as ISuperDynamicObject;
+            if (sdo != null) {
+                return sdo.GetDict();
+            }
+
+            if (instance == null) return type.dict;
+
+            throw Ops.TypeError("type {0} has no dict", Ops.StringRepr(type));
+        }
+
+        #endregion
+    }
     /// <summary>
     /// Method wrappers provide quick access to commonly used methods that
     /// short-circuit walking the entire inheritance chain.  When a method wrapper

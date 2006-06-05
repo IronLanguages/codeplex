@@ -31,5 +31,9 @@ def test_positive():
     AreEqual(binascii.a2b_base64('AAA='), '\x00\x00')
     AreEqual(binascii.a2b_base64('%%^^&&A%%&&**A**#%&A='), '\x00\x00')
 
+def test_zeros():
+    """verify zeros don't show up as being only a single character"""
+    AreEqual(binascii.b2a_hex('\x00\x00\x10\x00'), '00001000')
+
 
 run_test(__name__)

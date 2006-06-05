@@ -121,6 +121,7 @@ fieldList = [
     ('__gen_$_parm__', 'GeneratorParmName'),
     ('$env', 'EnvironmentParmName'),
     ('iter', 'Iter'),
+    ('__slots__', 'Slots'),
 
     ('LastWellKnown', 'LastWellKnown')
     ]

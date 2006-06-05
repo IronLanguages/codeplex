@@ -44,6 +44,7 @@ namespace IronPython.Runtime {
         // This is typed as "object" instead of "string" as the user is allowed to set it to an arbitrary object
         public object __module__;
         private Tuple bases;
+        private bool hasSlots;
 
         #region Public API Surface
 
@@ -71,7 +72,7 @@ namespace IronPython.Runtime {
             }
 
             if (ctors.Count == 0) throw new NotImplementedException("no MakeNew found");
-
+            
             ctor = BuiltinFunction.Make(name, ctors.ToArray(), ctors.ToArray(), FunctionType.Function);
 
             if (type.GetInterface("ICustomAttributes") == typeof(ICustomAttributes)) {
@@ -89,6 +90,8 @@ namespace IronPython.Runtime {
             }
 
             IAttributesDictionary fastDict = (IAttributesDictionary)dict;
+
+            if (fastDict.ContainsKey(SymbolTable.Slots)) hasSlots = true;
 
             this.__name__ = name;
             this.__module__ = fastDict[SymbolTable.Module];   // should always be present...
@@ -158,11 +161,16 @@ namespace IronPython.Runtime {
             Debug.Assert(interfacesToExtend.Count < type.GetInterfaces().Length);
 
             // "type" is the instance type used for instances of this type. This will be a type created by NewTypeMaker. 
-            Debug.Assert(NewTypeMaker.IsInstanceType(type));
-            // Its BaseType will the CLI type that needs to be inherited by instance types used by other UserTypes inheriting 
-            // from the current UserType. For pure Python types, this will be System.Object.
-            Debug.Assert(!NewTypeMaker.IsInstanceType(type.BaseType));
+            // It's base type is either system.object, some Python type (Dict, List, etc...), some slots type (derivied
+            // from it's parent type + some properties that expose the slot).  In order to support re-assignment to
+            // class he two types need to share this underlying type which means they have the same layout in memory.  
+            // When extending we therefore typically want to extend the common type, allowing the __class__ assignment
+            // from one type to another.  If we're a type that defines __slots__ though we want to extend ourselves
+            // as we make our object layout unique.
 
+            Debug.Assert(NewTypeMaker.IsInstanceType(type));
+
+            if (hasSlots) return type;            
             return type.BaseType;
         }
 
@@ -317,7 +325,7 @@ namespace IronPython.Runtime {
             object slot;
             if (!TryLookupSlot(context, name, out slot)) {
                 IAttributesDictionary d = GetInitializedDict((ISuperDynamicObject)self); //!!! forces dict init
-                if (d.ContainsKey(name)) {
+                if (d != null && d.ContainsKey(name)) {
                     d.Remove(name);
                     return;
                 } else {
@@ -397,7 +405,7 @@ namespace IronPython.Runtime {
 
             if (name == SymbolTable.Dict) {
                 ret = GetInitializedDict(self);
-                return true;
+                return ret != null;
             }
 
             IAttributesDictionary d = self.GetDict();
@@ -412,7 +420,9 @@ namespace IronPython.Runtime {
             }
 
             if (name == SymbolTable.Class) { ret = this; return true; }
-            if (name == SymbolTable.WeakRef) { ret = null; return true; }
+            if (name == SymbolTable.WeakRef && !hasSlots) {                 
+                ret = null; return true; 
+            }
 
             if (!__getattr__F.IsObjectMethod()) {
                 ret = __getattr__F.Invoke(self, SymbolTable.IdToString(name));
@@ -433,6 +443,8 @@ namespace IronPython.Runtime {
                 throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), SymbolTable.WeakRef);
 
             IAttributesDictionary d = GetInitializedDict((ISuperDynamicObject)self);
+            if (d == null) throw Ops.AttributeErrorForMissingAttribute((string)__name__, name);
+
             d[name] = value;
         }
 
@@ -482,7 +494,7 @@ namespace IronPython.Runtime {
             IAttributesDictionary d = self.GetDict();
             if (d == null) {
                 d = new FieldIdDict();
-                self.SetDict(d);
+                if (!self.SetDict(d)) return null;
             }
             return d;
         }
@@ -706,7 +718,8 @@ namespace IronPython.Runtime {
 
         public override object Positive(object self) {
             object func;
-            if (Ops.TryGetAttr(self, SymbolTable.Positive, out func)) return Ops.Call(func);
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Positive, out func))
+                return Ops.Call(func);
 
             return Ops.NotImplemented;
         }
@@ -795,6 +808,8 @@ namespace IronPython.Runtime {
             System.Diagnostics.Debug.Assert(sdo != null);
 
             IAttributesDictionary d = GetInitializedDict(sdo);
+            if (d == null) throw Ops.AttributeErrorForMissingAttribute((string)Ops.GetDynamicType(self).__name__, SymbolTable.WeakRef);
+
             d[SymbolTable.WeakRef] = value;
         }
 

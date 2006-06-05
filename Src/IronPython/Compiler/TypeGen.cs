@@ -116,14 +116,18 @@ namespace IronPython.Compiler {
             return myType.DefineProperty(name, attrs, returnType, new Type[0]);
         }
 
-        public CodeGen DefineMethodOverride(MethodInfo baseMethod) {
-            MethodAttributes attrs = baseMethod.Attributes &
-                ~(MethodAttributes.Abstract | MethodAttributes.ReservedMask);
-            MethodBuilder mb = myType.DefineMethod(baseMethod.Name, attrs, baseMethod.ReturnType,
+        public CodeGen DefineMethodOverride(MethodAttributes attrs, MethodInfo baseMethod) {
+            MethodAttributes finalAttrs = (baseMethod.Attributes &
+                ~(MethodAttributes.Abstract | MethodAttributes.ReservedMask))|attrs;
+            MethodBuilder mb = myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType,
                 CompilerHelpers.GetTypes(baseMethod.GetParameters()));
             CodeGen ret = new CodeGen(this, mb, mb.GetILGenerator(), baseMethod.GetParameters());
             ret.methodToOverride = baseMethod;
             return ret;
+        }
+
+        public CodeGen DefineMethodOverride(MethodInfo baseMethod) {
+            return DefineMethodOverride((MethodAttributes)0, baseMethod);
         }
 
         public CodeGen DefineMethod(string name, Type retType, Type[] paramTypes, string[] paramNames) {

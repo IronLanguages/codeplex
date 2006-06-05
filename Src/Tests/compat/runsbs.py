@@ -27,7 +27,6 @@ def run_ipython(test):
 
 def get_sbs_tests():
     not_run_tests = [ 
-        "sbs_typeop.py",
     ]
     import nt
     return [x[:-3] for x in nt.listdir(compat_test_path) 

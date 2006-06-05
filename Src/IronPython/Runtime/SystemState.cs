@@ -99,7 +99,7 @@ namespace IronPython.Runtime {
             maxint = Int32.MaxValue;
             maxunicode = (int)ushort.MaxValue;
             platform = Ops.ToPython("cli");
-            version_info = Tuple.MakeTuple(2, 4);
+            version_info = Tuple.MakeTuple(2, 4, 0, "final", 0);    // report as being compatible w/ 2.4.0 final
             // !!! These fields do need to be reset on "reload(sys)". However, the initial value is specified by the 
             // engine elsewhere. For now, we initialize them just once to some default value
             if (version == null) {

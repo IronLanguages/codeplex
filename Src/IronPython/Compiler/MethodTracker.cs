@@ -143,14 +143,28 @@ namespace IronPython.Compiler {
 
     class TrackingParamInfo : ParameterInfo {
         Type type;
+        string name;
 
         public TrackingParamInfo(Type parameterType) {
             type = parameterType;
         }
 
+        public TrackingParamInfo(Type parameterType, string parameterName) {
+            type = parameterType;
+            name = parameterName;
+        }
+
         public override Type ParameterType {
             get {
                 return type;
+            }
+        }
+
+        public override string Name {
+            get {
+                if (name != null) return name;
+
+                return base.Name;
             }
         }
 

@@ -296,8 +296,8 @@ namespace IronPython.Modules {
                 return (GetObject() as ISuperDynamicObject).GetDict();
             }
 
-            void ISuperDynamicObject.SetDict(IAttributesDictionary dict) {
-                (GetObject() as ISuperDynamicObject).SetDict(dict);
+            bool ISuperDynamicObject.SetDict(IAttributesDictionary dict) {
+                return (GetObject() as ISuperDynamicObject).SetDict(dict);
             }
 
             void ISuperDynamicObject.SetDynamicType(UserType newType) {
@@ -454,8 +454,8 @@ namespace IronPython.Modules {
                 return (GetObject() as ISuperDynamicObject).GetDict();
             }
 
-            void ISuperDynamicObject.SetDict(IAttributesDictionary dict) {
-                (GetObject() as ISuperDynamicObject).SetDict(dict);
+            bool ISuperDynamicObject.SetDict(IAttributesDictionary dict) {
+                return (GetObject() as ISuperDynamicObject).SetDict(dict);
             }
 
             void ISuperDynamicObject.SetDynamicType(UserType newType) {

@@ -221,8 +221,8 @@ namespace IronPython.Runtime {
             throw Ops.TypeError("cannot add string and {0}", Ops.GetDynamicType(other).__name__);
         }
 
-        public object MultiplySequence(int count) {
-            return StringOps.Multiply(self, count);
+        public virtual object MultiplySequence(object count) {
+            return StringOps.Multiply(self, Converter.ConvertToSequenceLength(count));
         }
 
         public object this[int index] {

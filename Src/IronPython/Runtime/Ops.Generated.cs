@@ -540,10 +540,10 @@ namespace IronPython.Runtime {
             }
 
 
-            if (x is ISequence && y is int) {
-                return ((ISequence)x).MultiplySequence((int)y);
-            } else if (y is ISequence && x is int) {
-                return ((ISequence)y).MultiplySequence((int)x);
+            if (x is ISequence) {
+                return ((ISequence)x).MultiplySequence(y);
+            } else if (y is ISequence) {
+                return ((ISequence)y).MultiplySequence(x);
             }
 
 

@@ -672,7 +672,9 @@ namespace IronPython.Runtime {
             get {
                 //!!! need to cache this to avoid Tuple creation overhead
                 if (type.BaseType == null) return Tuple.MakeTuple();
-                else return Tuple.MakeTuple(Ops.GetDynamicTypeFromType(type.BaseType)); //??? add interfaces
+                if (type.BaseType == typeof(ValueType)) return Tuple.MakeTuple(TypeCache.Object);
+                
+                return Tuple.MakeTuple(Ops.GetDynamicTypeFromType(type.BaseType)); //??? add interfaces
             }
             [PythonName("__bases__")]
             set {
@@ -1238,14 +1240,16 @@ namespace IronPython.Runtime {
         #region IFancyCallable Members
 
         public object Call(ICallerContext context, object[] args, string[] names) {
-            // built in type doesn't define __init__, we'll
-            // pass the kw args on as property sets.
-            for (int i = 0; i < names.Length; i++) {
-                if (instance == null) {
-                    // unbound call, first arg should be self.
-                    Ops.SetAttr(context, args[0], SymbolTable.StringToId(names[i]), args[args.Length - names.Length + i]);
-                } else {
-                    Ops.SetAttr(context, instance, SymbolTable.StringToId(names[i]), args[args.Length - names.Length + i]);
+            if (!(type is UserType)) {
+                // built in type doesn't define __init__, we'll
+                // pass the kw args on as property sets.
+                for (int i = 0; i < names.Length; i++) {
+                    if (instance == null) {
+                        // unbound call, first arg should be self.
+                        Ops.SetAttr(context, args[0], SymbolTable.StringToId(names[i]), args[args.Length - names.Length + i]);
+                    } else {
+                        Ops.SetAttr(context, instance, SymbolTable.StringToId(names[i]), args[args.Length - names.Length + i]);
+                    }
                 }
             }
             return null;

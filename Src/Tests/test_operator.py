@@ -284,4 +284,14 @@ for x in C1(), C2():
     AreEqual(-x, 10)
     AreEqual(~x, 20)
     AreEqual(abs(x), 30)
+
+
+    
 #***** Above code are from 'Operators' *****
+
+# object identity of booleans - __ne__ should return "True" or "False", not a new boxed bool
+
+AreEqual(id(complex.__ne__(1+1j, 1+1j)), id(False))
+AreEqual(id(complex.__ne__(1+1j, 1+2j)), id(True))
+
+

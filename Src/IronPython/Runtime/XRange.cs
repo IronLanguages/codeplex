@@ -99,7 +99,7 @@ namespace IronPython.Runtime {
             throw Ops.TypeError("unsupported operand type(s) for +: 'xrange' and '{0}'", Ops.GetDynamicType(other).__name__);
         }
 
-        public object MultiplySequence(int count) {
+        public object MultiplySequence(object count) {
             throw Ops.TypeError("unsupported operand type(s) for *: 'xrange' and 'int'");
         }
 

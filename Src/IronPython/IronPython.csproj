@@ -119,6 +119,8 @@
     <Compile Include="Compiler\NameConverter.cs" />
     <Compile Include="Compiler\NameEnv.cs" />
     <Compile Include="Compiler\Namespace.cs" />
+    <Compile Include="Compiler\NewSubtypeMaker.cs" />
+    <Compile Include="Compiler\NewTypeInfo.cs" />
     <Compile Include="Compiler\NewTypeMaker.cs" />
     <Compile Include="Compiler\Node.cs" />
     <Compile Include="Compiler\Operator.cs" />

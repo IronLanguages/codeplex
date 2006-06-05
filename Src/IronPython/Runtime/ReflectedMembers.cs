@@ -89,11 +89,31 @@ namespace IronPython.Runtime {
         #endregion
     }
 
+    /// <summary>
+    /// Just like a reflected property, but we also allow deleting of values (setting them to
+    /// uninitialized)
+    /// </summary>
+    public class ReflectedSlotProperty : ReflectedProperty {
+        
+        public ReflectedSlotProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) :
+            base(info, getter, setter, nt) {
+        }
+
+        [PythonName("__delete__")]
+        public override bool DeleteAttribute(object instance) {
+            if (instance != null) {
+                SetAttribute(instance, new Uninitialized(info.Name));
+                return true;
+            }
+            return false;
+        }
+    }
 
     public class ReflectedProperty : IDataDescriptor, IContextAwareMember {
         public readonly MethodInfo getter, setter;
         public readonly PropertyInfo info;
         private NameType nameType;
+        private BuiltinFunction optGetter, optSetter;
 
         public ReflectedProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) {
             this.info = info;
@@ -121,45 +141,75 @@ namespace IronPython.Runtime {
         public object GetAttribute(object instance, object context) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
             if (getter == null) throw Ops.TypeError("writeonly attribute");
-            if (instance == null) {
-                if (getter.IsStatic) return Ops.ToPython(getter.Invoke(null, new object[0]));
-                else return this;
-            } else {
-                return Ops.ToPython(getter.Invoke(instance, new object[0]));
-            }
-        }
 
-        private void DoSet(object instance, object val) {
-            PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
-            if (setter == null) throw Ops.TypeError("readonly attribute");
-            setter.Invoke(instance,
-                new object[] { Ops.ConvertTo(val, info.PropertyType) });
+            OptimizePropertyMethod(ref optGetter, getter);
+
+            if (instance == null && !getter.IsStatic) return this;
+
+            if (optGetter != null) {
+                if (instance == null) {
+                    return optGetter.Call();
+                } else {
+                    return optGetter.Call(instance);
+                }
+            } 
+
+            return DoGet(instance);            
         }
 
         [PythonName("__set__")]
         public bool SetAttribute(object instance, object value) {
-            if (instance == null) {
-                if (setter == null) return false;
+            if(setter != null) OptimizePropertyMethod(ref optSetter, setter);
 
-                if (setter.IsStatic) {
-                    DoSet(null, value);
+            if (instance == null && (setter == null || !setter.IsStatic)) return false;
+
+            if (optSetter != null) {
+                if (instance == null) {
+                    optSetter.Call(value);
                 } else {
-                    return false;
+                    optSetter.Call(instance, value);
                 }
-            } else {
-                DoSet(instance, value); //.toObject(info.DeclaringType, "set "), val);
+                return true;
             }
+
+            DoSet(instance, value);
             return true;
         }
 
         [PythonName("__delete__")]
-        public bool DeleteAttribute(object instance) {
+        public virtual bool DeleteAttribute(object instance) {
             throw Ops.TypeError("can't delete property on built-in object");
         }
 
         [PythonName("__str__")]
         public override string ToString() {
             return string.Format("<property# {0} on {1}>", info.Name, info.DeclaringType.Name);
+        }
+
+        private void OptimizePropertyMethod(ref BuiltinFunction bf, MethodInfo method) {
+            if (Options.OptimizeReflectCalls && bf == null) {
+                FunctionType ft = FunctionType.Method;
+                if (method.IsStatic) ft = FunctionType.Function;
+                bf = ReflectOptimizer.MakeFunction(new ReflectedMethod(info.Name, method, ft));
+            }
+        }
+
+        private void DoSet(object instance, object val) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
+            if (setter == null) throw Ops.TypeError("readonly attribute");
+            try {
+                setter.Invoke(instance, new object[] { Ops.ConvertTo(val, info.PropertyType) });
+            } catch (TargetInvocationException tie) {
+                throw ExceptionConverter.UpdateForRethrow(tie.InnerException);
+            }
+        }
+
+        private object DoGet(object instance) {
+            try {
+                return Ops.ToPython(getter.Invoke(instance, new object[0]));
+            } catch (TargetInvocationException tie) {
+                throw ExceptionConverter.UpdateForRethrow(tie.InnerException);
+            }
         }
 
         #region IContextAwareMember Members

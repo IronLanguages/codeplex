@@ -62,7 +62,7 @@ namespace IronPython.Runtime {
     public interface ISuperDynamicObject : IDynamicObject {
         /// <returns>This can return null if the object has no attributes.</returns>
         IAttributesDictionary GetDict();
-        void SetDict(IAttributesDictionary dict);
+        bool SetDict(IAttributesDictionary dict);
 
         void SetDynamicType(UserType newType);  //??? maybe PythonType
     }
@@ -159,7 +159,7 @@ namespace IronPython.Runtime {
         [PythonName("__add__")]
         object AddSequence(object other);  //??? require that other be ISequence
         [PythonName("__mul__")]
-        object MultiplySequence(int count);
+        object MultiplySequence(object count);
 
         object this[int index] {
             get;

@@ -515,6 +515,9 @@ AreEqual(a.xyz, 'C1')
 del(C1.__getattribute__)
 AreEqual(a.xyz, 'B')
 
+# int mro shouldn't include ValueType
+AreEqual(int.__mro__, (int, object))
+
 # Testing the class attributes backed by globals
 
 x = 10
@@ -1019,3 +1022,132 @@ class D(C, B, G):
 d = D()
 d.meth = type(F.meth)(gmeth, d, G)
 AreEqual(d.meth(), 'G')
+
+
+### slots tests ###
+
+# simple slots, assign, delete, etc...
+
+class foo(object):
+    __slots__ = ['abc']
+    
+class bar(object):
+    __slots__ = 'abc'
+
+class baz(object):
+    __slots__ = ('abc', )
+
+for slotType in [foo, bar, baz]:
+    a = slotType()
+    try:
+        x = a.abc
+        AreEqual(True, False)
+    except AttributeError: pass
+    
+    AreEqual(hasattr(a, 'abc'), False)
+    
+    a.abc = 'xyz'
+    AreEqual(a.abc, 'xyz')
+    
+    AreEqual(hasattr(a, 'abc'), True)
+    del(a.abc)
+    AreEqual(hasattr(a, 'abc'), False)
+    
+    # slot classes don't have __dict__
+    try:
+        x = a.abc
+        AreEqual(True, False)
+    except AttributeError: pass
+    
+    AreEqual(hasattr(a, '__dict__'), False)
+    try:
+        x = a.__dict__
+    except AttributeError: pass
+
+# sub-class of slots class, has no slots, has a __dict__
+
+class foo(object):
+    __slots__ = 'abc'
+    def __init__(self):
+        self.abc = 23
+        
+class bar(foo): 
+    def __init__(self):
+        super(bar, self).__init__()
+    
+a = bar()
+AreEqual(a.abc, 23)
+del(a.abc)
+AreEqual(hasattr(a, 'abc'), False)
+a.abc = 42
+AreEqual(a.abc, 42)
+
+x = a.__dict__
+AreEqual(x.has_key('abc'), False)
+a.xyz = 'abc'
+AreEqual(a.xyz, 'abc')
+
+
+# slots & metaclass
+class foo(type): 
+	__slots__ = ['abc']
+
+class bar(object):
+    __metaclass__ = foo
+
+# complex slots
+
+class foo(object):
+	__slots__ = ['abc']
+	def __new__(cls, *args, **kw):
+		self = object.__new__(cls)
+		dict = object.__getattribute__(self, '__dict__')
+		return self
+
+class bar(foo): pass
+
+a = bar()
+
+AssertError(AttributeError, foo)
+
+# calling w/ keyword args
+
+class foo(object):
+	__slots__ = ['a', 'b']
+	def __new__(cls, one='a', two='b'):
+		self = object.__new__(cls)
+		self.a = one
+		self.b = two
+		return self
+
+a = foo('x', two='y')
+AreEqual(a.a, 'x')
+AreEqual(a.b, 'y')
+
+# CLI specific tests
+
+if is_cli:
+    
+    import System
+    
+    # slots & interfaces
+    class foo(object):
+        __slots__ = ['abc']
+    
+    class bar(foo, System.IComparable):
+        def CompareTo(self, other):
+                return 23
+    
+    class baz(bar): pass
+    
+    
+# assign to __dict__
+
+class C(object): pass
+
+a = C()
+a.__dict__ = {'b':1}
+AreEqual(a.b, 1)
+
+    
+    

@@ -290,6 +290,8 @@ namespace IronPython.Runtime {
         public static readonly SymbolId EnvironmentParmName = new SymbolId(EnvironmentParmNameId);
         ///<summary>Symbol for 'iter'</summary> 
         public static readonly SymbolId Iter = new SymbolId(IterId);
+        ///<summary>Symbol for '__slots__'</summary> 
+        public static readonly SymbolId Slots = new SymbolId(SlotsId);
 
         // *** END GENERATED CODE ***
 
@@ -438,7 +440,8 @@ namespace IronPython.Runtime {
         public const int GeneratorParmNameId = 127;
         public const int EnvironmentParmNameId = 128;
         public const int IterId = 129;
-        public const int LastWellKnownId = 130;
+        public const int SlotsId = 130;
+        public const int LastWellKnownId = 131;
 
         // *** END GENERATED CODE ***
 
@@ -587,6 +590,7 @@ namespace IronPython.Runtime {
             StringToId("__gen_$_parm__");  // 127
             StringToId("$env");  // 128
             StringToId("iter");  // 129
+            StringToId("__slots__");  // 130
 
             // *** END GENERATED CODE ***
 

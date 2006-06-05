@@ -18,6 +18,7 @@ using System.Threading;
 using System.Globalization;
 using System.Text;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 using IronPython.Runtime;
 
@@ -44,8 +45,10 @@ namespace IronPython.Modules {
         public static string tzname = TimeZone.CurrentTimeZone.StandardName;
         public static bool accept2dyear = true;
 
+        private static Stopwatch sw;
+
         [PythonName("asctime")]
-        public static string AscTime() {
+        public static string AscTime() {                
             return AscTime(null);
         }
 
@@ -65,7 +68,8 @@ namespace IronPython.Modules {
 
         [PythonName("clock")]
         public static double Clock() {
-            return DateTime.Now.Ticks / 1.0e7;
+            InitStopWatch();            
+            return ((double)sw.ElapsedTicks) / Stopwatch.Frequency;
         }
 
         [PythonName("ctime")]
@@ -342,6 +346,13 @@ namespace IronPython.Modules {
                 if (formatInfo[i].Text == format) return i;
             }
             return -1;
+        }
+
+        private static void InitStopWatch() {
+            if (sw == null) {
+                sw = new Stopwatch();
+                sw.Start();
+            }
         }
 
     }

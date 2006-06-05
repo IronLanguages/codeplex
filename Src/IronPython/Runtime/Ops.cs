@@ -333,10 +333,12 @@ namespace IronPython.Runtime {
         /// wrappers are required. Try *really hard* to avoid wrappers.
         /// </summary>
         public static object ToPython(Type type, object o) {
+            if (type == typeof(bool)) return Bool2Object((bool)o);  // preserve object identity o
+
             return ToPython(o);
         }
 
-        public static object ToPython(object o) {
+       public static object ToPython(object o) {
             if (o == null) return o;
             return o;
         }
@@ -1593,6 +1595,14 @@ namespace IronPython.Runtime {
         public static void CheckInitialized(object o) {
             if (o is Uninitialized) {
                 throw Ops.NameError("name '{0}' not defined", ((Uninitialized)o).name);
+            }
+        }
+
+        public static void CheckInitializedAttribute(object o, object self) {
+            if (o is Uninitialized) {
+                throw Ops.AttributeError("'{0}' object has no attribute '{1}'", 
+                    Ops.GetDynamicType(self), 
+                    ((Uninitialized)o).name);
             }
         }
 
