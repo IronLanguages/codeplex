@@ -61,9 +61,9 @@ namespace IronPython.Hosting {
 
         #region Private Data Members
         private IConsole _console = null;
+        private SystemState systemState = new SystemState();
         private Frame topFrame;
         private CompilerContext context = new CompilerContext("<stdin>");
-        private EngineContext engineContext;
         #endregion
 
         #region Constructor
@@ -71,10 +71,11 @@ namespace IronPython.Hosting {
             // make sure cctor for OutputGenerator has run
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(OutputGenerator).TypeHandle);
 
-            engineContext = new EngineContext();
-            topFrame = new Frame(engineContext.Module);
+            PythonModule mod = new PythonModule("__main__", new Dict(), systemState);
+            topFrame = new Frame(mod);
             options = new Options();
         }
+
         public PythonEngine(Options opts)
             : this() {
             if (opts == null) 
@@ -82,9 +83,10 @@ namespace IronPython.Hosting {
             // Save the options. Clone it first to prevent the client from unexpectedly mutating it
             options = opts.Clone();
         }
+
         public void Shutdown() {
             object callable;
-            if (Sys.TryGetAttr(engineContext, SymbolTable.SysExitFunc, out callable)) {
+            if (Sys.TryGetAttr(topFrame, SymbolTable.SysExitFunc, out callable)) {
                 try {
                     Ops.Call(callable);
                 } catch (Exception e) {
@@ -113,23 +115,22 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Non-Public Members
-        private int RunFileInNewModule(string fileName, string moduleName, bool skipLine, out bool exitRaised) {
+        private int RunFileInNewModule(string fileName, string moduleName, bool skipLine, out PythonModule mod, out bool exitRaised) {
             CompilerContext context = new CompilerContext(fileName);
-            Parser p = Parser.FromFile(engineContext.SystemState, context, skipLine, false);
+            Parser p = Parser.FromFile(Sys, context, skipLine, false);
             Stmt s = p.ParseFileInput();
 
-            PythonModule mod = OutputGenerator.GenerateModule(engineContext.SystemState, context, s, moduleName);
+            mod = OutputGenerator.GenerateModule(Sys, context, s, moduleName);
 
             Sys.modules[mod.ModuleName] = mod;
-            engineContext.ResetModule(mod);
-            mod.SetAttr(engineContext, SymbolTable.File, fileName);
+            mod.SetAttr(mod, SymbolTable.File, fileName);
             exitRaised = false;
 
             try {
                 mod.Initialize();
             } catch (PythonSystemExit e) {
                 exitRaised = true;
-                return e.GetExitCode(engineContext);
+                return e.GetExitCode(mod);
             }
 
             return 0;
@@ -142,7 +143,7 @@ namespace IronPython.Hosting {
             try {
                 result = interactiveAction(out continueInteraction);
             } catch (PythonSystemExit se) {
-                return se.GetExitCode(engineContext);
+                return se.GetExitCode(topFrame);
             } catch (ThreadAbortException tae) {
                 PythonKeyboardInterrupt pki = tae.ExceptionState as PythonKeyboardInterrupt;
                 if (pki != null) {
@@ -189,7 +190,7 @@ namespace IronPython.Hosting {
         }
 
         private Stmt ParseInteractiveInput(string text, bool allowIncompleteStatement) {
-            Parser p = Parser.FromString(engineContext.SystemState, context, text);
+            Parser p = Parser.FromString(Sys, context, text);
             return p.ParseInteractiveInput(allowIncompleteStatement);
         }
 
@@ -403,7 +404,7 @@ namespace IronPython.Hosting {
             try {
                 code.Run(topFrame);
             } catch (PythonSystemExit e) {
-                return e.GetExitCode(engineContext);
+                return e.GetExitCode(topFrame);
             }
             return null; // null indicates that the execution completed normally, without a PythonSystemExit being raised
         }
@@ -433,39 +434,47 @@ namespace IronPython.Hosting {
             // Publish the command line arguments
             Sys.argv = new List(commandLineArgs);
 
+            PythonModule mod = null;
+
             if (introspection) {
                 bool continueInteraction;
                 int result = TryInteractiveAction(
                     delegate(out bool continueInteractionArgument) {
                         bool exitRaised;
-                        int res = RunFileInNewModule(fileName, "__main__", skipLine, out exitRaised);
+                        int res = RunFileInNewModule(fileName, "__main__", skipLine, out mod, out exitRaised);
                         continueInteractionArgument = !exitRaised;
                         return res;
                     },
                     out continueInteraction);
 
                 if (continueInteraction) {
-                    topFrame = new Frame(engineContext.Module);
+                    if (mod == null) {
+                        // If there was an error generating a new module (for eg. because of a syntax error),
+                        // we will just use the existing "topFrame"
+                    } else {
+                        // Otherwise, we create a new "topFrame"
+                        topFrame = new Frame(mod);
+                    }
                     return RunInteractiveLoop();
                 } else {
                     return result;
                 }
             } else {
                 bool exitRaised;
-                return RunFileInNewModule(fileName, "__main__", skipLine, out exitRaised);
+                return RunFileInNewModule(fileName, "__main__", skipLine, out mod, out exitRaised);
             }
         }
 
         public int ExecuteToConsole(string text) {
-            Parser p = Parser.FromString(engineContext.SystemState, context, text);
+            Parser p = Parser.FromString(Sys, context, text);
             Stmt s = p.ParseFileInput();
 
             FrameCode code = OutputGenerator.GenerateSnippet(context, s, true);
 
             try {
-                code.Run(new Frame(engineContext.Module));
+                code.Run(topFrame);
             } catch (PythonSystemExit e) {
-                return e.GetExitCode(engineContext);
+                return e.GetExitCode(topFrame);
             }
             return 0;
         }
@@ -510,14 +519,14 @@ namespace IronPython.Hosting {
 
         public int RunInteractive() {
             topFrame.SetGlobal("__doc__", null);
-            Sys.modules[engineContext.Module.ModuleName] = engineContext.Module;
+            Sys.modules[topFrame.Module.ModuleName] = topFrame.Module;
             return RunInteractiveLoop();
         }
         #endregion
 
         public SystemState Sys {
             get {
-                return engineContext.SystemState;
+                return systemState;
             }
         }
 
@@ -527,11 +536,11 @@ namespace IronPython.Hosting {
         }
 
         public void LoadAssembly(Assembly assem) {
-            engineContext.SystemState.TopPackage.LoadAssembly(engineContext.SystemState, assem);
+            Sys.TopPackage.LoadAssembly(Sys, assem);
         }
 
         public object Import(string module) {
-            object mod = Importer.ImportModule(engineContext, module, true);
+            object mod = Importer.ImportModule(topFrame, module, true);
             if (mod != null) {
                 string[] names = module.Split('.');
                 topFrame.SetGlobal(names[names.Length - 1], mod);
@@ -553,7 +562,7 @@ namespace IronPython.Hosting {
             try {
                 init();
             } catch (PythonSystemExit x) {
-                return x.GetExitCode(compiledEngine.engineContext);
+                return x.GetExitCode(compiledEngine.topFrame);
             } catch (Exception e) {
                 compiledEngine.MyConsole.Write(compiledEngine.FormatException(e), Style.Error);
                 return -1;
@@ -575,7 +584,7 @@ namespace IronPython.Hosting {
 
             if (references != null) {
                 for (int i = 0; i < references.Length; i++) {
-                    compiledEngine.engineContext.SystemState.ClrModule.AddReference(references[i]);
+                    compiledEngine.Sys.ClrModule.AddReference(references[i]);
                 }            
             }
 
@@ -588,18 +597,18 @@ namespace IronPython.Hosting {
 
         #region IO Stream
         public void SetStderr(Stream stream) {
-            Sys.__stderr__ = new PythonFile(stream, engineContext.SystemState.DefaultEncoding, "HostedStderr", "w");
+            Sys.__stderr__ = new PythonFile(stream, Sys.DefaultEncoding, "HostedStderr", "w");
             Sys.stderr = Sys.__stderr__;
         }
 
 
         public void SetStdout(Stream stream) {
-            Sys.__stdout__ = new PythonFile(stream, engineContext.SystemState.DefaultEncoding, "HostedStdout", "w");
+            Sys.__stdout__ = new PythonFile(stream, Sys.DefaultEncoding, "HostedStdout", "w");
             Sys.stdout = Sys.__stdout__;
         }
 
         public void SetStdin(Stream stream) {
-            Sys.__stdin__ = new PythonFile(stream, engineContext.SystemState.DefaultEncoding, "HostedStdin", "w");
+            Sys.__stdin__ = new PythonFile(stream, Sys.DefaultEncoding, "HostedStdin", "w");
             Sys.stdin = Sys.__stdin__;
         }
         #endregion
@@ -607,52 +616,52 @@ namespace IronPython.Hosting {
         #region Get\Set Variable
         public void SetVariable(string name, object val) {
             val = Ops.ToPython(val);
-            Ops.SetAttr(engineContext, engineContext.Module, SymbolTable.StringToId(name), val);
+            Ops.SetAttr(topFrame, topFrame.Module, SymbolTable.StringToId(name), val);
         }
 
         public object GetVariable(string name) {
-            return Ops.GetAttr(engineContext, engineContext.Module, SymbolTable.StringToId(name));
+            return Ops.GetAttr(topFrame, topFrame.Module, SymbolTable.StringToId(name));
         }
         #endregion
 
         #region Dynamic Execution\Evaluation
         public int Execute(string text) {
-            Parser p = Parser.FromString(engineContext.SystemState, context, text);
-            int? res = Execute(p, engineContext.Module);
+            Parser p = Parser.FromString(Sys, context, text);
+            int? res = Execute(p, topFrame.Module);
             return (res == null) ? 0 : (int)res;
         }
 
         public int? ExecuteFile(string fileName) {
-            Parser p = Parser.FromFile(engineContext.SystemState, context.CopyWithNewSourceFile(fileName));
-            return Execute(p, engineContext.Module);
+            Parser p = Parser.FromFile(Sys, context.CopyWithNewSourceFile(fileName));
+            return Execute(p, topFrame.Module);
         }
 
         public int RunFile(string fileName) {
-            Parser p = Parser.FromFile(engineContext.SystemState, context.CopyWithNewSourceFile(fileName));
+            Parser p = Parser.FromFile(Sys, context.CopyWithNewSourceFile(fileName));
             Stmt s = p.ParseFileInput();
             string moduleName = "tmp" + counter++;
 
-            PythonModule mod = OutputGenerator.GenerateModule(engineContext.SystemState, p.CompilerContext, s, moduleName);
-            foreach (KeyValuePair<SymbolId, object> name in engineContext.Module.__dict__.SymbolAttributes) {
-                mod.SetAttr(engineContext, name.Key, name.Value);
+            PythonModule mod = OutputGenerator.GenerateModule(Sys, p.CompilerContext, s, moduleName);
+            foreach (KeyValuePair<SymbolId, object> name in topFrame.Module.__dict__.SymbolAttributes) {
+                mod.SetAttr(topFrame, name.Key, name.Value);
             }
-            mod.SetAttr(engineContext, SymbolTable.File, fileName);
+            mod.SetAttr(topFrame, SymbolTable.File, fileName);
 
             try {
                 mod.Initialize();
             } catch (PythonSystemExit e) {
-                return e.GetExitCode(engineContext);
+                return e.GetExitCode(topFrame);
             }
 
             return 0;
         }
 
         public object Evaluate(string expr) {
-            return Builtin.Eval(engineContext, expr);
+            return Builtin.Eval(topFrame, expr);
         }
 
         public T Evaluate<T>(string expr) {
-            return Converter.Convert<T>(Builtin.Eval(engineContext, expr));
+            return Converter.Convert<T>(Builtin.Eval(topFrame, expr));
         }
         #endregion
 
@@ -660,7 +669,7 @@ namespace IronPython.Hosting {
         public void Execute(object code) {
             FrameCode fc = code as FrameCode;
             if (fc != null) {
-                fc.Run(new Frame(engineContext.Module));
+                fc.Run(new Frame(topFrame.Module));
             } else if (code is string) {
                 Execute((string)code);
             } else {
@@ -673,7 +682,7 @@ namespace IronPython.Hosting {
         }
 
         public object Compile(string text, bool printExprStatements) {
-            Parser p = Parser.FromString(engineContext.SystemState, context, text);
+            Parser p = Parser.FromString(Sys, context, text);
             Stmt s = p.ParseFileInput();
 
             return OutputGenerator.GenerateSnippet(context, s, printExprStatements);

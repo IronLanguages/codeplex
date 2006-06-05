@@ -23,13 +23,20 @@ using IronPython.Compiler;
 using IronPython.Modules;
 
 namespace IronPython.Runtime {
-    // Frame holds the namespace for the code for FrameCode snippets.
-    // Most imported Python modules will not use a Frame, and will instead store the namespace
-    // in the generated assembly
+    /// <summary>
+    /// PythonModule normally runs code using compiled modules. However, FrameCode snippet code can also 
+    /// be run in the context of a PythonModule. In such a case, Frame holds the context and scope information
+    /// of the PythonModule..
+    /// </summary>
 
     public class Frame : IFrameEnvironment, ICloneable {
+        // This is usually the same as __module__.__dict__.
+        // It differs for code which does:
+        //     eval("someGlobal==someLocal", { "someGlobal":1 }, { "someLocal":1 })
         private IDictionary<object, object> f_globals;
+
         private object f_locals; // can be any dictionary or IMapping.
+
         private bool trueDivision;
 
         private ReflectedType __builtin__;
@@ -120,7 +127,7 @@ namespace IronPython.Runtime {
 
         #region ICallerContext Members
 
-        PythonModule ICallerContext.Module {
+        public PythonModule Module {
             get { return __module__; }
         }
 
