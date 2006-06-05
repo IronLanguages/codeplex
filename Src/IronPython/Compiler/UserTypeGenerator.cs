@@ -408,8 +408,15 @@ namespace IronPython.Compiler {
                 object[] funcDefaults = GetStaticDefaults(node, paramNames.Length);
                 MethodInfo baseMethod = GetMethodOverload(strName, attrs);
 
-                Type retType = typeof(object);
-                if (baseMethod != null) {
+                Type retType;
+                if (baseMethod == null) {
+                    // Check whether the method has a return statement, to decide whether it should
+                    // return void or object
+                    ReturnStatementFinder finder = new ReturnStatementFinder(node);
+                    node.Walk(finder);
+                    retType = finder.FoundReturnStatement ? typeof(object) : typeof(void);
+                } else {
+                    // Get the return and param types from the base method
                     typeArr = CompilerHelpers.GetTypes(baseMethod.GetParameters());
                     retType = baseMethod.ReturnType;
                     attrs |= MethodAttributes.Virtual;
@@ -1038,5 +1045,30 @@ namespace IronPython.Compiler {
                 }
             }
         }
+
+        private class ReturnStatementFinder : AstWalkerNonRecursive {
+            private FuncDef _funcDef;
+            public bool FoundReturnStatement = false;
+
+            public ReturnStatementFinder(FuncDef funcDef) { _funcDef = funcDef; }
+
+            // Only recurse on constructs that can contain return statements
+
+            public override bool Walk(SuiteStmt node) { return true; }
+            public override bool Walk(ForStmt node) { return true; }
+            public override bool Walk(IfStmt node) { return true; }
+            public override bool Walk(WhileStmt node) { return true; }
+            public override bool Walk(TryFinallyStmt node) { return true; }
+            public override bool Walk(TryStmt node) { return true; }
+
+            // Only recurse on the function itself, but not any nested ones
+            public override bool Walk(FuncDef node) { return (node == _funcDef); }
+
+            public override bool Walk(ReturnStmt node) {
+                FoundReturnStatement = true;
+                return false;
+            }
+        }
+
     }
 }

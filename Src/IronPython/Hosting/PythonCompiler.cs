@@ -275,6 +275,9 @@ namespace IronPython.Hosting {
             } else {
                 // auto-import all compiled modules, useful for CodeDom scenarios.
                 init = OutputGenerator.GenerateModuleInitialize(context, gs, tg, staticTypes, delegate(CodeGen cg) {
+
+                    Location dummyLocation = new Location(1, 1);
+
                     for (int i = 0; i < sourceFiles.Count; i++) {
                         string otherModName = GetModuleFromFilename(sourceFiles[i]);
                         if (otherModName == moduleName) continue;
@@ -282,9 +285,47 @@ namespace IronPython.Hosting {
                         FromImportStmt stmt = new FromImportStmt(
                             new DottedName(new SymbolId[] { SymbolTable.StringToId(otherModName) }),
                             FromImportStmt.Star, null);
-                        stmt.start = new Location(1, 1);
-                        stmt.end = new Location(1, 1);
+                        stmt.start = dummyLocation;
+                        stmt.end = dummyLocation;
                         stmt.Emit(cg);
+                    }
+
+                    // Import the first part of all namespaces in all referenced assemblies
+
+                    // First, determine the set of unique such prefixes
+                    Dictionary<string, object> nsPrefixes = new Dictionary<string, object>();
+                    foreach (string assemblyPath in ReferencedAssemblies) {
+                        Assembly a;
+                        try {
+                            a = Assembly.LoadFrom(assemblyPath);
+                        } catch {
+                            // Ignore assemblies that can't be loaded
+                            continue;
+                        }
+
+                        foreach (Type t in a.GetTypes()) {
+                            // We only care about public types
+                            if (!t.IsPublic) continue;
+
+                            // Ignore types that don't have a namespace
+                            if (t.Namespace == null) continue;
+
+                            string nsPrefix = t.Namespace.Split('.')[0];
+                            nsPrefixes[nsPrefix] = null;
+                        }
+                    }
+
+                    // Import all the uniquer prefixes we found
+                    foreach (string nsPrefix in nsPrefixes.Keys) {
+                        SymbolId symbolId = SymbolTable.StringToId(nsPrefix);
+                        cg.Names.CreateGlobalSlot(symbolId);
+                        DottedName dottedName = new DottedName(new SymbolId[] { symbolId });
+                        ImportStmt importStmt = new ImportStmt(
+                            new DottedName[] { dottedName },
+                            new SymbolId[] { SymbolTable.Empty });
+                        importStmt.start = dummyLocation;
+                        importStmt.end = dummyLocation;
+                        importStmt.Emit(cg);
                     }
                 });
             }
