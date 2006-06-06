@@ -188,7 +188,7 @@ namespace IronPython.Runtime {
             get { return __dict__; }
         }
 
-        object ICallerContext.Globals {
+        IAttributesDictionary ICallerContext.Globals {
             get { return __dict__; }
         }
 

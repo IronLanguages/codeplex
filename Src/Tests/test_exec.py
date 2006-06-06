@@ -242,3 +242,70 @@ Assert("a" in myglob)
 Assert("a" not in myloc)
 Assert("b" in myglob)
 Assert("b" not in myloc)
+
+# Testing interesting exec cases
+
+x = "global_x"
+
+def TryExecG(what, glob):
+    exec what in glob
+
+def TryExecGL(what, glob, loc):
+    exec what in glob, loc
+
+class Nothing:
+    pass
+
+def MakeDict(value):
+    return { 'AreEqual' : AreEqual, 'AssertError' : AssertError, 'x' : value, 'str' : str }
+
+class Mapping:
+    def __init__(self, value = None):
+        self.values = MakeDict(value)
+    def __getitem__(self, item):
+        return self.values[item]
+
+class MyDict(dict):
+    def __init__(self, value = None):
+        self.values = MakeDict(value)
+    def __getitem__(self, item):
+        return self.values[item]
+
+TryExecG("AreEqual(x, 'global_x')", None)
+TryExecGL("AreEqual(x, 'global_x')", None, None)
+
+AssertError(TypeError, TryExecG, "print x", Nothing())
+AssertError(TypeError, TryExecGL, "print x", Nothing(), None)
+
+AssertError(TypeError, TryExecG, "print x", Mapping())
+AssertError(TypeError, TryExecGL, "print x", Mapping(), None)
+
+TryExecG("AreEqual(x, 17)", MakeDict(17))
+TryExecGL("AreEqual(x, 19)", MakeDict(19), None)
+
+#TryExecG("AreEqual(x, 23)", MyDict(23))
+#TryExecGL("AreEqual(x, 29)", MyDict(29), None)
+
+TryExecGL("AreEqual(x, 31)", None, MakeDict(31))
+AssertError(TypeError, TryExecGL, "print x", None, Nothing())
+
+TryExecGL("AreEqual(x, 37)", None, Mapping(37))
+#TryExecGL("AreEqual(x, 41)", None, MyDict(41))
+
+# Evaluating the "in" expressions in exec statement
+
+def f(l):
+    l.append("called f")
+    return {}
+
+l = []
+exec "pass" in f(l)
+AreEqual(l, ["called f"])
+
+def g(l):
+    l.append("called g")
+    return {}
+
+l = []
+exec "pass" in f(l), g(l)
+AreEqual(l, ["called f", "called g"])

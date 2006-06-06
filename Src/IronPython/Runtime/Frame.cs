@@ -68,30 +68,32 @@ namespace IronPython.Runtime {
         }
 
         private bool TryGetLocal(SymbolId symbol, out object ret) {
-            // couple of exception-free fast paths...
-            IAttributesDictionary ad = f_locals as IAttributesDictionary;
-            if (ad != null) {
-                if (ad.TryGetValue(symbol, out ret)) return true;
-            }
+            if (f_locals != null) {
+                // couple of exception-free fast paths...
+                IAttributesDictionary ad = f_locals as IAttributesDictionary;
+                if (ad != null) {
+                    if (ad.TryGetValue(symbol, out ret)) return true;
+                }
 
-            string name = symbol.ToString();
+                string name = symbol.ToString();
 
-            IDictionary<object, object> dict = f_locals as IDictionary<object, object>;
-            if (dict != null) {
-                if (dict.TryGetValue(name, out ret)) return true;
-            }
+                IDictionary<object, object> dict = f_locals as IDictionary<object, object>;
+                if (dict != null) {
+                    if (dict.TryGetValue(name, out ret)) return true;
+                }
 
-            IMapping imap = f_locals as IMapping;
-            if (imap != null) {
-                return imap.TryGetValue(name, out ret);
-            }
+                IMapping imap = f_locals as IMapping;
+                if (imap != null) {
+                    return imap.TryGetValue(name, out ret);
+                }
 
-            // uh-oh, we may end up throwing...
-            try {
-                ret = Ops.GetIndex(f_locals, name);
-                return true;
-            } catch (KeyNotFoundException) {
-                // return false
+                // uh-oh, we may end up throwing...
+                try {
+                    ret = Ops.GetIndex(f_locals, name);
+                    return true;
+                } catch (KeyNotFoundException) {
+                    // return false
+                }
             }
             ret = null;
             return false;
@@ -100,7 +102,7 @@ namespace IronPython.Runtime {
         public void DelLocal(SymbolId symbol) {
             try {
                 Ops.DelIndex(f_locals, symbol.ToString());
-            } catch(KeyNotFoundException) {                
+            } catch (KeyNotFoundException) {
                 throw Ops.NameError("name {0} is not defined", symbol);
             }
         }
@@ -151,7 +153,7 @@ namespace IronPython.Runtime {
             get { return f_locals; }
         }
 
-        object ICallerContext.Globals {
+        IAttributesDictionary ICallerContext.Globals {
             get { return f_globals; }
         }
 

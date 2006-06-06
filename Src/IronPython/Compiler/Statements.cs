@@ -978,37 +978,27 @@ namespace IronPython.Compiler {
             cg.EmitPosition(start, end);
             cg.EmitCallerContext();
             code.Emit(cg);
-            if (locals == null) {
-                if (globals == null) {
-                    // pass in the current module's globals.
-                    cg.EmitCall(typeof(Ops), "Exec", new Type[] {
+            if (locals == null && globals == null) {
+                // pass in the current module's globals.
+                cg.EmitCall(typeof(Ops), "Exec", new Type[] {
                         typeof(ICallerContext),
                         typeof(object),                        
                     });
-                } else {
-                    // user provided only globals, this gets used as both dictionarys.
-                    globals.Emit(cg);
-                    cg.EmitCastFromObject(typeof(IAttributesDictionary));
-                    globals.Emit(cg);
-                    cg.EmitCastFromObject(typeof(IAttributesDictionary));
-                    cg.EmitCall(typeof(Ops), "Exec", new Type[] {
-                        typeof(ICallerContext),
-                        typeof(object),
-                        typeof(IAttributesDictionary),
-                        typeof(IAttributesDictionary)
-                    });
-                }
             } else {
-                // locals is last so both are defined
-                locals.Emit(cg);
-                cg.EmitCastFromObject(typeof(IAttributesDictionary));
+                // We must have globals now (locals is last and may be absent)
+                Debug.Assert(globals != null);
                 globals.Emit(cg);
                 cg.EmitCastFromObject(typeof(IAttributesDictionary));
+                if (locals != null) {
+                    locals.Emit(cg);        // emit locals
+                } else {
+                    cg.Emit(OpCodes.Dup);   // use globals
+                }
                 cg.EmitCall(typeof(Ops), "Exec", new Type[] {
                         typeof(ICallerContext),
                         typeof(object),
                         typeof(IAttributesDictionary),
-                        typeof(IAttributesDictionary)
+                        typeof(object)
                     });
             }
         }

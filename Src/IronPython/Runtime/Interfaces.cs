@@ -42,7 +42,7 @@ namespace IronPython.Runtime {
         PythonModule Module { get; }
         SystemState SystemState { get;} 
         object Locals { get; }
-        object Globals { get; }
+        IAttributesDictionary Globals { get; }
         object GetStaticData(int index);
         bool TrueDivision { get; set; }
         CallerContextFlags ContextFlags { get; set; }

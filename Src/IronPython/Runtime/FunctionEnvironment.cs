@@ -105,7 +105,7 @@ namespace IronPython.Runtime {
             get { return this; }
         }
 
-        public object Globals {
+        public IAttributesDictionary Globals {
             get { return context.Globals; }
         }
 

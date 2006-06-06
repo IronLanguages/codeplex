@@ -1910,8 +1910,8 @@ namespace IronPython.Runtime {
 
 
         public static void Exec(ICallerContext context, object code) {
-            IAttributesDictionary locals = (IAttributesDictionary)context.Locals;
-            IAttributesDictionary globals = (IAttributesDictionary)context.Globals;
+            IAttributesDictionary locals = null;
+            IAttributesDictionary globals = null;
 
             // if the user passes us a tuple we'll extract the 3 values out of it            
             Tuple codeTuple = code as Tuple;
@@ -1930,14 +1930,10 @@ namespace IronPython.Runtime {
                     locals = globals;
             }
 
-            Exec(context, code, locals, globals);
+            Exec(context, code, globals, locals);
         }
 
-        public static void Exec(ICallerContext context, object code, IAttributesDictionary locals) {
-            Exec(context, code, locals, context.Module.__dict__);
-        }
-
-        public static void Exec(ICallerContext context, object code, IAttributesDictionary locals, IAttributesDictionary globals) {
+        public static void Exec(ICallerContext context, object code, IAttributesDictionary globals, object locals) {
             if (code is PythonFile) {
                 PythonFile pf = code as PythonFile;
                 List lines = pf.ReadLines();
@@ -1963,6 +1959,14 @@ namespace IronPython.Runtime {
             FunctionCode fc = code as FunctionCode;
             if (fc == null) {
                 throw Ops.TypeError("arg 1 must be a string, file, Stream, or code object");
+            }
+
+            if (locals == null) locals = globals;
+            if (globals == null) globals = (IAttributesDictionary)context.Globals;
+            if (locals == null) locals = (IAttributesDictionary)context.Locals;
+
+            if (locals != null && IronPython.Modules.PythonOperator.IsMappingType(context, locals) != Ops.TRUE) {
+                throw Ops.TypeError("exec: arg 3 must be mapping or None");
             }
 
             fc.Call(new Frame(context.Module, globals, locals));

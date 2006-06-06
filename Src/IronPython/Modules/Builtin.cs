@@ -435,8 +435,11 @@ namespace IronPython.Modules {
 
         [PythonName("globals")]
         public static IAttributesDictionary Globals(ICallerContext context) {
-            PythonModule mod = context.Module;
-            return mod.__dict__;
+            IAttributesDictionary res = context.Globals;
+            if (res == null) {
+                res = context.Module.__dict__;
+            }
+            return res;
         }
 
         [PythonName("hasattr")]

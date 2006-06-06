@@ -45,7 +45,7 @@ namespace IronPython.Runtime {
             get { return null; }
         }
 
-        public object Globals {
+        public IAttributesDictionary Globals {
             get { return null; }
         }
 
