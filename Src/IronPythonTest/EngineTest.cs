@@ -17,16 +17,19 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using IronPython.Hosting;
+using IronPython.Runtime;
 using System.IO;
 
 namespace IronPythonTest {
     class Common {
         public static string RuntimeDirectory;
         public static string ScriptTestDirectory;
+        public static string InputTestDirectory;
 
         static Common() {
             RuntimeDirectory = Path.GetDirectoryName(typeof(PythonEngine).Assembly.Location);
             ScriptTestDirectory = Path.Combine(RuntimeDirectory, @"Src\Tests");
+            InputTestDirectory = Path.Combine(ScriptTestDirectory, "Inputs");
         }
     }
 
@@ -46,6 +49,13 @@ namespace IronPythonTest {
     }
 
     public class EngineTest {
+
+        PythonEngine standardEngine = new PythonEngine();
+
+        public EngineTest() {
+            // Load a script with all the utility functions that are required
+            // standardEngine.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
+        }
 
         // Execute 
         public void Scenario1() {
@@ -251,41 +261,44 @@ namespace IronPythonTest {
             }
         }
 
-        // RunFile
-        public void Scenario8() {
-            PythonEngine pe = new PythonEngine();
+        // ExecutionOptions.EnableDebugging
 
-            string tempFile1 = Path.GetTempFileName();
-            string tempFile2 = Path.GetTempFileName();
+        delegate void ThrowExceptionDelegate();
+        static void ThrowException() {
+            throw new Exception("Exception from ThrowException");
+        }
 
+        public void ScenarioEnableDebugging() {
+            // Ensure that you do not get good line numbers without ExecutionOptions.Default
             try {
-                File.WriteAllText(tempFile1, "x = 9");
-                int ret = pe.RunFile(tempFile1);
-                AreEqual(ret, 0);
-
-                try {
-                    pe.Evaluate("x");
-                    throw new Exception("Scenario8 - here");
-                } catch (IronPython.Runtime.PythonNameError) { }
-
-                File.WriteAllText(tempFile2, "print x");
-                try {
-                    pe.RunFile(tempFile2);
-                    throw new Exception("Scenario8 - there");
-                } catch (IronPython.Runtime.PythonNameError) { }
-
-                // cover GetExitCode()
-                using (StreamWriter sw = new StreamWriter(tempFile2)) {
-                    sw.WriteLine("import sys");
-                    sw.WriteLine("sys.exit(-1)");
-                }
-                ret = pe.RunFile(tempFile2);
-                AreEqual(ret, -1);
-
-            } finally {
-                File.Delete(tempFile1);
-                File.Delete(tempFile2);
+                standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.Default);
+                throw new Exception("We should not get here");
+            } catch (StringException e1) {
+                string stackTrace = e1.StackTrace;
+                if (stackTrace.Contains("moduleHolder"))
+                    throw new Exception("Debugging is enabled");
             }
+
+            // Ensure that you do get good line numbers with ExecutionOptions.Default
+            try {
+                standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.EnableDebugging);
+                throw new Exception("We should not get here");
+            } catch (StringException e2) {
+                string stackTrace = e2.StackTrace;
+                if (!stackTrace.Contains("moduleHolder"))
+                    throw new Exception("Debugging is not enabled");
+            }
+        }
+
+        public void ScenarioExecuteFileOptimized() {
+            PythonEngine pe = new PythonEngine();
+            Frame moduleScope;
+            pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\simpleCommand.py", null, ExecutionOptions.Default, out moduleScope);
+            AreEqual(1, pe.Evaluate<int>("x", moduleScope, ExecutionOptions.Default));
+
+            // Ensure that we can set new globals in the scope, and execute further code
+            moduleScope.SetGlobal(SymbolTable.StringToId("y"), 2);
+            AreEqual(3, pe.Evaluate<int>("x+y", moduleScope, ExecutionOptions.Default));
         }
 
         // Compile and Run
@@ -312,7 +325,7 @@ namespace IronPythonTest {
 import sys
 sys.stdout = file('testfile.tmp', 'w')
 ");
-            object code = pe.Compile("45", true);
+            object code = pe.Compile("45", ExecutionOptions.PrintExpressions);
             pe.Execute(code);
 
             code = pe.Compile("a = _");

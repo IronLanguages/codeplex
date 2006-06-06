@@ -47,33 +47,28 @@ ipi.End()
 ###############################################################################
 # Test "ironpythonconsole.exe -i script.py"
 
-from System.IO import Path
-from System import String
-CurScriptPath = Path.GetDirectoryName(Path.GetFullPath(__file__))
-InputsDir = CurScriptPath + "\\Inputs"
-
-inputScript = InputsDir + "\\simpleCommand.py"
+inputScript = testpath.test_inputs_dir + "\\simpleCommand.py"
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -i \"" + inputScript + "\"")
 AreEqual(ipi.Start(), True)
 ipi.EnsureInteractive()
 AreEqual("1", ipi.ExecuteLine("x"))
 ipi.End()
 
-inputScript = InputsDir + "\\raise.py"
+inputScript = testpath.test_inputs_dir + "\\raise.py"
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -i \"" + inputScript + "\"")
 AreEqual(ipi.Start(), True)
 ipi.EnsureInteractive()
 AreEqual("1", ipi.ExecuteLine("x"))
 ipi.End()
 
-inputScript = InputsDir + "\\syntaxError.py"
+inputScript = testpath.test_inputs_dir + "\\syntaxError.py"
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -i \"" + inputScript + "\"")
 AreEqual(ipi.Start(), True)
 ipi.EnsureInteractive()
 Assert(ipi.ExecuteLine("x").find("NameError") != -1)
 ipi.End()
 
-inputScript = InputsDir + "\\exit.py"
+inputScript = testpath.test_inputs_dir + "\\exit.py"
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -i \"" + inputScript + "\"")
 (result, output, exitCode) = ipi.StartAndRunToCompletion()
 AreEqual(exitCode, 0)
@@ -82,18 +77,20 @@ ipi.End()
 ###############################################################################
 # Test sys.exitfunc
 
-inputScript = InputsDir + "\\exitFuncRuns.py"
+inputScript = testpath.test_inputs_dir + "\\exitFuncRuns.py"
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " \"" + inputScript + "\"")
 (result, output, exitCode) = ipi.StartAndRunToCompletion()
 AreEqual(exitCode, 0)
 AreEqual(output.find('hello world') > -1, True)
 ipi.End()
 
-inputScript = InputsDir + "\\exitFuncRaises.py"
+inputScript = testpath.test_inputs_dir + "\\exitFuncRaises.py"
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " \"" + inputScript + "\"")
 (result, output, exitCode) = ipi.StartAndRunToCompletion()
 AreEqual(exitCode, 0)
 AreEqual(output.find('Error in sys.exitfunc:') > -1, True)
+AreEqual("-X:GenerateAsSnippets" in Environment.GetCommandLineArgs() or 
+         output.find('exitFuncRaises.py, line 19, in foo') > -1, True)
 ipi.End()
 
 #############################################################################

@@ -24,6 +24,7 @@ using SystemThread = System.Threading.Thread;
 
 using IronPython.Hosting;
 using IronPython.Compiler;
+using IronPython.Runtime;
 
 namespace IronPythonConsole {
     /// <summary>
@@ -57,10 +58,10 @@ namespace IronPythonConsole {
 
         private class MTAParameters {
             public readonly PythonEngine engine;
-            public readonly ArrayList args;
+            public readonly List<string> args;
             public int result;
 
-            public MTAParameters(PythonEngine engine, ArrayList args) {
+            public MTAParameters(PythonEngine engine, List<string> args) {
                 this.engine = engine;
                 this.args = args;
             }
@@ -75,10 +76,10 @@ namespace IronPythonConsole {
         }
 
         [STAThread]
-        static int Main(string[] rawArgs) {
-            ArrayList args = new ArrayList(); //??? new List<string>(args);
-            foreach (string arg in rawArgs) args.Add(arg);
+        static int Main(string [] rawArgs) {
+            List<string> args = new List<string>(rawArgs);
             Options options = ParseOptions(args);
+
             if (Options.PrintVersionAndExit) {
                 Console.WriteLine(PythonEngine.VersionString);
                 return 0;
@@ -113,7 +114,7 @@ namespace IronPythonConsole {
             }
         }
 
-        private static int Run(ArrayList args, PythonEngine engine) {
+        private static int Run(List<string> args, PythonEngine engine) {
             try {
                 if (Options.Command != null) {
                     return RunString(engine, Options.Command, args);
@@ -130,7 +131,7 @@ namespace IronPythonConsole {
             }
         }
 
-        private static Options ParseOptions(ArrayList args) {
+        private static Options ParseOptions(List<string> args) {
             Options options = new Options();
 
             while (args.Count > 0) {
@@ -333,29 +334,29 @@ namespace IronPythonConsole {
             }
         }
 
-        private static int? RunStartup(PythonEngine engine) {
+        private static void RunStartup(PythonEngine engine) {
             if (Options.IgnoreEnvironmentVariables)
-                return null;
+                return;
+
             string startup = Environment.GetEnvironmentVariable("IRONPYTHONSTARTUP");
             if (startup != null && startup.Length > 0) {
                 if (HandleExceptions) {
                     try {
-                        return engine.ExecuteFile(startup);
+                        engine.ExecuteFile(startup);
                     } catch (Exception e) {
+                        if (e is PythonSystemExit) throw;
                         engine.MyConsole.Write(engine.FormatException(e), Style.Error);
                     } finally {
                         engine.DumpDebugInfo();
                     }
                 } else {
                     try {
-                        return engine.ExecuteFile(startup);
+                        engine.ExecuteFile(startup);
                     } finally {
                         engine.DumpDebugInfo();
                     }
                 }
             }
-
-            return null; // null means that SystemExit wasn't raised
         }
 
         // The advanced console functions are in a special non-inlined function so that 
@@ -366,8 +367,8 @@ namespace IronPythonConsole {
             Console.ReadKey();
         }
 
-        private static int RunFile(PythonEngine engine, ArrayList args) {
-            string fileName = (string)args[0];
+        private static int RunFile(PythonEngine engine, List<string> args) {
+            string fileName = args[0];
             if (fileName == "-") {
                 fileName = "<stdin>";
             } else {
@@ -383,17 +384,29 @@ namespace IronPythonConsole {
             ImportSite(engine);
             int result = 1;
 
+            ExecutionOptions executionOptions = ExecutionOptions.Default;
+            if (Options.Introspection) executionOptions |= ExecutionOptions.Introspection;
+            if (Options.SkipFirstLine) executionOptions |= ExecutionOptions.SkipFirstLine;
+
             if (HandleExceptions) {
                 try {
-                    result = engine.RunFileInNewModule(fileName, args, Options.Introspection, Options.SkipFirstLine);
-                } catch (Exception e) {
+                    Frame scope;
+                    engine.ExecuteFileOptimized(fileName, args, executionOptions, out scope);
+                    result = 0;
+                } catch (PythonSystemExit pythonSystemExit) {
+                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                }  catch (Exception e) {
                     engine.MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
                     engine.DumpDebugInfo();
                 }
             } else {
                 try {
-                    result = engine.RunFileInNewModule(fileName, args, Options.Introspection, Options.SkipFirstLine);
+                    Frame scope;
+                    engine.ExecuteFileOptimized(fileName, args, executionOptions, out scope);
+                    result = 0;
+                } catch (PythonSystemExit pythonSystemExit) {
+                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
                 } finally {
                     engine.DumpDebugInfo();
                 }
@@ -406,7 +419,7 @@ namespace IronPythonConsole {
             return result;
         }
 
-        private static int RunString(PythonEngine engine, string command, ArrayList args) {
+        private static int RunString(PythonEngine engine, string command, List<string> args) {
             engine.AddToPath(Environment.CurrentDirectory);
             InitializePath(engine);
             InitializeModules(engine);
@@ -418,15 +431,21 @@ namespace IronPythonConsole {
 
             if (HandleExceptions) {
                 try {
-                    result = engine.ExecuteToConsole(command);
-                } catch (Exception e) {
+                    engine.Execute(command, engine.DefaultModuleScope, ExecutionOptions.PrintExpressions);
+                    result = 0;
+                } catch (PythonSystemExit pythonSystemExit) {
+                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                } catch(Exception e) {
                     engine.MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
                     engine.DumpDebugInfo();
                 }
             } else {
                 try {
-                    result = engine.Execute(command);
+                    engine.Execute(command);
+                    result = 0;
+                } catch (PythonSystemExit pythonSystemExit) {
+                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
                 } finally {
                     engine.DumpDebugInfo();
                 }
@@ -457,10 +476,20 @@ namespace IronPythonConsole {
             engine.MyConsole.WriteLine(version, Style.Out);
             engine.MyConsole.WriteLine(PythonEngine.Copyright, Style.Out);
 
-            int? result = RunStartup(engine);
-            if (result == null) {
+            bool continueInteraction = true;
+            int result = 1;
+            try {
+                RunStartup(engine);
+                result = 0;
+            } catch (PythonSystemExit pythonSystemExit) {
+                return pythonSystemExit.GetExitCode(engine.DefaultModuleScope);                
+            } catch (Exception e) {
+            }
+
+            if (continueInteraction) {
                 result = engine.RunInteractive();
             }
+
             engine.DumpDebugInfo();
             return (int) result;
         }

@@ -60,22 +60,45 @@ namespace IronPython.Compiler {
             snippetAssembly = CreateNewSnippetAssembly();
         }
 
-        internal static FrameCode GenerateSnippet(CompilerContext context, Stmt body, bool printExprStmts) {
-            return GenerateSnippet(context, body, context.SourceFile, printExprStmts);
+        private static int moduleHolderIndex = 0;
+
+        private static TypeGen MakeModuleSlotHolder() {
+            TypeGen tg = snippetAssembly.DefinePublicType("moduleHolder_" + moduleHolderIndex++, typeof(object));
+            tg.AddModuleField(typeof(PythonModule));
+            tg.myType.DefineDefaultConstructor(MethodAttributes.Public);
+            return tg;
         }
 
-        public static FrameCode GenerateSnippet(CompilerContext context, Stmt body, string name, bool printExprStmts) {
+        public static FrameCode GenerateSnippet(CompilerContext context, Stmt body) {
+            return GenerateSnippet(context, body, false, false);
+        }
+
+        public static FrameCode GenerateSnippet(CompilerContext context, Stmt body, bool printExprStmts, bool enableDebugging) {
+            return GenerateSnippet(context, body, context.SourceFile, printExprStmts, enableDebugging);
+        }
+
+        public static FrameCode GenerateSnippet(CompilerContext context, Stmt body, string name, bool printExprStmts, bool enableDebugging) {
             GlobalSuite gs = Binder.Bind(body, context);
 
             if (name.Length == 0) name = "<empty>"; // The empty string isn't a legal method name
             CodeGen cg;
             List<object> staticData = null;
             TypeGen tg = null;
-            cg = snippetAssembly.DefineDynamicMethod(name, typeof(object), new Type[] { typeof(Frame) });
-            staticData = new List<object>();
-            cg.staticData = staticData;
-            cg.doNotCacheConstants = true;
-            cg.ModuleSlot = cg.GetLocalTmp(typeof(PythonModule));
+
+            if (enableDebugging) {
+                tg = MakeModuleSlotHolder();
+                cg = tg.DefineUserHiddenMethod(MethodAttributes.Public | MethodAttributes.Static,
+                    name, typeof(object), new Type[] { typeof(Frame) });
+                cg.typeGen = tg;
+                cg.ModuleSlot = tg.moduleSlot;
+            } else {
+                cg = snippetAssembly.DefineDynamicMethod(name, typeof(object), new Type[] { typeof(Frame) });
+                staticData = new List<object>();
+                cg.staticData = staticData;
+                cg.doNotCacheConstants = true;
+                cg.ModuleSlot = cg.GetLocalTmp(typeof(PythonModule));
+            }
+
             cg.ContextSlot = cg.GetArgumentSlot(0);
             cg.Names = CodeGen.CreateFrameNamespace(cg.ContextSlot);
             cg.Context = context;
@@ -183,7 +206,7 @@ namespace IronPython.Compiler {
 
             foreach (Stmt stmt in suite.stmts) {
                 // GenerateSnippet will do the binding
-                smr.AddSnippet(GenerateSnippet(context, stmt, moduleName, true));
+                smr.AddSnippet(GenerateSnippet(context, stmt, moduleName, true, false));
             }
             return smr.Module;
         }

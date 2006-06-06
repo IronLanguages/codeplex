@@ -47,6 +47,7 @@ class testpath:
     external_dir        = path_combine(ip_root, r'External')
     public_testdir      = path_combine(sys.prefix, r'Src\Tests')
     compat_testdir      = path_combine(sys.prefix, r'Src\Tests\compat')
+    test_inputs_dir     = path_combine(sys.prefix, r'Src\Tests\Inputs')
     script_testdir      = path_combine(sys.prefix, r'Src\Scripts')
 
     parrot_testdir      = path_combine(external_dir, r'parrotbench')

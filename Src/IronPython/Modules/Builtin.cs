@@ -213,13 +213,13 @@ namespace IronPython.Modules {
 
             if (kind == "exec") {
                 Stmt s = p.ParseFileInput();
-                code = OutputGenerator.GenerateSnippet(cc, s, false);
+                code = OutputGenerator.GenerateSnippet(cc, s);
             } else if (kind == "eval") {
                 Expr e = p.ParseTestListAsExpression();
-                code = OutputGenerator.GenerateSnippet(cc, new ReturnStmt(e), true);
+                code = OutputGenerator.GenerateSnippet(cc, new ReturnStmt(e), true, false);
             } else if (kind == "single") {
                 Stmt s = p.ParseSingleStatement();
-                code = OutputGenerator.GenerateSnippet(cc, s, true);
+                code = OutputGenerator.GenerateSnippet(cc, s, true, false);
             } else {
                 throw Ops.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
             }
@@ -307,6 +307,10 @@ namespace IronPython.Modules {
 
         [PythonName("eval")]
         public static object Eval(ICallerContext context, string expression, IAttributesDictionary globals, object locals) {
+            return Eval(context, expression, globals, locals, IronPython.Hosting.ExecutionOptions.Default);
+        }
+
+        internal static object Eval(ICallerContext context, string expression, IAttributesDictionary globals, object locals, IronPython.Hosting.ExecutionOptions executionOptions) {
             if (locals != null && PythonOperator.IsMappingType(context, locals) == Ops.FALSE) {
                 throw Ops.TypeError("locals must be mapping");
             }
@@ -323,7 +327,9 @@ namespace IronPython.Modules {
                 return e.Evaluate(new NameEnv(mod, locals));
             } else {
                 Stmt s = new ReturnStmt(e);
-                FrameCode fc = OutputGenerator.GenerateSnippet(cc, s, false);
+                bool printExprStmts = (executionOptions & IronPython.Hosting.ExecutionOptions.PrintExpressions) != 0;
+                bool enableDebugging = (executionOptions & IronPython.Hosting.ExecutionOptions.EnableDebugging) != 0;
+                FrameCode fc = OutputGenerator.GenerateSnippet(cc, s, printExprStmts, enableDebugging);
                 return fc.Run(new Frame(mod, globals, locals));
             }
         }
@@ -369,7 +375,7 @@ namespace IronPython.Modules {
             }
 
             Frame topFrame = new Frame(mod, g, l);
-            FrameCode code = OutputGenerator.GenerateSnippet(cc, s, false);
+            FrameCode code = OutputGenerator.GenerateSnippet(cc, s);
             code.Run(topFrame);
             return null;
         }

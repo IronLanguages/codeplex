@@ -28,6 +28,35 @@ using IronPython.Runtime;
 
 namespace IronPython.Hosting {
 
+    /// <summary>
+    /// Options to affect the PythonEngine.Execute* APIs. Note that these options only apply to
+    /// the direct script code executed by the APIs, but not for other script code that happens
+    /// to get called as a result of the execution.
+    /// </summary>
+    [Flags]
+    public enum ExecutionOptions {
+        Default             = 0x00,
+
+        // If the statment is just an expression, print it. This is useful to interactive sessions
+        // so that the host console does not need to determine if a statement is an expression or not.
+        PrintExpressions    = 0x01, 
+
+        // Enable CLI debugging. This allows debugging the script with a CLI debugger. Also, CLI exceptions
+        // will have line numbers in the stack-trace.
+        // Note that this is independent of the "traceback" Python module.
+        // Also, the generated code will not be reclaimed, and so this should only be used for bounded number 
+        // of executions.
+        EnableDebugging     = 0x02,
+
+        // Call RunInteractive after the script has executed. This is useful for interactive consoles
+        // to inspect the scope of the script.
+        Introspection       = 0x04,
+
+        // Skip the first line of the code to execute. This is useful for Unix scripts which
+        // have the command to execute specified in the first line.
+        SkipFirstLine       = 0x08
+    }
+
     public class PythonEngine {
 
         #region Static Public Members
@@ -56,7 +85,6 @@ namespace IronPython.Hosting {
 
         #region Static Non-Public Members
         internal static Options options;
-        private static int counter = 0;
         #endregion
 
         #region Private Data Members
@@ -71,7 +99,7 @@ namespace IronPython.Hosting {
             // make sure cctor for OutputGenerator has run
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(OutputGenerator).TypeHandle);
 
-            PythonModule mod = new PythonModule("__main__", new Dict(), systemState);
+            PythonModule mod = new PythonModule("__main__", new Dict(), Sys);
             topFrame = new Frame(mod);
             options = new Options();
         }
@@ -115,25 +143,32 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Non-Public Members
-        private int RunFileInNewModule(string fileName, string moduleName, bool skipLine, out PythonModule mod, out bool exitRaised) {
+
+        private const ExecutionOptions ExecuteStringOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.PrintExpressions | ExecutionOptions.SkipFirstLine;
+        private const ExecutionOptions ExecuteFileOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.PrintExpressions | ExecutionOptions.SkipFirstLine;
+        private const ExecutionOptions EvaluateStringOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.PrintExpressions;
+
+        private static void ValidateExecutionOptions(ExecutionOptions userOptions, ExecutionOptions permissibleOptions) {
+            ExecutionOptions invalidOptions = userOptions & ~permissibleOptions;
+            if (invalidOptions == 0)
+                return;
+
+            throw new ArgumentOutOfRangeException("executionOptions", userOptions, invalidOptions.ToString() + " is invalid");
+        }
+
+        private void ExecuteFileOptimized(string fileName, string moduleName, ExecutionOptions executionOptions, out Frame moduleScope) {
             CompilerContext context = new CompilerContext(fileName);
+            bool skipLine = (executionOptions & ExecutionOptions.SkipFirstLine) != 0;
             Parser p = Parser.FromFile(Sys, context, skipLine, false);
             Stmt s = p.ParseFileInput();
 
-            mod = OutputGenerator.GenerateModule(Sys, context, s, moduleName);
+            PythonModule mod = OutputGenerator.GenerateModule(Sys, context, s, moduleName);
+            moduleScope = new Frame(mod);
 
             Sys.modules[mod.ModuleName] = mod;
             mod.SetAttr(mod, SymbolTable.File, fileName);
-            exitRaised = false;
 
-            try {
-                mod.Initialize();
-            } catch (PythonSystemExit e) {
-                exitRaised = true;
-                return e.GetExitCode(mod);
-            }
-
-            return 0;
+            mod.Initialize();
         }
 
         private int TryInteractiveAction(InteractiveAction interactiveAction, out bool continueInteraction) {
@@ -395,18 +430,12 @@ namespace IronPython.Hosting {
             }
         }
 
-        private int? Execute(Parser p, PythonModule m) {
+        private void ExecuteSnippet(Parser p, Frame moduleScope, ExecutionOptions executionOptions) {
             Stmt s = p.ParseFileInput();
-
-            Frame topFrame = new Frame(m);
-            FrameCode code = OutputGenerator.GenerateSnippet(context, s, false);
-
-            try {
-                code.Run(topFrame);
-            } catch (PythonSystemExit e) {
-                return e.GetExitCode(topFrame);
-            }
-            return null; // null indicates that the execution completed normally, without a PythonSystemExit being raised
+            bool printExprStmts = (executionOptions & ExecutionOptions.PrintExpressions) != 0;
+            bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
+            FrameCode code = OutputGenerator.GenerateSnippet(context, s, printExprStmts, enableDebugging);
+            code.Run(moduleScope);
         }
 
         private delegate bool FilterStackFrame(StackFrame frame);
@@ -430,53 +459,55 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Console Support
-        public int RunFileInNewModule(string fileName, ArrayList commandLineArgs, bool introspection, bool skipLine) {
-            // Publish the command line arguments
-            Sys.argv = new List(commandLineArgs);
+        /// <summary>
+        /// Create a new module scope and execute the given script, with optimizations enabled.
+        /// Code cannot be optimized if the caller specifies a Frame. Hence, this API creates a new Frame itself.
+        /// ExecutionOptions.EnableDebugging is implied.
+        /// </summary>
+        /// <param name="moduleScope">This is set to the new module scope which is created and used to execute the script.
+        /// It will be null if a Frame could not be created (for eg, if the script contains a syntax error).
+        /// It can be non-null even if an exception is thrown by the script.</param>
+        public void ExecuteFileOptimized(string fileName, IEnumerable<string> commandLineArguments, ExecutionOptions executionOptions, out Frame moduleScope) {
+            moduleScope = null;
 
-            PythonModule mod = null;
+            ValidateExecutionOptions(executionOptions, ExecuteFileOptions | ExecutionOptions.Introspection);
+
+            // !!! It is invalid to call this API multiple times within the same PythonEngine.
+            // To enforce this invariant, we could factor this out into a static method that instantiates a new PythonEngine.
+            if ((Sys.argv as List).Count != 0)
+                throw new InvalidOperationException("This API can be called just once on the same PythonEngine instance");
+
+            // Publish the command line arguments
+            if (commandLineArguments == null)
+                Sys.argv = new List();
+            else
+                Sys.argv = new List(commandLineArguments);
+
+            bool introspection = (executionOptions & ExecutionOptions.Introspection) != 0;
 
             if (introspection) {
+                Frame scopeResult = null;
                 bool continueInteraction;
                 int result = TryInteractiveAction(
                     delegate(out bool continueInteractionArgument) {
-                        bool exitRaised;
-                        int res = RunFileInNewModule(fileName, "__main__", skipLine, out mod, out exitRaised);
-                        continueInteractionArgument = !exitRaised;
-                        return res;
+                        ExecuteFileOptimized(fileName, "__main__", executionOptions, out scopeResult);
+                        continueInteractionArgument = true;
+                        return 0;
                     },
                     out continueInteraction);
 
                 if (continueInteraction) {
-                    if (mod == null) {
+                    if (scopeResult == null) {
                         // If there was an error generating a new module (for eg. because of a syntax error),
                         // we will just use the existing "topFrame"
                     } else {
-                        // Otherwise, we create a new "topFrame"
-                        topFrame = new Frame(mod);
+                        topFrame = moduleScope = scopeResult;
                     }
-                    return RunInteractiveLoop();
-                } else {
-                    return result;
+                    RunInteractiveLoop();
                 }
             } else {
-                bool exitRaised;
-                return RunFileInNewModule(fileName, "__main__", skipLine, out mod, out exitRaised);
+                ExecuteFileOptimized(fileName, "__main__", executionOptions, out moduleScope);
             }
-        }
-
-        public int ExecuteToConsole(string text) {
-            Parser p = Parser.FromString(Sys, context, text);
-            Stmt s = p.ParseFileInput();
-
-            FrameCode code = OutputGenerator.GenerateSnippet(context, s, true);
-
-            try {
-                code.Run(topFrame);
-            } catch (PythonSystemExit e) {
-                return e.GetExitCode(topFrame);
-            }
-            return 0;
         }
 
         public IConsole MyConsole {
@@ -500,7 +531,7 @@ namespace IronPython.Hosting {
             //  's' is null when we parse a line composed only of a NEWLINE (interactive_input grammar);
             //  we don't generate anything when 's' is null
             if (s != null) {
-                FrameCode code = OutputGenerator.GenerateSnippet(context, s, true);
+                FrameCode code = OutputGenerator.GenerateSnippet(context, s, true, false);
 
                 if (ExecWrapper != null) {
                     CallTarget0 t = delegate() {
@@ -547,9 +578,12 @@ namespace IronPython.Hosting {
             }
             return mod;
         }
+        #endregion
 
+        #region Helper functions for the engine. 
         internal static PythonEngine compiledEngine;
 
+        // These are not part of the public hosting API even though its marked as public
         public static int ExecuteCompiled(InitializeModule init) {
             // first arg is EXE 
             List args = new List();
@@ -622,46 +656,54 @@ namespace IronPython.Hosting {
         public object GetVariable(string name) {
             return Ops.GetAttr(topFrame, topFrame.Module, SymbolTable.StringToId(name));
         }
+
+        public Frame DefaultModuleScope { get { return topFrame; } }
         #endregion
 
         #region Dynamic Execution\Evaluation
-        public int Execute(string text) {
-            Parser p = Parser.FromString(Sys, context, text);
-            int? res = Execute(p, topFrame.Module);
-            return (res == null) ? 0 : (int)res;
+        public void Execute(string text) {
+            Execute(text, topFrame, ExecutionOptions.Default);
         }
 
-        public int? ExecuteFile(string fileName) {
-            Parser p = Parser.FromFile(Sys, context.CopyWithNewSourceFile(fileName));
-            return Execute(p, topFrame.Module);
+        public void Execute(string text, Frame moduleScope, ExecutionOptions executionOptions) {
+            ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
+
+            Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, context, text);
+            ExecuteSnippet(p, moduleScope, executionOptions);
         }
 
-        public int RunFile(string fileName) {
+        public void ExecuteFile(string fileName) {
+            ExecuteFile(fileName, topFrame, ExecutionOptions.Default);
+        }
+
+        public void ExecuteFile(string fileName, Frame moduleScope, ExecutionOptions executionOptions) {
+            ValidateExecutionOptions(executionOptions, ExecuteFileOptions);
+
             Parser p = Parser.FromFile(Sys, context.CopyWithNewSourceFile(fileName));
-            Stmt s = p.ParseFileInput();
-            string moduleName = "tmp" + counter++;
-
-            PythonModule mod = OutputGenerator.GenerateModule(Sys, p.CompilerContext, s, moduleName);
-            foreach (KeyValuePair<SymbolId, object> name in topFrame.Module.__dict__.SymbolAttributes) {
-                mod.SetAttr(topFrame, name.Key, name.Value);
-            }
-            mod.SetAttr(topFrame, SymbolTable.File, fileName);
-
-            try {
-                mod.Initialize();
-            } catch (PythonSystemExit e) {
-                return e.GetExitCode(topFrame);
-            }
-
-            return 0;
+            ExecuteSnippet(p, moduleScope, executionOptions);
         }
 
         public object Evaluate(string expr) {
-            return Builtin.Eval(topFrame, expr);
+            return Evaluate(expr, topFrame, ExecutionOptions.Default);
+        }
+
+        public object Evaluate(string expr, Frame moduleScope, ExecutionOptions executionOptions) {
+            ValidateExecutionOptions(executionOptions, EvaluateStringOptions);
+
+            return Builtin.Eval(
+                moduleScope, 
+                expr,
+                ((ICallerContext)moduleScope).Globals,
+                ((ICallerContext)moduleScope).Globals,
+                executionOptions);
         }
 
         public T Evaluate<T>(string expr) {
-            return Converter.Convert<T>(Builtin.Eval(topFrame, expr));
+            return Converter.Convert<T>(Evaluate(expr));
+        }
+
+        public T Evaluate<T>(string expr, Frame moduleScope, ExecutionOptions executionOptions) {
+            return Converter.Convert<T>(Evaluate(expr, moduleScope, executionOptions));
         }
         #endregion
 
@@ -678,14 +720,18 @@ namespace IronPython.Hosting {
         }
 
         public object Compile(string text) {
-            return Compile(text, false);
+            return Compile(text, ExecutionOptions.Default);
         }
 
-        public object Compile(string text, bool printExprStatements) {
+        public object Compile(string text, ExecutionOptions executionOptions) {
+            ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
+
             Parser p = Parser.FromString(Sys, context, text);
             Stmt s = p.ParseFileInput();
 
-            return OutputGenerator.GenerateSnippet(context, s, printExprStatements);
+            bool printExprStmts = (executionOptions & ExecutionOptions.PrintExpressions) != 0;
+            bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
+            return OutputGenerator.GenerateSnippet(context, s, printExprStmts, enableDebugging);
         }
         #endregion
 

@@ -1953,7 +1953,7 @@ namespace IronPython.Runtime {
                 Parser p = Parser.FromString(context.SystemState, cc, (string)code);
                 //  could be multiple statements e.g. exec "\nprint "abc"\nprint "def"\n"
                 Stmt s = p.ParseFileInput();
-                code = new FunctionCode(OutputGenerator.GenerateSnippet(cc, s, false));
+                code = new FunctionCode(OutputGenerator.GenerateSnippet(cc, s));
             }
 
             FunctionCode fc = code as FunctionCode;
