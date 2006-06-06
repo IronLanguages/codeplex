@@ -159,10 +159,9 @@ namespace IronPython.Compiler {
             return DoGenerateModule(state, context, gs, moduleName, context.SourceFile, outSuffix);
         }
 
-        internal class SnippetModuleRunner {
+        internal class SnippetModuleRunner : CompiledModule {
             PythonModule module;
             Frame frame;
-            Dict dict = new Dict();
             List<FrameCode> snippets = new List<FrameCode>();
 
             public PythonModule Module {
@@ -172,7 +171,7 @@ namespace IronPython.Compiler {
             }
 
             public SnippetModuleRunner(string name, SystemState state) {
-                module = new PythonModule(name, dict, state, this.Initialize);
+                module = new PythonModule(name, this, state, this.Initialize);
                 frame = new Frame(module);
             }
 
@@ -180,11 +179,18 @@ namespace IronPython.Compiler {
                 snippets.Add(fc);
             }
 
-            public void Initialize() {
+            public override void Initialize() {
                 foreach (FrameCode fc in snippets) {
                     fc.Run(frame);
                 }
             }
+
+            #region CustomSymbolDict
+            public static readonly SymbolId[] noExtraKeys = new SymbolId[0];
+            public override SymbolId[] GetExtraKeys() { return noExtraKeys; }
+            public override bool TryGetExtraValue(SymbolId key, out object value) { value = null; return false; }
+            public override bool TrySetExtraValue(SymbolId key, object value) { return false; }
+            #endregion
         }
 
         private static PythonModule GenerateModuleAsSnippets(SystemState state, CompilerContext context, Stmt body, string moduleName) {
@@ -241,13 +247,7 @@ namespace IronPython.Compiler {
             Assembly assm = ag.DumpAndLoad();
             ret = assm.GetType(moduleName);
 
-            CustomSymbolDict dict = (CustomSymbolDict)ret.GetConstructor(Type.EmptyTypes).Invoke(new object[0]);
-            InitializeModule init = (InitializeModule)Delegate.CreateDelegate(
-                typeof(InitializeModule), dict, "Initialize");
-
-            PythonModule pmod = new PythonModule(moduleName, dict, state, init);
-
-            pmod.InitializeBuiltins();
+            PythonModule pmod = CompiledModule.Load(moduleName, ret, state);
             return pmod;
         }
 
@@ -258,7 +258,7 @@ namespace IronPython.Compiler {
         }
 
         internal static CodeGen GenerateModuleInitialize(CompilerContext context, GlobalSuite gs, TypeGen tg, bool staticTypes, CustomModuleInit customInit) {
-            CodeGen ncg = tg.DefineUserHiddenMethod(MethodAttributes.Public, "Initialize", typeof(void), Type.EmptyTypes);
+            CodeGen ncg = tg.DefineMethodOverride(typeof(CompiledModule).GetMethod("Initialize", BindingFlags.Public | BindingFlags.Instance));
             ncg.Context = context;
 
             if (Options.StaticModules) {
@@ -291,6 +291,7 @@ namespace IronPython.Compiler {
 
             ncg.EmitPosition(Location.None, Location.None);
             ncg.EmitReturn();
+            ncg.Finish();
 
             FinishCustomDict(tg, ncg.Names);
 
@@ -318,7 +319,7 @@ namespace IronPython.Compiler {
             main.EmitDelegate(init, typeof(InitializeModule), instance);    
 
             // Call ExecuteCompiled
-            main.EmitCall(typeof(IronPython.Hosting.PythonEngine), "ExecuteCompiled", ExecuteCompiledSignature);
+            main.EmitCall(typeof(Ops), "ExecuteCompiled", ExecuteCompiledSignature);
             
             main.EmitReturn();
 
@@ -359,11 +360,11 @@ namespace IronPython.Compiler {
             } else main.Emit(OpCodes.Ldnull);
 
             // Call InitializeModule
-            main.EmitCall(typeof(IronPython.Hosting.PythonEngine), "InitializeModule");
+            main.EmitCall(typeof(Ops), "InitializeModule");
         }
 
         internal static TypeGen GenerateModuleType(string moduleName, AssemblyGen ag) {
-            TypeGen tg = ag.DefinePublicType(moduleName, typeof(CustomSymbolDict));
+            TypeGen tg = ag.DefinePublicType(moduleName, typeof(CompiledModule));
             tg.AddModuleField(typeof(PythonModule));
             tg.DefaultConstructor = tg.myType.DefineDefaultConstructor(MethodAttributes.Public);
 

@@ -132,6 +132,9 @@ namespace IronPython.Compiler {
             WriteSignature(mi.Name, paramTypes);
         }
 
+        public override string ToString() {
+            return methodInfo.ToString();
+        }
 
         public bool EmitDebugInfo {
             get { return debugSymbolWriter != null; }
@@ -809,9 +812,15 @@ namespace IronPython.Compiler {
                 EmitCall(typeof(Ops), "CreateDynamicDelegate");
                 Emit(OpCodes.Castclass, delegateType);
             } else {
-                if (targetSlot == null) EmitConstant(null);
-                else targetSlot.EmitGet(this);
-                Emit(OpCodes.Ldftn, delegateFunction.MethodInfo);
+                if (delegateFunction.MethodInfo.IsVirtual) {
+                    targetSlot.EmitGet(this);
+                    Emit(OpCodes.Dup);
+                    Emit(OpCodes.Ldvirtftn, delegateFunction.MethodInfo);
+                } else {
+                    if (targetSlot == null) EmitConstant(null);
+                    else targetSlot.EmitGet(this);
+                    Emit(OpCodes.Ldftn, delegateFunction.MethodInfo);
+                }
                 Emit(OpCodes.Newobj, (ConstructorInfo)(delegateType.GetMember(".ctor")[0]));
             }
         }

@@ -234,11 +234,8 @@ namespace IronPython.Runtime {
             }
             Type ty;
             if (mod.SystemState.TopPackage.Builtins.TryGetValue(name, out ty)) {
-                if (typeof(CustomSymbolDict).IsAssignableFrom(ty)) {
-                    CustomSymbolDict dict = (CustomSymbolDict)ty.GetConstructor(Type.EmptyTypes).Invoke(new object[0]);
-                    InitializeModule init = (InitializeModule)Delegate.CreateDelegate(
-                        typeof(InitializeModule), dict, "Initialize");
-                    return InitializeModule(name, new PythonModule(name, dict, mod.SystemState, init, CallerContextFlags.None));
+                if (typeof(CompiledModule).IsAssignableFrom(ty)) {
+                    return InitializeModule(name, CompiledModule.Load(name, ty, mod.SystemState));
                 } else {
                     return MakePythonModule(mod.SystemState, name, (ReflectedType)Ops.GetDynamicTypeFromType(ty));
                 }
@@ -311,7 +308,6 @@ namespace IronPython.Runtime {
             //Put this in modules dict so we won't reload with circular imports
             pmod.SystemState.modules[fullName] = pmod;
             try {
-                newmod.InitializeBuiltins();
                 newmod.Initialize();
             } catch {
                 pmod.SystemState.modules.Remove(fullName);

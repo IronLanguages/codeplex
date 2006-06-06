@@ -886,7 +886,7 @@ namespace IronPython.Compiler {
                         }
 
                         if (baseType == typeof(object)) {
-                            foreach (Assembly asm in Hosting.PythonEngine.compiledEngine.Sys.TopPackage.LoadedAssemblies.Keys) {
+                            foreach (Assembly asm in Ops.compiledEngine.Sys.TopPackage.LoadedAssemblies.Keys) {
                                 Type t = asm.GetType(baseName);
                                 if (t != null) {
                                     baseType = t;

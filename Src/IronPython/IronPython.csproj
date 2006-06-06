@@ -106,6 +106,7 @@
     <Compile Include="Compiler\Binder.cs" />
     <Compile Include="Compiler\ClassDef.cs" />
     <Compile Include="Compiler\CodeGen.cs" />
+    <Compile Include="Compiler\CompiledModule.cs" />
     <Compile Include="Compiler\CompilerContext.cs" />
     <Compile Include="Compiler\CompilerHelpers.cs" />
     <Compile Include="Compiler\EnvironmentFactory.cs" />

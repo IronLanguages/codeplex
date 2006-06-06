@@ -47,6 +47,9 @@ namespace IronPython.Compiler {
             //!!!AddModuleField(myType);
         }
 
+        public override string ToString() {
+            return myType.ToString();
+        }
         public CodeGen GetOrMakeInitializer() {
             if (initializer == null) {
                 initializer = myType.DefineTypeInitializer();
@@ -78,7 +81,7 @@ namespace IronPython.Compiler {
         }
 
         public void AddModuleField(Type moduleType) {
-            FieldBuilder moduleField = this.myType.DefineField(PythonModule.ModuleFieldName,
+            FieldBuilder moduleField = this.myType.DefineField(CompiledModule.ModuleFieldName,
                 moduleType, FieldAttributes.Public | FieldAttributes.Static);  //!!!
             moduleField.SetCustomAttribute(new CustomAttributeBuilder(typeof(PythonHiddenFieldAttribute).GetConstructor(new Type[0]), new object[0]));
             this.moduleSlot = new StaticFieldSlot(moduleField);
@@ -116,9 +119,11 @@ namespace IronPython.Compiler {
             return myType.DefineProperty(name, attrs, returnType, new Type[0]);
         }
 
-        public CodeGen DefineMethodOverride(MethodAttributes attrs, MethodInfo baseMethod) {
-            MethodAttributes finalAttrs = (baseMethod.Attributes &
-                ~(MethodAttributes.Abstract | MethodAttributes.ReservedMask))|attrs;
+        private const MethodAttributes MethodAttributesToEraseInOveride =
+            MethodAttributes.Abstract | MethodAttributes.ReservedMask;
+
+        public CodeGen DefineMethodOverride(MethodAttributes extraAttrs, MethodInfo baseMethod) {
+            MethodAttributes finalAttrs = (baseMethod.Attributes & ~MethodAttributesToEraseInOveride) | extraAttrs;
             MethodBuilder mb = myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType,
                 CompilerHelpers.GetTypes(baseMethod.GetParameters()));
             CodeGen ret = new CodeGen(this, mb, mb.GetILGenerator(), baseMethod.GetParameters());

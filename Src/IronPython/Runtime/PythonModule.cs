@@ -39,8 +39,6 @@ namespace IronPython.Runtime {
     public class PythonModule : ICustomAttributes, IFrameEnvironment {
         internal IAttributesDictionary __dict__;
 
-        internal const string ModuleFieldName = "myModule__py";
-
         private ICustomAttributes innerMod;
         private bool packageImported;
         private CallerContextFlags contextFlags;
@@ -54,8 +52,8 @@ namespace IronPython.Runtime {
             : this(name, dict, state, null, CallerContextFlags.None) {
         }
 
-        public PythonModule(string name, IAttributesDictionary dict, SystemState state, InitializeModule init)
-            : this(name, dict, state, init, CallerContextFlags.None) {
+        public PythonModule(string name, CompiledModule compiledModule, SystemState state, InitializeModule init)
+            : this(name, compiledModule, state, init, CallerContextFlags.None) {
         }
 
         public PythonModule(string name, IAttributesDictionary dict, SystemState state, InitializeModule init, CallerContextFlags callerContextFlags) {
@@ -92,46 +90,6 @@ namespace IronPython.Runtime {
             }
             [PythonName("__file__")]
             set { __dict__[SymbolTable.File] = value; }
-        }
-
-        //!!! This needs to go
-        public void InitializeBuiltins() {
-            FieldInfo ti = __dict__.GetType().GetField(ModuleFieldName);
-            if (ti != null) ti.SetValue(__dict__, this);
-
-            foreach (FieldInfo fi in __dict__.GetType().GetFields()) {
-                if (fi.FieldType != typeof(object) && fi.FieldType != typeof(BuiltinWrapper)) continue;
-                if (!fi.IsStatic) continue;
-
-                if (fi.Name == "__debug__") {
-                    fi.SetValue(null, new BuiltinWrapper(IronPython.Hosting.PythonEngine.options.DebugMode, "__debug__"));
-                    continue;
-                }
-
-                //!!! GetAttr instead of GetSlot
-                
-                object bi;
-                if (TypeCache.Builtin.TryGetSlot(DefaultContext.Default, SymbolTable.StringToId(fi.Name), out bi)) {
-                    Debug.Assert(fi.FieldType == typeof(BuiltinWrapper));
-
-                    ReflectedMethod rm = bi as ReflectedMethod;
-                    BuiltinFunction bf;
-                    if (rm != null) {
-                        // update the dictionary w/ an optimized version, if one's available.
-                        bf = ReflectOptimizer.MakeFunction(rm);
-                        if (bf != null) bi = bf;
-                    }
-
-                    fi.SetValue(null, new BuiltinWrapper(Ops.GetDescriptor(bi, null, TypeCache.Builtin), fi.Name));
-                    continue;
-                }
-
-                if (fi.GetValue(null) == null) {
-                    Debug.Assert(fi.FieldType == typeof(object));
-
-                    fi.SetValue(null, new Uninitialized(fi.Name));
-                }
-            }
         }
 
         public void Initialize() {

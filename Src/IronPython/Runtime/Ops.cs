@@ -1856,6 +1856,57 @@ namespace IronPython.Runtime {
             }
         }
 
+        #region Pre-compiled code support
+
+        // When pre-compiled code gets loaded it always gets loaded into a single engine, not into a 
+        // user-visible engine.
+        internal static IronPython.Hosting.PythonEngine compiledEngine;
+
+        public static PythonModule InitializeModule(CompiledModule compiledModule, string fullName, string[] references) {
+            if (compiledEngine == null) {
+                compiledEngine = new IronPython.Hosting.PythonEngine();
+
+                compiledEngine.Sys.prefix = System.IO.Path.GetDirectoryName(fullName);
+                compiledEngine.Sys.executable = fullName;
+                compiledEngine.Sys.exec_prefix = compiledEngine.Sys.prefix;
+
+                compiledEngine.AddToPath(Environment.CurrentDirectory);
+            }
+
+            if (references != null) {
+                for (int i = 0; i < references.Length; i++) {
+                    compiledEngine.Sys.ClrModule.AddReference(references[i]);
+                }
+            }
+
+            compiledEngine.LoadAssembly(compiledModule.GetType().Assembly);
+            PythonModule module = compiledModule.Load(fullName, (InitializeModule)null, compiledEngine.Sys);
+            compiledEngine.Sys.modules[fullName] = module;
+            return module;
+        }
+
+        public static int ExecuteCompiled(InitializeModule init) {
+            // first arg is EXE 
+            List args = new List();
+            string[] fullArgs = Environment.GetCommandLineArgs();
+            args.Add(Path.GetFullPath(fullArgs[0]));
+            for (int i = 1; i < fullArgs.Length; i++)
+                args.Add(fullArgs[i]);
+            compiledEngine.Sys.argv = args;
+
+            try {
+                init();
+            } catch (PythonSystemExit x) {
+                return x.GetExitCode(compiledEngine.DefaultModuleScope);
+            } catch (Exception e) {
+                compiledEngine.MyConsole.Write(compiledEngine.FormatException(e), IronPython.Hosting.Style.Error);
+                return -1;
+            }
+            return 0;
+        }
+
+        #endregion
+
         public static Delegate CreateDynamicDelegate(DynamicMethod meth, Type delegateType, object target) {
             // Always close delegate around its own instance of the frame
             return meth.CreateDelegate(delegateType, target);

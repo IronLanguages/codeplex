@@ -580,54 +580,6 @@ namespace IronPython.Hosting {
         }
         #endregion
 
-        #region Helper functions for the engine. 
-        internal static PythonEngine compiledEngine;
-
-        // These are not part of the public hosting API even though its marked as public
-        public static int ExecuteCompiled(InitializeModule init) {
-            // first arg is EXE 
-            List args = new List();
-            string[] fullArgs = Environment.GetCommandLineArgs();
-            args.Add(Path.GetFullPath(fullArgs[0]));
-            for (int i = 1; i < fullArgs.Length; i++)
-                args.Add(fullArgs[i]);
-            compiledEngine.Sys.argv = args;
-
-            try {
-                init();
-            } catch (PythonSystemExit x) {
-                return x.GetExitCode(compiledEngine.topFrame);
-            } catch (Exception e) {
-                compiledEngine.MyConsole.Write(compiledEngine.FormatException(e), Style.Error);
-                return -1;
-            }
-            return 0;
-        }
-        #endregion
-
-        public static PythonModule InitializeModule(CustomSymbolDict compiled, string fullName, string []references) {
-            if (compiledEngine == null) {
-                compiledEngine = new PythonEngine();
-
-                compiledEngine.Sys.prefix = System.IO.Path.GetDirectoryName(fullName);
-                compiledEngine.Sys.executable = fullName;
-                compiledEngine.Sys.exec_prefix = compiledEngine.Sys.prefix;
-        
-                compiledEngine.AddToPath(Environment.CurrentDirectory);
-            }
-
-            if (references != null) {
-                for (int i = 0; i < references.Length; i++) {
-                    compiledEngine.Sys.ClrModule.AddReference(references[i]);
-                }            
-            }
-
-            compiledEngine.LoadAssembly(compiled.GetType().Assembly);
-            PythonModule module = new PythonModule(fullName, compiled, compiledEngine.Sys);
-            compiledEngine.Sys.modules[fullName] = module;
-            module.InitializeBuiltins();
-            return module;
-        }
 
         #region IO Stream
         public void SetStderr(Stream stream) {
