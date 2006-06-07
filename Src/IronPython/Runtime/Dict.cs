@@ -830,6 +830,8 @@ namespace IronPython.Runtime {
             Array.Copy(args, 0, newArgs, 1, newArgs.Length - 1);
             newArgs[0] = TypeCache.Dict;
             Dict ret = (Dict)ctor.Call(newArgs);
+            if (newArgs.Length > 2) throw Ops.TypeError("dict expected at most 1 arguments, got {0}",newArgs.Length-1);
+            if (newArgs.Length == 2) ret.Initialize(newArgs[1]);            
 
             for (int i = 0; i < names.Length; i++) {
                 ret[names[i]] = args[i + (newArgs.Length - 1)];

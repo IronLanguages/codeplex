@@ -187,7 +187,7 @@ namespace IronPython.Runtime {
                     MethodBinding mb = new MethodBinding();
                     mb.method = targets[i];
 
-                    if (!(targets[i].IsStatic || targets[i].IsConstructor)) {
+                    if(!CompilerHelpers.IsStatic(targets[i])) {
                         if (!HasInstance) {
                             if (realArgs.Length == 0) {
                                 throw Ops.TypeError("bad number of arguments for function {0}", targets[0].Name);

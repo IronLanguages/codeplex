@@ -518,6 +518,100 @@ AreEqual(a.xyz, 'B')
 # int mro shouldn't include ValueType
 AreEqual(int.__mro__, (int, object))
 
+# mixed inheritance from old-style & new-style classes
+
+# we should use old-style MRO when inheriting w/ a single old-style class
+class A: pass
+
+class B(A): pass
+
+class C(A): pass
+
+class D(B, C):pass
+
+class E(D, object): pass
+
+# old-style MRO of D is D, B, A, C, which should
+# be present  in E's mro
+AreEqual(E.__mro__, (E, D, B, A, C, object))
+
+class F(B, C, object): pass
+
+# but when inheriting from multiple old-style classes we switch
+# to new-style MRO, and respect local ordering of classes in the MRO
+AreEqual(F.__mro__, (F, B, C, A, object))
+
+class G(B, object, C): pass
+
+AreEqual(G.__mro__, (G, B, object, C, A))
+
+class H(E): pass
+
+AreEqual(H.__mro__, (H, E, D, B, A, C, object))
+
+try:
+	class H(A,B,E): pass
+	AreEqual(True, False)
+except TypeError: 
+	pass
+
+
+class H(E,B,A): pass
+
+AreEqual(H.__mro__, (H, E, D, B, A, C, object))
+
+# Verify given two large, independent class hierarchies
+# that we favor them in the order listed.
+
+# w/ old-style
+
+class A: pass
+
+class B(A): pass
+
+class C(A): pass
+
+class D(B,C): pass
+
+class E(D, object): pass
+
+class G: pass
+
+class H(G): pass
+
+class I(G): pass
+
+class K(H,I, object): pass
+
+class L(K,E): pass
+
+AreEqual(L.__mro__, (L, K, H, I, G, E, D, B, A, C, object))
+
+# w/o old-style
+
+class A(object): pass
+
+class B(A): pass
+
+class C(A): pass
+
+class D(B,C): pass
+
+class E(D, object): pass
+
+class G(object): pass
+
+class H(G): pass
+
+class I(G): pass
+
+class K(H,I, object): pass
+
+class L(K,E): pass
+
+AreEqual(L.__mro__, (L, K, H, I, G, E, D, B, C, A, object))
+
+
 # Testing the class attributes backed by globals
 
 x = 10
@@ -1006,12 +1100,14 @@ class D(C, F, B):
     def meth(self):
         return "D" + super(D, self).meth()
 
+AreEqual(D.__mro__, (D,C,F,B,A,object))
 AreEqual(D().meth(), 'DCF')
 
 class D(C, B, F):
     def meth(self):
         return "D" + super(D, self).meth()
 
+AreEqual(D.__mro__, (D,C,B,A,object,F))
 AreEqual(D().meth(), 'DCBAF')
 
 

@@ -603,3 +603,24 @@ a.__init__({'abc':'def'})
 AreEqual(a, {'abc':'def'})
 a.__init__({'abcd':'defg'})
 AreEqual(a, {'abc':'def', 'abcd':'defg'})
+
+# keyword arg contruction
+
+# single kw-arg, should go into dict
+a = dict(b=2)
+AreEqual(a, {'b':2})
+
+# dict value to init, Plus kw-arg
+a = dict({'a':3}, b=2)
+AreEqual(a, {'a':3, 'b':2})
+
+# more than one
+a = dict({'a':3}, b=2, c=5)
+AreEqual(a, {'a':3, 'b':2, 'c':5})
+
+try:
+    dict({'a':3}, {'b':2}, c=5)
+    AreEqual(True, False)
+except TypeError: pass
+
+

@@ -37,7 +37,7 @@ namespace IronPython.Runtime {
         public readonly Type type;
 
         public IAttributesDictionary dict;
-        private Tuple methodResolutionOrder;  
+        private Tuple methodResolutionOrder;
 
         // Cached attribute fields
         public MethodWrapper __getitem__F;
@@ -89,25 +89,25 @@ namespace IronPython.Runtime {
                 throw Ops.TypeError("metaclass conflict {0} and {1}", metaCls.__name__, meta.__name__);
             }
 
-            
+
             UserType ut = meta as UserType;
             if (ut != null) {
                 object newFunc = Ops.GetAttr(context, ut, SymbolTable.NewInst);
-                
+
                 if (meta != cls) {
                     if (DefaultNewInst == null) DefaultNewInst = Ops.GetAttr(context, Modules.Builtin.type, SymbolTable.NewInst);
 
                     // the user has a custom __new__ which picked the wrong meta class, call __new__ again
-                    if(newFunc != DefaultNewInst) return Ops.Call(newFunc, ut, name, bases, dict);
-                } 
+                    if (newFunc != DefaultNewInst) return Ops.Call(newFunc, ut, name, bases, dict);
+                }
 
                 // we have the right user __new__, call our ctor method which will do the actual
                 // creation.
-                return ut.ctor.Call(ut, name, bases, dict);                
+                return ut.ctor.Call(ut, name, bases, dict);
             }
 
             // no custom user type for __new__
-            return UserType.MakeClass(name, bases, dict);            
+            return UserType.MakeClass(name, bases, dict);
         }
 
         [PythonName("__new__")]
@@ -283,7 +283,7 @@ namespace IronPython.Runtime {
 
         public void RemoveSubclass(PythonType subclass) {
             lock (subclass) {
-                foreach(WeakReference subType in subclasses) {
+                foreach (WeakReference subType in subclasses) {
                     if (subclass == (subType.Target as PythonType)) {
                         subclasses.Remove(subType);
                         return;
@@ -357,7 +357,7 @@ namespace IronPython.Runtime {
             if (TryGetSlot(context, name, out ret)) return true;
             return TryLookupSlotInBases(context, name, out ret);
         }
-        
+
         internal bool TryLookupSlotInBases(ICallerContext context, SymbolId name, out object ret) {
             Tuple resOrder = MethodResolutionOrder;
 
@@ -374,21 +374,26 @@ namespace IronPython.Runtime {
 
                         MethodWrapper mw = ret as MethodWrapper;
                         if (mw == null || !mw.IsSuperTypeMethod()) return true;
-                    } 
-                } else if (Ops.TryGetAttr(context, type, name, out ret)) {
-                    return true;
+                    }
+                } else {
+                    // need to access OldClass's dict directly for this lookup because
+                    // TryGetAttr will search subclasses first, which is wrong.
+                    OldClass oc = type as OldClass;
+                    Debug.Assert(oc != null);
+
+                    if (oc.__dict__.TryGetValue(name, out ret)) return true;
                 }
             }
             ret = null;
             return false;
         }
-        
+
         internal bool TryGetSlot(ICallerContext context, SymbolId name, out object ret) {
             Initialize();
 
-            switch(name.Id){
+            switch (name.Id) {
                 case SymbolTable.DictId: ret = new DictWrapper(this); return true;
-                case SymbolTable.GetAttributeId:  ret = __getattribute__F;  return true;                    
+                case SymbolTable.GetAttributeId: ret = __getattribute__F; return true;
                 case SymbolTable.GetAttrId: ret = __getattr__F; return true;
                 case SymbolTable.SetAttrId: ret = __setattr__F; return true;
                 case SymbolTable.DelAttrId: ret = __delattr__F; return true;
@@ -400,10 +405,10 @@ namespace IronPython.Runtime {
                         return true;
                     }
                     break;
-                case SymbolTable.MethodResolutionOrderId: 
-                    if (methodResolutionOrder == null) 
-                        methodResolutionOrder = CalculateMro(BaseClasses); 
-                    ret = methodResolutionOrder; 
+                case SymbolTable.MethodResolutionOrderId:
+                    if (methodResolutionOrder == null)
+                        methodResolutionOrder = CalculateMro(BaseClasses);
+                    ret = methodResolutionOrder;
                     return true;
             }
 
@@ -434,7 +439,7 @@ namespace IronPython.Runtime {
             }
             dict[name] = value;
         }
-       
+
         protected virtual void RawDeleteSlot(SymbolId name) {
             if (dict.ContainsKey(name)) {
                 dict.Remove(name);
@@ -463,7 +468,7 @@ namespace IronPython.Runtime {
             return (newArgs);
         }
 
-        public void InvokeInit(object inst, object[] args) {            
+        public void InvokeInit(object inst, object[] args) {
             object initFunc;
 
             if (Ops.GetDynamicType(inst).IsSubclassOf(this)) {
@@ -508,13 +513,13 @@ namespace IronPython.Runtime {
 
         // What kind of a class is it? Built-in, CLI, etc?
         protected abstract string TypeCategoryDescription {
-            get; 
+            get;
         }
 
         #region ICustomAttributes Members
 
         public virtual bool TryGetAttr(ICallerContext context, SymbolId name, out object value) {
-            switch(name.Id){
+            switch (name.Id) {
                 case SymbolTable.NameId: value = __name__; return true;
                 case SymbolTable.BasesId: value = BaseClasses; return true;
                 case SymbolTable.ClassId: value = Ops.GetDynamicType(this); return true;
@@ -530,7 +535,7 @@ namespace IronPython.Runtime {
                     }
                     break;
             }
-            
+
             return false;
         }
 
@@ -614,7 +619,7 @@ namespace IronPython.Runtime {
         }
 
         #endregion
-        
+
         public override List GetAttrNames(ICallerContext context, object self) {
             // Get the entries from the type
             List ret = GetAttrNames(context);
@@ -654,162 +659,9 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        #region Method Resolution Order Generation
-
-        private class MroRatingInfo : List<DynamicType> {
-            public int Order;
-            public bool Processing;
-
-            public MroRatingInfo()
-                : base() {
-            }
-        }
-
         protected virtual Tuple CalculateMro(Tuple bases) {
-            // the rules are:
-            //      If A is a subtype of B, then A has precedence (A >B)
-            //      If C appears before D in the list of bases then C > D
-            //      If E > F in one __mro__ then E > F in all __mro__'s for our subtype
-            // 
-            // class A(object): pass
-            // class B(object): pass
-            // class C(B): pass
-            // class N(A,B,C): pass         # illegal
-            //
-            // This is because:
-            //      C.__mro__ == (C, B, object)
-            //      N.__mro__ == (N, A, B, C, object)
-            // which would conflict, but:
-            //
-            // N(B,A) is ok  (N, B, a, object)
-            // N(C, B, A) is ok (N, C, B, A, object)
-            //
-            // To calculate this we build a graph that is based upon the first two
-            // properties: the base classes, and the order in which the base classes
-            // are ordered.  At the same time of building the graph we store the
-            // order the classes occur so that classes that come earlier in the
-            // precedence list but at the same depth from the newly defined type have
-            // lower values.  In the case of two classes that have the same weight
-            // we use this distance to disambiguate, and select the class that appeared
-            // earliest in the inheritance hierachy.
-            // 
-            // Once we've built the graph we recursively walk it, and if we detect
-            // any cycles the MRO is invalid.  The graph is stored using a dictionary
-            // of dynamic types mapping to the types that are less than it.  If there
-            // are no cycles we propagate the types in the lists up the graph so that
-            // the top most type contains all the types less than it.  
-            // 
-            // Finally we sort that list w/ the largest # of types winning, and that
-            // sorted order is our MRO.
-
-            Dictionary<DynamicType, MroRatingInfo> classes = new Dictionary<DynamicType, MroRatingInfo>();
-
-            // start w/ the provided bases, and build the graph that merges inheritance
-            // and linear order as defined by the base classes
-            int count = 1;
-            GenerateMroGraph(classes, this, bases, ref count);
-
-            // then propagate all the classes reachable from one node into that node
-            // so we get the overall weight of each node
-            foreach (DynamicType dt in classes.Keys) {
-                PropagateBases(classes, dt);
-            }
-
-            // get the sorted keys, based upon weight, ties decided by order
-            KeyValuePair<DynamicType, MroRatingInfo>[] kvps = GetSortedRatings(classes);
-            DynamicType[] mro = new DynamicType[classes.Count];
-
-            // and then we have our mro...
-            for (int i = 0; i < mro.Length; i++) {
-                mro[i] = kvps[i].Key;
-            }
-
-            return new Tuple(false, mro);
+            return new Mro().Calculate(this, bases);
         }
-
-        /// <summary>
-        /// Gets the keys sorted by their weight & ties settled by the order in which
-        /// classes appear in the class hierarchy given the calculated graph
-        /// </summary>
-        private static KeyValuePair<DynamicType, MroRatingInfo>[] GetSortedRatings(Dictionary<DynamicType, MroRatingInfo> classes) {
-            KeyValuePair<DynamicType, MroRatingInfo>[] kvps = new KeyValuePair<DynamicType, MroRatingInfo>[classes.Count];
-            ((ICollection<KeyValuePair<DynamicType, MroRatingInfo>>)classes).CopyTo(kvps, 0);
-
-            // sort the array, so the largest lists are on top
-            Array.Sort<KeyValuePair<DynamicType, MroRatingInfo>>(kvps,
-                delegate(KeyValuePair<DynamicType, MroRatingInfo> x, KeyValuePair<DynamicType, MroRatingInfo> y) {
-                    if (x.Key == y.Key) return 0;
-
-                    int res = y.Value.Count - x.Value.Count;
-                    if (res != 0) return res;
-
-                    // two classes are of the same precedence, 
-                    // we need to look at which one is left
-                    // most - luckily we already stored that info
-                    return x.Value.Order - y.Value.Order;
-                });
-            return kvps;
-        }
-
-        /// <summary>
-        /// Updates our classes dictionary from a type's base classes, updating for both
-        /// the inheritance hierachy as well as the order the types appear as bases.
-        /// </summary>
-        private static void GenerateMroGraph(Dictionary<DynamicType, MroRatingInfo> classes, DynamicType parent, Tuple bases, ref int count) {
-            MroRatingInfo parentList, innerList;
-            if (!classes.TryGetValue(parent, out parentList))
-                parentList = classes[parent] = new MroRatingInfo();
-
-            // only set order once - if we see a type multiple times,
-            // the earliest one is the most important.
-            if (parentList.Order == 0) parentList.Order = count++;
-
-            DynamicType prevType = null;
-            foreach (DynamicType baseType in bases) {
-                if (!parentList.Contains(baseType)) parentList.Add(baseType);
-
-                if (prevType != null) {
-                    if (!classes.TryGetValue(prevType, out innerList))
-                        innerList = classes[prevType] = new MroRatingInfo();
-
-                    if (!innerList.Contains(baseType)) innerList.Add(baseType);
-                }
-
-                prevType = baseType;
-
-                GenerateMroGraph(classes, baseType, baseType.BaseClasses, ref count);
-            }
-        }
-
-        private static void PropagateBases(Dictionary<DynamicType, MroRatingInfo> classes, DynamicType dt) {
-            MroRatingInfo innerInfo, mroInfo = classes[dt];
-            mroInfo.Processing = true;
-
-            // recurse down to the bottom of the tree
-            foreach (DynamicType lesser in mroInfo) {
-                DynamicType lesserType = lesser;
-
-                if (classes[lesserType].Processing) throw Ops.TypeError("invalid order for base classes: {0} and {1}", dt.__name__, lesserType.__name__);
-
-                PropagateBases(classes, lesserType);
-            }
-
-            // then propagate the bases up the tree as we go.
-            int startingCount = mroInfo.Count;
-            for (int i = 0; i < startingCount; i++) {
-                DynamicType lesser = mroInfo[i];
-
-                if (!classes.TryGetValue(lesser, out innerInfo)) continue;
-
-                foreach (DynamicType newList in innerInfo) {
-                    if (!mroInfo.Contains(newList)) mroInfo.Add(newList);
-                }
-            }
-
-            mroInfo.Processing = false;
-        }
-
-        #endregion
     }
 
     /// <summary>
@@ -877,7 +729,7 @@ namespace IronPython.Runtime {
 
         public static MethodWrapper Make(PythonType pt, SymbolId name) {
             MethodWrapper ret = new MethodWrapper(pt, name);
-            object meth;            
+            object meth;
             if (pt.dict.TryGetValue(name, out meth)) {
                 object otherMeth;
                 if (!pt.TryLookupSlotInBases(DefaultContext.Default, name, out otherMeth) || otherMeth != meth) {
@@ -947,7 +799,7 @@ namespace IronPython.Runtime {
             Debug.Assert(mro.Count > 0);
             MethodWrapper current = (MethodWrapper)myField.GetValue(mro[0]);
 
-            for(int i = 1; i<mro.Count; i++){
+            for (int i = 1; i < mro.Count; i++) {
                 if (current != null && !current.isSuperTypeMethod) {
                     break;
                 }
@@ -963,7 +815,7 @@ namespace IronPython.Runtime {
                 current = (MethodWrapper)myField.GetValue(baseType);
             }
 
-            if(current != null) UpdateFromBase(current);
+            if (current != null) UpdateFromBase(current);
         }
 
         private void UpdateFromBase(MethodWrapper mw) {
@@ -1036,7 +888,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__get__")]
         public object GetAttribute(object instance, object owner) {
-            if (func == null) 
+            if (func == null)
                 throw Ops.AttributeErrorForMissingAttribute(pythonType.__name__.ToString(), name);
             if (instance != null) return new Method(func, instance, owner);
             else return func;
@@ -1062,7 +914,7 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        #endregion        
+        #endregion
     }
 
 }

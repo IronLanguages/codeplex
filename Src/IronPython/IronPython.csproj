@@ -132,6 +132,7 @@
     <Compile Include="Runtime\ByteOps.Generated.cs" />
     <Compile Include="Runtime\CustomSymbolDict.cs" />
     <Compile Include="Runtime\FieldIdDict.cs" />
+    <Compile Include="Runtime\Mro.cs" />
     <Compile Include="Runtime\ParamTree.cs" />
     <Compile Include="Compiler\Parser.cs" />
     <Compile Include="Compiler\ParserSink.cs" />

@@ -337,7 +337,8 @@ namespace IronPython.Runtime {
             // If we fail to find a name in our dictionary then we will only iterate all of the types
             // if we don't have the full assembly loaded.  This is controllved via our assemblyTypeLoadIndex.
 
-
+            if (assemblyTypeLoadIndex != -1 && assemblyTypeLoadIndex < packageAssemblies.Count)
+                LoadAllTypes();
 
             if (__dict__.TryGetValue(name, out value)) {
                 int level;
