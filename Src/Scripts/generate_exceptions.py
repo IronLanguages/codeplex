@@ -81,7 +81,7 @@ CodeGenerator("PythonException Classes", factory_gen).doit()
 
 def builtin_gen(cw):
     for e, supername in excs:        
-        cw.write("public static object %s = ExceptionConverter.GetPythonExceptionByName(\"%s\");" %
+        cw.write("public static object %s = ExceptionConverter.GetPythonException(\"%s\");" %
                  (e.__name__, e.__name__))
 
 CodeGenerator("builtin exceptions", builtin_gen).doit()
@@ -89,9 +89,9 @@ CodeGenerator("builtin exceptions", builtin_gen).doit()
 
 
 def excep_module_gen(cw):
-    cw.write("public static object Exception = ExceptionConverter.GetPythonExceptionByName(\"Exception\");")
+    cw.write("public static object Exception = ExceptionConverter.GetPythonException(\"Exception\");")
     for e, super in excs:
-        cw.write("public static object %s = ExceptionConverter.GetPythonExceptionByName(\"%s\");" % (e.__name__, e.__name__))
+        cw.write("public static object %s = ExceptionConverter.GetPythonException(\"%s\");" % (e.__name__, e.__name__))
         
         
 CodeGenerator("Exceptions Module", excep_module_gen).doit()

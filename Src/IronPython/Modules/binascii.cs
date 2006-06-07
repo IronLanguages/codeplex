@@ -22,7 +22,7 @@ using IronPython.Runtime;
 [assembly: PythonModule("binascii", typeof(IronPython.Modules.BinaryAscii))]
 namespace IronPython.Modules {
     public static class BinaryAscii {
-        public static object Error = ExceptionConverter.GetPythonExceptionByName("BinAsciiError");
+        public static object Error = ExceptionConverter.CreatePythonException("Error", "binascii");
 
         [PythonName("a2b_uu")]
         public static string DecodeUUEncoding(string data) {

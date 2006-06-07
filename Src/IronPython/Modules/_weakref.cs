@@ -53,7 +53,7 @@ namespace IronPython.Modules {
         public static object CallableProxyType = Ops.GetDynamicTypeFromType(typeof(PythonCallableWeakRefProxy));
         public static object ProxyType = Ops.GetDynamicTypeFromType(typeof(PythonWeakRefProxy));
         public static object ReferenceType = Ops.GetDynamicTypeFromType(typeof(PythonWeakReference));
-        public static object ReferenceError = ExceptionConverter.GetPythonExceptionByName("ReferenceError");
+        public static object ReferenceError = ExceptionConverter.GetPythonException("ReferenceError");
 
 
         [PythonType("ref")]

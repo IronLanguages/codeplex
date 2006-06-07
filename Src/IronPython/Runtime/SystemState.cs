@@ -220,13 +220,13 @@ namespace IronPython.Runtime {
 
         [PythonName("exit")]
         public void exit() {
-            throw ExceptionConverter.CreateThrowable(ExceptionConverter.GetPythonExceptionByName("SystemExit"));
+            throw ExceptionConverter.CreateThrowable(ExceptionConverter.GetPythonException("SystemExit"));
         }
 
         [PythonName("exit")]
         public void exit(object code) {
             // throw as a python exception here to get the args set.
-            throw ExceptionConverter.CreateThrowable(ExceptionConverter.GetPythonExceptionByName("SystemExit"), code);
+            throw ExceptionConverter.CreateThrowable(ExceptionConverter.GetPythonException("SystemExit"), code);
         }
 
         [PythonName("getdefaultencoding")]

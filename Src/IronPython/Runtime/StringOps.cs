@@ -1559,7 +1559,7 @@ namespace IronPython.Runtime {
 
             private bool DoPythonFallback(int index, int length) {
                 // create the exception object to hand to the user-function...
-                object exObj = Ops.Call(ExceptionConverter.GetPythonExceptionByName("UnicodeEncodeError"),
+                object exObj = Ops.Call(ExceptionConverter.GetPythonException("UnicodeEncodeError"),
                     encoding,
                     strData,
                     index,
@@ -1657,7 +1657,7 @@ namespace IronPython.Runtime {
 
             public override bool Fallback(byte[] bytesUnknown, int index) {
                 // create the exception object to hand to the user-function...
-                object exObj = Ops.Call(ExceptionConverter.GetPythonExceptionByName("UnicodeDecodeError"),
+                object exObj = Ops.Call(ExceptionConverter.GetPythonException("UnicodeDecodeError"),
                     encoding,
                     strData,
                     index,

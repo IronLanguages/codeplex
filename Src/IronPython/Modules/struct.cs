@@ -328,7 +328,7 @@ namespace IronPython.Modules {
             return len;
         }
 
-        public static object error = ExceptionConverter.GetPythonExceptionByName("struct_error");
+        public static object error = ExceptionConverter.CreatePythonException("error", "struct");
 
         #endregion
 

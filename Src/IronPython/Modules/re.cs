@@ -72,7 +72,7 @@ namespace IronPython.Modules {
         }
         public static string engine = "cli reg ex";
 
-        public static object error = ExceptionConverter.GetPythonExceptionByName("RegexError");
+        public static object error = ExceptionConverter.CreatePythonException("error", "re");
 
         [PythonName("escape")]
         public static string Escape(string text) {

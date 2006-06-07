@@ -56,7 +56,7 @@ namespace IronPython.Modules {
             }
         }
 
-        public static object error = ExceptionConverter.GetPythonExceptionByName("nt_error");
+        public static object error = ExceptionConverter.GetPythonException("OSError");
 
         [PythonName("_exit")]
         public static void ExitProcess(int code) {

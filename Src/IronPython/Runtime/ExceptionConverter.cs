@@ -41,9 +41,12 @@ namespace IronPython.Runtime {
         static PythonFunction unicodeErrorInit;
         static PythonFunction systemExitInitMethod;
 
+        public delegate OldClass ExceptionClassCreator(string name, string module, DynamicType baseType);
+
         const string pythonExceptionKey = "PythonExceptionInfo";
         const string prevStackTraces = "PreviousStackTraces";
         const string defaultExceptionModule = "exceptions";
+        static readonly DynamicType defaultExceptionBaseType; // assigned in static constructor
 
         /*********************************************************
          * Exception mapping hierarchy - this defines how we
@@ -128,9 +131,11 @@ namespace IronPython.Runtime {
                 CreateExceptionMapping(null, exceptionMappings[i]);
             }
 
+            defaultExceptionBaseType = nameToPython[new QualifiedExceptionName("Exception", defaultExceptionModule)];
+
             // we also have a couple of explicit bonus mappings.
-            clrToPython[typeof(InvalidCastException)] = GetPythonExceptionByName("TypeError");
-            clrToPython[typeof(ArgumentNullException)] = GetPythonExceptionByName("TypeError");
+            clrToPython[typeof(InvalidCastException)] = GetPythonException("TypeError");
+            clrToPython[typeof(ArgumentNullException)] = GetPythonException("TypeError");
         }
 
         #region Public API Surface
@@ -296,7 +301,7 @@ namespace IronPython.Runtime {
         }
 
         /// <summary>
-        /// Helper function that shows up on exception instances, get's an
+        /// Helper function that shows up on exception instances, gets an
         /// index from args.
         /// </summary>
         public static object ExceptionGetItem(params object[] args) {
@@ -309,24 +314,65 @@ namespace IronPython.Runtime {
 
         /// <summary>
         /// Returns the DynamicType for a given PythonException in the default exception module
-        /// Creates the exception type if it doesn't yet exist.
+        /// Throws KeyNotFoundException it doesn't exist.
         /// </summary>
-        public static DynamicType GetPythonExceptionByName(string name) {
-            return GetPythonExceptionByName(name, defaultExceptionModule);
+        public static DynamicType GetPythonException(string name) {
+            return GetPythonException(name, defaultExceptionModule);
         }
 
         /// <summary>
-        /// Returns the DynamicType for a given PythonException in a specified module
-        /// Creates the exception type if it doesn't yet exist.
+        /// Returns the DynamicType for a given PythonException in a specified module.
+        /// Throws KeyNotFoundException it doesn't exist.
         /// </summary>
-        public static DynamicType GetPythonExceptionByName(string name, string module) {
-            DynamicType res;
+        public static DynamicType GetPythonException(string name, string module) {
+            DynamicType type;
             QualifiedExceptionName key = new QualifiedExceptionName(name, module);
-            if (nameToPython.TryGetValue(key, out res)) {
-                return res;
+            if (nameToPython.TryGetValue(key, out type)) {
+                return type;
+            }
+            throw new KeyNotFoundException("exception " + module + "." + name + " does not exist");
+        }
+
+        /// <summary>
+        /// Creates and returns the DynamicType for a given PythonException in the default exception module with the default base type.
+        /// Throws InvalidOperationException if it already exists and and doesn't have the default base type.
+        /// </summary>
+        public static DynamicType CreatePythonException(string name) {
+            return CreatePythonException(name, defaultExceptionModule);
+        }
+
+        /// <summary>
+        /// Creates and returns the DynamicType for a given PythonException in a given module with the default base type.
+        /// Throws InvalidOperationException if it already exists and and doesn't have the default base type.
+        /// </summary>
+        public static DynamicType CreatePythonException(string name, string module) {
+            return CreatePythonException(name, module, defaultExceptionBaseType);
+        }
+
+        /// <summary>
+        /// Creates and returns the DynamicType for a given PythonException in a given module with a given base type.
+        /// Throws InvalidOperationException if it already exists and has a different base type.
+        /// </summary>
+        public static DynamicType CreatePythonException(string name, string module, DynamicType baseType) {
+            return CreatePythonException(name, module, defaultExceptionBaseType, DefaultExceptionCreator);
+        }
+
+        /// <summary>
+        /// Creates and returns the DynamicType for a given PythonException in a given module with a given base type using a given exception creator.
+        /// Throws InvalidOperationException if it already exists and has a different base type.
+        /// </summary>
+        public static DynamicType CreatePythonException(string name, string module, DynamicType baseType, ExceptionClassCreator creator) {
+            DynamicType type;
+            QualifiedExceptionName key = new QualifiedExceptionName(name, module);
+            if (nameToPython.TryGetValue(key, out type)) {
+                if (Ops.Equals(type.BaseClasses, ObjectToTuple(baseType))) {
+                    return type;
+                } else {
+                    throw new InvalidOperationException(module + "." + name + " already exists with different base type(s)");
+                }
             }
 
-            res = DefaultExceptionCreator(name, module, GetPythonExceptionByName("Exception"));
+            DynamicType res = creator(name, module, baseType);
             nameToPython[key] = res;
             return res;
         }
@@ -463,24 +509,81 @@ namespace IronPython.Runtime {
 
             return ExceptionConverter.ToClr(pyEx);
         }
-        #endregion
 
-        #region Private implementation details
-        private static void CreateExceptionMapping(object baseType, ExceptionMapping em) {
-            OldClass oc = em.Creator(em.PythonException, em.PythonModule, baseType);
+        public static void CreateExceptionMapping(DynamicType baseType, ExceptionMapping em) {
+            DynamicType type = CreatePythonException(em.PythonException, em.PythonModule, baseType, em.Creator);
 
-            pythonToClr[oc] = em.CLRException;
-            clrToPython[em.CLRException] = oc;
-            nameToPython[new QualifiedExceptionName(em.PythonException, em.PythonModule)] = oc;
+            pythonToClr[type] = em.CLRException;
+            clrToPython[em.CLRException] = type;
 
             if (em.SubTypes != null) {
                 for (int i = 0; i < em.SubTypes.Length; i++) {
-
-                    CreateExceptionMapping(oc, em.SubTypes[i]);
+                    CreateExceptionMapping(type, em.SubTypes[i]);
                 }
             }
         }
 
+        /// <summary>
+        /// Represents a single exception mapping from a CLR type to python type.
+        /// </summary>
+        public struct ExceptionMapping {
+            public ExceptionMapping(string python, Type clr) {
+                PythonException = python;
+                PythonModule = ExceptionConverter.defaultExceptionModule;
+                CLRException = clr;
+                SubTypes = null;
+                Creator = DefaultExceptionCreator;
+            }
+
+            public ExceptionMapping(string python, string module, Type clr) {
+                PythonException = python;
+                PythonModule = module;
+                CLRException = clr;
+                SubTypes = null;
+                Creator = DefaultExceptionCreator;
+            }
+
+            public ExceptionMapping(string python, Type clr, ExceptionClassCreator creator) {
+                PythonException = python;
+                PythonModule = ExceptionConverter.defaultExceptionModule;
+                CLRException = clr;
+                SubTypes = null;
+                Creator = creator;
+            }
+
+            public ExceptionMapping(string python, string module, Type clr, ExceptionMapping[] subTypes) {
+                PythonException = python;
+                PythonModule = module;
+                CLRException = clr;
+                SubTypes = subTypes;
+                Creator = DefaultExceptionCreator;
+            }
+
+            public ExceptionMapping(string python, Type clr, ExceptionMapping[] subTypes) {
+                PythonException = python;
+                PythonModule = ExceptionConverter.defaultExceptionModule;
+                CLRException = clr;
+                SubTypes = subTypes;
+                Creator = DefaultExceptionCreator;
+            }
+
+            public ExceptionMapping(string python, Type clr, ExceptionClassCreator creator, ExceptionMapping[] subTypes) {
+                PythonException = python;
+                PythonModule = ExceptionConverter.defaultExceptionModule;
+                CLRException = clr;
+                SubTypes = subTypes;
+                Creator = creator;
+            }
+
+            public string PythonException;
+            public string PythonModule;
+            public Type CLRException;
+            public ExceptionMapping[] SubTypes;
+            public ExceptionClassCreator Creator;
+        }
+        #endregion
+
+        #region Private implementation details
         private static void AssociateExceptions(Exception ex, object pyEx) {
             ex.Data[pythonExceptionKey] = pyEx;
             Ops.SetAttr(DefaultContext.Default, pyEx, SymbolTable.ClrExceptionKey, ex);
@@ -502,7 +605,7 @@ namespace IronPython.Runtime {
                 curType = curType.BaseType;
             }
 
-            return GetPythonExceptionByName("Exception");
+            return GetPythonException("Exception");
         }
 
         private static Type GetCLRTypeFromPython(DynamicType type) {
@@ -523,7 +626,7 @@ namespace IronPython.Runtime {
         }
 
         private static OldClass DefaultExceptionCreator(string name, string module, object baseType) {
-            Tuple bases = (baseType == null) ? Tuple.MakeTuple() : Tuple.MakeTuple(baseType);
+            Tuple bases = ObjectToTuple(baseType);
 
             FieldIdDict dict = new FieldIdDict();
             dict[SymbolTable.Module] = module;
@@ -533,6 +636,10 @@ namespace IronPython.Runtime {
             oc.SetAttr(DefaultContext.Default, SymbolTable.String, exceptionStrMethod);
 
             return oc;
+        }
+
+        private static Tuple ObjectToTuple(object obj) {
+            return (obj == null) ? Tuple.MakeTuple() : Tuple.MakeTuple(obj);
         }
 
         private static OldClass SyntaxErrorExceptionCreator(string name, string module, object baseType) {
@@ -557,67 +664,6 @@ namespace IronPython.Runtime {
         }
 
         /// <summary>
-        /// Represents a single exception mapping from a CLR type to python type.
-        /// </summary>
-        private struct ExceptionMapping {
-            public ExceptionMapping(string python, Type clr) {
-                PythonException = python;
-                PythonModule = ExceptionConverter.defaultExceptionModule;
-                CLRException = clr;
-                SubTypes = null;
-                Creator = DefaultExceptionCreator;
-            }
-
-            public ExceptionMapping(string python, string module, Type clr) {
-                PythonException = python;
-                PythonModule = module;
-                CLRException = clr;
-                SubTypes = null;
-                Creator = DefaultExceptionCreator;
-            }
-
-            public ExceptionMapping(string python, Type clr, CreateExceptionClass creator) {
-                PythonException = python;
-                PythonModule = ExceptionConverter.defaultExceptionModule;
-                CLRException = clr;
-                SubTypes = null;
-                Creator = creator;
-            }
-
-            public ExceptionMapping(string python, string module, Type clr, ExceptionMapping[] subTypes) {
-                PythonException = python;
-                PythonModule = module;
-                CLRException = clr;
-                SubTypes = subTypes;
-                Creator = DefaultExceptionCreator;
-            }
-
-            public ExceptionMapping(string python, Type clr, ExceptionMapping[] subTypes) {
-                PythonException = python;
-                PythonModule = ExceptionConverter.defaultExceptionModule;
-                CLRException = clr;
-                SubTypes = subTypes;
-                Creator = DefaultExceptionCreator;
-            }
-
-            public ExceptionMapping(string python, Type clr, CreateExceptionClass creator, ExceptionMapping[] subTypes) {
-                PythonException = python;
-                PythonModule = ExceptionConverter.defaultExceptionModule;
-                CLRException = clr;
-                SubTypes = subTypes;
-                Creator = creator;
-            }
-
-            public string PythonException;
-            public string PythonModule;
-            public Type CLRException;
-            public ExceptionMapping[] SubTypes;
-            public CreateExceptionClass Creator;
-
-            public delegate OldClass CreateExceptionClass(string name, string module, object baseType);
-        }
-
-        /// <summary>
         /// Python exception name, qualified with the module name, e.g. exceptions.TypeError
         /// </summary>
         private struct QualifiedExceptionName {
@@ -627,6 +673,9 @@ namespace IronPython.Runtime {
             }
             public override int GetHashCode() {
                 return Name.GetHashCode() ^ Module.GetHashCode();
+            }
+            public override string ToString() {
+                return Module + "." + Name;
             }
             public string Name;
             public string Module;

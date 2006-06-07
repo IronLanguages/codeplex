@@ -29,7 +29,7 @@ namespace IronPython.Modules {
     public static class PythonThread {
         #region Public API Surface
         public static object LockType = Ops.GetDynamicTypeFromType(typeof(Lock));
-        public static object error = ExceptionConverter.GetPythonExceptionByName("ThreadError");
+        public static object error = ExceptionConverter.CreatePythonException("error", "thread");
 
 
         [Documentation("start_new_thread(function, [args, [kwDict]]) -> thread id\nCreates a new thread running the given function")]

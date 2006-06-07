@@ -145,7 +145,7 @@ namespace IronPython.Modules {
                     else if (o is BigInteger) WriteInteger((BigInteger)o);
                     else if (o is Complex64) WriteComplex((Complex64)o);
                     else if (o is PythonBuffer) WriteBuffer((PythonBuffer)o);
-                    else if (o == ExceptionConverter.GetPythonExceptionByName("StopIteration")) WriteStopIteration();
+                    else if (o == ExceptionConverter.GetPythonException("StopIteration")) WriteStopIteration();
                     else throw Ops.ValueError("unmarshallable object");                    
                 } finally {
                     infinite.RemoveAt(index);
@@ -465,7 +465,7 @@ namespace IronPython.Modules {
                     case 'f': res = ReadFloat(); break;
                     case 't': res = ReadAsciiString(); break;
                     case 'u': res = ReadUnicodeString(); break;
-                    case 'S': res = ExceptionConverter.GetPythonExceptionByName("StopIteration"); break;
+                    case 'S': res = ExceptionConverter.GetPythonException("StopIteration"); break;
                     case 'N': res = null; break;
                     case 'x': res = ReadComplex(); break;
                     case 's': res = ReadBuffer(); break;

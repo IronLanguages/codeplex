@@ -1245,6 +1245,6 @@ namespace IronPython.Modules {
             }
         }
 
-        public static object Exception = ExceptionConverter.GetPythonExceptionByName("Exception");
+        public static object Exception = ExceptionConverter.GetPythonException("Exception");
     }
 }
