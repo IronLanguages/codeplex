@@ -272,4 +272,16 @@ ex = re.compile(r'\s+')
 m = ex.match('(object Petal', 7)
 Assert (m.end(0) == 8)
 
+#bug 850
+#re.search.group() index error
+
+AreEqual(re.search("z.*z", "az123za").group(),'z123z')
+AreEqual(re.search("z.*z", "az12za").group(),'z12z')
+AreEqual(re.search("z.*z", "azza").group(),'zz')
+AreEqual(re.search("z123p+z", "az123ppppppppppza").group(),'z123ppppppppppz')
+AreEqual(re.search("z123p+z", "az123pza").group(),'z123pz')
+AreEqual(re.search("z123p?z", "az123pza").group(),'z123pz')
+AreEqual(re.search("z123p?z", "az123za").group(),'z123z')
+
+
 run_test(__name__)
