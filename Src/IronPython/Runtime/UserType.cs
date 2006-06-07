@@ -65,7 +65,7 @@ namespace IronPython.Runtime {
         #region Constructors
 
         protected UserType(string name, Tuple bases, IDictionary<object, object> dict)
-            : base(NewTypeMaker.GetNewType(name, bases, dict)) {
+            : base(NewTypeMaker.GetNewType(name, bases, dict))  {
             List<MethodInfo> ctors = new List<MethodInfo>();
             foreach (MethodInfo mi in type.GetMethods()) {
                 if (mi.Name == ReflectedType.MakeNewName) ctors.Add(mi);
@@ -88,6 +88,11 @@ namespace IronPython.Runtime {
                 if (dict.ContainsKey(SymbolTable.DelAttr.ToString()))
                     throw new NotImplementedException("Overriding __delattr__ of built-in types is not implemented");
             }
+
+            // we don't support overriding __mro__
+            if (dict.ContainsKey(SymbolTable.MethodResolutionOrder.ToString()))
+                throw new NotImplementedException("Overriding __mro__ of built-in types is not implemented");
+
 
             IAttributesDictionary fastDict = (IAttributesDictionary)dict;
 

@@ -509,6 +509,36 @@ AreEqual(launch_ironpython_changing_extensions(_f_pkg1), 0)
 AreEqual(launch_ironpython_changing_extensions(_f_pkg2), 0)
 
 
+_imfp    = 'impmodfrmpkg'
+_f_imfp_init = path_combine(testpath.public_testdir, _imfp, "__init__.py")
+_f_imfp_mod  = path_combine(testpath.public_testdir, _imfp, "mod.py")
+_f_imfp_start = path_combine(testpath.public_testdir, "imfpstart.tpy")
+
+write_to_file(_f_imfp_init, "")
+write_to_file(_f_imfp_mod, "")
+write_to_file(_f_imfp_start, """try:
+    from impmodfrmpkg.mod import mod
+except ImportError, e:
+    pass
+else:
+    raise AssertionError("Import of mod from pkg.mod unexpectedly succeeded")
+""")
+
+AreEqual(launch_ironpython(_f_imfp_start), 0)
+
+_recimp = 'recimp'
+_f_recimp_init = path_combine(testpath.public_testdir, _recimp, "__init__.py")
+_f_recimp_a = path_combine(testpath.public_testdir, _recimp, "a.py")
+_f_recimp_b = path_combine(testpath.public_testdir, _recimp, "b.py")
+_f_recimp_start = path_combine(testpath.public_testdir, "recimpstart.tpy")
+
+write_to_file(_f_recimp_init, "from a import *")
+write_to_file(_f_recimp_a, "import b")
+write_to_file(_f_recimp_b, "import a")
+write_to_file(_f_recimp_start, "import recimp")
+
+AreEqual(launch_ironpython(_f_recimp_start), 0)
+
 # remove all test files
 
-delete_all_f(__name__)
+#delete_all_f(__name__)

@@ -93,6 +93,18 @@
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Signed Release|AnyCPU' ">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Signed Debug|AnyCPU' ">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System">
       <Name>System</Name>
@@ -147,6 +159,6 @@ copy /y "$(SolutionDir)IronPythonKey.snk" "$(ProjectDir)"
 "$(FrameworkSDKDir)Bin\sn" -Vr "$(TargetPath)" "$(SolutionDir)PublicKeyOnly.pk"
 if exist "%25ProgramFiles%25\Microsoft.NET\SDK\v2.0 64bit\Bin\sn.exe"  sn -Vr "$(TargetPath)" "$(SolutionDir)PublicKeyOnly.pk"
 del /q "$(SolutionDir)PublicKeyOnly.pk"
-    </PostBuildEvent>  
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>

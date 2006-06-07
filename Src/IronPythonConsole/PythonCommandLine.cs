@@ -483,7 +483,7 @@ namespace IronPythonConsole {
                 result = 0;
             } catch (PythonSystemExit pythonSystemExit) {
                 return pythonSystemExit.GetExitCode(engine.DefaultModuleScope);                
-            } catch (Exception e) {
+            } catch (Exception) {
             }
 
             if (continueInteraction) {

@@ -322,26 +322,30 @@ namespace IronPython.Compiler {
         }
 
         private void EmitOuterLocalIDs(CodeGen cg) {
-            int size = 0;
-            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
-                if (kv.Value.IsFree) size++;
-            }
-            // Emit null if no outer symbol IDs
-            if (size == 0) {
-                cg.EmitExprOrNone(null);
-            } else {
-                cg.EmitInt(size);
-                cg.Emit(OpCodes.Newarr, typeof(SymbolId));
-                int index = 0;
+            if (EmitLocalDictionary) {
+                int size = 0;
                 foreach (KeyValuePair<SymbolId, Binding> kv in names) {
-                    if (kv.Value.IsFree) {
-                        cg.Emit(OpCodes.Dup);
-                        cg.EmitInt(index++);
-                        cg.Emit(OpCodes.Ldelema, typeof(SymbolId));
-                        cg.EmitSymbolIdId(kv.Key);
-                        cg.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
+                    if (kv.Value.IsFree) size++;
+                }
+                // Emit null if no outer symbol IDs
+                if (size == 0) {
+                    cg.EmitExprOrNone(null);
+                } else {
+                    cg.EmitInt(size);
+                    cg.Emit(OpCodes.Newarr, typeof(SymbolId));
+                    int index = 0;
+                    foreach (KeyValuePair<SymbolId, Binding> kv in names) {
+                        if (kv.Value.IsFree) {
+                            cg.Emit(OpCodes.Dup);
+                            cg.EmitInt(index++);
+                            cg.Emit(OpCodes.Ldelema, typeof(SymbolId));
+                            cg.EmitSymbolIdId(kv.Key);
+                            cg.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
+                        }
                     }
                 }
+            } else {
+                cg.EmitExprOrNone(null);
             }
         }
 

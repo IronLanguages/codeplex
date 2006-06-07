@@ -208,16 +208,6 @@ namespace IronMath {
                 ToString(10),
                 System.Globalization.CultureInfo.InvariantCulture.NumberFormat
                 );
-
-            //!!! code above is horribly inefficient; however, code below is inaccurate which is clearly worse
-            //			double ret = (double)sign;
-            //			double place = 1.0;
-            //			double radix = (double)uint.MaxValue;
-            //			for (int i=0, len=length; i<len; i++) {
-            //				ret += place*(double)data[i];
-            //				place *= radix;
-            //			}
-            //			return ret;
         }
 
         public int Length {

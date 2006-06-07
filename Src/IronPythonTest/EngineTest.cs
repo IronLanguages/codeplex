@@ -275,8 +275,11 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
         }
 
         // AddToPath
-        public void xScenarioAddToPath() { // BUG#1030
+        public void ScenarioAddToPath() {
             PythonEngine pe = new PythonEngine();
+            string ipc_dll = typeof(PythonEngine).Assembly.Location;
+            string ipc_path = Path.GetDirectoryName(ipc_dll);
+            pe.InitializeModules(ipc_path, ipc_path + "\\IronPythonConsole.exe", PythonEngine.VersionString);
             string tempFile1 = Path.GetTempFileName();
 
             try {

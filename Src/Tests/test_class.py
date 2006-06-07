@@ -1149,5 +1149,13 @@ a = C()
 a.__dict__ = {'b':1}
 AreEqual(a.b, 1)
 
-    
-    
+# do not automatically include outer scopes in closure scenarios
+
+def outer_scope_test():
+    class Referenced:
+        pass
+    class C:
+        if Referenced: pass
+    Assert("Referenced" not in C.__dict__.keys())
+
+outer_scope_test()
