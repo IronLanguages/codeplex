@@ -38,15 +38,14 @@ namespace IronPython.Compiler {
 
     public static class OutputGenerator {
         private static int count = 0;
-        private static AssemblyGen CreateNewSnippetAssembly() {
-            string name = "snippets";
+        private static AssemblyGen CreateNewSnippetAssembly(string name, bool emitDebugInfo) {
             int thisCnt = Interlocked.Increment(ref count);
             if (thisCnt > 0) name += thisCnt;
-            return new AssemblyGen(name, Environment.CurrentDirectory, name + ".dll", Options.ILDebug);
+            return new AssemblyGen(name, Environment.CurrentDirectory, name + ".dll", emitDebugInfo);
         }
 
         // All snippets are created in this shared assembly
-        private static AssemblyGen snippetAssembly = CreateNewSnippetAssembly();
+        private static AssemblyGen snippetAssembly = CreateNewSnippetAssembly("snippets", Options.ILDebug);
         public static AssemblyGen Snippets {
             get {
                 return snippetAssembly;
@@ -57,13 +56,38 @@ namespace IronPython.Compiler {
             if (Options.SaveAndReloadBinaries) {
                 snippetAssembly.Dump();
             }
-            snippetAssembly = CreateNewSnippetAssembly();
+            snippetAssembly = CreateNewSnippetAssembly("snippets", Options.ILDebug);
+
+            if (debuggableSnippetAssembly != null) {
+                if (Options.SaveAndReloadBinaries)
+                    debuggableSnippetAssembly.Dump();
+                debuggableSnippetAssembly = null;
+            }
         }
 
-        private static int moduleHolderIndex = 0;
+        // All debuggable snippets are created in this shared assembly
+        private static AssemblyGen debuggableSnippetAssembly;
+        internal static AssemblyGen DebuggableSnippets {
+            get {
+                if (debuggableSnippetAssembly == null) {
+                    debuggableSnippetAssembly = CreateNewSnippetAssembly("debuggableSnippets", true);
+                }
+                return debuggableSnippetAssembly;
+            }
+        }
 
-        private static TypeGen MakeModuleSlotHolder() {
-            TypeGen tg = snippetAssembly.DefinePublicType("moduleHolder_" + moduleHolderIndex++, typeof(object));
+        // Ensures a unique name
+        private static int debuggableSnippetTypeIndex = 0;
+
+        private static TypeGen MakeDebuggableSnippetType(string snippetName) {
+            string typeName = snippetName;
+            try {
+                typeName = Path.GetFileName(snippetName);
+            } catch (ArgumentException) { }
+
+            typeName = typeName.Replace('.', '_'); // '.' is for separating the namespace and the type name.
+            DebuggableSnippets.SetPythonSourceFile(snippetName);
+            TypeGen tg = DebuggableSnippets.DefinePublicType(typeName + "$" + debuggableSnippetTypeIndex++, typeof(object));
             tg.AddModuleField(typeof(PythonModule));
             tg.myType.DefineDefaultConstructor(MethodAttributes.Public);
             return tg;
@@ -86,9 +110,9 @@ namespace IronPython.Compiler {
             TypeGen tg = null;
 
             if (enableDebugging) {
-                tg = MakeModuleSlotHolder();
+                tg = MakeDebuggableSnippetType(name);
                 cg = tg.DefineUserHiddenMethod(MethodAttributes.Public | MethodAttributes.Static,
-                    name, typeof(object), new Type[] { typeof(Frame) });
+                    "Initialize", typeof(object), new Type[] { typeof(Frame) });
                 cg.typeGen = tg;
                 cg.ModuleSlot = tg.moduleSlot;
             } else {

@@ -99,8 +99,7 @@ namespace IronPython.Hosting {
             // make sure cctor for OutputGenerator has run
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(OutputGenerator).TypeHandle);
 
-            PythonModule mod = new PythonModule("__main__", new Dict(), Sys);
-            topFrame = new Frame(mod);
+            topFrame = new Frame("__main__");
             options = new Options();
         }
 
@@ -154,6 +153,11 @@ namespace IronPython.Hosting {
                 return;
 
             throw new ArgumentOutOfRangeException("executionOptions", userOptions, invalidOptions.ToString() + " is invalid");
+        }
+
+        private void EnsureValidArguments(Frame moduleScope, ExecutionOptions userOptions, ExecutionOptions permissibleOptions) {
+            moduleScope.EnsureInitialized(Sys);
+            ValidateExecutionOptions(userOptions, ExecuteFileOptions);
         }
 
         private void ExecuteFileOptimized(string fileName, string moduleName, ExecutionOptions executionOptions, out Frame moduleScope) {
@@ -434,7 +438,7 @@ namespace IronPython.Hosting {
             Stmt s = p.ParseFileInput();
             bool printExprStmts = (executionOptions & ExecutionOptions.PrintExpressions) != 0;
             bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
-            FrameCode code = OutputGenerator.GenerateSnippet(context, s, printExprStmts, enableDebugging);
+            FrameCode code = OutputGenerator.GenerateSnippet(p.CompilerContext, s, printExprStmts, enableDebugging);
             code.Run(moduleScope);
         }
 
@@ -571,6 +575,8 @@ namespace IronPython.Hosting {
         }
 
         public object Import(string module) {
+            topFrame.EnsureInitialized(Sys);
+
             object mod = Importer.ImportModule(topFrame, module, true);
             if (mod != null) {
                 string[] names = module.Split('.');
@@ -601,15 +607,20 @@ namespace IronPython.Hosting {
 
         #region Get\Set Variable
         public void SetVariable(string name, object val) {
+            topFrame.EnsureInitialized(Sys);
+
             val = Ops.ToPython(val);
             Ops.SetAttr(topFrame, topFrame.Module, SymbolTable.StringToId(name), val);
         }
 
         public object GetVariable(string name) {
+            topFrame.EnsureInitialized(Sys);
+
             return Ops.GetAttr(topFrame, topFrame.Module, SymbolTable.StringToId(name));
         }
 
         public Frame DefaultModuleScope { get { return topFrame; } }
+
         #endregion
 
         #region Dynamic Execution\Evaluation
@@ -618,7 +629,7 @@ namespace IronPython.Hosting {
         }
 
         public void Execute(string text, Frame moduleScope, ExecutionOptions executionOptions) {
-            ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
+            EnsureValidArguments(moduleScope, executionOptions, ExecuteStringOptions);
 
             Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, context, text);
             ExecuteSnippet(p, moduleScope, executionOptions);
@@ -629,7 +640,7 @@ namespace IronPython.Hosting {
         }
 
         public void ExecuteFile(string fileName, Frame moduleScope, ExecutionOptions executionOptions) {
-            ValidateExecutionOptions(executionOptions, ExecuteFileOptions);
+            EnsureValidArguments(moduleScope, executionOptions, ExecuteFileOptions);
 
             Parser p = Parser.FromFile(Sys, context.CopyWithNewSourceFile(fileName));
             ExecuteSnippet(p, moduleScope, executionOptions);
@@ -640,7 +651,7 @@ namespace IronPython.Hosting {
         }
 
         public object Evaluate(string expr, Frame moduleScope, ExecutionOptions executionOptions) {
-            ValidateExecutionOptions(executionOptions, EvaluateStringOptions);
+            EnsureValidArguments(moduleScope, executionOptions, EvaluateStringOptions);
 
             return Builtin.Eval(
                 moduleScope, 
@@ -661,13 +672,19 @@ namespace IronPython.Hosting {
 
         #region Compile
         public void Execute(object code) {
+            Execute(code, topFrame);
+        }
+
+        public void Execute(object code, Frame moduleScope) {
+            moduleScope.EnsureInitialized(Sys);
+
             FrameCode fc = code as FrameCode;
             if (fc != null) {
-                fc.Run(new Frame(topFrame.Module));
+                fc.Run(moduleScope);
             } else if (code is string) {
                 Execute((string)code);
             } else {
-                throw new ArgumentException("code object must be string or have been generated via PythonEngine.Compile");
+                throw new ArgumentException("code object must be string or have been generated via PythonEngine.Compile", "code");
             }
         }
 

@@ -57,8 +57,8 @@ namespace IronPythonTest {
             // standardEngine.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
         }
 
-        // Execute 
-        public void Scenario1() {
+        // Execute
+        public void ScenarioExecute() {
             PythonEngine pe = new PythonEngine();
 
             ClsPart clsPart = new ClsPart();
@@ -104,8 +104,8 @@ namespace IronPythonTest {
             AreEqual((int)pe.GetVariable("clsPart"), 1);
         }
 
-        // No interfere between two engines :)
-        public void Scenario2() {
+        // No intereference between two engines
+        public void ScenarioNoInterferenceBetweenTwoEngines() {
             PythonEngine pe1 = new PythonEngine();
             PythonEngine pe2 = new PythonEngine();
 
@@ -117,8 +117,43 @@ namespace IronPythonTest {
             } catch (IronPython.Runtime.PythonNameError) { }
         }
 
+        public void ScenarioEvaluateInAnonymousModuleScope() {
+            Frame anonymousScope = new Frame();
+            Frame anotherAnonymousScope = new Frame();
+            standardEngine.Execute("x = 0");
+            standardEngine.Execute("x = 1", anonymousScope, ExecutionOptions.Default);
+            anotherAnonymousScope.SetGlobal((SymbolId)"x", 2);
+
+            // Ensure that the default ModuleScope is not affected
+            AreEqual(0, standardEngine.Evaluate<int>("x"));
+            AreEqual(0, (int)standardEngine.DefaultModuleScope.GetGlobal((SymbolId)"x"));
+            // Ensure that the anonymous scope has been updated as expected
+            AreEqual(1, standardEngine.Evaluate<int>("x", anonymousScope, ExecutionOptions.Default));
+            AreEqual(1, (int)anonymousScope.GetGlobal((SymbolId)"x"));
+            // Ensure that other anonymous scopes are not affected
+            AreEqual(2, standardEngine.Evaluate<int>("x", anotherAnonymousScope, ExecutionOptions.Default));
+            AreEqual(2, (int)anotherAnonymousScope.GetGlobal((SymbolId)"x"));
+        }
+
+        public void ScenarioEvaluateInPublishedModuleScope() {
+            Frame publishedScope = new Frame("published_scope_test");
+            standardEngine.Execute("x = 0");
+            standardEngine.Execute("x = 1", publishedScope, ExecutionOptions.Default);
+            // Ensure that the default ModuleScope is not affected
+            AreEqual(0, standardEngine.Evaluate<int>("x"));
+            // Ensure that the published scope has been updated as expected
+            AreEqual(1, standardEngine.Evaluate<int>("x", publishedScope, ExecutionOptions.Default));
+
+            // Ensure that the published scope is accessible from other scopes using sys.modules
+            standardEngine.Execute(@"
+import sys
+x_from_published_scope_test = sys.modules['published_scope_test'].x
+");
+            AreEqual(1, standardEngine.Evaluate<int>("x_from_published_scope_test"));
+        }
+
         // Evaluate
-        public void Scenario3() {
+        public void ScenarioEvaluate() {
             PythonEngine pe = new PythonEngine();
 
             AreEqual(10, (int)pe.Evaluate("4+6"));
@@ -138,7 +173,7 @@ namespace IronPythonTest {
         }
 
         // ExecuteFile
-        public void Scenario4() {
+        public void ScenarioExecuteFile() {
             PythonEngine pe = new PythonEngine();
 
             string tempFile1 = Path.GetTempFileName();
@@ -174,7 +209,7 @@ namespace IronPythonTest {
         }
 
         // Bug: 542
-        public void Scenario5() {
+        public void Scenario542() {
             PythonEngine pe = new PythonEngine();
             string tempFile1 = Path.GetTempFileName();
 
@@ -231,7 +266,7 @@ namespace IronPythonTest {
         }
 
         // Bug: 167 
-        public void Scenario6() {
+        public void Scenario167() {
             PythonEngine pe = new PythonEngine();
 
             pe.Execute("a=1\r\nb=-1");
@@ -240,7 +275,7 @@ namespace IronPythonTest {
         }
 
         // AddToPath
-        public void xScenario7() { // BUG#1030
+        public void xScenarioAddToPath() { // BUG#1030
             PythonEngine pe = new PythonEngine();
             string tempFile1 = Path.GetTempFileName();
 
@@ -269,24 +304,23 @@ namespace IronPythonTest {
         }
 
         public void ScenarioEnableDebugging() {
-            // Ensure that you do not get good line numbers without ExecutionOptions.Default
-            try {
-                standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.Default);
-                throw new Exception("We should not get here");
-            } catch (StringException e1) {
-                string stackTrace = e1.StackTrace;
-                if (stackTrace.Contains("moduleHolder"))
-                    throw new Exception("Debugging is enabled");
-            }
-
+            const string lineNumber = "raise.py:line 18";
             // Ensure that you do get good line numbers with ExecutionOptions.Default
             try {
                 standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.EnableDebugging);
                 throw new Exception("We should not get here");
+            } catch (StringException e1) {
+                if (!e1.StackTrace.Contains(lineNumber))
+                    throw new Exception("Debugging is not enabled even though ExecutionOptions.EnableDebugging is specified");
+            }
+
+            // Ensure that you do not get good line numbers without ExecutionOptions.Default
+            try {
+                standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.Default);
+                throw new Exception("We should not get here");
             } catch (StringException e2) {
-                string stackTrace = e2.StackTrace;
-                if (!stackTrace.Contains("moduleHolder"))
-                    throw new Exception("Debugging is not enabled");
+                if (e2.StackTrace.Contains(lineNumber))
+                    throw new Exception("Debugging is enabled even though ExecutionOptions.EnableDebugging is not specified");
             }
         }
 
@@ -297,12 +331,40 @@ namespace IronPythonTest {
             AreEqual(1, pe.Evaluate<int>("x", moduleScope, ExecutionOptions.Default));
 
             // Ensure that we can set new globals in the scope, and execute further code
-            moduleScope.SetGlobal(SymbolTable.StringToId("y"), 2);
+            moduleScope.SetGlobal((SymbolId)"y", 2);
             AreEqual(3, pe.Evaluate<int>("x+y", moduleScope, ExecutionOptions.Default));
         }
 
+        public void ScenarioExecuteFileOptimized_ScriptThrows() {
+            // We should be able to use the Frame even if an exception is thrown by the script
+            PythonEngine pe = new PythonEngine();
+            Frame moduleScope = null;
+            try {
+                pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\raise.py", null, ExecutionOptions.Default, out moduleScope);
+                throw new Exception("We should not reach here");
+            } catch (StringException) {
+                AreEqual(1, pe.Evaluate<int>("x", moduleScope, ExecutionOptions.Default));
+
+                // Ensure that we can set new globals in the scope, and execute further code
+                moduleScope.SetGlobal((SymbolId)"y", 2);
+                AreEqual(3, pe.Evaluate<int>("x+y", moduleScope, ExecutionOptions.Default));
+            }
+        }
+
+        public void ScenarioExecuteFileOptimized_ParserThrows() {
+            // We should be able to use the Frame even if an exception is thrown before the script starts executing
+            PythonEngine pe = new PythonEngine();
+            Frame moduleScope = null;
+            try {
+                pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\syntaxError.py", null, ExecutionOptions.Default, out moduleScope);
+                throw new Exception("We should not reach here");
+            } catch (PythonSyntaxError) {
+                AreEqual((Frame)null, moduleScope);
+            }
+        }
+
         // Compile and Run
-        public void Scenario9() {
+        public void ScenarioCompileAndRun() {
             PythonEngine pe = new PythonEngine();
             ClsPart clsPart = new ClsPart();
 
@@ -371,6 +433,8 @@ if r.sum != 110:
         public static int Negate(int arg) { return -1 * arg; }
 
         static void AreEqual<T>(T expected, T actual) {
+            if (expected == null && actual == null) return;
+
             if (!expected.Equals(actual)) {
                 Console.WriteLine("{0} {1}", expected, actual);
                 throw new Exception();

@@ -39,26 +39,68 @@ namespace IronPython.Runtime {
         private bool trueDivision;
 
         private ReflectedType __builtin__;
-        public readonly PythonModule __module__;
+        public PythonModule __module__;
 
         public List<object> staticData;
+
+        private string moduleName;
 
         public static Frame MakeFrameForFunction(PythonModule context) {
             return new Frame(context, context.__dict__, new FieldIdDict());
         }
 
-        public Frame(PythonModule mod) {
-            __module__ = mod;
-            f_globals = mod.__dict__;
-            f_locals = mod.__dict__;
-            __builtin__ = TypeCache.Builtin;
+        /// <summary>
+        /// These overloads of the constructor allows delayed creating of the PythonModule. The Frame cannot
+        /// be used until EnsureInitialized has been called.
+        /// </summary>
+        public Frame() : this(String.Empty) {
         }
 
-        public Frame(PythonModule mod, IAttributesDictionary globals, object locals) {
+        public Frame(string modName) {
+            if (modName == null)
+                throw new ArgumentException("moduleName");
+
+            moduleName = modName;
+            // Populate the dictionary so that SetGlobal will work
+            f_globals = new FieldIdDict();
+        }
+
+        internal Frame(PythonModule mod) : this(mod, mod.__dict__, mod.__dict__) {
+        }
+
+        internal Frame(PythonModule mod, IAttributesDictionary globals, object locals) {
+            Initialize(mod, globals, locals);
+        }
+
+        internal void EnsureInitialized(SystemState state) {
+            Debug.Assert(state != null);
+
+            if (__module__ == null) {
+                lock (this) {
+                    if (__module__ == null) {
+                        PythonModule mod = new PythonModule(moduleName, f_globals, state);
+                        Initialize(mod, mod.__dict__, mod.__dict__);
+
+                        if (moduleName != String.Empty)
+                            mod.SystemState.modules[moduleName] = mod;
+                    }
+                }
+            }
+
+            if (__module__.SystemState != state)
+                throw new ArgumentException("A ModuleScope can only be used with its associated PythonEngine", "moduleScope");
+        }
+
+        private void Initialize(PythonModule mod, IAttributesDictionary globals, object locals) {
             __module__ = mod;
             f_globals = globals;
             f_locals = locals;
             __builtin__ = TypeCache.Builtin;
+            moduleName = mod.ModuleName;
+        }
+
+        public override string ToString() {
+            return moduleName;
         }
 
         public object GetLocal(SymbolId symbol) {

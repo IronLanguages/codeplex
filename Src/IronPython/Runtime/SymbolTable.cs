@@ -50,6 +50,10 @@ namespace IronPython.Runtime {
             return SymbolTable.IdToString(this);
         }
 
+        public static explicit operator SymbolId(string s) {
+            return SymbolTable.StringToId(s);
+        }
+
         public static bool operator ==(SymbolId a, SymbolId b) {
             return a.Id == b.Id;
         }
