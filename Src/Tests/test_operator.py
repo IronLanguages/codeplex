@@ -286,7 +286,25 @@ for x in C1(), C2():
     AreEqual(abs(x), 30)
 
 
-    
+# testing custom divmod operator
+class DM:
+    def __divmod__(self, other):
+        return "__divmod__"
+
+class NewDM(int): pass
+
+class Callable:
+    def __call__(self, other):
+        return "__call__"
+
+class CallDM:
+    __divmod__ = Callable()
+
+AreEqual(divmod(DM(), DM()), "__divmod__")
+AreEqual(divmod(DM(), 10), "__divmod__")
+AreEqual(divmod(NewDM(10), NewDM(5)), (2, 0))
+AreEqual(divmod(CallDM(), 2), "__call__")
+
 #***** Above code are from 'Operators' *****
 
 # object identity of booleans - __ne__ should return "True" or "False", not a new boxed bool

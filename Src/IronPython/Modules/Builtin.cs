@@ -271,8 +271,13 @@ namespace IronPython.Modules {
 
         // Python has lots of optimizations for this method that we may want to implement in the future
         [PythonName("divmod")]
-        public static Tuple DivMod(object x, object y) {
-            return Tuple.MakeTuple(Ops.FloorDivide(x, y), Ops.Mod(x, y));
+        public static object DivMod(object x, object y) {
+            object func, res;
+            if (Ops.TryGetAttr(x, SymbolTable.StringToId("__divmod__"), out func) && Ops.TryCall(func, y, out res)) {
+                return res;
+            } else {
+                return Tuple.MakeTuple(Ops.FloorDivide(x, y), Ops.Mod(x, y));
+            }
         }
 
         public static object enumerate = Ops.GetDynamicTypeFromType(typeof(Enumerate));
