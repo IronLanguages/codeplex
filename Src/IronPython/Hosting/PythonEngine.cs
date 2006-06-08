@@ -37,20 +37,12 @@ namespace IronPython.Hosting {
     public enum ExecutionOptions {
         Default             = 0x00,
 
-        // If the statment is just an expression, print it. This is useful to interactive sessions
-        // so that the host console does not need to determine if a statement is an expression or not.
-        PrintExpressions    = 0x01, 
-
         // Enable CLI debugging. This allows debugging the script with a CLI debugger. Also, CLI exceptions
         // will have line numbers in the stack-trace.
         // Note that this is independent of the "traceback" Python module.
         // Also, the generated code will not be reclaimed, and so this should only be used for bounded number 
         // of executions.
         EnableDebugging     = 0x02,
-
-        // Call RunInteractive after the script has executed. This is useful for interactive consoles
-        // to inspect the scope of the script.
-        Introspection       = 0x04,
 
         // Skip the first line of the code to execute. This is useful for Unix scripts which
         // have the command to execute specified in the first line.
@@ -88,7 +80,6 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Private Data Members
-        private IConsole _console = null;
         private SystemState systemState = new SystemState();
         private Frame topFrame;
         private CompilerContext context = new CompilerContext("<stdin>");
@@ -113,14 +104,9 @@ namespace IronPython.Hosting {
 
         public void Shutdown() {
             object callable;
+
             if (Sys.TryGetAttr(topFrame, SymbolTable.SysExitFunc, out callable)) {
-                try {
-                    Ops.Call(callable);
-                } catch (Exception e) {
-                    MyConsole.WriteLine("", Style.Error);
-                    MyConsole.WriteLine("Error in sys.exitfunc:", Style.Error);
-                    MyConsole.Write(FormatException(e), Style.Error);
-                }
+                Ops.Call(callable);
             }
 
             DumpDebugInfo();
@@ -143,9 +129,9 @@ namespace IronPython.Hosting {
 
         #region Non-Public Members
 
-        private const ExecutionOptions ExecuteStringOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.PrintExpressions | ExecutionOptions.SkipFirstLine;
-        private const ExecutionOptions ExecuteFileOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.PrintExpressions | ExecutionOptions.SkipFirstLine;
-        private const ExecutionOptions EvaluateStringOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.PrintExpressions;
+        private const ExecutionOptions ExecuteStringOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.SkipFirstLine;
+        private const ExecutionOptions ExecuteFileOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.SkipFirstLine;
+        private const ExecutionOptions EvaluateStringOptions = ExecutionOptions.EnableDebugging;
 
         private static void ValidateExecutionOptions(ExecutionOptions userOptions, ExecutionOptions permissibleOptions) {
             ExecutionOptions invalidOptions = userOptions & ~permissibleOptions;
@@ -158,124 +144,6 @@ namespace IronPython.Hosting {
         private void EnsureValidArguments(Frame moduleScope, ExecutionOptions userOptions, ExecutionOptions permissibleOptions) {
             moduleScope.EnsureInitialized(Sys);
             ValidateExecutionOptions(userOptions, ExecuteFileOptions);
-        }
-
-        private void ExecuteFileOptimized(string fileName, string moduleName, ExecutionOptions executionOptions, out Frame moduleScope) {
-            CompilerContext context = new CompilerContext(fileName);
-            bool skipLine = (executionOptions & ExecutionOptions.SkipFirstLine) != 0;
-            Parser p = Parser.FromFile(Sys, context, skipLine, false);
-            Stmt s = p.ParseFileInput();
-
-            PythonModule mod = OutputGenerator.GenerateModule(Sys, context, s, moduleName);
-            moduleScope = new Frame(mod);
-
-            Sys.modules[mod.ModuleName] = mod;
-            mod.SetAttr(mod, SymbolTable.File, fileName);
-
-            mod.Initialize();
-        }
-
-        private int TryInteractiveAction(InteractiveAction interactiveAction, out bool continueInteraction) {
-            int result = 1; // assume failure
-            continueInteraction = false;
-
-            try {
-                result = interactiveAction(out continueInteraction);
-            } catch (PythonSystemExit se) {
-                return se.GetExitCode(topFrame);
-            } catch (ThreadAbortException tae) {
-                PythonKeyboardInterrupt pki = tae.ExceptionState as PythonKeyboardInterrupt;
-                if (pki != null) {
-                    Thread.ResetAbort();
-                    bool endOfMscorlib = false;
-                    string ex = FormatException(tae, ExceptionConverter.ToPython(pki), delegate(StackFrame sf) {
-                        // filter out mscorlib methods that show up on the stack initially, 
-                        // for example ReadLine / ReadBuffer etc...
-                        if (!endOfMscorlib &&
-                            sf.GetMethod().DeclaringType != null &&
-                            sf.GetMethod().DeclaringType.Assembly == typeof(string).Assembly) {
-                            return false;
-                        }
-                        endOfMscorlib = true;
-                        return true;
-                    });
-                    MyConsole.Write(ex, Style.Error);
-                    continueInteraction = true;
-                }
-            } catch (Exception e) {
-                // There should be no unhandled exceptions in the interactive session
-                // We catch all exceptions here, and just display it,
-                // and keep on going
-                MyConsole.Write(FormatException(e), Style.Error);
-                continueInteraction = true;
-            }
-
-            return result;
-        }
-
-        private int RunInteractiveLoop() {
-            bool continueInteraction = true;
-            int result = 0;
-            while (continueInteraction) {
-                result = TryInteractiveAction(
-                    delegate(out bool continueInteractionArgument) {
-                        continueInteractionArgument = DoOneInteractive(topFrame);
-                        return 0;
-                    },
-                    out continueInteraction);
-            }
-
-            return result;
-        }
-
-        private Stmt ParseInteractiveInput(string text, bool allowIncompleteStatement) {
-            Parser p = Parser.FromString(Sys, context, text);
-            return p.ParseInteractiveInput(allowIncompleteStatement);
-        }
-
-        private bool TreatAsBlankLine(string line, int autoIndentSize) {
-            if (line.Length == 0) return true;
-            if (autoIndentSize != 0 && line.Trim().Length == 0 && line.Length == autoIndentSize) {
-                return true;
-            }
-
-            return false;
-        }
-
-        private Stmt ReadStatement(out bool continueInteraction) {
-            StringBuilder b = new StringBuilder();
-            int autoIndentSize = 0;
-
-            MyConsole.Write(Sys.ps1.ToString(), Style.Prompt);
-
-            while (true) {
-                string line = MyConsole.ReadLine(autoIndentSize);
-                continueInteraction = true;
-
-                if (line == null) {
-                    if (ExecWrapper != null) {
-                        Ops.Call(ExecWrapper, new object[] { null });
-                    }
-                    continueInteraction = false;
-                    return null;
-                }
-
-                bool allowIncompleteStatement = !TreatAsBlankLine(line, autoIndentSize);
-                b.Append(line);
-                b.Append("\n");
-
-                if (b.ToString() == "\n" || (!allowIncompleteStatement && b.ToString().Trim().Length == 0)) return null;
-
-                Stmt s = ParseInteractiveInput(b.ToString(), allowIncompleteStatement);
-                if (s != null) return s;
-
-                if (Options.AutoIndentSize != 0) {
-                    autoIndentSize = Parser.GetNextAutoIndentSize(b.ToString(), Options.AutoIndentSize);
-                }
-
-                // Keep on reading input
-                MyConsole.Write(Sys.ps2.ToString(), Style.Prompt);
-            }
         }
 
         private string FormatPythonException(object python) {
@@ -436,15 +304,15 @@ namespace IronPython.Hosting {
 
         private void ExecuteSnippet(Parser p, Frame moduleScope, ExecutionOptions executionOptions) {
             Stmt s = p.ParseFileInput();
-            bool printExprStmts = (executionOptions & ExecutionOptions.PrintExpressions) != 0;
             bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
-            FrameCode code = OutputGenerator.GenerateSnippet(p.CompilerContext, s, printExprStmts, enableDebugging);
+            FrameCode code = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, enableDebugging);
             code.Run(moduleScope);
         }
 
-        private delegate bool FilterStackFrame(StackFrame frame);
+        public delegate bool FilterStackFrame(StackFrame frame);
 
-        private string FormatException(Exception e, object pythonException, FilterStackFrame fsf) {
+        // TODO: Make private
+        public string FormatException(Exception e, object pythonException, FilterStackFrame fsf) {
             Debug.Assert(pythonException != null);
             Debug.Assert(e != null);
 
@@ -458,104 +326,57 @@ namespace IronPython.Hosting {
 
             return result;
         }
-
-        internal delegate int InteractiveAction(out bool continueInteraction);
         #endregion
 
         #region Console Support
-        /// <summary>
-        /// Create a new module scope and execute the given script, with optimizations enabled.
-        /// Code cannot be optimized if the caller specifies a Frame. Hence, this API creates a new Frame itself.
-        /// ExecutionOptions.EnableDebugging is implied.
-        /// </summary>
-        /// <param name="moduleScope">This is set to the new module scope which is created and used to execute the script.
-        /// It will be null if a Frame could not be created (for eg, if the script contains a syntax error).
-        /// It can be non-null even if an exception is thrown by the script.</param>
-        public void ExecuteFileOptimized(string fileName, IEnumerable<string> commandLineArguments, ExecutionOptions executionOptions, out Frame moduleScope) {
-            moduleScope = null;
+        public void ExecuteFileOptimized(string fileName, string moduleName, ExecutionOptions executionOptions, out Frame moduleScope) {
+            CompilerContext context = this.context.CopyWithNewSourceFile(fileName);
+            bool skipLine = (executionOptions & ExecutionOptions.SkipFirstLine) != 0;
+            Parser p = Parser.FromFile(Sys, context, skipLine, false);
+            Stmt s = p.ParseFileInput();
 
-            ValidateExecutionOptions(executionOptions, ExecuteFileOptions | ExecutionOptions.Introspection);
+            PythonModule mod = OutputGenerator.GenerateModule(Sys, context, s, moduleName);
+            moduleScope = new Frame(mod);
 
-            // !!! It is invalid to call this API multiple times within the same PythonEngine.
-            // To enforce this invariant, we could factor this out into a static method that instantiates a new PythonEngine.
-            if ((Sys.argv as List).Count != 0)
-                throw new InvalidOperationException("This API can be called just once on the same PythonEngine instance");
+            if (moduleName != null)
+                Sys.modules[mod.ModuleName] = mod;
+            mod.SetAttr(mod, SymbolTable.File, fileName);
 
-            // Publish the command line arguments
-            if (commandLineArguments == null)
-                Sys.argv = new List();
-            else
-                Sys.argv = new List(commandLineArguments);
-
-            bool introspection = (executionOptions & ExecutionOptions.Introspection) != 0;
-
-            if (introspection) {
-                Frame scopeResult = null;
-                bool continueInteraction;
-                int result = TryInteractiveAction(
-                    delegate(out bool continueInteractionArgument) {
-                        ExecuteFileOptimized(fileName, "__main__", executionOptions, out scopeResult);
-                        continueInteractionArgument = true;
-                        return 0;
-                    },
-                    out continueInteraction);
-
-                if (continueInteraction) {
-                    if (scopeResult == null) {
-                        // If there was an error generating a new module (for eg. because of a syntax error),
-                        // we will just use the existing "topFrame"
-                    } else {
-                        topFrame = moduleScope = scopeResult;
-                    }
-                    RunInteractiveLoop();
-                }
-            } else {
-                ExecuteFileOptimized(fileName, "__main__", executionOptions, out moduleScope);
-            }
+            mod.Initialize();
         }
 
-        public IConsole MyConsole {
-            get {
-                if (_console == null) {
-                    _console = new BasicConsole();
-                }
-                return _console;
-            }
-            set {
-                _console = value;
-            }
-        }
+        public void ExecuteToConsole(string text) { ExecuteToConsole(text, topFrame); }
+        public void ExecuteToConsole(string text, Frame topFrame) {
+            topFrame.EnsureInitialized(Sys);
 
-        public bool DoOneInteractive(Frame topFrame) {
-            bool continueInteraction;
-            Stmt s = ReadStatement(out continueInteraction);
-            if (continueInteraction == false)
-                return false;
+            Parser p = Parser.FromString(((ICallerContext)topFrame).SystemState, context, text);
+            Stmt s = p.ParseInteractiveInput(false);
 
             //  's' is null when we parse a line composed only of a NEWLINE (interactive_input grammar);
             //  we don't generate anything when 's' is null
             if (s != null) {
                 FrameCode code = OutputGenerator.GenerateSnippet(context, s, true, false);
+                Exception ex = null;
 
                 if (ExecWrapper != null) {
+                    // ExecWrapper usually used in Winforms scenario to cause code to be executed on a separate thread
                     CallTarget0 t = delegate() {
-                        try { code.Run(topFrame); } catch (Exception e) { MyConsole.Write(FormatException(e), Style.Error); }
+                        try { code.Run(topFrame); } catch (Exception e) { ex = e; }
                         return null;
                     };
                     object callable = new Function0(topFrame.__module__, "wrapper", t, new string[0], new object[0]);
                     Ops.Call(ExecWrapper, callable);
+                    if (ex != null)
+                        throw ex;
                 } else {
                     code.Run(topFrame);
                 }
             }
-
-            return true;
         }
 
-        public int RunInteractive() {
-            topFrame.SetGlobal(SymbolTable.Doc, null);
-            Sys.modules[topFrame.Module.ModuleName] = topFrame.Module;
-            return RunInteractiveLoop();
+        public bool ParseInteractiveInput(string text, bool allowIncompleteStatement) {
+            Parser p = Parser.FromString(Sys, context, text);
+            return p.ParseInteractiveInput(allowIncompleteStatement) != null;
         }
         #endregion
 
@@ -585,7 +406,6 @@ namespace IronPython.Hosting {
             return mod;
         }
         #endregion
-
 
         #region IO Stream
         public void SetStderr(Stream stream) {
@@ -619,7 +439,7 @@ namespace IronPython.Hosting {
             return Ops.GetAttr(topFrame, topFrame.Module, SymbolTable.StringToId(name));
         }
 
-        public Frame DefaultModuleScope { get { return topFrame; } }
+        public Frame DefaultModuleScope { get { return topFrame; } set { topFrame = value; } }
 
         #endregion
 
@@ -698,9 +518,8 @@ namespace IronPython.Hosting {
             Parser p = Parser.FromString(Sys, context, text);
             Stmt s = p.ParseFileInput();
 
-            bool printExprStmts = (executionOptions & ExecutionOptions.PrintExpressions) != 0;
             bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
-            return OutputGenerator.GenerateSnippet(context, s, printExprStmts, enableDebugging);
+            return OutputGenerator.GenerateSnippet(context, s, false, enableDebugging);
         }
         #endregion
 

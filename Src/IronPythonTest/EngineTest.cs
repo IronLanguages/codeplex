@@ -330,7 +330,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
         public void ScenarioExecuteFileOptimized() {
             PythonEngine pe = new PythonEngine();
             Frame moduleScope;
-            pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\simpleCommand.py", null, ExecutionOptions.Default, out moduleScope);
+            pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\simpleCommand.py", "__main__", ExecutionOptions.Default, out moduleScope);
             AreEqual(1, pe.Evaluate<int>("x", moduleScope, ExecutionOptions.Default));
 
             // Ensure that we can set new globals in the scope, and execute further code
@@ -343,7 +343,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
             PythonEngine pe = new PythonEngine();
             Frame moduleScope = null;
             try {
-                pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\raise.py", null, ExecutionOptions.Default, out moduleScope);
+                pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\raise.py", "__main__", ExecutionOptions.Default, out moduleScope);
                 throw new Exception("We should not reach here");
             } catch (StringException) {
                 AreEqual(1, pe.Evaluate<int>("x", moduleScope, ExecutionOptions.Default));
@@ -359,7 +359,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
             PythonEngine pe = new PythonEngine();
             Frame moduleScope = null;
             try {
-                pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\syntaxError.py", null, ExecutionOptions.Default, out moduleScope);
+                pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\syntaxError.py", "__main__", ExecutionOptions.Default, out moduleScope);
                 throw new Exception("We should not reach here");
             } catch (PythonSyntaxError) {
                 AreEqual((Frame)null, moduleScope);
@@ -381,32 +381,6 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
             pe.Execute(code);
             AreEqual(20, clsPart.Field);
             
-        }
-
-        public void Scenario10() {
-            PythonEngine pe = new PythonEngine();
-            // suppress output to the console when we do the execute...
-            pe.Execute(@"
-import sys
-sys.stdout = file('testfile.tmp', 'w')
-");
-            object code = pe.Compile("45", ExecutionOptions.PrintExpressions);
-            pe.Execute(code);
-
-            code = pe.Compile("a = _");
-            pe.Execute(code);
-
-            code = pe.Compile("if a != 45: raise Exception");
-            pe.Execute(code);
-
-
-            pe.Execute(@"
-sys.stdout.close()
-import sys
-sys.stdout = sys.__stdout__
-import nt
-nt.unlink('testfile.tmp')
-");
         }
 
         public void Scenario12() {

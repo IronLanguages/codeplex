@@ -1919,7 +1919,7 @@ namespace IronPython.Runtime {
             } catch (PythonSystemExit x) {
                 return x.GetExitCode(compiledEngine.DefaultModuleScope);
             } catch (Exception e) {
-                compiledEngine.MyConsole.Write(compiledEngine.FormatException(e), IronPython.Hosting.Style.Error);
+                Console.WriteLine(compiledEngine.FormatException(e));
                 return -1;
             }
             return 0;

@@ -19,12 +19,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using SystemThread = System.Threading.Thread;
 
 using IronPython.Hosting;
 using IronPython.Compiler;
 using IronPython.Runtime;
+using System.Diagnostics;
 
 namespace IronPythonConsole {
     /// <summary>
@@ -71,7 +73,7 @@ namespace IronPythonConsole {
         private static void MTAThread(object obj) {
             MTAParameters p = obj as MTAParameters;
             if (p != null) {
-                p.result = Run(p.args, p.engine);
+                p.result = Run(p.engine, p.args[0]);
             }
         }
 
@@ -91,13 +93,20 @@ namespace IronPythonConsole {
                 if (TabCompletion) {
                     UseSuperConsole(engine);
                 } else {
-                    engine.MyConsole = new BasicConsole();
+                    MyConsole = new BasicConsole();
                 }
 
                 if (Options.WarningFilters != null)
                     engine.Sys.warnoptions = IronPython.Runtime.List.Make(Options.WarningFilters);
 
                 engine.Sys.SetRecursionLimit(Options.MaximumRecursion);
+
+                // Publish the command line arguments
+                if (args == null)
+                    engine.Sys.argv = new List();
+                else
+                    engine.Sys.argv = List.Make(args);
+
 
                 if (mta) {
                     MTAParameters p = new MTAParameters(engine, args);
@@ -107,21 +116,29 @@ namespace IronPythonConsole {
                     thread.Join();
                     return p.result;
                 } else {
-                    return Run(args, engine);
+                    return Run(engine, args == null ? null : args.Count > 0 ? args[0] : null);
                 }
             } finally {
-                engine.Shutdown();
+                try {
+                    engine.Shutdown();
+                } catch (Exception e) {
+                    MyConsole.WriteLine("", Style.Error);
+                    MyConsole.WriteLine("Error in sys.exitfunc:", Style.Error);
+                    MyConsole.Write(engine.FormatException(e), Style.Error);
+                }
+
+                engine.DumpDebugInfo();
             }
         }
 
-        private static int Run(List<string> args, PythonEngine engine) {
+        private static int Run(PythonEngine engine, string fileName) {
             try {
                 if (Options.Command != null) {
-                    return RunString(engine, Options.Command, args);
-                } else if (args.Count == 0) {
+                    return RunString(engine, Options.Command);
+                } else if (fileName == null) {
                     return RunInteractive(engine);
                 } else {
-                    return RunFile(engine, args);
+                    return RunFile(engine, fileName);
                 }
             } catch (System.Threading.ThreadAbortException tae) {
                 if (tae.ExceptionState is IronPython.Runtime.PythonKeyboardInterrupt) {
@@ -330,7 +347,7 @@ namespace IronPythonConsole {
             try {
                 engine.Import("site");
             } catch (Exception e) {
-                engine.MyConsole.Write(engine.FormatException(e), Style.Error);
+                MyConsole.Write(engine.FormatException(e), Style.Error);
             }
         }
 
@@ -345,7 +362,7 @@ namespace IronPythonConsole {
                         engine.ExecuteFile(startup);
                     } catch (Exception e) {
                         if (e is PythonSystemExit) throw;
-                        engine.MyConsole.Write(engine.FormatException(e), Style.Error);
+                        MyConsole.Write(engine.FormatException(e), Style.Error);
                     } finally {
                         engine.DumpDebugInfo();
                     }
@@ -367,8 +384,7 @@ namespace IronPythonConsole {
             Console.ReadKey();
         }
 
-        private static int RunFile(PythonEngine engine, List<string> args) {
-            string fileName = args[0];
+        private static int RunFile(PythonEngine engine, string fileName) {
             if (fileName == "-") {
                 fileName = "<stdin>";
             } else {
@@ -385,25 +401,30 @@ namespace IronPythonConsole {
             int result = 1;
 
             ExecutionOptions executionOptions = ExecutionOptions.Default;
-            if (Options.Introspection) executionOptions |= ExecutionOptions.Introspection;
             if (Options.SkipFirstLine) executionOptions |= ExecutionOptions.SkipFirstLine;
 
             if (HandleExceptions) {
                 try {
                     Frame scope;
-                    engine.ExecuteFileOptimized(fileName, args, executionOptions, out scope);
+                    if (Options.Introspection) 
+                        ExecuteFileConsole(fileName, executionOptions, out scope);
+                    else
+                        engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
                     result = 0;
                 } catch (PythonSystemExit pythonSystemExit) {
                     result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
                 }  catch (Exception e) {
-                    engine.MyConsole.Write(engine.FormatException(e), Style.Error);
+                    MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
                     engine.DumpDebugInfo();
                 }
             } else {
                 try {
                     Frame scope;
-                    engine.ExecuteFileOptimized(fileName, args, executionOptions, out scope);
+                    if (Options.Introspection)
+                        ExecuteFileConsole(fileName, executionOptions, out scope);
+                    else
+                        engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
                     result = 0;
                 } catch (PythonSystemExit pythonSystemExit) {
                     result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
@@ -419,30 +440,30 @@ namespace IronPythonConsole {
             return result;
         }
 
-        private static int RunString(PythonEngine engine, string command, List<string> args) {
+        private static int RunString(PythonEngine engine, string command) {
             engine.AddToPath(Environment.CurrentDirectory);
             InitializePath(engine);
             InitializeModules(engine);
             ImportSite(engine);
             int result = 1;
 
-            args[0] = "-c";
-            engine.Sys.argv = IronPython.Runtime.List.Make(args);
+            ((List)engine.Sys.argv)[0] = "-c";
 
             if (HandleExceptions) {
                 try {
-                    engine.Execute(command, engine.DefaultModuleScope, ExecutionOptions.PrintExpressions);
+                    //engine.Execute(command, engine.DefaultModuleScope, ExecutionOptions.PrintExpressions);
+                    engine.ExecuteToConsole(command);
                     result = 0;
                 } catch (PythonSystemExit pythonSystemExit) {
                     result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
                 } catch(Exception e) {
-                    engine.MyConsole.Write(engine.FormatException(e), Style.Error);
+                    MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
                     engine.DumpDebugInfo();
                 }
             } else {
                 try {
-                    engine.Execute(command);
+                    engine.ExecuteToConsole(command);
                     result = 0;
                 } catch (PythonSystemExit pythonSystemExit) {
                     result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
@@ -462,7 +483,161 @@ namespace IronPythonConsole {
         // dependencies are pulled in only if necessary.
         [MethodImplAttribute(MethodImplOptions.NoInlining)]
         private static void UseSuperConsole(PythonEngine engine) {
-            engine.MyConsole = new SuperConsole(engine, ColorfulConsole);
+            MyConsole = new SuperConsole(engine, ColorfulConsole);
+        }
+
+        public static bool DoOneInteractive(Frame topFrame) {
+            bool continueInteraction;
+            string s = ReadStatement(out continueInteraction);
+            if (continueInteraction == false)
+                return false;
+
+            engine.ExecuteToConsole(s, topFrame);
+
+            return true;
+        }
+
+        public static void ExecuteFileConsole(string fileName, ExecutionOptions executionOptions, out Frame moduleScope) {
+            moduleScope = null;
+
+            Frame scopeResult = null;
+            bool continueInteraction;
+            int result = TryInteractiveAction(
+                delegate(out bool continueInteractionArgument) {
+                    engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scopeResult);
+                    continueInteractionArgument = true;
+                    return 0;
+                },
+                out continueInteraction);
+
+            if (continueInteraction) {
+                if (scopeResult == null) {
+                    // If there was an error generating a new module (for eg. because of a syntax error),
+                    // we will just use the existing "topFrame"
+                } else {
+                    engine.DefaultModuleScope = moduleScope = scopeResult;
+                }
+                RunInteractiveLoop();
+            }
+        }
+
+        static IConsole _console;
+        public static IConsole MyConsole {
+            get {
+                if (_console == null) {
+                    _console = new BasicConsole();
+                }
+                return _console;
+            }
+            set {
+                _console = value;
+            }
+        }
+
+        public delegate int InteractiveAction(out bool continueInteraction);
+
+        public static int TryInteractiveAction(InteractiveAction interactiveAction, out bool continueInteraction) {
+            int result = 1; // assume failure
+            continueInteraction = false;
+
+            try {
+                result = interactiveAction(out continueInteraction);
+            } catch (PythonSystemExit se) {
+                return se.GetExitCode(engine.DefaultModuleScope);
+            } catch (ThreadAbortException tae) {
+                PythonKeyboardInterrupt pki = tae.ExceptionState as PythonKeyboardInterrupt;
+                if (pki != null) {
+                    Thread.ResetAbort();
+                    bool endOfMscorlib = false;
+                    string ex = engine.FormatException(tae, ExceptionConverter.ToPython(pki), delegate(StackFrame sf) {
+                        // filter out mscorlib methods that show up on the stack initially, 
+                        // for example ReadLine / ReadBuffer etc...
+                        if (!endOfMscorlib &&
+                            sf.GetMethod().DeclaringType != null &&
+                            sf.GetMethod().DeclaringType.Assembly == typeof(string).Assembly) {
+                            return false;
+                        }
+                        endOfMscorlib = true;
+                        return true;
+                    });
+                    MyConsole.Write(ex, Style.Error);
+                    continueInteraction = true;
+                }
+            } catch (Exception e) {
+                // There should be no unhandled exceptions in the interactive session
+                // We catch all exceptions here, and just display it,
+                // and keep on going
+                MyConsole.Write(engine.FormatException(e), Style.Error);
+                continueInteraction = true;
+            }
+
+            return result;
+        }
+
+        private static bool TreatAsBlankLine(string line, int autoIndentSize) {
+            if (line.Length == 0) return true;
+            if (autoIndentSize != 0 && line.Trim().Length == 0 && line.Length == autoIndentSize) {
+                return true;
+            }
+
+            return false;
+        }
+
+        public static string ReadStatement(out bool continueInteraction) {
+            StringBuilder b = new StringBuilder();
+            int autoIndentSize = 0;
+
+            MyConsole.Write(engine.Sys.ps1.ToString(), Style.Prompt);
+
+            while (true) {
+                string line = MyConsole.ReadLine(autoIndentSize);
+                continueInteraction = true;
+
+                if (line == null) {
+                    if (PythonEngine.ExecWrapper != null) {
+                        Ops.Call(PythonEngine.ExecWrapper, new object[] { null });
+                    }
+                    continueInteraction = false;
+                    return null;
+                }
+
+                bool allowIncompleteStatement = !TreatAsBlankLine(line, autoIndentSize);
+                b.Append(line);
+                b.Append("\n");
+
+                if (b.ToString() == "\n" || (!allowIncompleteStatement && b.ToString().Trim().Length == 0)) return null;
+
+                bool s = engine.ParseInteractiveInput(b.ToString(), allowIncompleteStatement);
+                if (s) return b.ToString();
+
+                if (Options.AutoIndentSize != 0) {
+                    autoIndentSize = Parser.GetNextAutoIndentSize(b.ToString(), Options.AutoIndentSize);
+                }
+
+                // Keep on reading input
+                MyConsole.Write(engine.Sys.ps2.ToString(), Style.Prompt);
+            }
+        }
+
+        private static int RunInteractiveLoop() {
+            bool continueInteraction = true;
+            int result = 0;
+            while (continueInteraction) {
+                result = TryInteractiveAction(
+                    delegate(out bool continueInteractionArgument) {
+                        continueInteractionArgument = DoOneInteractive(engine.DefaultModuleScope);
+                        return 0;
+                    },
+                    out continueInteraction);
+            }
+
+            return result;
+        }
+
+        private static int RunInteractive() {
+            engine.DefaultModuleScope.SetGlobal(SymbolTable.Doc, null);
+            engine.Sys.modules[engine.DefaultModuleScope.Module.ModuleName] = engine.DefaultModuleScope.Module;
+            return RunInteractiveLoop();
         }
 
         private static int RunInteractive(PythonEngine engine) {
@@ -473,8 +648,8 @@ namespace IronPythonConsole {
 
             AppDomain.CurrentDomain.UnhandledException += DefaultExceptionHandler;
 
-            engine.MyConsole.WriteLine(version, Style.Out);
-            engine.MyConsole.WriteLine(PythonEngine.Copyright, Style.Out);
+            MyConsole.WriteLine(version, Style.Out);
+            MyConsole.WriteLine(PythonEngine.Copyright, Style.Out);
 
             bool continueInteraction = true;
             int result = 1;
@@ -487,7 +662,7 @@ namespace IronPythonConsole {
             }
 
             if (continueInteraction) {
-                result = engine.RunInteractive();
+                result = RunInteractive();
             }
 
             engine.DumpDebugInfo();
@@ -495,8 +670,83 @@ namespace IronPythonConsole {
         }
 
         private static void DefaultExceptionHandler(object sender, UnhandledExceptionEventArgs args) {
-            engine.MyConsole.WriteLine("Unhandled exception: ", Style.Error);
-            engine.MyConsole.Write(engine.FormatException((Exception)args.ExceptionObject), Style.Error);
+            MyConsole.WriteLine("Unhandled exception: ", Style.Error);
+            MyConsole.Write(engine.FormatException((Exception)args.ExceptionObject), Style.Error);
         }
+    }
+}
+
+namespace IronPythonConsole {
+    public interface IConsole {
+        // Read a single line of interactive input
+        // autoIndentSize is the indentation level to be used for the current suite of a compound statement.
+        // The console can ignore this argument if it does not want to support auto-indentation
+        string ReadLine(int autoIndentSize);
+
+        void Write(string text, Style style);
+        void WriteLine(string text, Style style);
+    }
+
+    public enum Style {
+        Prompt, Out, Error
+    }
+    
+    public class BasicConsole : IConsole {
+        private TextWriter Out;
+        private TextReader In;
+        private AutoResetEvent ctrlCEvent;
+        private Thread MainEngineThread = Thread.CurrentThread;
+
+        public BasicConsole()
+            : this(Console.Out, Console.In) {
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
+            ctrlCEvent = new AutoResetEvent(false);
+        }
+
+        void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e) {
+            if (e.SpecialKey == ConsoleSpecialKey.ControlC) {
+                e.Cancel = true;
+                ctrlCEvent.Set();
+                MainEngineThread.Abort(new IronPython.Runtime.PythonKeyboardInterrupt(""));
+            }
+        }
+
+        public BasicConsole(TextWriter _out, TextReader _in) {
+            this.Out = _out;
+            this.In = _in;
+        }
+
+        #region IConsole Members
+
+        public string ReadLine(int autoIndentSize) {         
+            string res= In.ReadLine();
+            if (res == null) {
+                // we have a race - the Ctrl-C event is delivered
+                // after ReadLine returns.  We need to wait for a little
+                // bit to see which one we got.  This will cause a slight
+                // delay when shutting down the process via ctrl-z, but it's
+                // not really perceptible.  In the ctrl-C case we will return
+                // as soon as the event is signaled.
+                if (ctrlCEvent != null && ctrlCEvent.WaitOne(100,false)) {
+                    // received ctrl-C
+                    return "";
+                } else {
+                    // received ctrl-Z
+                    return null;
+                }
+            }
+            return res;
+        }
+
+        public void Write(string text, Style style) {
+            Out.Write(text);
+            Out.Flush();
+        }
+
+        public void WriteLine(string text, Style style) {
+            Out.WriteLine(text);
+        }
+
+        #endregion
     }
 }

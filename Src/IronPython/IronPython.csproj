@@ -150,7 +150,6 @@
     <Compile Include="Compiler\UserTypeGenerator.cs" />
     <Compile Include="Compiler\Walker.Generated.cs" />
     <Compile Include="Hosting\CompilerSink.cs" />
-    <Compile Include="Hosting\IConsole.cs" />
     <Compile Include="Hosting\PythonCompiler.cs" />
     <Compile Include="Hosting\PythonEngine.cs" />
     <Compile Include="Modules\binascii.cs" />

@@ -332,9 +332,8 @@ namespace IronPython.Modules {
                 return e.Evaluate(new NameEnv(mod, locals));
             } else {
                 Stmt s = new ReturnStmt(e);
-                bool printExprStmts = (executionOptions & IronPython.Hosting.ExecutionOptions.PrintExpressions) != 0;
                 bool enableDebugging = (executionOptions & IronPython.Hosting.ExecutionOptions.EnableDebugging) != 0;
-                FrameCode fc = OutputGenerator.GenerateSnippet(cc, s, printExprStmts, enableDebugging);
+                FrameCode fc = OutputGenerator.GenerateSnippet(cc, s, false, enableDebugging);
                 return fc.Run(new Frame(mod, globals, locals));
             }
         }
