@@ -505,6 +505,24 @@ namespace IronPython.Runtime {
             size += 1;
         }
 
+        internal void AddNoLockNoDups(object item) {
+            for (int i = 0; i < size; i++) {
+                if (Ops.EqualRetBool(data[i], item)) {
+                   return;
+                }
+            }
+
+            AddNoLock(item);
+        }
+
+        internal void AppendListNoLockNoDups(List list) {
+            if (list != null) {
+                foreach (object item in list) {
+                    AddNoLockNoDups(item);
+                }
+            }
+        }
+
         [PythonName("count")]
         public int count(object item) {
             lock (this) {

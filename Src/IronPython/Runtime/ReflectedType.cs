@@ -61,6 +61,9 @@ namespace IronPython.Runtime {
 
         internal const string MakeNewName = "MakeNew$$";
 
+        private IAttributesInjector prependedAttrs;
+        private IAttributesInjector appendedAttrs;
+
         #endregion
 
         #region ReflectedType factories
@@ -258,6 +261,23 @@ namespace IronPython.Runtime {
                         return;
                     }
                 }
+            }
+        }
+
+        internal void RegisterAttributesInjector(IAttributesInjector attrInjector, bool prepend) {
+            if (prepend) {
+                if (prependedAttrs != null) {
+                    throw new InvalidOperationException("Attributes injector already registered");
+                }
+
+                prependedAttrs = attrInjector;
+            }
+            else {
+                if (appendedAttrs != null) {
+                    throw new InvalidOperationException("Attributes injector already registered");
+                }
+
+                appendedAttrs = attrInjector;
             }
         }
 
@@ -844,6 +864,10 @@ namespace IronPython.Runtime {
                 throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), name);
             }
 
+            if (prependedAttrs != null && prependedAttrs.TryGetAttr(self, name, out ret)) {
+                return true;
+            }
+
             if (TryGetSlot(context, name, out ret)) {
                 ret = Ops.GetDescriptor(ret, self, this);
                 return true;
@@ -851,7 +875,29 @@ namespace IronPython.Runtime {
 
             if (name == SymbolTable.Class) { ret = this; return true; }
 
+            if (appendedAttrs != null && appendedAttrs.TryGetAttr(self, name, out ret)) {
+                return true;
+            }
+
             return false;
+        }
+
+        public override List GetAttrNames(ICallerContext context, object self) {
+            List ret;
+
+            if (prependedAttrs != null) {
+                ret = prependedAttrs.GetAttrNames(self);
+                ret.AppendListNoLockNoDups(base.GetAttrNames(context, self));
+            }
+            else {
+                ret = base.GetAttrNames(context, self);
+            }
+
+            if (appendedAttrs != null) {
+                ret.AppendListNoLockNoDups(appendedAttrs.GetAttrNames(self));
+            }
+
+            return ret;
         }
 
         void ThrowAttributeError(bool slotExists, SymbolId attributeName) {
@@ -1038,6 +1084,7 @@ namespace IronPython.Runtime {
                 ret = mw;
                 return true;
             }
+
             return false;
         }
 
@@ -1050,7 +1097,7 @@ namespace IronPython.Runtime {
 
         public override List GetAttrNames(ICallerContext context) {
             List res = base.GetAttrNames(context);
-            if (!res.Contains("__class__")) res.AddNoLock("__class__");
+            res.AddNoLockNoDups("__class__");
             return res;
         }
 

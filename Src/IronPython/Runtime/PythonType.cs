@@ -590,8 +590,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            if (!names.Contains("__class__"))
-                names.AddNoLock("__class__");
+            names.AddNoLockNoDups("__class__");
             return names;
         }
 
@@ -630,9 +629,7 @@ namespace IronPython.Runtime {
                 if (sdo.GetDict() != null) {
                     ICollection<object> keys = sdo.GetDict().Keys;
                     foreach (object key in keys) {
-                        if (!ret.Contains(key)) {
-                            ret.AddNoLock(key);
-                        }
+                        ret.AddNoLockNoDups(key);
                     }
                 }
             }

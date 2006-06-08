@@ -281,11 +281,7 @@ namespace IronPython.Runtime {
             if (HaveInterfaces) {
                 foreach (DynamicType type in interfaces) {
                     List names = type.GetAttrNames(context, obj);
-                    foreach (object o in names) {
-                        if (!list.Contains(o)) {
-                            list.AddNoLock(o);
-                        }
-                    }
+                    list.AppendListNoLockNoDups(names);
                 }
             } else {
                 //return GetDynamicType().GetAttrNames(context, this);

@@ -218,8 +218,7 @@ namespace IronPython.Runtime {
         public override List GetAttrNames(ICallerContext context, object self) {
             List names = base.GetAttrNames(context, self);
             for (int i = 0; i < noneAttrs.Length; i++) {
-                if (!names.Contains(SymbolTable.IdToString(noneAttrs[i])))
-                    names.AddNoLock(SymbolTable.IdToString(noneAttrs[i]));
+                names.AddNoLockNoDups(SymbolTable.IdToString(noneAttrs[i]));
             }
             return names;
         }

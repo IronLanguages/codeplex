@@ -90,6 +90,11 @@ namespace IronPython.Runtime {
         IDictionary<object, object> GetAttrDict(ICallerContext context);
     }
 
+    public interface IAttributesInjector {
+        bool TryGetAttr(object self, SymbolId name, out object value);
+        List GetAttrNames(object self);
+    }
+
     /// <summary>
     /// This interface represents a dictionary that can be accessed using symbols and also arbitrary objects.
     /// This should conceptually inherit from IDictionary<object, object>, but we do not do that as we want the default indexer

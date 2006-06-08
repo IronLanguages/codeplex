@@ -577,6 +577,16 @@ namespace IronPython.Runtime {
             }
         }
 
+        public static void RegisterAttributesInjectorForType(Type ty, IAttributesInjector attrInjector, bool prepend) {
+            ReflectedType rty = GetDynamicTypeFromType(ty) as ReflectedType;
+
+            if (rty == null) {
+                throw new Exception("failed to obtain ReflectedType from Type");
+            }
+
+            rty.RegisterAttributesInjector(attrInjector, prepend);
+        }
+
         public static DynamicType GetDynamicType(object o) {
             IDynamicObject dt = o as IDynamicObject;
             if (dt != null) return dt.GetDynamicType();

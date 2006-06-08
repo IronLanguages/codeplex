@@ -612,11 +612,7 @@ namespace IronPython.Runtime {
             list.AddNoLock(SymbolTable.Module.ToString());
 
             List reflectedAttrs = GetDynamicType().GetAttrNames(context, this);
-            foreach (object o in reflectedAttrs) {
-                if (list.Contains(o))
-                    continue;
-                list.AddNoLock(o);
-            }
+            list.AppendListNoLockNoDups(reflectedAttrs);
             return list;
         }
 
@@ -1066,15 +1062,13 @@ namespace IronPython.Runtime {
         public List GetAttrNames(ICallerContext context) {
             List ret = TypeCache.Method.GetAttrNames(context, this);
             ret = List.Make(ret);
-            if (!ret.Contains(SymbolTable.Module.ToString()))
-                ret.AddNoLock(SymbolTable.Module.ToString());
+            ret.AddNoLockNoDups(SymbolTable.Module.ToString());
 
             IAttributesDictionary dict = ((PythonFunction)func).dict;
             if (dict != null) {
                 // Check the func
                 foreach (KeyValuePair<object, object> kvp in ((PythonFunction)func).dict) {
-                    if (!ret.Contains(kvp.Key))
-                        ret.AddNoLock(kvp.Key);
+                    ret.AddNoLockNoDups(kvp.Key);
                 }
             }
 
