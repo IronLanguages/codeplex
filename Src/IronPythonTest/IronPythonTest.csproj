@@ -62,6 +62,7 @@
     <Compile Include="EngineTest.cs" />
     <Compile Include="Enums.cs" />
     <Compile Include="Events.cs" />
+    <Compile Include="ExceptionConverter.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="GenMeth.cs" />
     <Compile Include="Indexable.cs" />

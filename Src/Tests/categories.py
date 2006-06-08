@@ -99,6 +99,7 @@ IronPythonTests = {
                 test_protected
                 test_specialcontext
                 test_clrexception
+                test_exceptionconverter
                 ''',
             'standard':
                 '''

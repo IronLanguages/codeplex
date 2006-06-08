@@ -344,6 +344,10 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Creates and returns the DynamicType for a given PythonException in a given module with the default base type.
         /// Throws InvalidOperationException if it already exists and and doesn't have the default base type.
+        /// 
+        /// Note that specifying the module doesn't actually place the created type in that module.
+        /// The type knows about the module, but the module doesn't know about the type. It's the caller's
+        /// responsibility to put the returned type in the appropriate module.
         /// </summary>
         public static DynamicType CreatePythonException(string name, string module) {
             return CreatePythonException(name, module, defaultExceptionBaseType);
@@ -352,14 +356,22 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Creates and returns the DynamicType for a given PythonException in a given module with a given base type.
         /// Throws InvalidOperationException if it already exists and has a different base type.
+        /// 
+        /// Note that specifying the module doesn't actually place the created type in that module.
+        /// The type knows about the module, but the module doesn't know about the type. It's the caller's
+        /// responsibility to put the returned type in the appropriate module.
         /// </summary>
         public static DynamicType CreatePythonException(string name, string module, DynamicType baseType) {
-            return CreatePythonException(name, module, defaultExceptionBaseType, DefaultExceptionCreator);
+            return CreatePythonException(name, module, baseType, DefaultExceptionCreator);
         }
 
         /// <summary>
         /// Creates and returns the DynamicType for a given PythonException in a given module with a given base type using a given exception creator.
         /// Throws InvalidOperationException if it already exists and has a different base type.
+        /// 
+        /// Note that specifying the module doesn't actually place the created type in that module.
+        /// The type knows about the module, but the module doesn't know about the type. It's the caller's
+        /// responsibility to put the returned type in the appropriate module.
         /// </summary>
         public static DynamicType CreatePythonException(string name, string module, DynamicType baseType, ExceptionClassCreator creator) {
             DynamicType type;
