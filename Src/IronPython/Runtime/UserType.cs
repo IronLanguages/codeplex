@@ -44,7 +44,7 @@ namespace IronPython.Runtime {
         // This is typed as "object" instead of "string" as the user is allowed to set it to an arbitrary object
         public object __module__;
         private Tuple bases;
-        private bool hasSlots;
+        internal bool hasSlots;
 
         #region Public API Surface
 
@@ -465,9 +465,13 @@ namespace IronPython.Runtime {
             NamespaceDictionary ret = NamespaceDictionary.Make(symNames, bases);
 
             foreach (KeyValuePair<object, object> kv in dict) {
-                PythonFunction func = kv.Value as PythonFunction;
-                if (func != null && func.Name != "__new__") {
-                    ret.AsObjectKeyedDictionary()[kv.Key] = new Method(func, null, this);
+                PythonFunction func = kv.Value as PythonFunction;                
+                if (func != null) {
+                    if (func.Name != "__new__") {
+                        ret.AsObjectKeyedDictionary()[kv.Key] = new Method(func, null, this);
+                    } else {
+                        ret.AsObjectKeyedDictionary()[kv.Key] = new StaticMethod(func);
+                    }
                 } else {
                     ret.AsObjectKeyedDictionary()[kv.Key] = kv.Value;
                 }
@@ -553,7 +557,7 @@ namespace IronPython.Runtime {
 
         public object Call(ICallerContext context, object[] args, string[] names) {
             object newMethod, newObject = null;
-            if (TryLookupSlot(context, SymbolTable.NewInst, out newMethod)) {
+            if (TryLookupBoundSlot(context, null, SymbolTable.NewInst, out newMethod)) {
                 IFancyCallable ifc = newMethod as IFancyCallable;
                 if (ifc != null) {
                     newObject = ifc.Call(context, PrependThis(args), names);
@@ -804,34 +808,7 @@ namespace IronPython.Runtime {
         void IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
             dict[SymbolTable.WeakRef] = value;
         }
-        #endregion
-
-        #region WeakRef helpers
-
-        public static void SetWeakRefHelper(object self, WeakRefTracker value) {
-            ISuperDynamicObject sdo = self as ISuperDynamicObject;
-            System.Diagnostics.Debug.Assert(sdo != null);
-
-            IAttributesDictionary d = GetInitializedDict(sdo);
-            if (d == null) throw Ops.AttributeErrorForMissingAttribute((string)Ops.GetDynamicType(self).__name__, SymbolTable.WeakRef);
-
-            d[SymbolTable.WeakRef] = value;
-        }
-
-        public static WeakRefTracker GetWeakRefHelper(object self) {
-            ISuperDynamicObject sdo = self as ISuperDynamicObject;
-            if (sdo != null) {
-                IAttributesDictionary dict = sdo.GetDict();
-                if (dict != null) {
-                    object res;
-                    if (dict.TryGetValue(SymbolTable.WeakRef, out res)) {
-                        return res as WeakRefTracker;
-                    }
-                }
-            }
-            return null;
-        }
-        #endregion
+        #endregion        
     }
 
     public class BigNamespaceDictionary : NamespaceDictionary {

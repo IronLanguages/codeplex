@@ -494,8 +494,12 @@ namespace IronPython.Runtime {
             if (name.Id != SymbolTable.GetAttrId) {
                 object getattr;
                 if (TryRawGetAttr(SymbolTable.GetAttr, out getattr)) {
-                    value = Ops.Call(getattr, SymbolTable.IdToString(name));
-                    return true;
+                    try {
+                        value = Ops.Call(getattr, SymbolTable.IdToString(name));
+                        return true;
+                    } catch (MissingMemberException) {
+                        // __getattr__ raised AttributeError, return false.
+                    }
                 }
             }
 

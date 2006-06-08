@@ -605,6 +605,8 @@ namespace IronPython.Runtime {
         }
 
         public static object Equal(object x, object y) {
+            ExtensibleString es;
+
             object ret = Ops.NotImplemented;
             if (x is int) {
                 ret = IntOps.Equals((int)x, y);
@@ -623,8 +625,8 @@ namespace IronPython.Runtime {
                 ret = BoolOps.Equals((bool)x, y);
             } else if (x is ExtensibleInt) {
                 ret = IntOps.Equals(((ExtensibleInt)x).value, y);
-            } else if (x is ExtensibleString) {
-                ret = StringOps.Equals(((ExtensibleString)x).Value, y);
+            } else if ((es = x as ExtensibleString)!=null) {
+                ret = es.RichEquals(y);
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Equals(((ExtensibleFloat)x).value, y);
             } else if (x is byte) {
@@ -673,6 +675,8 @@ namespace IronPython.Runtime {
         }
 
         public static bool EqualRetBool(object x, object y) {
+            ExtensibleString es;
+
             if (x is int) {
                 return IntOps.EqualsRetBool((int)x, y);
             } else if (x is string) {
@@ -690,8 +694,9 @@ namespace IronPython.Runtime {
                 return BoolOps.EqualsRetBool((bool)x, y);
             } else if (x is ExtensibleInt) {
                 return IntOps.EqualsRetBool(((ExtensibleInt)x).value, y);
-            } else if (x is ExtensibleString) {
-                return StringOps.EqualsRetBool(((ExtensibleString)x).Value, y);
+            } else if ((es = x as ExtensibleString) != null) {
+                object res = es.RichEquals(y);
+                if(res != Ops.NotImplemented) return (bool)res;
             } else if (x is ExtensibleFloat) {
                 return FloatOps.EqualsRetBool(((ExtensibleFloat)x).value, y);
             } else if (x is byte) {
@@ -743,6 +748,8 @@ namespace IronPython.Runtime {
         }
 
         public static object NotEqual(object x, object y) {
+            ExtensibleString es;
+
             object ret = Ops.NotImplemented;
             if (x is int) {
                 ret = IntOps.Equals((int)x, y);
@@ -761,8 +768,8 @@ namespace IronPython.Runtime {
                 ret = BoolOps.Equals((bool)x, y);
             } else if (x is ExtensibleInt) {
                 ret = IntOps.Equals(((ExtensibleInt)x).value, y);
-            } else if (x is ExtensibleString) {
-                ret = StringOps.Equals(((ExtensibleString)x).Value, y);
+            } else if ((es = x as ExtensibleString)!=null) {
+                ret = es.RichEquals(y);
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Equals(((ExtensibleFloat)x).value, y);
             } else if (x is byte) {
@@ -811,6 +818,8 @@ namespace IronPython.Runtime {
         }
 
         public static bool NotEqualRetBool(object x, object y) {
+            ExtensibleString es;
+
             if (x is int) {
                 return !IntOps.EqualsRetBool((int)x, y);
             } else if (x is string) {
@@ -828,8 +837,9 @@ namespace IronPython.Runtime {
                 return !BoolOps.EqualsRetBool((bool)x, y);
             } else if (x is ExtensibleInt) {
                 return !IntOps.EqualsRetBool(((ExtensibleInt)x).value, y);
-            } else if (x is ExtensibleString) {
-                return !StringOps.EqualsRetBool(((ExtensibleString)x).Value, y);
+            } else if ((es = x as ExtensibleString)!=null) {
+                object ret = es.RichEquals(y);
+                if (ret != Ops.NotImplemented) return (bool)Not(ret);
             } else if (x is ExtensibleFloat) {
                 return !FloatOps.EqualsRetBool(((ExtensibleFloat)x).value, y);
             } else if (x is byte) {

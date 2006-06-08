@@ -27,8 +27,8 @@ namespace IronPython.Compiler {
     /// layout which the subtype also inherits.
     /// </summary>
     class NewSubtypeMaker : NewTypeMaker {
-        public NewSubtypeMaker(string typeName, NewTypeInfo ti)
-            : base(typeName, ti) {
+        public NewSubtypeMaker(Tuple bases, string typeName, NewTypeInfo ti)
+            : base(bases, typeName, ti) {
         }
 
         protected override string GetName() {
@@ -68,6 +68,14 @@ namespace IronPython.Compiler {
                 cg.EmitRawConstant(true);
                 cg.EmitReturn();
                 cg.Finish();
+            }
+        }
+
+        protected override void ImplementWeakReference() {
+            if (baseType.GetInterface("IWeakReferenceable")==null
+                && (slots == null || slots.Contains("__weakref__"))) {
+                // base type didn't have slots, but it's there now...
+                base.ImplementWeakReference();
             }
         }
     }

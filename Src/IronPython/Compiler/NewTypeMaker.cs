@@ -204,9 +204,10 @@ namespace IronPython.Compiler {
         protected Type baseType;
         protected IList<string> slots;
         protected TypeGen tg;
-        protected Slot typeField, dictField;
+        protected Slot typeField, dictField, weakrefField;
         protected IEnumerable<Type> interfaceTypes;
 
+        private Tuple baseClasses;
         private bool hasBaseTypeField = false;
         private IList<Slot> slotsSlots;
 
@@ -227,7 +228,7 @@ namespace IronPython.Compiler {
             Type ret = newTypes.GetOrCreateValue(typeInfo,
                 delegate() {
                     // creation code                    
-                    return GetTypeMaker(typeName, typeInfo).CreateNewType();
+                    return GetTypeMaker(bases, typeName, typeInfo).CreateNewType();
                 });
 
             if (typeInfo.Slots != null) {
@@ -235,17 +236,21 @@ namespace IronPython.Compiler {
 
                 for (int i = 0; i < typeInfo.Slots.Count; i++) {
                     PropertyInfo pi = ret.GetProperty(typeInfo.Slots[i]);
-                    dict[typeInfo.Slots[i]] = new ReflectedSlotProperty(pi, pi.GetGetMethod(), pi.GetSetMethod(), NameType.PythonProperty);
+                    string name = typeInfo.Slots[i];
+                    if(name.StartsWith("__") && !name.EndsWith("__")) {
+                        name = "_" + typeName  + name;
+                    }
+                    dict[name] = new ReflectedSlotProperty(pi, pi.GetGetMethod(), pi.GetSetMethod(), NameType.PythonProperty);
                 }
             }
 
             return ret;
         }
 
-        private static NewTypeMaker GetTypeMaker(string typeName, NewTypeInfo ti) {
-            if (IsInstanceType(ti.BaseType)) return new NewSubtypeMaker(typeName, ti);
+        private static NewTypeMaker GetTypeMaker(Tuple bases, string typeName, NewTypeInfo ti) {
+            if (IsInstanceType(ti.BaseType)) return new NewSubtypeMaker(bases, typeName, ti);
 
-            return new NewTypeMaker(typeName, ti);
+            return new NewTypeMaker(bases, typeName, ti);
         }
 
         private static List<string> GetSlots(IDictionary<object, object> dict) {
@@ -253,20 +258,26 @@ namespace IronPython.Compiler {
             object slots;            
             IAttributesDictionary attrDict = dict as IAttributesDictionary;
             if (attrDict != null && attrDict.TryGetValue(SymbolTable.Slots, out slots)) {
-                ISequence seq = slots as ISequence;
-                if (seq != null && !(seq is ExtensibleString)) {
-                    res = new List<string>(seq.GetLength());
-                    for (int i = 0; i < seq.GetLength(); i++) {
-                        res.Add(GetSlotName(seq[i]));
-                    }
-
-                    res.Sort();
-                } else {
-                    res = new List<string>(1);
-                    res.Add(GetSlotName(slots));
-                }                
+                res = SlotsToList(slots);            
             }
 
+            return res;
+        }
+
+        private static List<string> SlotsToList(object slots) {
+            List<string> res = new List<string>(); 
+            ISequence seq = slots as ISequence;
+            if (seq != null && !(seq is ExtensibleString)) {
+                res = new List<string>(seq.GetLength());
+                for (int i = 0; i < seq.GetLength(); i++) {
+                    res.Add(GetSlotName(seq[i]));
+                }
+
+                res.Sort();
+            } else {
+                res = new List<string>(1);
+                res.Add(GetSlotName(slots));
+            }
             return res;
         }
 
@@ -274,7 +285,7 @@ namespace IronPython.Compiler {
         private static string GetSlotName(object o) {
             Conversion conv;
             string value = Converter.TryConvertToString(o, out conv);
-            if (conv == Conversion.None) throw Ops.TypeError("slots must be one string or a list of strings");
+            if (String.IsNullOrEmpty(value) || conv == Conversion.None) throw Ops.TypeError("slots must be one string or a list of strings");
 
             for (int i = 0; i < value.Length; i++) {
                 if ((value[i] >= 'a' && value[i] <= 'z') ||
@@ -335,7 +346,19 @@ namespace IronPython.Compiler {
 
                     if (curTypeToExtend != typeof(object)) {
                         if (baseCLIType != typeof(object) && baseCLIType != curTypeToExtend) {
-                            throw Ops.TypeError(typeName + ": can only extend one CLI or builtin type, not both {0} (for {1}) and {2} (for {3})",
+                            bool isOkConflit = false;
+                            if (IsInstanceType(baseCLIType) && IsInstanceType(curTypeToExtend)) {
+                                List<string> slots1 = SlotsToList(curBasePythonType.dict[SymbolTable.Slots]);
+                                List<string> slots2 = SlotsToList(basePythonType.dict[SymbolTable.Slots]);
+                                if (curBasePythonType.type.BaseType == basePythonType.type.BaseType && 
+                                    slots1.Count == 1 && slots2.Count == 1 &&
+                                    ((slots1[0] == "__dict__" && slots2[0] == "__weakref__") ||
+                                    (slots2[0] == "__dict__" && slots1[0] == "__weakref__"))) {
+                                    isOkConflit = true;
+                                    curTypeToExtend = curBasePythonType.type.BaseType;
+                                }
+                            }
+                            if(!isOkConflit) throw Ops.TypeError(typeName + ": can only extend one CLI or builtin type, not both {0} (for {1}) and {2} (for {3})",
                                                 baseCLIType.FullName, basePythonType, curTypeToExtend.FullName, curBasePythonType);
                         }
 
@@ -358,8 +381,9 @@ namespace IronPython.Compiler {
             return new NewTypeInfo(baseCLIType, interfaceTypes, oldClasses, slots);
         }
 
-        protected NewTypeMaker(String name, NewTypeInfo typeInfo) {
+        protected NewTypeMaker(Tuple baseClasses, String name, NewTypeInfo typeInfo) {
             this.baseType = typeInfo.BaseType;
+            this.baseClasses = baseClasses;
             this.interfaceTypes = typeInfo.InterfaceTypes;
             this.slots = typeInfo.Slots;
         }
@@ -420,9 +444,9 @@ namespace IronPython.Compiler {
 
             GetOrDefineDict();
 
-            ImplementPythonObject();
-
             ImplementSlots();
+
+            ImplementPythonObject();
 
             ImplementConstructors();
 
@@ -574,8 +598,12 @@ namespace IronPython.Compiler {
             // initialize all slots to Uninitialized
             if (slots != null) {
                 for (int i = 0; i < slots.Count; i++) {
-                    cg.EmitString(slots[i]);
-                    cg.EmitNew(typeof(Uninitialized), new Type[] { typeof(string) });
+                    if (slots[i] != "__weakref__" && slots[i] != "__dict__") {
+                        cg.EmitString(slots[i]);
+                        cg.EmitNew(typeof(Uninitialized), new Type[] { typeof(string) });
+                    } else {
+                        cg.Emit(OpCodes.Ldnull);
+                    }
                     slotsSlots[i].EmitSet(cg);
                 }
             }
@@ -634,6 +662,19 @@ namespace IronPython.Compiler {
             cg.Finish();
         }
 
+        private bool NeedsDictionary {
+            get{
+                if (slots == null) return true;
+                if (slots.Contains("__dict__")) return true;
+
+                foreach(DynamicType dt in baseClasses){
+                    if(dt is UserType) return true;
+                }
+
+                return false;
+            }
+        }
+
         private void ImplementDynamicObject() {
             CodeGen cg;
 
@@ -643,7 +684,7 @@ namespace IronPython.Compiler {
             if (slots != null) attrs = MethodAttributes.Virtual;
             
             cg = tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("GetDict"));
-            if (slots == null) {
+            if (NeedsDictionary) {
                 dictField.EmitGet(cg);
                 cg.EmitReturn();
             } else {
@@ -653,7 +694,7 @@ namespace IronPython.Compiler {
             cg.Finish();
 
             cg = tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("SetDict"));
-            if (slots == null) {
+            if (NeedsDictionary) {
                 cg.EmitArgGet(0);
                 dictField.EmitSet(cg);
                 cg.EmitRawConstant(true);
@@ -727,18 +768,75 @@ namespace IronPython.Compiler {
             }
         }
 
-        private void ImplementWeakReference() {
-            if (slots == null) {
-                DefineHelperInterface(typeof(IWeakReferenceable), true);
+        private void CreateWeakRefField() {
+            if (weakrefField != null) return;
+
+            FieldInfo fi = baseType.GetField("__weakref__");
+            if (fi != null) {
+                // base defines it
+                weakrefField = new FieldSlot(new ThisSlot(baseType), fi);
             }
+
+            if (weakrefField == null) {
+                weakrefField = tg.AddField(typeof(WeakRefTracker), "__weakref__");
+            }
+        }
+
+        bool BaseHasWeakRef(DynamicType curType) {
+            UserType ut = curType as UserType;
+            if (ut != null && ut.hasSlots && ut.type.GetInterface("IWeakReferenceable") != null) {
+                return true;
+            }
+
+            foreach (DynamicType baseType in curType.BaseClasses) {
+                if (BaseHasWeakRef(baseType)) return true;
+            }
+            return false;
+        }
+        protected virtual void ImplementWeakReference() {
+            CreateWeakRefField();
+
+            if (slots != null && !slots.Contains("__weakref__")) {
+                // always define the field, only implement the interface
+                // if we are slotless or the user defined __weakref__ in slots
+                bool baseHasWeakRef = false;
+                foreach (DynamicType dt in baseClasses) {
+                    if (BaseHasWeakRef(dt)) {
+                        baseHasWeakRef = true;
+                        break;
+                    }
+                }
+                if(!baseHasWeakRef) return;
+            }
+
+            tg.myType.AddInterfaceImplementation(typeof(IWeakReferenceable));
+
+            CodeGen cg = tg.DefineMethodOverride(typeof(IWeakReferenceable).GetMethod("SetWeakRef"));
+            cg.EmitArgGet(0);
+            weakrefField.EmitSet(cg);
+            cg.EmitReturn();
+            cg.Finish();
+
+            cg = tg.DefineMethodOverride(typeof(IWeakReferenceable).GetMethod("GetWeakRef"));
+            weakrefField.EmitGet(cg);
+            cg.EmitReturn();
+            cg.Finish();
         }
 
         private void ImplementSlots() {
             if (slots != null) {
                 slotsSlots = new List<Slot>();
                 for (int i = 0; i < slots.Count; i++) {
-                    // mangled w/ a . to never collide w/ any regular names
-                    Slot s = tg.AddField(typeof(object), "." + slots[i]);
+                    Slot s;
+                    switch(slots[i]){
+                        case "__weakref__": CreateWeakRefField(); s = weakrefField; break;
+                        case "__dict__": s = dictField; break;
+                        default:
+                            // mangled w/ a . to never collide w/ any regular names
+                            s = tg.AddField(typeof(object), "." + slots[i]);
+                            break;
+                    }
+                    
                     slotsSlots.Add(s);
 
                     PropertyBuilder pb = tg.DefineProperty(slots[i], PropertyAttributes.None, typeof(object));

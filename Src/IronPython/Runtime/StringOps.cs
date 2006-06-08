@@ -185,13 +185,13 @@ namespace IronPython.Runtime {
         #region IRichComparable
 
         [PythonName("__hash__")]
-        public object RichGetHashCode() {
+        public virtual object RichGetHashCode() {
             return Ops.Int2Object(GetHashCode());
         }
 
 
         [PythonName("__eq__")]
-        public object RichEquals(object other) {
+        public virtual object RichEquals(object other) {
             if (other == null) return Ops.FALSE;
 
             ExtensibleString es = other as ExtensibleString;
@@ -203,7 +203,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__ne__")]
-        public object RichNotEquals(object other) {
+        public virtual object RichNotEquals(object other) {
             object res = RichEquals(other);
             if (res != Ops.NotImplemented) return Ops.Not(res);
 

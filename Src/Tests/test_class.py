@@ -238,6 +238,26 @@ class C:
 
 a = C()
 
+# raising AttributeError from __getattr__ should be ok,
+# and shouldn't be seen by the user
+
+class A:
+    def __getattr__(self, name):
+        raise AttributeError, 'get outta here'        
+    def __repr__(self):
+        return 'foo'
+
+class B:
+    def __getattr__(self, name):
+        raise AttributeError, 'get outta here'        
+    def __str__(self):
+        return 'foo'
+
+AreEqual(str(A()), 'foo')
+AreEqual(repr(A()), 'foo')
+AreEqual(str(B()), 'foo')
+Assert(repr(B()).find('B instance') != -1)
+
 ############################################################
 if is_cli:
     #
@@ -353,8 +373,18 @@ def CheckDictionary(C):
     # replace a class dictionary (containing non-string keys) w/ a normal dictionary
     C.newTypeAttr = 1
     AreEqual(hasattr(C, 'newTypeAttr'), True)
-    C.__dict__ = dict(C.__dict__)  
-    AreEqual(hasattr(C, 'newTypeAttr'), True)
+    
+    class OldClass: pass
+    
+    if isinstance(C, type(OldClass)):
+        C.__dict__ = dict(C.__dict__)  
+        AreEqual(hasattr(C, 'newTypeAttr'), True)
+    else:
+        try:
+            C.__dict__ = {}
+            AreEqual(True, False)
+        except TypeError:
+            pass
     
     # replace an instance dictionary (containing non-string keys) w/ a new one.
     a.newInstanceAttr = 1
@@ -1183,6 +1213,14 @@ AreEqual(x.has_key('abc'), False)
 a.xyz = 'abc'
 AreEqual(a.xyz, 'abc')
 
+# subclass of not-slots class defining slots:
+
+class A(object): pass
+
+class B(A): __slots__ = 'c'
+
+AreEqual(hasattr(B(), '__dict__'), True)
+AreEqual(hasattr(B, 'c'), True)
 
 # slots & metaclass
 class foo(type): 
@@ -1202,9 +1240,75 @@ class foo(object):
 
 class bar(foo): pass
 
+
 a = bar()
 
 AssertError(AttributeError, foo)
+
+# slots & name-mangling
+
+class foo(object):
+    __slots__ = '__bar'
+    
+AreEqual(hasattr(foo, '_foo__bar'), True)
+
+# invalid __slots__ values
+for x in ['', None, '3.5']:
+    try:
+        class C(object):
+            __slots__ = x
+        AreEqual(True,False)
+    except TypeError:
+        pass
+
+# including __dict__ in slots allows accessing __dict__
+class A(object): __slots__ = '__dict__'
+
+AreEqual(hasattr(A(),"__dict__"), True)
+a = A()
+a.abc = 'xyz'
+AreEqual(a.abc, 'xyz')
+
+class B(A): pass
+AreEqual(hasattr(B(),"__dict__"), True)
+b = A()
+b.abc = 'xyz'
+AreEqual(b.abc, 'xyz')
+
+# including __weakref__ explicitly
+class A(object):
+    __slots__ = ["__weakref__"]
+
+hasattr(A(), "__weakref__")
+
+class B(A): pass
+
+hasattr(B(), "__weakref__")
+
+# weird case, including __weakref__ and __dict__ and we allow
+# a subtype to inherit from both
+
+for x in [object, dict, tuple]:
+    class A(x):
+        __slots__ = ["__dict__"]
+    
+    class B(x):
+        __slots__ = ["__weakref__"]
+    
+    class C(A,B):
+        __slots__ = []
+        
+    a = C()
+    AreEqual(hasattr(a, '__dict__'), True)
+    AreEqual(hasattr(a, '__weakref__'), True)
+
+    class C(A,B):
+        __slots__ = ['xyz']
+        
+    a = C()
+    AreEqual(hasattr(a, '__dict__'), True)
+    AreEqual(hasattr(a, '__weakref__'), True)
+    AreEqual(hasattr(C, 'xyz'), True)
 
 # calling w/ keyword args
 
@@ -1255,3 +1359,15 @@ def outer_scope_test():
     Assert("Referenced" not in C.__dict__.keys())
 
 outer_scope_test()
+
+
+for x in [None, 'abc', 3]:
+    class foo(object): pass
+    a = foo()
+    try:
+        a.__dict__ = x
+        AreEqual(True, False)
+    except TypeError: pass
+
+
+

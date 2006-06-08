@@ -399,6 +399,7 @@ namespace IronPython.Runtime {
                 case SymbolTable.DelAttrId: ret = __delattr__F; return true;
                 case SymbolTable.ReprId: ret = __repr__F; return true;
                 case SymbolTable.StringId: ret = __str__F; return true;
+                case SymbolTable.WeakRefId: ret = new WeakRefWrapper(this); return true;
                 case SymbolTable.CmpId:
                     if (!__cmp__F.IsSuperTypeMethod()) {
                         ret = __cmp__F;
@@ -676,9 +677,13 @@ namespace IronPython.Runtime {
         public bool SetAttribute(object instance, object value) {
             ISuperDynamicObject sdo = instance as ISuperDynamicObject;
             if (sdo != null) {
+                if (!(value is IAttributesDictionary)) 
+                    throw Ops.TypeError("__dict__ must be set to a dictionary, not '{0}'",Ops.GetDynamicType(value).__name__);
+
                 return sdo.SetDict((IAttributesDictionary)value);
             }
 
+            if (instance == null) throw Ops.TypeError("'__dict__' of '{0}' objects is not writable", Ops.GetDynamicType(type).__name__);
             return false;
         }
 
@@ -687,7 +692,8 @@ namespace IronPython.Runtime {
             if (sdo != null) {
                 return sdo.SetDict(null);
             }
-
+            
+            if (instance == null) throw Ops.TypeError("'__dict__' of '{0}' objects is not writable", Ops.GetDynamicType(type).__name__);
             return false;
         }
 
@@ -707,6 +713,52 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+    }
+
+    public sealed class WeakRefWrapper : IDataDescriptor {
+        DynamicType parentType;
+
+        public WeakRefWrapper(DynamicType parent) {
+            this.parentType = parent;
+        }
+
+        #region IDataDescriptor Members
+
+        public bool SetAttribute(object instance, object value) {
+            IWeakReferenceable reference = instance as IWeakReferenceable;
+            if(reference != null){
+                reference.SetWeakRef(new WeakRefTracker(value, instance));
+                return true;
+            }
+            return false;
+        }
+
+        public bool DeleteAttribute(object instance) {
+            throw Ops.TypeError("__weakref__ attribute cannot be deleted");
+        }
+
+        #endregion
+
+        #region IDescriptor Members
+
+        public object GetAttribute(object instance, object owner) {
+            if (instance == null) return this;
+
+            IWeakReferenceable reference = instance as IWeakReferenceable;
+            if (reference != null) {
+                WeakRefTracker tracker = reference.GetWeakRef();
+                if (tracker == null || tracker.HandlerCount == 0) return null;
+
+                return tracker.GetHandlerCallback(0);
+            }
+            throw Ops.TypeError("'{0}' has no attribute __weakref__", Ops.GetDynamicType(instance));
+        }
+
+        #endregion
+
+        public override string ToString() {
+            return String.Format("<attribute '__weakref__' of '{0}' objects>", parentType.__name__);
+        }
     }
     /// <summary>
     /// Method wrappers provide quick access to commonly used methods that
