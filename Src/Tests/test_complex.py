@@ -53,6 +53,12 @@ def test_misc():
 
     Assert(complex(2) == complex(2, 0))
     
+def test_inherit():
+    class mycomplex(complex): pass
+    
+    a = mycomplex(2+1j)
+    AreEqual(a.real, 2)
+    AreEqual(a.imag, 1)
 
 
 run_test(__name__)

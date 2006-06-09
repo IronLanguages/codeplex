@@ -39,13 +39,13 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__get__")]
-        public object GetAttribute(object instance, object context) {
+        public virtual object GetAttribute(object instance, object context) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, this);
             if (instance == null) {
                 if (info.IsStatic) return Ops.ToPython(info.GetValue(null));
                 else return this;
             } else {
-                return Ops.ToPython(info.GetValue(instance)); //.toObject(info.DeclaringType, "get ")));
+                return Ops.ToPython(info.GetValue(Converter.Convert(instance, info.DeclaringType)));
             }
         }
 
@@ -57,7 +57,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__set__")]
-        public bool SetAttribute(object instance, object value) {
+        public virtual bool SetAttribute(object instance, object value) {
             if (instance == null) {
                 if (info.IsStatic) {
                     DoSet(null, value);
@@ -87,6 +87,46 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+    }
+
+    /// <summary>
+    /// Used to create overridden fields from a base type to an ops reflected type.  
+    /// 
+    /// BaseType is the type we're providing overrides for, ExtensibleType is the type that
+    /// is used to extend this.  ExtensibleType must implemnt IExtensible of BaseType to
+    /// provide access to the base type value.  This value will be updated if the user
+    /// sets the value, or wants to get a field from the value.
+    /// </summary>
+    class OpsReflectedField<BaseType, ExtensibleType> : ReflectedField 
+        where ExtensibleType : IExtensible<BaseType> {
+        
+        public OpsReflectedField(FieldInfo info, NameType nameType)
+            : base(info, nameType) {
+        }
+
+        public override object GetAttribute(object instance, object context) {
+            if (instance is BaseType) 
+                return base.GetAttribute(instance, context);
+            if(instance is ExtensibleType) 
+                return base.GetAttribute(((ExtensibleType)instance).Value, context);
+            
+            throw Ops.TypeError("expected {0}, got {1}",
+                Ops.GetDynamicTypeFromType(typeof(BaseType)).__name__, 
+                Ops.GetDynamicType(instance));
+        }
+
+        public override bool SetAttribute(object instance, object value) {
+            if (instance is BaseType) 
+                return base.SetAttribute(instance, value);
+            if (instance is ExtensibleType)
+                return base.SetAttribute(((ExtensibleType)instance).Value, value);            
+            if (instance == null)
+                return false;
+
+            throw Ops.TypeError("expected {0}, got {1}",
+                Ops.GetDynamicTypeFromType(typeof(BaseType)).__name__,
+                Ops.GetDynamicType(instance));
+        }
     }
 
     /// <summary>

@@ -376,3 +376,46 @@ ls.append((do_remove, f1, -10))
 ls.append((do_remove, d.f1, -30))
 
 RunSequence(ls)
+
+# verify delegates are calling
+
+from System.Threading import ThreadStart, ParameterizedThreadStart
+
+def myfunc():
+    global myfuncCalled
+    myfuncCalled = True
+    
+def myotherfunc(arg):
+    global myfuncCalled, passedarg
+    myfuncCalled = True
+    passedarg = arg
+
+class myclass(object):
+    def myfunc(self):
+        global myfuncCalled
+        myfuncCalled = True
+    def myotherfunc(self, arg):
+        global myfuncCalled,passedarg 
+        myfuncCalled = True
+        passedarg = arg
+
+class myoldclass:
+    def myfunc(self):
+        global myfuncCalled 
+        myfuncCalled = True
+    def myotherfunc(self, arg):
+        global myfuncCalled, passedarg
+        myfuncCalled = True
+        passedarg = arg
+
+for target in [myfunc, myclass().myfunc, myoldclass().myfunc]:
+    myfuncCalled = False
+    ThreadStart(target)()
+    AreEqual(myfuncCalled, True)
+
+for target in [myotherfunc, myclass().myotherfunc, myoldclass().myotherfunc]:
+    myfuncCalled = False
+    ParameterizedThreadStart(target)(1)
+    AreEqual(myfuncCalled, True)
+    AreEqual(passedarg, 1)
+    passedarg = None

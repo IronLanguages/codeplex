@@ -74,6 +74,10 @@ namespace IronPython.Runtime {
                     type);
             }
 
+            if (type.IsSubclassOf(typeof(Delegate))) {
+                return new ReflectedDelegateType(type);
+            }
+
             if (ComObject.Is__ComObject(type)) {
                 return ComType.MakeDynamicType();
             }
@@ -855,7 +859,6 @@ namespace IronPython.Runtime {
                 return typeToExtend;
             }
         }
-
 
         //!!! Get vs. Lookup needs addressing
         public override bool TryGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {

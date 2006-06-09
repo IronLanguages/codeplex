@@ -34,6 +34,12 @@ namespace IronPython.Runtime {
         object Call(ICallerContext context, object[] args);
     }
 
+    public interface IExtensible<T> {
+        T Value {
+            get;
+        }
+    }
+
     public interface IContextAwareMember {
         bool IsVisible(ICallerContext context);
     }

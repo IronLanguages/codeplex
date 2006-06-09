@@ -22,7 +22,7 @@ using IronMath;
 using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime {
-    public partial class ExtensibleComplex {
+    public partial class ExtensibleComplex : IExtensible<Complex64> {
         public Complex64 value;
         
         public ExtensibleComplex() { this.value = new Complex64(0, 0); }
@@ -30,7 +30,7 @@ namespace IronPython.Runtime {
         public ExtensibleComplex(double real, double imag) {
             value = new Complex64(real, imag);
         }
-
+        
         public override string ToString() {
             return value.ToString();
         }
@@ -45,7 +45,15 @@ namespace IronPython.Runtime {
 
         public virtual object Power(object other) {
             return ComplexOps.Power(value, other);
-        }        
+        }
+
+        #region IExtensible<Complex64> Members
+
+        public Complex64 Value {
+            get { return value; }
+        }
+
+        #endregion
     }
 
     public static partial class ComplexOps {
@@ -378,5 +386,9 @@ namespace IronPython.Runtime {
         public static Complex64 Conjugate(Complex64 x) {
             return x.Conjugate();
         }
+
+        public static object imag = new OpsReflectedField<Complex64, ExtensibleComplex>(typeof(Complex64).GetField("imag"), NameType.PythonField);
+        public static object real = new OpsReflectedField<Complex64, ExtensibleComplex>(typeof(Complex64).GetField("real"), NameType.PythonField);
+
     }
 }
