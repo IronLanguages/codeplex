@@ -60,7 +60,13 @@ namespace IronPython.Runtime {
             this.__name__ = name;
             this.opsType = opsType;
 
-            OpsTypeToType[opsType] = this;
+            lock (OpsTypeToType) {
+                // All the array types (byte[], int[]) etc map to ArrayOps. However, we map it only to System.Array.
+                Debug.Assert(!OpsTypeToType.ContainsKey(opsType) ||
+                             (opsType == typeof(ArrayOps) && OpsTypeToType[opsType] == TypeCache.Array));
+                if (!OpsTypeToType.ContainsKey(opsType))
+                    OpsTypeToType[opsType] = this;
+            }
         }
 
         public override Type GetTypeToExtend() {

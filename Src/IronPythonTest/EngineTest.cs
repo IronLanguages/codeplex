@@ -46,6 +46,33 @@ namespace IronPythonTest {
             else
                 return -1;
         }
+
+        // Private members
+        private int privateField;
+        private int privateProperty { get { return m_property; } set { m_property = value; } }
+        private event IntIntDelegate privateEvent;
+        private int privateMethod(int arg) {
+            if (privateEvent != null)
+                return privateEvent(arg);
+            else
+                return -1;
+        }
+        private int privateStaticMethod() {
+            return 100;
+        }
+    }
+
+    internal class InternalClsPart {
+        internal int Field;
+        int m_property;
+        internal int Property { get { return m_property; } set { m_property = value; } }
+        internal event IntIntDelegate Event;
+        internal int Method(int arg) {
+            if (Event != null)
+                return Event(arg);
+            else
+                return -1;
+        }
     }
 
     public class EngineTest {
@@ -307,13 +334,14 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
         }
 
         public void ScenarioEnableDebugging() {
-            const string lineNumber = "raise.py:line 18";
+            const string lineNumber1 = "raise.py:line 21";
+            const string lineNumber2 = "raise.py:line 23";
             // Ensure that you do get good line numbers with ExecutionOptions.Default
             try {
                 standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.EnableDebugging);
                 throw new Exception("We should not get here");
             } catch (StringException e1) {
-                if (!e1.StackTrace.Contains(lineNumber))
+                if (!e1.StackTrace.Contains(lineNumber1) || !e1.StackTrace.Contains(lineNumber2))
                     throw new Exception("Debugging is not enabled even though ExecutionOptions.EnableDebugging is specified");
             }
 
@@ -322,7 +350,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
                 standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.Default);
                 throw new Exception("We should not get here");
             } catch (StringException e2) {
-                if (e2.StackTrace.Contains(lineNumber))
+                if (e2.StackTrace.Contains(lineNumber1) || e2.StackTrace.Contains(lineNumber2))
                     throw new Exception("Debugging is enabled even though ExecutionOptions.EnableDebugging is not specified");
             }
         }

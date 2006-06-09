@@ -21,6 +21,11 @@ using System.Diagnostics;
 namespace IronPython.Runtime {
     static class ReflectionUtil {
 
+        // Generic type names have the arity (number of generic type paramters) appended at the end. 
+        // For eg. the mangled name of System.List<T> is "List`1". This mangling is done to enable multiple 
+        // generic types to exist as long as they have different arities.
+        internal const char GenericArityDelimiter = '`';
+
         internal static string GetDefaultDocumentation(string methodName) {
             switch (methodName) {
                 case "__abs__":     return "x.__abs__() <==> abs(x)";

@@ -135,6 +135,16 @@ namespace IronPython.Runtime {
             throw new NotImplementedException();
         }
 
+        internal static DynamicType GetDeclaringType(MemberInfo member) {
+            Type declaringType = member.DeclaringType;
+            if (OpsReflectedType.OpsTypeToType.ContainsKey(declaringType)) {
+                // declaringType is an Ops type
+                return OpsReflectedType.OpsTypeToType[declaringType];
+            } else {
+                return Ops.GetDynamicTypeFromType(declaringType);
+            }
+        }
+
         public virtual object CompareTo(object self, object other) {
             return Ops.NotImplemented;
         }
@@ -211,7 +221,7 @@ namespace IronPython.Runtime {
             set { throw Ops.TypeError("can't set attributes of built-in/extension type 'NoneType'"); }
         }
         public override bool IsSubclassOf(object other) {
-            if (other == this) return true;
+            if (other == this || other == TypeCache.Object) return true;
             return false;
         }
 

@@ -15,4 +15,12 @@
 
 x = 1
 
-raise "Hello"
+class C(object):
+    def __init__(self):
+        self.attr = 1
+        raise "Hello"
+
+c = C()
+
+# We will never get to this statement
+y = 1

@@ -100,6 +100,7 @@ IronPythonTests = {
                 test_specialcontext
                 test_clrexception
                 test_exceptionconverter
+                test_privateBinding
                 ''',
             'standard':
                 '''

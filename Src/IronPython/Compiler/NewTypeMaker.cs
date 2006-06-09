@@ -932,14 +932,26 @@ namespace IronPython.Compiler {
         }
 
         private void OverrideBaseMethod(MethodInfo mi, Dictionary<string, bool> specialNames) {
-            string name;
             if (mi == null ||
                 !mi.IsVirtual ||
                 mi.IsFinal ||
-                Array.IndexOf(SkipMethodNames, mi.Name) != -1 ||
-                NameConverter.TryGetName(Ops.GetDynamicTypeFromType(baseType), mi, out name) == NameType.None) {
+                Array.IndexOf(SkipMethodNames, mi.Name) != -1) {
                 return;
             }
+
+            DynamicType baseDynamicType;
+            if (baseType == mi.DeclaringType || baseType.IsSubclassOf(mi.DeclaringType)) {
+                baseDynamicType = Ops.GetDynamicTypeFromType(baseType);
+            } else {
+                // We must be inherting from an interface
+                Debug.Assert(mi.DeclaringType.IsInterface);
+                baseDynamicType = Ops.GetDynamicTypeFromType(mi.DeclaringType);
+            }
+
+            string name = null;
+            if (NameConverter.TryGetName(baseDynamicType, mi, out name) == NameType.None)
+                return;
+
             if (mi.DeclaringType == typeof(object) && mi.Name == "Finalize") return;
 
             specialNames[mi.Name] = false;

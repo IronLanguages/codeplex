@@ -202,7 +202,7 @@ namespace IronPython.Runtime {
         /// Given "a", sets parentScopeName to null and returns "a"
         /// </summary>
         static string GetNameParts(string fullName, out string parentScopeName) {
-            int parentNameEnd = fullName.LastIndexOf('.');
+            int parentNameEnd = fullName.LastIndexOf(Type.Delimiter);
             if (parentNameEnd == -1) {
                 // This is a name at the outermost scope
                 parentScopeName = null;
@@ -273,7 +273,7 @@ namespace IronPython.Runtime {
         void GetName(StringBuilder sb, ReflectedNamespace ns) {
             if (ns.parent != null) {
                 GetName(sb, ns.parent);
-                sb.Append('.');
+                sb.Append(Type.Delimiter);
             }
 
             sb.Append(ns.myNamespace);

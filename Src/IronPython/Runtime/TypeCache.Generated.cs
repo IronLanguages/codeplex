@@ -24,7 +24,7 @@ namespace IronPython.Runtime {
 
         // *** BEGIN GENERATED CODE ***
 
-        private static ReflectedType builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, pythonmodule, method, enumerate;
+        private static ReflectedType array, builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, pythonmodule, method, enumerate;
         private static PythonType obj, intType;
 
         // *** END GENERATED CODE ***
@@ -34,6 +34,13 @@ namespace IronPython.Runtime {
         #region Generated TypeCache Entries
 
         // *** BEGIN GENERATED CODE ***
+
+        public static ReflectedType Array {
+            get {
+                if (array == null) array = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(Array));
+                return array;
+            }
+        }
 
         public static ReflectedType BuiltinFunction {
             get {

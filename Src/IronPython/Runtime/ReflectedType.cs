@@ -358,7 +358,7 @@ namespace IronPython.Runtime {
                 return attr.name;
             } else {
                 string name;
-                NameConverter.TryGetName(null, type, out name);
+                NameConverter.TryGetName(type, out name);
                 return name;
             }
         }
@@ -623,7 +623,7 @@ namespace IronPython.Runtime {
 
         private void AddNestedType(Type type) {
             string name;
-            NameType nt = NameConverter.TryGetName(this, type, out name);
+            NameType nt = NameConverter.TryGetName(type, out name);
             if (nt == NameType.None) return;
             else if (nt == NameType.Type) dict[SymbolTable.StringToId(name)] = Ops.GetDynamicTypeFromClsOnlyType(type);
             else dict[SymbolTable.StringToId(name)] = Ops.GetDynamicTypeFromType(type);

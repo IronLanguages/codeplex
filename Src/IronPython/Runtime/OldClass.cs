@@ -864,7 +864,7 @@ namespace IronPython.Runtime {
         }
 
         public override bool IsSubclassOf(object other) {
-            if (other == this) return true;
+            if (other == this || other == TypeCache.Object) return true;
             return false;
         }
 

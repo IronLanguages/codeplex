@@ -85,7 +85,7 @@ namespace IronPython.Compiler {
                 typeName = Path.GetFileName(snippetName);
             } catch (ArgumentException) { }
 
-            typeName = typeName.Replace('.', '_'); // '.' is for separating the namespace and the type name.
+            typeName = typeName.Replace(Type.Delimiter, '_'); // '.' is for separating the namespace and the type name.
             DebuggableSnippets.SetPythonSourceFile(snippetName);
             TypeGen tg = DebuggableSnippets.DefinePublicType(typeName + "$" + debuggableSnippetTypeIndex++, typeof(object));
             tg.AddModuleField(typeof(PythonModule));
@@ -188,6 +188,7 @@ namespace IronPython.Compiler {
             return DoGenerateModule(state, context, gs, moduleName, context.SourceFile, outSuffix);
         }
 
+        [PythonType(typeof(Dict))]
         internal class SnippetModuleRunner : CompiledModule {
             PythonModule module;
             Frame frame;
@@ -394,6 +395,11 @@ namespace IronPython.Compiler {
 
         internal static TypeGen GenerateModuleType(string moduleName, AssemblyGen ag) {
             TypeGen tg = ag.DefinePublicType(moduleName, typeof(CompiledModule));
+
+            // Type inheriting from CompiledModule are Dicts. Mark the type with "[PythonType(typeof(Dict))]".
+            ConstructorInfo PythonTypeAttributeCtor = typeof(PythonTypeAttribute).GetConstructor(new Type[1] { typeof(Type) });
+            tg.myType.SetCustomAttribute(new CustomAttributeBuilder(PythonTypeAttributeCtor, new object[1] { typeof(Dict) }));
+
             tg.AddModuleField(typeof(PythonModule));
             tg.DefaultConstructor = tg.myType.DefineDefaultConstructor(MethodAttributes.Public);
 

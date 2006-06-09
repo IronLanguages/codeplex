@@ -96,5 +96,10 @@ def test_imp_module():
     AreEqual(module.value, 'imp test module')
     pf.close()
 
+def test_module_dict():
+    currentModule = sys.modules[__name__]
+    AreEqual(type({}), type(currentModule.__dict__))
+    AreEqual(isinstance(currentModule.__dict__, dict), True)
+
 run_test(__name__)
 delete_all_f(__name__)

@@ -17,6 +17,8 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
+using System.Diagnostics;
+
 using IronPython.Runtime;
 
 namespace IronPython.Compiler {
@@ -24,8 +26,9 @@ namespace IronPython.Compiler {
     /// Contains helper methods for converting C# names into Python names.
     /// </summary>
     static class NameConverter {
-
         public static NameType TryGetName(DynamicType dt, MethodInfo mi, out string name) {
+            Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(mi)));
+
             string namePrefix = null;
             NameType res = NameType.Method;
             name = mi.Name;
@@ -45,7 +48,7 @@ namespace IronPython.Compiler {
                     // drop the namespace, leave the interface name, and replace 
                     // the dot with an underscore.  Eg System.IConvertible.ToBoolean
                     // becomes IConvertible_ToBoolean
-                    int lastDot = name.LastIndexOf('.');
+                    int lastDot = name.LastIndexOf(Type.Delimiter);
                     if (lastDot != -1) {
                         name = name.Substring(lastDot + 1);
                     }
@@ -69,6 +72,8 @@ namespace IronPython.Compiler {
         }
 
         public static NameType TryGetName(DynamicType dt, FieldInfo fi, out string name) {
+            Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(fi)));
+
             NameType nt = NameType.PythonField;
             name = null;
 
@@ -90,6 +95,8 @@ namespace IronPython.Compiler {
         }
 
         public static NameType TryGetName(DynamicType dt, PropertyInfo pi, MethodInfo prop, out string name) {
+            Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(pi)));
+
             name = null;
             string namePrefix = "";
             NameType res = NameType.Property; 
@@ -121,24 +128,23 @@ namespace IronPython.Compiler {
             return res;
         }
 
-
-        public static NameType TryGetName(DynamicType dt, Type t, out string name) {
+        public static NameType TryGetName(Type t, out string name) {
             name = t.Name;
 
             int backtickIndex;
-            if ((backtickIndex=name.IndexOf("`")) != -1) {
+            if ((backtickIndex = name.IndexOf(ReflectionUtil.GenericArityDelimiter)) != -1) {
                 name = name.Substring(0, backtickIndex);
             }
 
             string namePrefix = "";
-            if (!t.IsNestedPublic || (t.IsNestedAssembly && !t.IsNestedFamORAssem)) {
+            if ((t.IsNested && !t.IsNestedPublic) || (t.IsNestedAssembly && !t.IsNestedFamORAssem)) {
                 if (!Options.PrivateBinding) {
                     return NameType.None;
                 } else {
-                    // mangle protectes to private
-                    namePrefix = "_" + dt.__name__ + "__";
+                    namePrefix = "_" + Ops.GetDynamicTypeFromType(t.DeclaringType).__name__ + "__";
                 }
             }
+
             NameType res = NameType.Type;
             object[] attribute = t.GetCustomAttributes(typeof(PythonTypeAttribute), false);
 

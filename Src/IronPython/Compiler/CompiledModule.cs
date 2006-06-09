@@ -30,6 +30,7 @@ namespace IronPython.Compiler {
     /// Note that a CompiledModule does not directly relate to pre-compiled script code, though it is used
     /// in that context too.
     /// </summary>
+    [PythonType(typeof(Dict))]
     public abstract class CompiledModule : CustomSymbolDict {
 
         internal static PythonModule Load(string moduleName, Type compiledModuleType, SystemState state) {

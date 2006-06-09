@@ -136,7 +136,7 @@ namespace IronPython.Runtime {
             ReflectedPackage ret = this;
             if (ns != null) {
 
-                string[] pieces = ns.Split('.');
+                string[] pieces = ns.Split(Type.Delimiter);
                 for (int i = 0; i < pieces.Length; i++) {
                     if (!ret.packageAssemblies.Contains(assm)) ret.packageAssemblies.Add(assm);
                     ret = ret.GetOrMakePackage(state, String.Join(".", pieces, 0, i + 1), pieces[i]);
@@ -312,7 +312,7 @@ namespace IronPython.Runtime {
                     // but not in a child namespace
                     if (fullName.Length < types[j].FullName.Length &&
                         String.Compare(fullName, 0, types[j].FullName, 0, fullName.Length) == 0 &&
-                        types[j].FullName.IndexOf('.', fullName.Length + 1) == -1) {
+                        types[j].FullName.IndexOf(Type.Delimiter, fullName.Length + 1) == -1) {
                         SaveType(types[j]);
                     }
                 }
@@ -355,7 +355,7 @@ namespace IronPython.Runtime {
 
                 // try and find the type name...
                 for (int i = 0; i < packageAssemblies.Count; i++) {
-                    string arityName = typeName + '`';  
+                    string arityName = typeName + ReflectionUtil.GenericArityDelimiter;  
                     Type[] allTypes = packageAssemblies[i].GetTypes();
 
                     for (int j = 0; j < allTypes.Length; j++) {
@@ -420,7 +420,7 @@ namespace IronPython.Runtime {
         private static string GetCoreTypeName(Type type) {
             string name = type.Name;
             if (type.IsGenericType) {
-                int backtick = name.IndexOf('`');
+                int backtick = name.IndexOf(ReflectionUtil.GenericArityDelimiter);
                 if (backtick != -1) return name.Substring(0, backtick);
             }
             return name;

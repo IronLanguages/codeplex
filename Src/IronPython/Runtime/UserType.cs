@@ -854,6 +854,7 @@ namespace IronPython.Runtime {
         }
     }
 
+    [PythonType(typeof(Dict))]
     public class NamespaceDictionary : CustomSymbolDict, ICloneable {
         const int BinarySearchSize = 32;
 

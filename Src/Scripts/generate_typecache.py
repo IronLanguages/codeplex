@@ -47,6 +47,7 @@ the private storage as a lower-case named version of the type.
 		
 # list of all the types we auto-generate
 data = [
+	TypeData('Array'),
 	TypeData('BuiltinFunction'),
 	TypeData('Dict'),
 	TypeData('FrozenSetCollection', entryName="FrozenSet"),

@@ -125,7 +125,9 @@ Assert(inst_o.__dict__['val2'] == "Value")
 Assert(count_elem(dir(inst_o), "val1") == 1)
 inst_n.val1 = 20
 Assert(count_elem(dir(inst_o), "val1") == 1)
-
+Assert(isinstance(class_o, object))
+Assert(isinstance(inst_o, object))
+Assert(isinstance(None, object))
 
 class C:
     def x(self):
