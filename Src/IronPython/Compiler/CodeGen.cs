@@ -1385,6 +1385,37 @@ namespace IronPython.Compiler {
             ilg.EmitWriteLine(value);
         }
 
+        internal void EmitTraceBackTryBlockStart() {
+            if (Options.TracebackSupport) {
+                // push a try for traceback support
+                PushTryBlock();
+                BeginExceptionBlock();
+            }
+        }
+
+        internal void EmitTraceBackFaultBlock(string name, string filename) {
+            if (Options.TracebackSupport) {
+                // push a fault block (runs only if there's an exception, doesn't handle the exception)
+                PopTargets();
+                if (IsDynamicMethod) {
+                    BeginCatchBlock(typeof(Exception));
+                } else {
+                    BeginFaultBlock();
+                }
+
+                EmitCallerContext();
+                EmitString(name);
+                EmitString(filename);
+                EmitGetCurrentLine();
+                EmitCall(typeof(Ops), "UpdateTraceBack");
+
+                // end the exception block
+                if (IsDynamicMethod) {
+                    Emit(OpCodes.Rethrow);
+                }
+                EndExceptionBlock();
+            }
+        }
         #endregion
 
         #region IL Debugging Support

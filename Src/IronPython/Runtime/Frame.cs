@@ -155,10 +155,10 @@ namespace IronPython.Runtime {
 
         #region IFrameEnvironment Members
 
-        public object GetGlobal(SymbolId symbol) {
+        public virtual object GetGlobal(SymbolId symbol) {
             object ret;
 
-            if (f_globals.TryGetValue(symbol, out ret)) return ret;
+            if (TryGetGlobal(symbol, out ret)) return ret;
 
             // In theory, we need to check if "__builtins__" has been set by the user
             // to some custom module. However, we do not do that for perf reasons.
@@ -167,11 +167,15 @@ namespace IronPython.Runtime {
             throw Ops.NameError("name '{0}' not defined", symbol);
         }
 
-        public void SetGlobal(SymbolId symbol, object value) {
+        public virtual bool TryGetGlobal(SymbolId symbol, out object value) {
+            return f_globals.TryGetValue(symbol, out value);
+        }
+
+        public virtual void SetGlobal(SymbolId symbol, object value) {
             Ops.SetIndexId(f_globals, symbol, value);
         }
 
-        public void DelGlobal(SymbolId symbol) {
+        public virtual void DelGlobal(SymbolId symbol) {
             if (!f_globals.Remove(symbol)) {
                 throw Ops.NameError("name {0} not defined", symbol);
             }

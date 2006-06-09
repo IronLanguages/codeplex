@@ -135,6 +135,10 @@ namespace IronPython.Runtime {
             return context.GetGlobal(symbol);
         }
 
+        public bool TryGetGlobal(SymbolId symbol, out object value) {
+            return context.TryGetGlobal(symbol, out value);
+        }
+
         public void SetGlobal(SymbolId symbol, object value) {
             context.SetGlobal(symbol, value);
         }

@@ -57,6 +57,7 @@ namespace IronPython.Runtime {
 
     public interface IFrameEnvironment : ICallerContext {
         object GetGlobal(SymbolId symbol);
+        bool TryGetGlobal(SymbolId name, out object value);
         void SetGlobal(SymbolId symbol, object value);
         void DelGlobal(SymbolId symbol);
     }

@@ -214,11 +214,7 @@ namespace IronPython.Compiler {
                 PromoteLocalsToEnvironment();
             }
 
-            if (Options.TracebackSupport) {
-                // push a try for traceback support
-                methodCodeGen.PushTryBlock();
-                methodCodeGen.BeginExceptionBlock();
-            }
+            methodCodeGen.EmitTraceBackTryBlockStart();
 
             // emit the actual body
             if (yieldCount > 0) {
@@ -227,33 +223,9 @@ namespace IronPython.Compiler {
                 EmitFunctionBody(methodCodeGen, initCodeGen);
             }
 
-            if (Options.TracebackSupport) {
-                // push a fault block (runs only if there's an exception, doesn't handle the exception)
-                methodCodeGen.PopTargets();
-                if (methodCodeGen.IsDynamicMethod) {
-                    methodCodeGen.BeginCatchBlock(typeof(Exception));
-                } else {
-                    methodCodeGen.BeginFaultBlock();
-                }
-
-                EmitUpdateTraceBack(methodCodeGen, initCodeGen);
-
-                // end the exception block
-                if (methodCodeGen.IsDynamicMethod) {
-                    methodCodeGen.Emit(OpCodes.Rethrow);
-                }
-                methodCodeGen.EndExceptionBlock();
-            }
+            methodCodeGen.EmitTraceBackFaultBlock(name.GetString(), filename);
 
             methodCodeGen.Finish();
-        }
-
-        private void EmitUpdateTraceBack(CodeGen cg, CodeGen ocg) {
-            cg.EmitCallerContext();
-            cg.EmitString(name.GetString());
-            cg.EmitString(filename);
-            cg.EmitGetCurrentLine();
-            cg.EmitCall(typeof(Ops), "UpdateTraceBack");
         }
 
         private bool NeedsWrapperMethod() {

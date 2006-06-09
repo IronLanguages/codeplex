@@ -182,6 +182,10 @@ namespace IronPython.Runtime {
             throw new InvalidOperationException("not supported on standard modules");
         }
 
+        public bool TryGetGlobal(SymbolId symbol, out object value) {
+            throw new InvalidOperationException("not supported on standard modules");
+        }
+
         public void SetGlobal(SymbolId symbol, object value) {
             throw new InvalidOperationException("not supported on standard modules");
         }

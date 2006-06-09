@@ -22,7 +22,7 @@ using IronPython.Runtime;
 
 namespace IronPython.Runtime {
     [PythonType("traceback")]
-    class TraceBack {
+    public class TraceBack {
         TraceBack next;
         TraceBackFrame frame;
         int line, offset;
@@ -37,28 +37,28 @@ namespace IronPython.Runtime {
             // extract line info & IL offsets from stack trace
         }
 
-        public TraceBack tb_next{
+        public TraceBack Next {
             [PythonName("tb_next")]
             get {
                 return next;
             }
         }
 
-        public object tb_frame {
+        public object Frame {
             [PythonName("tb_frame")]
             get {
                 return frame;
             }
         }
 
-        public int tb_lineno{
+        public int Line {
             [PythonName("tb_lineno")]
             get {
                 return line;
             }
         }
 
-        public int tb_lasti{
+        public int Offset {
             [PythonName("tb_lasti")]
             get {
                 return offset;
@@ -83,15 +83,36 @@ namespace IronPython.Runtime {
         }
     }
 
-    class TraceBackFrame {
-        public object f_globals;
-        public object f_locals;
-        public object f_code;
+    public class TraceBackFrame {
+        private object globals;
+        private object locals;
+        private object code;
+
+        public object Globals {
+            [PythonName("f_globals")]
+            get {
+                return globals;
+            }
+        }
+
+        public object Locals {
+            [PythonName("f_locals")]
+            get {
+                return locals;
+            }
+        }
+
+        public object Code {
+            [PythonName("f_code")]
+            get {
+                return code;
+            }
+        }
 
         public TraceBackFrame(object globals, object locals, object code) {
-            f_globals = globals;
-            f_locals = locals;
-            f_code = code;
+            this.globals = globals;
+            this.locals = locals;
+            this.code = code;
         }
     }
 }

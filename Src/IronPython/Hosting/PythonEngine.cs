@@ -427,16 +427,24 @@ namespace IronPython.Hosting {
 
         #region Get\Set Variable
         public void SetVariable(string name, object val) {
-            topFrame.EnsureInitialized(Sys);
+            SetVariable(name, val, topFrame);
+        }
+
+        public void SetVariable(string name, object val, Frame frame) {
+            frame.EnsureInitialized(Sys);
 
             val = Ops.ToPython(val);
-            Ops.SetAttr(topFrame, topFrame.Module, SymbolTable.StringToId(name), val);
+            Ops.SetAttr(frame, frame.Module, SymbolTable.StringToId(name), val);
         }
 
         public object GetVariable(string name) {
-            topFrame.EnsureInitialized(Sys);
+            return GetVariable(name, topFrame);
+        }
 
-            return Ops.GetAttr(topFrame, topFrame.Module, SymbolTable.StringToId(name));
+        public object GetVariable(string name, Frame frame) {
+            frame.EnsureInitialized(Sys);
+
+            return Ops.GetAttr(frame, frame.Module, SymbolTable.StringToId(name));
         }
 
         public Frame DefaultModuleScope { get { return topFrame; } set { topFrame = value; } }
@@ -516,10 +524,25 @@ namespace IronPython.Hosting {
             ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
 
             Parser p = Parser.FromString(Sys, context, text);
+            return Compile(p, executionOptions);
+        }
+
+        public object CompileFile(string fileName) {
+            return CompileFile(fileName, ExecutionOptions.Default);
+        }
+
+        public object CompileFile(string fileName, ExecutionOptions executionOptions) {
+            ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
+
+            Parser p = Parser.FromFile(Sys, context.CopyWithNewSourceFile(fileName));
+            return Compile(p, executionOptions);
+        }
+
+        private object Compile(Parser p, ExecutionOptions executionOptions) {
             Stmt s = p.ParseFileInput();
 
             bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
-            return OutputGenerator.GenerateSnippet(context, s, false, enableDebugging);
+            return OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, enableDebugging);
         }
         #endregion
 

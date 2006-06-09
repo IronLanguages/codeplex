@@ -141,9 +141,14 @@ namespace IronPython.Compiler {
                 cg.EmitCall(typeof(ICallerContext), "set_TrueDivision");
             }
 
+            // Emit a try/catch block  for TraceBack support, except for simple return statements
+            if (!(body is ReturnStmt))
+                cg.EmitTraceBackTryBlockStart();
+
             gs.Emit(cg);
 
             if (!(body is ReturnStmt)) {
+                cg.EmitTraceBackFaultBlock("Initialize", context.SourceFile);
                 cg.EmitPosition(Location.None, Location.None);
                 cg.EmitReturn(null);
             }
