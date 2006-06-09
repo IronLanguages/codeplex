@@ -28,7 +28,7 @@ using System.Threading;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler {
-    public class AssemblyGen {
+    class AssemblyGen {
         public static readonly Guid PythonLanguageGuid = new Guid("03ed4b80-d10b-442f-ad9a-47dae85b2051");
         public readonly AssemblyBuilder myAssembly;
         internal ModuleBuilder myModule;

@@ -81,7 +81,7 @@ namespace IronPython.Compiler {
             w.PostWalk(this);
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, header);
             SignatureInfo sigInfo = GetSignature(cg);
 
@@ -174,7 +174,7 @@ namespace IronPython.Compiler {
             return cg.ContextSlot;
         }
 
-        public SignatureInfo GetSignature(CodeGen cg) {
+        internal SignatureInfo GetSignature(CodeGen cg) {
             int first = 0;
             Type[] paramTypes;
             SymbolId[] paramNames;
@@ -209,7 +209,7 @@ namespace IronPython.Compiler {
         /// <param name="cg"></param>
         /// <param name="icg"></param>
         /// <param name="context"></param>
-        public void EmitFunctionImplementation(CodeGen methodCodeGen, CodeGen initCodeGen) {
+        internal void EmitFunctionImplementation(CodeGen methodCodeGen, CodeGen initCodeGen) {
             if (EmitLocalDictionary) {
                 PromoteLocalsToEnvironment();
             }
@@ -454,7 +454,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class SignatureInfo {
+    class SignatureInfo {
         public SignatureInfo(Type[] paramTypes, SymbolId[] paramNames, bool hasContext, Slot contextSlot) {
             ParamTypes = paramTypes;
             ParamNames = paramNames;
@@ -479,12 +479,12 @@ namespace IronPython.Compiler {
             finallyBranch = false;
         }
 
-        public YieldTarget FixForTry(CodeGen cg) {
+        internal YieldTarget FixForTry(CodeGen cg) {
             tryBranchTarget = cg.DefineLabel();
             return this;
         }
 
-        public YieldTarget FixForFinally(CodeGen cg) {
+        internal YieldTarget FixForFinally(CodeGen cg) {
             tryBranchTarget = cg.DefineLabel();
             finallyBranch = true;
             return this;

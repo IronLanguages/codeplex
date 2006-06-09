@@ -61,11 +61,11 @@ namespace IronPython.Compiler {
             this.inPlaceTarget = inPlaceTarget;
         }
 
-        public virtual void Emit(CodeGen cg) {
+        internal virtual void Emit(CodeGen cg) {
             cg.EmitCall(target.Method);
         }
 
-        public virtual void EmitInPlace(CodeGen cg) {
+        internal virtual void EmitInPlace(CodeGen cg) {
             cg.EmitCall(inPlaceTarget.Method);
         }
 
@@ -90,14 +90,14 @@ namespace IronPython.Compiler {
             this.inPlaceTargetTrue = inPlaceTargetTrue;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             if (cg.Context.TrueDivision) {
                 cg.EmitCall(targetTrue.Method);
             } else {
                 base.Emit(cg);
             }
         }
-        public override void EmitInPlace(CodeGen cg) {
+        internal override void EmitInPlace(CodeGen cg) {
             if (cg.Context.TrueDivision) {
                 cg.EmitCall(inPlaceTargetTrue.Method);
             } else {

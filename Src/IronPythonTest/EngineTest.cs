@@ -48,7 +48,10 @@ namespace IronPythonTest {
         }
 
         // Private members
+#pragma warning disable 169
+        // This field is accessed from the test
         private int privateField;
+#pragma warning restore 169
         private int privateProperty { get { return m_property; } set { m_property = value; } }
         private event IntIntDelegate privateEvent;
         private int privateMethod(int arg) {
@@ -63,7 +66,10 @@ namespace IronPythonTest {
     }
 
     internal class InternalClsPart {
+#pragma warning disable 649
+        // This field is accessed from the test
         internal int Field;
+#pragma warning restore 649
         int m_property;
         internal int Property { get { return m_property; } set { m_property = value; } }
         internal event IntIntDelegate Event;

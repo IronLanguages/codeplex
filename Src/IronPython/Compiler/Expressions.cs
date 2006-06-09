@@ -30,25 +30,25 @@ namespace IronPython.Compiler {
     /// Summary description for Expr.
     /// </summary>
     public abstract class Expr : Node {
-        public virtual object Evaluate(NameEnv env) {
+        internal virtual object Evaluate(NameEnv env) {
             throw new NotImplementedException("Evaluate: " + this);
         }
 
-        public virtual void Assign(object val, NameEnv env) {
+        internal virtual void Assign(object val, NameEnv env) {
             throw new NotImplementedException("Assign: " + this);
         }
 
-        public abstract void Emit(CodeGen cg);
+        internal abstract void Emit(CodeGen cg);
 
-        public virtual void EmitSet(CodeGen cg) {
+        internal virtual void EmitSet(CodeGen cg) {
             cg.Context.AddError("can't assign to " + this.GetType().Name, this);
         }
 
-        public virtual void EmitDel(CodeGen cg) {
+        internal virtual void EmitDel(CodeGen cg) {
             throw new NotImplementedException("EmitDel: " + this);
         }
 
-        public static object[] Evaluate(Expr[] items, NameEnv env) {
+        internal static object[] Evaluate(Expr[] items, NameEnv env) {
             object[] ret = new object[items.Length];
             for (int i = 0; i < items.Length; i++) {
                 ret[i] = items[i].Evaluate(env);
@@ -61,7 +61,7 @@ namespace IronPython.Compiler {
         public override void Walk(IAstWalker w) {
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             throw new NotImplementedException("ErrorExpr.Emit");
         }
     }
@@ -96,11 +96,11 @@ namespace IronPython.Compiler {
             return false;
         }
 
-        public override void EmitDel(CodeGen cg) {
+        internal override void EmitDel(CodeGen cg) {
             cg.Context.AddError("can't delete function call", this);
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             object callee = target.Evaluate(env);
 
             object[] cargs = new object[args.Length];
@@ -116,7 +116,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             //!!! first optimize option comes here
             //			if (target is FieldExpr && !hasSpecialArgs()) {
             //				generateInvoke((FieldExpr)target, cg);
@@ -225,17 +225,17 @@ namespace IronPython.Compiler {
             this.name = name;
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             object t = target.Evaluate(env);
             return Ops.GetAttr(env.globals, t, SymbolTable.StringToId(name.GetString()));
         }
 
-        public override void Assign(object val, NameEnv env) {
+        internal override void Assign(object val, NameEnv env) {
             object t = target.Evaluate(env);
             Ops.SetAttr(env.globals, t, SymbolTable.StringToId(name.GetString()), val);
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitCallerContext();
             target.Emit(cg);
 
@@ -244,14 +244,14 @@ namespace IronPython.Compiler {
             cg.EmitCall(typeof(Ops), "GetAttr"); //, new Type[] { typeof(object), typeof(SymbolId) });
         }
 
-        public override void EmitSet(CodeGen cg) {
+        internal override void EmitSet(CodeGen cg) {
             target.Emit(cg);
             cg.EmitSymbolId(name);
             cg.EmitCallerContext();
             cg.EmitCall(typeof(Ops), "SetAttrStackHelper");
         }
 
-        public override void EmitDel(CodeGen cg) {
+        internal override void EmitDel(CodeGen cg) {
             cg.EmitCallerContext();
             target.Emit(cg);
             cg.EmitSymbolId(name);
@@ -274,32 +274,32 @@ namespace IronPython.Compiler {
             this.index = index;
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             object t = target.Evaluate(env);
             object i = index.Evaluate(env);
             return Ops.GetIndex(t, i);
         }
 
-        public override void Assign(object val, NameEnv env) {
+        internal override void Assign(object val, NameEnv env) {
             object t = target.Evaluate(env);
             object i = index.Evaluate(env);
             Ops.SetIndex(t, i, val);
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             target.Emit(cg);
             index.Emit(cg);
             cg.EmitCall(typeof(Ops), "GetIndex");
         }
 
 
-        public override void EmitSet(CodeGen cg) {
+        internal override void EmitSet(CodeGen cg) {
             target.Emit(cg);
             index.Emit(cg);
             cg.EmitCall(typeof(Ops), "SetIndexStackHelper");
         }
 
-        public override void EmitDel(CodeGen cg) {
+        internal override void EmitDel(CodeGen cg) {
             target.Emit(cg);
             index.Emit(cg);
             cg.EmitCall(typeof(Ops), "DelIndex");
@@ -320,18 +320,18 @@ namespace IronPython.Compiler {
 
         protected abstract string EmptySequenceString { get; }
 
-        public override void Assign(object val, NameEnv env) {
+        internal override void Assign(object val, NameEnv env) {
             // Disallow "[] = l", "[], a = l, l", "[[]] = [l]", etc
             if (items.Length == 0) {
-                throw Ops.SyntaxError("can't assign to " + EmptySequenceString, "<unknown>", 
+                throw Ops.SyntaxError("can't assign to " + EmptySequenceString, "<unknown>",
                     start.line, start.column, null, 0, IronPython.Hosting.Severity.Error);
             }
-            
+
             IEnumerator ie = Ops.GetEnumerator(val);
 
             int leftCount = items.Length;
-            object[] values = new object[leftCount]; 
-            
+            object[] values = new object[leftCount];
+
             int rightCount = Ops.GetEnumeratorValues(ie, ref values);
             if (leftCount != rightCount)
                 throw Ops.ValueErrorForUnpackMismatch(leftCount, rightCount);
@@ -340,7 +340,7 @@ namespace IronPython.Compiler {
                 items[i].Assign(values[i], env);
         }
 
-        public override void EmitSet(CodeGen cg) {
+        internal override void EmitSet(CodeGen cg) {
             // Disallow "[] = l", "[], a = l, l", "[[]] = [l]", etc
             if (items.Length == 0) {
                 cg.Context.AddError("can't assign to " + EmptySequenceString, this);
@@ -404,7 +404,7 @@ namespace IronPython.Compiler {
             cg.FreeLocalTmp(ie);
         }
 
-        public override void EmitDel(CodeGen cg) {
+        internal override void EmitDel(CodeGen cg) {
             foreach (Expr expr in items) {
                 expr.EmitDel(cg);
             }
@@ -425,11 +425,11 @@ namespace IronPython.Compiler {
 
         protected override string EmptySequenceString { get { return "()"; } }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             return Ops.MakeTuple(Evaluate(items, env));
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitObjectArray(items);
             cg.EmitCall(typeof(Ops), expandable ? "MakeExpandableTuple" : "MakeTuple", new Type[] { typeof(object[]) });
         }
@@ -447,11 +447,11 @@ namespace IronPython.Compiler {
 
         protected override string EmptySequenceString { get { return "[]"; } }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             return Ops.MakeList(Evaluate(items, env));
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitObjectArray(items);
             cg.EmitCall(typeof(Ops), "MakeList", new Type[] { typeof(object[]) });
         }
@@ -468,7 +468,7 @@ namespace IronPython.Compiler {
         public readonly SliceExpr[] items;
         public DictExpr(params SliceExpr[] items) { this.items = items; }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             IDictionary<object, object> dict = Ops.MakeDict(items.Length);
             foreach (SliceExpr s in items) {
                 dict[s.slStart.Evaluate(env)] = s.slStop.Evaluate(env);
@@ -476,7 +476,7 @@ namespace IronPython.Compiler {
             return dict;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitInt(items.Length);
             cg.EmitCall(typeof(Ops), "MakeDict");
             foreach (SliceExpr s in items) {
@@ -504,14 +504,14 @@ namespace IronPython.Compiler {
             this.slStep = step;
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             object e1 = slStart.Evaluate(env);
             object e2 = slStop.Evaluate(env);
             object e3 = slStep.Evaluate(env);
             return Ops.MakeSlice(e1, e2, e3);
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitExprOrNone(slStart);
             cg.EmitExprOrNone(slStop);
             cg.EmitExprOrNone(slStep);
@@ -533,11 +533,11 @@ namespace IronPython.Compiler {
         public readonly Expr expr;
         public BackquoteExpr(Expr expr) { this.expr = expr; }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             return Ops.Repr(expr.Evaluate(env));
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             expr.Emit(cg);
             cg.EmitCall(typeof(Ops), "Repr");
         }
@@ -553,23 +553,23 @@ namespace IronPython.Compiler {
         public readonly Expr expr;
         public ParenExpr(Expr expr) { this.expr = expr; }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             return expr.Evaluate(env);
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             expr.Emit(cg);
         }
 
-        public override void EmitDel(CodeGen cg) {
+        internal override void EmitDel(CodeGen cg) {
             expr.EmitDel(cg);
         }
 
-        public override void EmitSet(CodeGen cg) {
+        internal override void EmitSet(CodeGen cg) {
             expr.EmitSet(cg);
         }
 
-        public override void Assign(object val, NameEnv env) {
+        internal override void Assign(object val, NameEnv env) {
             expr.Assign(val, env);
         }
 
@@ -588,15 +588,15 @@ namespace IronPython.Compiler {
             this.value = value;
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             return value;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitConstant(value);
         }
 
-        public override void EmitSet(CodeGen cg) {
+        internal override void EmitSet(CodeGen cg) {
             if (value == null) {
                 cg.Context.AddError("assignment to None", this);
             }
@@ -618,23 +618,23 @@ namespace IronPython.Compiler {
 
         public NameExpr(SymbolId name) { this.name = name; }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             return env.Get(name.GetString());
         }
 
-        public override void Assign(object val, NameEnv env) {
+        internal override void Assign(object val, NameEnv env) {
             env.Set(name.GetString(), val);
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitGet(name, !defined);
         }
 
-        public override void EmitSet(CodeGen cg) {
+        internal override void EmitSet(CodeGen cg) {
             cg.EmitSet(name);
         }
 
-        public override void EmitDel(CodeGen cg) {
+        internal override void EmitDel(CodeGen cg) {
             cg.EmitDel(name, !defined);
         }
 
@@ -656,13 +656,13 @@ namespace IronPython.Compiler {
             this.end = right.end;
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             object ret = left.Evaluate(env);
             if (Ops.IsTrue(ret)) return right.Evaluate(env);
             else return ret;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             left.Emit(cg);
             cg.Emit(OpCodes.Dup);
             cg.EmitCall(typeof(Ops), "IsTrue");
@@ -690,13 +690,13 @@ namespace IronPython.Compiler {
             this.start = left.start; this.end = right.end;
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             object ret = left.Evaluate(env);
             if (!Ops.IsTrue(ret)) return right.Evaluate(env);
             else return ret;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             left.Emit(cg);
             cg.Emit(OpCodes.Dup);
             cg.EmitCall(typeof(Ops), "IsTrue");
@@ -725,11 +725,11 @@ namespace IronPython.Compiler {
             this.end = expr.end;
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             return op.Evaluate(expr.Evaluate(env));
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             expr.Emit(cg);
             cg.EmitCall(op.target.Method);
         }
@@ -750,7 +750,7 @@ namespace IronPython.Compiler {
             this.start = left.start; this.end = right.end;
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             //!!! not right for compare
             object l = left.Evaluate(env);
             object r = right.Evaluate(env);
@@ -758,7 +758,7 @@ namespace IronPython.Compiler {
             return op.Evaluate(l, r);
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             left.Emit(cg);
             if (IsComparision() && IsComparision(right)) {
                 FinishCompare(cg);
@@ -777,8 +777,7 @@ namespace IronPython.Compiler {
             return be != null && be.IsComparision();
         }
 
-        //!!! code review
-        protected void FinishCompare(CodeGen cg) {
+        internal void FinishCompare(CodeGen cg) {
             BinaryExpr bright = (BinaryExpr)right;
 
             Slot valTmp = cg.GetLocalTmp(typeof(object));
@@ -824,11 +823,11 @@ namespace IronPython.Compiler {
             this.func = func;
         }
 
-        public override object Evaluate(NameEnv env) {
+        internal override object Evaluate(NameEnv env) {
             return func.MakeFunction(env);
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             func.Emit(cg);
             cg.EmitGet(func.name, false);
         }
@@ -883,7 +882,7 @@ namespace IronPython.Compiler {
             this.item = item; this.iters = citers;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             Slot list = cg.GetLocalTmp(typeof(List));
             cg.EmitCall(typeof(Ops), "MakeList", Type.EmptyTypes);
             list.EmitSet(cg);
@@ -980,7 +979,7 @@ namespace IronPython.Compiler {
             this.call = call;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             func.Emit(cg);
             call.Emit(cg);
         }

@@ -19,7 +19,7 @@ using System.Diagnostics;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler {
-    public abstract class EnvironmentFactory {
+    abstract class EnvironmentFactory {
         public EnvironmentReference MakeEnvironmentReference(SymbolId name) {
             return MakeEnvironmentReference(name, typeof(object));
         }
@@ -30,7 +30,7 @@ namespace IronPython.Compiler {
         public abstract EnvironmentReference MakeEnvironmentReference(SymbolId name, Type type);
     }
 
-    public class IndexEnvironmentFactory : EnvironmentFactory {
+    class IndexEnvironmentFactory : EnvironmentFactory {
         private int size;
         private int index;
 
@@ -53,7 +53,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class FieldEnvironmentFactory : EnvironmentFactory {
+    class FieldEnvironmentFactory : EnvironmentFactory {
         Type type;
         FieldInfo[] fields;
         private int index;
@@ -82,7 +82,7 @@ namespace IronPython.Compiler {
     }
 
 
-    public class GlobalEnvironmentFactory : EnvironmentFactory {
+    class GlobalEnvironmentFactory : EnvironmentFactory {
         public GlobalEnvironmentFactory() {
         }
 

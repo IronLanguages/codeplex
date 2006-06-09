@@ -35,7 +35,7 @@ namespace IronPython.Compiler {
             throw new NotImplementedException("execute: " + this);
         }
 
-        public virtual void Emit(CodeGen cg) {
+        internal virtual void Emit(CodeGen cg) {
             throw new NotImplementedException("Emit: " + this);
         }
 
@@ -59,7 +59,7 @@ namespace IronPython.Compiler {
             return ret;
         }
        
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             // Should emit nop for the colon?
             foreach (Stmt stmt in stmts) {
                 stmt.Emit(cg);
@@ -105,7 +105,7 @@ namespace IronPython.Compiler {
             return NextStmt;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             Label eoi = cg.DefineLabel();
             foreach (IfStmtTest t in tests) {
                 Label next = cg.DefineLabel();
@@ -170,7 +170,7 @@ namespace IronPython.Compiler {
             //			}
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             Label eol = cg.DefineLabel();
             Label breakTarget = cg.DefineLabel();
             Label continueTarget = cg.DefineLabel();
@@ -239,7 +239,7 @@ namespace IronPython.Compiler {
             //			}
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             Label eol = cg.DefineLabel();
             Label breakTarget = cg.DefineLabel();
             Label continueTarget = cg.DefineLabel();
@@ -324,7 +324,7 @@ namespace IronPython.Compiler {
         }
 
         //!!! need to evaluate break/continue through a try block
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             Slot choiceVar = null;
             cg.EmitPosition(start, header);
 
@@ -479,7 +479,7 @@ namespace IronPython.Compiler {
             this.body = body; this.finallyStmt = finally_;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, header);
             Slot choiceVar = null;
             Slot returnVar = null;
@@ -577,7 +577,7 @@ namespace IronPython.Compiler {
             return NextStmt;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
             if (cg.printExprStmts) {
                 // emit & print expression.
@@ -638,7 +638,7 @@ namespace IronPython.Compiler {
             return NextStmt;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
             rhs.Emit(cg);
             for (int i = 0; i < lhs.Length; i++) {
@@ -665,7 +665,7 @@ namespace IronPython.Compiler {
             this.op = op; this.lhs = lhs; this.rhs = rhs;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
 
             // if lhs is a complex expression (eg foo[x] or foo.bar)
@@ -708,7 +708,7 @@ namespace IronPython.Compiler {
             return NextStmt;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
             string suffix = "";
             if (dest != null) suffix = "WithDest";
@@ -765,7 +765,7 @@ namespace IronPython.Compiler {
             this.asNames = asNames;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
 
             for (int i = 0; i < names.Length; i++) {
@@ -814,7 +814,7 @@ namespace IronPython.Compiler {
             return NextStmt;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
 
             cg.EmitModuleInstance();
@@ -873,7 +873,7 @@ namespace IronPython.Compiler {
             return NextStmt;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
         }
 
         public override void Walk(IAstWalker w) {
@@ -888,7 +888,7 @@ namespace IronPython.Compiler {
             this.exprs = exprs;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
             foreach (Expr expr in exprs) {
                 expr.EmitDel(cg);
@@ -909,7 +909,7 @@ namespace IronPython.Compiler {
             this.type = type; this.value = _value; this.traceback = traceback;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
             if (type == null && value == null && traceback == null) {
                 cg.EmitCall(typeof(Ops), "Raise", Type.EmptyTypes);
@@ -939,7 +939,7 @@ namespace IronPython.Compiler {
             this.message = message;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             if (IronPython.Hosting.PythonEngine.options.DebugMode) {
                 cg.EmitPosition(start, end);
                 cg.EmitTestTrue(test);
@@ -974,7 +974,7 @@ namespace IronPython.Compiler {
             return globals == null && locals == null;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
             cg.EmitCallerContext();
             code.Emit(cg);
@@ -1024,7 +1024,7 @@ namespace IronPython.Compiler {
             return expr.Evaluate(env);
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
             cg.EmitReturn(expr);
         }
@@ -1047,7 +1047,7 @@ namespace IronPython.Compiler {
         }
 
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
             cg.EmitYield(expr, index, label);
         }
@@ -1073,7 +1073,7 @@ namespace IronPython.Compiler {
             return NextStmt;
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, end);
         }
 
@@ -1088,7 +1088,7 @@ namespace IronPython.Compiler {
     public class BreakStmt : Stmt {
         public BreakStmt() { }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             if (!cg.InLoop()) {
                 cg.Context.AddError("'break' not properly in loop", this);
                 return;
@@ -1108,7 +1108,7 @@ namespace IronPython.Compiler {
     public class ContinueStmt : Stmt {
         public ContinueStmt() { }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             if (!cg.InLoop()) {
                 cg.Context.AddError("'continue' not properly in loop", this);
                 return;

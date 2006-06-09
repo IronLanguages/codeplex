@@ -20,7 +20,7 @@ using System.Diagnostics;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler {
-    public class EnvironmentNamespace {
+    class EnvironmentNamespace {
         private EnvironmentFactory factory;
         private Dictionary<SymbolId, EnvironmentReference> references = new Dictionary<SymbolId, EnvironmentReference>();
 
@@ -49,7 +49,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public abstract class GlobalNamespace {
+    abstract class GlobalNamespace {
         public Slot GetOrMakeSlot(SymbolId name) {
             return GetOrMakeSlot(name, typeof(object));
         }
@@ -58,7 +58,7 @@ namespace IronPython.Compiler {
         public abstract GlobalNamespace Relocate(Slot instance);
     }
 
-    public sealed class GlobalEnvironmentNamespace : GlobalNamespace {
+    sealed class GlobalEnvironmentNamespace : GlobalNamespace {
         private EnvironmentNamespace en;
         private Slot instance;
 
@@ -84,7 +84,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public sealed class GlobalFieldNamespace : GlobalNamespace {
+    sealed class GlobalFieldNamespace : GlobalNamespace {
         private StaticFieldSlotFactory sfsf;
         private Dictionary<SymbolId, Slot> slots = new Dictionary<SymbolId, Slot>();
 

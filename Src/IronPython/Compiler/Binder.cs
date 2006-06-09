@@ -43,7 +43,7 @@ using IronPython.Runtime;
  */
 
 namespace IronPython.Compiler {
-    public class DefineBinder : AstWalkerNonRecursive {
+    class DefineBinder : AstWalkerNonRecursive {
         protected Binder binder;
         public DefineBinder(Binder binder) {
             this.binder = binder;
@@ -67,7 +67,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class ParameterBinder : AstWalkerNonRecursive {
+    class ParameterBinder : AstWalkerNonRecursive {
         private Binder binder;
         public ParameterBinder(Binder binder) {
             this.binder = binder;
@@ -87,7 +87,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class DeleteBinder : AstWalkerNonRecursive {
+    class DeleteBinder : AstWalkerNonRecursive {
         private Binder binder;
         public DeleteBinder(Binder binder) {
             this.binder = binder;
@@ -99,7 +99,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class Binder : AstWalker {
+    class Binder : AstWalker {
         private ScopeStatement current;
         private List<ScopeStatement> processed = new List<ScopeStatement>();
 

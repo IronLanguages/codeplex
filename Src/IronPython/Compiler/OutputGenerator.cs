@@ -36,7 +36,7 @@ namespace IronPython.Compiler {
     //
     // OutputGenerator manages both units of compilation.
 
-    public static class OutputGenerator {
+    static class OutputGenerator {
         private static int count = 0;
         private static AssemblyGen CreateNewSnippetAssembly(string name, bool emitDebugInfo) {
             int thisCnt = Interlocked.Increment(ref count);

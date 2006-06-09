@@ -35,12 +35,12 @@ namespace IronPython.Compiler {
     /// Summary description for CodeGen.
     /// </summary>
 
-    public struct ReturnBlock {
+    struct ReturnBlock {
         public Slot returnValue;
         public Label returnStart;
     }
 
-    public struct Targets {
+    struct Targets {
         public enum TargetBlockType {
             Normal,
             Try,
@@ -72,7 +72,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class CodeGen : IDisposable {
+    internal class CodeGen : IDisposable {
         //@todo make all fields private
         internal TypeGen typeGen;
         private AssemblyGen assemblyGen;

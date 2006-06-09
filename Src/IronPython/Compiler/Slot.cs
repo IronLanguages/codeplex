@@ -32,7 +32,7 @@ namespace IronPython.Compiler {
     // function. Though each closure will use the same string (the name of the variable), each
     // string is considered a unique Name or symbol.
 
-    public abstract class Slot {
+    abstract class Slot {
         private bool local;
 
         internal bool Local {
@@ -110,7 +110,7 @@ namespace IronPython.Compiler {
     // NamedFrameSlot represens a global variables (or builtin) of FrameCode code executing 
     // in the context of a Frame. They have to be looked up by name at runtime.
 
-    public sealed class NamedFrameSlot : Slot {
+    sealed class NamedFrameSlot : Slot {
         // The Frame whose Namespace will be used to resolve the Name
         private readonly Slot frame;
         private readonly SymbolId name;
@@ -164,7 +164,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class LocalNamedFrameSlot : Slot {
+    class LocalNamedFrameSlot : Slot {
         public readonly Slot frame;
         public readonly SymbolId name;
 
@@ -214,7 +214,7 @@ namespace IronPython.Compiler {
 
     // Most imported Python modules uses static fields in an assembly for the module globals.
 
-    public class StaticFieldSlot : Slot {
+    class StaticFieldSlot : Slot {
         public readonly FieldInfo field;
 
         public StaticFieldSlot(FieldInfo field) {
@@ -241,7 +241,7 @@ namespace IronPython.Compiler {
     /// <summary>
     /// A StaticField Slot who's name collides w/ a built-in name
     /// </summary>
-    public class StaticFieldBuiltinSlot : StaticFieldSlot {
+    class StaticFieldBuiltinSlot : StaticFieldSlot {
         public StaticFieldBuiltinSlot(FieldInfo field)
             : base(field) {
         }
@@ -280,7 +280,7 @@ namespace IronPython.Compiler {
     }
 
     // FieldSlot is an access of an attribute of an object
-    public class FieldSlot : Slot {
+    class FieldSlot : Slot {
         public readonly Slot instance;
         public readonly FieldInfo field;
 
@@ -320,7 +320,7 @@ namespace IronPython.Compiler {
     // Local variable access
     // Note that access of local variables of an enclosing function is done using a FieldSlot
 
-    public class LocalSlot : Slot {
+    class LocalSlot : Slot {
         public readonly LocalBuilder localBuilder;
         private readonly CodeGen codeGen;           // LocalSlot's can only be used w/ codegen that created them
 
@@ -350,7 +350,7 @@ namespace IronPython.Compiler {
     }
 
     // Argument access
-    public class ArgSlot : Slot {
+    class ArgSlot : Slot {
         private Type argType;
         private int index;
         private CodeGen codeGen;
@@ -388,11 +388,11 @@ namespace IronPython.Compiler {
         }
     }
 
-    class ParamArraySlot : Slot{
+    class ParamArraySlot : Slot {
         Slot param;
         int index;
 
-        public ParamArraySlot(Slot paramArray, int paramIndex){
+        public ParamArraySlot(Slot paramArray, int paramIndex) {
             param = paramArray;
             index = paramIndex;
         }
@@ -413,7 +413,7 @@ namespace IronPython.Compiler {
     }
 
     // Accessing self
-    public class ThisSlot : Slot {
+    class ThisSlot : Slot {
         public readonly Type type;
 
         public ThisSlot(Type type) {
@@ -438,7 +438,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class VTableSlot : Slot {
+    class VTableSlot : Slot {
         public readonly Slot typeSlot;
         public readonly string name;
         public readonly int index;
@@ -477,7 +477,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class IndexSlot : Slot {
+    class IndexSlot : Slot {
         private Slot instance;
         private int index;
         private Type type;
@@ -536,7 +536,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class PropertySlot : Slot {
+    class PropertySlot : Slot {
         Slot instance;
         PropertyInfo property;
 
@@ -589,7 +589,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    internal class CastSlot : Slot {
+    class CastSlot : Slot {
         private Slot instance;
         private Type type;
 
@@ -623,7 +623,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    internal class GlobalBackedSlot : Slot {
+    class GlobalBackedSlot : Slot {
         Slot attribute;
         Slot global;
 
@@ -672,7 +672,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    internal class EnvironmentBackedSlot : Slot {
+    class EnvironmentBackedSlot : Slot {
         Slot global;
         Slot environment;
         SymbolId name;

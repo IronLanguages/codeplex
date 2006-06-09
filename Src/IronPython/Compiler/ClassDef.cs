@@ -42,7 +42,7 @@ namespace IronPython.Compiler {
         }
 
         private static int index = 0;
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             cg.EmitPosition(start, header);
 
             CodeGen icg = CreateClassMaker(cg);

@@ -21,14 +21,14 @@ using System.Diagnostics;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler {
-    public abstract class SlotFactory {
+    abstract class SlotFactory {
         public Slot MakeSlot(SymbolId name) {
             return MakeSlot(name, typeof(object));
         }
         public abstract Slot MakeSlot(SymbolId name, Type type);
     }
 
-    public class LocalSlotFactory : SlotFactory {
+    class LocalSlotFactory : SlotFactory {
         private CodeGen codeGen;
 
         public LocalSlotFactory(CodeGen codeGen) {
@@ -42,7 +42,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class FieldSlotFactory : SlotFactory {
+    class FieldSlotFactory : SlotFactory {
         private TypeGen typeGen;
         private Slot instance;
 
@@ -56,7 +56,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class StaticFieldSlotFactory : SlotFactory {
+    class StaticFieldSlotFactory : SlotFactory {
         Dictionary<SymbolId, StaticFieldSlot> fields = new Dictionary<SymbolId,StaticFieldSlot>();
         private TypeGen typeGen;
 
@@ -93,7 +93,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class LocalFrameSlotFactory : SlotFactory {
+    class LocalFrameSlotFactory : SlotFactory {
         protected Slot frame;
 
         public LocalFrameSlotFactory(Slot frame) {
@@ -105,7 +105,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class IndexSlotFactory : SlotFactory {
+    class IndexSlotFactory : SlotFactory {
         private Slot instance;
         private int index;
 

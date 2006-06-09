@@ -19,7 +19,7 @@ using System.Diagnostics;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler {
-    public abstract class EnvironmentReference {
+    abstract class EnvironmentReference {
         protected Type type;
 
         protected EnvironmentReference(Type type) {
@@ -35,7 +35,7 @@ namespace IronPython.Compiler {
         public abstract Slot CreateSlot(Slot instance);
     }
 
-    public sealed class IndexEnvironmentReference : EnvironmentReference {
+    sealed class IndexEnvironmentReference : EnvironmentReference {
         private int index;
 
         public IndexEnvironmentReference(int index, Type type)
@@ -52,7 +52,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public sealed class FieldEnvironmentReference : EnvironmentReference {
+    sealed class FieldEnvironmentReference : EnvironmentReference {
         private FieldInfo field;
 
         public FieldEnvironmentReference(FieldInfo field, Type type)
@@ -74,7 +74,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public sealed class NamedEnvironmentReference : EnvironmentReference {
+    sealed class NamedEnvironmentReference : EnvironmentReference {
         public readonly SymbolId name;
 
         public NamedEnvironmentReference(SymbolId name, Type type)

@@ -41,7 +41,7 @@ namespace IronPython.Compiler {
     //
     // Note that for module-level code, globals and locals are the same.
 
-    public class Namespace {
+    class Namespace {
         private Dictionary<SymbolId, Slot> slots = new Dictionary<SymbolId, Slot>();
 
         private SlotFactory locals;

@@ -167,8 +167,8 @@ namespace IronPython.Compiler {
         protected Dictionary<SymbolId, Binding> names = new Dictionary<SymbolId, Binding>();
 
         // Names that need to be promoted to the environment and their assigned index in the environment
-        protected Dictionary<SymbolId, EnvironmentReference> environment;
-        protected EnvironmentFactory environmentFactory;
+        internal Dictionary<SymbolId, EnvironmentReference> environment;
+        internal EnvironmentFactory environmentFactory;
         public int tempsCount;
 
         protected ScopeStatement(Stmt body) {
@@ -241,7 +241,7 @@ namespace IronPython.Compiler {
             return false;
         }
 
-        public bool BindInParent(SymbolId name, Binder binder) {
+        internal bool BindInParent(SymbolId name, Binder binder) {
             Binding binding;
             ContainsNestedFreeVariables = true;
             if (TryGetBinding(name, out binding)) {
@@ -266,7 +266,7 @@ namespace IronPython.Compiler {
             return false;
         }
 
-        public void BindNames(GlobalSuite globals, Binder binder) {
+        internal void BindNames(GlobalSuite globals, Binder binder) {
             foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 Binding b = kv.Value;
                 SymbolId n = kv.Key;
@@ -370,7 +370,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        protected Slot CreateEnvironment(CodeGen cg) {
+        internal Slot CreateEnvironment(CodeGen cg) {
             // Get the environment size
             int size = CalculateEnvironmentSize();
 
@@ -418,7 +418,7 @@ namespace IronPython.Compiler {
             return environmentSlot;
         }
 
-        protected void CreateLocalSlots(CodeGen cg) {
+        internal void CreateLocalSlots(CodeGen cg) {
             foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 if (kv.Value.IsLocal) {
                     Slot local = cg.Names.EnsureLocalSlot(kv.Key);
@@ -429,7 +429,8 @@ namespace IronPython.Compiler {
                 }
             }
         }
-        protected void CreateGlobalSlots(CodeGen to, CodeGen from) {
+
+        internal void CreateGlobalSlots(CodeGen to, CodeGen from) {
             to.Names.Globals = from.Names.Globals.Relocate(to.ContextSlot);
 
             foreach (KeyValuePair<SymbolId, Binding> kv in names) {
@@ -457,7 +458,7 @@ namespace IronPython.Compiler {
             return false;
         }
 
-        protected void CreateClosureSlots(CodeGen cg) {
+        internal void CreateClosureSlots(CodeGen cg) {
             CreateClosureSlots(cg.StaticLinkSlot, cg.Names);
         }
 
@@ -546,7 +547,7 @@ namespace IronPython.Compiler {
             : base(body) {
         }
 
-        public override void Emit(CodeGen cg) {
+        internal override void Emit(CodeGen cg) {
             CreateGlobalSlots(cg);
             body.Emit(cg);
         }
@@ -558,7 +559,7 @@ namespace IronPython.Compiler {
             w.PostWalk(this);
         }
 
-        public void CreateGlobalSlots(CodeGen cg) {
+        internal void CreateGlobalSlots(CodeGen cg) {
             foreach (KeyValuePair<SymbolId, Binding> kv in names) {
                 Slot slot = cg.Names.Globals.GetOrMakeSlot(kv.Key);
                 if (kv.Value.IsGlobal) {
