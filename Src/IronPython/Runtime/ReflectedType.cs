@@ -650,11 +650,7 @@ namespace IronPython.Runtime {
             MethodInfo methodInfo = typeof(InstanceOps).GetMethod(methodName);
             if (nameType == NameType.PythonMethod) functionType |= FunctionType.PythonVisible;
 
-            if (IsOptimizedMethod(methodInfo.GetParameters())) {
-                meth = BuiltinFunction.Make(pythonName, methodInfo, new MethodBase[] { methodInfo }, functionType).GetDescriptor();
-            } else {
-                meth = new ReflectedUnboundMethod(pythonName, methodInfo, functionType).GetDescriptor();
-            }
+            meth = new ReflectedUnboundMethod(pythonName, methodInfo, functionType).GetDescriptor();
 
             Debug.Assert(meth != null);
 

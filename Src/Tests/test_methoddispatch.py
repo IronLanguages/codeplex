@@ -19,6 +19,16 @@ from lib.assert_util import *
 load_iron_python_test()
 from IronPythonTest import *
 
+#A few minimal checks for error messages - using bad exact match rules
+#???These tests should be rewritten to capture essence of errors without details
+md = MixedDispatch("hi")
+AssertErrorWithMessage(TypeError, "Combine() takes exactly 2 arguments (1 given)", MixedDispatch.Combine, md)
+AssertErrorWithMessage(TypeError, "Combine() takes exactly 1 argument (0 given)", md.Combine)
+
+#mc = MultiCall()
+#mc.M0(3.0)
+
+
 x = BindingTestClass.Bind("Hello")
 Assert(x == "Hello")
 x = BindingTestClass.Bind(10)
@@ -279,7 +289,7 @@ methods = [
     MyEnumTest.TestEnumUShort,
     MyEnumTest.TestEnumULong,
     MyEnumTest.TestEnumByte,
-    MyEnumTest.TestEnumBoolean,
+    #MyEnumTest.TestEnumBoolean,
 ]
 
 parameters = [
@@ -294,8 +304,9 @@ parameters = [
 ]
 
 for p in parameters:
+	#No implicit conversions from enum to numeric types are allowed
     for m in methods:
-        x = m(p)
+		AssertError(TypeError, m, p)
     x = int(p)
     x = bool(p)
 
@@ -337,7 +348,7 @@ AssertError(TypeError, d.M2, None)
 #        public void M3(int arg, int arg2) { Flag = 203; }
 #======================================================================
 
-Check(103, d.M3, IronPythonTest.DispatchHelpers.Color.Red)
+AssertError(TypeError, d.M3, IronPythonTest.DispatchHelpers.Color.Red)
 Check(103, d.M3, 1)
 Check(203, d.M3, 1, 1)
 AssertError(TypeError, d.M3, None, None)
@@ -348,10 +359,9 @@ AssertError(TypeError, d.M4, None)
 #        public void M4(int arg, __arglist) { Flag = 204; }
 #======================================================================
 
-Check(104, d.M4, IronPythonTest.DispatchHelpers.Color.Red)
+AssertError(TypeError, IronPythonTest.DispatchHelpers.Color.Red)
 Check(104, d.M4, 1)
-#!!! Apparently IP choose the first one, HOWEVER should we care since
-# Reflection MethodInfo.Invoke on vararg method is not supported?
+#VarArgs methods can not be called from IronPython by design
 AssertError(TypeError, d.M4, 1, 1)
 AssertError(TypeError, d.M4, None, None)
 AssertError(TypeError, d.M4, None)
@@ -403,9 +413,9 @@ AssertError(TypeError, d.M10, None)
 #======================================================================
 
 Check(111, d.M11, 1, 1)
-Check(111, d.M11, 1, IronPythonTest.DispatchHelpers.Color.Red)
+AssertError(TypeError, d.M11, 1, IronPythonTest.DispatchHelpers.Color.Red)
 Check(211, d.M11, IronPythonTest.DispatchHelpers.Color.Red, 1)
-Check(211, d.M11, IronPythonTest.DispatchHelpers.Color.Red, IronPythonTest.DispatchHelpers.Color.Red)
+AssertError(TypeError, d.M11, IronPythonTest.DispatchHelpers.Color.Red, IronPythonTest.DispatchHelpers.Color.Red)
 
 #======================================================================
 #        public void M12(int arg, DispatchHelpers.Color arg2) { Flag = 112; }
@@ -415,8 +425,7 @@ Check(211, d.M11, IronPythonTest.DispatchHelpers.Color.Red, IronPythonTest.Dispa
 AssertError(TypeError, d.M12, 1, 1)
 Check(112, d.M12, 1, IronPythonTest.DispatchHelpers.Color.Red)
 Check(212, d.M12, IronPythonTest.DispatchHelpers.Color.Red, 1)
-# !!!
-#Check(112, d.M12, IronPythonTest.DispatchHelpers.Color.Red, IronPythonTest.DispatchHelpers.Color.Red)
+AssertError(TypeError, d.M12, IronPythonTest.DispatchHelpers.Color.Red, IronPythonTest.DispatchHelpers.Color.Red)
 
 #======================================================================
 #        public void M20(DispatchHelpers.B arg) { Flag = 120; }
@@ -488,7 +497,7 @@ AssertError(TypeError, IronPythonTest.Dispatch.M71, d, d)
 #        public static void M81(Dispatch arg, int arg2) { Flag = 181; }
 #        public void M81(int arg) { Flag = 281; }
 #======================================================================
-Check(181, d.M81, d, 1)
+AssertError(TypeError, d.M81, d, 1)
 Check(181, IronPythonTest.Dispatch.M81, d, 1)
 Check(281, d.M81, 1)
 AssertError(TypeError, IronPythonTest.Dispatch.M81, 1)
@@ -611,24 +620,24 @@ strdict = {'abc': 'def', 'xyz':'abc', 'mno':'prq'}
 objdict = { (2,3) : (4,5), (1,2):(3,4), (8,9):(1,4)}
 mixeddict = {'abc': 2, 'def': 9, 'qrs': 8}
 
-objFunctions = [cd.Array,cd.ObjIList, cd.ObjList, cd.ArrayList, cd.Enumerator]
+objFunctions = [cd.Array,cd.ObjIList, cd.Enumerator]
 objData = [inttuple, strtuple, othertuple]
 
-intFunctions = [cd.IntArray, cd.IntEnumerator, cd.IntIList]
+intFunctions = [cd.IntEnumerator, cd.IntIList]
 intData = [inttuple, intlist]
 
-intTupleFunctions = [cd.IntList]
+intTupleFunctions = [cd.IntArray]
 intTupleData = [inttuple]
 
-strFunctions = [cd.StringArray, cd.StringEnumerator, cd.StringIList]
+strFunctions = [cd.StringEnumerator, cd.StringIList]
 strData = [strtuple, strlist]
 
-strTupleFunctions = [cd.StringList]
+strTupleFunctions = [cd.StringArray]
 strTupleData = [strtuple]
 
 # dictionary data
 
-objDictFunctions = [cd.DictTest, cd.HashtableTest]
+objDictFunctions = [cd.DictTest]
 objDictData = [intdict, strdict, objdict, mixeddict]
 
 intDictFunctions = [cd.IntDictTest]
@@ -640,20 +649,20 @@ strDictData = [strdict]
 mixedDictFunctions = [cd.MixedDictTest]
 mixedDictData = [mixeddict]
 
-modCases = [ (cd.ObjIList, (intlist, strlist, otherlist)), \
-             ( cd.IntIList, (intlist,) ),  \
-             ( cd.StringIList, (strlist,) ),   \
-             ( cd.ArrayList, (intlist, strlist, otherlist) ) ]
+modCases = [ (cd.ObjIList, (intlist, strlist, otherlist)), 
+             ( cd.IntIList, (intlist,) ),  
+             ( cd.StringIList, (strlist,) ),   
+              ]
 
-testCases = [ [objFunctions, objData], \
-              [intFunctions, intData], \
-              [strFunctions, strData], \
-              [intTupleFunctions, intTupleData], \
+testCases = [ [objFunctions, objData],
+              [intFunctions, intData],
+              [strFunctions, strData],
+              [intTupleFunctions, intTupleData],
               [strTupleFunctions, strTupleData] ]
 
-dictTestCases = ( (objDictFunctions, objDictData ), \
-                  (intDictFunctions, intDictData ), \
-                  (strDictFunctions, strDictData),  \
+dictTestCases = ( (objDictFunctions, objDictData ),
+                  (intDictFunctions, intDictData ),
+                  (strDictFunctions, strDictData), 
                   (mixedDictFunctions, mixedDictData) )
 
 ############################################3
@@ -733,9 +742,6 @@ class C:
     
 a = C()
 AreEqual(a.mycmp(0,0), 0)
-
-
-
 
 ####################################################################################
 # Default parameter value tests
@@ -977,18 +983,24 @@ import System
 maxlong1 = System.Int64.MaxValue
 maxlong2 = long(str(maxlong1))
 
+class MyInt(int):
+    def __repr__(self):
+        return "MyInt(%s)" % super(MyInt, self).__repr__()
+
+myint = MyInt(10)
+
 #############################################################################################
 #        public int M0(int arg) { return 1; }
 #        public int M0(long arg) { return 2; }
 
 func = c.M0
-AllEqual(1, func, [(0,), (1,), (maxint,), (10L,), (-1234.0,)])
-AllEqual(2, func, [(maxint + 1,), (-maxint-10,)])
+AllEqual(1, func, [(0,), (1,), (maxint,), (myint,)])
+AllEqual(2, func, [(maxint + 1,), (-maxint-10,), (10L,)])
 AllAssert(TypeError, func, [ 
-    #(-10.2,),
+    (-10.2,),
     (1+2j,), 
     ("10",), 
-    (System.Byte.Parse("2"),)
+    (System.Byte.Parse("2"),),
     ])
     
 #############################################################################################
@@ -1001,6 +1013,8 @@ AllEqual(1, func, [
     (0,), 
     (1,), 
     (maxint,), 
+    (System.Byte.Parse("2"),),
+    (myint, ),
     #(10L,), 
     #(-1234.0,),
     ])
@@ -1008,7 +1022,7 @@ AllEqual(2, func, [
     #(maxint + 1,), 
     #(-maxint-10,),
     ])
-AllEqual(3, func, [(-10.2,), (1+2j,), ("10",), (System.Byte.Parse("2"),)])
+AllEqual(3, func, [(-10.2,), (1+2j,), ("10",),])
 
 #############################################################################################
 #        public int M2(int arg1, int arg2) { return 1; }
@@ -1027,13 +1041,13 @@ AllEqual(2, func, [
     #(maxint+1, 0), 
     #(maxint+10, 10),
     #(maxint+10, 10L),
-    (maxlong1, 0),
+    #(maxlong1, 0),
     #(maxlong2, 0),
     ])
 
 AllEqual(3, func, [
-    (0, maxint+1), 
-    (10, maxint+10),
+    #(0, maxint+1), 
+    #(10, maxint+10),
     #(10L, maxint+10),
     ])
 
@@ -1041,7 +1055,7 @@ AllEqual(4, func, [
     #(maxint+10, maxint+1), 
     #(-maxint-10, maxint+10),
     #(-maxint-10L, maxint+100),
-    (maxlong1, maxlong1),
+    #(maxlong1, maxlong1),
     #(maxlong2, maxlong1),
     ])  
     
@@ -1126,7 +1140,7 @@ AllAssert(TypeError, func, [(1,1), (None, None), (None, d)])
 #        public int M8(object arg1, object arg2) { return 3; }
 
 func = c.M8
-AllEqual(1, func, [(1, 2), (maxint, 2L)])
+AllEqual(1, func, [(1, 2), ]) #(maxint, 2L)])
 AllEqual(2, func, [(b, b), (b, d), (d, b), (d, d)])
 AllEqual(3, func, [(5.1, b), (1, d), (d, 1), (d, maxlong2), (maxlong1, d), (None, 3), (3, None)])
 
@@ -1179,7 +1193,7 @@ AreEqual(x[1], a)
 AreEqual(a.M98.__doc__, '(int, Dispatch) M98(str a, str b, str c, str d, Dispatch di)\r\n')
 
 # call type.InvokeMember on String.ToString - all methods have more arguments than max args.
-res = clr.GetClrType(str).InvokeMember('ToString', System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.InvokeMethod, None, 'abc', [])
+res = clr.GetClrType(str).InvokeMember('ToString', System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.InvokeMethod, None, 'abc', ())
 AreEqual(res, 'abc')
 
 

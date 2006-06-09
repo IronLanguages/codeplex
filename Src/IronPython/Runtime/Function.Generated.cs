@@ -19,24 +19,6 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace IronPython.Runtime {
-    #region Generated CallTargets
-
-    // *** BEGIN GENERATED CODE ***
-
-
-    public delegate object CallTarget0();
-    public delegate object CallTarget1(object arg0);
-    public delegate object CallTarget2(object arg0, object arg1);
-    public delegate object CallTarget3(object arg0, object arg1, object arg2);
-    public delegate object CallTarget4(object arg0, object arg1, object arg2, object arg3);
-    public delegate object CallTarget5(object arg0, object arg1, object arg2, object arg3, object arg4);
-
-
-    // *** END GENERATED CODE ***
-
-    #endregion
-
-
     public abstract partial class PythonFunction {
         #region Generated Function IFastCallable Members
 

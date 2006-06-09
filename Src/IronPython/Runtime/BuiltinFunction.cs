@@ -62,6 +62,7 @@ namespace IronPython.Runtime {
             return new Method(newFunction, inst, null);
         }
 
+
         #region Static factories
         /// <summary>
         /// Create a new builtin function.
@@ -137,6 +138,7 @@ namespace IronPython.Runtime {
         #endregion
 
         #region Public API Surface
+
         public string Name {
             [PythonName("__name__")]
             get {
@@ -169,7 +171,8 @@ namespace IronPython.Runtime {
             //      1. Our error messages match CPython more closely 
             //      2. The attribute lookup is done lazily only if kw-args are supplied to a ctor
 
-            if(IsContextAware) {
+            //!!! This is awful
+            if (IsContextAware) {
                 object[] argsWithContext = new object[args.Length + 1];
                 argsWithContext[0] = context;
                 Array.Copy(args, 0, argsWithContext, 1, args.Length);
@@ -223,7 +226,16 @@ namespace IronPython.Runtime {
                 // we've bound the arguments to a real method,
                 // finally we're going to dispatch back to the 
                 // optimized version of the calls.
-                object ret = Call(bestBinding.arguments);
+                object[] callArgs;
+                if (IsContextAware) {
+                    object[] newArgs = new object[bestBinding.arguments.Length - 1];
+                    Array.Copy(bestBinding.arguments, 1, newArgs, 0, bestBinding.arguments.Length - 1);
+                    callArgs = newArgs;
+                } else {
+                    callArgs = bestBinding.arguments;
+                }
+
+                object ret = Call(context, callArgs);
 
                 // any unbound arguments left over we assume the user
                 // wants to do a property set with.  We'll go ahead and try
@@ -576,9 +588,9 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         protected virtual object Instance {
             get {
-                if (inst != null && (funcType & FunctionType.FunctionMethodMask) == FunctionType.FunctionMethodMask) {                    
-                    return new InstanceArgument(inst);
-                }
+                //if (inst != null && (funcType & FunctionType.FunctionMethodMask) == FunctionType.FunctionMethodMask) {                    
+                //    return new InstanceArgument(inst);
+                //}
                 return inst;
             }
         }
@@ -715,11 +727,11 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         Params              = 0x0080,   // True if this is a params method, false otherwise.
     }
 
-    /// <summary>
-    /// Wrapper class used when calling mixed built-in functions w/ an
-    /// instance value.  The instance value is wrapped as an InstanceArgument
-    /// which the generated built-in function detects and unwraps.
-    /// </summary>
+    ///// <summary>
+    ///// Wrapper class used when calling mixed built-in functions w/ an
+    ///// instance value.  The instance value is wrapped as an InstanceArgument
+    ///// which the generated built-in function detects and unwraps.
+    ///// </summary>
     public sealed class InstanceArgument {
         public readonly object ArgumentValue;
 

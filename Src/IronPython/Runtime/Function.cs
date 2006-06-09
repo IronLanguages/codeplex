@@ -25,8 +25,6 @@ using IronPython.Compiler;
 
 namespace IronPython.Runtime {
 
-    public delegate object CallTargetN(params object[] args);
-
     /// <summary>
     /// Represents a piece of code.  This can reference either a FrameCode
     /// object or a Function.   The user can explicitly call FunctionCode by

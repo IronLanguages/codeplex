@@ -19,7 +19,7 @@ using System.Text;
 using System.Collections;
 
 namespace IronPython.Runtime {
-    class InstanceOps {
+    public class InstanceOps {
         public static object NextMethod(object self) {
             IEnumerator i = (IEnumerator)self;
             if (i.MoveNext()) return i.Current;

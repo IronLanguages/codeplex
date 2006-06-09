@@ -72,8 +72,8 @@ namespace IronPython.Runtime {
             }
 
             if (ctors.Count == 0) throw new NotImplementedException("no MakeNew found");
-            
-            ctor = BuiltinFunction.Make(name, ctors.ToArray(), ctors.ToArray(), FunctionType.Function);
+
+            ctor = ReflectedMethod.MakeMethod(name, ctors.ToArray(), FunctionType.Function); 
 
             if (type.GetInterface("ICustomAttributes") == typeof(ICustomAttributes)) {
                 // ICustomAttributes is a well-known type. Ops.GetAttr etc first check for it, and dispatch to the

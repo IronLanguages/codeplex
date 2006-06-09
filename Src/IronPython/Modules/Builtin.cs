@@ -757,7 +757,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("max")]
-        static object Max(object x) {
+        public static object Max(object x) {
             IEnumerator i = Ops.GetEnumerator(x);
             i.MoveNext();
             object ret = i.Current;
@@ -783,7 +783,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("min")]
-        static object Min(object x) {
+        public static object Min(object x) {
             IEnumerator i = Ops.GetEnumerator(x);
             if (!i.MoveNext()) {
                 throw Ops.ValueError("empty sequence");

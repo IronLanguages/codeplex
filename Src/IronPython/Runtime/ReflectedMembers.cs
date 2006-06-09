@@ -230,7 +230,7 @@ namespace IronPython.Runtime {
             if (Options.OptimizeReflectCalls && bf == null) {
                 FunctionType ft = FunctionType.Method;
                 if (method.IsStatic) ft = FunctionType.Function;
-                bf = ReflectOptimizer.MakeFunction(new ReflectedMethod(info.Name, method, ft));
+                bf = ReflectedMethod.MakeMethod(info.Name, method, ft);
             }
         }
 

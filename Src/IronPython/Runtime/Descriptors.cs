@@ -63,9 +63,9 @@ namespace IronPython.Runtime {
     public class Property : IDataDescriptor {
         public object fget, fset, fdel, __doc__;
 
-        public Property(object fget) : this(fget, null, null, null) { }
-        public Property(object fget, object fset) : this(fget, fset, null, null) { }
-        public Property([Optional]object fget, [Optional]object fset, [Optional]object fdel) : this(fget, fset, fdel, null) { }
+        //public Property(object fget) : this(fget, null, null, null) { }
+        //public Property(object fget, object fset) : this(fget, fset, null, null) { }
+        //public Property([Optional]object fget, [Optional]object fset, [Optional]object fdel) : this(fget, fset, fdel, null) { }
 
         public Property([DefaultParameterValueAttribute(null)]object fget,
                         [DefaultParameterValueAttribute(null)]object fset,

@@ -92,14 +92,6 @@ namespace IronPython.Compiler {
                 if (TypeCache.Builtin.TryGetSlot(DefaultContext.Default, SymbolTable.StringToId(fi.Name), out bi)) {
                     Debug.Assert(fi.FieldType == typeof(BuiltinWrapper));
 
-                    ReflectedMethod rm = bi as ReflectedMethod;
-                    BuiltinFunction bf;
-                    if (rm != null) {
-                        // update the dictionary w/ an optimized version, if one's available.
-                        bf = ReflectOptimizer.MakeFunction(rm);
-                        if (bf != null) bi = bf;
-                    }
-
                     fi.SetValue(null, new BuiltinWrapper(Ops.GetDescriptor(bi, null, TypeCache.Builtin), fi.Name));
                     continue;
                 }

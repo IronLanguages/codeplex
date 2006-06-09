@@ -806,7 +806,7 @@ namespace IronPython.Runtime {
             ret.isBuiltinMethod = true;
             ret.isSuperTypeMethod = false;
 
-            ret.func = BuiltinFunction.Make((string)SymbolTable.IdToString(name), func, new MethodBase[] { func.Method });
+            ret.func = ReflectedMethod.MakeMethod((string)SymbolTable.IdToString(name), func.Method, FunctionType.Function);
             ret.funcAsFunc = ret.func as BuiltinFunction;
 
             //pt.dict[name] = ret;

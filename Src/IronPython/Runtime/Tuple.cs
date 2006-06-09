@@ -20,7 +20,7 @@ using System.Text;
 
 namespace IronPython.Runtime {
     [PythonType("tuple")]
-    public class Tuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IComparable, IDynamicObject {
+    public class Tuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IComparable, IDynamicObject, IList<object> {
         private static Tuple EMPTY = new Tuple();
 
         #region Python Constructors
@@ -352,5 +352,68 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+
+        #region IList<object> Members
+
+        int IList<object>.IndexOf(object item) {
+            for (int i = 0; i < Count; i++) {
+                if (Ops.EqualRetBool(this[i], item)) return i;
+            }
+            return -1;
+        }
+
+        void IList<object>.Insert(int index, object item) {
+            throw new InvalidOperationException("Tuple is readonly");
+        }
+
+        void IList<object>.RemoveAt(int index) {
+            throw new InvalidOperationException("Tuple is readonly");
+        }
+
+        object IList<object>.this[int index] {
+            get {
+                return this[index];
+            }
+            set {
+                throw new InvalidOperationException("Tuple is readonly");
+            }
+        }
+
+        #endregion
+
+        #region ICollection<object> Members
+
+        void ICollection<object>.Add(object item) {
+            throw new InvalidOperationException("Tuple is readonly");
+        }
+
+        void ICollection<object>.Clear() {
+            throw new InvalidOperationException("Tuple is readonly");
+        }
+
+        bool ICollection<object>.Contains(object item) {
+            return this.ContainsValue(item);
+        }
+
+        void ICollection<object>.CopyTo(object[] array, int arrayIndex) {
+            for (int i = 0; i < Count; i++) {
+                array[arrayIndex + i] = this[i];
+            }
+        }
+
+        int ICollection<object>.Count {
+            get { return this.Count; }
+        }
+
+        bool ICollection<object>.IsReadOnly {
+            get { return true; }
+        }
+
+        bool ICollection<object>.Remove(object item) {
+            throw new InvalidOperationException("Tuple is readonly");
+        }
+
+        #endregion
+
     }
 }

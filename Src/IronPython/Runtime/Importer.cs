@@ -394,11 +394,12 @@ namespace IronPython.Runtime {
 
             //Put this in modules dict so we won't reload with circular imports
             pmod.SystemState.modules[fullName] = pmod;
+            bool success = false;
             try {
                 newmod.Initialize();
-            } catch {
-                pmod.SystemState.modules.Remove(fullName);
-                throw;
+                success = true;
+            } finally {
+                if (!success) pmod.SystemState.modules.Remove(fullName);
             }
 
 

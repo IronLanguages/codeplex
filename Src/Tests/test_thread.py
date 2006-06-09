@@ -33,7 +33,7 @@ def Main():
     t.Join()
     Assert(sync.hit == 1)
 
-    t = Thread(ThreadProcNoParm)
+    t = Thread(ThreadStart(ThreadProcNoParm))
     t.Start()
     t.Join()
 
@@ -44,7 +44,7 @@ def import_sys():
     import sys
     Assert(sys != None)
 
-t = Thread(import_sys)
+t = Thread(ThreadStart(import_sys))
 t.Start()
 
 t.Join()

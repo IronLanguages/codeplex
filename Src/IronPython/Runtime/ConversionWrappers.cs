@@ -20,6 +20,202 @@ using System.Text;
 
 namespace IronPython.Runtime {
 
+    public class ListGenericWrapper<T> : IList<T> {
+        private IList<object> value;
+
+        public ListGenericWrapper(IList<object> value) { this.value = value; }
+
+
+        #region IList<T> Members
+
+        public int IndexOf(T item) {
+            return value.IndexOf(item);
+        }
+
+        public void Insert(int index, T item) {
+            value.Insert(index, item);
+        }
+
+        public void RemoveAt(int index) {
+            value.RemoveAt(index);
+        }
+
+        public T this[int index] {
+            get {
+                return (T)value[index];
+            }
+            set {
+                this.value[index] = value;
+            }
+        }
+
+        #endregion
+
+        #region ICollection<T> Members
+
+        public void Add(T item) {
+            value.Add(item);
+        }
+
+        public void Clear() {
+            value.Clear();
+        }
+
+        public bool Contains(T item) {
+            return value.Contains(item);
+        }
+
+        public void CopyTo(T[] array, int arrayIndex) {
+            throw new NotImplementedException();
+        }
+
+        public int Count {
+            get { return value.Count; }
+        }
+
+        public bool IsReadOnly {
+            get { return value.IsReadOnly; }
+        }
+
+        public bool Remove(T item) {
+            return value.Remove(item);
+        }
+
+        #endregion
+
+        #region IEnumerable<T> Members
+
+        public IEnumerator<T> GetEnumerator() {
+            return new IEnumeratorOfTWrapper<T>(value.GetEnumerator());
+        }
+
+        #endregion
+
+        #region IEnumerable Members
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            return value.GetEnumerator();
+        }
+
+        #endregion
+    }
+
+
+    public class DictionaryGenericWrapper<K, V> : IDictionary<K, V> {
+        private IDictionary<object, object> self;
+
+        public DictionaryGenericWrapper(IDictionary<object, object> self) {
+            this.self = self;
+        }
+
+        #region IDictionary<K,V> Members
+
+        public void Add(K key, V value) {
+            self.Add(key, value);
+        }
+
+        public bool ContainsKey(K key) {
+            return self.ContainsKey(key);
+        }
+
+        public ICollection<K> Keys {
+            get {
+                List<K> res = new List<K>();
+                foreach (object o in self.Keys) {
+                    res.Add((K)o);
+                }
+                return res;
+            }
+        }
+
+        public bool Remove(K key) {
+            return self.Remove(key);
+        }
+
+        public bool TryGetValue(K key, out V value) {
+            object outValue;
+            if (self.TryGetValue(key, out outValue)) {
+                value = (V)outValue;
+                return true;
+            }
+            value = default(V);
+            return false;
+        }
+
+        public ICollection<V> Values {
+            get {
+                List<V> res = new List<V>();
+                foreach (object o in self.Values) {
+                    res.Add((V)o);
+                }
+                return res;
+            }
+        }
+
+        public V this[K key] {
+            get {
+                return (V)self[key];
+            }
+            set {
+                self[key] = value;
+            }
+        }
+
+        #endregion
+
+        #region ICollection<KeyValuePair<K,V>> Members
+
+        public void Add(KeyValuePair<K, V> item) {
+            self.Add(new KeyValuePair<object, object>(item.Key, item.Value));
+        }
+
+        public void Clear() {
+            self.Clear();
+        }
+
+        public bool Contains(KeyValuePair<K, V> item) {
+            return self.Contains(new KeyValuePair<object, object>(item.Key, item.Value));
+        }
+
+        public void CopyTo(KeyValuePair<K, V>[] array, int arrayIndex) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public int Count {
+            get { return self.Count;  }
+        }
+
+        public bool IsReadOnly {
+            get { return self.IsReadOnly; }
+        }
+
+        public bool Remove(KeyValuePair<K, V> item) {
+            return self.Remove(new KeyValuePair<object, object>(item.Key, item.Value));
+        }
+
+        #endregion
+
+        #region IEnumerable<KeyValuePair<K,V>> Members
+
+        public IEnumerator<KeyValuePair<K, V>> GetEnumerator() {
+            foreach (KeyValuePair<object, object> kv in self) {
+                yield return new KeyValuePair<K, V>((K)kv.Key, (V)kv.Value);
+            }
+        }
+
+        #endregion
+
+        #region IEnumerable Members
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            return self.GetEnumerator();
+        }
+
+        #endregion
+    }
+
+
+
     /// <summary>
     /// Exposes a Python List as a C# IList
     /// </summary>

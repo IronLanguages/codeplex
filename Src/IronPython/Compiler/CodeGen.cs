@@ -639,6 +639,14 @@ namespace IronPython.Compiler {
             }
         }
 
+        public void EmitStelem(Type t) {
+            if (t.IsValueType) {
+                Emit(OpCodes.Stelem, t);
+            } else {
+                Emit(OpCodes.Stelem_Ref);
+            }
+        }
+
         public void EmitTrueArgGet(int i) {
             switch (i) {
                 case 0: this.Emit(OpCodes.Ldarg_0); break;
@@ -983,12 +991,80 @@ namespace IronPython.Compiler {
             }
         }
 
+
+        public void NewEmitCastFromObject(Type paramType) {
+            if (paramType == typeof(object)) return;
+
+            if (paramType == typeof(void)) {
+                Emit(OpCodes.Pop);
+            } else if (paramType == typeof(char)) {
+                EmitCall(typeof(NewConverter), "ConvertToChar");
+            } else if (paramType == typeof(int)) {
+                EmitCall(typeof(NewConverter), "ConvertToInt32");
+            } else if (paramType == typeof(string)) {
+                EmitCall(typeof(NewConverter), "ConvertToString");
+            //} else if (paramType == typeof(long)) {
+            //    EmitCall(typeof(Converter), "ConvertToInt64");
+            } else if (paramType == typeof(double)) {
+                EmitCall(typeof(NewConverter), "ConvertToDouble");
+            } else if (paramType == typeof(bool)) {
+                EmitCall(typeof(NewConverter), "ConvertToBoolean");
+            //} else if (paramType == typeof(BigInteger)) {
+            //    EmitCall(typeof(Converter), "ConvertToBigInteger");
+            //} else if (paramType == typeof(Complex64)) {
+            //    EmitCall(typeof(Converter), "ConvertToComplex64");
+            } else if (paramType == typeof(IEnumerator)) {
+                EmitCall(typeof(NewConverter), "ConvertToIEnumerator");
+            //} else if (paramType == typeof(float)) {
+            //    EmitCall(typeof(Converter), "ConvertToSingle");
+            //} else if (paramType == typeof(byte)) {
+            //    EmitCall(typeof(Converter), "ConvertToByte");
+            //} else if (paramType == typeof(sbyte)) {
+            //    EmitCall(typeof(Converter), "ConvertToSByte");
+            //} else if (paramType == typeof(short)) {
+            //    EmitCall(typeof(Converter), "ConvertToInt16");
+            //} else if (paramType == typeof(uint)) {
+            //    EmitCall(typeof(Converter), "ConvertToUInt32");
+            //} else if (paramType == typeof(ulong)) {
+            //    EmitCall(typeof(Converter), "ConvertToUInt64");
+            //} else if (paramType == typeof(ushort)) {
+            //    EmitCall(typeof(Converter), "ConvertToUInt16");
+            } else if (paramType == typeof(Type)) {
+                EmitCall(typeof(NewConverter), "ConvertToType");
+            } else if (typeof(Delegate).IsAssignableFrom(paramType)) {
+                EmitType(paramType);
+                EmitCall(typeof(NewConverter), "ConvertToDelegate");
+                Emit(OpCodes.Castclass, paramType);                
+            } else {
+                Label end = DefineLabel();
+                Emit(OpCodes.Dup);
+                Emit(OpCodes.Isinst, paramType);
+                
+                Emit(OpCodes.Brtrue_S, end);
+                Emit(OpCodes.Ldtoken, paramType);
+                if (paramType.IsValueType) {
+                    if (paramType.IsGenericType && paramType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+                        EmitCall(typeof(NewConverter), "ConvertToNullableType");
+                    } else {
+                        EmitCall(typeof(NewConverter), "ConvertToValueType");
+                    }
+                } else {
+                    EmitCall(typeof(NewConverter), "ConvertToReferenceType");
+                }
+                MarkLabel(end);
+
+                Emit(OpCodes.Unbox_Any, paramType); //??? this check may be redundant
+            }
+        }
+
         public void EmitCastToObject(Type retType) {
             if (retType == typeof(void)) {
                 Emit(OpCodes.Ldnull);
             } else if (retType.IsValueType) {
                 if (retType == typeof(int)) {
                     EmitCall(typeof(Ops), "Int2Object");
+                } else if (retType == typeof(bool)) {
+                    EmitCall(typeof(Ops), "Bool2Object");
                 } else {
                     Emit(OpCodes.Box, retType);
                 }

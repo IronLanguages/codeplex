@@ -64,12 +64,7 @@ namespace IronPython.Runtime {
         private static BuiltinFunction GetNextFunctionTemplate() {
             BuiltinMethodDescriptor bimd = (BuiltinMethodDescriptor)TypeCache.Generator.GetAttr(
                 DefaultContext.Default, null, SymbolTable.GeneratorNext);
-            BuiltinFunction unOpt = bimd.template;
-
-            BuiltinFunction res = Compiler.ReflectOptimizer.MakeFunction(unOpt);
-            if (res == null) return unOpt;  // optimization is disabled...
-
-            return res;
+            return bimd.template;
         }
 
         #region IEnumerable Members

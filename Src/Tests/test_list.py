@@ -209,13 +209,6 @@ if is_cli:
             for x, y in zip(cl, pl): AreEqual(x, y)
             
         do_something(IronPythonTest.UsePythonListAsList, pl, cl, check_content)
-               
-        # test ListWrapperForArrayList
-        pl = [check_content, 1, type, "string"]
-        cl = System.Collections.ArrayList()
-        for x in pl: result = cl.Add(x)
-
-        do_something(IronPythonTest.UsePythonListAsArrayList, pl, cl, check_content)
         
         # test DictWrapperForIDict 
         pl = {"redmond" : 10, "seattle" : 20}
@@ -229,16 +222,6 @@ if is_cli:
       
         do_something(IronPythonTest.UsePythonDictAsDictionary, pl, cl, check_content)
 
-        # test DictWrapperForHashtable 
-        pl = {"redmond" : 10, "seattle" : 20}
-        cl = System.Collections.Hashtable()
-        for x, y in pl.iteritems(): cl.Add(x, y)
 
-        def check_content():
-            AreEqual(len(pl), len(cl))
-            for x in cl.Keys: 
-                AreEqual(cl[x], pl[x])
-       
-        do_something(IronPythonTest.UsePythonDictAsHashtable, cl, pl, check_content)
 
 run_test(__name__)

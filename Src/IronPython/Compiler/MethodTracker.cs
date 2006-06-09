@@ -124,14 +124,28 @@ namespace IronPython.Compiler {
         public ParameterInfo[] GetParameters() {
             return sig;
         }
+        
+        internal static bool IsOutParameter(ParameterInfo pi) {
+            return pi.IsOut && !pi.IsIn;
+        }
 
         public int GetInArgCount() {
             int res = 0;
             ParameterInfo[] pis = GetParameters();
             for (int i = 0; i < pis.Length; i++) {
-                if (!pis[i].IsOut || pis[i].IsIn) res++;
+                if (!IsOutParameter(pis[i])) res++;
             }
             return res;
+        }
+
+        public bool HasOutParameters {
+            get {
+                ParameterInfo[] pis = GetParameters();
+                for (int i = 0; i < pis.Length; i++) {
+                    if (IsOutParameter(pis[i])) return true;
+                }
+                return false;
+            }
         }
 
         public bool IsParamsMethod {

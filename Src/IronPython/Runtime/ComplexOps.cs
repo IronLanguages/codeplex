@@ -131,6 +131,7 @@ namespace IronPython.Runtime {
             return x.Power(y);
         }
 
+        [PythonName("__div__")]
         public static object Divide(Complex64 x, object other) {
             if (other is Complex64) {
                 return TrueDivide(x, (Complex64)other);

@@ -128,8 +128,11 @@
     <Compile Include="Compiler\Operator.Generated.cs" />
     <Compile Include="Compiler\Options.cs" />
     <Compile Include="Compiler\OutputGenerator.cs" />
+    <Compile Include="Compiler\MethodBinder.cs" />
     <Compile Include="Runtime\ByteOps.cs" />
     <Compile Include="Runtime\ByteOps.Generated.cs" />
+    <Compile Include="Runtime\FastCallable.Generated.cs" />
+    <Compile Include="Runtime\FastCallable.cs" />
     <Compile Include="Runtime\CustomSymbolDict.cs" />
     <Compile Include="Runtime\DelegateOps.cs" />
     <Compile Include="Runtime\FieldIdDict.cs" />

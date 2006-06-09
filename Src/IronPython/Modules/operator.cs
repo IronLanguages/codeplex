@@ -182,7 +182,7 @@ namespace IronPython.Modules {
         public static object Invert(object o) {
             return Ops.OnesComplement(o);
         }
-        [PythonName("inv")]
+        [PythonName("__inv__")]
         public static object OperatorInv(object o) {
             return Ops.OnesComplement(o);
         }

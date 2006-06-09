@@ -32,22 +32,28 @@ namespace IronPython.Runtime {
         // *** BEGIN GENERATED CODE ***
 
         public override object Call(ICallerContext context) {
-            return Call(context, new object[0]);
+            if (HasInstance) return MyFastCallable.CallInstance(context, Instance);
+            else return MyFastCallable.Call(context);
         }
         public override object Call(ICallerContext context, object arg0) {
-            return Call(context, new object[]{ arg0});
+            if (HasInstance) return MyFastCallable.CallInstance(context, Instance, arg0);
+            else return MyFastCallable.Call(context, arg0);
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
-            return Call(context, new object[]{ arg0, arg1});
+            if (HasInstance) return MyFastCallable.CallInstance(context, Instance, arg0, arg1);
+            else return MyFastCallable.Call(context, arg0, arg1);
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
-            return Call(context, new object[]{ arg0, arg1, arg2});
+            if (HasInstance) return MyFastCallable.CallInstance(context, Instance, arg0, arg1, arg2);
+            else return MyFastCallable.Call(context, arg0, arg1, arg2);
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
-            return Call(context, new object[]{ arg0, arg1, arg2, arg3});
+            if (HasInstance) return MyFastCallable.CallInstance(context, Instance, arg0, arg1, arg2, arg3);
+            else return MyFastCallable.Call(context, arg0, arg1, arg2, arg3);
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            return Call(context, new object[]{ arg0, arg1, arg2, arg3, arg4});
+            if (HasInstance) return MyFastCallable.CallInstance(context, Instance, arg0, arg1, arg2, arg3, arg4);
+            else return MyFastCallable.Call(context, arg0, arg1, arg2, arg3, arg4);
         }
 
         // *** END GENERATED CODE ***
@@ -59,22 +65,22 @@ namespace IronPython.Runtime {
         // *** BEGIN GENERATED CODE ***
 
         public override object Call() {
-            return Call(new object[]{ });
+            return Call((ICallerContext)null);
         }
         public override object Call(object arg0) {
-            return Call(new object[]{ arg0});
+            return Call((ICallerContext)null, arg0);
         }
         public override object Call(object arg0, object arg1) {
-            return Call(new object[]{ arg0, arg1});
+            return Call((ICallerContext)null, arg0, arg1);
         }
         public override object Call(object arg0, object arg1, object arg2) {
-            return Call(new object[]{ arg0, arg1, arg2});
+            return Call((ICallerContext)null, arg0, arg1, arg2);
         }
         public override object Call(object arg0, object arg1, object arg2, object arg3) {
-            return Call(new object[]{ arg0, arg1, arg2, arg3});
+            return Call((ICallerContext)null, arg0, arg1, arg2, arg3);
         }
         public override object Call(object arg0, object arg1, object arg2, object arg3, object arg4) {
-            return Call(new object[]{ arg0, arg1, arg2, arg3, arg4});
+            return Call((ICallerContext)null, arg0, arg1, arg2, arg3, arg4);
         }
 
         // *** END GENERATED CODE ***

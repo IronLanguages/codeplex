@@ -27,7 +27,7 @@ namespace IronPythonTest {
     /// can reflect over python objects in the proper way.
     /// </summary>
     public class TypeDescTests {
-        public object TestProperties(object totest, ArrayList shouldContain, ArrayList shouldntContain) {
+        public object TestProperties(object totest, IList shouldContain, IList shouldntContain) {
             if(shouldContain != null){
                 foreach (object o in shouldContain) {
                     bool fFound = false;

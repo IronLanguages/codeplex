@@ -107,8 +107,8 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__getitem__")]
-        public static object GetItem(object[] data, int index) {
-            return data[Ops.FixIndex(index, data.Length)];
+        public static object GetItem(Array data, int index) {
+            return GetIndex(data, index); // data[Ops.FixIndex(index, data.Length)];
         }
 
         [PythonName("__getitem__")]

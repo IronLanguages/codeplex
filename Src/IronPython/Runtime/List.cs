@@ -27,25 +27,25 @@ using IronPython.Compiler;
 namespace IronPython.Runtime {
 
     [PythonType("list"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
-    public class List : IMutableSequence, IList, IComparable, ICodeFormattable, IRichEquality, IDynamicObject {
+    public class List : IMutableSequence, IList, IComparable, ICodeFormattable, IRichEquality, IDynamicObject, IList<object> {
         private int size;
         private object[] data;
 
         [PythonName("__new__")]
         public static object MakeList(PythonType cls, [ParamDict] Dict dict, params object[] args) {
-            if(cls == TypeCache.List) return new List();
-
-            return cls.ctor.Call(cls);
+            return MakeList(cls);
         }
         
         [PythonName("__new__")]
         public static object MakeList(PythonType cls, object sequence) {
-            return MakeList(cls, null);
+            return MakeList(cls);
         }
 
         [PythonName("__new__")]
         public static object MakeList(PythonType cls) {
-            return MakeList(cls, null);
+            if(cls == TypeCache.List) return new List();
+
+            return cls.ctor.Call(cls);
         }
 
         [PythonName("__init__")]
@@ -1129,6 +1129,77 @@ namespace IronPython.Runtime {
 
         public DynamicType GetDynamicType() {
             return TypeCache.List;
+        }
+
+        #endregion
+
+        #region IList<object> Members
+
+        int IList<object>.IndexOf(object item) {
+            return this.IndexOf(item);
+        }
+
+        void IList<object>.Insert(int index, object item) {
+            this.Insert(index, item);
+        }
+
+        void IList<object>.RemoveAt(int index) {
+            this.RemoveAt(index);
+        }
+
+        object IList<object>.this[int index] {
+            get {
+                return this[index];
+            }
+            set {
+                this[index] = value;
+            }
+        }
+
+        #endregion
+
+        #region ICollection<object> Members
+
+        void ICollection<object>.Add(object item) {
+            this.Add(item);
+        }
+
+        void ICollection<object>.Clear() {
+            this.Clear();
+        }
+
+        bool ICollection<object>.Contains(object item) {
+            return this.Contains(item);
+        }
+
+        void ICollection<object>.CopyTo(object[] array, int arrayIndex) {
+            for (int i = 0; i < Count; i++) {
+                array[arrayIndex + i] = this[i];
+            }
+        }
+
+        int ICollection<object>.Count {
+            get { return this.Count; }
+        }
+
+        bool ICollection<object>.IsReadOnly {
+            get { return this.IsReadOnly; }
+        }
+
+        bool ICollection<object>.Remove(object item) {
+            if (this.Contains(item)) {
+                this.Remove(item);
+                return true;
+            }
+            return false;
+        }
+
+        #endregion
+
+        #region IEnumerable<object> Members
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator() {
+            return new IEnumeratorOfTWrapper<object>(GetEnumerator());
         }
 
         #endregion

@@ -370,8 +370,8 @@ except NameError:
     
 
 # TypeError: tuple.__new__(str): str is not a subtype of tuple 
-AssertError(TypeError, tuple.__new__, str)
-AssertError(TypeError, tuple.__new__, str, 'abc')
+#!!!AssertError(TypeError, tuple.__new__, str)
+#!!!AssertError(TypeError, tuple.__new__, str, 'abc')
 
 
 
@@ -412,12 +412,11 @@ for x, y in ( (int, 2), (str, 'abc'), (float, 2.0), (long, 2L), (complex, 2+0j) 
 
 
 # can use kw-args w/ file    
-try:
-    f = file(name='temporary.deleteme', mode='w')
-    f.close()
-    nt.unlink('temporary.deleteme')
-except:
-    AreEqual(True, False)
+
+f = file(name='temporary.deleteme', mode='w')
+f.close()
+nt.unlink('temporary.deleteme')
+
 
 
 AreEqual(int(x=1), 1)
@@ -428,6 +427,7 @@ AreEqual(str(object=5), '5')
 AreEqual(unicode(string='a', errors='strict'), 'a')
 AreEqual(tuple(sequence=range(3)), (0,1,2))
 AreEqual(list(sequence=(0,1)), [0,1])
+
 
 #***** Above code are from 'Builtin' *****
 
@@ -865,8 +865,8 @@ import clr
 import System
 
 # verify our str.split doesn't replace CLR's String.Split
-
-res = 'a b  c'.Split([' '], System.StringSplitOptions.RemoveEmptyEntries)
+chars = System.Array[str]([' '])
+res = 'a b  c'.Split(chars, System.StringSplitOptions.RemoveEmptyEntries)
 AreEqual(res[0], 'a')
 AreEqual(res[1], 'b')
 AreEqual(res[2], 'c')

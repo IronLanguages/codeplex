@@ -158,6 +158,24 @@ namespace IronPython.Modules {
 
         #endregion
 
+        public class Reference {
+            private object value;
+            public Reference() { }
+
+            public Reference(object value) {
+                this.value = value;
+            }
+
+            public object Value {
+                get { return value; }
+                set { this.value = value; }
+            }
+
+            public override string ToString() {
+                return string.Format("Reference({0})", Value);
+            }
+        }
+
 
         #region Private implementation methods
 

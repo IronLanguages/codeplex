@@ -343,10 +343,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        public int __len__() {
-            return GetLength();
-        }
-
         #endregion
 
         #region Mutating Members

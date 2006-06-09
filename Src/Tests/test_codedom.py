@@ -323,7 +323,7 @@ def compileTest(test, log=False):
     
     parsed = parser.Parse(txt)
     pathToExe = path_combine(testpath.public_testdir, 'test' + str(_random.Random().random()*10000) +'.exe')
-    co = SCC.CompilerParameters(['System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'], pathToExe, False)
+    co = SCC.CompilerParameters(('System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',), pathToExe, False)
     co.GenerateInMemory = False
     res = prov.CompileAssemblyFromDom(co, parsed)
     if log: print res.Errors.Count
