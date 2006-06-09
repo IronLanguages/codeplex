@@ -246,7 +246,7 @@ namespace IronPython.Compiler {
             return cg;
         }
         public void SetEntryPoint(MethodInfo mi, PEFileKinds kind) {
-            myAssembly.SetEntryPoint(mi, PEFileKinds.ConsoleApplication);
+            myAssembly.SetEntryPoint(mi, kind);
         }
 
         public void AddPythonModuleAttribute(TypeGen tg, string moduleName) {
