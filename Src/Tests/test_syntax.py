@@ -242,6 +242,8 @@ AssertError(SyntaxError, compile, "x <= ", "Error", "single")
 AssertError(IndentationError, compile, "class C:\nx=2\n", "Error", "exec")
 AssertError(IndentationError, compile, "class C:\n\n", "Error", "single")
 
+# test for bug #1001 - IronPython allows an empty set of base classes as in "class C():"
+AssertError(SyntaxError, compile, "class C(): pass", "Error", "exec")
 
 # multiline expression passed to exec (positive test)
 s = """

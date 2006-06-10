@@ -910,6 +910,9 @@ namespace IronPython.Compiler {
             Expr[] bases = new Expr[0];
             if (MaybeEat(TokenKind.LParen)) {
                 List<Expr> l = ParseTestList();
+                if (l.Count == 0) {
+                    ReportSyntaxError(PeekToken());
+                }
                 bases = l.ToArray();
                 Eat(TokenKind.RParen);
             }
