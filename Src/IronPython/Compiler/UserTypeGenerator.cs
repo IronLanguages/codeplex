@@ -67,23 +67,8 @@ namespace IronPython.Compiler {
                 if(RemoteCompiler.Instance != null){
                     StringCollection files =  RemoteCompiler.Instance.References;
                     foreach(string file in files) {
-                        try {
-                            Assembly asm = Assembly.LoadFrom(file);
-                            assemblies.Add(asm);
-                        } catch {
-                            try {
-                                Assembly asm = Assembly.Load(file);
-                                assemblies.Add(asm);
-                            } catch {
-                                try {
-#pragma warning disable
-                                    Assembly asm = Assembly.LoadWithPartialName(file);
-#pragma warning enable
-                                    assemblies.Add(asm);
-                                } catch {
-                                }
-                            }
-                        }
+                        Assembly asm = IronPython.Hosting.PythonCompiler.LoadAssembly(file);
+                        assemblies.Add(asm);
                     }
                 }
             }
@@ -430,6 +415,8 @@ namespace IronPython.Compiler {
                          funcDefaults,
                          cabs);
 
+                icg.Context = compctx;
+
                 if (baseMethod != null) icg.methodToOverride = baseMethod;
                 
                 icg.Names = CodeGen.CreateLocalNamespace(icg);
@@ -668,7 +655,6 @@ namespace IronPython.Compiler {
 
                     CodeGen baseAccess = newType.DefineMethodOverride(typeof(ICustomBaseAccess).GetMethod("TryGetBaseAttr"));
                     Label next = baseAccess.DefineLabel();
-                    RuntimeMethodHandle rhm;                    
                     
                     for (int i = 0; i < overridden.Count; i++) {
                         baseAccess.EmitSymbolIdInt(overridden[i].Name);
@@ -862,7 +848,7 @@ namespace IronPython.Compiler {
                     }
 
                     if (baseName == null) throw new InvalidOperationException("couldn't find basetype");
-                    if (baseName != "object") {
+                    if (baseName != "object" && baseName != "System.Object") {
                         for (int j = declaredTypes.Count - 1; j >= 0; j--) {
                             Dictionary<string, TypeGen> curDict = declaredTypes[j];
 
@@ -885,7 +871,7 @@ namespace IronPython.Compiler {
                             }
                         }
 
-                        if (baseType == typeof(object)) {
+                        if (baseType == typeof(object) && Ops.compiledEngine != null) {
                             foreach (Assembly asm in Ops.compiledEngine.Sys.TopPackage.LoadedAssemblies.Keys) {
                                 Type t = asm.GetType(baseName);
                                 if (t != null) {

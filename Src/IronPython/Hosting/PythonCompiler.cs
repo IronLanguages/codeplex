@@ -294,14 +294,8 @@ namespace IronPython.Hosting {
 
                     // First, determine the set of unique such prefixes
                     Dictionary<string, object> nsPrefixes = new Dictionary<string, object>();
-                    foreach (string assemblyPath in ReferencedAssemblies) {
-                        Assembly a;
-                        try {
-                            a = Assembly.LoadFrom(assemblyPath);
-                        } catch {
-                            // Ignore assemblies that can't be loaded
-                            continue;
-                        }
+                    foreach (string name in ReferencedAssemblies) {
+                        Assembly a = LoadAssembly(name);
 
                         foreach (Type t in a.GetTypes()) {
                             // We only care about public types
@@ -330,6 +324,30 @@ namespace IronPython.Hosting {
                 });
             }
             return init;
-        }        
+        }
+
+        // Load an assembly based on a string that may be a full path, and full assembly name,
+        // or a partial assembly name.
+        internal static Assembly LoadAssembly(string name) {
+            // If it's an existing file, just call LoadFrom
+            if (File.Exists(name))
+                return Assembly.LoadFrom(name);
+
+            // Get rid of the path
+            name = Path.GetFileName(name);
+
+            // Get rid of the .dll extension before treating it as an assembly name
+            if (name.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase)) {
+                name = Path.GetFileNameWithoutExtension(name);
+            }
+
+            try {
+                return Assembly.Load(name);
+            } catch {
+#pragma warning disable
+                return Assembly.LoadWithPartialName(name);
+#pragma warning enable
+            }
+        }
     }
 }
