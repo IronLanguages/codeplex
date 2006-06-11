@@ -2040,7 +2040,7 @@ namespace IronPython.Runtime {
                 throw Ops.TypeError("exec: arg 3 must be mapping or None");
             }
 
-            fc.Call(new Frame(context.Module, globals, locals));
+            fc.Call(new ModuleScope(context.Module, globals, locals));
         }
 
         public static void Raise() {

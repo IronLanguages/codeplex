@@ -25,7 +25,7 @@ using IronPython.Hosting;
 namespace IronPython.Compiler {
     /// <summary>
     /// A Python module gets compiled into a CLI assembly which contains a type that inherits from CompiledModule. 
-    /// CompiledModule is comparable with FrameCode since it contains the code for a PythonModule, but not the state 
+    /// CompiledModule is comparable with CompiledCode since it contains the code for a PythonModule, but not the state 
     /// associated with the module.
     /// Note that a CompiledModule does not directly relate to pre-compiled script code, though it is used
     /// in that context too.

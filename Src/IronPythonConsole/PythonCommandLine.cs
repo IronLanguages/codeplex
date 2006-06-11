@@ -405,7 +405,7 @@ namespace IronPythonConsole {
 
             if (HandleExceptions) {
                 try {
-                    Frame scope;
+                    ModuleScope scope;
                     if (Options.Introspection) 
                         ExecuteFileConsole(fileName, executionOptions, out scope);
                     else
@@ -420,7 +420,7 @@ namespace IronPythonConsole {
                 }
             } else {
                 try {
-                    Frame scope;
+                    ModuleScope scope;
                     if (Options.Introspection)
                         ExecuteFileConsole(fileName, executionOptions, out scope);
                     else
@@ -486,7 +486,7 @@ namespace IronPythonConsole {
             MyConsole = new SuperConsole(engine, ColorfulConsole);
         }
 
-        public static bool DoOneInteractive(Frame topFrame) {
+        public static bool DoOneInteractive(ModuleScope topFrame) {
             bool continueInteraction;
             string s = ReadStatement(out continueInteraction);
             if (continueInteraction == false)
@@ -497,10 +497,10 @@ namespace IronPythonConsole {
             return true;
         }
 
-        public static void ExecuteFileConsole(string fileName, ExecutionOptions executionOptions, out Frame moduleScope) {
+        public static void ExecuteFileConsole(string fileName, ExecutionOptions executionOptions, out ModuleScope moduleScope) {
             moduleScope = null;
 
-            Frame scopeResult = null;
+            ModuleScope scopeResult = null;
             bool continueInteraction;
             int result = TryInteractiveAction(
                 delegate(out bool continueInteractionArgument) {

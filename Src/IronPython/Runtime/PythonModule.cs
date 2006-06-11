@@ -36,7 +36,7 @@ namespace IronPython.Runtime {
     /// Summary description for module.
     /// </summary>
     [PythonType("module")]
-    public class PythonModule : ICustomAttributes, IFrameEnvironment {
+    public class PythonModule : ICustomAttributes, IModuleEnvironment {
         internal IAttributesDictionary __dict__;
 
         private ICustomAttributes innerMod;
@@ -176,7 +176,7 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region IFrameEnvironment Members
+        #region IModuleEnvironment Members
 
         public object GetGlobal(SymbolId symbol) {
             throw new InvalidOperationException("not supported on standard modules");

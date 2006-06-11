@@ -209,21 +209,21 @@ namespace IronPython.Modules {
             cc.TrueDivision = inheritContext && context.TrueDivision || ((cflags & CompileFlags.CO_FUTURE_DIVISION) != 0);
 
             Parser p = Parser.FromString(context.SystemState, cc, source);
-            FrameCode code;
+            CompiledCode compiledCode;
 
             if (kind == "exec") {
                 Stmt s = p.ParseFileInput();
-                code = OutputGenerator.GenerateSnippet(cc, s);
+                compiledCode = OutputGenerator.GenerateSnippet(cc, s);
             } else if (kind == "eval") {
                 Expr e = p.ParseTestListAsExpression();
-                code = OutputGenerator.GenerateSnippet(cc, new ReturnStmt(e), true, false);
+                compiledCode = OutputGenerator.GenerateSnippet(cc, new ReturnStmt(e), true, false);
             } else if (kind == "single") {
                 Stmt s = p.ParseSingleStatement();
-                code = OutputGenerator.GenerateSnippet(cc, s, true, false);
+                compiledCode = OutputGenerator.GenerateSnippet(cc, s, true, false);
             } else {
                 throw Ops.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
             }
-            return new FunctionCode(code);
+            return new FunctionCode(compiledCode);
         }
 
         [PythonName("compile")]
@@ -297,7 +297,7 @@ namespace IronPython.Modules {
             if (globals == null) globals = Globals(context);
             if (locals == null) locals = Locals(context);
             PythonModule mod = new PythonModule(context.Module.ModuleName, globals, context.SystemState, null, context.ContextFlags);
-            return code.Call(new Frame(mod, globals, locals));
+            return code.Call(new ModuleScope(mod, globals, locals));
         }
 
         [PythonName("eval")]
@@ -333,8 +333,8 @@ namespace IronPython.Modules {
             } else {
                 Stmt s = new ReturnStmt(e);
                 bool enableDebugging = (executionOptions & IronPython.Hosting.ExecutionOptions.EnableDebugging) != 0;
-                FrameCode fc = OutputGenerator.GenerateSnippet(cc, s, false, enableDebugging);
-                return fc.Run(new Frame(mod, globals, locals));
+                CompiledCode compiledCode = OutputGenerator.GenerateSnippet(cc, s, false, enableDebugging);
+                return compiledCode.Run(new ModuleScope(mod, globals, locals));
             }
         }
 
@@ -378,9 +378,9 @@ namespace IronPython.Modules {
                 throw Ops.TypeError("execfile: arg 3 must be dictionary");
             }
 
-            Frame topFrame = new Frame(mod, g, l);
-            FrameCode code = OutputGenerator.GenerateSnippet(cc, s);
-            code.Run(topFrame);
+            ModuleScope topFrame = new ModuleScope(mod, g, l);
+            CompiledCode compiledCode = OutputGenerator.GenerateSnippet(cc, s);
+            compiledCode.Run(topFrame);
             return null;
         }
 

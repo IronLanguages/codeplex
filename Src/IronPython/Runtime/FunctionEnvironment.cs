@@ -26,14 +26,14 @@ namespace IronPython.Runtime {
     }
     
     [PythonType(typeof(Dict))]
-    public abstract class FunctionEnvironmentDictionary : CustomSymbolDict, IFrameEnvironment {
+    public abstract class FunctionEnvironmentDictionary : CustomSymbolDict, IModuleEnvironment {
         [PythonHiddenField] public FunctionEnvironmentDictionary parent;
-        [PythonHiddenField] public IFrameEnvironment context;
+        [PythonHiddenField] public IModuleEnvironment context;
         [PythonHiddenField] protected SymbolId[] names;
         private SymbolId[] outer;       // outer scopes
         private SymbolId[] extra;       // extra keys
 
-        protected FunctionEnvironmentDictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment context, SymbolId[] names, SymbolId[] outer) {
+        protected FunctionEnvironmentDictionary(FunctionEnvironmentDictionary parent, IModuleEnvironment context, SymbolId[] names, SymbolId[] outer) {
             this.parent = parent;
             this.context = context;
             this.names = names;
@@ -129,7 +129,7 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region IFrameEnvironment Members
+        #region IModuleEnvironment Members
 
         public object GetGlobal(SymbolId symbol) {
             return context.GetGlobal(symbol);
@@ -160,7 +160,7 @@ namespace IronPython.Runtime {
         // Array of the variables in the environment
         [PythonHiddenField]public object[] environmentValues;
 
-        public FunctionEnvironmentNDictionary(int size, FunctionEnvironmentDictionary parent, IFrameEnvironment context, SymbolId[] names, SymbolId[] outer)
+        public FunctionEnvironmentNDictionary(int size, FunctionEnvironmentDictionary parent, IModuleEnvironment context, SymbolId[] names, SymbolId[] outer)
             : base(parent, context, names, outer) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Temporary, "FuncEnv " + size.ToString());
             Debug.Assert(names.Length == size);

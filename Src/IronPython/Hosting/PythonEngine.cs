@@ -80,9 +80,13 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Private Data Members
+        // Every PythonEngine has its own SystemState. This allows multiple engines to exist simultaneously,
+        // while maintaingin unique significant state for every engine..
         private SystemState systemState = new SystemState();
-        private Frame topFrame;
-        private CompilerContext context = new CompilerContext("<stdin>");
+
+        private ModuleScope defaultScope;
+        
+        private CompilerContext compilerContext = new CompilerContext("<stdin>");
         #endregion
 
         #region Constructor
@@ -90,7 +94,7 @@ namespace IronPython.Hosting {
             // make sure cctor for OutputGenerator has run
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(OutputGenerator).TypeHandle);
 
-            topFrame = new Frame("__main__");
+            defaultScope = new ModuleScope("__main__");
             options = new Options();
         }
 
@@ -105,7 +109,7 @@ namespace IronPython.Hosting {
         public void Shutdown() {
             object callable;
 
-            if (Sys.TryGetAttr(topFrame, SymbolTable.SysExitFunc, out callable)) {
+            if (Sys.TryGetAttr(defaultScope, SymbolTable.SysExitFunc, out callable)) {
                 Ops.Call(callable);
             }
 
@@ -141,7 +145,7 @@ namespace IronPython.Hosting {
             throw new ArgumentOutOfRangeException("executionOptions", userOptions, invalidOptions.ToString() + " is invalid");
         }
 
-        private void EnsureValidArguments(Frame moduleScope, ExecutionOptions userOptions, ExecutionOptions permissibleOptions) {
+        private void EnsureValidArguments(ModuleScope moduleScope, ExecutionOptions userOptions, ExecutionOptions permissibleOptions) {
             moduleScope.EnsureInitialized(Sys);
             ValidateExecutionOptions(userOptions, ExecuteFileOptions);
         }
@@ -302,11 +306,11 @@ namespace IronPython.Hosting {
             }
         }
 
-        private void ExecuteSnippet(Parser p, Frame moduleScope, ExecutionOptions executionOptions) {
+        private void ExecuteSnippet(Parser p, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             Stmt s = p.ParseFileInput();
             bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
-            FrameCode code = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, enableDebugging);
-            code.Run(moduleScope);
+            CompiledCode compiledCode = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, enableDebugging);
+            compiledCode.Run(moduleScope);
         }
 
         public delegate bool FilterStackFrame(StackFrame frame);
@@ -329,14 +333,14 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Console Support
-        public void ExecuteFileOptimized(string fileName, string moduleName, ExecutionOptions executionOptions, out Frame moduleScope) {
-            CompilerContext context = this.context.CopyWithNewSourceFile(fileName);
+        public void ExecuteFileOptimized(string fileName, string moduleName, ExecutionOptions executionOptions, out ModuleScope moduleScope) {
+            CompilerContext context = this.compilerContext.CopyWithNewSourceFile(fileName);
             bool skipLine = (executionOptions & ExecutionOptions.SkipFirstLine) != 0;
             Parser p = Parser.FromFile(Sys, context, skipLine, false);
             Stmt s = p.ParseFileInput();
 
             PythonModule mod = OutputGenerator.GenerateModule(Sys, context, s, moduleName);
-            moduleScope = new Frame(mod);
+            moduleScope = new ModuleScope(mod);
 
             if (moduleName != null)
                 Sys.modules[mod.ModuleName] = mod;
@@ -345,37 +349,37 @@ namespace IronPython.Hosting {
             mod.Initialize();
         }
 
-        public void ExecuteToConsole(string text) { ExecuteToConsole(text, topFrame); }
-        public void ExecuteToConsole(string text, Frame topFrame) {
-            topFrame.EnsureInitialized(Sys);
+        public void ExecuteToConsole(string text) { ExecuteToConsole(text, defaultScope); }
+        public void ExecuteToConsole(string text, ModuleScope defaultScope) {
+            defaultScope.EnsureInitialized(Sys);
 
-            Parser p = Parser.FromString(((ICallerContext)topFrame).SystemState, context, text);
+            Parser p = Parser.FromString(((ICallerContext)defaultScope).SystemState, compilerContext, text);
             Stmt s = p.ParseInteractiveInput(false);
 
             //  's' is null when we parse a line composed only of a NEWLINE (interactive_input grammar);
             //  we don't generate anything when 's' is null
             if (s != null) {
-                FrameCode code = OutputGenerator.GenerateSnippet(context, s, true, false);
+                CompiledCode compiledCode = OutputGenerator.GenerateSnippet(compilerContext, s, true, false);
                 Exception ex = null;
 
                 if (ExecWrapper != null) {
                     // ExecWrapper usually used in Winforms scenario to cause code to be executed on a separate thread
-                    CallTarget0 t = delegate() {
-                        try { code.Run(topFrame); } catch (Exception e) { ex = e; }
+                    CallTarget0 runCode>ope = delegate() {
+                        try { compiledCode.Run(defaultScope); } catch (Exception e) { ex = e; }
                         return null;
                     };
-                    object callable = new Function0(topFrame.__module__, "wrapper", t, new string[0], new object[0]);
+                    object callable = new Function0(defaultScope.Module, "wrapper", runCode, new string[0], new object[0]);
                     Ops.Call(ExecWrapper, callable);
                     if (ex != null)
                         throw ex;
                 } else {
-                    code.Run(topFrame);
+                    compiledCode.Run(defaultScope);
                 }
             }
         }
 
         public bool ParseInteractiveInput(string text, bool allowIncompleteStatement) {
-            Parser p = Parser.FromString(Sys, context, text);
+            Parser p = Parser.FromString(Sys, compilerContext, text);
             return p.ParseInteractiveInput(allowIncompleteStatement) != null;
         }
         #endregion
@@ -396,12 +400,12 @@ namespace IronPython.Hosting {
         }
 
         public object Import(string module) {
-            topFrame.EnsureInitialized(Sys);
+            defaultScope.EnsureInitialized(Sys);
 
-            object mod = Importer.ImportModule(topFrame, module, true);
+            object mod = Importer.ImportModule(defaultScope, module, true);
             if (mod != null) {
                 string[] names = module.Split('.');
-                topFrame.SetGlobal(SymbolTable.StringToId(names[names.Length - 1]), mod);
+                defaultScope.SetGlobal(SymbolTable.StringToId(names[names.Length - 1]), mod);
             }
             return mod;
         }
@@ -425,60 +429,60 @@ namespace IronPython.Hosting {
         }
         #endregion
 
-        #region Get\Set Variable
-        public void SetVariable(string name, object val) {
-            SetVariable(name, val, topFrame);
+        #region Get\Set Global
+        public void SetGlobal(SymbolId name, object val) {
+            SetGlobal(name, val, defaultScope);
         }
 
-        public void SetVariable(string name, object val, Frame frame) {
-            frame.EnsureInitialized(Sys);
+        public void SetGlobal(SymbolId name, object val, ModuleScope moduleScope) {
+            moduleScope.EnsureInitialized(Sys);
 
             val = Ops.ToPython(val);
-            Ops.SetAttr(frame, frame.Module, SymbolTable.StringToId(name), val);
+            Ops.SetAttr(moduleScope, moduleScope.Module, name, val);
         }
 
-        public object GetVariable(string name) {
-            return GetVariable(name, topFrame);
+        public object GetGlobal(SymbolId name) {
+            return GetGlobal(name, defaultScope);
         }
 
-        public object GetVariable(string name, Frame frame) {
-            frame.EnsureInitialized(Sys);
+        public object GetGlobal(SymbolId name, ModuleScope moduleScope) {
+            moduleScope.EnsureInitialized(Sys);
 
-            return Ops.GetAttr(frame, frame.Module, SymbolTable.StringToId(name));
+            return Ops.GetAttr(moduleScope, moduleScope.Module, name);
         }
 
-        public Frame DefaultModuleScope { get { return topFrame; } set { topFrame = value; } }
+        public ModuleScope DefaultModuleScope { get { return defaultScope; } set { defaultScope = value; } }
 
         #endregion
 
         #region Dynamic Execution\Evaluation
         public void Execute(string text) {
-            Execute(text, topFrame, ExecutionOptions.Default);
+            Execute(text, defaultScope, ExecutionOptions.Default);
         }
 
-        public void Execute(string text, Frame moduleScope, ExecutionOptions executionOptions) {
+        public void Execute(string text, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             EnsureValidArguments(moduleScope, executionOptions, ExecuteStringOptions);
 
-            Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, context, text);
+            Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, compilerContext, text);
             ExecuteSnippet(p, moduleScope, executionOptions);
         }
 
         public void ExecuteFile(string fileName) {
-            ExecuteFile(fileName, topFrame, ExecutionOptions.Default);
+            ExecuteFile(fileName, defaultScope, ExecutionOptions.Default);
         }
 
-        public void ExecuteFile(string fileName, Frame moduleScope, ExecutionOptions executionOptions) {
+        public void ExecuteFile(string fileName, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             EnsureValidArguments(moduleScope, executionOptions, ExecuteFileOptions);
 
-            Parser p = Parser.FromFile(Sys, context.CopyWithNewSourceFile(fileName));
+            Parser p = Parser.FromFile(Sys, compilerContext.CopyWithNewSourceFile(fileName));
             ExecuteSnippet(p, moduleScope, executionOptions);
         }
 
         public object Evaluate(string expr) {
-            return Evaluate(expr, topFrame, ExecutionOptions.Default);
+            return Evaluate(expr, defaultScope, ExecutionOptions.Default);
         }
 
-        public object Evaluate(string expr, Frame moduleScope, ExecutionOptions executionOptions) {
+        public object Evaluate(string expr, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             EnsureValidArguments(moduleScope, executionOptions, EvaluateStringOptions);
 
             return Builtin.Eval(
@@ -493,52 +497,44 @@ namespace IronPython.Hosting {
             return Converter.Convert<T>(Evaluate(expr));
         }
 
-        public T Evaluate<T>(string expr, Frame moduleScope, ExecutionOptions executionOptions) {
+        public T Evaluate<T>(string expr, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             return Converter.Convert<T>(Evaluate(expr, moduleScope, executionOptions));
         }
         #endregion
 
         #region Compile
-        public void Execute(object code) {
-            Execute(code, topFrame);
+        public void Execute(CompiledCode compiledCode) {
+            Execute(compiledCode, defaultScope);
         }
 
-        public void Execute(object code, Frame moduleScope) {
+        public void Execute(CompiledCode compiledCode, ModuleScope moduleScope) {
             moduleScope.EnsureInitialized(Sys);
-
-            FrameCode fc = code as FrameCode;
-            if (fc != null) {
-                fc.Run(moduleScope);
-            } else if (code is string) {
-                Execute((string)code);
-            } else {
-                throw new ArgumentException("code object must be string or have been generated via PythonEngine.Compile", "code");
-            }
+            compiledCode.Run(moduleScope);
         }
 
-        public object Compile(string text) {
+        public CompiledCode Compile(string text) {
             return Compile(text, ExecutionOptions.Default);
         }
 
-        public object Compile(string text, ExecutionOptions executionOptions) {
+        public CompiledCode Compile(string text, ExecutionOptions executionOptions) {
             ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
 
-            Parser p = Parser.FromString(Sys, context, text);
+            Parser p = Parser.FromString(Sys, compilerContext, text);
             return Compile(p, executionOptions);
         }
 
-        public object CompileFile(string fileName) {
+        public CompiledCode CompileFile(string fileName) {
             return CompileFile(fileName, ExecutionOptions.Default);
         }
 
-        public object CompileFile(string fileName, ExecutionOptions executionOptions) {
+        public CompiledCode CompileFile(string fileName, ExecutionOptions executionOptions) {
             ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
 
-            Parser p = Parser.FromFile(Sys, context.CopyWithNewSourceFile(fileName));
+            Parser p = Parser.FromFile(Sys, compilerContext.CopyWithNewSourceFile(fileName));
             return Compile(p, executionOptions);
         }
 
-        private object Compile(Parser p, ExecutionOptions executionOptions) {
+        private CompiledCode Compile(Parser p, ExecutionOptions executionOptions) {
             Stmt s = p.ParseFileInput();
 
             bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;

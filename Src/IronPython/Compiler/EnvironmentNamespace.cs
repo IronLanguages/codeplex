@@ -79,7 +79,7 @@ namespace IronPython.Compiler {
 
         public override GlobalNamespace Relocate(Slot instance) {
             Debug.Assert(instance != null, "relocating environment namespace with null instance");
-            Debug.Assert(typeof(IFrameEnvironment).IsAssignableFrom(instance.Type), "wrong instance type");
+            Debug.Assert(typeof(IModuleEnvironment).IsAssignableFrom(instance.Type), "wrong instance type");
             return new GlobalEnvironmentNamespace(en, instance);
         }
     }

@@ -93,15 +93,15 @@ namespace IronPython.Compiler {
             return tg;
         }
 
-        public static FrameCode GenerateSnippet(CompilerContext context, Stmt body) {
+        public static CompiledCode GenerateSnippet(CompilerContext context, Stmt body) {
             return GenerateSnippet(context, body, false, false);
         }
 
-        public static FrameCode GenerateSnippet(CompilerContext context, Stmt body, bool printExprStmts, bool enableDebugging) {
+        public static CompiledCode GenerateSnippet(CompilerContext context, Stmt body, bool printExprStmts, bool enableDebugging) {
             return GenerateSnippet(context, body, context.SourceFile, printExprStmts, enableDebugging);
         }
 
-        public static FrameCode GenerateSnippet(CompilerContext context, Stmt body, string name, bool printExprStmts, bool enableDebugging) {
+        public static CompiledCode GenerateSnippet(CompilerContext context, Stmt body, string name, bool printExprStmts, bool enableDebugging) {
             GlobalSuite gs = Binder.Bind(body, context);
 
             if (name.Length == 0) name = "<empty>"; // The empty string isn't a legal method name
@@ -112,11 +112,11 @@ namespace IronPython.Compiler {
             if (enableDebugging) {
                 tg = MakeDebuggableSnippetType(name);
                 cg = tg.DefineUserHiddenMethod(MethodAttributes.Public | MethodAttributes.Static,
-                    "Initialize", typeof(object), new Type[] { typeof(Frame) });
+                    "Initialize", typeof(object), new Type[] { typeof(ModuleScope) });
                 cg.typeGen = tg;
                 cg.ModuleSlot = tg.moduleSlot;
             } else {
-                cg = snippetAssembly.DefineDynamicMethod(name, typeof(object), new Type[] { typeof(Frame) });
+                cg = snippetAssembly.DefineDynamicMethod(name, typeof(object), new Type[] { typeof(ModuleScope) });
                 staticData = new List<object>();
                 cg.staticData = staticData;
                 cg.doNotCacheConstants = true;
@@ -132,7 +132,7 @@ namespace IronPython.Compiler {
             }
 
             cg.ContextSlot.EmitGet(cg);
-            cg.EmitFieldGet(typeof(Frame), "__module__");
+            cg.EmitFieldGet(typeof(ModuleScope), "__module__");
             cg.ModuleSlot.EmitSet(cg);
 
             if (context.TrueDivision) {
@@ -155,10 +155,10 @@ namespace IronPython.Compiler {
 
             if (tg != null) tg.FinishType();
 
-            FrameCode frameCode = new FrameCode(name,
-                (FrameCodeDelegate)cg.CreateDelegate(typeof(FrameCodeDelegate)),
+            CompiledCode compiledCode = new CompiledCode(name,
+                (CompiledCodeDelegate)cg.CreateDelegate(typeof(CompiledCodeDelegate)),
                 staticData);
-            return frameCode;
+            return compiledCode;
         }
 
         public static PythonModule GenerateModule(SystemState state, CompilerContext context, Stmt body, string moduleName) {
@@ -191,8 +191,8 @@ namespace IronPython.Compiler {
         [PythonType(typeof(Dict))]
         internal class SnippetModuleRunner : CompiledModule {
             PythonModule module;
-            Frame frame;
-            List<FrameCode> snippets = new List<FrameCode>();
+            ModuleScope moduleScope;
+            List<CompiledCode> snippets = new List<CompiledCode>();
 
             public PythonModule Module {
                 get {
@@ -202,16 +202,16 @@ namespace IronPython.Compiler {
 
             public SnippetModuleRunner(string name, SystemState state) {
                 module = new PythonModule(name, this, state, this.Initialize);
-                frame = new Frame(module);
+                moduleScope = new ModuleScope(module);
             }
 
-            public void AddSnippet(FrameCode fc) {
-                snippets.Add(fc);
+            public void AddSnippet(CompiledCode compiledCode) {
+                snippets.Add(compiledCode);
             }
 
             public override void Initialize() {
-                foreach (FrameCode fc in snippets) {
-                    fc.Run(frame);
+                foreach (CompiledCode compiledCode in snippets) {
+                    compiledCode.Run(moduleScope);
                 }
             }
 

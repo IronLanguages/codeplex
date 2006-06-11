@@ -55,11 +55,14 @@ namespace IronPython.Runtime {
         IronPython.Compiler.CompilerContext CreateCompilerContext();
     }
 
-    public interface IFrameEnvironment : ICallerContext {
+    public interface IModuleScope {
         object GetGlobal(SymbolId symbol);
         bool TryGetGlobal(SymbolId name, out object value);
         void SetGlobal(SymbolId symbol, object value);
         void DelGlobal(SymbolId symbol);
+    }
+
+    public interface IModuleEnvironment : ICallerContext, IModuleScope {
     }
 
     public interface IDynamicObject {

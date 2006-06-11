@@ -107,16 +107,16 @@ namespace IronPython.Compiler {
         public abstract Type Type { get; }
     }
 
-    // NamedFrameSlot represens a global variables (or builtin) of FrameCode code executing 
-    // in the context of a Frame. They have to be looked up by name at runtime.
+    // NamedFrameSlot represens a global variables (or builtin) of CompiledCode compiledCode executing 
+    // in the context of a ModuleScope. They have to be looked up by name at runtime.
 
     sealed class NamedFrameSlot : Slot {
-        // The Frame whose Namespace will be used to resolve the Name
+        // The ModuleScope whose Namespace will be used to resolve the Name
         private readonly Slot frame;
         private readonly SymbolId name;
 
         public NamedFrameSlot(Slot frame, SymbolId name) {
-            Debug.Assert(typeof(IFrameEnvironment).IsAssignableFrom(frame.Type), "invalid frame type");
+            Debug.Assert(typeof(IModuleEnvironment).IsAssignableFrom(frame.Type), "invalid frame type");
             this.frame = frame;
             this.name = name;
         }
@@ -127,7 +127,7 @@ namespace IronPython.Compiler {
             //
             frame.EmitGet(cg);
             cg.EmitSymbolId(name);
-            cg.EmitCall(typeof(IFrameEnvironment), "GetGlobal");
+            cg.EmitCall(typeof(IModuleScope), "GetGlobal");
         }
 
         public override void EmitGetAddr(CodeGen cg) {
@@ -142,7 +142,7 @@ namespace IronPython.Compiler {
             frame.EmitGet(cg);
             cg.EmitSymbolId(name);
             val.EmitGet(cg);
-            cg.EmitCall(typeof(IFrameEnvironment), "SetGlobal");
+            cg.EmitCall(typeof(IModuleScope), "SetGlobal");
         }
 
         public override void EmitSetUninitialized(CodeGen cg, SymbolId name) {
@@ -154,7 +154,7 @@ namespace IronPython.Compiler {
             //
             frame.EmitGet(cg);
             cg.EmitSymbolId(name);
-            cg.EmitCall(typeof(IFrameEnvironment), "DelGlobal");
+            cg.EmitCall(typeof(IModuleScope), "DelGlobal");
         }
 
         public override Type Type {
@@ -176,7 +176,7 @@ namespace IronPython.Compiler {
         public override void EmitGet(CodeGen cg) {
             frame.EmitGet(cg);
             cg.EmitSymbolId(name);
-            cg.EmitCall(typeof(Frame), "GetLocal");
+            cg.EmitCall(typeof(ModuleScope), "GetLocal");
         }
 
         public override void EmitGetAddr(CodeGen cg) {
@@ -190,7 +190,7 @@ namespace IronPython.Compiler {
             frame.EmitGet(cg);
             cg.EmitSymbolId(name);
             val.EmitGet(cg);
-            cg.EmitCall(typeof(Frame), "SetLocal");
+            cg.EmitCall(typeof(ModuleScope), "SetLocal");
         }
 
         public override void EmitSetUninitialized(CodeGen cg, SymbolId name) {
@@ -201,7 +201,7 @@ namespace IronPython.Compiler {
             //    frame.DelLocal(symbol_id)
             frame.EmitGet(cg);
             cg.EmitSymbolId(name);
-            cg.EmitCall(typeof(Frame), "DelLocal");
+            cg.EmitCall(typeof(ModuleScope), "DelLocal");
         }
 
         public override Type Type {

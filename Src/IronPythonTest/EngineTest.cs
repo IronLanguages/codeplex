@@ -90,12 +90,14 @@ namespace IronPythonTest {
             // standardEngine.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
         }
 
+        static readonly SymbolId clsPart_SymbolId = (SymbolId)"clsPart";
+
         // Execute
         public void ScenarioExecute() {
             PythonEngine pe = new PythonEngine();
 
             ClsPart clsPart = new ClsPart();
-            pe.SetVariable("clsPart", clsPart);
+            pe.SetGlobal(clsPart_SymbolId, clsPart);
 
             // field: assign and get back
             pe.Execute("clsPart.Field = 100");
@@ -120,11 +122,11 @@ namespace IronPythonTest {
             // ===============================================
 
             // reset the same variable with instance of the same type
-            pe.SetVariable("clsPart", new ClsPart());
+            pe.SetGlobal(clsPart_SymbolId, new ClsPart());
             pe.Execute("if 0 != clsPart.Field: raise AssertionError('test failed')");
 
             // add cls method as event handler
-            pe.SetVariable("clsMethod", new IntIntDelegate(Negate));
+            pe.SetGlobal((SymbolId)"clsMethod", new IntIntDelegate(Negate));
             pe.Execute("clsPart.Event += clsMethod");
             pe.Execute("a = clsPart.Method(2)");
             pe.Execute("if -2 != a: raise AssertionError('test failed')");
@@ -132,9 +134,9 @@ namespace IronPythonTest {
             // ===============================================
 
             // reset the same variable with integer
-            pe.SetVariable("clsPart", 1);
+            pe.SetGlobal(clsPart_SymbolId, 1);
             pe.Execute("if 1 != clsPart: raise AssertionError('test failed')");
-            AreEqual((int)pe.GetVariable("clsPart"), 1);
+            AreEqual((int)pe.GetGlobal(clsPart_SymbolId), 1);
         }
 
         // No intereference between two engines
@@ -151,25 +153,26 @@ namespace IronPythonTest {
         }
 
         public void ScenarioEvaluateInAnonymousModuleScope() {
-            Frame anonymousScope = new Frame();
-            Frame anotherAnonymousScope = new Frame();
+            SymbolId x_SymbolId = (SymbolId)"x";
+            ModuleScope anonymousScope = new ModuleScope();
+            ModuleScope anotherAnonymousScope = new ModuleScope();
             standardEngine.Execute("x = 0");
             standardEngine.Execute("x = 1", anonymousScope, ExecutionOptions.Default);
-            anotherAnonymousScope.SetGlobal((SymbolId)"x", 2);
+            anotherAnonymousScope.SetGlobal(x_SymbolId, 2);
 
             // Ensure that the default ModuleScope is not affected
             AreEqual(0, standardEngine.Evaluate<int>("x"));
-            AreEqual(0, (int)standardEngine.DefaultModuleScope.GetGlobal((SymbolId)"x"));
+            AreEqual(0, (int)standardEngine.DefaultModuleScope.GetGlobal(x_SymbolId));
             // Ensure that the anonymous scope has been updated as expected
             AreEqual(1, standardEngine.Evaluate<int>("x", anonymousScope, ExecutionOptions.Default));
-            AreEqual(1, (int)anonymousScope.GetGlobal((SymbolId)"x"));
+            AreEqual(1, (int)anonymousScope.GetGlobal(x_SymbolId));
             // Ensure that other anonymous scopes are not affected
             AreEqual(2, standardEngine.Evaluate<int>("x", anotherAnonymousScope, ExecutionOptions.Default));
-            AreEqual(2, (int)anotherAnonymousScope.GetGlobal((SymbolId)"x"));
+            AreEqual(2, (int)anotherAnonymousScope.GetGlobal(x_SymbolId));
         }
 
         public void ScenarioEvaluateInPublishedModuleScope() {
-            Frame publishedScope = new Frame("published_scope_test");
+            ModuleScope publishedScope = new ModuleScope("published_scope_test");
             standardEngine.Execute("x = 0");
             standardEngine.Execute("x = 1", publishedScope, ExecutionOptions.Default);
             // Ensure that the default ModuleScope is not affected
@@ -196,7 +199,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
             AreEqual("abab", pe.Evaluate<string>("'ab' * 2"));
 
             ClsPart clsPart = new ClsPart();
-            pe.SetVariable("clsPart", clsPart);
+            pe.SetGlobal(clsPart_SymbolId, clsPart);
             AreEqual(clsPart, pe.Evaluate("clsPart") as ClsPart);
             AreEqual(clsPart, pe.Evaluate<ClsPart>("clsPart"));
 
@@ -222,7 +225,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
                 }
 
                 ClsPart clsPart = new ClsPart();
-                pe.SetVariable("clsPart", clsPart);
+                pe.SetGlobal(clsPart_SymbolId, clsPart);
                 pe.ExecuteFile(tempFile1);
 
                 using (StreamWriter sw = new StreamWriter(tempFile2)) {
@@ -363,7 +366,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
 
         public void ScenarioExecuteFileOptimized() {
             PythonEngine pe = new PythonEngine();
-            Frame moduleScope;
+            ModuleScope moduleScope;
             pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\simpleCommand.py", "__main__", ExecutionOptions.Default, out moduleScope);
             AreEqual(1, pe.Evaluate<int>("x", moduleScope, ExecutionOptions.Default));
 
@@ -373,9 +376,9 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
         }
 
         public void ScenarioExecuteFileOptimized_ScriptThrows() {
-            // We should be able to use the Frame even if an exception is thrown by the script
+            // We should be able to use the ModuleScope even if an exception is thrown by the script
             PythonEngine pe = new PythonEngine();
-            Frame moduleScope = null;
+            ModuleScope moduleScope = null;
             try {
                 pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\raise.py", "__main__", ExecutionOptions.Default, out moduleScope);
                 throw new Exception("We should not reach here");
@@ -389,14 +392,14 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
         }
 
         public void ScenarioExecuteFileOptimized_ParserThrows() {
-            // We should be able to use the Frame even if an exception is thrown before the script starts executing
+            // We should be able to use the ModuleScope even if an exception is thrown before the script starts executing
             PythonEngine pe = new PythonEngine();
-            Frame moduleScope = null;
+            ModuleScope moduleScope = null;
             try {
                 pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\syntaxError.py", "__main__", ExecutionOptions.Default, out moduleScope);
                 throw new Exception("We should not reach here");
             } catch (PythonSyntaxError) {
-                AreEqual((Frame)null, moduleScope);
+                AreEqual((ModuleScope)null, moduleScope);
             }
         }
 
@@ -405,8 +408,8 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
             PythonEngine pe = new PythonEngine();
             ClsPart clsPart = new ClsPart();
 
-            pe.SetVariable("clsPart", clsPart);
-            object code = pe.Compile("def f(): clsPart.Field += 10");
+            pe.SetGlobal(clsPart_SymbolId, clsPart);
+            CompiledCode code = pe.Compile("def f(): clsPart.Field += 10");
             pe.Execute(code);
 
             code = pe.Compile("f()");
@@ -435,8 +438,8 @@ r = R(10, 100)
 if r.sum != 110:
     raise AssertionError('Scenario 12 failed')
 ";
-            object compiled = pe.Compile(script);
-            pe.Execute(compiled);
+            CompiledCode compiledCode = pe.Compile(script);
+            pe.Execute(compiledCode);
         }
 
         // More to come: exception related...

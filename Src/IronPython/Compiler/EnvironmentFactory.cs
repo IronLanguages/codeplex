@@ -88,7 +88,7 @@ namespace IronPython.Compiler {
 
         public override Type EnvironmentType {
             get {
-                return typeof(Frame);
+                return typeof(ModuleScope);
             }
         }
 

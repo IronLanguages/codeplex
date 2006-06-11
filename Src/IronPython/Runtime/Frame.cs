@@ -24,12 +24,12 @@ using IronPython.Modules;
 
 namespace IronPython.Runtime {
     /// <summary>
-    /// PythonModule normally runs code using compiled modules. However, FrameCode snippet code can also 
-    /// be run in the context of a PythonModule. In such a case, Frame holds the context and scope information
+    /// PythonModule normally runs code using compiled modules. However, CompiledCode snippet code can also 
+    /// be run in the context of a PythonModule. In such a case, ModuleScope holds the context and scope information
     /// of the PythonModule..
     /// </summary>
 
-    public class Frame : IFrameEnvironment, ICloneable {
+    public class ModuleScope : IModuleEnvironment, ICloneable {
         // This is usually the same as __module__.__dict__.
         // It differs for code which does:
         //     eval("someGlobal==someLocal", { "someGlobal":1 }, { "someLocal":1 })
@@ -45,18 +45,18 @@ namespace IronPython.Runtime {
 
         private string moduleName;
 
-        public static Frame MakeFrameForFunction(PythonModule context) {
-            return new Frame(context, context.__dict__, new FieldIdDict());
+        public static ModuleScope MakeScopeForFunction(PythonModule context) {
+            return new ModuleScope(context, context.__dict__, new FieldIdDict());
         }
 
         /// <summary>
-        /// These overloads of the constructor allows delayed creating of the PythonModule. The Frame cannot
+        /// These overloads of the constructor allows delayed creating of the PythonModule. The ModuleScope cannot
         /// be used until EnsureInitialized has been called.
         /// </summary>
-        public Frame() : this(String.Empty) {
+        public ModuleScope() : this(String.Empty) {
         }
 
-        public Frame(string modName) {
+        public ModuleScope(string modName) {
             if (modName == null)
                 throw new ArgumentException("moduleName");
 
@@ -65,10 +65,10 @@ namespace IronPython.Runtime {
             f_globals = new FieldIdDict();
         }
 
-        internal Frame(PythonModule mod) : this(mod, mod.__dict__, mod.__dict__) {
+        internal ModuleScope(PythonModule mod) : this(mod, mod.__dict__, mod.__dict__) {
         }
 
-        internal Frame(PythonModule mod, IAttributesDictionary globals, object locals) {
+        internal ModuleScope(PythonModule mod, IAttributesDictionary globals, object locals) {
             Initialize(mod, globals, locals);
         }
 
@@ -153,7 +153,7 @@ namespace IronPython.Runtime {
             Ops.SetIndexId(f_locals, symbol, value);
         }
 
-        #region IFrameEnvironment Members
+        #region IModuleEnvironment Members
 
         public virtual object GetGlobal(SymbolId symbol) {
             object ret;
@@ -239,25 +239,26 @@ namespace IronPython.Runtime {
     }
 
 
-    // FrameCode represents code that executes in the context of a Frame. This is typically
-    // code executed from the interactive console, code compiled with the "eval" keyword, etc.
-    public delegate object FrameCodeDelegate(Frame frame);
+    public delegate object CompiledCodeDelegate(ModuleScope moduleScope);
 
-    public class FrameCode {
-        private FrameCodeDelegate code;
+    // CompiledCode represents code that executes in the context of a ModuleScope. This is typically
+    // code executed from the interactive console, code compiled with the "eval" keyword, etc.
+    // Also see CompiledModule which represents code of an entire module
+    public class CompiledCode {
+        private CompiledCodeDelegate code;
         private string name;
         private List<object> staticData;
 
-        public FrameCode(string name, FrameCodeDelegate code, List<object> staticData) {
+        public CompiledCode(string name, CompiledCodeDelegate code, List<object> staticData) {
             this.name = name;
             this.code = code;
             this.staticData = staticData;
         }
 
-        public object Run(Frame frame) {
-            frame = (Frame)frame.Clone();
-            frame.staticData = staticData;
-            return code(frame);
+        public object Run(ModuleScope moduleScope) {
+            moduleScope = (ModuleScope)moduleScope.Clone();
+            moduleScope.staticData = staticData;
+            return code(moduleScope);
         }
 
         public override string ToString() {

@@ -21,8 +21,8 @@ def gen_one_env(cw, i):
     for j in range(i):
         cw.writeline("[EnvironmentIndex(%i)] public object value%i;" % (j, j))
     cw.writeline()
-    cw.writeline("public FunctionEnvironment%iDictionary(FunctionEnvironmentDictionary parent, IFrameEnvironment frame, SymbolId[] names, SymbolId[] outer)" % i)
-    cw.enter_block("    : base(parent, frame, names, outer)")
+    cw.writeline("public FunctionEnvironment%iDictionary(FunctionEnvironmentDictionary parent, IModuleEnvironment moduleScope, SymbolId[] names, SymbolId[] outer)" % i)
+    cw.enter_block("    : base(parent, moduleScope, names, outer)")
     cw.exit_block()
     cw.enter_block("public override bool TrySetExtraValue(SymbolId key, object value)")
     if i > 4:
@@ -125,12 +125,12 @@ def gen_pf(cw):
     gen_one_pf(cw, ssizes[-1], False, True)
 
     cw.exit_block()
-    cw.writeline("ctor = envType.GetConstructor(new Type[] { typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]), typeof(SymbolId[]) });")
+    cw.writeline("ctor = envType.GetConstructor(new Type[] { typeof(FunctionEnvironmentDictionary), typeof(IModuleEnvironment), typeof(SymbolId[]), typeof(SymbolId[]) });")
     cw.writeline("ef = new FieldEnvironmentFactory(envType);")
     cw.else_block()
     cw.writeline("cg.EmitInt(size);");
     cw.writeline("envType = typeof(FunctionEnvironmentNDictionary);")
-    cw.writeline("ctor = envType.GetConstructor(new Type[] { typeof(int), typeof(FunctionEnvironmentDictionary), typeof(IFrameEnvironment), typeof(SymbolId[]), typeof(SymbolId[]) });")
+    cw.writeline("ctor = envType.GetConstructor(new Type[] { typeof(int), typeof(FunctionEnvironmentDictionary), typeof(IModuleEnvironment), typeof(SymbolId[]), typeof(SymbolId[]) });")
     cw.writeline("ef = new IndexEnvironmentFactory(size);")
     cw.exit_block()
 

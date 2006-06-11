@@ -44,7 +44,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public object Frame {
+        public object ModuleScope {
             [PythonName("tb_frame")]
             get {
                 return frame;

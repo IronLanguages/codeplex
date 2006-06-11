@@ -26,7 +26,7 @@ using IronPython.Compiler;
 namespace IronPython.Runtime {
 
     /// <summary>
-    /// Represents a piece of code.  This can reference either a FrameCode
+    /// Represents a piece of code.  This can reference either a CompiledCode
     /// object or a Function.   The user can explicitly call FunctionCode by
     /// passing it into exec or eval.
     /// </summary>
@@ -34,7 +34,7 @@ namespace IronPython.Runtime {
     public class FunctionCode {
         #region Private member variables
         private object varnames;
-        private FrameCode fc;
+        private CompiledCode compiledCode;
         private PythonFunction func;
         private string filename;
         private int lineNo;
@@ -51,8 +51,8 @@ namespace IronPython.Runtime {
         #endregion
 
         #region Public constructors
-        public FunctionCode(FrameCode fc) {
-            this.fc = fc;
+        public FunctionCode(CompiledCode code) {
+            this.compiledCode = code;
         }
 
         public FunctionCode(PythonFunction f) {
@@ -74,7 +74,7 @@ namespace IronPython.Runtime {
         public object ArgCount {
             [PythonName("co_argcount")]
             get {
-                if (fc != null) return 0;
+                if (compiledCode != null) return 0;
                 return func.argNames.Length;
             }
         }
@@ -148,7 +148,7 @@ namespace IronPython.Runtime {
             [PythonName("co_name")]
             get {
                 if (func != null) return func.Name;
-                if (fc != null) return fc.GetType().Name;
+                if (compiledCode != null) return compiledCode.GetType().Name;
 
                 throw Ops.NotImplementedError("");
             }
@@ -188,9 +188,9 @@ namespace IronPython.Runtime {
         #endregion
 
         #region Internal API Surface
-        internal object Call(Frame curFrame) {
-            if (fc != null) {
-                return fc.Run(curFrame);
+        internal object Call(ModuleScope curFrame) {
+            if (compiledCode != null) {
+                return compiledCode.Run(curFrame);
             } else if (func != null) {
                 return func.Call();
             }
@@ -201,7 +201,7 @@ namespace IronPython.Runtime {
 
         #region Private helper functions
         private Tuple GetArgNames() {
-            if (fc != null) return Tuple.MakeTuple();
+            if (compiledCode != null) return Tuple.MakeTuple();
 
             List<string> names = new List<string>();
             List<Tuple> nested = new List<Tuple>();
@@ -238,8 +238,8 @@ namespace IronPython.Runtime {
             FunctionCode other = obj as FunctionCode;
             if (other == null) return false;
 
-            if (fc != null) {
-                return fc == other.fc;
+            if (compiledCode != null) {
+                return compiledCode == other.compiledCode;
             } else if (func != null) {
                 return func == other.func;
             }
@@ -249,8 +249,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__hash__")]
         public override int GetHashCode() {
-            if (fc != null) {
-                return fc.GetHashCode();
+            if (compiledCode != null) {
+                return compiledCode.GetHashCode();
             } else if (func != null) {
                 return func.GetHashCode();
             }
