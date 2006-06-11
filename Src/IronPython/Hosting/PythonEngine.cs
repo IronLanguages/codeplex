@@ -71,8 +71,6 @@ namespace IronPython.Hosting {
             }
         }
 
-        public static object ExecWrapper = null;
-
         #endregion
 
         #region Static Non-Public Members
@@ -349,6 +347,10 @@ namespace IronPython.Hosting {
             mod.Initialize();
         }
 
+        // This can be set to a method like System.Windows.Forms.Control.Invoke for Winforms scenario 
+        // to cause code to be executed on a separate thread.
+        public static object ExecWrapper = null;
+
         public void ExecuteToConsole(string text) { ExecuteToConsole(text, defaultScope); }
         public void ExecuteToConsole(string text, ModuleScope defaultScope) {
             defaultScope.EnsureInitialized(Sys);
@@ -363,8 +365,7 @@ namespace IronPython.Hosting {
                 Exception ex = null;
 
                 if (ExecWrapper != null) {
-                    // ExecWrapper usually used in Winforms scenario to cause code to be executed on a separate thread
-                    CallTarget0 runCode>ope = delegate() {
+                    CallTarget0 runCode = delegate() {
                         try { compiledCode.Run(defaultScope); } catch (Exception e) { ex = e; }
                         return null;
                     };
