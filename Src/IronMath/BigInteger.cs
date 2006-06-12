@@ -99,6 +99,10 @@ namespace IronMath {
             }
         }
 
+        public static implicit operator BigInteger(ushort i) {
+            return Create((uint)i);
+        }
+
         public static implicit operator BigInteger(uint i) {
             return Create(i);
         }

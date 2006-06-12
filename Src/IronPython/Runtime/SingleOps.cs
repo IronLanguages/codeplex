@@ -14,9 +14,33 @@
  * **********************************************************************************/
 
 using System;
+using System.Diagnostics;
 
 namespace IronPython.Runtime {
     static partial class SingleOps {
+        #region Unary operators
+
+        [PythonName("__abs__")]
+        public static object Abs(object value) {
+            Debug.Assert(value is Single);
+            Single valueSingle = (Single)value;
+            if (valueSingle < 0) valueSingle = -valueSingle;
+            return valueSingle;
+        }
+
+        [PythonName("__neg__")]
+        public static object Negate(object value) {
+            Debug.Assert(value is Single);
+            return -(Single)value;
+        }
+
+        [PythonName("__pos__")]
+        public static object Positive(object value) {
+            return value;
+        }
+
+        #endregion
+
         internal static object DivideImpl(Single left, Single right) {
             return left / right;
         }
@@ -45,6 +69,24 @@ namespace IronPython.Runtime {
 
         internal static double ReverseModImpl(Single left, Single right) {
             return ModImpl(right, left);
+        }
+
+        internal static object DivModImpl(Single left, Single right) {
+            object div = FloorDivideImpl(left, right);
+            if (div == Ops.NotImplemented) return div;
+            object mod = ModImpl(left, right);
+            if (mod == Ops.NotImplemented) return mod;
+            return Tuple.MakeTuple(div, mod);
+        }
+        internal static object ReverseDivModImpl(Single left, Single right) {
+            return DivModImpl(right, left);
+        }
+
+        internal static object PowerImpl(Single left, Single right) {
+            return FloatOps.Power((Double)left, (Double)right);
+        }
+        internal static object ReversePowerImpl(Single left, Single right) {
+            return PowerImpl(right, left);
         }
     }
 }

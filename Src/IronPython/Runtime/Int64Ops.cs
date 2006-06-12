@@ -281,10 +281,7 @@ namespace IronPython.Runtime {
             if (other is int) {
                 return RightShift(x, (int)other);
             } else if (other is long) {
-                long y = (long)other;
-                if (Int32.MinValue <= y && y <= Int32.MaxValue) {
-                    return RightShift(x, (int)y);
-                }
+                return RightShift(x, (long)other);
             } else if (other is bool) {
                 return RightShift(x, (bool)other ? 1 : 0);
             } else if (other is BigInteger) {
@@ -304,6 +301,12 @@ namespace IronPython.Runtime {
                 return RightShift(x, (int)((byte)other));
             }
             return Ops.NotImplemented;
+        }
+
+        internal static object RightShift(long x, long y) {
+            if (Int32.MinValue <= y && y <= Int32.MaxValue) {
+                return RightShift(x, (int)y);
+            } else return Ops.NotImplemented;
         }
 
         private static object RightShift(long x, int y) {
@@ -333,10 +336,7 @@ namespace IronPython.Runtime {
             if (other is int) {
                 return LeftShift(x, (int)other);
             } else if (other is long) {
-                long y = (long)other;
-                if (Int32.MinValue <= y && y <= Int32.MaxValue) {
-                    return LeftShift(x, (int)y);
-                }
+                return LeftShift(x, (long)other);
             } else if (other is bool) {
                 return LeftShift(x, (bool)other ? 1 : 0);
             } else if (other is BigInteger) {
@@ -356,6 +356,12 @@ namespace IronPython.Runtime {
                 return LeftShift(x, (int)((byte)other));
             }
             return Ops.NotImplemented;
+        }
+
+        internal static object LeftShift(long x, long y) {
+            if (Int32.MinValue <= y && y <= Int32.MaxValue) {
+                return LeftShift(x, (int)y);
+            } else return Ops.NotImplemented;
         }
 
         private static object LeftShift(long x, int y) {
@@ -426,6 +432,26 @@ namespace IronPython.Runtime {
             } else {
                 return "0x" + x.ToString("X") + "L";
             }
+        }
+
+        public static object DivMod(long x, long y) {
+            try {
+                return Tuple.MakeTuple(Divide(x, y), Mod(x, y));
+            } catch (OverflowException) {
+                return LongOps.DivMod(x, y);
+            }
+        }
+        public static object ReverseDivMod(long x, long y) {
+            return DivMod(y, x);
+        }
+        public static object ReverseLeftShift(long x, long y) {
+            return LeftShift(y, x);
+        }
+        public static object ReversePower(long x, long y) {
+            return Power(y, x);
+        }
+        public static object ReverseRightShift(long x, long y) {
+            return RightShift(y, x);
         }
     }
 }

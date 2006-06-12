@@ -14,10 +14,45 @@
  * **********************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
 
 namespace IronPython.Runtime {
     static partial class ByteOps {
+        #region Unary operators
+        [PythonName("__abs__")]
+        public static object Abs(object value) {
+            Debug.Assert(value is Byte);
+            return value;
+        }
+
+        [PythonName("__neg__")]
+        public static object Negate(object value) {
+            Debug.Assert(value is Byte);
+            return -(Int16)(Byte)value;
+        }
+
+        [PythonName("__pos__")]
+        public static object Positive(object value) {
+            Debug.Assert(value is Byte);
+            return value;
+        }
+
+        [PythonName("__invert__")]
+        public static object Invert(object value) {
+            Debug.Assert(value is Byte);
+            return ~(Byte)value;
+        }
+
+        #endregion
+
+        internal static object LeftShiftImpl(Byte left, Byte right) {
+            return IntOps.LeftShift((int)left, (int)right);
+        }
+        internal static object PowerImpl(Byte left, Byte right) {
+            return IntOps.Power((int)left, (int)right);
+        }
+        internal static object RightShiftImpl(Byte left, Byte right) {
+            return IntOps.RightShift((int)left, (int)right);
+        }
     }
 }

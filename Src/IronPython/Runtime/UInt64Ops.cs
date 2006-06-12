@@ -14,10 +14,44 @@
  * **********************************************************************************/
 
 using System;
+using System.Diagnostics;
 using IronMath;
 
 namespace IronPython.Runtime {
     static partial class UInt64Ops {
+        #region Unary operators
+
+        [PythonName("__abs__")]
+        public static object Abs(object value) {
+            Debug.Assert(value is UInt64);
+            return value;
+        }
+
+        [PythonName("__neg__")]
+        public static object Negate(object value) {
+            Debug.Assert(value is UInt64);
+            UInt64 valueUInt64 = (UInt64)value;
+            if (valueUInt64 < (UInt64)Int64.MaxValue) {
+                return -(Int64)valueUInt64;
+            } else {
+                // would overflow
+                return LongOps.Negate(valueUInt64);
+            }
+        }
+
+        [PythonName("__pos__")]
+        public static object Positive(object value) {
+            Debug.Assert(value is UInt64);
+            return value;
+        }
+
+        [PythonName("__invert__")]
+        public static object Invert(object value) {
+            Debug.Assert(value is UInt64);
+            return ~(UInt64)value;
+        }
+
+        #endregion
 
         internal static object AddImpl(UInt64 left, UInt64 right) {
             if (left > UInt64.MaxValue - right) {
@@ -236,12 +270,135 @@ namespace IronPython.Runtime {
             }
         }
 
+        internal static object DivModImpl(Int64 left, UInt64 right) {
+            object div = DivideImpl(left, right);
+            if (div == Ops.NotImplemented) return div;
+            object mod = ModImpl(left, right);
+            if (mod == Ops.NotImplemented) return mod;
+            return Tuple.MakeTuple(div, mod);
+        }
+        internal static object DivModImpl(UInt64 left, Int64 right) {
+            object div = DivideImpl(left, right);
+            if (div == Ops.NotImplemented) return div;
+            object mod = ModImpl(left, right);
+            if (mod == Ops.NotImplemented) return mod;
+            return Tuple.MakeTuple(div, mod);
+        }
+        internal static object LeftShiftImpl(UInt64 left, UInt64 right) {
+            if (right > 63 ||
+                // right guaranteed <= 63 at this point
+                left > (UInt64.MaxValue >> (int)right)) {
+                return LongOps.LeftShift(BigInteger.Create(left), right);
+            }
+            // right <= 63
+            return left << (int)right;
+        }
+        internal static object LeftShiftImpl(Int64 left, UInt64 right) {
+            if (right > 63 ||
+                // right guaranteed <= 63 at this point
+                (left > 0 && left > (Int64.MaxValue >> (int)right)) ||
+                (left < 0 && left < (Int64.MinValue >> (int)right))) {
+                return LongOps.LeftShift(BigInteger.Create(left), right);
+            }
+            // right <= 63
+            return left << (int)right;
+        }
+        internal static object LeftShiftImpl(UInt64 left, Int64 right) {
+            if (right < 0) {
+                throw Ops.ValueError("negative shift count");
+            }
+            // right >= 0 so it fits into UInt64
+            return LeftShiftImpl(left, (UInt64)right);
+        }
+        internal static object PowerImpl(UInt64 x, UInt64 exp) {
+            if (exp == 0) return 1;
+            if (exp == 1) return x;
+
+            UInt64 saveexp = exp;
+            UInt64 result = 1;
+            UInt64 factor = x;
+            try {
+                checked {
+                    while (exp != 0) {
+                        if ((exp & 1) != 0) result *= factor;
+                        if (exp == 1) break;    // save possible overflow below
+                        factor = factor * factor;
+                        exp >>= 1;
+                    }
+                    return result;
+                }
+            } catch (OverflowException) {
+                return LongOps.Power(BigInteger.Create(x), saveexp);
+            }
+        }
+        internal static object PowerImpl(Int64 x, UInt64 exp) {
+            if (x >= 0) {
+                return PowerImpl((UInt64)x, exp);
+            } else { // x < 0
+                if (exp < Int64.MaxValue) {
+                    return Int64Ops.Power(x, (Int64)exp);
+                } else { // big exponent, negative number
+                    throw Ops.ValueError("number too long");
+                }
+            }
+        }
+        internal static object PowerImpl(UInt64 x, Int64 exp) {
+            if (exp < 0) {
+                return FloatOps.Power(x, exp);
+            }
+            // exp >= 0, it will fit into UInt64
+            return PowerImpl(x, (UInt64)exp);
+        }
+
+        internal static object RightShiftImpl(UInt64 left, UInt64 right) {
+            // both positive so we don't need the modulo check
+            return right > 63 ? 0 : left >> (int)right;
+        }
+        internal static object RightShiftImpl(Int64 left, UInt64 right) {
+            if (right > 63) {
+                return left >= 0 ? 0 : -1;
+            }
+            // right <= 63 now, it will fit into long
+            return Int64Ops.RightShift(left, (Int64)right);
+        }
+        internal static object RightShiftImpl(UInt64 left, Int64 right) {
+            if (right < 0) {
+                throw Ops.ValueError("negative shift count");
+            }
+            return RightShiftImpl(left, (UInt64)right);
+        }
+
+        #region Reverse operator implementations
         internal static object ReverseModImpl(Int64 left, UInt64 right) {
             return ModImpl(right, left);
         }
-
         internal static object ReverseModImpl(UInt64 left, Int64 right) {
             return ModImpl(right, left);
         }
+        internal static object ReverseDivModImpl(Int64 left, UInt64 right) {
+            return DivModImpl(right, left);
+        }
+        internal static object ReverseDivModImpl(UInt64 left, Int64 right) {
+            return DivModImpl(right, left);
+        }
+        internal static object ReverseLeftShiftImpl(Int64 left, UInt64 right) {
+            return LeftShiftImpl(right, left);
+        }
+        internal static object ReverseLeftShiftImpl(UInt64 left, Int64 right) {
+            return LeftShiftImpl(right, left);
+        }
+        internal static object ReversePowerImpl(Int64 left, UInt64 right) {
+            return PowerImpl(right, left);
+        }
+        internal static object ReversePowerImpl(UInt64 left, Int64 right) {
+            return PowerImpl(right, left);
+        }
+        internal static object ReverseRightShiftImpl(Int64 left, UInt64 right) {
+            return RightShiftImpl(right, left);
+        }
+        internal static object ReverseRightShiftImpl(UInt64 left, Int64 right) {
+            return RightShiftImpl(right, left);
+        }
+        #endregion
     }
 }

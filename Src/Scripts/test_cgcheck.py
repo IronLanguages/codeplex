@@ -19,7 +19,9 @@ def test_main(level='full'):
     old_args = sys.argv
     sys.argv = ['checkonly']
 
-    generators = ['generate_binops', 
+    generators = [
+        'generate_alltypes',
+        'generate_binops', 
         'generate_calls', 
         'generate_convert', 
         'generate_environment', 

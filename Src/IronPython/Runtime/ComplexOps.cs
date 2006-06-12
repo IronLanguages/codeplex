@@ -388,6 +388,18 @@ namespace IronPython.Runtime {
             return x.Conjugate();
         }
 
+        internal static object DivMod(Complex64 x, Complex64 y) {
+            object div = FloorDivide(x, y);
+            if (div == Ops.NotImplemented) return div;
+            object mod = Mod(x, y);
+            if (mod == Ops.NotImplemented) return mod;
+            return Tuple.MakeTuple(div, mod);
+        }
+
+        internal static object ReverseDivMod(Complex64 x, Complex64 y) {
+            return DivMod(y, x);
+        }
+
         public static object imag = new OpsReflectedField<Complex64, ExtensibleComplex>(typeof(Complex64).GetField("imag"), NameType.PythonField);
         public static object real = new OpsReflectedField<Complex64, ExtensibleComplex>(typeof(Complex64).GetField("real"), NameType.PythonField);
 

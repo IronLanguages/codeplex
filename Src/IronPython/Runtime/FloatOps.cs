@@ -191,7 +191,7 @@ namespace IronPython.Runtime {
             return x / y;
         }
 
-        private static object TrueDivide(double x, double y) {
+        internal static object TrueDivide(double x, double y) {
             if (y == 0) throw Ops.ZeroDivisionError();
             return x / y;
         }
@@ -595,7 +595,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        private static object ReverseTrueDivide(double x, double y) {
+        internal static object ReverseTrueDivide(double x, double y) {
             return y / x;
         }
 
@@ -641,5 +641,13 @@ namespace IronPython.Runtime {
             return 1;
         }
 
+        internal static object DivMod(double x, double y) {
+            object div = FloorDivide(x, y);
+            if (div == Ops.NotImplemented) return div;
+            return Tuple.MakeTuple(div, Modulo(x, y));
+        }
+        internal static object ReverseDivMod(double x, double y) {
+            return DivMod(y, x);
+        }
     }
 }

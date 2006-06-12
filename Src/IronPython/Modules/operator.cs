@@ -271,11 +271,11 @@ namespace IronPython.Modules {
             } else if (a is IronMath.BigInteger) {
                 return LongOps.TrueDivide((IronMath.BigInteger)a, b);
             }
-            return Ops.Divide(a, b);
+            return Ops.TrueDivide(a, b);
         }
         [PythonName("__truediv__")]
         public static object OperatorTrueDivide(object a, object b) {
-            return Ops.Divide(a, b);
+            return Ops.TrueDivide(a, b);
         }
         [PythonName("xor")]
         public static object Xor(object a, object b) {

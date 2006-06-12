@@ -338,6 +338,22 @@ namespace IronPython.Runtime {
             return self.ToFloat64();
         }
 
+        internal static object Power(BigInteger x, ulong exp) {
+            if (exp == 0) {
+                return BigInteger.One;
+            } else if (exp == 1) {
+                return x;
+            } else if (exp < Int32.MaxValue) {
+                return Power(x, (int)exp);
+            } else if (x == BigInteger.Zero) {
+                return BigInteger.Zero;
+            } else if (x == BigInteger.One) {
+                return BigInteger.One;
+            } else {
+                throw Ops.ValueError("number too big");
+            }
+        }
+
         [PythonName("__pow__")]
         public static object Power(BigInteger x, long y) {
             if ((int)y == y) {
@@ -650,6 +666,12 @@ namespace IronPython.Runtime {
             }
             return x << y;
         }
+        internal static object LeftShift(BigInteger x, ulong y) {
+            if (y <= Int32.MaxValue) {
+                return LeftShift(x, (int)y);
+            }
+            throw Ops.OverflowError("number too big");
+        }
         private static object LeftShift(BigInteger x, BigInteger y) {
             if (y < BigInteger.Zero) {
                 throw Ops.ValueError("negative shift count");
@@ -781,6 +803,16 @@ namespace IronPython.Runtime {
             } else {
                 return "0x" + x.ToString(16) + "L";
             }
+        }
+
+        internal static object DivMod(BigInteger x, BigInteger y) {
+            BigInteger div, mod;
+            div = DivMod(x, y, out mod);
+            return Tuple.MakeTuple(div, mod);
+        }
+
+        internal static object ReverseDivMod(BigInteger x, BigInteger y) {
+            return DivMod(y, x);
         }
     }
 }

@@ -524,7 +524,7 @@ namespace IronPython.Runtime {
             return Ops.NotImplemented;
         }
 
-        private static object LeftShift(int x, int y) {
+        internal static object LeftShift(int x, int y) {
             if (y < 0) {
                 throw Ops.ValueError("negative shift count");
             }
@@ -568,7 +568,7 @@ namespace IronPython.Runtime {
             return Ops.NotImplemented;
         }
 
-        private static object RightShift(int x, int y) {
+        internal static object RightShift(int x, int y) {
             if (y < 0) {
                 throw Ops.ValueError("negative shift count");
             }
@@ -811,6 +811,27 @@ namespace IronPython.Runtime {
         [PythonName("__nonzero__")]
         public static bool NonZero(int x) {
             return (x != 0);
+        }
+
+        internal static object DivMod(int x, int y) {
+            try {
+                return Tuple.MakeTuple(Divide(x, y), Mod(x, y));
+            } catch (OverflowException) {
+                return Int64Ops.DivMod(x, y);
+            }
+        }
+        internal static object ReverseDivMod(int x, int y) {
+            return DivMod(y, x);
+        }
+
+        internal static object ReversePower(int x, int y) {
+            return Power(y, x);
+        }
+        internal static object ReverseLeftShift(int x, int y) {
+            return LeftShift(y, x);
+        }
+        internal static object ReverseRightShift(int x, int y) {
+            return RightShift(y, x);
         }
     }
 }
