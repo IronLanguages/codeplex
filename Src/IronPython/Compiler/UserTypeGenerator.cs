@@ -670,9 +670,10 @@ namespace IronPython.Compiler {
                         baseAccess.Emit(OpCodes.Ldtoken, overrides[i].MethodInfo);
                         baseAccess.EmitCall(typeof(MethodBase), "GetMethodFromHandle", new Type[]{typeof(RuntimeMethodHandle)});
                         baseAccess.Emit(OpCodes.Castclass, typeof(MethodInfo));
-                        baseAccess.EmitInt((int)NameType.Method);
-                        
-                        baseAccess.EmitNew(typeof(ReflectedMethod).GetConstructor(new Type[]{typeof(string), typeof(MethodInfo), typeof(NameType)}));
+                        baseAccess.EmitInt((int)FunctionType.Method);
+
+                        baseAccess.EmitCall(typeof(BuiltinFunction).GetMethod("MakeMethod", 
+                            new Type[]{typeof(string), typeof(MethodInfo), typeof(FunctionType)}));
                         baseAccess.EmitCall(typeof(BuiltinFunction), "GetDescriptor");
                         
                         baseAccess.Emit(OpCodes.Stind_Ref);

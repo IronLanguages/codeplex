@@ -40,7 +40,16 @@ namespace IronPython.Compiler {
                 || method.Method.ContainsGenericParameters;
         }
 
-        public MethodBinder(string name, MethodTracker[] methods, FunctionType funcType) {
+        public static FastCallable MakeFastCallable(string name, MethodInfo mi, FunctionType funcType) {
+            //??? In the future add optimization for simple case of nothing tricky in mi
+            return new MethodBinder(name, new MethodTracker[] { new MethodTracker(mi) }, funcType).MakeFastCallable();
+        }
+
+        public static FastCallable MakeFastCallable(string name, MethodBase[] mis, FunctionType funcType) {
+            return new MethodBinder(name, MethodTracker.GetTrackerArray(mis), funcType).MakeFastCallable();
+        }
+
+        private MethodBinder(string name, MethodTracker[] methods, FunctionType funcType) {
             this.name = name;
             foreach (MethodTracker method in methods) {
                 if (IsUnsupported(method)) continue;
@@ -54,6 +63,16 @@ namespace IronPython.Compiler {
                 }
             }
         }
+
+        public string Name { get { return name; } }
+        public int MaximumArgs {
+            get { 
+                int minArgs, maxArgs;  
+                GetMinAndMaxArgs(out minArgs, out maxArgs); 
+                return maxArgs;
+            }
+        }
+        public int MinimumArgs { get { int minArgs, maxArgs; GetMinAndMaxArgs(out minArgs, out maxArgs); return minArgs; } }
 
         private Delegate MakeFastCallable(bool needsContext, int nargs) {
             TargetSet ts = GetTargetSet(nargs);

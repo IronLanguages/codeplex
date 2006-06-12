@@ -66,14 +66,16 @@ namespace IronPython.Runtime {
 
         protected UserType(string name, Tuple bases, IDictionary<object, object> dict)
             : base(NewTypeMaker.GetNewType(name, bases, dict))  {
-            List<MethodInfo> ctors = new List<MethodInfo>();
-            foreach (MethodInfo mi in type.GetMethods()) {
-                if (mi.Name == ReflectedType.MakeNewName) ctors.Add(mi);
-            }
+            ctor = BuiltinFunction.MakeMethod(name, type.GetConstructors(), FunctionType.Function);
 
-            if (ctors.Count == 0) throw new NotImplementedException("no MakeNew found");
+            //List<MethodInfo> ctors = new List<MethodInfo>();
+            //foreach (MethodInfo mi in type.GetMethods()) {
+            //    if (mi.Name == ReflectedType.MakeNewName) ctors.Add(mi);
+            //}
 
-            ctor = ReflectedMethod.MakeMethod(name, ctors.ToArray(), FunctionType.Function); 
+            //if (ctors.Count == 0) throw new NotImplementedException("no MakeNew found");
+
+            //ctor = ReflectedMethod.MakeMethod(name, ctors.ToArray(), FunctionType.Function); 
 
             if (type.GetInterface("ICustomAttributes") == typeof(ICustomAttributes)) {
                 // ICustomAttributes is a well-known type. Ops.GetAttr etc first check for it, and dispatch to the

@@ -118,19 +118,19 @@ namespace IronPython.Runtime {
             RemoveNonOps(SymbolTable.StringToId(name));
 
             // store Python version
-            StoreMethod<ReflectedUnboundMethod>(name, mi, funcType | FunctionType.OpsFunction);
+            StoreMethod<BuiltinFunction>(name, mi, funcType | FunctionType.OpsFunction);
 
             // store CLR version, if different and we don't have a clash (if we do
             // have a clash our version is still available under the python name)
             if (name != mi.Name && !ContainsNonOps(SymbolTable.StringToId(mi.Name))) {
-                StoreMethod<ReflectedUnboundMethod>(mi.Name, mi, FunctionType.Method | FunctionType.OpsFunction);
+                StoreMethod<BuiltinFunction>(mi.Name, mi, FunctionType.Method | FunctionType.OpsFunction);
             }
         }
 
         private bool ContainsNonOps(SymbolId name){
             object value;
             if (dict.TryGetValue(name, out value)) {
-                ReflectedUnboundMethod rum = value as ReflectedUnboundMethod;
+                BuiltinFunction rum = value as BuiltinFunction;
                 BuiltinMethodDescriptor bimd;
                 if (rum != null) {
                     if ((rum.FunctionType & FunctionType.OpsFunction) != 0) return false;

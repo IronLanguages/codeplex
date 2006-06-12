@@ -20,27 +20,42 @@ using System.Text;
 
 namespace IronPython.Runtime {
     public abstract partial class PythonFunction {
-        #region Generated Function IFastCallable Members
+        #region Generated Function FastCallable Members
 
         // *** BEGIN GENERATED CODE ***
 
-        public virtual object Call() {
+        public override object Call(ICallerContext context) {
             throw BadArgumentError(0);
         }
-        public virtual object Call(object arg0) {
+        public override object Call(ICallerContext context, object arg0) {
             throw BadArgumentError(1);
         }
-        public virtual object Call(object arg0, object arg1) {
+        public override object Call(ICallerContext context, object arg0, object arg1) {
             throw BadArgumentError(2);
         }
-        public virtual object Call(object arg0, object arg1, object arg2) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
             throw BadArgumentError(3);
         }
-        public virtual object Call(object arg0, object arg1, object arg2, object arg3) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
             throw BadArgumentError(4);
         }
-        public virtual object Call(object arg0, object arg1, object arg2, object arg3, object arg4) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
             throw BadArgumentError(5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            return Call(context, arg0);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            return Call(context, arg0, arg1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            return Call(context, arg0, arg1, arg2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            return Call(context, arg0, arg1, arg2, arg3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            return Call(context, arg0, arg1, arg2, arg3, arg4);
         }
 
         // *** END GENERATED CODE ***
@@ -60,7 +75,7 @@ namespace IronPython.Runtime {
             : base(globals, name, argNames, defaults) {
             this.target = target;
         }
-        public override object Call() {
+        public override object Call(ICallerContext context) {
             if(!EnforceRecursion) return target();
             PushFrame();
             try {
@@ -69,9 +84,9 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(params object[] args) {
+        public override object Call(ICallerContext context, params object[] args) {
             switch (args.Length) {
-                case 0: return Call();
+                case 0: return Call(context);
                 default: throw BadArgumentError(args.Length);
             }
         }
@@ -96,7 +111,7 @@ namespace IronPython.Runtime {
             : base(globals, name, argNames, defaults) {
             this.target = target;
         }
-        public override object Call() {
+        public override object Call(ICallerContext context) {
             if (defaults.Length < 1) throw BadArgumentError(0);
             if(!EnforceRecursion) return target(defaults[defaults.Length - 1]);
             PushFrame();
@@ -106,7 +121,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0) {
+        public override object Call(ICallerContext context, object arg0) {
             if(!EnforceRecursion) return target(arg0);
             PushFrame();
             try {
@@ -115,10 +130,10 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(params object[] args) {
+        public override object Call(ICallerContext context, params object[] args) {
             switch (args.Length) {
-                case 0: return Call();
-                case 1: return Call(args[0]);
+                case 0: return Call(context);
+                case 1: return Call(context, args[0]);
                 default: throw BadArgumentError(args.Length);
             }
         }
@@ -143,7 +158,7 @@ namespace IronPython.Runtime {
             : base(globals, name, argNames, defaults) {
             this.target = target;
         }
-        public override object Call() {
+        public override object Call(ICallerContext context) {
             if (defaults.Length < 2) throw BadArgumentError(0);
             if(!EnforceRecursion) return target(defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -153,7 +168,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0) {
+        public override object Call(ICallerContext context, object arg0) {
             if (defaults.Length < 1) throw BadArgumentError(1);
             if(!EnforceRecursion) return target(arg0, defaults[defaults.Length - 1]);
             PushFrame();
@@ -163,7 +178,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1) {
+        public override object Call(ICallerContext context, object arg0, object arg1) {
             if(!EnforceRecursion) return target(arg0, arg1);
             PushFrame();
             try {
@@ -172,11 +187,11 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(params object[] args) {
+        public override object Call(ICallerContext context, params object[] args) {
             switch (args.Length) {
-                case 0: return Call();
-                case 1: return Call(args[0]);
-                case 2: return Call(args[0], args[1]);
+                case 0: return Call(context);
+                case 1: return Call(context, args[0]);
+                case 2: return Call(context, args[0], args[1]);
                 default: throw BadArgumentError(args.Length);
             }
         }
@@ -201,7 +216,7 @@ namespace IronPython.Runtime {
             : base(globals, name, argNames, defaults) {
             this.target = target;
         }
-        public override object Call() {
+        public override object Call(ICallerContext context) {
             if (defaults.Length < 3) throw BadArgumentError(0);
             if(!EnforceRecursion) return target(defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -211,7 +226,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0) {
+        public override object Call(ICallerContext context, object arg0) {
             if (defaults.Length < 2) throw BadArgumentError(1);
             if(!EnforceRecursion) return target(arg0, defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -221,7 +236,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1) {
+        public override object Call(ICallerContext context, object arg0, object arg1) {
             if (defaults.Length < 1) throw BadArgumentError(2);
             if(!EnforceRecursion) return target(arg0, arg1, defaults[defaults.Length - 1]);
             PushFrame();
@@ -231,7 +246,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1, object arg2) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
             if(!EnforceRecursion) return target(arg0, arg1, arg2);
             PushFrame();
             try {
@@ -240,12 +255,12 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(params object[] args) {
+        public override object Call(ICallerContext context, params object[] args) {
             switch (args.Length) {
-                case 0: return Call();
-                case 1: return Call(args[0]);
-                case 2: return Call(args[0], args[1]);
-                case 3: return Call(args[0], args[1], args[2]);
+                case 0: return Call(context);
+                case 1: return Call(context, args[0]);
+                case 2: return Call(context, args[0], args[1]);
+                case 3: return Call(context, args[0], args[1], args[2]);
                 default: throw BadArgumentError(args.Length);
             }
         }
@@ -270,7 +285,7 @@ namespace IronPython.Runtime {
             : base(globals, name, argNames, defaults) {
             this.target = target;
         }
-        public override object Call() {
+        public override object Call(ICallerContext context) {
             if (defaults.Length < 4) throw BadArgumentError(0);
             if(!EnforceRecursion) return target(defaults[defaults.Length - 4], defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -280,7 +295,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0) {
+        public override object Call(ICallerContext context, object arg0) {
             if (defaults.Length < 3) throw BadArgumentError(1);
             if(!EnforceRecursion) return target(arg0, defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -290,7 +305,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1) {
+        public override object Call(ICallerContext context, object arg0, object arg1) {
             if (defaults.Length < 2) throw BadArgumentError(2);
             if(!EnforceRecursion) return target(arg0, arg1, defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -300,7 +315,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1, object arg2) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
             if (defaults.Length < 1) throw BadArgumentError(3);
             if(!EnforceRecursion) return target(arg0, arg1, arg2, defaults[defaults.Length - 1]);
             PushFrame();
@@ -310,7 +325,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1, object arg2, object arg3) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
             if(!EnforceRecursion) return target(arg0, arg1, arg2, arg3);
             PushFrame();
             try {
@@ -319,13 +334,13 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(params object[] args) {
+        public override object Call(ICallerContext context, params object[] args) {
             switch (args.Length) {
-                case 0: return Call();
-                case 1: return Call(args[0]);
-                case 2: return Call(args[0], args[1]);
-                case 3: return Call(args[0], args[1], args[2]);
-                case 4: return Call(args[0], args[1], args[2], args[3]);
+                case 0: return Call(context);
+                case 1: return Call(context, args[0]);
+                case 2: return Call(context, args[0], args[1]);
+                case 3: return Call(context, args[0], args[1], args[2]);
+                case 4: return Call(context, args[0], args[1], args[2], args[3]);
                 default: throw BadArgumentError(args.Length);
             }
         }
@@ -350,7 +365,7 @@ namespace IronPython.Runtime {
             : base(globals, name, argNames, defaults) {
             this.target = target;
         }
-        public override object Call() {
+        public override object Call(ICallerContext context) {
             if (defaults.Length < 5) throw BadArgumentError(0);
             if(!EnforceRecursion) return target(defaults[defaults.Length - 5], defaults[defaults.Length - 4], defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -360,7 +375,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0) {
+        public override object Call(ICallerContext context, object arg0) {
             if (defaults.Length < 4) throw BadArgumentError(1);
             if(!EnforceRecursion) return target(arg0, defaults[defaults.Length - 4], defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -370,7 +385,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1) {
+        public override object Call(ICallerContext context, object arg0, object arg1) {
             if (defaults.Length < 3) throw BadArgumentError(2);
             if(!EnforceRecursion) return target(arg0, arg1, defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -380,7 +395,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1, object arg2) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
             if (defaults.Length < 2) throw BadArgumentError(3);
             if(!EnforceRecursion) return target(arg0, arg1, arg2, defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
             PushFrame();
@@ -390,7 +405,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1, object arg2, object arg3) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
             if (defaults.Length < 1) throw BadArgumentError(4);
             if(!EnforceRecursion) return target(arg0, arg1, arg2, arg3, defaults[defaults.Length - 1]);
             PushFrame();
@@ -400,7 +415,7 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(object arg0, object arg1, object arg2, object arg3, object arg4) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
             if(!EnforceRecursion) return target(arg0, arg1, arg2, arg3, arg4);
             PushFrame();
             try {
@@ -409,14 +424,14 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-        public override object Call(params object[] args) {
+        public override object Call(ICallerContext context, params object[] args) {
             switch (args.Length) {
-                case 0: return Call();
-                case 1: return Call(args[0]);
-                case 2: return Call(args[0], args[1]);
-                case 3: return Call(args[0], args[1], args[2]);
-                case 4: return Call(args[0], args[1], args[2], args[3]);
-                case 5: return Call(args[0], args[1], args[2], args[3], args[4]);
+                case 0: return Call(context);
+                case 1: return Call(context, args[0]);
+                case 2: return Call(context, args[0], args[1]);
+                case 3: return Call(context, args[0], args[1], args[2]);
+                case 4: return Call(context, args[0], args[1], args[2], args[3]);
+                case 5: return Call(context, args[0], args[1], args[2], args[3], args[4]);
                 default: throw BadArgumentError(args.Length);
             }
         }
@@ -441,31 +456,31 @@ namespace IronPython.Runtime {
 
 
     public partial class FunctionN {
-        #region Generated FunctionN IFastCallable Members
+        #region Generated FunctionN FastCallable Members
 
         // *** BEGIN GENERATED CODE ***
 
-        public override object Call() {
+        public override object Call(ICallerContext context) {
             return Call(new object[] { });
         }
 
-        public override object Call(object arg0) {
+        public override object Call(ICallerContext context, object arg0) {
             return Call(new object[] { arg0});
         }
 
-        public override object Call(object arg0, object arg1) {
+        public override object Call(ICallerContext context, object arg0, object arg1) {
             return Call(new object[] { arg0, arg1});
         }
 
-        public override object Call(object arg0, object arg1, object arg2) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
             return Call(new object[] { arg0, arg1, arg2});
         }
 
-        public override object Call(object arg0, object arg1, object arg2, object arg3) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
             return Call(new object[] { arg0, arg1, arg2, arg3});
         }
 
-        public override object Call(object arg0, object arg1, object arg2, object arg3, object arg4) {
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
             return Call(new object[] { arg0, arg1, arg2, arg3, arg4});
         }
 
@@ -477,72 +492,91 @@ namespace IronPython.Runtime {
 
 
     public partial class Method {
-        #region Generated Method IFastCallable Members
+        public override object CallInstance(ICallerContext context, object arg0) {
+            return Call(context, arg0);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            return Call(context, arg0, arg1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            return Call(context, arg0, arg1, arg2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            return Call(context, arg0, arg1, arg2, arg3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            return Call(context, arg0, arg1, arg2, arg3, arg4);
+        }
+
+
+
+        #region Generated Method FastCallable Members
 
         // *** BEGIN GENERATED CODE ***
 
-        public object Call() {
-            if (inst != null) return Ops.Call(func, inst);
-            throw BadSelf(null);
-        }
-
-        public object Call(object arg0) {
-            PythonFunction f = func as PythonFunction;
-            if(inst != null) {
-                if (f != null) return f.Call(inst, arg0);
-                return Ops.Call(func, inst, arg0);
+        public override object Call(ICallerContext context) {
+            FastCallable fc = func as FastCallable;
+            if (fc != null) {
+                if (inst != null) return fc.CallInstance(context, inst);
+                else return fc.Call(context);
             } else {
-                if (!Modules.Builtin.IsInstance(arg0, DeclaringClass)) throw BadSelf(arg0);
-                if (f != null) return f.Call(arg0);
-                return Ops.Call(func, arg0);
+                if (inst != null) return Ops.CallWithContext(context, func, inst);
+                throw BadSelf(null);
             }
         }
 
-        public object Call(object arg0, object arg1) {
-            PythonFunction f = func as PythonFunction;
-            if(inst != null) {
-                if (f != null) return f.Call(inst, arg0, arg1);
-                return Ops.Call(func, inst, arg0, arg1);
+        public override object Call(ICallerContext context, object arg0) {
+            FastCallable fc = func as FastCallable;
+            if (fc != null) {
+                if (inst != null) return fc.CallInstance(context, inst, arg0);
+                else return fc.Call(context, CheckSelf(arg0));
             } else {
-                if (!Modules.Builtin.IsInstance(arg0, DeclaringClass)) throw BadSelf(arg0);
-                if (f != null) return f.Call(arg0, arg1);
-                return Ops.Call(func, arg0, arg1);
+                if (inst != null) return Ops.CallWithContext(context, func, inst, arg0);
+                return Ops.CallWithContext(context, func, CheckSelf(arg0));
             }
         }
 
-        public object Call(object arg0, object arg1, object arg2) {
-            PythonFunction f = func as PythonFunction;
-            if(inst != null) {
-                if (f != null) return f.Call(inst, arg0, arg1, arg2);
-                return Ops.Call(func, inst, arg0, arg1, arg2);
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            FastCallable fc = func as FastCallable;
+            if (fc != null) {
+                if (inst != null) return fc.CallInstance(context, inst, arg0, arg1);
+                else return fc.Call(context, CheckSelf(arg0), arg1);
             } else {
-                if (!Modules.Builtin.IsInstance(arg0, DeclaringClass)) throw BadSelf(arg0);
-                if (f != null) return f.Call(arg0, arg1, arg2);
-                return Ops.Call(func, arg0, arg1, arg2);
+                if (inst != null) return Ops.CallWithContext(context, func, inst, arg0, arg1);
+                return Ops.CallWithContext(context, func, CheckSelf(arg0), arg1);
             }
         }
 
-        public object Call(object arg0, object arg1, object arg2, object arg3) {
-            PythonFunction f = func as PythonFunction;
-            if(inst != null) {
-                if (f != null) return f.Call(inst, arg0, arg1, arg2, arg3);
-                return Ops.Call(func, inst, arg0, arg1, arg2, arg3);
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            FastCallable fc = func as FastCallable;
+            if (fc != null) {
+                if (inst != null) return fc.CallInstance(context, inst, arg0, arg1, arg2);
+                else return fc.Call(context, CheckSelf(arg0), arg1, arg2);
             } else {
-                if (!Modules.Builtin.IsInstance(arg0, DeclaringClass)) throw BadSelf(arg0);
-                if (f != null) return f.Call(arg0, arg1, arg2, arg3);
-                return Ops.Call(func, arg0, arg1, arg2, arg3);
+                if (inst != null) return Ops.CallWithContext(context, func, inst, arg0, arg1, arg2);
+                return Ops.CallWithContext(context, func, CheckSelf(arg0), arg1, arg2);
             }
         }
 
-        public object Call(object arg0, object arg1, object arg2, object arg3, object arg4) {
-            PythonFunction f = func as PythonFunction;
-            if(inst != null) {
-                if (f != null) return f.Call(inst, arg0, arg1, arg2, arg3, arg4);
-                return Ops.Call(func, inst, arg0, arg1, arg2, arg3, arg4);
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            FastCallable fc = func as FastCallable;
+            if (fc != null) {
+                if (inst != null) return fc.CallInstance(context, inst, arg0, arg1, arg2, arg3);
+                else return fc.Call(context, CheckSelf(arg0), arg1, arg2, arg3);
             } else {
-                if (!Modules.Builtin.IsInstance(arg0, DeclaringClass)) throw BadSelf(arg0);
-                if (f != null) return f.Call(arg0, arg1, arg2, arg3, arg4);
-                return Ops.Call(func, arg0, arg1, arg2, arg3, arg4);
+                if (inst != null) return Ops.CallWithContext(context, func, inst, arg0, arg1, arg2, arg3);
+                return Ops.CallWithContext(context, func, CheckSelf(arg0), arg1, arg2, arg3);
+            }
+        }
+
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            FastCallable fc = func as FastCallable;
+            if (fc != null) {
+                if (inst != null) return fc.CallInstance(context, inst, arg0, arg1, arg2, arg3, arg4);
+                else return fc.Call(context, CheckSelf(arg0), arg1, arg2, arg3, arg4);
+            } else {
+                if (inst != null) return Ops.CallWithContext(context, func, inst, arg0, arg1, arg2, arg3, arg4);
+                return Ops.CallWithContext(context, func, CheckSelf(arg0), arg1, arg2, arg3, arg4);
             }
         }
 

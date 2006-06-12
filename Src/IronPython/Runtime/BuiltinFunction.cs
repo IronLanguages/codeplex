@@ -49,71 +49,33 @@ namespace IronPython.Runtime {
     /// Currently all classes use reflection based invocation for keyword argument calls.
     /// </summary>
     [PythonType("builtin_function_or_method")]
-    public abstract partial class BuiltinFunction : 
-        ICallable, IFastCallable, IFancyCallable, IContextAwareMember, IDynamicObject, ICallableWithCallerContext, IMapping {
+    public partial class BuiltinFunction : 
+        FastCallable, IFancyCallable, IContextAwareMember, IDynamicObject {
         internal MethodBase[] targets;
-        internal object inst;
         private FunctionType funcType;
-        private string name;
+        protected FastCallable optimizedTarget;
 
         [PythonName("__new__")]
         public static object Make(object cls, PythonFunction newFunction, object inst) {
-            Debug.Assert(!(inst is InstanceArgument));
             return new Method(newFunction, inst, null);
         }
 
 
         #region Static factories
-        /// <summary>
-        /// Create a new builtin function.
-        /// </summary>
-        /// <param name="info">The helper for performing dispatch</param>
-        /// <param name="targets">The target methods we will dispatch to</param>
-        /// <param name="functionType">Method, Function, Both and optionally PythonMethod</param>
-        public static BuiltinFunction Make(string name, MethodInfo info, MethodBase[] targets, FunctionType functionType) {
-            Debug.Assert(info.IsStatic);
-
-            return MakeBuiltinFunction(name, info, targets, functionType);
+        public static BuiltinFunction MakeMethod(string name, MethodBase info, FunctionType ft) {
+            return new BuiltinFunction(name, new MethodBase[] { info }, ft);
         }
 
-        /// <summary>
-        /// Creates a new builtin function from a delegate
-        /// </summary>
-        /// <param name="d">The delegate that handles dynamic dispatch</param>
-        /// <param name="targets">The target methods the delegate will handle dispatch for</param>
-        public static BuiltinFunction Make(string name, Delegate d, MethodBase [] targets) {
-            return Make(name, new MethodInfo[] { d.Method }, targets, FunctionType.PythonVisible | FunctionType.Function);
-        }
-
-        /// <summary>
-        /// Creates a new builtin function that will handle dispatch for multiple
-        /// numbers of effective parameters.
-        /// </summary>
-        /// <param name="infos">The methods that will be used for handling dispatch</param>
-        /// <param name="targets">The final target methods we will dispatch to</param>
-        /// <param name="functionType">Method, Function, Both and optionally PythonMethod</param>
-        public static BuiltinFunction Make(string name, MethodInfo[] infos, MethodBase [] targets, FunctionType functionType) {
-            if (infos.Length == 1) {
-                if (infos[0].GetParameters().Length == 0 || !infos[0].GetParameters()[0].ParameterType.HasElementType)
-                    return Make(name, infos[0], targets, functionType);
-                else
-                    return MakeParams(name, infos[0], targets, functionType);
-            }
-
-            return new OptimizedFunctionAny(name, infos, targets, functionType);
-        }
-
-        private static OptimizedFunctionN MakeParams(string name, MethodInfo info, MethodBase[] targets, FunctionType functionType) {
-            Debug.Assert(info.IsStatic);
-
-            return new OptimizedFunctionN(name, info, targets, functionType);
+        public static BuiltinFunction MakeMethod(string name, MethodBase[] infos, FunctionType ft) {
+            return new BuiltinFunction(name, infos, ft);
         }
         #endregion
 
         #region Protected Constructors
-        protected BuiltinFunction() { }
+        public BuiltinFunction() :base("") { }
 
-        protected BuiltinFunction(string functionName, MethodBase[] originalTargets, FunctionType functionType) {
+        protected BuiltinFunction(string functionName, MethodBase[] originalTargets, FunctionType functionType) :
+        base(functionName) {
             Debug.Assert(originalTargets!= null, "originalTargets array is null");
 
             MethodBase target=originalTargets[0];
@@ -129,10 +91,8 @@ namespace IronPython.Runtime {
             }
         }
 
-        protected BuiltinFunction(BuiltinFunction from) {
-            this.targets = from.targets;
-            this.name = from.name;
-            this.funcType = from.funcType;
+        protected BuiltinFunction(string name, MethodBase target, FunctionType functionType)
+            : this(name, new MethodBase[] { target }, functionType) {
         }
 
         #endregion
@@ -162,8 +122,64 @@ namespace IronPython.Runtime {
             }
         }
 
-        [PythonName("__call__")]        
+        public FastCallable OptimizedTarget {
+            get {
+                if (optimizedTarget == null) {
+                    optimizedTarget = MethodBinder.MakeFastCallable(Name, targets, FunctionType);
+                }
+                return optimizedTarget;
+            }
+        }
+
+        public void AddMethod(MethodBase info) {
+            if (optimizedTarget != null) optimizedTarget = null;
+            if (targets != null) {
+                MethodBase[] ni = new MethodBase[targets.Length + 1];
+                targets.CopyTo(ni, 0);
+                ni[targets.Length] = info;
+                targets = ni;
+            } else {
+                targets = new MethodBase[] { info };
+            }
+            UpdateFunctionInfo(info);
+        }
+
+        public virtual bool TryCall(object arg, out object ret) {
+            //!!! This too is bad
+            try {
+                ret = Call(null, arg);
+                return true;
+            } catch (ArgumentTypeException) {
+                ret = null;
+                return false;
+            }
+        }
+        internal virtual bool TryCall(object arg0, object arg1, out object ret) {
+            //!!! This too is bad
+            try {
+                ret = Call(null, arg0, arg1);
+                return true;
+            } catch (ArgumentTypeException) {
+                ret = null;
+                return false;
+            }
+        }
+
+        [PythonName("__call__")]
+        public override object Call(ICallerContext context, params object[] args) {
+            return OptimizedTarget.Call(context, args);
+        }
+
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            return OptimizedTarget.CallInstance(context, instance, args);
+        }
+
+        [PythonName("__call__")]
         public virtual object Call(ICallerContext context, object[] args, string[] names) {
+            return CallHelper(context, args, names, null);
+        }
+
+        internal object CallHelper(ICallerContext context, object[] args, string[] names, object instance) {
             // we allow kw-arg binding to ctor's of arbitrary CLS types, but
             // NOT Python built-in types.  After the ctor succeeds we'll set the kw args as
             // arbitrary properties on the CLS type.  If this ends up being a built-in type we'll
@@ -191,7 +207,7 @@ namespace IronPython.Runtime {
                     mb.method = targets[i];
 
                     if(!CompilerHelpers.IsStatic(targets[i])) {
-                        if (!HasInstance) {
+                        if (instance == null) {
                             if (realArgs.Length == 0) {
                                 throw Ops.TypeError("bad number of arguments for function {0}", targets[0].Name);
                             }
@@ -199,7 +215,7 @@ namespace IronPython.Runtime {
                             mb.arguments = new object[realArgs.Length - 1];
                             Array.Copy(realArgs, mb.arguments, realArgs.Length - 1);
                         } else {
-                            mb.instance = Instance;
+                            mb.instance = instance;
                             mb.arguments = realArgs;
                         }
                     } else {
@@ -235,7 +251,9 @@ namespace IronPython.Runtime {
                     callArgs = bestBinding.arguments;
                 }
 
-                object ret = Call(context, callArgs);
+                object ret;
+                if (instance == null) ret = Call(context, callArgs);
+                else ret = CallInstance(context, instance, callArgs);
 
                 // any unbound arguments left over we assume the user
                 // wants to do a property set with.  We'll go ahead and try
@@ -269,8 +287,16 @@ namespace IronPython.Runtime {
 
         [PythonName("__call__")]
         public object Call(ICallerContext context, [ParamDict]Dict dictArgs, params object[] args) {
-            object[] realArgs = new object[args.Length + dictArgs.Count];
-            string[] argNames = new string[dictArgs.Count];
+            object[] realArgs;
+            string[] argNames;
+            DictArgsHelper(dictArgs, args, out realArgs, out argNames);
+
+            return CallHelper(context, realArgs, argNames, null);
+        }
+
+        internal void DictArgsHelper(Dict dictArgs, object[] args, out object[] realArgs, out string[] argNames) {
+            realArgs = new object[args.Length + dictArgs.Count];
+            argNames = new string[dictArgs.Count];
 
             Array.Copy(args, realArgs, args.Length);
 
@@ -280,18 +306,10 @@ namespace IronPython.Runtime {
                 realArgs[index + args.Length] = kvp.Value;
                 index++;
             }
-
-            return Ops.Call(context, this, realArgs, argNames);
         }
 
         [PythonName("__str__")]
         public override string ToString() {
-            if (inst != null) {
-                return string.Format("<built-in method {0} of {1} object at {2}>",
-                    Name,
-                    Ops.GetDynamicType(inst).__name__,
-                    Ops.HexId(inst));
-            }
             return string.Format("<built-in function {0}>", Name);
         }
 
@@ -312,7 +330,7 @@ namespace IronPython.Runtime {
         public object Self {
             [PythonName("__self__")]
             get {
-                return Instance;
+                return null;
             }
         }
 
@@ -332,12 +350,8 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                 // since it's hard to generate all the keys of the signature mapping when
                 // two type systems are involved.  Creating the mapping object is quite
                 // cheap so we don't cache a copy.
-                return new BuiltinFunctionOverloadMapper(this);
+                return new BuiltinFunctionOverloadMapper(this, null);
             }
-        }
-
-        public virtual BuiltinFunction Clone() {
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -349,6 +363,13 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                 return new BuiltinMethodDescriptor(this);
             }
             return this;
+        }
+
+        public override int MaximumArgs {
+            get { return OptimizedTarget.MaximumArgs; }
+        }
+        public override int MinimumArgs {
+            get { return OptimizedTarget.MinimumArgs; }
         }
 
         /// <summary>
@@ -390,26 +411,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         public DynamicType GetDynamicType() {
             return TypeCache.BuiltinFunction;
-        }
-
-        public override bool Equals(object obj) {
-            BuiltinFunction bf = obj as BuiltinFunction;
-            if (bf == null) return false;
-
-            if (bf.targets.Length != targets.Length) return false;
-
-            for (int i = 0; i < bf.targets.Length; i++) {
-                if (bf.targets[i] != targets[i]) return false;
-            }
-            return true;
-        }
-
-        public override int GetHashCode() {
-            int res = 6551;
-            for (int i = 0; i < targets.Length; i++) {
-                res ^= targets[i].GetHashCode();
-            }
-            return res;
         }
         #endregion
 
@@ -467,28 +468,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             }
         }
 
-        /// <summary>
-        /// Returns a new BuiltinFunction that includes the 
-        /// optimized method that was requested to be added.
-        /// </summary>
-        /// <param name="adding"></param>
-        internal BuiltinFunction ReOptimize(MethodInfo adding) {
-            MethodInfo [] infos = new MethodInfo[targets.Length + 1];
-            infos[0] = adding;
-            Array.Copy(targets, 0, infos, 1, targets.Length);
-            targets = infos;
-            BuiltinFunction res = Compiler.ReflectOptimizer.MakeFunction(this);
-            if (res != null) {
-                res.FunctionType = FunctionType | FunctionType.SkipThisCheck;
-                
-                return res;
-            }
-
-            // we now include our base type, we can't survie a type check.
-            FunctionType |= FunctionType.SkipThisCheck;
-            return null;
-        }
-
         #endregion
 
         #region IContextAwareMember Members
@@ -498,32 +477,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         }
 
         #endregion
-
-        #region IContainer members
-
-        public int GetLength() {
-            return Targets.Length;
-        }
-
-        public bool ContainsValue(object value) {
-            throw new NotImplementedException();
-        }
-
-        #endregion 
-
-        #region IMapping members
-
-        public object GetValue(object key) {
-            throw new NotImplementedException();
-        }
-
-        public object GetValue(object key, object defaultValue) {
-            throw new NotImplementedException();
-        }
-
-        public bool TryGetValue(object key, out object value) {
-            throw new NotImplementedException();
-        }
 
         // Use indexing on generic methods to provide a new reflected method with targets bound with
         // the supplied type arguments.
@@ -544,7 +497,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
                 // Start building a new ReflectedMethod that will contain targets with bound type
                 // arguments.
-                ReflectedMethod rm = new ReflectedMethod();
+                BuiltinFunction rm = new BuiltinFunction();
 
                 // Search for generic targets with the correct arity (number of type parameters).
                 // Compatible targets must be MethodInfos by definition (constructors never take
@@ -562,38 +515,12 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
                 rm.Name = Name;
                 rm.FunctionType = FunctionType|FunctionType.OptimizeChecked;    // don't want to optimize & whack our dictionary.
-                rm.inst = inst;
 
                 return rm;
             }
-            set {
-                throw new NotImplementedException();
-            }
         }
-
-        [PythonName("__delitem__")]
-        public void DeleteItem(object key) {
-            throw new NotImplementedException();
-        }
-
-        #endregion
 
         #region Protected APIs
-
-        protected virtual bool HasInstance {
-            get {
-                return inst != null;
-            }
-        }
-
-        protected virtual object Instance {
-            get {
-                //if (inst != null && (funcType & FunctionType.FunctionMethodMask) == FunctionType.FunctionMethodMask) {                    
-                //    return new InstanceArgument(inst);
-                //}
-                return inst;
-            }
-        }
 
         protected void UpdateFunctionInfo(MethodBase info) {
             ParameterInfo[] parameters = info.GetParameters();
@@ -627,53 +554,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             else throw PythonFunction.TypeErrorForIncorrectArgumentCount(FriendlyName, max, max - min, count);
         }
 
-        /// <summary>
-        /// Performs late-bound invocation - used by ReflectedMethod's and
-        /// for keyword argument calls.
-        /// </summary>
-        protected static object Invoke(MethodBinding binding) {
-            object result;
-            try {
-                if (binding.method is ConstructorInfo) {
-                    result = ((ConstructorInfo)binding.method).Invoke(binding.arguments);
-                } else {
-                    result = binding.method.Invoke(binding.instance, binding.arguments);
-                }
-            } catch (TargetInvocationException tie) {
-                throw ExceptionConverter.UpdateForRethrow(tie.InnerException);
-            }
-
-            MethodBase info = binding.method;
-            ParameterInfo[] parameters = info.GetParameters();
-            int results = 0;
-            for (int parm = 0; parm < parameters.Length; parm++) {
-                if (parameters[parm].ParameterType.IsByRef) results++;
-            }
-            if (results == 0) {
-                return Ops.ToPython(CompilerHelpers.GetReturnType(info), result);
-            }
-
-            object[] retValues;
-            int retValueIndex = 0;
-            if (info is MethodInfo && ((MethodInfo)info).ReturnType != typeof(void)) {
-                retValues = new object[results + 1];
-                retValues[retValueIndex++] = Ops.ToPython(CompilerHelpers.GetReturnType(info), result);
-            } else {
-                retValues = new object[results];
-            }
-
-            for (int parm = 0; parm < parameters.Length; parm++) {
-                Type parmType = parameters[parm].ParameterType;
-                if (parmType.IsByRef) {
-                    retValues[retValueIndex++] = Ops.ToPython(parmType, binding.arguments[parm]);
-                }
-            }
-            if (retValues.Length == 1) {
-                return retValues[0];
-            } else {
-                return Tuple.MakeTuple(retValues);
-            }
-        }
 
         protected struct MethodBinding {
             [Flags]
@@ -696,7 +576,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                     return (flags & MethodBindingSettings.ArgIntoThis) != 0;
                 }
             }
-        };
+        }
 
         #endregion
 
@@ -727,19 +607,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         Params              = 0x0080,   // True if this is a params method, false otherwise.
     }
 
-    ///// <summary>
-    ///// Wrapper class used when calling mixed built-in functions w/ an
-    ///// instance value.  The instance value is wrapped as an InstanceArgument
-    ///// which the generated built-in function detects and unwraps.
-    ///// </summary>
-    public sealed class InstanceArgument {
-        public readonly object ArgumentValue;
-
-        public InstanceArgument(object argumentValue) {
-            Debug.Assert(!(argumentValue is InstanceArgument), "InstanceArgument double wrapped");
-            ArgumentValue = argumentValue;
-        }
-    }
 
     [PythonType("method_descriptor")]
     public sealed class BuiltinMethodDescriptor : IDescriptor, IFancyCallable, ICallable, IContextAwareMember, ICallableWithCallerContext {
@@ -755,10 +622,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         public object GetAttribute(object instance, object owner) {
             if (instance != null) {
                 CheckSelf(instance);
-
-                BuiltinFunction res = template.Clone() as BuiltinFunction;
-                res.inst = instance;
-                return res;
+                return new BoundBuiltinFunction(template, instance);
             }
             return this;
         }
@@ -830,6 +694,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         #region IFancyCallable Members
 
+        [PythonName("__call__")]
         public object Call(ICallerContext context, object[] args, string[] names) {
             if (args.Length == 0)
                 throw Ops.TypeError("descriptor {0} of {1} needs an argument",
@@ -862,7 +727,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         private void CheckSelf(object self) {
             // if the type has been re-optimized (we also have base type info in here) 
             // then we can't do the type checks right now :(.
-            if ((template.FunctionType & FunctionType.SkipThisCheck) != 0) 
+            if ((template.FunctionType & FunctionType.SkipThisCheck) != 0)
                 return;
 
             if ((template.FunctionType & FunctionType.FunctionMethodMask) == FunctionType.Method) {
@@ -895,6 +760,109 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         #endregion        
     
+    }
+
+    [PythonType(typeof(BuiltinFunction))]
+    public partial class BoundBuiltinFunction : FastCallable, IFancyCallable {
+        BuiltinFunction target;
+        private object instance;
+
+        [PythonName("__new__")]
+        public static object Make(object cls, object newFunction, object inst) {
+            return new Method(newFunction, inst, null);
+        }
+
+        public BoundBuiltinFunction(BuiltinFunction target, object instance) : base("") {
+            this.target = target;
+            this.instance = instance;
+        }
+
+        public object Self {
+            [PythonName("__self__")]
+            get { return instance; }
+        }
+
+        public string Name {
+            [PythonName("__name__")]
+            get { return target.Name; }
+        }
+
+        [PythonName("__eq__")]
+        public override bool Equals(object obj) {
+            BoundBuiltinFunction other = obj as BoundBuiltinFunction;
+            if (other == null) return false;
+
+            return other.instance == instance && other.target == target;
+        }
+
+        [PythonName("__hash__")]
+        public override int GetHashCode() {
+            return instance.GetHashCode() ^ target.GetHashCode();
+        }
+
+        public string Documentation {
+            [PythonName("__doc__")]
+            get {
+                return target.Documentation;
+            }
+        }
+
+        public BuiltinFunctionOverloadMapper Overloads {
+            [PythonName("__overloads__")]
+            get {
+                return new BuiltinFunctionOverloadMapper(target, instance);
+            }
+        }
+
+        public object this[object key] {
+            get {
+                return new BoundBuiltinFunction((BuiltinFunction)target[key], instance);
+            }
+        }
+
+        public override int MaximumArgs {
+            get { return target.MaximumArgs - 1; }
+        }
+        public override int MinimumArgs {
+            get { return target.MinimumArgs - 1; }
+        }
+
+        public override object Call(ICallerContext context, params object[] args) {
+            return target.OptimizedTarget.CallInstance(context, instance, args);
+        }
+
+        [PythonName("__call__")]
+        public object Call(ICallerContext context, [ParamDict]Dict dictArgs, params object[] args) {
+            object[] realArgs;
+            string[] argNames;
+            target.DictArgsHelper(dictArgs, args, out realArgs, out argNames);
+
+            return target.CallHelper(context, realArgs, argNames, instance);
+        }
+
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public bool TryCall(object arg, out object ret) {
+            return target.TryCall(instance, arg, out ret);
+        }
+
+        #region IFancyCallable Members
+
+        public object Call(ICallerContext context, object[] args, string[] names) {
+            return target.CallHelper(context, args, names, instance);
+        }
+
+        #endregion
+
+        [PythonName("__str__")]
+        public override string ToString() {
+            return string.Format("<built-in method {0} of {1} object at {2}>",
+                    Name,
+                    Ops.GetDynamicType(instance).__name__,
+                    Ops.HexId(instance));
+        }
     }
 
 }

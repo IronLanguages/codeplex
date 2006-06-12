@@ -49,11 +49,11 @@ namespace IronPython.Compiler {
             name = info.Name;
         }
 
-        public MethodTracker(ConstructorBuilder cb, ParameterInfo[] signature) {
-            mi = cb;
-            sig = signature;
-            name = IronPython.Runtime.ReflectedType.MakeNewName;
-        }
+        //public MethodTracker(ConstructorBuilder cb, ParameterInfo[] signature) {
+        //    mi = cb;
+        //    sig = signature;
+        //    name = IronPython.Runtime.ReflectedType.MakeNewName;
+        //}
 
         public MethodTracker(MethodBuilder mb, ParameterInfo[] signature) {
             mi = mb;

@@ -628,11 +628,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("isinstance")]
-        public static object IsInstanceWrapper(object o, object typeinfo) {
-            return Ops.Bool2Object(IsInstance(o, typeinfo));
-        }
-
-        internal static bool IsInstance(object o, object typeinfo) {
+        public static bool IsInstance(object o, object typeinfo) {
             if (typeinfo is OldClass) {
                 // old instances are strange - they all share a common type
                 // of instance but they can "be subclasses" of other
@@ -645,11 +641,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("issubclass")]
-        public static object IsSubClassWrapper(DynamicType c, object typeinfo) {
-            return Ops.Bool2Object(IsSubClass(c, typeinfo));
-        }
-
-        internal static bool IsSubClass(DynamicType c, object typeinfo) {
+        public static bool IsSubClass(DynamicType c, object typeinfo) {
             if (c == null) {
                 throw Ops.TypeError("issubclass: arg 1 must be a class");
             }

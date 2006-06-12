@@ -93,9 +93,7 @@ namespace IronPython.Runtime {
                 // two benefits out of this:
                 //      1. Avoid the dictionary lookup for next
                 //      2. Avoid the self-check in the method descriptor (because we know we're binding to a generator)
-                BuiltinFunction res = nextFunction.Clone();
-                res.inst = this;
-                value = res;
+                value = new BoundBuiltinFunction(nextFunction, this);
                 return true;
             }
             return generatorType.TryGetAttr(context, this, name, out value);

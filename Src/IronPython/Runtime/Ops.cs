@@ -1333,23 +1333,14 @@ namespace IronPython.Runtime {
             }
         }
 
-        public static bool TryCall(object func, out object ret) {
-            return TryCall(func, new object[0], out ret);
-        }
-
         public static bool TryCall(object func, object arg0, out object ret) {
-            return TryCall(func, new object[] { arg0 }, out ret);
-        }
+            BuiltinFunction bf = func as BuiltinFunction;
+            if (bf != null) return bf.TryCall(arg0, out ret);
 
-        public static bool TryCall(object func, object arg0, object arg1, out object ret) {
-            return TryCall(func, new object[] { arg0, arg1 }, out ret);
-        }
+            BoundBuiltinFunction bbf = func as BoundBuiltinFunction;
+            if (bbf != null) return bbf.TryCall(arg0, out ret);
 
-        public static bool TryCall(object func, object[] args, out object ret) {
-            ITryCallable itc = func as ITryCallable;
-            if (itc != null) return itc.TryCall(args, out ret);
-
-            ret = Call(func, args);
+            ret = Call(func, arg0);
             return true;
         }
 

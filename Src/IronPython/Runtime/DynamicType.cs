@@ -297,7 +297,7 @@ namespace IronPython.Runtime {
 
         private static object GenerateUnboundMethod(string name) {
             MethodInfo mi = typeof(NoneType).GetMethod(name);
-            return new ReflectedUnboundMethod(name, mi, NameType.PythonMethod);
+            return BuiltinFunction.MakeMethod(name, mi, FunctionType.Method | FunctionType.PythonVisible);
         }
 
         #endregion

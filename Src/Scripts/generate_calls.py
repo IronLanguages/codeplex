@@ -24,12 +24,12 @@ def make_params(nargs, *prefix):
     params = ["object arg%d" % i for i in range(nargs)]
     return ", ".join(list(prefix) + params)
 
-def make_params1(nargs, prefix):
+def make_params1(nargs, prefix=("ICallerContext context",)):
     params = ["object arg%d" % i for i in range(nargs)]
     return ", ".join(list(prefix) + params)
 
-def make_args1(nargs, prefix):
-    args = ["arg%d" % i for i in range(nargs)]
+def make_args1(nargs, prefix, start=0):
+    args = ["arg%d" % i for i in range(start, nargs)]
     return ", ".join(list(prefix) + args)
 
 def gen_args_comma(nparams, comma):
@@ -83,15 +83,35 @@ def calltargets(cw):
 
 CodeGenerator("CallTargets", calltargets).doit()
 
+def get_call_type(postfix):
+    if postfix == "": return "CallType.None"
+    else: return "CallType.ImplicitInstance"
+
 
 def make_call_to_target(cw, index, postfix, extraArg):
         cw.enter_block("public override object Call%(postfix)s(%(params)s)", postfix=postfix,
-                       params=make_params1(index, ("ICallerContext context",)))
+                       params=make_params1(index))
         cw.write("if (target%(index)d != null) return target%(index)d(%(args)s);", index=index,
                  args = make_args1(index, extraArg))
-        cw.write("return base.Call%(postfix)s(%(args)s);", postfix=postfix,
-                 args=make_args1(index, ("context",)))
-        cw.exit_block()    
+        cw.write("throw BadArgumentError(%(callType)s, %(nargs)d);", callType=get_call_type(postfix), nargs=index)
+        cw.exit_block()
+
+def make_call_to_targetX(cw, index, postfix, extraArg):
+        cw.enter_block("public override object Call%(postfix)s(%(params)s)", postfix=postfix,
+                       params=make_params1(index))
+        cw.write("return target%(index)d(%(args)s);", index=index, args = make_args1(index, extraArg))
+        cw.exit_block()
+
+def make_error_calls(cw, index):
+        cw.enter_block("public override object Call(%(params)s)", params=make_params1(index))
+        cw.write("throw BadArgumentError(CallType.None, %(nargs)d);", nargs=index)
+        cw.exit_block()
+
+        if index > 0:
+            cw.enter_block("public override object CallInstance(%(params)s)", params=make_params1(index))
+            cw.write("throw BadArgumentError(CallType.ImplicitInstance, %(nargs)d);", nargs=index)
+            cw.exit_block()
+    
     
 
 def gen_fastcallable_any(cw, postfix="WithContext", extraParam=("ICallerContext context",), extraArg=("context",)):
@@ -100,7 +120,15 @@ def gen_fastcallable_any(cw, postfix="WithContext", extraParam=("ICallerContext 
         cw.write("public CallTarget%(postfix)s%(index)d target%(index)d;", index=i, postfix=postfix)
     cw.write("public CallTarget%(postfix)sN targetN;", postfix=postfix)
 
-    cw.write("public FastCallable%(postfix)sAny(string name, int minArgs, int maxArgs) : base(name, minArgs, maxArgs) { }", postfix=postfix)
+
+    cw.write("private int minArgs, maxArgs;")
+    cw.enter_block("public FastCallable%(postfix)sAny(string name, int minArgs, int maxArgs) : base(name)", postfix=postfix)
+    cw.write("this.minArgs = minArgs;")
+    cw.write("this.maxArgs = maxArgs;")
+    cw.exit_block()
+
+    cw.write("public override int MaximumArgs { get { return maxArgs; } }")
+    cw.write("public override int MinimumArgs { get { return minArgs; } }")
 
     for i in xrange(MAX_ARGS + 1):
         make_call_to_target(cw, i, "", extraArg)
@@ -119,10 +147,6 @@ def gen_fastcallable_any(cw, postfix="WithContext", extraParam=("ICallerContext 
     cw.write("throw BadArgumentError(CallType.None, args.Length);")
     cw.exit_block()
 
-
-    cw.enter_block("public override object CallInstance(%(params)s)", params= make_params1(MAX_ARGS, extraParam+('object instance',)))
-    cw.write("return CallInstance(context, instance, new object[] { %(args)s });", args=make_args1(MAX_ARGS, ()))
-    cw.exit_block()
     
     cw.enter_block("public override object CallInstance(%(params)s)", params=", ".join(extraParam+("object instance", "params object[] args",)))
     cw.enter_block("switch(args.Length)")
@@ -140,15 +164,34 @@ def gen_fastcallable_any(cw, postfix="WithContext", extraParam=("ICallerContext 
 def gen_fastcallable_x(cw, index, postfix="WithContext", extraArg=("context",)):
     cw.enter_block("public class FastCallable%(postfix)s%(index)d : FastCallable", postfix=postfix, index=index)
     cw.write("public CallTarget%(postfix)s%(index)d target%(index)d;", index=index, postfix=postfix)
-    cw.enter_block("public FastCallable%(postfix)s%(index)d(string name, CallTarget%(postfix)s%(index)d target) : base(name, %(index)d, %(index)d)",
+    cw.enter_block("public FastCallable%(postfix)s%(index)d(string name, CallTarget%(postfix)s%(index)d target) : base(name)",
              index=index, postfix=postfix)
     cw.write("this.target%(index)d = target;", index=index)
     cw.exit_block()
+    cw.write("public override int MaximumArgs { get { return %(index)d; } }", index = index)
+    cw.write("public override int MinimumArgs { get { return %(index)d; } }", index=index)
 
-    
-    make_call_to_target(cw, index, "", extraArg)
-    if index > 0:
-        make_call_to_target(cw, index, "Instance", extraArg)
+
+    for i in xrange(MAX_ARGS+1):
+        if i == index:
+            make_call_to_targetX(cw, index, "", extraArg)
+            if index > 0:
+                make_call_to_targetX(cw, index, "Instance", extraArg)
+        else:
+            make_error_calls(cw, i)
+
+    cw.enter_block("public override object Call(ICallerContext context, params object[] args)")
+    cw.write("if (args.Length == %(index)d) return Call(%(args)s);", index=index,
+             args=", ".join(["context"]+["args[%d]" % i for i in xrange(index)]))
+    cw.write("throw BadArgumentError(CallType.None, args.Length);")
+    cw.exit_block()
+
+    cw.enter_block("public override object CallInstance(ICallerContext context, object instance, params object[] args)")
+    cw.write("if (args.Length == %(index)d) return CallInstance(%(args)s);", index=index-1,
+             args=", ".join(["context", "instance"] + ["args[%d]" % i for i in xrange(index-1)]))
+    cw.write("throw BadArgumentError(CallType.ImplicitInstance, args.Length);")
+    cw.exit_block()
+
     cw.exit_block()
 
 def gen_fastcallables(cw):
@@ -180,14 +223,27 @@ def gen_fastmaker(cw):
     cw.write("throw new NotImplementedException();")
     cw.exit_block()
 
+def gen_fastmethods(cw):
+    for i in xrange(MAX_ARGS+1):
+        cw.write("public abstract object Call(%(params)s);", params=make_params1(i))
+        if i > 0:
+            cw.write("public abstract object CallInstance(%(params)s);", params=make_params1(i))
+    cw.enter_block("public object CallInstance(%(params)s)", params=make_params1(MAX_ARGS+1))
+    cw.write("return CallInstance(context, arg0, new object[] { %(args)s });",
+             args=", ".join(["arg%d" % (i+1) for i in xrange(MAX_ARGS)]))
+    cw.exit_block()
 
-CodeGenerator("FastCallableMakers", gen_fastmaker).doit()
+
+def gen_fastmembers(cw):
+    gen_fastmaker(cw)
+    gen_fastmethods(cw)
+
+CodeGenerator("FastCallableMembers", gen_fastmembers).doit()
 
 
 def gen_call(nargs, nparams, cw):
-    #params = ["object arg%d" % i for i in range(nargs)]
     args = ["arg%d" % i for i in range(nargs)]
-    cw.enter_block("public override object Call(%s)" % make_params(nargs))
+    cw.enter_block("public override object Call(%s)" % make_params1(nargs))
     
     # first emit error checking...
     ndefaults = nparams-nargs
@@ -260,275 +316,6 @@ def gen_params_callN(cw, any):
     cw.write("")
         
 
-def gen_builtin_function(nparams, cw):
-    suffix = str(nparams)
-    if(nparams == sys.maxint): suffix = 'N'
-
-    cw.write("""[PythonType("builtin_function_or_method")]""")
-    cw.enter_block("public class OptimizedFunction%s : BuiltinFunction" % suffix)
-    cw.write("CallTarget%s target = null;" % suffix)
-    cw.write("")
-
-    cw.enter_block("public OptimizedFunction%s(string name, MethodInfo info, MethodBase[] targets, FunctionType functionType) : base(name, targets, functionType)" % suffix)
-    cw.write("target = IronPython.Compiler.CodeGen.CreateDelegate(info, typeof(CallTarget%s)) as CallTarget%s;" % (suffix, suffix))    
-    cw.exit_block()
-    
-    cw.enter_block("public OptimizedFunction%s(OptimizedFunction%s from) : base(from)" % (suffix,suffix))
-    cw.write("target = from.target;")
-    cw.exit_block()
-    
-    if nparams != sys.maxint:
-        # normal calls
-        
-        # instanceless target
-        cw.enter_block("public override object Call(" + gen_args(nparams) + ")")
-        cw.write("if((this.FunctionType & FunctionType.Function)==0 && HasInstance) throw BadArgumentError(%d" % (nparams) +");")
-        cw.write("return target(" + gen_args_call(nparams) + ");")
-        cw.exit_block()
-        
-        # target w/ instance (takes 1 less parameter)
-        if nparams != 0:
-            cw.enter_block("public override object Call(" + gen_args(nparams-1) + ")")
-            cw.write("if(HasInstance)")
-            if nparams != 1:
-                cw.write("    return target(Instance, " + gen_args_call(nparams-1) + ");")
-            else:
-                cw.write("    return target(Instance);")
-            cw.write("else")
-            cw.write("    throw BadArgumentError(%d);" % (nparams-1))
-            cw.exit_block()
-        
-        # calls w/ context
-        
-        # instanceless
-        if nparams != 0: 
-            cw.enter_block("public override object Call(ICallerContext context, " + gen_args(nparams) + ")")
-        else:
-            cw.enter_block("public override object Call(ICallerContext context)")
-		
-        cw.write("if((this.FunctionType & FunctionType.Function)==0 && HasInstance) throw BadArgumentError(%d" % (nparams) +");")
-        cw.write("return target(" + gen_args_call(nparams) + ");")
-        cw.exit_block()
-
-        if nparams != 0:
-            # target w/ instance (or context), 1 less parameter
-            if nparams != 1:
-                cw.enter_block("public override object Call(ICallerContext context, " + gen_args(nparams-1) + ")")
-                cw.write("if(HasInstance) return target(Instance, " + gen_args_call(nparams-1) + ");")
-                cw.write("if(IsContextAware) return target(context, " + gen_args_call(nparams-1) + ");")
-            else:
-                cw.enter_block("public override object Call(ICallerContext context)")            
-                cw.write("if(HasInstance) return target(Instance);")
-                cw.write("if(IsContextAware) return target((object)context);")
-            cw.write("")
-            cw.write("throw BadArgumentError(%d);" % (nparams-1))
-            cw.exit_block()
-		
-		# target w/ instance & context
-        if nparams > 1:
-            if nparams == 2:
-                cw.enter_block("public override object Call(ICallerContext context)")            
-                cw.write("if(!HasInstance || !IsContextAware) throw BadArgumentError(%d);" %(nparams-2))
-                cw.write("return target(context, Instance);")
-            else:
-                cw.enter_block("public override object Call(ICallerContext context, " + gen_args(nparams-2) + ")")
-                cw.write("if(!HasInstance || !IsContextAware) throw BadArgumentError(%d);" %(nparams-2))
-                cw.write("return target(context, Instance, " + gen_args_call(nparams-2) + ");")
-            cw.exit_block()
-            
-    else:
-        for i in xrange(MAX_ARGS+1):
-            cw.enter_block("public override object Call(" + gen_args(i) + ")")            
-            cw.write("if(HasInstance) return target(new object[]{Instance, " + gen_args_call(i) + "});")
-            cw.write("return target( new object[]{" + gen_args_call(i) + "});")
-            cw.exit_block()
-            cw.write("")
-            if i != 0:
-                cw.enter_block("public override object Call(ICallerContext context, " + gen_args(i) + ")")            
-            else:
-                cw.enter_block("public override object Call(ICallerContext context)")            
-            cw.write("if(HasInstance) return target(new object[]{Instance, " + gen_args_call(i) + "});")
-            cw.write("return target( new object[]{" + gen_args_call(i) + "});")
-            cw.exit_block()
-
-        cw.write("")
-        cw.enter_block("public override object Call(params object[] args)")
-        cw.enter_block("if(HasInstance)")
-        cw.write("object [] newArgs = new object[args.Length+1];")
-        cw.write("newArgs[0] = Instance;")
-        cw.write("Array.Copy(args, 0, newArgs, 1, args.Length);")
-        cw.write("return target(newArgs);")
-        cw.exit_block()
-        cw.write("return target(args);")
-        cw.exit_block()
-        
-        gen_params_callN(cw, False)
-    
-    cw.enter_block("protected override Delegate[] OptimizedTargets")
-    cw.enter_block("get")
-    cw.write("return new Delegate[] { target };")
-    cw.exit_block()
-    cw.exit_block()
-
-    cw.enter_block("public override int GetMaximumArguments()")
-    if(nparams != sys.maxint):
-        cw.write("return %d;" % nparams)
-    else:
-        cw.write("return int.MaxValue;")
-              
-    cw.exit_block()
-    
-    cw.enter_block("public override BuiltinFunction Clone()")
-    cw.write("return new OptimizedFunction%s(this);" % (suffix))
-    cw.exit_block()
-
-    
-    cw.exit_block()
-    
-    
-
-def gen_builtin_function_any(cw):
-    cw.write("""[PythonType("builtin_function_or_method")]""")
-    cw.enter_block("public class OptimizedFunctionAny : BuiltinFunction")
-    cw.write("CallTargetN targetN;")
-    for i in xrange(MAX_ARGS+1):
-        cw.write("CallTarget%d target%d;" %(i, i))
-
-    cw.enter_block("public OptimizedFunctionAny(string name, MethodInfo[] infos, MethodBase[] targets, FunctionType functionType) : base(name, targets, functionType)")
-    cw.enter_block("for (int i = 0; i < infos.Length; i++)")
-    cw.write("Debug.Assert(infos[i].IsStatic);")
-    cw.write("")
-    cw.enter_block("switch(infos[i].GetParameters().Length)")
-    for i in xrange(MAX_ARGS+1):
-        if(i != 1):
-            cw.write("case %(i)d: target%(i)d = IronPython.Compiler.CodeGen.CreateDelegate(infos[i], typeof(CallTarget%(i)d)) as CallTarget%(i)d; break;" %{'i': i})
-        else:
-            cw.write("case 1:")
-            cw.write("if (!infos[i].GetParameters()[0].ParameterType.HasElementType) ")
-            cw.write("    target1 = IronPython.Compiler.CodeGen.CreateDelegate(infos[i], typeof(CallTarget1)) as CallTarget1;")
-            cw.write("else")
-            cw.write("    targetN = IronPython.Compiler.CodeGen.CreateDelegate(infos[i], typeof(CallTargetN)) as CallTargetN;")
-            cw.write("break;")
-    cw.exit_block()
-    cw.exit_block()
-    cw.exit_block()
-
-    cw.enter_block("public OptimizedFunctionAny(OptimizedFunctionAny from) : base(from)")
-    for i in xrange(MAX_ARGS+1):
-        cw.write("target%d = from.target%d;" % (i, i))
-    cw.write("targetN = from.targetN;")
-    cw.exit_block()
-
-    for i in xrange(MAX_ARGS+1):
-        cw.enter_block("public override object Call(" + gen_args(i) + ")")
-        cw.enter_block("if(HasInstance)")
-        if i == 0:
-            cw.write("if(target1 != null) return target1(Instance);")
-        elif i == MAX_ARGS:
-            cw.write( ("if(targetN != null) return targetN(new object[]{ Instance, " +  gen_args_call(i) + "});") )
-        else:
-            cw.write( ("if(target%d != null) return target%d(Instance, " + gen_args_call(i) + ");") % (i+1, i+1) )
-        cw.write("if (targetN != null) return targetN(new object[] {Instance, " + gen_args_call(i) + " });")
-        cw.write("throw BadArgumentError(%d);" % (i))
-        cw.exit_block()
-            
-        cw.write( ("if (target%d != null) return target%d(" + gen_args_call(i) + ");") % (i,i) )
-        cw.write("else if (targetN != null) return targetN(new object[] { " + gen_args_call(i) + " });")
-        cw.write("else throw BadArgumentError(%d);" % i)
-        cw.exit_block()
-    
-    cw.enter_block("public override object Call(params object[] args)")
-    cw.enter_block("if(Instance == null)")
-    
-    cw.enter_block("switch (args.Length)")
-    for i in xrange(MAX_ARGS+1):
-            cw.write(("case %d: return Call(" + gen_args_paramscall(i) + ");") % i)
-    cw.exit_block()
-    cw.write("if (targetN != null) return targetN(args);")
-    
-    cw.else_block("")
-    
-    cw.enter_block("switch (args.Length)")
-    for i in xrange(MAX_ARGS+1):
-            if i == 0:
-                cw.write(("case %d: if(target1 != null) return target1(Instance); break;") % (i))
-            elif i == MAX_ARGS:
-                cw.write(("case %d: if(targetN != null) return targetN(new object[]{ Instance, " + gen_args_paramscall(i) + "}); break;") % i)
-            else:
-                cw.write(("case %d: if(target%d != null) return target%d(Instance, " + gen_args_paramscall(i) + "); break;") % (i, i+1, i+1))
-    cw.exit_block()
-    cw.enter_block("if (targetN != null)")
-    cw.write("object [] newArgs = new object[args.Length+1];")
-    cw.write("newArgs[0] = Instance;")
-    cw.write("Array.Copy(args, 0, newArgs, 1, args.Length);")
-    cw.write("return targetN(newArgs);")
-    cw.exit_block()
-
-    cw.exit_block()
-    cw.write("throw BadArgumentError(args.Length);")
-    cw.exit_block()
-
-    cw.enter_block("public override object Call(ICallerContext context)")
-    cw.write("if(!IsContextAware) return Call();")
-    
-    cw.enter_block("if(HasInstance)")
-    cw.write("if(target2 != null) return target2(context, Instance);")
-    cw.write("else if(targetN != null) return targetN(new object[]{context, Instance});")
-    cw.write("throw BadArgumentError(0);")    
-    cw.exit_block()
-    
-    cw.write("return Call((object)context);")
-    cw.exit_block()
-    cw.write("")
-    
-    for i in xrange(MAX_ARGS-1):
-        cw.enter_block("public override object Call(ICallerContext context, " + gen_args(i+1) +")")
-        cw.write("if(!IsContextAware) return Call(" + gen_args_call(i+1) + ");")
-        cw.write("if(!HasInstance) return Call((object)context, " + gen_args_call(i+1) + ");")
-        # instance & context
-        
-        if i+3 < MAX_ARGS:
-            cw.write( ("if(target%d != null) return target%d(context, Instance, " + gen_args_call(i+1) + ");") % (i+3, i+3) )
-            
-        cw.write("if (targetN != null) return targetN(new object[] {context, Instance, " + gen_args_call(i+1) + " });")
-        cw.write("throw BadArgumentError(%d);" % (i))
-
-        cw.exit_block()
-        cw.write("")
-        
-    cw.enter_block("public override object Call(ICallerContext context, " + gen_args(MAX_ARGS) +")")
-    cw.write("if(IsContextAware) return Call(new object[]{context, " + gen_args_call(MAX_ARGS) + "});")
-    cw.write("return Call(" + gen_args_call(MAX_ARGS) + ");")
-    cw.exit_block()
-    cw.write("")
-    
-    gen_params_callN(cw, True)
-    
-    cw.enter_block("protected override Delegate[] OptimizedTargets")
-    cw.enter_block("get")
-    cw.enter_block("Delegate[] delegates = new Delegate[]")
-    for i in xrange(MAX_ARGS+1):
-        cw.write("target%d," % i)
-    cw.write("targetN")
-    cw.exit_block()
-    cw.write(";")
-    cw.write("return delegates;")
-    cw.exit_block()
-    cw.exit_block()
-
-    cw.enter_block("public override int GetMaximumArguments()")
-    cw.write("if (targetN != null) return int.MaxValue;")
-    for i in reversed(xrange(MAX_ARGS+1)):
-        if i != 0: cw.write("if (target%d != null) return %d;" % (i,i))
-    cw.write("return 0;")
-    cw.exit_block()
-    
-    cw.enter_block("public override BuiltinFunction Clone()")
-    cw.write("return new OptimizedFunctionAny(this);")
-    cw.exit_block()
-
-    cw.exit_block()
-
 
 def gen_function(nparams, cw):
     cw.write("""[PythonType(typeof(PythonFunction))]""")
@@ -544,11 +331,11 @@ def gen_function(nparams, cw):
     for nargs in range(nparams+1):
         gen_call(nargs, nparams, cw)
 
-    cw.enter_block("public override object Call(params object[] args)")
+    cw.enter_block("public override object Call(ICallerContext context, params object[] args)")
     cw.enter_block("switch (args.Length)")
     for nargs in range(nparams+1):
         args = ["args[%d]" % i for i in range(nargs)]
-        cw.write("case %d: return Call(%s);" % (nargs, ", ".join(args)))
+        cw.write("case %d: return Call(%s);" % (nargs, ", ".join(["context"]+args)))
     cw.write("default: throw BadArgumentError(args.Length);")
     cw.exit_block()
     cw.exit_block()
@@ -586,7 +373,7 @@ def builtin_functions(cw):
 
 
 CodeGenerator("FunctionNs", functions).doit()
-CodeGenerator("Builtin Functions", builtin_functions).doit()
+#CodeGenerator("Builtin Functions", builtin_functions).doit()
 
 def gen_methods(cw):
     for nparams in range(MAX_ARGS+1):
@@ -596,41 +383,26 @@ CodeGenerator("FastCallable methods", gen_methods).doit()
 
 CODE = """
 public static object Call(%(params)s) {
-    PythonFunction f = func as PythonFunction;
-    if (f != null) return f.Call(%(args)s);
-
-    IFastCallable ifc = func as IFastCallable;
-    if (ifc != null) return ifc.Call(%(args)s);
-
-    ICallable ic = func as ICallable;
-    if (ic != null) return ic.Call(%(argsArray)s);
+    FastCallable fc = func as FastCallable;
+    if (fc != null) return fc.Call(%(args)s);
 
     return Ops.Call(func, %(argsArray)s);
 }"""
 
 
 def gen_call_meth(nargs, cw):
-    args = ["arg%d" % i for i in range(nargs)]
+    args = ["(ICallerContext)null"]+["arg%d" % i for i in range(nargs)]
     argsArray = "EMPTY"
     if nargs > 0:
-        argsArray = "new object[] { %s }" % ", ".join(args)
+        argsArray = "new object[] { %s }" % ", ".join(args[1:])
 
     cw.write(CODE, params=make_params(nargs, 'object func'), args=", ".join(args),
              argsArray = argsArray)
 
 def gen_callcontext_meth(nparams, cw):
     cw.enter_block("public static object CallWithContext(ICallerContext context, object func" + gen_args_comma(nparams, ", ") + ")")
-    cw.write("BuiltinFunction bf = func as BuiltinFunction;")
-    if nparams != 0:
-        cw.write("if (bf != null) return bf.Call(context, "+ gen_args_call(nparams) +");")
-    else: 
-        cw.write("if (bf != null) return bf.Call(context);")
-    cw.write("")
-    cw.write("PythonFunction f = func as PythonFunction;")
-    cw.write("if (f != null) return f.Call(" + gen_args_call(nparams) +");")
-    cw.write("")
-    cw.write("IFastCallable ifc = func as IFastCallable;")
-    cw.write("if (ifc != null) return ifc.Call(" + gen_args_call(nparams) + ");")
+    cw.write("FastCallable fc = func as FastCallable;")
+    cw.write("if (fc != null) return fc.Call("+ make_args1(nparams, ["context"]) +");")
     cw.write("")
     if nparams == 0:
         cw.write("return Ops.CallWithContext(context, func, EMPTY);")
@@ -654,59 +426,17 @@ CodeGenerator("Call Ops", gen_methods).doit()
 
 
 
-
-def gen_targets(cw):
-    for nargs in range(MAX_ARGS+1):
-        cw.write("public virtual object Call("+ gen_args(nargs) + ") { throw BadArgumentError(%d); }" % nargs)
-
-    cw.enter_block("public virtual object Call(params object[] args)")
-    cw.enter_block("switch(args.Length)")
-    for nargs in range(MAX_ARGS+1):
-        cw.write("case %d: return Call(%s);" %
-                 (nargs, ", ".join(["args[%d]" % i for i in range(nargs)])))
-    cw.exit_block()
-    cw.write("throw BadArgumentError(args.Length);")
-    cw.exit_block()
-
-    cw.enter_block("private static BuiltinFunction MakeBuiltinFunction(string name, MethodInfo info, MethodBase[] targets, FunctionType functionType)")
-    cw.enter_block("switch (info.GetParameters().Length)")
-    for nargs in range(MAX_ARGS+1):
-        cw.write("case %d: return new OptimizedFunction%d(name, info, targets, functionType);" % (nargs,nargs))
-    cw.exit_block()
-    cw.write("throw new InvalidOperationException(\"too many args\");")
-    cw.exit_block()
-    
-def gen_context_targets(cw):
-    for nargs in range(MAX_ARGS+1):
-        if nargs != 0:
-            cw.write("public virtual object Call(ICallerContext context, "+ gen_args(nargs) + ") { throw BadArgumentError(%d); }" % nargs)
-        else:
-            cw.write("public virtual object Call(ICallerContext context) { throw BadArgumentError(%d); }" % nargs)
-    
-    cw.enter_block("public virtual object Call(ICallerContext context, params object[] args)")
-    cw.enter_block("switch(args.Length)")
-    for nargs in range(MAX_ARGS+1):
-        if nargs != 0:
-            cw.write("case %d: return Call(context, %s);" %
-                 (nargs, ", ".join(["args[%d]" % i for i in range(nargs)])))
-        else:
-            cw.write("case 0: return Call(context);")
-            
-    cw.exit_block()
-    cw.write("throw BadArgumentError(args.Length);")
-    cw.exit_block()
-
-CodeGenerator("BuiltinFunction targets", gen_targets).doit()
-
-CodeGenerator("BuiltinFunction context targets", gen_context_targets).doit()
-
 def gen_function_fastcall(cw):
     for i in xrange(MAX_ARGS+1):
-        cw.enter_block("public virtual object Call(" + gen_args(i) + ")")
+        cw.enter_block("public override object Call(" + make_params1(i) + ")")
         cw.write("throw BadArgumentError(%d);" % i)
         cw.exit_block()
+    for i in xrange(1, MAX_ARGS+1):
+        cw.enter_block("public override object CallInstance(" + make_params1(i) + ")")
+        cw.write("return Call(%(args)s);", args=make_args1(i, ["context"]))
+        cw.exit_block()
 
-CodeGenerator("Function IFastCallable Members", gen_function_fastcall).doit()
+CodeGenerator("Function FastCallable Members", gen_function_fastcall).doit()
 
 
 def gen_funcdef(cw):
@@ -731,59 +461,81 @@ CodeGenerator("FuncDef Code", gen_funcdef).doit()
 
 def gen_functionN_fastcall(cw):
     for i in xrange(MAX_ARGS+1):
-        cw.enter_block("public override object Call(" + gen_args(i) + ")")
+        cw.enter_block("public override object Call(" + make_params1(i) + ")")
         cw.write("return Call(new object[] { " + gen_args_call(i) + "});")
         cw.exit_block()
         cw.write("")
 
-CodeGenerator("FunctionN IFastCallable Members", gen_functionN_fastcall).doit()
+CodeGenerator("FunctionN FastCallable Members", gen_functionN_fastcall).doit()
 
 def gen_method_fastcall(cw):
     for i in xrange(MAX_ARGS+1):
-        cw.enter_block("public object Call(" + gen_args(i) + ")")
-        if(i != 0):
-            cw.write("PythonFunction f = func as PythonFunction;")
-            cw.enter_block("if(inst != null)")
-            cw.write("if (f != null) return f.Call(inst, "+ gen_args_call(i) + ");")
-            cw.write("return Ops.Call(func, inst, " + gen_args_call(i) +");")
-            cw.else_block("")
-            cw.write("if (!Modules.Builtin.IsInstance(arg0, DeclaringClass)) throw BadSelf(arg0);")
-            cw.write("if (f != null) return f.Call("+ gen_args_call(i) + ");")
-            cw.write("return Ops.Call(func, " + gen_args_call(i) +");")            
-            cw.exit_block()
+        cw.enter_block("public override object Call(" + make_params1(i) + ")")
+        cw.write("FastCallable fc = func as FastCallable;")
+        cw.enter_block("if (fc != null)")
+        cw.write("if (inst != null) return fc.CallInstance(%(args)s);", args=make_args1(i, ["context", "inst"]))
+        if i > 0:
+            cw.write("else return fc.Call(%(args)s);", args=make_args1(i, ["context", "CheckSelf(arg0)"], start=1))
         else:
-            cw.write("if (inst != null) return Ops.Call(func, inst);")
+            cw.write("else return fc.Call(%(args)s);", args=make_args1(i, ["context"]))
+        cw.else_block("")
+        cw.write("if (inst != null) return Ops.CallWithContext(%(args)s);", args=make_args1(i, ["context", "func", "inst"]))
+        if i > 0:
+            cw.write("return Ops.CallWithContext(%(args)s);", args=make_args1(i, ["context", "func", "CheckSelf(arg0)"], start=1))    
+        else:
             cw.write("throw BadSelf(null);")
-            
+                
+        cw.exit_block()
         cw.exit_block()
         cw.write("")
 
-CodeGenerator("Method IFastCallable Members", gen_method_fastcall).doit()
+CodeGenerator("Method FastCallable Members", gen_method_fastcall).doit()
 
 
 def gen_reflectedmethod_contextcall(cw):
     cw.enter_block("public override object Call(ICallerContext context)")
-    cw.write("if (HasInstance) return MyFastCallable.CallInstance(context, Instance);")
-    cw.write("else return MyFastCallable.Call(context);")
+    cw.write("if (HasInstance) return OptimizedTarget.CallInstance(context, Instance);")
+    cw.write("else return OptimizedTarget.Call(context);")
     cw.exit_block()
     
     for i in xrange(MAX_ARGS):
         param = i+1
         cw.enter_block("public override object Call(ICallerContext context, " + gen_args(param) + ")")
-        cw.write("if (HasInstance) return MyFastCallable.CallInstance(context, Instance, %s);" % gen_args_call(param))
-        cw.write("else return MyFastCallable.Call(context, %s);" % gen_args_call(param))
+        cw.write("if (HasInstance) return OptimizedTarget.CallInstance(context, Instance, %s);" % gen_args_call(param))
+        cw.write("else return OptimizedTarget.Call(context, %s);" % gen_args_call(param))
+        cw.exit_block()
+        cw.enter_block("public override object CallInstance(ICallerContext context, " + gen_args(param) + ")")
+        cw.write("if (HasInstance) return OptimizedTarget.CallInstance(context, Instance, %s);" % gen_args_call(param))
+        cw.write("else return OptimizedTarget.CallInstance(context, %s);" % gen_args_call(param))
         cw.exit_block()
 
-def gen_reflectedmethod(cw):    
+def gen_builtin_targets(cw):
     for i in xrange(MAX_ARGS+1):
-        cw.enter_block("public override object Call(" + gen_args(i) + ")")
-        cw.write("return Call(" + ", ".join(["(ICallerContext)null"] + ["arg%d" % i for i in range(i)]) + ");")
+        cw.enter_block("public override object Call(%(params)s)", params=make_params1(i))
+        cw.write("return OptimizedTarget.Call(%(args)s);", args=make_args1(i, ["context"]))
         cw.exit_block()
+
+        if i == 0: continue
+        cw.enter_block("public override object CallInstance(%(params)s)", params=make_params1(i))
+        cw.write("return OptimizedTarget.CallInstance(%(args)s);", args=make_args1(i, ["context"]))
+        cw.exit_block()
+        
+def gen_boundbuiltin_targets(cw):
+    for i in xrange(MAX_ARGS+1):
+        cw.enter_block("public override object Call(%(params)s)", params=make_params1(i))
+        cw.write("return target.OptimizedTarget.CallInstance(%(args)s);", args=make_args1(i, ["context", "instance"]))
+        cw.exit_block()
+
+        if i == 0: continue
+        cw.enter_block("public override object CallInstance(%(params)s)", params=make_params1(i))
+        cw.write("return target.OptimizedTarget.CallInstance(%(args)s);", args=make_args1(i, ["context", "instance"]))
+        cw.exit_block()
+
             
 
-CodeGenerator("ReflectedMethod context targets", gen_reflectedmethod_contextcall).doit()
+CodeGenerator("BuiltinFunction targets", gen_builtin_targets).doit()
 
-CodeGenerator("ReflectedMethod IFastCallable", gen_reflectedmethod).doit()
+CodeGenerator("BoundBuiltinFunction targets", gen_boundbuiltin_targets).doit()
 
 
 

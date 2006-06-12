@@ -23,7 +23,7 @@ using IronPython.Compiler;
 
 namespace IronPython.Runtime {
     public class ReflectedDelegateType : ReflectedType {
-        BuiltinFunction invoker;
+        private FastCallable invoker;
 
         public ReflectedDelegateType(Type delegateType)
             : base(delegateType) {
@@ -37,20 +37,14 @@ namespace IronPython.Runtime {
             // put delegate's Target object into args
             Delegate d = func as Delegate;
             Debug.Assert(d != null);
-            
-            object[] newArgs = new object[args.Length + 1];
-            newArgs[0] = d.Target;
-            Array.Copy(args, 0, newArgs, 1, args.Length);
 
-            return invoker.Call(newArgs);
+            return invoker.CallInstance(null, d.Target, args);
         }
 
         private void CreateInvoker() {
             MethodInfo delegateInfo = type.GetMethod("Invoke");
             Debug.Assert(delegateInfo != null);
-            ReflectedMethod unOpt = new ReflectedMethod("invoke", delegateInfo, FunctionType.Method);
-            invoker = ReflectOptimizer.MakeFunction(unOpt);
-            if (invoker == null) invoker = unOpt;
+            invoker = MethodBinder.MakeFastCallable("invoke", delegateInfo, FunctionType.Method);
         }
     }
 

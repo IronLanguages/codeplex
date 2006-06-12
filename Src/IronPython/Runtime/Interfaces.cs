@@ -22,10 +22,6 @@ namespace IronPython.Runtime {
         object Call(params object[] args);
     }
 
-    public interface ITryCallable : ICallable {
-        bool TryCall(object[] args, out object ret);
-    }
-
     public interface IFancyCallable {
         object Call(ICallerContext context, object[] args, string[] names);
     }

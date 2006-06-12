@@ -41,7 +41,7 @@ namespace IronPython.Runtime {
         private static Dictionary<string,int> events = new Dictionary<string,int>();
         private static Dictionary<Categories, int> summaryStats = new Dictionary<Categories, int>();
 
-        public static void PerfTest(ReflectedMethod o, int count) {
+        public static void PerfTest(BuiltinFunction o, int count) {
             Stopwatch s = new Stopwatch();
             s.Start();
             for(int i = 0; i<count;i++){

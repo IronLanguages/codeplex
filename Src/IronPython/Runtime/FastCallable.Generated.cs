@@ -48,7 +48,7 @@ namespace IronPython.Runtime {
 
 
     public abstract partial class FastCallable {
-        #region Generated FastCallableMakers
+        #region Generated FastCallableMembers
 
         // *** BEGIN GENERATED CODE ***
 
@@ -75,6 +75,20 @@ namespace IronPython.Runtime {
             }
             throw new NotImplementedException();
         }
+        public abstract object Call(ICallerContext context);
+        public abstract object Call(ICallerContext context, object arg0);
+        public abstract object CallInstance(ICallerContext context, object arg0);
+        public abstract object Call(ICallerContext context, object arg0, object arg1);
+        public abstract object CallInstance(ICallerContext context, object arg0, object arg1);
+        public abstract object Call(ICallerContext context, object arg0, object arg1, object arg2);
+        public abstract object CallInstance(ICallerContext context, object arg0, object arg1, object arg2);
+        public abstract object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3);
+        public abstract object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3);
+        public abstract object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4);
+        public abstract object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4);
+        public object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5) {
+            return CallInstance(context, arg0, new object[] { arg1, arg2, arg3, arg4, arg5 });
+        }
 
         // *** END GENERATED CODE ***
 
@@ -96,50 +110,56 @@ namespace IronPython.Runtime {
         public CallTarget4 target4;
         public CallTarget5 target5;
         public CallTargetN targetN;
-        public FastCallableAny(string name, int minArgs, int maxArgs) : base(name, minArgs, maxArgs) { }
+        private int minArgs, maxArgs;
+        public FastCallableAny(string name, int minArgs, int maxArgs) : base(name) {
+            this.minArgs = minArgs;
+            this.maxArgs = maxArgs;
+        }
+        public override int MaximumArgs { get { return maxArgs; } }
+        public override int MinimumArgs { get { return minArgs; } }
         public override object Call(ICallerContext context) {
             if (target0 != null) return target0();
-            return base.Call(context);
+            throw BadArgumentError(CallType.None, 0);
         }
         public override object Call(ICallerContext context, object arg0) {
             if (target1 != null) return target1(arg0);
-            return base.Call(context, arg0);
+            throw BadArgumentError(CallType.None, 1);
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
             if (target2 != null) return target2(arg0, arg1);
-            return base.Call(context, arg0, arg1);
+            throw BadArgumentError(CallType.None, 2);
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
             if (target3 != null) return target3(arg0, arg1, arg2);
-            return base.Call(context, arg0, arg1, arg2);
+            throw BadArgumentError(CallType.None, 3);
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
             if (target4 != null) return target4(arg0, arg1, arg2, arg3);
-            return base.Call(context, arg0, arg1, arg2, arg3);
+            throw BadArgumentError(CallType.None, 4);
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
             if (target5 != null) return target5(arg0, arg1, arg2, arg3, arg4);
-            return base.Call(context, arg0, arg1, arg2, arg3, arg4);
+            throw BadArgumentError(CallType.None, 5);
         }
         public override object CallInstance(ICallerContext context, object arg0) {
             if (target1 != null) return target1(arg0);
-            return base.CallInstance(context, arg0);
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1) {
             if (target2 != null) return target2(arg0, arg1);
-            return base.CallInstance(context, arg0, arg1);
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
             if (target3 != null) return target3(arg0, arg1, arg2);
-            return base.CallInstance(context, arg0, arg1, arg2);
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
             if (target4 != null) return target4(arg0, arg1, arg2, arg3);
-            return base.CallInstance(context, arg0, arg1, arg2, arg3);
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
             if (target5 != null) return target5(arg0, arg1, arg2, arg3, arg4);
-            return base.CallInstance(context, arg0, arg1, arg2, arg3, arg4);
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
         }
         public override object Call(ICallerContext context, params object[] args) {
             switch(args.Length) {
@@ -152,9 +172,6 @@ namespace IronPython.Runtime {
             }
             if (targetN != null) return targetN(args);
             throw BadArgumentError(CallType.None, args.Length);
-        }
-        public override object CallInstance(ICallerContext context, object instance, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            return CallInstance(context, instance, new object[] { arg0, arg1, arg2, arg3, arg4 });
         }
         public override object CallInstance(ICallerContext context, object instance, params object[] args) {
             switch(args.Length) {
@@ -176,50 +193,56 @@ namespace IronPython.Runtime {
         public CallTargetWithContext4 target4;
         public CallTargetWithContext5 target5;
         public CallTargetWithContextN targetN;
-        public FastCallableWithContextAny(string name, int minArgs, int maxArgs) : base(name, minArgs, maxArgs) { }
+        private int minArgs, maxArgs;
+        public FastCallableWithContextAny(string name, int minArgs, int maxArgs) : base(name) {
+            this.minArgs = minArgs;
+            this.maxArgs = maxArgs;
+        }
+        public override int MaximumArgs { get { return maxArgs; } }
+        public override int MinimumArgs { get { return minArgs; } }
         public override object Call(ICallerContext context) {
             if (target0 != null) return target0(context);
-            return base.Call(context);
+            throw BadArgumentError(CallType.None, 0);
         }
         public override object Call(ICallerContext context, object arg0) {
             if (target1 != null) return target1(context, arg0);
-            return base.Call(context, arg0);
+            throw BadArgumentError(CallType.None, 1);
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
             if (target2 != null) return target2(context, arg0, arg1);
-            return base.Call(context, arg0, arg1);
+            throw BadArgumentError(CallType.None, 2);
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
             if (target3 != null) return target3(context, arg0, arg1, arg2);
-            return base.Call(context, arg0, arg1, arg2);
+            throw BadArgumentError(CallType.None, 3);
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
             if (target4 != null) return target4(context, arg0, arg1, arg2, arg3);
-            return base.Call(context, arg0, arg1, arg2, arg3);
+            throw BadArgumentError(CallType.None, 4);
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
             if (target5 != null) return target5(context, arg0, arg1, arg2, arg3, arg4);
-            return base.Call(context, arg0, arg1, arg2, arg3, arg4);
+            throw BadArgumentError(CallType.None, 5);
         }
         public override object CallInstance(ICallerContext context, object arg0) {
             if (target1 != null) return target1(context, arg0);
-            return base.CallInstance(context, arg0);
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1) {
             if (target2 != null) return target2(context, arg0, arg1);
-            return base.CallInstance(context, arg0, arg1);
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
             if (target3 != null) return target3(context, arg0, arg1, arg2);
-            return base.CallInstance(context, arg0, arg1, arg2);
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
             if (target4 != null) return target4(context, arg0, arg1, arg2, arg3);
-            return base.CallInstance(context, arg0, arg1, arg2, arg3);
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
             if (target5 != null) return target5(context, arg0, arg1, arg2, arg3, arg4);
-            return base.CallInstance(context, arg0, arg1, arg2, arg3, arg4);
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
         }
         public override object Call(ICallerContext context, params object[] args) {
             switch(args.Length) {
@@ -232,9 +255,6 @@ namespace IronPython.Runtime {
             }
             if (targetN != null) return targetN(context, args);
             throw BadArgumentError(CallType.None, args.Length);
-        }
-        public override object CallInstance(ICallerContext context, object instance, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            return CallInstance(context, instance, new object[] { arg0, arg1, arg2, arg3, arg4 });
         }
         public override object CallInstance(ICallerContext context, object instance, params object[] args) {
             switch(args.Length) {
@@ -250,162 +270,590 @@ namespace IronPython.Runtime {
     }
     public class FastCallable0 : FastCallable {
         public CallTarget0 target0;
-        public FastCallable0(string name, CallTarget0 target) : base(name, 0, 0) {
+        public FastCallable0(string name, CallTarget0 target) : base(name) {
             this.target0 = target;
         }
+        public override int MaximumArgs { get { return 0; } }
+        public override int MinimumArgs { get { return 0; } }
         public override object Call(ICallerContext context) {
-            if (target0 != null) return target0();
-            return base.Call(context);
+            return target0();
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 0) return Call(context);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == -1) return CallInstance(context, instance);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallableWithContext0 : FastCallable {
         public CallTargetWithContext0 target0;
-        public FastCallableWithContext0(string name, CallTargetWithContext0 target) : base(name, 0, 0) {
+        public FastCallableWithContext0(string name, CallTargetWithContext0 target) : base(name) {
             this.target0 = target;
         }
+        public override int MaximumArgs { get { return 0; } }
+        public override int MinimumArgs { get { return 0; } }
         public override object Call(ICallerContext context) {
-            if (target0 != null) return target0(context);
-            return base.Call(context);
+            return target0(context);
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 0) return Call(context);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == -1) return CallInstance(context, instance);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallable1 : FastCallable {
         public CallTarget1 target1;
-        public FastCallable1(string name, CallTarget1 target) : base(name, 1, 1) {
+        public FastCallable1(string name, CallTarget1 target) : base(name) {
             this.target1 = target;
         }
+        public override int MaximumArgs { get { return 1; } }
+        public override int MinimumArgs { get { return 1; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
         public override object Call(ICallerContext context, object arg0) {
-            if (target1 != null) return target1(arg0);
-            return base.Call(context, arg0);
+            return target1(arg0);
         }
         public override object CallInstance(ICallerContext context, object arg0) {
-            if (target1 != null) return target1(arg0);
-            return base.CallInstance(context, arg0);
+            return target1(arg0);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 1) return Call(context, args[0]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 0) return CallInstance(context, instance);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallableWithContext1 : FastCallable {
         public CallTargetWithContext1 target1;
-        public FastCallableWithContext1(string name, CallTargetWithContext1 target) : base(name, 1, 1) {
+        public FastCallableWithContext1(string name, CallTargetWithContext1 target) : base(name) {
             this.target1 = target;
         }
+        public override int MaximumArgs { get { return 1; } }
+        public override int MinimumArgs { get { return 1; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
         public override object Call(ICallerContext context, object arg0) {
-            if (target1 != null) return target1(context, arg0);
-            return base.Call(context, arg0);
+            return target1(context, arg0);
         }
         public override object CallInstance(ICallerContext context, object arg0) {
-            if (target1 != null) return target1(context, arg0);
-            return base.CallInstance(context, arg0);
+            return target1(context, arg0);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 1) return Call(context, args[0]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 0) return CallInstance(context, instance);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallable2 : FastCallable {
         public CallTarget2 target2;
-        public FastCallable2(string name, CallTarget2 target) : base(name, 2, 2) {
+        public FastCallable2(string name, CallTarget2 target) : base(name) {
             this.target2 = target;
         }
+        public override int MaximumArgs { get { return 2; } }
+        public override int MinimumArgs { get { return 2; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
         public override object Call(ICallerContext context, object arg0, object arg1) {
-            if (target2 != null) return target2(arg0, arg1);
-            return base.Call(context, arg0, arg1);
+            return target2(arg0, arg1);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1) {
-            if (target2 != null) return target2(arg0, arg1);
-            return base.CallInstance(context, arg0, arg1);
+            return target2(arg0, arg1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 2) return Call(context, args[0], args[1]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 1) return CallInstance(context, instance, args[0]);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallableWithContext2 : FastCallable {
         public CallTargetWithContext2 target2;
-        public FastCallableWithContext2(string name, CallTargetWithContext2 target) : base(name, 2, 2) {
+        public FastCallableWithContext2(string name, CallTargetWithContext2 target) : base(name) {
             this.target2 = target;
         }
+        public override int MaximumArgs { get { return 2; } }
+        public override int MinimumArgs { get { return 2; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
         public override object Call(ICallerContext context, object arg0, object arg1) {
-            if (target2 != null) return target2(context, arg0, arg1);
-            return base.Call(context, arg0, arg1);
+            return target2(context, arg0, arg1);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1) {
-            if (target2 != null) return target2(context, arg0, arg1);
-            return base.CallInstance(context, arg0, arg1);
+            return target2(context, arg0, arg1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 2) return Call(context, args[0], args[1]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 1) return CallInstance(context, instance, args[0]);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallable3 : FastCallable {
         public CallTarget3 target3;
-        public FastCallable3(string name, CallTarget3 target) : base(name, 3, 3) {
+        public FastCallable3(string name, CallTarget3 target) : base(name) {
             this.target3 = target;
         }
+        public override int MaximumArgs { get { return 3; } }
+        public override int MinimumArgs { get { return 3; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
-            if (target3 != null) return target3(arg0, arg1, arg2);
-            return base.Call(context, arg0, arg1, arg2);
+            return target3(arg0, arg1, arg2);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
-            if (target3 != null) return target3(arg0, arg1, arg2);
-            return base.CallInstance(context, arg0, arg1, arg2);
+            return target3(arg0, arg1, arg2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 3) return Call(context, args[0], args[1], args[2]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 2) return CallInstance(context, instance, args[0], args[1]);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallableWithContext3 : FastCallable {
         public CallTargetWithContext3 target3;
-        public FastCallableWithContext3(string name, CallTargetWithContext3 target) : base(name, 3, 3) {
+        public FastCallableWithContext3(string name, CallTargetWithContext3 target) : base(name) {
             this.target3 = target;
         }
+        public override int MaximumArgs { get { return 3; } }
+        public override int MinimumArgs { get { return 3; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
-            if (target3 != null) return target3(context, arg0, arg1, arg2);
-            return base.Call(context, arg0, arg1, arg2);
+            return target3(context, arg0, arg1, arg2);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
-            if (target3 != null) return target3(context, arg0, arg1, arg2);
-            return base.CallInstance(context, arg0, arg1, arg2);
+            return target3(context, arg0, arg1, arg2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 3) return Call(context, args[0], args[1], args[2]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 2) return CallInstance(context, instance, args[0], args[1]);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallable4 : FastCallable {
         public CallTarget4 target4;
-        public FastCallable4(string name, CallTarget4 target) : base(name, 4, 4) {
+        public FastCallable4(string name, CallTarget4 target) : base(name) {
             this.target4 = target;
         }
+        public override int MaximumArgs { get { return 4; } }
+        public override int MinimumArgs { get { return 4; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
-            if (target4 != null) return target4(arg0, arg1, arg2, arg3);
-            return base.Call(context, arg0, arg1, arg2, arg3);
+            return target4(arg0, arg1, arg2, arg3);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
-            if (target4 != null) return target4(arg0, arg1, arg2, arg3);
-            return base.CallInstance(context, arg0, arg1, arg2, arg3);
+            return target4(arg0, arg1, arg2, arg3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 4) return Call(context, args[0], args[1], args[2], args[3]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 3) return CallInstance(context, instance, args[0], args[1], args[2]);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallableWithContext4 : FastCallable {
         public CallTargetWithContext4 target4;
-        public FastCallableWithContext4(string name, CallTargetWithContext4 target) : base(name, 4, 4) {
+        public FastCallableWithContext4(string name, CallTargetWithContext4 target) : base(name) {
             this.target4 = target;
         }
+        public override int MaximumArgs { get { return 4; } }
+        public override int MinimumArgs { get { return 4; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
-            if (target4 != null) return target4(context, arg0, arg1, arg2, arg3);
-            return base.Call(context, arg0, arg1, arg2, arg3);
+            return target4(context, arg0, arg1, arg2, arg3);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
-            if (target4 != null) return target4(context, arg0, arg1, arg2, arg3);
-            return base.CallInstance(context, arg0, arg1, arg2, arg3);
+            return target4(context, arg0, arg1, arg2, arg3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.None, 5);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
+            throw BadArgumentError(CallType.ImplicitInstance, 5);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 4) return Call(context, args[0], args[1], args[2], args[3]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 3) return CallInstance(context, instance, args[0], args[1], args[2]);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallable5 : FastCallable {
         public CallTarget5 target5;
-        public FastCallable5(string name, CallTarget5 target) : base(name, 5, 5) {
+        public FastCallable5(string name, CallTarget5 target) : base(name) {
             this.target5 = target;
         }
+        public override int MaximumArgs { get { return 5; } }
+        public override int MinimumArgs { get { return 5; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            if (target5 != null) return target5(arg0, arg1, arg2, arg3, arg4);
-            return base.Call(context, arg0, arg1, arg2, arg3, arg4);
+            return target5(arg0, arg1, arg2, arg3, arg4);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            if (target5 != null) return target5(arg0, arg1, arg2, arg3, arg4);
-            return base.CallInstance(context, arg0, arg1, arg2, arg3, arg4);
+            return target5(arg0, arg1, arg2, arg3, arg4);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 5) return Call(context, args[0], args[1], args[2], args[3], args[4]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 4) return CallInstance(context, instance, args[0], args[1], args[2], args[3]);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
     public class FastCallableWithContext5 : FastCallable {
         public CallTargetWithContext5 target5;
-        public FastCallableWithContext5(string name, CallTargetWithContext5 target) : base(name, 5, 5) {
+        public FastCallableWithContext5(string name, CallTargetWithContext5 target) : base(name) {
             this.target5 = target;
         }
+        public override int MaximumArgs { get { return 5; } }
+        public override int MinimumArgs { get { return 5; } }
+        public override object Call(ICallerContext context) {
+            throw BadArgumentError(CallType.None, 0);
+        }
+        public override object Call(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.None, 1);
+        }
+        public override object CallInstance(ICallerContext context, object arg0) {
+            throw BadArgumentError(CallType.ImplicitInstance, 1);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.None, 2);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1) {
+            throw BadArgumentError(CallType.ImplicitInstance, 2);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.None, 3);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2) {
+            throw BadArgumentError(CallType.ImplicitInstance, 3);
+        }
+        public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.None, 4);
+        }
+        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
+            throw BadArgumentError(CallType.ImplicitInstance, 4);
+        }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            if (target5 != null) return target5(context, arg0, arg1, arg2, arg3, arg4);
-            return base.Call(context, arg0, arg1, arg2, arg3, arg4);
+            return target5(context, arg0, arg1, arg2, arg3, arg4);
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            if (target5 != null) return target5(context, arg0, arg1, arg2, arg3, arg4);
-            return base.CallInstance(context, arg0, arg1, arg2, arg3, arg4);
+            return target5(context, arg0, arg1, arg2, arg3, arg4);
+        }
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 5) return Call(context, args[0], args[1], args[2], args[3], args[4]);
+            throw BadArgumentError(CallType.None, args.Length);
+        }
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 4) return CallInstance(context, instance, args[0], args[1], args[2], args[3]);
+            throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
     }
 

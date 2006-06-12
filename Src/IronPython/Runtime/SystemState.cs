@@ -88,7 +88,8 @@ namespace IronPython.Runtime {
             MethodInfo mi = typeof(SystemState).GetMethod("setdefaultencodingImpl", 
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-            BuiltinMethodDescriptor descr = (BuiltinMethodDescriptor)new ReflectedMethod("setdefaultencoding", mi, FunctionType.PythonVisible | FunctionType.Method).GetDescriptor();
+            BuiltinMethodDescriptor descr = (BuiltinMethodDescriptor)BuiltinFunction.MakeMethod(
+                "setdefaultencoding", mi, FunctionType.PythonVisible | FunctionType.Method).GetDescriptor();
 
             __dict__[SymbolTable.SetDefaultEncoding] = descr.GetAttribute(this, this);
 

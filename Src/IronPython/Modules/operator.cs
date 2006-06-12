@@ -409,16 +409,16 @@ namespace IronPython.Modules {
         [PythonName("isMappingType")]
         public static object IsMappingType(ICallerContext context, object o) {
             if (o is IMapping || o is Dict || o is IDictionary<object, object>) {
-                if ((context.ContextFlags & CallerContextFlags.ShowCls) == 0) {
-                    // in standard Python methods aren't mapping types, therefore
-                    // if the user hasn't broken out of that box yet don't treat 
-                    // them as mapping types.
-                    if (o is ReflectedMethod) return Ops.FALSE;
-                }
                 return Ops.TRUE;
             }
             object getitem;
             if (Ops.TryGetAttr(o, SymbolTable.GetItem, out getitem)) {
+                if ((context.ContextFlags & CallerContextFlags.ShowCls) == 0) {
+                    // in standard Python methods aren't mapping types, therefore
+                    // if the user hasn't broken out of that box yet don't treat 
+                    // them as mapping types.
+                    if (o is BuiltinFunction) return Ops.FALSE;
+                }
                 return Ops.TRUE;
             }
             return Ops.FALSE;

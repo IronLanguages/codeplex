@@ -59,7 +59,7 @@ namespace IronPython.Runtime {
 
         private static Hashtable operatorTable;
 
-        internal const string MakeNewName = "MakeNew$$";
+        //internal const string MakeNewName = "MakeNew$$";
 
         private IAttributesInjector prependedAttrs;
         private IAttributesInjector appendedAttrs;
@@ -179,7 +179,7 @@ namespace IronPython.Runtime {
         }
 
         /// <summary> Generic helper for doing the different types of method stores. </summary>
-        internal void StoreMethod<T>(string name, MethodInfo mi, FunctionType ft) where T : ReflectedMethodBase, new() {
+        internal void StoreMethod<T>(string name, MethodInfo mi, FunctionType ft) where T : BuiltinFunction, new() {
             object existingMember;
             T rm = null;
             SymbolId methodId = SymbolTable.StringToId(name);
@@ -217,11 +217,11 @@ namespace IronPython.Runtime {
             FunctionType ft = CompilerHelpers.IsStatic(mi) ? FunctionType.Function : FunctionType.Method;
             if (nt == NameType.PythonMethod || (!IsPythonType && !clsOnly)) ft |= FunctionType.PythonVisible;
 
-            StoreMethod<ReflectedMethod>(name, mi, ft);
+            StoreMethod<BuiltinFunction>(name, mi, ft);
         }
 
         internal void StoreReflectedUnboundMethod(string name, MethodInfo mi, NameType nt) {
-            StoreMethod<ReflectedUnboundMethod>(name, mi, nt == NameType.PythonMethod ? FunctionType.PythonVisible | FunctionType.Method : FunctionType.Method);
+            StoreMethod<BuiltinFunction>(name, mi, nt == NameType.PythonMethod ? FunctionType.PythonVisible | FunctionType.Method : FunctionType.Method);
         }
 
         internal void StoreReflectedUnboundReverseOp(string name, MethodInfo mi, NameType nt) {
@@ -234,13 +234,13 @@ namespace IronPython.Runtime {
             if (dict.TryGetValue(methodId, out existingMethod)) {
                 ClassMethod cm = existingMethod as ClassMethod;
                 if (cm != null) {
-                    ((ReflectedMethod)cm.func).AddMethod(mi);
+                    ((BuiltinFunction)cm.func).AddMethod(mi);
                 } else {
                     //!!! Assert
-                    dict[methodId] = new ClassMethod(new ReflectedUnboundMethod(name, mi, FunctionType.Function | FunctionType.PythonVisible));
+                    dict[methodId] = new ClassMethod(BuiltinFunction.MakeMethod(name, mi, FunctionType.Function | FunctionType.PythonVisible));
                 }
             } else {
-                dict[methodId] = new ClassMethod(new ReflectedUnboundMethod(name, mi, FunctionType.Function | FunctionType.PythonVisible));
+                dict[methodId] = new ClassMethod(BuiltinFunction.MakeMethod(name, mi, FunctionType.Function | FunctionType.PythonVisible));
             }
         }
 
@@ -253,17 +253,7 @@ namespace IronPython.Runtime {
                 BuiltinFunction bf = (bmd == null) ? val as BuiltinFunction : bmd.template;
 
                 if (bf != null) {
-                    BuiltinFunction newFunc = bf.ReOptimize(mi);
-                    if (newFunc != null) {
-                        object outSlot;
-                        // try and update a MethodWrapper first, and if that
-                        // doesn't work then update the dictionary.
-                        if (!TryGetSlot(DefaultContext.Default, methodId, out outSlot) ||
-                            !Ops.SetDescriptor(outSlot, this, newFunc.GetDescriptor())) {
-                            dict[methodId] = newFunc.GetDescriptor();
-                        }
-                        return;
-                    }
+                    bf.AddMethod(mi);
                 }
             }
         }
@@ -292,14 +282,14 @@ namespace IronPython.Runtime {
         private void CreateInitCode() {
             if (!dict.ContainsKey(SymbolTable.NewInst)) {
                 if (!type.IsAbstract) {
-                    ReflectedConstructor reflectedCtors = null;
+                    BuiltinFunction reflectedCtors = null;
                     //!!! how to best handle inheritance...
                     //??? Would it make things clearer or faster to use type.GetMembers()?
                     foreach (ConstructorInfo ci in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic |
                                                                         BindingFlags.Instance)) {
                         if (ci.IsPublic || ci.IsFamily || ci.IsFamilyOrAssembly) {
                             if (reflectedCtors == null) {
-                                reflectedCtors = new ReflectedConstructor((string)__name__, ci);
+                                reflectedCtors = BuiltinFunction.MakeMethod((string)__name__, ci, FunctionType.Function);
                             } else {
                                 reflectedCtors.AddMethod(ci);
                             }
@@ -369,7 +359,7 @@ namespace IronPython.Runtime {
 
             if (oper.method != null) {
                 MethodInfo mi = typeof(EnumOps).GetMethod(method);
-                StoreMethod<ReflectedUnboundMethod>(oper.method,
+                StoreMethod<BuiltinFunction>(oper.method,
                     mi,
                     FunctionType.PythonVisible | FunctionType.SkipThisCheck | FunctionType.Method);
             }
@@ -650,7 +640,7 @@ namespace IronPython.Runtime {
             MethodInfo methodInfo = typeof(InstanceOps).GetMethod(methodName);
             if (nameType == NameType.PythonMethod) functionType |= FunctionType.PythonVisible;
 
-            meth = new ReflectedUnboundMethod(pythonName, methodInfo, functionType).GetDescriptor();
+            meth = BuiltinFunction.MakeMethod(pythonName, methodInfo, functionType).GetDescriptor();
 
             Debug.Assert(meth != null);
 
@@ -1340,10 +1330,9 @@ namespace IronPython.Runtime {
     /// </summary>
     public class NewMethod : ICallable, IFancyCallable {
         private ReflectedType rt;
-        private ReflectedConstructor rc;
-        private BuiltinFunction fastCtor;
+        private BuiltinFunction rc;
 
-        public NewMethod(ReflectedType rt, ReflectedConstructor rc) {
+        public NewMethod(ReflectedType rt, BuiltinFunction rc) {
             this.rt = rt;
             this.rc = rc;
         }
@@ -1351,20 +1340,8 @@ namespace IronPython.Runtime {
         public string Documentation {
             [PythonName("__doc__")]
             get {
-                ReflectedMethodBase init = rc;
-                if (init == null) return "no documentation available";
-                return init.Documentation;
+                return rc.Documentation;
             }
-        }
-
-        internal ReflectedConstructor Constructor {
-            get {
-                return rc;
-            }
-        }
-
-        internal void Optimize(BuiltinFunction bf) {
-            this.fastCtor = bf;
         }
 
         #region ICallable Members
@@ -1383,37 +1360,24 @@ namespace IronPython.Runtime {
                 object res = toCall.Call(targetType);
                 return res;
             } else if (rc != toCall) {
-                if (toCall is ReflectedConstructor) {
-                    // compiled user-type overriding __new__
-                    return toCall.Call(RemoveClass(args));
-                } else {
+                //if (toCall is BuiltinFunction && ((BuiltinFunction)toCall).IsConstructor) {
+                //    // compiled user-type overriding __new__
+                //    return toCall.Call(RemoveClass(args));
+                //} else {
                     // calling a __new__ method that takes a type (derived class)
                     return toCall.Call(args);
-                }
+                //}
             } else {
                 // calling a ctor directly (non-derived class)
-                if (fastCtor != null) {
-                    if (fastCtor.GetMaximumArguments() == 0) {
-                        return fastCtor.Call();
-                    } else {
-                        // use the optimized call if we've got it
-                        switch (args.Length) {
-                            case 1: return fastCtor.Call();
-                            case 2: return fastCtor.Call(args[1]);
-                            case 3: return fastCtor.Call(args[1], args[2]);
-                            case 4: return fastCtor.Call(args[1], args[2], args[3]);
-                            case 5: return fastCtor.Call(args[1], args[2], args[3], args[4]);
-                            default: return fastCtor.Call(RemoveClass(args));
-                        }
-                    }
+                if (rc.GetMaximumArguments() == 0) return rc.Call(); //??? not-enough args case
+                switch (args.Length) {
+                    case 1: return rc.Call();
+                    case 2: return rc.Call(args[1]);
+                    case 3: return rc.Call(args[1], args[2]);
+                    case 4: return rc.Call(args[1], args[2], args[3]);
+                    case 5: return rc.Call(args[1], args[2], args[3], args[4]);
+                    default: return rc.Call(RemoveClass(args));
                 }
-
-                //!!! doesn't handle not-enough args case correctly.
-                BuiltinFunction bf = toCall as BuiltinFunction;
-                if (bf.GetMaximumArguments() == 0) {
-                    return toCall.Call();
-                }
-                return toCall.Call(RemoveClass(args));
             }
         }
         #endregion
@@ -1444,7 +1408,7 @@ namespace IronPython.Runtime {
                 Debug.Assert(targetType is ReflectedType, "Expected ReflectedType");
                 // compiled user type, user is calling base class on
                 // type, we need to get the real default ctor.
-                toCall = new ReflectedConstructor((string)targetType.__name__, targetType.type.GetConstructor(new Type[0]));
+                toCall = BuiltinFunction.MakeMethod((string)targetType.__name__, targetType.type.GetConstructor(new Type[0]), FunctionType.Function);
             }
 
 

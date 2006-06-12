@@ -120,8 +120,7 @@ namespace IronPython.Runtime {
         }
 
         internal static int GetMaxArgs(ICallable c) {
-            if (c is ReflectedMethodBase) return ((ReflectedMethodBase)c).GetMaximumArguments();
-            else if (c is BuiltinFunction) return ((BuiltinFunction)c).GetMaximumArguments();
+            if (c is BuiltinFunction) return ((BuiltinFunction)c).GetMaximumArguments();
             else return 10;
         }
 
@@ -525,9 +524,8 @@ namespace IronPython.Runtime {
                 case SymbolTable.BasesId: value = BaseClasses; return true;
                 case SymbolTable.ClassId: value = Ops.GetDynamicType(this); return true;
                 case SymbolTable.SubclassesId:
-                    ReflectedMethod rm = new ReflectedMethod("__subclasses__", typeof(ReflectedType).GetMethod("__subclasses__"), FunctionType.PythonVisible | FunctionType.Method); ;
-                    rm.inst = this;
-                    value = rm;
+                    BuiltinFunction rm = BuiltinFunction.MakeMethod("__subclasses__", typeof(ReflectedType).GetMethod("__subclasses__"), FunctionType.PythonVisible | FunctionType.Method); ;
+                    value = new BoundBuiltinFunction(rm, this);
                     return true;
                 default:
                     if (TryLookupSlot(context, name, out value)) {
@@ -806,7 +804,7 @@ namespace IronPython.Runtime {
             ret.isBuiltinMethod = true;
             ret.isSuperTypeMethod = false;
 
-            ret.func = ReflectedMethod.MakeMethod((string)SymbolTable.IdToString(name), func.Method, FunctionType.Function);
+            ret.func = BuiltinFunction.MakeMethod((string)SymbolTable.IdToString(name), func.Method, FunctionType.Function);
             ret.funcAsFunc = ret.func as BuiltinFunction;
 
             //pt.dict[name] = ret;

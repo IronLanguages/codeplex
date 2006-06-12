@@ -27,7 +27,7 @@ namespace IronPython.Runtime {
     public delegate object CallTargetN(params object[] args);
     public delegate object CallTargetWithContextN(ICallerContext context, params object[] args);
 
-    public abstract partial class FastCallable {
+    public abstract partial class FastCallable:ICallable, ICallableWithCallerContext {
 
         public static Delegate MakeDelegate(MethodInfo mi) {
             if (mi.ReturnType != typeof(object)) return null;
@@ -52,9 +52,6 @@ namespace IronPython.Runtime {
             return CodeGen.CreateDelegate(mi, GetTargetType(needsContext, nargs));
         }
 
-        //public static FastCallable Make(MethodInfo mi) {
-        //}
-
         public static Type GetTargetType(bool needsContext, int nargs) {
             if (needsContext) {
                 switch (nargs) {
@@ -78,52 +75,25 @@ namespace IronPython.Runtime {
             throw new NotImplementedException();
         }
 
-
-        protected int minArgs, maxArgs;
         protected string name;
-        protected FastCallable(string name, int minArgs, int maxArgs) {
+        protected FastCallable(string name) {
             this.name = name;
-            this.minArgs = minArgs;
-            this.maxArgs = maxArgs;
         }
 
-        public virtual object Call(ICallerContext context) { throw BadArgumentError(CallType.None, 0); }
-        public virtual object Call(ICallerContext context, object arg0) { throw BadArgumentError(CallType.None, 1); }
-        public virtual object Call(ICallerContext context, object arg0, object arg1) { throw BadArgumentError(CallType.None, 2); }
-        public virtual object Call(ICallerContext context, object arg0, object arg1, object arg2) { throw BadArgumentError(CallType.None, 3); }
-        public virtual object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) { throw BadArgumentError(CallType.None, 4); }
-        public virtual object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) { throw BadArgumentError(CallType.None, 5); }
-        public virtual object Call(ICallerContext context, params object[] args) {
-            switch (args.Length) {
-                case 0: return Call(context);
-                case 1: return Call(context, args[0]);
-                case 2: return Call(context, args[0], args[1]);
-                case 3: return Call(context, args[0], args[1], args[2]);
-                case 4: return Call(context, args[0], args[1], args[2], args[3]);
-                case 5: return Call(context, args[0], args[1], args[2], args[3], args[4]);
-            }
-            throw BadArgumentError(CallType.None, args.Length);
+        public abstract int MaximumArgs {
+            get;
         }
-        public virtual object CallInstance(ICallerContext context, object instance) { throw BadArgumentError(CallType.ImplicitInstance, 1); }
-        public virtual object CallInstance(ICallerContext context, object instance, object arg0) { throw BadArgumentError(CallType.ImplicitInstance, 2); }
-        public virtual object CallInstance(ICallerContext context, object instance, object arg0, object arg1) { throw BadArgumentError(CallType.ImplicitInstance, 3); }
-        public virtual object CallInstance(ICallerContext context, object instance, object arg0, object arg1, object arg2) { throw BadArgumentError(CallType.ImplicitInstance, 4); }
-        public virtual object CallInstance(ICallerContext context, object instance, object arg0, object arg1, object arg2, object arg3) { throw BadArgumentError(CallType.ImplicitInstance, 5); }
-        public virtual object CallInstance(ICallerContext context, object instance, object arg0, object arg1, object arg2, object arg3, object arg4) { throw BadArgumentError(CallType.ImplicitInstance, 6); }
-        public virtual object CallInstance(ICallerContext context, object instance, params object[] args) {
-            switch (args.Length) {
-                case 0: return Call(context, instance);
-                case 1: return Call(context, instance, args[0]);
-                case 2: return Call(context, instance, args[0], args[1]);
-                case 3: return Call(context, instance, args[0], args[1], args[2]);
-                case 4: return Call(context, instance, args[0], args[1], args[2], args[3]);
-            }
-            throw BadArgumentError(CallType.ImplicitInstance, args.Length + 1);
+
+        public abstract int MinimumArgs {
+            get;
         }
+
+        public abstract object Call(ICallerContext context, params object[] args);
+        public abstract object CallInstance(ICallerContext context, object instance, params object[] args);
 
         protected Exception BadArgumentError(CallType callType, int argCount) {
-            int errMinArgs = minArgs;
-            int errMaxArgs = maxArgs;
+            int errMinArgs = MinimumArgs;
+            int errMaxArgs = MaximumArgs;
             if (callType == CallType.ImplicitInstance) {
                 argCount -= 1;
                 errMinArgs -= 1;
@@ -135,7 +105,7 @@ namespace IronPython.Runtime {
             return PythonFunction.TypeErrorForIncorrectArgumentCount(name, errMaxArgs, errMaxArgs - errMinArgs, argCount);
         }
    
-        public static object[] PrependInstance(object instance, object[] args) {
+        protected static object[] PrependInstance(object instance, object[] args) {
             object[] nargs = new object[args.Length + 1];
             nargs[0] = instance;
             for (int i=0; i < args.Length; i++) {
@@ -143,6 +113,14 @@ namespace IronPython.Runtime {
             }
             return nargs;
         }
+
+        #region ICallable Members
+
+        public object Call(params object[] args) {
+            return Call((ICallerContext)null, args); //??? is a null context okay
+        }
+
+        #endregion
     }
 
     public class FastCallableUgly : FastCallable {
@@ -150,9 +128,12 @@ namespace IronPython.Runtime {
 
         //!!! bad args passed to parent
         public FastCallableUgly(MethodBinder binder)
-            : base("", 0, 0) {
+            : base(binder.Name) {
             this.binder = binder;
         }
+
+        public override int MaximumArgs { get { return binder.MaximumArgs; } }
+        public override int MinimumArgs { get { return binder.MinimumArgs; } }
 
         public override object Call(ICallerContext context) {
             return binder.Call(context, CallType.None, new object[] { });
@@ -191,9 +172,6 @@ namespace IronPython.Runtime {
         }
         public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
             return binder.Call(context, CallType.ImplicitInstance, new object[] { arg0, arg1, arg2, arg3, arg4 });
-        }
-        public override object CallInstance(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4, object arg5) {
-            return binder.Call(context, CallType.ImplicitInstance, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
         }
 
         public override object CallInstance(ICallerContext context, object instance, params object[] args) {

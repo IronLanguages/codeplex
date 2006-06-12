@@ -263,7 +263,7 @@ namespace IronPython.Runtime {
     /// Created for a user-defined function.  
     /// </summary>
     [PythonType("function")]
-    public abstract partial class PythonFunction : IFastCallable, IFancyCallable, IDescriptor, IDynamicObject, IWeakReferenceable, ICloneable, ICustomAttributes {
+    public abstract partial class PythonFunction : FastCallable, IFancyCallable, IDescriptor, IDynamicObject, IWeakReferenceable, ICloneable, ICustomAttributes {
         [ThreadStatic]
         private static int depth;                         // call depth (only used when we have lots of threads)
         private static int[] depths = new int[20];        // first 32 threads get tracked in static array for perf, 
@@ -276,14 +276,13 @@ namespace IronPython.Runtime {
         // The default values of the last few arguments
         protected readonly object[] defaults;
 
-        private string name;
         private PythonModule module;
         private object doc;
         private FunctionCode code;
         internal IAttributesDictionary dict;
         #endregion
 
-        protected PythonFunction(PythonModule globals, string name, string[] argNames, object[] defaults) {
+        protected PythonFunction(PythonModule globals, string name, string[] argNames, object[] defaults):base(name) {
             this.argNames = argNames;
             this.defaults = defaults;
             Debug.Assert(defaults.Length <= argNames.Length);
@@ -296,6 +295,14 @@ namespace IronPython.Runtime {
 
             this.module = globals;
             this.FunctionCode = new FunctionCode(this);
+        }
+
+        public override int MaximumArgs {
+            get { return 0; }
+        }
+
+        public override int MinimumArgs {
+            get { return 0; }
         }
 
         #region Public APIs
@@ -362,6 +369,10 @@ namespace IronPython.Runtime {
                 if (!(value is FunctionCode)) throw Ops.TypeError("func_code must be set to a code object");
                 code = (FunctionCode)value;
             }
+        }
+
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            return Call(context, PrependInstance(instance, args));
         }
 
         [PythonName("__call__")]
@@ -434,13 +445,6 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region ICallable Members
-
-        public virtual object Call(params object[] args) {
-            throw new NotImplementedException();
-        }
-
-        #endregion
 
         #region Protected APIs
 
@@ -677,7 +681,7 @@ namespace IronPython.Runtime {
         #region ICallable Members
 
         [PythonName("__call__")]
-        public override object Call(params object[] args) {
+        public override object Call(ICallerContext context, params object[] args) {
             int nparams = argNames.Length;
             int nargs = args.Length;
             if (nargs < nparams) {
@@ -765,7 +769,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__call__")]
-        public override object Call(params object[] args) {
+        public override object Call(ICallerContext context, params object[] args) {
             int nargs = args.Length;
             object argList = null;
             object[] outArgs = new object[argNames.Length];
@@ -863,20 +867,20 @@ namespace IronPython.Runtime {
     }
 
     [PythonType("instancemethod")]
-    public sealed partial class Method : IFastCallable, IFancyCallable, IDescriptor, IWeakReferenceable, IDynamicObject, ICustomAttributes {
+    public sealed partial class Method : FastCallable, IFancyCallable, IDescriptor, IWeakReferenceable, IDynamicObject, ICustomAttributes {
         //??? can I type this to Function
         private object func;
         private object inst;
         private object declaringClass;
         private WeakRefTracker weakref;
 
-        public Method(object function, object instance, object @class) {
+        public Method(object function, object instance, object @class):base("") {
             this.func = function;
             this.inst = instance;
             this.declaringClass = @class;
         }
 
-        public Method(object function, object instance) {
+        public Method(object function, object instance):base("") {
             this.func = function;
             this.inst = instance;
         }
@@ -914,6 +918,15 @@ namespace IronPython.Runtime {
             }
         }
 
+        //!!! These two methods are quite ugly
+        public override int MaximumArgs {
+            get { return 0; }
+        }
+
+        public override int MinimumArgs {
+            get { return 0; }
+        }
+
         private Exception BadSelf(object got) {
             DynamicType dt = DeclaringClass as DynamicType;
 
@@ -930,10 +943,15 @@ namespace IronPython.Runtime {
                 firstArg);
         }
 
+        private object CheckSelf(object self) {
+            if (!Modules.Builtin.IsInstance(self, DeclaringClass)) throw BadSelf(self);
+            return self;
+        }
+
         private object[] AddInstToArgs(object[] args) {
             if (inst == null) {
                 if (args.Length < 1) throw BadSelf(null);
-                if (!Modules.Builtin.IsInstance(args[0], DeclaringClass)) throw BadSelf(args[0]);
+                CheckSelf(args[0]);
                 return args;
             }
 
@@ -943,14 +961,28 @@ namespace IronPython.Runtime {
             return nargs;
         }
 
-        #region ICallable Members
-
         [PythonName("__call__")]
-        public object Call(params object[] args) {
-            return Ops.Call(func, AddInstToArgs(args));
+        public override object Call(ICallerContext context, params object[] args) {
+            FastCallable fc = func as FastCallable;
+            if (fc != null) {
+                if (inst != null) {
+                    return fc.CallInstance(context, inst, args);
+                }  else {
+                    if (args.Length > 0) CheckSelf(args[0]);
+                    return fc.Call(context, args);
+                }
+            }
+            return Ops.CallWithContext(context, func, AddInstToArgs(args));
         }
 
-        #endregion
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            FastCallable fc = func as FastCallable;
+            if (fc != null) {
+                if (inst != null) return fc.CallInstance(context, instance, AddInstToArgs(args));
+                else return fc.CallInstance(context, instance, args); //??? check instance type
+            }
+            return Ops.CallWithContext(context, func, PrependInstance(instance, AddInstToArgs(args)));
+        }
 
         [PythonName("__call__")]
         public object Call(ICallerContext context, object []args, string []names){
@@ -967,13 +999,6 @@ namespace IronPython.Runtime {
 
         [PythonName("__str__")]
         public override string ToString() {
-            if (func is BuiltinFunction || func is ReflectedMethodBase) {
-                if (inst != null) {
-                    return string.Format("<built-in method {0} of {1} object at {2}>", Ops.GetAttr(DefaultContext.Default, func, SymbolTable.Name),
-                        Ops.GetDynamicType(inst).__name__, Ops.HexId(inst));
-                }
-            }
-
             if (inst != null) {
                 return string.Format("<bound method {0}.{1} of {2}>",
                     DeclaringClassAsString(), 

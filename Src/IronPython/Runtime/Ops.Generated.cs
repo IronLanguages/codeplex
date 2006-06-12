@@ -28,157 +28,85 @@ namespace IronPython.Runtime {
         public const int MaximumCallArgs = 5;
 
         public static object Call(object func) {
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call();
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call();
-
-            ICallable ic = func as ICallable;
-            if (ic != null) return ic.Call(EMPTY);
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call((ICallerContext)null);
 
             return Ops.Call(func, EMPTY);
         }
 
         public static object Call(object func, object arg0) {
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0);
-
-            ICallable ic = func as ICallable;
-            if (ic != null) return ic.Call(new object[] { arg0 });
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call((ICallerContext)null, arg0);
 
             return Ops.Call(func, new object[] { arg0 });
         }
 
         public static object Call(object func, object arg0, object arg1) {
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0, arg1);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0, arg1);
-
-            ICallable ic = func as ICallable;
-            if (ic != null) return ic.Call(new object[] { arg0, arg1 });
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call((ICallerContext)null, arg0, arg1);
 
             return Ops.Call(func, new object[] { arg0, arg1 });
         }
 
         public static object Call(object func, object arg0, object arg1, object arg2) {
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0, arg1, arg2);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0, arg1, arg2);
-
-            ICallable ic = func as ICallable;
-            if (ic != null) return ic.Call(new object[] { arg0, arg1, arg2 });
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call((ICallerContext)null, arg0, arg1, arg2);
 
             return Ops.Call(func, new object[] { arg0, arg1, arg2 });
         }
 
         public static object Call(object func, object arg0, object arg1, object arg2, object arg3) {
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0, arg1, arg2, arg3);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0, arg1, arg2, arg3);
-
-            ICallable ic = func as ICallable;
-            if (ic != null) return ic.Call(new object[] { arg0, arg1, arg2, arg3 });
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call((ICallerContext)null, arg0, arg1, arg2, arg3);
 
             return Ops.Call(func, new object[] { arg0, arg1, arg2, arg3 });
         }
 
         public static object Call(object func, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0, arg1, arg2, arg3, arg4);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0, arg1, arg2, arg3, arg4);
-
-            ICallable ic = func as ICallable;
-            if (ic != null) return ic.Call(new object[] { arg0, arg1, arg2, arg3, arg4 });
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call((ICallerContext)null, arg0, arg1, arg2, arg3, arg4);
 
             return Ops.Call(func, new object[] { arg0, arg1, arg2, arg3, arg4 });
         }
 
         public static object CallWithContext(ICallerContext context, object func) {
-            BuiltinFunction bf = func as BuiltinFunction;
-            if (bf != null) return bf.Call(context);
-
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call();
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call();
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call(context);
 
             return Ops.CallWithContext(context, func, EMPTY);
         }
 
         public static object CallWithContext(ICallerContext context, object func, object arg0) {
-            BuiltinFunction bf = func as BuiltinFunction;
-            if (bf != null) return bf.Call(context, arg0);
-
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0);
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call(context, arg0);
 
             return Ops.CallWithContext(context, func, new object[]{arg0});
         }
 
         public static object CallWithContext(ICallerContext context, object func, object arg0, object arg1) {
-            BuiltinFunction bf = func as BuiltinFunction;
-            if (bf != null) return bf.Call(context, arg0, arg1);
-
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0, arg1);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0, arg1);
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call(context, arg0, arg1);
 
             return Ops.CallWithContext(context, func, new object[]{arg0, arg1});
         }
 
         public static object CallWithContext(ICallerContext context, object func, object arg0, object arg1, object arg2) {
-            BuiltinFunction bf = func as BuiltinFunction;
-            if (bf != null) return bf.Call(context, arg0, arg1, arg2);
-
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0, arg1, arg2);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0, arg1, arg2);
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call(context, arg0, arg1, arg2);
 
             return Ops.CallWithContext(context, func, new object[]{arg0, arg1, arg2});
         }
 
         public static object CallWithContext(ICallerContext context, object func, object arg0, object arg1, object arg2, object arg3) {
-            BuiltinFunction bf = func as BuiltinFunction;
-            if (bf != null) return bf.Call(context, arg0, arg1, arg2, arg3);
-
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0, arg1, arg2, arg3);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0, arg1, arg2, arg3);
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call(context, arg0, arg1, arg2, arg3);
 
             return Ops.CallWithContext(context, func, new object[]{arg0, arg1, arg2, arg3});
         }
 
         public static object CallWithContext(ICallerContext context, object func, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            BuiltinFunction bf = func as BuiltinFunction;
-            if (bf != null) return bf.Call(context, arg0, arg1, arg2, arg3, arg4);
-
-            PythonFunction f = func as PythonFunction;
-            if (f != null) return f.Call(arg0, arg1, arg2, arg3, arg4);
-
-            IFastCallable ifc = func as IFastCallable;
-            if (ifc != null) return ifc.Call(arg0, arg1, arg2, arg3, arg4);
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call(context, arg0, arg1, arg2, arg3, arg4);
 
             return Ops.CallWithContext(context, func, new object[]{arg0, arg1, arg2, arg3, arg4});
         }

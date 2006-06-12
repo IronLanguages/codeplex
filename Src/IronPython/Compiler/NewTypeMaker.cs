@@ -518,14 +518,10 @@ namespace IronPython.Compiler {
                                                     BindingFlags.Instance
                                                     );
 
-            List<MethodTracker> newCtors = new List<MethodTracker>();
             foreach (ConstructorInfo ci in constructors) {
                 if (!(ci.IsPublic || ci.IsFamily)) continue;
-
-                newCtors.Add(new MethodTracker(OverrideConstructor(ci), GetOverrideCtorSignature(ci.GetParameters())));
+                OverrideConstructor(ci);
             }
-
-            ReflectOptimizer.EmitFunction(tg, newCtors.ToArray());
         }
 
         protected virtual bool ShouldOverrideVirtual(MethodInfo mi) {
