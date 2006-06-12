@@ -54,7 +54,7 @@ namespace IronPython.Runtime {
         private static ReflectedType StringType;
         private static Dictionary<Type, DynamicType> dynamicTypes = MakeDynamicTypesTable();
         // The cache for dynamically generated delegates.
-        private static Publisher<Type, MethodInfo> dynamicDelegates = new Publisher<Type, MethodInfo>();
+        private static Publisher<DelegateSignatureInfo, MethodInfo> dynamicDelegates = new Publisher<DelegateSignatureInfo, MethodInfo>();
 
 
         public static object[] MakeArray(object o1) { return new object[] { o1 }; }
@@ -242,9 +242,11 @@ namespace IronPython.Runtime {
                 fo = m.Function as PythonFunction;
             }
 
+            MethodInfo invoke = delegateType.GetMethod("Invoke");
+            ParameterInfo[] pis = invoke.GetParameters();
             if (fo != null) {
                 if (fo is FunctionN == false) {
-                    int expArgCnt = delegateType.GetMethod("Invoke").GetParameters().Length;
+                    int expArgCnt = pis.Length;
                     int maxArgCnt = fo.ArgCount;
                     int minArgCnt = fo.ArgCount - fo.FunctionDefaults.Count;
 
@@ -263,64 +265,15 @@ namespace IronPython.Runtime {
                 }
             }
 
-            //
-            //  This hashtable is keyed off of the delegate type.
-            //  More optimal solution is to key it off of the delegate signature only.
-            //
-            MethodInfo methodInfo = dynamicDelegates.GetOrCreateValue(delegateType,
+            DelegateSignatureInfo dsi = new DelegateSignatureInfo(invoke.ReturnType, pis);
+            MethodInfo methodInfo = dynamicDelegates.GetOrCreateValue(dsi,
                 delegate() {
                     // creation code
-                    return CreateNewDelegate(delegateType);
+                    return dsi.CreateNewDelegate();
                 });
 
             return CodeGen.CreateDelegate(methodInfo, delegateType, o);
-        }
-
-        private static MethodInfo CreateNewDelegate(Type delegateType) {
-            MethodInfo handlerMethod = delegateType.GetMethod("Invoke");
-            ParameterInfo[] handlerParams = handlerMethod.GetParameters();
-
-            Type[] delegateParams = new Type[handlerParams.Length + 1];
-            delegateParams[0] = typeof(object);
-            for (int parameter = 0; parameter < handlerParams.Length; parameter++) {
-                delegateParams[parameter + 1] = handlerParams[parameter].ParameterType;
-            }
-            CodeGen cg = OutputGenerator.Snippets.DefineDynamicMethod(delegateType.ToString(),
-                                                                      handlerMethod.ReturnType,
-                                                                      delegateParams);
-
-            if (handlerParams.Length <= Ops.MaximumCallArgs) {
-                Type[] callParams = CompilerHelpers.MakeRepeatedArray(typeof(object), handlerParams.Length + 1);
-                cg.EmitArgGet(0);
-                for (int parameter = 0; parameter < handlerParams.Length; parameter++) {
-                    ParameterInfo pi = handlerParams[parameter];
-                    cg.EmitArgGet(parameter + 1);
-                    cg.EmitCastToObject(pi.ParameterType);
-                }
-                cg.EmitCall(typeof(Ops), "Call", callParams);
-            } else {
-                cg.EmitArgGet(0);                           //  Get the first argument, this one goes directly
-                cg.EmitInt(handlerParams.Length);           //  Rest of arguments go in an object array
-                cg.Emit(OpCodes.Newarr, typeof(object));    //   ... create the array
-
-                for (int parameter = 0; parameter < handlerParams.Length; parameter++) {
-                    ParameterInfo pi = handlerParams[parameter];
-                    cg.Emit(OpCodes.Dup);                   //  duplicate array handle
-                    cg.EmitInt(parameter);                  //  load index into the array
-                    cg.EmitArgGet(parameter + 1);           //  load the value - from the parameter
-                    cg.EmitCastToObject(pi.ParameterType);  //  cast to object
-                    cg.Emit(OpCodes.Stelem_Ref);            //  store it in the array
-                }
-
-                cg.EmitCall(typeof(Ops), "Call",
-                    new Type[] { typeof(object), typeof(object[]) });
-            }
-
-            cg.EmitCastFromObject(handlerMethod.ReturnType);
-            cg.Emit(OpCodes.Ret);
-
-            return cg.CreateDelegateMethodInfo();
-        }
+        }        
 
         public static object ConvertTo(object o, Type toType) {
             return Converter.Convert(o, toType);

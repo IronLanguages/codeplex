@@ -58,6 +58,7 @@
     <Compile Include="Cmplx.cs" />
     <Compile Include="Conversions.cs" />
     <Compile Include="DefaultParams.cs" />
+    <Compile Include="DelegateTest.cs" />
     <Compile Include="DeTest.cs" />
     <Compile Include="EngineTest.cs" />
     <Compile Include="Enums.cs" />

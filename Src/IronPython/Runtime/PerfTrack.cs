@@ -34,6 +34,7 @@ namespace IronPython.Runtime {
             Fields,         // fields got or set
             Methods,        // methods called through MethodBase.Invoke()...
             Compiler,       // Methods compiled via the ReflectOptimizer
+            DelegateCreate, // we've created a new method for delegates
             DictInvoke      // Dictionary accesses
         }
 

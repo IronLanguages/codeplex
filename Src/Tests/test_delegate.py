@@ -14,43 +14,212 @@
 ######################################################################################
 
 import clr
-clr.AddReferenceByPartialName("System.Drawing")
-clr.AddReferenceByPartialName("System.Windows.Forms")
-
-from System.Windows.Forms import *
-from System.Drawing import *
-import System
-
-superForm = Form(Text="Test")
-superTimer = Timer()
-
-def MyOnPaint(data, event):
-    f = data
-    g = f.CreateGraphics()
-    #g.GetHdc()
-    br = SolidBrush(SystemColors.WindowText)
-    g.DrawString("Hello", f.Font, br, System.Single.Epsilon,System.Single.Epsilon)
-
-def MyTick(data, event):
-    superForm.Close()
-    superTimer.Stop();
-
-def MyLoad(data, event):
-    superTimer.Interval = 1000
-    superTimer.Tick += MyTick
-    superTimer.Start()
-
-superForm.Paint += MyOnPaint
-superForm.Load += MyLoad
-superForm.ShowDialog()
-
-
 from lib.assert_util import *
 load_iron_python_test()
+import IronPythonTest
+
+from System.Threading import Timer, AutoResetEvent
+from System import EventArgs
+
+are = AutoResetEvent(False)
+
+def MyTick(state):
+    global superTimer
+    AreEqual(state, superTimer)
+    are.Set()
+
+def SimpleHandler(sender, args):
+    global superTimer
+    superTimer = Timer(MyTick)
+    superTimer.Change(1000, 0)
+        
+
+dlgTst = IronPythonTest.DelegateTest()
+dlgTst.Event += SimpleHandler
+
+dlgTst.FireInstance(None, EventArgs.Empty)
+are.WaitOne()
+superTimer.Dispose()
+
+############################################################
+# test various combinations of delegates...
+
+dlgTst = IronPythonTest.DelegateTest()
+
+def Handler(self, args):
+    global glblSelf, glblArgs, handlerCalled
+    
+    AreEqual(self, glblSelf)
+    AreEqual(args, glblArgs)
+    handlerCalled = True
+
+# check the methods w/ object sender, EventArgs sigs first...
+glblSelf = 0
+for x in [(IronPythonTest.DelegateTest.StaticEvent, IronPythonTest.DelegateTest.FireStatic), 
+           (dlgTst.Event, dlgTst.FireInstance), 
+           (IronPythonTest.DelegateTest.StaticGenericEvent, IronPythonTest.DelegateTest.FireGenericStatic), 
+           (dlgTst.GenericEvent, dlgTst.FireGeneric)]:
+    event, fire = x[0], x[1]
+    
+    event += Handler
+    
+    glblSelf = glblSelf + 1
+    glblArgs = EventArgs()
+    handlerCalled = False
+    
+    fire(glblSelf, glblArgs)
+        
+    AreEqual(handlerCalled, True)
+
+def ParamsHandler(self, *args):
+    global glblSelf, glblArgs, handlerCalled
+    
+    AreEqual(self, glblSelf)
+    AreEqual(args, tuple(range(glblArgs)))
+    handlerCalled = True
+
+for x in [(IronPythonTest.DelegateTest.StaticParamsEvent, IronPythonTest.DelegateTest.FireParamsStatic), 
+           (dlgTst.ParamsEvent, dlgTst.FireParams)]:
+    event, fire = x[0], x[1]
+    
+    event += ParamsHandler
+    
+    glblSelf = glblSelf + 1
+    
+    for x in range(6):
+        handlerCalled = False
+        
+        glblArgs = x
+        fire(glblSelf, *tuple(range(x)))
+        
+        AreEqual(handlerCalled, True)
+
+def BigParamsHandler(self, a, b, c, d, *args):
+    global glblSelf, glblArgs, handlerCalled
+    
+    AreEqual(self, glblSelf)
+    AreEqual(args, tuple(range(glblArgs)))
+    AreEqual(a, 1)
+    AreEqual(b, 2)
+    AreEqual(c, 3)
+    AreEqual(d, 4)
+    handlerCalled = True
+
+for x in [(IronPythonTest.DelegateTest.StaticBigParamsEvent, IronPythonTest.DelegateTest.FireBigParamsStatic), 
+           (dlgTst.BigParamsEvent, dlgTst.FireBigParams)]:
+    event, fire = x[0], x[1]
+    
+    event += BigParamsHandler
+    
+    glblSelf = glblSelf + 1
+    
+    for x in range(6):
+        handlerCalled = False
+        
+        glblArgs = x
+        fire(glblSelf, 1, 2, 3, 4, *tuple(range(x)))
+        
+        AreEqual(handlerCalled, True)
+
+# out param
+def OutHandler(sender):
+    global glblSelf, handlerCalled
+    
+    AreEqual(sender, glblSelf)
+    handlerCalled = True
+    
+    return 23
+    
+for x in [(IronPythonTest.DelegateTest.StaticOutEvent, IronPythonTest.DelegateTest.FireOutStatic), 
+           (dlgTst.OutEvent, dlgTst.FireOut)]:
+    event, fire = x[0], x[1]
+    
+    event += OutHandler
+    
+    glblSelf = glblSelf + 1
+    
+    handlerCalled = False
+    
+    AreEqual(fire(glblSelf), 23)
+    
+    AreEqual(handlerCalled, True)
+
+# ref param
+def RefHandler(sender, refArg):
+    global glblSelf, handlerCalled
+    
+    AreEqual(sender, glblSelf)
+    AreEqual(refArg, 42)
+    handlerCalled = True
+    
+    return 23
+    
+for x in [(IronPythonTest.DelegateTest.StaticRefEvent, IronPythonTest.DelegateTest.FireRefStatic), 
+           (dlgTst.RefEvent, dlgTst.FireRef)]:
+    event, fire = x[0], x[1]
+    
+    event += RefHandler
+    
+    glblSelf = glblSelf + 1
+    
+    handlerCalled = False
+    
+    AreEqual(fire(glblSelf, 42), 23)
+    
+    AreEqual(handlerCalled, True)
+
+# out w/ return type
+def OutHandler(sender):
+    global glblSelf, handlerCalled
+    
+    AreEqual(sender, glblSelf)
+    handlerCalled = True
+    
+    return ("23", 42)
+    
+for x in [(IronPythonTest.DelegateTest.StaticOutReturnEvent, IronPythonTest.DelegateTest.FireOutReturnStatic), 
+           (dlgTst.OutReturnEvent, dlgTst.FireOutReturn)]:
+    event, fire = x[0], x[1]
+    
+    event += OutHandler
+    
+    glblSelf = glblSelf + 1
+    
+    handlerCalled = False
+    
+    AreEqual(fire(glblSelf), ("23", 42))
+    
+    AreEqual(handlerCalled, True)
+    
+# ref w/ a return type
+def RefHandler(sender, refArg):
+    global glblSelf, handlerCalled
+    
+    AreEqual(sender, glblSelf)
+    AreEqual(refArg, 42)
+    handlerCalled = True
+    
+    return (23, 42)
+    
+for x in [(IronPythonTest.DelegateTest.StaticRefReturnEvent, IronPythonTest.DelegateTest.FireRefReturnStatic), 
+           (dlgTst.RefReturnEvent, dlgTst.FireRefReturn)]:
+    event, fire = x[0], x[1]
+    
+    event += RefHandler
+    
+    glblSelf = glblSelf + 1
+    
+    handlerCalled = False
+    
+    AreEqual(fire(glblSelf, 42), (23, 42))
+    
+    AreEqual(handlerCalled, True)
+
+
+#######
 
 def identity(x): return x
 
-import IronPythonTest
 r = IronPythonTest.ReturnTypes()
 r.floatEvent += identity
 
@@ -72,12 +241,12 @@ class foo(object):
         globalSelf = self
         globalArg = arg
 
-from System.Threading import Thread
+from System.Threading import Thread, ThreadStart, ParameterizedThreadStart
 
 # try parameterized thread
 
 a = foo()
-t = Thread(foo.bar)
+t = Thread(ParameterizedThreadStart(foo.bar))
 t.Start(a)
 t.Join()
 
@@ -88,7 +257,7 @@ AreEqual(globalSelf, a)
 a = foo()
 called = False
 
-t = Thread(a.bar)
+t = Thread(ThreadStart(a.bar))
 t.Start()
 t.Join()
 
@@ -100,7 +269,7 @@ AreEqual(globalSelf, a)
 a = foo()
 called = False
 
-t = Thread(a.baz)
+t = Thread(ParameterizedThreadStart(a.baz))
 t.Start('hello')
 t.Join()
 
@@ -112,30 +281,12 @@ AreEqual(globalArg, 'hello')
 # parameterized w/ self & extra arg, should throw
 
 try:
-    t = Thread(foo.baz)
+    t = Thread(ParameterizedThreadStart(foo.baz))
     AreEqual(True, False)
 except TypeError: pass
 
 
-
-#***** Above code are from 'Delegates' *****
-
-#***** Copying from 'SuperDelegates' *****
-
-#####################################################################################
-#
-#  Copyright (c) Microsoft Corporation. All rights reserved.
-#
-#  This source code is subject to terms and conditions of the Shared Source License
-#  for IronPython. A copy of the license can be found in the License.html file
-#  at the root of this distribution. If you can not locate the Shared Source License
-#  for IronPython, please send an email to ironpy@microsoft.com.
-#  By using this source code in any fashion, you are agreeing to be bound by
-#  the terms of the Shared Source License for IronPython.
-#
-#  You must not remove this notice, or any other, from this software.
-#
-######################################################################################
+# SuperDelegate Tests
 
 import sys
 import System
@@ -377,7 +528,7 @@ ls.append((do_remove, d.f1, -30))
 
 RunSequence(ls)
 
-# verify delegates are calling
+# verify delegates are calling 
 
 from System.Threading import ThreadStart, ParameterizedThreadStart
 
@@ -419,3 +570,7 @@ for target in [myotherfunc, myclass().myotherfunc, myoldclass().myotherfunc]:
     AreEqual(myfuncCalled, True)
     AreEqual(passedarg, 1)
     passedarg = None
+
+
+# verify we can call a delegate that's to a static method
+IronPythonTest.DelegateTest.Simple()

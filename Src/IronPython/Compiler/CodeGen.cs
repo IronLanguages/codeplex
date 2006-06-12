@@ -1090,6 +1090,21 @@ namespace IronPython.Compiler {
 
         }
 
+        public void EmitStoreValueIndirect(Type t) {
+            if (t.IsValueType) {
+                if (t == typeof(int)) Emit(OpCodes.Stind_I4);
+                else if (t == typeof(short)) Emit(OpCodes.Stind_I2);
+                else if (t == typeof(long) || t == typeof(ulong)) Emit(OpCodes.Stind_I8);
+                else if (t == typeof(char)) Emit(OpCodes.Stind_I2);
+                else if (t == typeof(bool)) Emit(OpCodes.Stind_I4);
+                else if (t == typeof(float)) Emit(OpCodes.Stind_R4);
+                else if (t == typeof(double)) Emit(OpCodes.Stind_R8);
+                else Emit(OpCodes.Stobj, t);
+            } else {
+                Emit(OpCodes.Stind_Ref);
+            }
+
+        }
         public void EmitStoreElement(Type t) {
             if (t.IsValueType) {
                 if (t == typeof(int) || t == typeof(uint)) Emit(OpCodes.Stelem_I4);
