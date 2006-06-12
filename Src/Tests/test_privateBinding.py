@@ -20,50 +20,17 @@
 from lib.assert_util import *
 from lib.file_util import *
 from lib.process_util import *
-import sys
-from System import Environment
+
+import System
+privateBinding = "-X:PrivateBinding" in System.Environment.GetCommandLineArgs()
 
 load_iron_python_test()
 import IronPythonTest
 from IronPythonTest import *
 
-import System
-
-privateBinding = "-X:PrivateBinding" in Environment.GetCommandLineArgs()
-
 clsPart = ClsPart()
 
-def test_NormalBinding():
-    if (privateBinding):
-        return
-
 def Negate(i): return -i
-
-def test_PrivateBinding():
-    if not privateBinding:
-        return
-    clsPart._ClsPart__privateField = 1
-    AreEqual(clsPart._ClsPart__privateField, 1)
-    clsPart._ClsPart__privateProperty = 1
-    AreEqual(clsPart._ClsPart__privateProperty, 1)
-    # !!! clsPart._ClsPart__privateEvent += Negate
-    clsPart._ClsPart__privateEvent = Negate
-    AreEqual(clsPart._ClsPart__privateMethod(1), -1)
-    
-    # !!! internalClsPart = InternalClsPart()
-    internalClsPart = IronPythonTest.InternalClsPart()
-    internalClsPart._InternalClsPart__Field = 1
-    AreEqual(internalClsPart._InternalClsPart__Field, 1)
-    internalClsPart._InternalClsPart__Property = 1
-    AreEqual(internalClsPart._InternalClsPart__Property, 1)
-    # !!! internalClsPart._InternalClsPart__Event += Negate
-    internalClsPart._InternalClsPart__Event = Negate
-    AreEqual(internalClsPart._InternalClsPart__Method(1), -1)
-    
-    # !!! AreEqual("_InternalClsPart__privateField" in dir(IronPythonTest.InternalClsPart), True)
-    # !!! AreEqual("_InternalClsPart__privateProperty" in dir(InternalClsPart), True)
-    # !!! AreEqual("_InternalClsPart__privateEvent" in dir(InternalClsPart), True)
-    # !!! AreEqual("_InternalClsPart__privateMethod" in dir(InternalClsPart), True)
 
 def test_Common():
     # !!! AreEqual("InternalClsPart" in dir(IronPythonTest), privateBinding)
@@ -74,7 +41,38 @@ def test_Common():
     AreEqual("_ClsPart__privateMethod" in dir(ClsPart), privateBinding)
     pass
 
-run_test(__name__)
+if not privateBinding: 
+    def test_NormalBinding():    
+        pass
+else: 
+    def test_PrivateBinding():
+        clsPart._ClsPart__privateField = 1
+        AreEqual(clsPart._ClsPart__privateField, 1)
+        clsPart._ClsPart__privateProperty = 1
+        AreEqual(clsPart._ClsPart__privateProperty, 1)
+        # !!! clsPart._ClswPart__privateEvent += Negate
+        clsPart._ClsPart__privateEvent = Negate
+        AreEqual(clsPart._ClsPart__privateMethod(1), -1)
+        
+        # !!! internalClsPart = InternalClsPart()
+        internalClsPart = IronPythonTest.InternalClsPart()
+        internalClsPart._InternalClsPart__Field = 1
+        AreEqual(internalClsPart._InternalClsPart__Field, 1)
+        internalClsPart._InternalClsPart__Property = 1
+        AreEqual(internalClsPart._InternalClsPart__Property, 1)
+        # !!! internalClsPart._InternalClsPart__Event += Negate
+        internalClsPart._InternalClsPart__Event = Negate
+        AreEqual(internalClsPart._InternalClsPart__Method(1), -1)
+        
+        # !!! AreEqual("_InternalClsPart__privateField" in dir(IronPythonTest.InternalClsPart), True)
+        # !!! AreEqual("_InternalClsPart__privateProperty" in dir(InternalClsPart), True)
+        # !!! AreEqual("_InternalClsPart__privateEvent" in dir(InternalClsPart), True)
+        # !!! AreEqual("_InternalClsPart__privateMethod" in dir(InternalClsPart), True)
+
+# use this when running standalone
+# run_test(__name__)
+
+run_test(__name__, noOutputPlease=True)
 
 if not privateBinding:
-    launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_privateBinding.py"), add=["-X:PrivateBinding"])
+    launch_ironpython_changing_extensions(__file__, add=["-X:PrivateBinding"])

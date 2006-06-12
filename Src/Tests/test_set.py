@@ -105,13 +105,11 @@ def test_ops():
                 
                 x1 = t1(s1)            
                 exec "y = x1 %s t2(s2)" % op
-                # BUG: 1029
-                #AreEqual(y, t1(exp1))
+                AreEqual(y, t1(exp1))
 
                 x1 = t1(s1)            
                 exec "y = x1 %s t2(s3)" % op
-                # BUG: 1029
-                #AreEqual(y, t1(exp2))
+                AreEqual(y, t1(exp2))
 
 def test_none():
     x, y = set([None, 'd']), set(['a', 'b', 'c', None])

@@ -75,14 +75,13 @@ def test_unpack():
     AreEqual(a, listOfSize2)
     AreEqual(b, 1)
     AreEqual(c, 2)
-    # BUG: 1028
-    #del a, b, c
+    del a, b, c
 
     [[a, b], c] = (listOfSize2, listOfSize2)
     AreEqual(a, 1)
     AreEqual(b, 2)
     AreEqual(c, listOfSize2)
-    #del a, b, c
+    del a, b, c
 
 def test_sort():
     # named params passed to sort

@@ -443,11 +443,9 @@ class RegressionTestConfig(TestConfig):
         self.runner     = RedirectTestRunner
         self.runstep    = RegressRunStep
         self.categories = categories.RegressionTests
-        if is_cli:
+        if is_cli64:
             # traceback support disabled on 64-bit
-            from System import IntPtr
-            if IntPtr.Size == 8:
-                self.notRunList += ['test.test_traceback']
+            self.notRunList += ['test.test_traceback']
         
     def getAllTests(self):
         return self.getTestsShownInCategories()

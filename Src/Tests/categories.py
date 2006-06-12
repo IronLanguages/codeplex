@@ -358,6 +358,8 @@ RegressionTests = {
                 test.test_colorsys
                 test.test_contains
                 test.test_compare
+                test.test_complex
+                test.test_decorators
                 test.test_dict
                 test.test_dircache
                 test.test_dummy_thread
@@ -367,6 +369,7 @@ RegressionTests = {
                 test.test_filecmp
                 test.test_fileinput
                 test.test_fnmatch
+                test.test_fpformat
                 test.test_format
                 test.test_grammar
                 test.test_hexoct
@@ -392,6 +395,7 @@ RegressionTests = {
                 test.test_slice
                 test.test_string
                 test.test_struct
+                test.test_syntax
                 test.test_textwrap
                 test.test_thread
                 test.test_threading
@@ -409,13 +413,11 @@ RegressionTests = {
     "test.test_bisect",     # doctest support
     "test.test_bool",       # 4 scenarios disabled due to pickle
     "test.test_codecs",     # Pyunycode, Nameprep, and idna not implemented, need to manually import encodings
-    "test.test_complex",    # BUG# 980
     "test.test_decimal",    # Bugs 972, 975, 973; another 2 cases disabled due to pickle
-    "test.test_decorators", # BUG# 976
     "test.test_deque",      # weakref, pickle, itertools not implemented
     "test.test_eof",        # tests for the whole exception string verbatim, changed to test for substring
     "test.test_exceptions", # warnings module
-    "test.test_iter",       # BUG# 908
+    "test.test_iter",       # reference counter behavior
     "test.test_itertools",
     "test.test_long",       # subclass long, test_float_overflow(), test_logs(), test_mixed_compares()
     "test.test_marshal",    # code not implemented, file() operations need to be explicitly closed
@@ -427,7 +429,6 @@ RegressionTests = {
     "test.test_sort",       # finalizer (__del__)
     "test.test_str",        # formatting disabled in string_tests, need to import encodings manually
     "test.test_stringio",   # IP doesn't support buffer, iter(StringIO()) is wrapped IEnumerator
-    "test.test_syntax",     # BUG# 971
     "test.test_traceback",  # generates files aren't collected, need to close manually
     "test.test_weakref",    # various tests disabled due to collection not being eager enough, additional gc.collect calls
     "test.test_builtin",    # various tests disabled - locals(), dir(), unicode strings
@@ -518,7 +519,7 @@ if __name__ == '__main__':
             y = mapping[x]
             if cat in y: 
                 print ' +', x
-                print ' |--', cat
+                print ' |-+', cat
                 for z in getattr(thisModule, x)[cat].split():
                     print '   |--', z
         print 

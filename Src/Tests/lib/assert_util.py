@@ -22,6 +22,11 @@ from type_util import types
 
 is_cli = sys.platform == 'cli'
 
+is_cli32, is_cli64 = False, False
+if is_cli: 
+    import System
+    is_cli32, is_cli64 = (System.IntPtr.Size == 4), (System.IntPtr.Size == 8)
+
 def usage(code, msg=''):
     print sys.modules['__main__'].__doc__ or 'No doc provided'
     if msg: print 'Error message: "%s"' % msg
@@ -201,13 +206,14 @@ def has_csc():
     except WindowsError: return False
     else:  return True
 
-def run_test(mod_name, verbose=False):
+def run_test(mod_name, noOutputPlease=False):
     import sys
     module = sys.modules[mod_name]
     for name in dir(module): 
         obj = getattr(module, name)
         if isinstance(obj, types.functionType) and name.startswith("test_"): 
-            if verbose or mod_name == '__main__': print "Testing %s" % name
+            if not noOutputPlease and (mod_name == '__main__'): 
+                print "Testing %s" % name
             obj()
 
 def run_class(mod_name, verbose=False): 
