@@ -23,7 +23,6 @@ using IronPython.Compiler;
 
 namespace IronPython.Runtime {
 
-    //!!! Giving up HybridDictionary performance, consider adding list for small sizes
     [PythonType("dict")]
     public class Dict : IMapping, IDictionary<object, object>, IComparable, ICloneable, IRichComparable, 
                         IDictionary, ICodeFormattable, IAttributesDictionary {
@@ -272,7 +271,6 @@ namespace IronPython.Runtime {
             DictOps.Update(this, b);
         }
 
-        //!!! These must be able to be done cleaner and faster        
         [PythonName("fromkeys")]
         internal static object FromKeys(object[] keys) {
             Dict ret = new Dict();
@@ -708,10 +706,6 @@ namespace IronPython.Runtime {
         }
 
         public static bool AddKeyValue(IDictionary<object, object> self, object o) {
-            //!!! optimize for Tuple, List, other easy cases
-            //ICollection c = (ICollection)o;
-            //!!!if (c.Count != 2) throw Ops.ValueError("dictionary update sequence element has length {0}, 2 required", c.Count);
-
             IEnumerator i = Ops.GetEnumerator(o); //c.GetEnumerator();
             if (i.MoveNext()) {
                 object key = i.Current;
@@ -753,7 +747,7 @@ namespace IronPython.Runtime {
                 }
             }
         }
-        //!!! not appropriately lazy
+
         public static IEnumerator IterItems(IDictionary<object, object> self) {
             return Items(self).GetEnumerator();
         }
@@ -801,10 +795,7 @@ namespace IronPython.Runtime {
 
             if (lcnt != rcnt) return lcnt > rcnt ? 1 : -1;
 
-            //!!! too expensive
-            
             List ritems = DictOps.Items(right);
-
             return CompareToWorker(left, rcnt, ritems);
         }
 

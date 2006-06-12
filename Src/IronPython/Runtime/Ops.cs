@@ -43,8 +43,8 @@ namespace IronPython.Runtime {
         [ThreadStatic]
         private static ArrayList InfiniteRepr;
 
-        public static readonly object NotImplemented = "<NotImplemented>"; //!!! need really singleton objects
-        public static readonly object Ellipsis = "..."; //!!!
+        public static readonly object NotImplemented = "<NotImplemented>";
+        public static readonly object Ellipsis = "...";
         public static readonly object TRUE = true;
         public static readonly object FALSE = false;
 
@@ -117,7 +117,7 @@ namespace IronPython.Runtime {
 
         public static string StringRepr(object o) {
             if (o == null) return "None";
-            //!!! this is performance important
+
             string s = o as string;
             if (s != null) return StringOps.Quote(s);
             if (o is int) return o.ToString();
@@ -187,7 +187,7 @@ namespace IronPython.Runtime {
 
 
         public static object Repr(object o) {
-            return Ops.ToPython(StringRepr(o));
+            return StringRepr(o);
         }
 
         static Ops() {
@@ -335,16 +335,7 @@ namespace IronPython.Runtime {
         public static object ToPython(Type type, object o) {
             if (type == typeof(bool)) return Bool2Object((bool)o);  // preserve object identity o
 
-            return ToPython(o);
-        }
-
-       public static object ToPython(object o) {
-            if (o == null) return o;
             return o;
-        }
-
-        public static object ToPython(string s) {
-            return s;
         }
 
         public static object GetLength(object o) {
@@ -547,11 +538,6 @@ namespace IronPython.Runtime {
 
             return ret;
         }
-        /*
-        public static void RegisterDynamicType(Type ty, DynamicType dt) {
-            //!!! check that we're not replacing a previous entry
-            dynamicTypes[ty] = dt;
-        }*/
 
         public static DynamicType GetDynamicTypeFromClsOnlyType(Type ty) {
             DynamicType ret;
@@ -906,8 +892,6 @@ namespace IronPython.Runtime {
         public static int Compare(object x, object y) {
             if (x == y) return 0;
 
-            //!!! This is going to be fun
-
             // built-in types need to be special cased here (like for equals)
             // because they don't implement our interfaces.
 
@@ -1209,7 +1193,7 @@ namespace IronPython.Runtime {
         public static int Hash(object o) {
             if (o is int) return (int)o;
             if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
-            if (o is double) return (int)(double)o; //??? fuzzy
+            if (o is double) return (int)(double)o;
             if (o == null) return NoneType.NoneHashCode;
 
             IRichEquality ipe = o as IRichEquality;
@@ -1543,7 +1527,7 @@ namespace IronPython.Runtime {
                 if (ifca.TryGetAttr(context, name, out ret)) return ret;
 
                 if (o.GetType().IsSubclassOf(typeof(UserType))) {
-                    //!!! we have an instance of a class that is built w/
+                    // we have an instance of a class that is built w/
                     // a meta-class.  We need to check the metaclasses
                     // properties as well, which ICustomAttrs didn't do.
                     // we'll fall through to GetAttr (we should probably
@@ -1708,7 +1692,6 @@ namespace IronPython.Runtime {
             return Ops.MakeAttributeError(self, name);
         }
 
-        //!!! try to use consistently
         static Exception MakeAttributeError(object o, string name) {
             if (o is DynamicType) {
                 throw Ops.AttributeError("type object '{0}' has no attribute '{1}'",
@@ -1958,7 +1941,7 @@ namespace IronPython.Runtime {
             if (metaclass == OldInstanceType.Instance)
                 return new OldClass(name, bases, vars);
             if (metaclass == TypeCache.ReflectedType || metaclass == TypeCache.UserType)
-                return UserType.MakeClass(name, bases, vars); //!!!
+                return UserType.MakeClass(name, bases, vars);
             if (metaclass is UserType)
                 return ((ICallableWithCallerContext)metaclass).Call(mod, new object[] { name, bases, vars });
 

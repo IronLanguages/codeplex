@@ -117,12 +117,6 @@ namespace IronPython.Compiler {
         }
 
         internal override void Emit(CodeGen cg) {
-            //!!! first optimize option comes here
-            //			if (target is FieldExpr && !hasSpecialArgs()) {
-            //				generateInvoke((FieldExpr)target, cg);
-            //				return;
-            //			}
-
             Label done = new Label();
             bool emitDone = false;
 
@@ -471,7 +465,7 @@ namespace IronPython.Compiler {
         internal override object Evaluate(NameEnv env) {
             IDictionary<object, object> dict = Ops.MakeDict(items.Length);
             foreach (SliceExpr s in items) {
-                dict[s.slStart.Evaluate(env)] = s.slStop.Evaluate(env);
+                dict[s.sliceStart.Evaluate(env)] = s.sliceStop.Evaluate(env);
             }
             return dict;
         }
@@ -481,8 +475,8 @@ namespace IronPython.Compiler {
             cg.EmitCall(typeof(Ops), "MakeDict");
             foreach (SliceExpr s in items) {
                 cg.Emit(OpCodes.Dup);
-                s.slStart.Emit(cg);
-                s.slStop.Emit(cg);
+                s.sliceStart.Emit(cg);
+                s.sliceStop.Emit(cg);
                 cg.EmitCall(typeof(Dict).GetProperty("Item").GetSetMethod());
             }
         }
@@ -496,33 +490,32 @@ namespace IronPython.Compiler {
     }
 
     public class SliceExpr : Expr {
-        //!!! these names will be trouble
-        public readonly Expr slStart, slStop, slStep;
+        public readonly Expr sliceStart, sliceStop, sliceStep;
         public SliceExpr(Expr start, Expr stop, Expr step) {
-            this.slStart = start;
-            this.slStop = stop;
-            this.slStep = step;
+            this.sliceStart = start;
+            this.sliceStop = stop;
+            this.sliceStep = step;
         }
 
         internal override object Evaluate(NameEnv env) {
-            object e1 = slStart.Evaluate(env);
-            object e2 = slStop.Evaluate(env);
-            object e3 = slStep.Evaluate(env);
+            object e1 = sliceStart.Evaluate(env);
+            object e2 = sliceStop.Evaluate(env);
+            object e3 = sliceStep.Evaluate(env);
             return Ops.MakeSlice(e1, e2, e3);
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitExprOrNone(slStart);
-            cg.EmitExprOrNone(slStop);
-            cg.EmitExprOrNone(slStep);
+            cg.EmitExprOrNone(sliceStart);
+            cg.EmitExprOrNone(sliceStop);
+            cg.EmitExprOrNone(sliceStep);
             cg.EmitCall(typeof(Ops), "MakeSlice");
         }
 
         public override void Walk(IAstWalker w) {
             if (w.Walk(this)) {
-                if (slStart != null) slStart.Walk(w);
-                if (slStop != null) slStop.Walk(w);
-                if (slStep != null) slStep.Walk(w);
+                if (sliceStart != null) sliceStart.Walk(w);
+                if (sliceStop != null) sliceStop.Walk(w);
+                if (sliceStep != null) sliceStep.Walk(w);
             }
             w.PostWalk(this);
         }
@@ -751,7 +744,6 @@ namespace IronPython.Compiler {
         }
 
         internal override object Evaluate(NameEnv env) {
-            //!!! not right for compare
             object l = left.Evaluate(env);
             object r = right.Evaluate(env);
 

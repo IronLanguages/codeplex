@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 using System.Text;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace IronMath {
     /// <summary>
@@ -470,43 +471,6 @@ namespace IronMath {
             return new BigInteger(x.sign * y.sign, zd);
         }
 
-        //		public static BigInteger operator *(int x, BigInteger y) {
-        //			return y*x;
-        //		}
-        //
-        //
-        //		public static BigInteger operator *(BigInteger x, int y) {
-        //			if (y == 256) {
-        //				Console.WriteLine("{0} * {2}  (digits = {1})", x, x.data.Length, y);
-        //			}
-        //
-        //			//BigInteger y = (BigInteger)yy;
-        //			int xl = x.length;
-        //			int yl = 1;
-        //			int ySign = 1;
-        //			uint yy = (uint)y; //!!!
-        //			int zl = xl+yl;
-        //			uint[] xd = x.data, zd = new uint[zl];
-        //
-        //			for (int xi=0; xi < xl; xi++) {
-        //				uint xv = xd[xi];
-        //				int zi = xi;
-        //				ulong carry = 0;
-        //				{
-        //					carry = carry+((ulong)xv)*yy+zd[zi];
-        //					zd[zi++] = (uint)carry;
-        //					carry >>= BitsPerDigit;
-        //				}
-        //				while (carry != 0) {
-        //					carry += zd[zi];
-        //					zd[zi++] = (uint)carry;
-        //					carry >>= BitsPerDigit;
-        //				}
-        //			}
-        //
-        //			return new BigInteger(x.sign*ySign, zd);
-        //		}
-
         public static BigInteger Divide(BigInteger x, BigInteger y) {
             return x / y;
         }
@@ -847,7 +811,7 @@ namespace IronMath {
             int xl = x.Length, yl = y.Length;
             uint[] xd = x.data, yd = y.data;
 
-            int zl = Math.Max(xl, yl);  //!!! can optimize for some &/| cases
+            int zl = Math.Max(xl, yl);
             uint[] zd = new uint[zl];
 
             bool negx = x.sign == -1, negy = y.sign == -1;
@@ -882,7 +846,7 @@ namespace IronMath {
             int xl = x.Length, yl = y.Length;
             uint[] xd = x.data, yd = y.data;
 
-            int zl = Math.Max(xl, yl);  //!!! can optimize for some &/| cases
+            int zl = Math.Max(xl, yl);
             uint[] zd = new uint[zl];
 
             bool negx = x.sign == -1, negy = y.sign == -1;
@@ -916,7 +880,7 @@ namespace IronMath {
             int xl = x.Length, yl = y.Length;
             uint[] xd = x.data, yd = y.data;
 
-            int zl = Math.Max(xl, yl);  //!!! can optimize for some &/| cases
+            int zl = Math.Max(xl, yl);
             uint[] zd = new uint[zl];
 
             bool negx = x.sign == -1, negy = y.sign == -1;
@@ -1039,7 +1003,7 @@ namespace IronMath {
                 throw new ArgumentOutOfRangeException(IronMath.NonNegativePower);
             }
             BigInteger factor = this;
-            BigInteger result = One; //!!! want a mutable here for efficiency
+            BigInteger result = One;
             while (exp != 0) {
                 if ((exp & 1) != 0) result = result * factor;
                 if (exp == 1) break;  // avoid costly factor.square()
@@ -1055,11 +1019,11 @@ namespace IronMath {
                 throw new ArgumentOutOfRangeException(IronMath.NonNegativePower);
             }
             BigInteger factor = this;
-            BigInteger result = One; //!!! want a mutable here for efficiency
+            BigInteger result = One;
             while (power != 0) {
                 if ((power & 1) != 0) {
                     result = result * factor;
-                    result = result % mod; //!!! should do all in one step
+                    result = result % mod;
                 }
                 factor = factor.Square();
                 power >>= 1;
@@ -1068,7 +1032,7 @@ namespace IronMath {
         }
 
         public BigInteger Square() {
-            return this * this; //!!! can do much better than O(N**2)
+            return this * this;
         }
 
         public override string ToString() {
@@ -1091,7 +1055,7 @@ namespace IronMath {
             int len = Length;
             if (len == 0) return "0";
 
-            ArrayList digitGroups = new ArrayList();
+            List<uint> digitGroups = new List<uint>();
 
             uint[] d = copy(data);
             int dl = Length;
@@ -1099,7 +1063,7 @@ namespace IronMath {
             uint groupRadix = groupRadixValues[radix];
             while (dl > 0) {
                 uint rem = div(d, ref dl, groupRadix);
-                digitGroups.Add(rem);  //!!! generics will improve efficiency
+                digitGroups.Add(rem);
             }
 
             StringBuilder ret = new StringBuilder();
@@ -1131,7 +1095,7 @@ namespace IronMath {
 
         public override int GetHashCode() {
             if (data.Length == 0) return 0;
-            //!!! weak (must be same as int for values in the range of a single int)
+            // HashCode must be same as int for values in the range of a single int
             return (int)data[0];
         }
 

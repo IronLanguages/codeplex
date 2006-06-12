@@ -64,6 +64,8 @@ namespace IronPython.Runtime {
         private IAttributesInjector prependedAttrs;
         private IAttributesInjector appendedAttrs;
 
+        private Tuple bases;
+
         #endregion
 
         #region ReflectedType factories
@@ -203,7 +205,7 @@ namespace IronPython.Runtime {
             }
 
             if (rm == null) {
-                //!!! this is destructive
+                // This is destructive, Assert
                 Debug.Assert(existingMember == null, String.Format("Replacing {0} with {1}", existingMember, typeof(T)));
                 rm = new T();
                 rm.Name = name;
@@ -236,7 +238,7 @@ namespace IronPython.Runtime {
                 if (cm != null) {
                     ((BuiltinFunction)cm.func).AddMethod(mi);
                 } else {
-                    //!!! Assert
+                    Debug.Fail(String.Format("Replacing existing method {0} on {1}", methodId, this));
                     dict[methodId] = new ClassMethod(BuiltinFunction.MakeMethod(name, mi, FunctionType.Function | FunctionType.PythonVisible));
                 }
             } else {
@@ -283,8 +285,6 @@ namespace IronPython.Runtime {
             if (!dict.ContainsKey(SymbolTable.NewInst)) {
                 if (!type.IsAbstract) {
                     BuiltinFunction reflectedCtors = null;
-                    //!!! how to best handle inheritance...
-                    //??? Would it make things clearer or faster to use type.GetMembers()?
                     foreach (ConstructorInfo ci in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic |
                                                                         BindingFlags.Instance)) {
                         if (ci.IsPublic || ci.IsFamily || ci.IsFamilyOrAssembly) {
@@ -525,7 +525,6 @@ namespace IronPython.Runtime {
                         // no collision, store the interface method.
                         StoreReflectedMethod(name, mi, nt);
                     }
-                    //!!! need to throw or force runtime error
                     break;
                 default: Debug.Assert(false, "Unexpected name type for reflected method"); break;
             }
@@ -680,11 +679,16 @@ namespace IronPython.Runtime {
         public override Tuple BaseClasses {
             [PythonName("__bases__")]
             get {
-                //!!! need to cache this to avoid Tuple creation overhead
-                if (type.BaseType == null) return Tuple.MakeTuple();
-                if (type.BaseType == typeof(ValueType)) return Tuple.MakeTuple(TypeCache.Object);
-                
-                return Tuple.MakeTuple(Ops.GetDynamicTypeFromType(type.BaseType)); //??? add interfaces
+                if (bases == null) {
+                    if (type.BaseType == null) {
+                        bases = Tuple.MakeTuple();
+                    } else if (type.BaseType == typeof(ValueType)) {
+                        bases = Tuple.MakeTuple(TypeCache.Object);
+                    } else {
+                        bases = Tuple.MakeTuple(Ops.GetDynamicTypeFromType(type.BaseType));
+                    }
+                }
+                return bases;
             }
             [PythonName("__bases__")]
             set {
@@ -755,7 +759,7 @@ namespace IronPython.Runtime {
                     // interfaces can't have explicitly implemented interfaces
                     if (!type.IsInterface) {
                         foreach (Type ty in type.GetInterfaces()) {
-                            //!!! GetInterfaceMap fails on array types ?
+                            // GetInterfaceMap fails on array types
                             if (!type.IsArray && !ty.IsGenericParameter) {
                                 InterfaceMapping mapping = type.GetInterfaceMap(ty);
                                 foreach (MethodInfo mi in mapping.TargetMethods) {
@@ -846,7 +850,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        //!!! Get vs. Lookup needs addressing
         public override bool TryGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
             if (name == SymbolTable.Dict) {
                 // Instances of builtin types do not have "__dict__"

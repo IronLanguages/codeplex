@@ -81,6 +81,12 @@ namespace IronPython.Compiler {
             end.column = span.endColumn;
         }
 
+        internal CodeSpan Span {
+            get {
+                return new CodeSpan(start.line, start.column, end.line, end.column);
+            }
+        }
+
         public abstract void Walk(IAstWalker w);
     }
 }

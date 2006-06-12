@@ -1321,7 +1321,6 @@ namespace IronPython.Compiler {
             if (typeGen != null) {
                 return typeGen.DefineMethod(name, retType, paramTypes, paramNames);
             } else {
-                //!!! it's troubling that this is can't get parameter names defined
                 return DefineDynamicMethod(name, retType, paramTypes);
             }
         }

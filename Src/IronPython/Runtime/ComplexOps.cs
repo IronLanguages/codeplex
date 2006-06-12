@@ -258,6 +258,11 @@ namespace IronPython.Runtime {
             return Ops.NotImplemented;
         }
 
+        [PythonName("__hash__")]
+        public static int GetHashCode(Complex64 x) {
+            return x.GetHashCode();
+        }
+
         public static bool EqualsRetBool(Complex64 x, object other) {
             bool res;
             if (TryEquals(x, other, out res)) return res;

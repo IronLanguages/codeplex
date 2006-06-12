@@ -89,7 +89,7 @@ namespace IronPython.Compiler {
                     sr.CurrentEncoding != Encoding.ASCII &&
                     encType != sr.CurrentEncoding) {
                     // we have both a BOM & an encoding type, throw an error
-                    context.Sink.AddError(fileName, "file has both Unicode marker and PEP-263 file encoding", 0, Severity.Error);
+                    context.Sink.AddError(fileName, "file has both Unicode marker and PEP-263 file encoding", String.Empty, CodeSpan.Empty, 0, Severity.Error);
                 }
             }
 
@@ -392,7 +392,6 @@ namespace IronPython.Compiler {
                 else return ret;
             } catch (PythonSyntaxError se) {
                 // Check if it's a real syntax error, or if its just an incomplete multi-line statement
-                //!!! This code shouldn't be using string matching to determine this
                 if ((se.ErrorCode & ErrorCodes.IncompleteMask) != 0) {
                     if ((se.ErrorCode & ErrorCodes.IncompleteToken) != 0) {
                         return null;

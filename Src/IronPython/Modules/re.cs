@@ -593,7 +593,7 @@ namespace IronPython.Modules {
                     if (!m.Groups[i].Success) {
                         ret[i - 1] = @default;
                     } else {
-                        ret[i - 1] = Ops.ToPython(m.Groups[i].Value); //!!! don't like this one bit
+                        ret[i - 1] = m.Groups[i].Value;
                     }
                 }
                 return Ops.MakeTuple(ret);

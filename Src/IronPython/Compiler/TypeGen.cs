@@ -44,7 +44,6 @@ namespace IronPython.Compiler {
         public TypeGen(AssemblyGen myAssembly, TypeBuilder myType) {
             this.myAssembly = myAssembly;
             this.myType = myType;
-            //!!!AddModuleField(myType);
         }
 
         public override string ToString() {
@@ -82,7 +81,7 @@ namespace IronPython.Compiler {
 
         public void AddModuleField(Type moduleType) {
             FieldBuilder moduleField = this.myType.DefineField(CompiledModule.ModuleFieldName,
-                moduleType, FieldAttributes.Public | FieldAttributes.Static);  //!!!
+                moduleType, FieldAttributes.Public | FieldAttributes.Static);
             moduleField.SetCustomAttribute(new CustomAttributeBuilder(typeof(PythonHiddenFieldAttribute).GetConstructor(new Type[0]), new object[0]));
             this.moduleSlot = new StaticFieldSlot(moduleField);
         }

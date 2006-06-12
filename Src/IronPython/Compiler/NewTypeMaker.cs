@@ -461,8 +461,8 @@ namespace IronPython.Compiler {
 
             InitializeVTableStrings();
 
-            //!!!Hashtable slots = collectSlots(dict, tg);
-            //!!!if (slots != null) tg.createAttrMethods(slots);
+            // Hashtable slots = collectSlots(dict, tg);
+            // if (slots != null) tg.createAttrMethods(slots);
 
             Type ret = tg.FinishType();
 
@@ -529,7 +529,7 @@ namespace IronPython.Compiler {
         }
 
         private void AddBaseMethods(Type finishedType, Dictionary<string,bool> specialNames) {            
-            // "Adds" base methods to super type (!!!should really add to the derived type)
+            // "Adds" base methods to super type (should really add to the derived type)
             // this makes super(...).xyz to work - otherwise we'd return a function that
             // did a virtual call resulting in a stack overflow.
             ReflectedType rt = Ops.GetDynamicTypeFromType(baseType) as ReflectedType;
@@ -589,7 +589,7 @@ namespace IronPython.Compiler {
 
             // <typeField> = <arg0>
             cg.EmitArgGet(0);
-            typeField.EmitSet(cg); //???
+            typeField.EmitSet(cg);
 
             // initialize all slots to Uninitialized
             if (slots != null) {
@@ -604,7 +604,6 @@ namespace IronPython.Compiler {
                 }
             }
 
-            //!!! what about propagating custom attributes ?
             CallBaseConstructor(parentConstructor, overrideParams.Length - pis.Length, overrideParams, cg);            
             return cb;
         }

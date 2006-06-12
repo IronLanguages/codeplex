@@ -111,7 +111,7 @@ namespace IronPython.Modules {
 
         // 
         // lstat(path) -> stat result
-        // Like stat(path), but do not follow symbolic links.!!!
+        // Like stat(path), but do not follow symbolic links.
         // 
         [PythonName("lstat")]
         public static object GetFileLStats(string path) {

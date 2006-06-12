@@ -166,8 +166,27 @@ namespace IronMath {
         }
 
         public static double Hypot(double x, double y) {
-            //!!! this is a very naive implementation of this algorithm
-            return Math.Sqrt(x * x + y * y);
+            //
+            // sqrt(x*x + y*y) == sqrt(x*x * (1 + (y*y)/(x*x))) ==
+            // sqrt(x*x) * sqrt(1 + (y/x)*(y/x)) ==
+            // abs(x) * sqrt(1 + (y/x)*(y/x))
+            //
+
+            //  First, get abs
+            if (x < 0.0) x = -x;
+            if (y < 0.0) y = -y;
+
+            // Obvious cases
+            if (x == 0.0) return y;
+            if (y == 0.0) return x;
+
+            // Divide smaller number by bigger number to safeguard the (y/x)*(y/x)
+            if (x < y) { double temp = y; y = x; x = temp; }
+
+            y /= x;
+
+            // calculate abs(x) * sqrt(1 + (y/x)*(y/x))
+            return x * Math.Sqrt(1 + y * y);
         }
 
         public double Abs() {
@@ -206,7 +225,7 @@ namespace IronMath {
         }
 
         public override int GetHashCode() {
-            return (int)real;  //!!! weak
+            return (int)real + (int)imag * 1000003;
         }
 
         public override bool Equals(object obj) {

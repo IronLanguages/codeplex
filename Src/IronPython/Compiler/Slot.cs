@@ -43,7 +43,7 @@ namespace IronPython.Compiler {
         public abstract void EmitGet(CodeGen cg);
         public abstract void EmitGetAddr(CodeGen cg);
 
-        //!!! must override at least one of these two methods or get infinite loop
+        // Must override at least one of these two methods or get infinite loop
         public virtual void EmitSet(CodeGen cg, Slot val) {
             val.EmitGet(cg);
             EmitSet(cg);
@@ -92,8 +92,6 @@ namespace IronPython.Compiler {
         }
 
         public virtual void EmitCheck(CodeGen cg) {
-            //!!! the two lines below add a 8% overhead to pystone
-            //!!! omit them when we can prove they are not needed
             if (Options.CheckInitialized) {
                 cg.Emit(OpCodes.Dup);
                 if (local) {

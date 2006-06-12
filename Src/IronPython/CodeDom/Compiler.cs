@@ -160,8 +160,8 @@ namespace IronPython.CodeDom {
             compResults = results;
         }
 
-        public override void AddError(string path, string message, string lineText, int startLine, int startColumn, int endLine, int endColumn, int errorCode, Severity severity) {
-            compResults.Errors.Add(new CompilerError(path, startLine, startColumn, errorCode.ToString(), message));
+        public override void AddError(string path, string message, string lineText, CodeSpan span, int errorCode, Severity severity) {
+            compResults.Errors.Add(new CompilerError(path, span.startLine, span.startColumn, errorCode.ToString(), message));
             throw new CompilerException();
         }
     }

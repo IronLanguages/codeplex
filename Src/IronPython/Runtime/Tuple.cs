@@ -70,26 +70,27 @@ namespace IronPython.Runtime {
         }
 
         private static object[] MakeItems(object o) {
-            if (o is Tuple) return ((Tuple)o).data;
+            if (o is Tuple) {
+                return ((Tuple)o).data;
+            } else if (o is string) {
+                string s = (string)o;
+                object[] res = new object[s.Length];
+                for (int i = 0; i < res.Length; i++) {
+                    res[i] = Ops.Char2String(s[i]);
+                }
+                return res;
+            } else if (o is List) {
+                return ((List)o).GetObjectArray();
+            } else {
+                ArrayList l = new ArrayList();
+                IEnumerator i = Ops.GetEnumerator(o);
+                while (i.MoveNext()) {
+                    l.Add(i.Current);
+                }
 
-            //!!! add special cases for obvious forms of o
-            ArrayList l = new ArrayList();
-            IEnumerator i = Ops.GetEnumerator(o);
-            while (i.MoveNext()) {
-                l.Add(i.Current);
+                return l.ToArray();
             }
-
-            //			if (l.Count > 4) {
-            //				Console.WriteLine(l);
-            //			}
-            return l.ToArray();
         }
-        //
-        //
-        //		public static PyTuple make(PyObject o) {
-        //			if (o is PyTuple) return (PyTuple)o;
-        //			return make(MakeItems(o));
-        //		}
 
         private readonly object[] data;
         private readonly bool expandable;
@@ -261,7 +262,7 @@ namespace IronPython.Runtime {
             int ret = 0;
             foreach (object o in data) {
                 if (o == null) ret ^= NoneType.NoneHashCode;
-                else  ret ^= o.GetHashCode(); //!!! terrible hashing
+                else  ret ^= o.GetHashCode();
             }
             return ret;
         }
@@ -280,7 +281,6 @@ namespace IronPython.Runtime {
 
 
         public int CompareTo(object other) {
-            //!!! how to handle different type
             Tuple l = other as Tuple;
             if (l == null) throw new ArgumentException("expected list");
 

@@ -73,7 +73,6 @@ namespace IronPython.Compiler {
         /// This initializes generated static fields representing builtins. Use of static fields enables optimized
         /// access to builtins. 
         /// Also, see StaticFieldBuiltinSlot for how we deal with name clashes between builtins and globals.
-        /// !!! This needs to go since it feels hacky
         /// </summary>
         internal void InitializeBuiltins() {
 
@@ -86,8 +85,6 @@ namespace IronPython.Compiler {
                     continue;
                 }
 
-                //!!! GetAttr instead of GetSlot
-                
                 object bi;
                 if (TypeCache.Builtin.TryGetSlot(DefaultContext.Default, SymbolTable.StringToId(fi.Name), out bi)) {
                     Debug.Assert(fi.FieldType == typeof(BuiltinWrapper));

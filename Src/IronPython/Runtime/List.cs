@@ -220,11 +220,6 @@ namespace IronPython.Runtime {
             lock (this) RawDelete(Ops.FixIndex(index, size));
         }
 
-        //		public override PyObject __iadd__(PyObject other) {
-        //			extend(other);
-        //			return this;
-        //		}
-
         [PythonName("__mul__")]
         public virtual object MultiplySequence(object count) {
             return MultiplySequenceWorker(Converter.ConvertToSequenceLength(count));

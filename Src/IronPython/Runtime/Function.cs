@@ -38,11 +38,12 @@ namespace IronPython.Runtime {
         private PythonFunction func;
         private string filename;
         private int lineNo;
+        private FuncCodeFlags flags;      // future division, generator
         #endregion
 
         #region Flags
         [Flags]
-        enum FuncCodeFlags {
+        internal enum FuncCodeFlags {
             VarArgs = 0x04,
             KwArgs = 0x08,
             Generator = 0x20,
@@ -117,16 +118,15 @@ namespace IronPython.Runtime {
         public object Flags {
             [PythonName("co_flags")]
             get {
-                int res = 0;
+                FuncCodeFlags res = flags;
                 FunctionN funcN = func as FunctionN;
                 FunctionX funcX = func as FunctionX;
-                if (funcN != null) res |= (int)FuncCodeFlags.VarArgs;
+                if (funcN != null) res |= FuncCodeFlags.VarArgs;
                 if (funcX != null) {
-                    if ((funcX.Flags & FuncDefType.KeywordDict) != 0) res |= (int)FuncCodeFlags.KwArgs;
-                    if ((funcX.Flags & FuncDefType.ArgList) != 0) res |= (int)FuncCodeFlags.VarArgs;
+                    if ((funcX.Flags & FuncDefType.KeywordDict) != 0) res |= FuncCodeFlags.KwArgs;
+                    if ((funcX.Flags & FuncDefType.ArgList) != 0) res |= FuncCodeFlags.VarArgs;
                 }
-                //!!! need to include future division & generator
-                return res;
+                return (int)res;
             }
         }
 
@@ -183,6 +183,11 @@ namespace IronPython.Runtime {
 
         public void SetLineNumber(int line) {
             lineNo = line;
+        }
+
+        // This is only used to set the value of FutureDivision and Generator flags
+        public void SetFlags(int value) {
+            this.flags = (FuncCodeFlags)value & (FuncCodeFlags.FutureDivision | FuncCodeFlags.Generator);
         }
 
         #endregion

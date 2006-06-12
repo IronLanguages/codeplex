@@ -66,14 +66,13 @@ namespace IronPython.Compiler {
             this.sink = sink;
         }
 
-        public void AddError(string message, string lineText, int startLine, int startColumn,
-                             int endLine, int endColumn, Severity severity) {
-            sink.AddError(sourceFile, message, lineText, startLine, startColumn, endLine, endColumn, DefaultErrorCode, severity);
+        public void AddError(string message, string lineText, int startLine, int startColumn, int endLine, int endColumn, Severity severity) {
+            sink.AddError(sourceFile, message, lineText, new CodeSpan(startLine, startColumn, endLine, endColumn), DefaultErrorCode, severity);
         }
 
         public void AddError(string message, string lineText, int startLine, int startColumn,
                              int endLine, int endColumn, int errorCode, Severity severity) {
-            sink.AddError(sourceFile, message, lineText, startLine, startColumn, endLine, endColumn, errorCode, severity);
+            sink.AddError(sourceFile, message, lineText, new CodeSpan(startLine, startColumn, endLine, endColumn), errorCode, severity);
         }
 
         public void AddError(string message, Node node) {
@@ -81,8 +80,7 @@ namespace IronPython.Compiler {
         }
 
         public void AddError(string message, Node node, Severity severity) {
-            sink.AddError(sourceFile, message, null, node.start.line, node.start.column, node.end.line, node.end.column, 
-                DefaultErrorCode, severity);
+            sink.AddError(sourceFile, message, null, node.Span, DefaultErrorCode, severity);
         }
 
         public CompilerContext CopyWithNewSourceFile(string newSourceFile) {

@@ -46,6 +46,8 @@ namespace IronPython.Hosting {
         public int endLine;
         public int endColumn;
 
+        public static CodeSpan Empty;
+
         public CodeSpan(int startLine, int startColumn, int endLine, int endColumn) {
             this.startLine = startLine;
             this.startColumn = startColumn;
@@ -62,19 +64,7 @@ namespace IronPython.Hosting {
     }
 
     public abstract class CompilerSink {
-        //!!! way too many parameters...
-        public abstract void AddError(string path, string message, string lineText,
-                                      int startLine, int startColumn,
-                                      int endLine, int endColumn,
-                                      int errorCode, Severity severity);
-
-        public void AddError(string path, string message, int errorCode, Severity severity) {
-            AddError(path, message, String.Empty, 0, 0, 0, 0, errorCode, severity);
-        }
-
-        public virtual void AddError(string path, string message, CodeSpan location, int errorCode, Severity severity) {
-            AddError(path, message, String.Empty, location.startLine, location.startColumn, location.endLine, location.endColumn, errorCode, severity);
-        }
+        public abstract void AddError(string path, string message, string lineText, CodeSpan location, int errorCode, Severity severity);
 
         public virtual void MatchPair(CodeSpan start, CodeSpan end, int priority) {
         }
@@ -99,7 +89,7 @@ namespace IronPython.Hosting {
     }
 
     public class CompilerExceptionSink : CompilerSink {
-        public override void AddError(string path, string message, string lineText, int startLine, int startColumn, int endLine, int endColumn, int errorCode, Severity severity) {
+        public override void AddError(string path, string message, string lineText, CodeSpan span, int errorCode, Severity severity) {
             string sev;
             if (severity >= Severity.Error)
                 sev = "Error";
@@ -108,7 +98,7 @@ namespace IronPython.Hosting {
             else
                 sev = "Message";
 
-            throw new Exception(string.Format("{0}:{1} at {2} {3}:{4}-{5}:{6}", sev, message, path, startLine, startColumn, endLine, endColumn));
+            throw new Exception(string.Format("{0}:{1} at {2} {3}:{4}-{5}:{6}", sev, message, path, span.startLine, span.startColumn, span.endLine, span.endColumn));
         }
     }
 }

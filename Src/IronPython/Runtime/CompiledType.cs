@@ -54,7 +54,7 @@ namespace IronPython.Runtime {
                 return true;
             }
 
-            //!!! this will force creation of the instances dict
+            // This will force creation of the instances dict
             IAttributesDictionary dict = ((ISuperDynamicObject)self).GetDict();
             return dict.TryGetValue(name, out ret);
         }

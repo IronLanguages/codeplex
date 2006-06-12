@@ -62,8 +62,8 @@ namespace IronPython.Runtime {
                 argv = Ops.MakeList();
                 modules = new Dict();
                 path = List.Make();
-                ps1 = Ops.ToPython(">>> ");
-                ps2 = Ops.ToPython("... ");
+                ps1 = ">>> ";
+                ps2 = "... ";
                 __stdin__ = new PythonFile(Console.OpenStandardInput(),
                                             Console.InputEncoding, 
                                             "<stdin>", 
@@ -99,7 +99,7 @@ namespace IronPython.Runtime {
             hexversion = 0x02040000;
             maxint = Int32.MaxValue;
             maxunicode = (int)ushort.MaxValue;
-            platform = Ops.ToPython("cli");
+            platform = "cli";
             version_info = Tuple.MakeTuple(2, 4, 0, "final", 0);    // report as being compatible w/ 2.4.0 final
             // !!! These fields do need to be reset on "reload(sys)". However, the initial value is specified by the 
             // engine elsewhere. For now, we initialize them just once to some default value

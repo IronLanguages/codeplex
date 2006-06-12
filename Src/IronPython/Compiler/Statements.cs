@@ -282,9 +282,7 @@ namespace IronPython.Compiler {
             }
             cg.MarkLabel(breakTarget);
 
-            if (cg.IsGenerator()) {
-                //!!! need to free my temp
-            } else {
+            if (!cg.IsGenerator()) {
                 cg.FreeLocalTmp(iter);
             }
         }
@@ -323,7 +321,6 @@ namespace IronPython.Compiler {
             yieldTargets.Add(t);
         }
 
-        //!!! need to evaluate break/continue through a try block
         internal override void Emit(CodeGen cg) {
             Slot choiceVar = null;
             cg.EmitPosition(start, header);
@@ -573,7 +570,6 @@ namespace IronPython.Compiler {
 
         public override object Execute(NameEnv env) {
             expr.Evaluate(env);
-            //!!! print it if in the right env
             return NextStmt;
         }
 
@@ -716,14 +712,26 @@ namespace IronPython.Compiler {
                 cg.EmitSystemState();
                 if (dest != null) dest.Emit(cg);
                 cg.EmitCall(typeof(Ops), "PrintNewline" + suffix);
-            }
-
-            for (int i = 0; i < exprs.Length; i++) {
-                cg.EmitSystemState();
-                if (dest != null) dest.Emit(cg); //!!! need to put in a temp
-                exprs[i].Emit(cg);
-                if (i < exprs.Length - 1 || trailingComma) cg.EmitCall(typeof(Ops), "PrintComma" + suffix);
-                else cg.EmitCall(typeof(Ops), "Print" + suffix);
+            } else {
+                Slot destSlot = null;
+                if (dest != null) {
+                    destSlot = cg.GetLocalTmp(typeof(object));
+                    dest.Emit(cg);
+                    destSlot.EmitSet(cg);
+                }
+                for (int i = 0; i < exprs.Length; i++) {
+                    cg.EmitSystemState();
+                    if (dest != null) {
+                        Debug.Assert(destSlot != null);
+                        destSlot.EmitGet(cg);
+                    }
+                    exprs[i].Emit(cg);
+                    if (i < exprs.Length - 1 || trailingComma) cg.EmitCall(typeof(Ops), "PrintComma" + suffix);
+                    else cg.EmitCall(typeof(Ops), "Print" + suffix);
+                }
+                if (destSlot != null) {
+                    cg.FreeLocalTmp(destSlot);
+                }
             }
         }
         public override void Walk(IAstWalker w) {
@@ -820,7 +828,7 @@ namespace IronPython.Compiler {
             cg.EmitModuleInstance();
             cg.EmitString(root.MakeString());
             if (names == Star) {
-                cg.EmitCall(typeof(Ops), "ImportStar"); //!!! this is tricky
+                cg.EmitCall(typeof(Ops), "ImportStar");
             } else {
                 Slot fromObj = cg.GetLocalTmp(typeof(object));
                 cg.EmitStringArray(SymbolTable.IdsToStrings(names));
@@ -1051,11 +1059,6 @@ namespace IronPython.Compiler {
             cg.EmitPosition(start, end);
             cg.EmitYield(expr, index, label);
         }
-/*
-        public override CodeObject Generate() {
-            //!!! expr, index
-            return new CodeSnippetStatement("yield ");
-        }*/
 
         public override void Walk(IAstWalker w) {
             if (w.Walk(this)) {

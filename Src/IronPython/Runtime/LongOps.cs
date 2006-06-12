@@ -786,7 +786,6 @@ namespace IronPython.Runtime {
 
         [PythonName("__oct__")]
         public static string Oct(BigInteger x) {
-            //!!! horribly inefficient
             if (x == BigInteger.Zero) {
                 return "0L";
             } else if (x > 0) {

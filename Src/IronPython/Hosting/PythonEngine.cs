@@ -118,7 +118,7 @@ namespace IronPython.Hosting {
                 PerfTrack.DumpStats();
                 try {
                     OutputGenerator.DumpSnippets();
-                } catch (NotSupportedException) { } //!!! usually not important info...
+                } catch (NotSupportedException) { } // usually not important info...
             }
         }
         public void InitializeModules(string prefix, string executable, string version) {
@@ -437,8 +437,6 @@ namespace IronPython.Hosting {
 
         public void SetGlobal(SymbolId name, object val, ModuleScope moduleScope) {
             moduleScope.EnsureInitialized(Sys);
-
-            val = Ops.ToPython(val);
             Ops.SetAttr(moduleScope, moduleScope.Module, name, val);
         }
 

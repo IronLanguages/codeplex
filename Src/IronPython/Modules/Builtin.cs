@@ -108,7 +108,7 @@ namespace IronPython.Modules {
             return Ops.CallWithArgsTupleAndKeywordDictAndContext(context, func, new object[0], new string[0], args, kws);
         }
 
-        public static object basestring = Ops.GetDynamicTypeFromType(typeof(string)); //!!! more unicode "unification"
+        public static object basestring = Ops.GetDynamicTypeFromType(typeof(string));
 
         public static object @bool = Ops.GetDynamicTypeFromType(typeof(bool));
 
@@ -328,7 +328,8 @@ namespace IronPython.Modules {
             if (locals == null) locals = Locals(context);
 
             PythonModule mod = new PythonModule("<eval>", globals, context.SystemState, null, context.ContextFlags);
-            if (Options.FastEval) {//!!! experimenting with a HUGE (>100x) performance boost to simple evals
+            if (Options.FastEval) {
+                // Direct evaluation can be much faster than codegen (>100x)
                 return e.Evaluate(new NameEnv(mod, locals));
             } else {
                 Stmt s = new ReturnStmt(e);
@@ -1067,7 +1068,7 @@ namespace IronPython.Modules {
             object getitem;
             object len;
 
-            //!!! OldClass check: we currently are in a strange state where we partially support
+            // OldClass check: we currently are in a strange state where we partially support
             // descriptors on old-style classes, although we're not supposed to.  We special
             // case it here until that's fixed.
             if (o is OldClass ||
@@ -1165,9 +1166,7 @@ namespace IronPython.Modules {
 
         public static object tuple = Ops.GetDynamicTypeFromType(typeof(Tuple));
 
-        public static object type = Ops.GetDynamicTypeFromType(typeof(PythonType));  //!!!
-
-        //public static object utype = Ops.GetDynamicTypeFromType(typeof(UserType));  //!!!
+        public static object type = Ops.GetDynamicTypeFromType(typeof(PythonType));
 
         [PythonName("unichr")]
         public static string Unichr(int i) {
@@ -1177,7 +1176,7 @@ namespace IronPython.Modules {
             return Ops.Char2String((char)i);
         }
 
-        public static object unicode = Ops.GetDynamicTypeFromType(typeof(string)); //!!! unicode str diffs
+        public static object unicode = Ops.GetDynamicTypeFromType(typeof(string));
 
         [PythonName("vars")]
         [Documentation("vars([object]) -> dictionary\n\nWithout arguments, equivalent to locals().\nWith an argument, equivalent to object.__dict__.")]

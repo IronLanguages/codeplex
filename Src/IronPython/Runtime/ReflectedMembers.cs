@@ -42,10 +42,10 @@ namespace IronPython.Runtime {
         public virtual object GetAttribute(object instance, object context) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, this);
             if (instance == null) {
-                if (info.IsStatic) return Ops.ToPython(info.GetValue(null));
+                if (info.IsStatic) return info.GetValue(null);
                 else return this;
             } else {
-                return Ops.ToPython(info.GetValue(Converter.Convert(instance, info.DeclaringType)));
+                return info.GetValue(Converter.Convert(instance, info.DeclaringType));
             }
         }
 
@@ -246,7 +246,7 @@ namespace IronPython.Runtime {
 
         private object DoGet(object instance) {
             try {
-                return Ops.ToPython(getter.Invoke(instance, new object[0]));
+                return getter.Invoke(instance, new object[0]);
             } catch (TargetInvocationException tie) {
                 throw ExceptionConverter.UpdateForRethrow(tie.InnerException);
             }

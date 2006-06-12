@@ -319,8 +319,8 @@ FileRemoval(source1, assembly)
 
 class TestSink(CompilerSink):
     errors = []
-    def AddError(self, path, message, lineText, startLine, startColumn, endLine, endColumn, errorCode, severity):
-        self.errors.append((path, message, startLine, startColumn, endLine, endColumn, errorCode, severity))
+    def AddError(self, path, message, lineText, span, errorCode, severity):
+        self.errors.append((path, message, span, errorCode, severity))
 
 
 FileRemoval(source1, assembly)

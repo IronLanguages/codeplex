@@ -1053,7 +1053,15 @@ namespace IronPython.Runtime {
 
         [PythonName("readlines")]
         public List ReadLines(int sizehint) {
-            return ReadLines(); //!!! optimize
+            List ret = new List();
+            for (; ; ) {
+                string line = ReadLine();
+                if (line == "") break;
+                ret.AddNoLock(line);
+                if (line.Length >= sizehint) break;
+                sizehint -= line.Length;
+            }
+            return ret;
         }
 
         [PythonName("seek")]
@@ -1099,7 +1107,7 @@ namespace IronPython.Runtime {
 
             if (writer != null) {
                 writer.Write(s);
-                Flush(); //!!! performance hazard
+                Flush();
             } else {
                 throw Ops.IOError("Can not write to " + this.name);
             }
@@ -1150,8 +1158,6 @@ namespace IronPython.Runtime {
                 }
             }
         }
-
-        //!!! many more go here
 
         [PythonName("next")]
         public object Next() {

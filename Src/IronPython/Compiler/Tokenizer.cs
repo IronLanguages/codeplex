@@ -404,7 +404,7 @@ namespace IronPython.Compiler {
 
             string contents = new string(data, start + sadd, end - start - (sadd + eadd));
             if (isTriple) {
-                contents = contents.Replace("\r\n", "\n"); //!!! partially right, Mac is still ToDo
+                contents = contents.Replace("\r\n", "\n");
             }
             contents = LiteralParser.ParseString(contents, isRaw, isUni, complete);
             if (complete) {

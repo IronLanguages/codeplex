@@ -69,7 +69,6 @@ namespace IronPython.Modules {
                 strftimeMap["%b"] = "MMM";
                 strftimeMap["%Y"] = "yyyy";
                 strftimeMap["%y"] = "yy";
-                //!!! many more to add
             }
 
             static string ReplaceFormat(Match m) {

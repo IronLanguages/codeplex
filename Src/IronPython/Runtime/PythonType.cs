@@ -164,7 +164,7 @@ namespace IronPython.Runtime {
             __setattr__F = MethodWrapper.MakeForObject(this, SymbolTable.SetAttr, new CallTarget3(SetAttrMethod));
             __delattr__F = MethodWrapper.MakeForObject(this, SymbolTable.DelAttr, new CallTarget2(DelAttrMethod));
 
-            __cmp__F = MethodWrapper.MakeUndefined(this, SymbolTable.Cmp); //!!!
+            __cmp__F = MethodWrapper.MakeUndefined(this, SymbolTable.Cmp);
             __str__F = MethodWrapper.MakeForObject(this, SymbolTable.String, new CallTarget1(StrMethod));
             __repr__F = MethodWrapper.MakeForObject(this, SymbolTable.Repr, new CallTarget1(ReprMethod));
         }
@@ -277,7 +277,6 @@ namespace IronPython.Runtime {
             lock (subclass) {
                 subclasses.Add(new WeakReference(subclass, true));
             }
-            //!!! propogation is needed
         }
 
         public void RemoveSubclass(PythonType subclass) {
@@ -292,7 +291,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        //!!! this should be field specific
         public void UpdateFromBases() {
             __getitem__F.UpdateFromBases(MethodResolutionOrder);
             __setitem__F.UpdateFromBases(MethodResolutionOrder);
@@ -456,7 +454,6 @@ namespace IronPython.Runtime {
         }
 
         public override string Repr(object self) {
-            //!!!
             Initialize();
             return (string)__repr__F.Invoke(self);
         }
@@ -473,7 +470,6 @@ namespace IronPython.Runtime {
 
             if (Ops.GetDynamicType(inst).IsSubclassOf(this)) {
                 if (TryLookupBoundSlot(DefaultContext.Default, inst, SymbolTable.Init, out initFunc)) {
-                    //!!!initFunc = Ops.GetDescriptor(initFunc, newObject, this);
                     switch (args.Length) {
                         case 0: Ops.Call(initFunc); break;
                         case 1: Ops.Call(initFunc, args[0]); break;
@@ -817,7 +813,6 @@ namespace IronPython.Runtime {
         public MethodWrapper(PythonType pt, SymbolId name) {
             this.pythonType = pt;
             this.name = name;
-            //!!! need to remove IdToField call here...
             string fieldname = SymbolTable.IdToString(name) + "F";
             this.myField = typeof(PythonType).GetField(fieldname);
             this.isObjectMethod = true;
@@ -836,7 +831,6 @@ namespace IronPython.Runtime {
             this.isBuiltinMethod = pythonType is ReflectedType;
             this.isSuperTypeMethod = false;
 
-            //!!! the dictionary should be bound to this in a more sophisticated way
             pythonType.dict[this.name] = m;
         }
 

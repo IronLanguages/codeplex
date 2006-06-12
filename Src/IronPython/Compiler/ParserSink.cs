@@ -23,18 +23,18 @@ using IronPython.Hosting;
 
 namespace IronPython.Compiler {
     internal class SimpleParserSink : CompilerSink {
-        public override void AddError(string path, string message, string lineText, int startLine, int startColumn, int endLine, int endColumn, int errorCode, Severity severity) {
+        public override void AddError(string path, string message, string lineText, CodeSpan span, int errorCode, Severity severity) {
             if (severity == Severity.Warning) {
-                throw Ops.SyntaxWarning(message, path, startLine, startColumn, lineText, severity);
+                throw Ops.SyntaxWarning(message, path, span.startLine, span.startColumn, lineText, severity);
             }
 
             switch (errorCode & ErrorCodes.ErrorMask) {
                 case ErrorCodes.IndentationError:
-                    throw Ops.IndentationError(message, path, startLine, startColumn, lineText, errorCode, severity);
+                    throw Ops.IndentationError(message, path, span.startLine, span.startColumn, lineText, errorCode, severity);
                 case ErrorCodes.TabError:
-                    throw Ops.TabError(message, path, startLine, startColumn, lineText, errorCode, severity);
+                    throw Ops.TabError(message, path, span.startLine, span.startColumn, lineText, errorCode, severity);
                 default:
-                    throw Ops.SyntaxError(message, path, startLine, startColumn, lineText, errorCode, severity);
+                    throw Ops.SyntaxError(message, path, span.startLine, span.startColumn, lineText, errorCode, severity);
             }
         }
     }

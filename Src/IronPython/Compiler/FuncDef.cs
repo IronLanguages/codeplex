@@ -151,14 +151,30 @@ namespace IronPython.Compiler {
             // update func_code w/ appropriate state.
             cg.Emit(OpCodes.Dup);
 
+            Slot functionCode = cg.GetLocalTmp(typeof(FunctionCode));
+
             cg.EmitCall(typeof(PythonFunction).GetProperty("FunctionCode").GetGetMethod());
             cg.Emit(OpCodes.Castclass, typeof(FunctionCode));
             cg.Emit(OpCodes.Dup);
+            functionCode.EmitSet(cg);
             cg.EmitInt(this.start.line);
             cg.EmitCall(typeof(FunctionCode), "SetLineNumber");
 
+            functionCode.EmitGet(cg);
             cg.EmitString(this.filename);
             cg.EmitCall(typeof(FunctionCode), "SetFilename");
+
+            // Only codegen the call into SetFlags if there are flags to set.
+            FunctionCode.FuncCodeFlags codeFlags = 0;
+            if (cg.Context.TrueDivision) codeFlags |= FunctionCode.FuncCodeFlags.FutureDivision;
+            if (this.yieldCount > 0)  codeFlags |= FunctionCode.FuncCodeFlags.Generator;
+            if (codeFlags != 0) {
+                functionCode.EmitGet(cg);
+                cg.EmitInt((int)codeFlags);
+                cg.EmitCall(typeof(FunctionCode), "SetFlags");
+            }
+
+            cg.FreeLocalTmp(functionCode);
 
             cg.EmitSet(name);
 
@@ -261,7 +277,6 @@ namespace IronPython.Compiler {
                 Expr p = parameters[i];
                 if (p is NameExpr) continue;
 
-                //!!! not too clean
                 cg.Names[EncodeTupleParamName(p as TupleExpr)].EmitGet(cg);
 
                 p.EmitSet(cg);

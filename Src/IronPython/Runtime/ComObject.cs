@@ -218,7 +218,7 @@ namespace IronPython.Runtime {
                         Obj,
                         new object[0]
                         );
-                    value = Ops.ToPython(result);
+                    value = result;
                     return true;
                 } catch (System.Reflection.TargetInvocationException e) {
                     COMException comex = e.InnerException as COMException;
@@ -561,14 +561,13 @@ namespace IronPython.Runtime {
 
         public object Call(params object[] args) {
             try {
-                object ret = obj.GetType().InvokeMember(
+                return obj.GetType().InvokeMember(
                     name,
                     System.Reflection.BindingFlags.InvokeMethod,
                     Type.DefaultBinder,
                     obj,
                     args
                     );
-                return Ops.ToPython(ret);
             } catch (Exception e) {
                 if (e.InnerException != null) {
                     throw ExceptionConverter.UpdateForRethrow(e.InnerException);

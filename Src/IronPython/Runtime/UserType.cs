@@ -246,7 +246,7 @@ namespace IronPython.Runtime {
 
                 Type otherTypeToExtend = rt.GetTypeToExtend();
                 if (otherTypeToExtend != null) {
-                    if (type == otherTypeToExtend || type.IsSubclassOf(otherTypeToExtend))  //!!! inefficient in most cases
+                    if (type == otherTypeToExtend || type.IsSubclassOf(otherTypeToExtend))
                         return true;
 
                     foreach (Type interfaceType in type.GetInterfaces()) {
@@ -331,7 +331,7 @@ namespace IronPython.Runtime {
         internal override void BaseDelAttr(ICallerContext context, object self, SymbolId name) {
             object slot;
             if (!TryLookupSlot(context, name, out slot)) {
-                IAttributesDictionary d = GetInitializedDict((ISuperDynamicObject)self); //!!! forces dict init
+                IAttributesDictionary d = GetInitializedDict((ISuperDynamicObject)self);
                 if (d != null && d.ContainsKey(name)) {
                     d.Remove(name);
                     return;
@@ -478,7 +478,6 @@ namespace IronPython.Runtime {
                     ret.AsObjectKeyedDictionary()[kv.Key] = kv.Value;
                 }
             }
-            //!!! need invalidation, inheritance, all that good stuff
             return ret;
         }
 
@@ -515,7 +514,7 @@ namespace IronPython.Runtime {
         #region IDynamicObject Members
 
         public override DynamicType GetDynamicType() {
-            return Ops.GetDynamicTypeFromType(typeof(UserType));  //!!! should be stuck in a static somewhere for faster lookup
+            return TypeCache.UserType;
         }
 
         #endregion

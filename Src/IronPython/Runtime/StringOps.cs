@@ -116,7 +116,7 @@ namespace IronPython.Runtime {
         }
 
         public override object Mod(object self, object other) {
-            return Ops.ToPython(new StringFormatter((string)self, other).Format());
+            return new StringFormatter((string)self, other).Format();
         }
     }
 
@@ -543,24 +543,7 @@ namespace IronPython.Runtime {
             if (sub.Length == 1) return self.IndexOf(sub[0]);
             CompareInfo c = CultureInfo.InvariantCulture.CompareInfo;
             return c.IndexOf(self, sub, CompareOptions.Ordinal);
-            //            char start = sub[0];
-            //
-            //            if (sub.Length == 1) return self.IndexOf(start);
-            //
-            //            int index = 0;
-            //            int max = self.Length-sub.Length;
-            //
-            //            while (index < max) {
-            //                int i = self.IndexOf(start, index);
-            //                if (i == -1) break;
-            //                if (String.CompareOrdinal(self, index, sub, 0, sub.Length) == 0) {
-            //                    return i;
-            //                }
-            //                index = i+1;
-            //            }
-            //
-            //            return -1;
-            //!!! too slow return self.IndexOf(sub);
+
         }
 
         [PythonName("find")]
@@ -918,8 +901,6 @@ namespace IronPython.Runtime {
                 return Split(self, new string[] { sep }, maxsplit);
             }
         }
-        //
-        //        //!!! split with non-char sep
 
         [PythonName("splitlines")]
         public static List SplitLines(string self) {

@@ -207,8 +207,6 @@ namespace IronPython.Runtime {
         }
 
         public static object ParseInteger(string text, int b) {
-            //!!! From experiments, CPython-1.3 appears to highly optimize this pattern
-            //!!! Unfortunately, this has a small impact on parrotbench scores
             if (b == 0 && text.StartsWith("0x")) {
                 int shift = 0;
                 int ret = 0;

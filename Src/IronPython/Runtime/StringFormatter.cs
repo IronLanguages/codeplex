@@ -860,7 +860,7 @@ namespace IronPython.Runtime {
             // Number of significant digits to display, before and after the decimal point.
             // For floats, it gets adjusted to the number of digits to display after the decimal point since
             // that is the value required by StringBuilder.AppendFormat.
-            // !!! For clarity, we should break this up into the two values - the precision specified by the
+            // For clarity, we should break this up into the two values - the precision specified by the
             // format string, and the value to be passed in to StringBuilder.AppendFormat
             internal int Precision;
 

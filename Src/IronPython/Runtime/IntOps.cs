@@ -789,7 +789,6 @@ namespace IronPython.Runtime {
 
         [PythonName("__oct__")]
         public static string Oct(int x) {
-            //!!! horribly inefficient
             if (x == 0) {
                 return "0";
             } else if (x > 0) {

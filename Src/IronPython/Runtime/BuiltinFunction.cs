@@ -187,7 +187,6 @@ namespace IronPython.Runtime {
             //      1. Our error messages match CPython more closely 
             //      2. The attribute lookup is done lazily only if kw-args are supplied to a ctor
 
-            //!!! This is awful
             if (IsContextAware) {
                 object[] argsWithContext = new object[args.Length + 1];
                 argsWithContext[0] = context;
@@ -259,7 +258,7 @@ namespace IronPython.Runtime {
                 // wants to do a property set with.  We'll go ahead and try
                 // that - if they fail we'll throw.
                 if (bestUnboundArgs != null) {
-                    ///!!! if we had a constructor w/ a ref param then we'll try
+                    // if we had a constructor w/ a ref param then we'll try
                     // updating the Tuple here instead of the user's object.
 
                     if (targets[0].DeclaringType.IsDefined(typeof(PythonTypeAttribute), false)) {
@@ -606,7 +605,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         OpsFunction         = 0x0040,   // True if this is a function/method declared on an Ops type (StringOps, IntOps, etc...)
         Params              = 0x0080,   // True if this is a params method, false otherwise.
     }
-
 
     [PythonType("method_descriptor")]
     public sealed class BuiltinMethodDescriptor : IDescriptor, IFancyCallable, ICallable, IContextAwareMember, ICallableWithCallerContext {

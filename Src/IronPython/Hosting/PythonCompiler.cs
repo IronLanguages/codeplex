@@ -78,15 +78,16 @@ namespace IronPython.Hosting {
             get { return messages; }
         }
 
-        public override void AddError(string path, string message, string lineText, int startLine, int startColumn, int endLine, int endColumn, int errorCode, Severity severity) {
+        public override void AddError(string path, string message, string lineText, CodeSpan span, int errorCode, Severity severity) {
             if(severity >= Severity.Error) errors++;
             else if(severity >= Severity.Warning) warnings++;
             else messages++;
 
             if (sink != null) {
-                sink.AddError(path, message, lineText, startLine, startColumn, endLine, endColumn, errorCode, severity);
+                sink.AddError(path, message, lineText, span, errorCode, severity);
             } else {
-                throw new Exception(string.Format("{0}:{1} at {2} {3}:{4}-{5}:{6}", severity, message, path, startLine, startColumn, endLine, endColumn));
+                throw new Exception(string.Format("{0}:{1} at {2} {3}:{4}-{5}:{6}", severity, message, path,
+                                                  span.startLine, span.startColumn, span.endLine, span.endColumn));
             }
         }
     }
@@ -233,7 +234,7 @@ namespace IronPython.Hosting {
             }
 
             if (targetKind != PEFileKinds.Dll && !entryPointSet) {
-                sink.AddError("", string.Format("Need an entry point for target kind {0}", targetKind), -1, Severity.Error);
+                sink.AddError("", string.Format("Need an entry point for target kind {0}", targetKind), String.Empty, CodeSpan.Empty, -1, Severity.Error);
             }
 
             assemblyGen.Dump();
