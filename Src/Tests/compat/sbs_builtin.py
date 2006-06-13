@@ -24,7 +24,7 @@ def complex_case_repr(*args):
         ret += "'%s (%s)'" % (str(x), type(x))
     return ret
 
-class test_builtin: 
+class test_builtin(object): 
     ''' test built-in type, etc '''
     
     def test_slice(self):
@@ -124,7 +124,7 @@ class test_builtin:
         la = []
         la.extend(ln)
         la.extend(ls)
-        
+            
         for s in la:
             try:                
                 printwith("case", complex_case_repr(s))
@@ -133,7 +133,6 @@ class test_builtin:
             except:
                 printwith("same", sys.exc_type, sys.exc_value)
         
-        bug = '''
         for s in la:
             try:                
                 printwith("case", "real only", complex_case_repr(s))
@@ -149,7 +148,6 @@ class test_builtin:
                 printwithtype(c)
             except:
                 printwith("same", sys.exc_type, sys.exc_value)
-        '''
                      
         for s1 in la:
             for s2 in ln:

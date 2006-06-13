@@ -158,8 +158,10 @@ def runtests(type):
     import sys
     obj = type()
     
+    failCnt = 0
     for x in dir(type):
         if not x.startswith("test_"): continue
+       
         test = getattr(obj, x)
         if not callable(test): continue
         typename = get_class_name(type)
@@ -176,15 +178,19 @@ def runtests(type):
 
             print "comparing ...", 
             (val, summary) = rulediff.compare(fullpath(win_log), fullpath(cli_log), dif_logfile)
+            
             if val == 0:
                 print "PASS "
             else: 
                 print "FAIL [%s]" % summary
                 print "         windiff %s %s" % (win_log, cli_log)
                 print "         notepad %s " % dif_log
-                
+                failCnt += 1
             dif_logfile.close()
         else : 
             print "skip comparing"
+    
+    if failCnt:
+        raise AssertionError, "Failed"
             
 class MyException: pass

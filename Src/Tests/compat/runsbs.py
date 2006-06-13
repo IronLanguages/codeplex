@@ -44,24 +44,18 @@ def run_sbs_test(l):
             __import__(test)
             success += 1
         except Exception, e:
-            print "   FAIL"
-            print e
+            print "*FAIL*"
             failure += 1
             exceptions.append(e)
             
     print "----------------------------------------"
     if failure > 0 or len(exceptions) > 0:
-        print " Simply Run:   !!! FAILED !!!"
+        print " Run & Compare:   !!! FAILED !!!"
     else:
-        print " Simply Run:   !!! SUCCESS !!!"
+        print " Run & Compare:   !!! SUCCESS !!!"
     print "----------------------------------------"
     print " Tests ran: " + str(success + failure), " Success: " + str(success)  + " Failure:   " + str(failure)
     print "----------------------------------------"
-    if len(exceptions) > 0:
-        print "Exceptions:"
-        for exception in exceptions:
-            print exception
-            print "----------------------------------------"
 
 def run(type="long", tests = "full", compare=True):
     if type in ["short", "medium"]:
@@ -74,11 +68,6 @@ def run(type="long", tests = "full", compare=True):
     
     run_sbs_test(tests)
 
-    if failure == 0 and compfail == 0: 
-        return 1
-    else :
-        return 0
-  
 if __name__ == "__main__":
     args = sys.argv
     
