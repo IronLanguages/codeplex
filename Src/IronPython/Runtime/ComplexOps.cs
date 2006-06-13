@@ -22,7 +22,7 @@ using IronMath;
 using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime {
-    public partial class ExtensibleComplex : IExtensible<Complex64> {
+    public partial class ExtensibleComplex : IRichComparable, IExtensible<Complex64> {
         public Complex64 value;
         
         public ExtensibleComplex() { this.value = new Complex64(0, 0); }
@@ -51,6 +51,57 @@ namespace IronPython.Runtime {
 
         public Complex64 Value {
             get { return value; }
+        }
+
+        #endregion
+
+        #region IRichComparable Members
+
+        [PythonName("__cmp__")]
+        public virtual object CompareTo(object other) {
+            return ComplexOps.Compare(value, other);
+        }
+
+        [PythonName("__gt__")]
+        public virtual object GreaterThan(object other) {
+            return ComplexOps.GreaterThan(value, other);
+        }
+
+        [PythonName("__lt__")]
+        public virtual object LessThan(object other) {
+            return ComplexOps.LessThan(value, other);
+        }
+
+        [PythonName("__ge__")]
+        public virtual object GreaterThanOrEqual(object other) {
+            return ComplexOps.GreaterThanEquals(value, other);
+        }
+
+        [PythonName("__le__")]
+        public virtual object LessThanOrEqual(object other) {
+            return ComplexOps.LessThanEquals(value, other);
+        }
+
+        #endregion
+
+        #region IRichEquality Members
+
+        [PythonName("__hash__")]
+        public virtual object RichGetHashCode() {
+            return ComplexOps.GetHashCode(value);
+        }
+
+        [PythonName("__eq__")]
+        public virtual object RichEquals(object other) {
+            return ComplexOps.Equals(value, other);
+        }
+
+        [PythonName("__ne__")]
+        public virtual object RichNotEquals(object other) {
+            object res = RichEquals(other);
+            if (res != Ops.NotImplemented) return Ops.Not(res);
+
+            return Ops.NotImplemented;
         }
 
         #endregion
@@ -361,7 +412,7 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Used for >, <, >=, <= where we don't allow ordered comparisons.
         /// </summary>
-        private static int Compare(Complex64 x, object y) {
+        internal static int Compare(Complex64 x, object y) {
             // Complex vs. another type is -1 (when complex is on the lhs)
             // Complex vs. null is 1 (when complex is on the lhs)
             // If two complex values are equal we return 0
