@@ -277,6 +277,7 @@ namespace IronPython.Runtime {
         internal static bool EnforceRecursion = false;    // true to enforce maximum depth, false otherwise
 
         #region instance members
+        private string name;
         public string[] argNames;
         // The default values of the last few arguments
         protected readonly object[] defaults;
@@ -287,7 +288,8 @@ namespace IronPython.Runtime {
         internal IAttributesDictionary dict;
         #endregion
 
-        protected PythonFunction(PythonModule globals, string name, string[] argNames, object[] defaults):base(name) {
+        protected PythonFunction(PythonModule globals, string name, string[] argNames, object[] defaults) {
+            this.name = name;
             this.argNames = argNames;
             this.defaults = defaults;
             Debug.Assert(defaults.Length <= argNames.Length);
@@ -300,14 +302,6 @@ namespace IronPython.Runtime {
 
             this.module = globals;
             this.FunctionCode = new FunctionCode(this);
-        }
-
-        public override int MaximumArgs {
-            get { return 0; }
-        }
-
-        public override int MinimumArgs {
-            get { return 0; }
         }
 
         #region Public APIs
@@ -370,7 +364,6 @@ namespace IronPython.Runtime {
             }
             [PythonName("func_code")]
             set {
-                ///!!! need to do more to be right.
                 if (!(value is FunctionCode)) throw Ops.TypeError("func_code must be set to a code object");
                 code = (FunctionCode)value;
             }
@@ -683,8 +676,6 @@ namespace IronPython.Runtime {
         }
 
 
-        #region ICallable Members
-
         [PythonName("__call__")]
         public override object Call(ICallerContext context, params object[] args) {
             int nparams = argNames.Length;
@@ -714,8 +705,6 @@ namespace IronPython.Runtime {
                 PopFrame();
             }
         }
-
-        #endregion
 
         #region Object Overrides
         [PythonName("__eq__")]
@@ -879,13 +868,13 @@ namespace IronPython.Runtime {
         private object declaringClass;
         private WeakRefTracker weakref;
 
-        public Method(object function, object instance, object @class):base("") {
+        public Method(object function, object instance, object @class) {
             this.func = function;
             this.inst = instance;
             this.declaringClass = @class;
         }
 
-        public Method(object function, object instance):base("") {
+        public Method(object function, object instance) {
             this.func = function;
             this.inst = instance;
         }
@@ -921,15 +910,6 @@ namespace IronPython.Runtime {
             get {
                 return declaringClass;
             }
-        }
-
-        //!!! These two methods are quite ugly
-        public override int MaximumArgs {
-            get { return 0; }
-        }
-
-        public override int MinimumArgs {
-            get { return 0; }
         }
 
         private Exception BadSelf(object got) {

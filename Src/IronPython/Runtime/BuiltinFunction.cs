@@ -25,32 +25,16 @@ using IronPython.Compiler;
 
 namespace IronPython.Runtime {
     /// <summary>
-    /// BuiltinFunction is the base class for calling all .NET methods.  The built-in function
-    /// class hierachy is defined as:
+    /// BuiltinFunction represents any standard CLR function exposed to Python.
+    /// This is used for both methods on standard Python types such as list or tuple
+    /// and for methods from arbitrary .NET assemblies.
     /// 
-    /// BuiltinFunction
-    ///     ReflectedMethodBase
-    ///         ReflectedMethod
-    ///             ReflectedUnboundMethod
-    ///             ReflectedUnboundReverseOp
-    ///     ReflectedConstructor
-    ///     OptimizedFunction0 .. OptimizedFunction(MAX_ARGS)
-    ///     OptimizedFunctionN
-    ///     OptimizedFunctionAny
-    /// 
-    /// BuiltinFunction contains functionality that is common to all of these.  That includes
-    /// the target methods, information about function/method, a bound instance (if any), and 
-    /// the user-displayed function name.
-    /// 
-    /// The OptimizedFunction* subclasses use delegate based dispatch.  
-    /// 
-    /// The ReflectedMethod* subclasses use slower reflection based invocation.
-    /// 
-    /// Currently all classes use reflection based invocation for keyword argument calls.
+    /// All calls are made through the optimizedTarget which is created lazily.
     /// </summary>
     [PythonType("builtin_function_or_method")]
     public partial class BuiltinFunction : 
         FastCallable, IFancyCallable, IContextAwareMember, IDynamicObject {
+        protected string name;
         internal MethodBase[] targets;
         private FunctionType funcType;
         protected FastCallable optimizedTarget;
@@ -72,19 +56,18 @@ namespace IronPython.Runtime {
         #endregion
 
         #region Protected Constructors
-        public BuiltinFunction() :base("") { }
+        public BuiltinFunction() { }
 
-        protected BuiltinFunction(string functionName, MethodBase[] originalTargets, FunctionType functionType) :
-        base(functionName) {
+        protected BuiltinFunction(string name, MethodBase[] originalTargets, FunctionType functionType) {
             Debug.Assert(originalTargets!= null, "originalTargets array is null");
-
+            
             MethodBase target=originalTargets[0];
             Debug.Assert(target != null, "no targets passed to make BuiltinFunction");
-            Debug.Assert(functionName != null, String.Format("name is null for {0}",target.Name));
+            Debug.Assert(name != null, String.Format("name is null for {0}",target.Name));
 
             funcType = functionType;
             targets = originalTargets;
-            name = functionName;
+            this.name = name;
 
             for (int i = 0; i < originalTargets.Length; i++) {
                 UpdateFunctionInfo(originalTargets[i]);
@@ -126,6 +109,7 @@ namespace IronPython.Runtime {
             get {
                 if (optimizedTarget == null) {
                     optimizedTarget = MethodBinder.MakeFastCallable(Name, targets, FunctionType);
+                    if (IsReversedOperator) optimizedTarget = new ReversedFastCallableWrapper(optimizedTarget);
                 }
                 return optimizedTarget;
             }
@@ -364,13 +348,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             return this;
         }
 
-        public override int MaximumArgs {
-            get { return OptimizedTarget.MaximumArgs; }
-        }
-        public override int MinimumArgs {
-            get { return OptimizedTarget.MinimumArgs; }
-        }
-
         /// <summary>
         /// Gets the maximum number of arguments the function can handle
         /// </summary>
@@ -396,6 +373,16 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         public bool IsContextAware {
             get {
                 return (FunctionType & FunctionType.IsContextAware) != 0;
+            }
+        }
+
+        public bool IsReversedOperator {
+            get {
+                return (FunctionType & FunctionType.ReversedOperator) != 0;
+            }
+            set {
+                if (value) FunctionType |= FunctionType.ReversedOperator;
+                else FunctionType &= ~FunctionType.ReversedOperator;
             }
         }
 
@@ -604,6 +591,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         OptimizeChecked     = 0x0020,   // True if we've checked if we could optimize the function, and we can't.
         OpsFunction         = 0x0040,   // True if this is a function/method declared on an Ops type (StringOps, IntOps, etc...)
         Params              = 0x0080,   // True if this is a params method, false otherwise.
+        ReversedOperator    = 0x0100,   // True if this is a __r*__ method for a CLS overloaded operator method
     }
 
     [PythonType("method_descriptor")]
@@ -770,7 +758,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             return new Method(newFunction, inst, null);
         }
 
-        public BoundBuiltinFunction(BuiltinFunction target, object instance) : base("") {
+        public BoundBuiltinFunction(BuiltinFunction target, object instance) {
             this.target = target;
             this.instance = instance;
         }
@@ -818,13 +806,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             }
         }
 
-        public override int MaximumArgs {
-            get { return target.MaximumArgs - 1; }
-        }
-        public override int MinimumArgs {
-            get { return target.MinimumArgs - 1; }
-        }
-
         public override object Call(ICallerContext context, params object[] args) {
             return target.OptimizedTarget.CallInstance(context, instance, args);
         }
@@ -860,6 +841,83 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                     Name,
                     Ops.GetDynamicType(instance).__name__,
                     Ops.HexId(instance));
+        }
+    }
+
+    // Used to map signatures to specific targets on the embedded reflected method.
+    public class BuiltinFunctionOverloadMapper {
+
+        private BuiltinFunction function;
+        private object instance;
+
+        public BuiltinFunctionOverloadMapper(BuiltinFunction builtinFunction, object instance) {
+            this.function = builtinFunction;
+            this.instance = instance;
+        }
+
+        public override string ToString() {
+            Dict overloadList = new Dict();
+            foreach (MethodBase mb in function.Targets) {
+                string key = ReflectionUtil.CreateAutoDoc(mb);
+                overloadList[key] = function;
+            }
+            return overloadList.ToString();
+        }
+
+        public object this[object key] {
+            get {
+                // Retrieve the signature from the index.
+                Type[] sig;
+                Tuple sigTuple = key as Tuple;
+
+                if (sigTuple != null) {
+                    sig = new Type[sigTuple.Count];
+                    for (int i = 0; i < sig.Length; i++) {
+                        sig[i] = Converter.ConvertToType(sigTuple[i]);
+                    }
+                } else {
+                    sig = new Type[] { Converter.ConvertToType(key) };
+                }
+
+                // We can still end up with more than one target since generic and non-generic
+                // methods can share the same name and signature. So we'll build up a new
+                // reflected method with all the candidate targets. A caller can then index this
+                // reflected method if necessary in order to provide generic type arguments and
+                // fully disambiguate the target.
+                BuiltinFunction rm = new BuiltinFunction();
+                rm.Name = function.Name;
+                rm.FunctionType = function.FunctionType | FunctionType.OptimizeChecked; // don't allow optimization that would whack the real entry
+
+
+                // Search for targets with the right number of arguments.
+                int args = sig.Length;
+                foreach (MethodBase mb in function.Targets) {
+                    ParameterInfo[] pis = mb.GetParameters();
+                    if (pis.Length != args)
+                        continue;
+
+                    // Check each parameter type for an exact match.
+                    bool match = true;
+                    for (int i = 0; i < args; i++)
+                        if (pis[i].ParameterType != sig[i]) {
+                            match = false;
+                            break;
+                        }
+                    if (!match)
+                        continue;
+
+                    // Okay, we have a match, add it to the list.
+                    rm.AddMethod(mb);
+                }
+                if (rm.Targets == null)
+                    throw Ops.TypeError("No match found for the method signature {0}", key);
+
+                if (instance != null) {
+                    return new BoundBuiltinFunction(rm, instance);
+                } else {
+                    return rm;
+                }
+            }
         }
     }
 

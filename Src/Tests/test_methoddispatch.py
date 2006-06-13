@@ -438,7 +438,7 @@ Check(120, d.M20, None)
 #        public void M22(DispatchHelpers.D arg) { Flag = 222; }
 #======================================================================
 
-# Bug 716: AssertError(TypeError, d.M22, None)
+Check(222, d.M22, None)
 Check(122, d.M22, IronPythonTest.DispatchHelpers.B())
 Check(222, d.M22, IronPythonTest.DispatchHelpers.D())
 

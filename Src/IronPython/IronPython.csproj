@@ -246,7 +246,6 @@
     <Compile Include="Runtime\PythonType.cs" />
     <Compile Include="Runtime\ReflectedAssembly.cs" />
     <Compile Include="Runtime\ReflectedMembers.cs" />
-    <Compile Include="Runtime\ReflectedMethod.cs" />
     <Compile Include="Runtime\ReflectedPackage.cs" />
     <Compile Include="Runtime\ReflectedType.cs" />
     <Compile Include="Runtime\ReflectedType.Generated.cs" />

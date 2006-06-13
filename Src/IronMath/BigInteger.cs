@@ -1235,6 +1235,8 @@ namespace IronMath {
         #region IFormattable Members
 
         string IFormattable.ToString(string format, IFormatProvider formatProvider) {
+            if (format == null) return this.ToString();
+
             switch(format[0]){
                 case 'd':
                 case 'D':

@@ -75,34 +75,21 @@ namespace IronPython.Runtime {
             throw new NotImplementedException();
         }
 
-        protected string name;
-        protected FastCallable(string name) {
-            this.name = name;
-        }
-
-        public abstract int MaximumArgs {
-            get;
-        }
-
-        public abstract int MinimumArgs {
-            get;
-        }
+        protected FastCallable() {}
 
         public abstract object Call(ICallerContext context, params object[] args);
         public abstract object CallInstance(ICallerContext context, object instance, params object[] args);
 
-        protected Exception BadArgumentError(CallType callType, int argCount) {
-            int errMinArgs = MinimumArgs;
-            int errMaxArgs = MaximumArgs;
+        protected static Exception BadArgumentError(string name, int minArgs, int maxArgs, CallType callType, int argCount) {
             if (callType == CallType.ImplicitInstance) {
                 argCount -= 1;
-                errMinArgs -= 1;
-                errMaxArgs -= 1;
+                minArgs -= 1;
+                maxArgs -= 1;
             }
 
             // This generates Python style error messages assuming that all arg counts in between min and max are allowed
             //It's possible that discontinuous sets of arg counts will produce a weird error message
-            return PythonFunction.TypeErrorForIncorrectArgumentCount(name, errMaxArgs, errMaxArgs - errMinArgs, argCount);
+            return PythonFunction.TypeErrorForIncorrectArgumentCount(name, maxArgs, maxArgs - minArgs, argCount);
         }
    
         protected static object[] PrependInstance(object instance, object[] args) {
@@ -117,23 +104,66 @@ namespace IronPython.Runtime {
         #region ICallable Members
 
         public object Call(params object[] args) {
-            return Call((ICallerContext)null, args); //??? is a null context okay
+            return Call(DefaultContext.Default, args);
         }
 
         #endregion
     }
 
+    // Swaps the first two arguments to the wrapped fast callable
+    // This is used to implement __r*__ functions from .NET methods
+    public partial class ReversedFastCallableWrapper : FastCallable {
+        private FastCallable target;
+        public ReversedFastCallableWrapper(FastCallable target) {
+            this.target = target;
+        }
+
+        public override object Call(ICallerContext context, params object[] args) {
+            if (args.Length == 0) {
+                return Call(context);
+            }
+            if (args.Length == 1) {
+                return Call(context, args[0]);
+            }
+            if (args.Length == 2) {
+                return Call(context, args[1], args[0]);
+            }
+
+            object[] newArgs = new object[args.Length];
+            newArgs[0] = args[1];
+            newArgs[1] = args[0];
+            for (int i = 2; i < args.Length; i++) {
+                newArgs[i] = args[i];
+            }
+
+            return target.Call(context, newArgs);
+        }
+
+        public override object CallInstance(ICallerContext context, object instance, params object[] args) {
+            if (args.Length == 0) {
+                return CallInstance(context, instance);
+            }
+            if (args.Length == 1) {
+                return CallInstance(context, args[0], instance);
+            }
+
+            object[] newArgs = new object[args.Length];
+            newArgs[0] = instance;
+            instance = args[0];
+            for (int i = 1; i < args.Length; i++) {
+                newArgs[i] = args[i];
+            }
+
+            return target.Call(context, newArgs);
+        }
+    }
+
     public class FastCallableUgly : FastCallable {
         private MethodBinder binder;
 
-        //!!! bad args passed to parent
-        public FastCallableUgly(MethodBinder binder)
-            : base(binder.Name) {
+        public FastCallableUgly(MethodBinder binder) {
             this.binder = binder;
         }
-
-        public override int MaximumArgs { get { return binder.MaximumArgs; } }
-        public override int MinimumArgs { get { return binder.MinimumArgs; } }
 
         public override object Call(ICallerContext context) {
             return binder.Call(context, CallType.None, new object[] { });

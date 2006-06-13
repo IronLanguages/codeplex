@@ -118,12 +118,12 @@ namespace IronPython.Runtime {
             RemoveNonOps(SymbolTable.StringToId(name));
 
             // store Python version
-            StoreMethod<BuiltinFunction>(name, mi, funcType | FunctionType.OpsFunction);
+            StoreMethod(name, mi, funcType | FunctionType.OpsFunction);
 
             // store CLR version, if different and we don't have a clash (if we do
             // have a clash our version is still available under the python name)
             if (name != mi.Name && !ContainsNonOps(SymbolTable.StringToId(mi.Name))) {
-                StoreMethod<BuiltinFunction>(mi.Name, mi, FunctionType.Method | FunctionType.OpsFunction);
+                StoreMethod(mi.Name, mi, FunctionType.Method | FunctionType.OpsFunction);
             }
         }
 

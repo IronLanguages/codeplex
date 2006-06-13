@@ -29,42 +29,42 @@ namespace IronPython.Runtime {
 
         public static object Call(object func) {
             FastCallable fc = func as FastCallable;
-            if (fc != null) return fc.Call((ICallerContext)null);
+            if (fc != null) return fc.Call(DefaultContext.Default);
 
             return Ops.Call(func, EMPTY);
         }
 
         public static object Call(object func, object arg0) {
             FastCallable fc = func as FastCallable;
-            if (fc != null) return fc.Call((ICallerContext)null, arg0);
+            if (fc != null) return fc.Call(DefaultContext.Default, arg0);
 
             return Ops.Call(func, new object[] { arg0 });
         }
 
         public static object Call(object func, object arg0, object arg1) {
             FastCallable fc = func as FastCallable;
-            if (fc != null) return fc.Call((ICallerContext)null, arg0, arg1);
+            if (fc != null) return fc.Call(DefaultContext.Default, arg0, arg1);
 
             return Ops.Call(func, new object[] { arg0, arg1 });
         }
 
         public static object Call(object func, object arg0, object arg1, object arg2) {
             FastCallable fc = func as FastCallable;
-            if (fc != null) return fc.Call((ICallerContext)null, arg0, arg1, arg2);
+            if (fc != null) return fc.Call(DefaultContext.Default, arg0, arg1, arg2);
 
             return Ops.Call(func, new object[] { arg0, arg1, arg2 });
         }
 
         public static object Call(object func, object arg0, object arg1, object arg2, object arg3) {
             FastCallable fc = func as FastCallable;
-            if (fc != null) return fc.Call((ICallerContext)null, arg0, arg1, arg2, arg3);
+            if (fc != null) return fc.Call(DefaultContext.Default, arg0, arg1, arg2, arg3);
 
             return Ops.Call(func, new object[] { arg0, arg1, arg2, arg3 });
         }
 
         public static object Call(object func, object arg0, object arg1, object arg2, object arg3, object arg4) {
             FastCallable fc = func as FastCallable;
-            if (fc != null) return fc.Call((ICallerContext)null, arg0, arg1, arg2, arg3, arg4);
+            if (fc != null) return fc.Call(DefaultContext.Default, arg0, arg1, arg2, arg3, arg4);
 
             return Ops.Call(func, new object[] { arg0, arg1, arg2, arg3, arg4 });
         }

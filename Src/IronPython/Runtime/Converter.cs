@@ -437,6 +437,9 @@ namespace IronPython.Runtime {
 
             if (o == null) throw MakeTypeError("int", o);
 
+            BigInteger bi = o as BigInteger;
+            if (!object.ReferenceEquals(bi, null)) return bi.ToInt32();
+
             // slow path is now okay (sortof)
             return (int)CheckedOldConversion(o, Int32Type);
         }
@@ -569,8 +572,6 @@ namespace IronPython.Runtime {
             return res;
         }
 
-
-
         public static Exception MakeTypeError(Type expectedType, object o) {
             return MakeTypeError(Ops.GetDynamicTypeFromType(expectedType).__name__.ToString(), o);
         }
@@ -578,8 +579,6 @@ namespace IronPython.Runtime {
         public static Exception MakeTypeError(string expected, object o) {
             return Ops.TypeError("expected {0}, found {1}", expected, Ops.GetDynamicType(o).__name__);
         }
-
-
 
         public static object Convert(object value, Type toType) {
             if (IronPython.Hosting.PythonEngine.options.EngineDebug) {
@@ -657,6 +656,7 @@ namespace IronPython.Runtime {
         public static bool CanConvertFrom(Type fromType, Type toType, NarrowingLevel allowNarrowing) {
             if (toType == fromType) return true;
             if (toType.IsAssignableFrom(fromType)) return true;
+            if (fromType.IsCOMObject && toType.IsInterface) return true; // A COM object could be cast to any interface
 
             if (HasImplicitNumericConversion(fromType, toType)) return true;
 

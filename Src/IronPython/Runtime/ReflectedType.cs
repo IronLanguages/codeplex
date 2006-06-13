@@ -181,14 +181,14 @@ namespace IronPython.Runtime {
         }
 
         /// <summary> Generic helper for doing the different types of method stores. </summary>
-        internal void StoreMethod<T>(string name, MethodInfo mi, FunctionType ft) where T : BuiltinFunction, new() {
+        internal void StoreMethod(string name, MethodInfo mi, FunctionType ft) {
             object existingMember;
-            T rm = null;
+            BuiltinFunction rm = null;
             SymbolId methodId = SymbolTable.StringToId(name);
             if (dict.TryGetValue(methodId, out existingMember)) {
                 BuiltinMethodDescriptor bimd = existingMember as BuiltinMethodDescriptor;
-                if (bimd != null) rm = bimd.template as T;
-                else rm = existingMember as T;
+                if (bimd != null) rm = bimd.template as BuiltinFunction;
+                else rm = existingMember as BuiltinFunction;
 
                 if (rm != null) {
                     rm.FunctionType |= ft;
@@ -206,11 +206,9 @@ namespace IronPython.Runtime {
 
             if (rm == null) {
                 // This is destructive, Assert
-                Debug.Assert(existingMember == null, String.Format("Replacing {0} with {1}", existingMember, typeof(T)));
-                rm = new T();
-                rm.Name = name;
-                rm.FunctionType = ft;
-                rm.AddMethod(mi);
+                Debug.Assert(existingMember == null, String.Format("Replacing {0} with new BuiltinFunction", existingMember));
+                if (name == "__init__") name = (string)this.__name__;
+                rm = BuiltinFunction.MakeMethod(name, mi, ft);
                 dict[methodId] = rm.GetDescriptor();
             }
         }
@@ -219,15 +217,15 @@ namespace IronPython.Runtime {
             FunctionType ft = CompilerHelpers.IsStatic(mi) ? FunctionType.Function : FunctionType.Method;
             if (nt == NameType.PythonMethod || (!IsPythonType && !clsOnly)) ft |= FunctionType.PythonVisible;
 
-            StoreMethod<BuiltinFunction>(name, mi, ft);
+            StoreMethod(name, mi, ft);
         }
 
         internal void StoreReflectedUnboundMethod(string name, MethodInfo mi, NameType nt) {
-            StoreMethod<BuiltinFunction>(name, mi, nt == NameType.PythonMethod ? FunctionType.PythonVisible | FunctionType.Method : FunctionType.Method);
+            StoreMethod(name, mi, nt == NameType.PythonMethod ? FunctionType.PythonVisible | FunctionType.Method : FunctionType.Method);
         }
 
         internal void StoreReflectedUnboundReverseOp(string name, MethodInfo mi, NameType nt) {
-            StoreMethod<ReflectedUnboundReverseOp>(name, mi, nt == NameType.PythonMethod ? FunctionType.PythonVisible | FunctionType.Method : FunctionType.Method);
+            StoreMethod(name, mi, FunctionType.ReversedOperator | (nt == NameType.PythonMethod ? FunctionType.PythonVisible | FunctionType.Method : FunctionType.Method));
         }
 
         internal void StoreClassMethod(string name, MethodInfo mi) {
@@ -359,7 +357,7 @@ namespace IronPython.Runtime {
 
             if (oper.method != null) {
                 MethodInfo mi = typeof(EnumOps).GetMethod(method);
-                StoreMethod<BuiltinFunction>(oper.method,
+                StoreMethod(oper.method,
                     mi,
                     FunctionType.PythonVisible | FunctionType.SkipThisCheck | FunctionType.Method);
             }

@@ -121,14 +121,13 @@ def gen_fastcallable_any(cw, postfix="WithContext", extraParam=("ICallerContext 
     cw.write("public CallTarget%(postfix)sN targetN;", postfix=postfix)
 
 
+    cw.write("private string name;")    
     cw.write("private int minArgs, maxArgs;")
-    cw.enter_block("public FastCallable%(postfix)sAny(string name, int minArgs, int maxArgs) : base(name)", postfix=postfix)
+    cw.enter_block("public FastCallable%(postfix)sAny(string name, int minArgs, int maxArgs)", postfix=postfix)
+    cw.write("this.name = name;")
     cw.write("this.minArgs = minArgs;")
     cw.write("this.maxArgs = maxArgs;")
     cw.exit_block()
-
-    cw.write("public override int MaximumArgs { get { return maxArgs; } }")
-    cw.write("public override int MinimumArgs { get { return minArgs; } }")
 
     for i in xrange(MAX_ARGS + 1):
         make_call_to_target(cw, i, "", extraArg)
@@ -158,19 +157,22 @@ def gen_fastcallable_any(cw, postfix="WithContext", extraParam=("ICallerContext 
     cw.write("if (targetN != null) return targetN(%(args)s);", args = ", ".join(extraArg+("PrependInstance(instance, args)",)))
     cw.write("throw BadArgumentError(CallType.None, args.Length+1);")
     cw.exit_block()
+    
+    cw.enter_block("private Exception BadArgumentError(CallType callType, int nargs)")
+    cw.write("return BadArgumentError(name, minArgs, maxArgs, callType, nargs);")
+    cw.exit_block()
         
     cw.exit_block()
 
 def gen_fastcallable_x(cw, index, postfix="WithContext", extraArg=("context",)):
     cw.enter_block("public class FastCallable%(postfix)s%(index)d : FastCallable", postfix=postfix, index=index)
     cw.write("public CallTarget%(postfix)s%(index)d target%(index)d;", index=index, postfix=postfix)
-    cw.enter_block("public FastCallable%(postfix)s%(index)d(string name, CallTarget%(postfix)s%(index)d target) : base(name)",
+    cw.write("private string name;")
+    cw.enter_block("public FastCallable%(postfix)s%(index)d(string name, CallTarget%(postfix)s%(index)d target)",
              index=index, postfix=postfix)
     cw.write("this.target%(index)d = target;", index=index)
+    cw.write("this.name = name;")
     cw.exit_block()
-    cw.write("public override int MaximumArgs { get { return %(index)d; } }", index = index)
-    cw.write("public override int MinimumArgs { get { return %(index)d; } }", index=index)
-
 
     for i in xrange(MAX_ARGS+1):
         if i == index:
@@ -190,6 +192,10 @@ def gen_fastcallable_x(cw, index, postfix="WithContext", extraArg=("context",)):
     cw.write("if (args.Length == %(index)d) return CallInstance(%(args)s);", index=index-1,
              args=", ".join(["context", "instance"] + ["args[%d]" % i for i in xrange(index-1)]))
     cw.write("throw BadArgumentError(CallType.ImplicitInstance, args.Length);")
+    cw.exit_block()
+    
+    cw.enter_block("private Exception BadArgumentError(CallType callType, int nargs)")
+    cw.write("return BadArgumentError(name, %(index)s, %(index)s, callType, nargs);", index=index)
     cw.exit_block()
 
     cw.exit_block()
@@ -239,6 +245,27 @@ def gen_fastmembers(cw):
     gen_fastmethods(cw)
 
 CodeGenerator("FastCallableMembers", gen_fastmembers).doit()
+
+def gen_rfastmethods(cw):
+    cw.enter_block("public override object Call(" + make_params1(0) + ")")
+    cw.write("return target.Call(context);")
+    cw.exit_block()
+
+    for i in xrange(1, MAX_ARGS+1):
+        args = ["arg%d" % argi for argi in xrange(i)]
+        if len(args) > 1:
+            args[0], args[1] = args[1], args[0]
+        args = ", ".join(["context"]+args)
+		
+        cw.enter_block("public override object Call(" + make_params1(i) + ")")
+        cw.write("return target.Call(%(args)s);", args=args)
+        cw.exit_block()
+        
+        cw.enter_block("public override object CallInstance(" + make_params1(i) + ")")
+        cw.write("return target.CallInstance(%(args)s);", args=args)
+        cw.exit_block()
+
+CodeGenerator("ReversedFastCallableWrapper Members", gen_rfastmethods).doit()
 
 
 def gen_call(nargs, nparams, cw):
@@ -373,13 +400,7 @@ def builtin_functions(cw):
 
 
 CodeGenerator("FunctionNs", functions).doit()
-#CodeGenerator("Builtin Functions", builtin_functions).doit()
 
-def gen_methods(cw):
-    for nparams in range(MAX_ARGS+1):
-        cw.write("object Call(%s);" % make_params(nparams))
-
-CodeGenerator("FastCallable methods", gen_methods).doit()
 
 CODE = """
 public static object Call(%(params)s) {
@@ -391,7 +412,7 @@ public static object Call(%(params)s) {
 
 
 def gen_call_meth(nargs, cw):
-    args = ["(ICallerContext)null"]+["arg%d" % i for i in range(nargs)]
+    args = ["DefaultContext.Default"]+["arg%d" % i for i in range(nargs)]
     argsArray = "EMPTY"
     if nargs > 0:
         argsArray = "new object[] { %s }" % ", ".join(args[1:])

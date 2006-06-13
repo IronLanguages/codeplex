@@ -19,23 +19,6 @@ using System.Text;
 
 namespace IronPython.Runtime {
 
-    public interface IFastCallable : ICallable {
-        #region Generated FastCallable methods
-
-        // *** BEGIN GENERATED CODE ***
-
-        object Call();
-        object Call(object arg0);
-        object Call(object arg0, object arg1);
-        object Call(object arg0, object arg1, object arg2);
-        object Call(object arg0, object arg1, object arg2, object arg3);
-        object Call(object arg0, object arg1, object arg2, object arg3, object arg4);
-
-        // *** END GENERATED CODE ***
-
-        #endregion
-    }
-
     public interface INumber {
         #region Generated INumber Methods
 

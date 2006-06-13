@@ -35,6 +35,11 @@ namespace IronPython.Runtime {
         public static object MakeList(PythonType cls, [ParamDict] Dict dict, params object[] args) {
             return MakeList(cls);
         }
+
+        [PythonName("__new__")]
+        public static object MakeList(PythonType cls, params object[] args) {
+            return MakeList(cls);
+        }
         
         [PythonName("__new__")]
         public static object MakeList(PythonType cls, object sequence) {
