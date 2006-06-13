@@ -38,13 +38,21 @@ namespace IronPython.Runtime {
     /// built-in types).
     /// </summary>
 
+    [Flags]
+    enum UserTypeFlags {
+        None         = 0x0000,
+        HasSlots     = 0x0001,
+        HasFinalizer = 0x0002,
+        HasWeakRef   = 0x0004,
+    }
+
     [DebuggerDisplay("UserType: {ToString()}")]
     [PythonType(typeof(PythonType))]
     public partial class UserType : PythonType, IFancyCallable, IWeakReferenceable, ICallableWithCallerContext {
         // This is typed as "object" instead of "string" as the user is allowed to set it to an arbitrary object
         public object __module__;
         private Tuple bases;
-        internal bool hasSlots;
+        UserTypeFlags flags;
 
         #region Public API Surface
 
@@ -98,8 +106,6 @@ namespace IronPython.Runtime {
 
             IAttributesDictionary fastDict = (IAttributesDictionary)dict;
 
-            if (fastDict.ContainsKey(SymbolTable.Slots)) hasSlots = true;
-
             this.__name__ = name;
             this.__module__ = fastDict[SymbolTable.Module];   // should always be present...
 
@@ -107,7 +113,9 @@ namespace IronPython.Runtime {
                 fastDict[SymbolTable.Doc] = null;
             }
 
-            InitializeUserType(bases, false);
+            if (fastDict.ContainsKey(SymbolTable.Slots)) HasSlots = true;
+
+            InitializeUserType(bases, fastDict, false);
 
             this.dict = CreateNamespaceDictionary(dict);
 
@@ -118,7 +126,7 @@ namespace IronPython.Runtime {
         /// Set up the type
         /// </summary>
         /// <param name="resetType">Is an existing type being reset?</param>
-        void InitializeUserType(Tuple bases, bool resetType) {
+        void InitializeUserType(Tuple bases, IAttributesDictionary newDict, bool resetType) {
             if (resetType) {
                 foreach (object baseTypeObj in BaseClasses) {
                     if (baseTypeObj is OldClass) continue;
@@ -137,11 +145,21 @@ namespace IronPython.Runtime {
                 }
             }
 
+            // if our dict, or any of our children, have a finalizer, then
+            // we have a finalizer.
+            bool hasFinalizer = newDict.ContainsKey(SymbolTable.Unassign);
             foreach (object baseTypeObj in BaseClasses) {
                 if (baseTypeObj is OldClass) continue;
                 PythonType baseType = baseTypeObj as PythonType;
                 baseType.AddSubclass(this);
+
+                UserType ut = baseType as UserType;
+                if (ut != null && ut.HasFinalizer) {
+                    hasFinalizer = true;
+                }
             }
+
+            HasFinalizer = hasFinalizer;
 
             if (!resetType)
                 Initialize();
@@ -177,7 +195,7 @@ namespace IronPython.Runtime {
 
             Debug.Assert(NewTypeMaker.IsInstanceType(type));
 
-            if (hasSlots) return type;            
+            if (HasSlots) return type;            
             return type.BaseType;
         }
 
@@ -203,7 +221,7 @@ namespace IronPython.Runtime {
                 CalculateMro(value);
 
                 lock (this) {
-                    InitializeUserType(value, true);
+                    InitializeUserType(value, dict, true);
 
                     // note: bases & MethodResolutionOrder are out of sync for a short period of time.  But because 
                     // the user cannot atomically read both  values at the same time, this is logically the same as the race 
@@ -427,7 +445,7 @@ namespace IronPython.Runtime {
             }
 
             if (name == SymbolTable.Class) { ret = this; return true; }
-            if (name == SymbolTable.WeakRef && !hasSlots) {                 
+            if (name == SymbolTable.WeakRef && !HasSlots) {                 
                 ret = null; return true; 
             }
 
@@ -458,6 +476,42 @@ namespace IronPython.Runtime {
         #endregion
 
         #region Private implementation details
+
+        internal bool HasSlots {
+            get {
+                return (flags & UserTypeFlags.HasSlots) != 0;
+            }
+            set {
+                if (value)
+                    flags |= UserTypeFlags.HasSlots;
+                else
+                    flags &= ~(UserTypeFlags.HasSlots);
+            }
+        }
+
+        internal bool HasWeakRef {
+            get {
+                return (flags & UserTypeFlags.HasWeakRef) != 0;
+            }
+            set {
+                if (value)
+                    flags |= UserTypeFlags.HasWeakRef;
+                else
+                    flags &= ~(UserTypeFlags.HasWeakRef);
+            }
+        }
+        private bool HasFinalizer {
+            get {
+                return (flags & UserTypeFlags.HasFinalizer) != 0;
+            }
+            set {
+                if (value)
+                    flags |= UserTypeFlags.HasFinalizer;
+                else
+                    flags &= ~(UserTypeFlags.HasFinalizer);
+            }
+        }
+
         private NamespaceDictionary CreateNamespaceDictionary(IDictionary<object, object> dict) {
             string[] names = (string[])this.type.GetField(NewTypeMaker.VtableNamesField).GetValue(null);
             SymbolId[] symNames = new SymbolId[names.Length];
@@ -540,6 +594,14 @@ namespace IronPython.Runtime {
                         default: Ops.CallWithContext(context, init, args); break;
                     }
 
+                }
+
+                if (HasFinalizer) {
+                    IWeakReferenceable iwr = newObject as IWeakReferenceable;
+                    Debug.Assert(iwr != null);
+
+                    InstanceFinalizer nif = new InstanceFinalizer(newObject);
+                    iwr.SetFinalizer(new WeakRefTracker(nif, nif));
                 }
             }
 
@@ -806,9 +868,15 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        void IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
+        bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
             dict[SymbolTable.WeakRef] = value;
+            return true;
         }
+
+        void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
+            ((IWeakReferenceable)this).SetWeakRef(value);
+        }
+
         #endregion        
     }
 

@@ -430,10 +430,14 @@ from lib.assert_util import *
 def test_scenarios(templates, cmps):
     values = [3.5, 4.5, 4, 0, -200L, 12345678901234567890]
     for l in values:
-        for r in values:
+       for r in values:
             for t in templates:
                 for c in cmps:
-                    easy = "%s %s %s" % (l, c, r)
+                    easy = t % (l, c, r)
+                    # need to compare the real values the classes hold,
+                    # not the values we expect them to hold, incase truncation
+                    # has occured                    
+                    easy = easy.replace(')', ').value')
                     inst = t % (l, c, r)
                     #print inst, eval(easy), eval(inst)
                     Assert(eval(easy) == eval(inst))

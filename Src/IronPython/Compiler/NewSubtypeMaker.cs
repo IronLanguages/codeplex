@@ -71,8 +71,18 @@ namespace IronPython.Compiler {
             }
         }
 
+        private bool NeedsNewWeakRef() {
+            foreach(DynamicType dt in baseClasses){
+                UserType ut = dt as UserType;
+                if (ut == null) continue;
+
+                if (ut.HasWeakRef) return false;
+            }
+            return true;
+        }
+
         protected override void ImplementWeakReference() {
-            if (baseType.GetInterface("IWeakReferenceable")==null
+            if (NeedsNewWeakRef() 
                 && (slots == null || slots.Contains("__weakref__"))) {
                 // base type didn't have slots, but it's there now...
                 base.ImplementWeakReference();

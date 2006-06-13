@@ -125,6 +125,7 @@ namespace IronPython.Modules {
                         target.Free();
                     }
                 } catch (InvalidOperationException) {
+                    // target was freed
                 }
             }
             #endregion
@@ -263,13 +264,17 @@ namespace IronPython.Modules {
             #region Finalizer
             ~PythonWeakRefProxy() {
                 // remove our self from the chain...
-                IWeakReferenceable iwr = target.Target as IWeakReferenceable;
-                if (iwr != null) {
-                    WeakRefTracker wrt = iwr.GetWeakRef();
-                    wrt.RemoveHandler(this);
-                }
+                try {
+                    IWeakReferenceable iwr = target.Target as IWeakReferenceable;
+                    if (iwr != null) {
+                        WeakRefTracker wrt = iwr.GetWeakRef();
+                        wrt.RemoveHandler(this);
+                    }
 
-                target.Free();
+                    target.Free();
+                } catch (InvalidOperationException) {
+                    // target was freed
+                }
             }
             #endregion
 
@@ -427,12 +432,16 @@ namespace IronPython.Modules {
             #region Finalizer
             ~PythonCallableWeakRefProxy() {
                 // remove our self from the chain...
-                IWeakReferenceable iwr = target.Target as IWeakReferenceable;
-                if (iwr != null) {
-                    WeakRefTracker wrt = iwr.GetWeakRef();
-                    wrt.RemoveHandler(this);
+                try {
+                    IWeakReferenceable iwr = target.Target as IWeakReferenceable;
+                    if (iwr != null) {
+                        WeakRefTracker wrt = iwr.GetWeakRef();
+                        wrt.RemoveHandler(this);
+                    }
+                    target.Free();
+                } catch (InvalidOperationException) {
+                    // target was freed
                 }
-                target.Free();
             }
             #endregion
 

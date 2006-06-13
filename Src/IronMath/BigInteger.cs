@@ -351,21 +351,17 @@ namespace IronMath {
                 throw new ArgumentException(IronMath.InvalidArgument, "x");
             }
 
-            double val;
-            if (!x.TryToFloat64(out val)) return false;
+            // we can hold all double values, but not all double values
+            // can hold BigInteger values, and we may lose precision.  Convert
+            // the double to a big int, then compare.
+            
+            if ((y % 1) != 0) return false;  // not a whole number, can't be equal
 
-            return val == y;
+            return x == BigInteger.Create(y);
         }
 
         public static bool operator ==(double x, BigInteger y) {
-            if (object.ReferenceEquals(y, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "y");
-            }
-
-            double val;
-            if (!y.TryToFloat64(out val)) return false;
-
-            return val == x;
+            return y == x;
         }
 
         public static bool operator !=(BigInteger x, double y) {

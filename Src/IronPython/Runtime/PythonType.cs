@@ -717,8 +717,7 @@ namespace IronPython.Runtime {
         public bool SetAttribute(object instance, object value) {
             IWeakReferenceable reference = instance as IWeakReferenceable;
             if(reference != null){
-                reference.SetWeakRef(new WeakRefTracker(value, instance));
-                return true;
+                return reference.SetWeakRef(new WeakRefTracker(value, instance));
             }
             return false;
         }

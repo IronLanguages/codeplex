@@ -492,9 +492,25 @@ public static %(rettype)s %(name)s%(suffix)s(object x, object y) {
         } else if(y == null) {
             return %(boolTransform)s(1 %(symbol)s 0);
         } else {
+            BigInteger bi = y as BigInteger;
+            if(!Object.ReferenceEquals(bi, null)) {
+                BigInteger self = BigInteger.Create((double)x);
+                double dblSelf = (double)x;
+                if(self == bi) {
+                    double mod = dblSelf %% 1;
+                    if(mod != 0) {
+                        if(dblSelf > 0) 
+                            return %(boolTransform)s(1 %(symbol)s 0);
+                        return %(boolTransform)s(0 %(symbol)s 1);
+                    }
+                }
+                
+                return %(boolTransform)s(self %(symbol)s bi);
+            }
+            
             Conversion conv;
             int val = Converter.TryConvertToInt32(y, out conv);
-            if(conv < Conversion.None) return %(boolTransform)s(((double)x) %(symbol)s val);
+            if(conv < Conversion.None) return %(boolTransform)s(((double)x) %(symbol)s val);            
         }
     } else if (x is bool) {
         if(y is bool) {
@@ -518,6 +534,9 @@ public static %(rettype)s %(name)s%(suffix)s(object x, object y) {
             return %(boolTransform)s(((BigInteger)x) %(symbol)s (((bool)y) ? 1 : 0));
         } else if(y == null) {
             return %(boolTransform)s(1 %(symbol)s 0);
+        } else if(y is double) {
+            double dbl = (double)y;
+            return %(boolTransform)s( (((int)FloatOps.Compare(dbl, x))*-1) %(symbol)s 0 );
         }
     } else if(x is short) {
         object res = IntOps.Compare((int)(short)x, y);

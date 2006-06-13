@@ -642,9 +642,14 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        void IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
+        bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
             EnsureDict();
             dict[SymbolTable.WeakRef] = value;
+            return true;
+        }
+
+        void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
+            ((IWeakReferenceable)this).SetWeakRef(value);
         }
 
         #endregion
@@ -1031,8 +1036,13 @@ namespace IronPython.Runtime {
             return weakref;
         }
 
-        void IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
+        bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
             weakref = value;
+            return true;
+        }
+
+        void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
+            ((IWeakReferenceable)this).SetWeakRef(value);
         }
 
         #endregion

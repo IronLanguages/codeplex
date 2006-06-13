@@ -512,8 +512,13 @@ namespace IronPython.Modules {
                 return (weakRef);
             }
 
-            public void SetWeakRef(WeakRefTracker value) {
+            public bool SetWeakRef(WeakRefTracker value) {
                 weakRef = value;
+                return true;
+            }
+
+            public void SetFinalizer(WeakRefTracker value) {
+                SetWeakRef(value);
             }
 
             #endregion

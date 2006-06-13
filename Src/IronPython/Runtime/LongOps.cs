@@ -387,8 +387,7 @@ namespace IronPython.Runtime {
             } else if (y is ExtensibleInt) {
                 if (x.AsInt32(out intVal)) return IntOps.Compare(intVal, ((ExtensibleInt)y).value);
             } else if (y is double) {
-                double dbl = x.ToFloat64();
-                return FloatOps.Compare(dbl, y);
+                return ((int)FloatOps.Compare((double)y, x)) * -1;
             } else if (y is ExtensibleFloat) {
                 double dbl = x.ToFloat64();
                 return FloatOps.Compare(dbl, ((ExtensibleFloat)y).value);
@@ -458,6 +457,9 @@ namespace IronPython.Runtime {
 
         [PythonName("__pow__")]
         public static object Power(BigInteger x, BigInteger y) {
+            if (Object.ReferenceEquals(x, null)) throw Ops.TypeError("unsupported operands for __pow__: NoneType and long");
+            if (Object.ReferenceEquals(y, null)) throw Ops.TypeError("unsupported operands for __pow__: long and NoneType");
+
             long yl;
             if (y.AsInt64(out yl)) {
                 return Power(x, yl);
@@ -477,6 +479,9 @@ namespace IronPython.Runtime {
         private static BigInteger DivMod(BigInteger x, BigInteger y, out BigInteger r) {
             BigInteger rr;
             BigInteger qq;
+
+            if (Object.ReferenceEquals(x, null)) throw Ops.TypeError("unsupported operands for div/mod: NoneType and long");
+            if (Object.ReferenceEquals(y, null)) throw Ops.TypeError("unsupported operands for div/mod: long and NoneType");
 
             qq = BigInteger.DivRem(x, y, out rr);
 

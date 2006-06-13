@@ -206,8 +206,8 @@ namespace IronPython.Compiler {
         protected TypeGen tg;
         protected Slot typeField, dictField, weakrefField;
         protected IEnumerable<Type> interfaceTypes;
+        protected Tuple baseClasses;
 
-        private Tuple baseClasses;
         private bool hasBaseTypeField = false;
         private IList<Slot> slotsSlots;
 
@@ -777,9 +777,9 @@ namespace IronPython.Compiler {
             }
         }
 
-        bool BaseHasWeakRef(DynamicType curType) {
+        internal bool BaseHasWeakRef(DynamicType curType) {
             UserType ut = curType as UserType;
-            if (ut != null && ut.hasSlots && ut.type.GetInterface("IWeakReferenceable") != null) {
+            if (ut != null && ut.HasSlots && ut.HasWeakRef) {
                 return true;
             }
 
@@ -791,6 +791,7 @@ namespace IronPython.Compiler {
         protected virtual void ImplementWeakReference() {
             CreateWeakRefField();
 
+            bool isWeakRefAble = true;
             if (slots != null && !slots.Contains("__weakref__")) {
                 // always define the field, only implement the interface
                 // if we are slotless or the user defined __weakref__ in slots
@@ -801,12 +802,26 @@ namespace IronPython.Compiler {
                         break;
                     }
                 }
-                if(!baseHasWeakRef) return;
-            }
+                if (baseHasWeakRef) return;
+
+                isWeakRefAble = false;
+            } 
 
             tg.myType.AddInterfaceImplementation(typeof(IWeakReferenceable));
 
             CodeGen cg = tg.DefineMethodOverride(typeof(IWeakReferenceable).GetMethod("SetWeakRef"));
+            if (!isWeakRefAble) {
+                cg.EmitRawConstant(false);
+                cg.EmitReturn();
+            } else {
+                cg.EmitArgGet(0);
+                weakrefField.EmitSet(cg);
+                cg.EmitRawConstant(true);
+                cg.EmitReturn();
+            }
+            cg.Finish();
+
+            cg = tg.DefineMethodOverride(typeof(IWeakReferenceable).GetMethod("SetFinalizer"));
             cg.EmitArgGet(0);
             weakrefField.EmitSet(cg);
             cg.EmitReturn();

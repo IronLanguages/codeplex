@@ -18,6 +18,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 
+using System.Diagnostics;
+
 namespace IronPython.Runtime {
     /// <summary>
     /// single finalizable instance used to track & deliver all the 
@@ -106,19 +108,53 @@ namespace IronPython.Runtime {
 
                 CallbackInfo ci = callbacks[i];
                 try {
-                    // a little ugly - we only run callbacks that aren't a part
-                    // of cyclic trash.  but old style classes use a single field for
-                    // finalization & GC - and that's always cyclic, so we need to special case it.
-                    if (ci.Callback != null &&
-                        (!ci.IsFinalizing || ci.WeakRef.Target is OldInstanceFinalizer)) {
+                    try {
+                        // a little ugly - we only run callbacks that aren't a part
+                        // of cyclic trash.  but classes use a single field for
+                        // finalization & GC - and that's always cyclic, so we need to special case it.
+                        if (ci.Callback != null &&
+                            (!ci.IsFinalizing ||
+                            ci.WeakRef.Target is InstanceFinalizer)) {
 
-                        Ops.Call(ci.Callback, ci.WeakRef.Target);
+                            Ops.Call(ci.Callback, ci.WeakRef.Target);
+                        }
+                    } catch (Exception) {
                     }
-                } catch (Exception) {
-                }
 
-                callbacks[i].WeakRef.Free();
+                    callbacks[i].WeakRef.Free();
+                } catch (InvalidOperationException) {
+                    // target was freed
+                }
             }
         }
     }
+
+
+    /// <summary>
+    /// Finalizable object used to hook up finalization calls for OldInstances.
+    /// 
+    /// We create one of these each time an object w/ a finalizer gets created.  The
+    /// only reference to this object is the instance so when that goes out of scope
+    /// this does as well and this will get finalized.  
+    /// </summary>
+    public sealed class InstanceFinalizer : ICallable {
+        object instance;
+
+        public InstanceFinalizer(object inst) {
+            Debug.Assert(inst != null);
+
+            instance = inst;
+        }
+
+        #region ICallable Members
+
+        public object Call(params object[] args) {
+            object o;
+            Ops.TryToInvoke(instance, SymbolTable.Unassign, out o, new object[0]);
+
+            return null;
+        }
+
+        #endregion
+    }   
 }

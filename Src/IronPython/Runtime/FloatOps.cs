@@ -596,22 +596,31 @@ namespace IronPython.Runtime {
         }
 
         internal static object ReverseTrueDivide(double x, double y) {
+            if (x == 0) throw Ops.ZeroDivisionError();
             return y / x;
         }
 
         private static object ReverseTrueDivide(double x, float y) {
+            if (x == 0) throw Ops.ZeroDivisionError();
+
             return y / x;
         }
 
         private static object ReverseTrueDivide(double x, int y) {
+            if (x == 0) throw Ops.ZeroDivisionError();
+
             return y / x;
         }
 
         private static object ReverseTrueDivide(double x, BigInteger y) {
+            if (x == 0) throw Ops.ZeroDivisionError();
+
             return y / x;
         }
 
         private static object ReverseTrueDivide(double x, long y) {
+            if (x == 0) throw Ops.ZeroDivisionError();
+
             return y / x;
         }
 
@@ -619,6 +628,23 @@ namespace IronPython.Runtime {
         public static object Compare(double self, object other) {
             if (other == null) return 1;
 
+            // BigInts can hold doubles, but doubles can't hold BigInts, so
+            // if we're comparing against a BigInt then we should convert ourself
+            // to a long and then compare.
+            BigInteger bi = other as BigInteger;
+            if (!Object.ReferenceEquals(bi, null)) {
+                BigInteger bigself = BigInteger.Create(self);
+                if (bigself == bi) {
+                    double mod = self % 1;
+                    if (mod == 0) return 0;                    
+                    if (mod > 0) return 1;
+                    return -1;
+                }
+                if (bigself > bi) return 1;
+                return -1;
+            }
+
+            // everything else can be held by a double.
             Conversion conv;
             double val = Converter.TryConvertToDouble(other, out conv);
             if (conv == Conversion.None) {
@@ -631,11 +657,10 @@ namespace IronPython.Runtime {
                 if (conv != Conversion.None) {
                     return ComplexOps.TrueCompare(c64, new Complex64(self)) * -1;
                 }
-                
+
                 return Ops.NotImplemented;
             }
-
-
+            
             if (val == self) return 0;
             if (self < val) return -1;
             return 1;

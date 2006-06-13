@@ -43,6 +43,10 @@ namespace IronPython.Runtime {
             return value.GetHashCode();
         }
 
+        public virtual object ReversePower(object other) {
+            return ComplexOps.ReversePower(value, other);
+        }
+
         public virtual object Power(object other) {
             return ComplexOps.Power(value, other);
         }

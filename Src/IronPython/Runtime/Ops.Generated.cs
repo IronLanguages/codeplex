@@ -1277,9 +1277,25 @@ namespace IronPython.Runtime {
                 } else if(y == null) {
                     return Ops.Bool2Object(1 < 0);
                 } else {
+                    BigInteger bi = y as BigInteger;
+                    if(!Object.ReferenceEquals(bi, null)) {
+                        BigInteger self = BigInteger.Create((double)x);
+                        double dblSelf = (double)x;
+                        if(self == bi) {
+                            double mod = dblSelf % 1;
+                            if(mod != 0) {
+                                if(dblSelf > 0) 
+                                    return Ops.Bool2Object(1 < 0);
+                                return Ops.Bool2Object(0 < 1);
+                            }
+                        }
+
+                        return Ops.Bool2Object(self < bi);
+                    }
+
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) < val);
+                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) < val);            
                 }
             } else if (x is bool) {
                 if(y is bool) {
@@ -1303,6 +1319,9 @@ namespace IronPython.Runtime {
                     return Ops.Bool2Object(((BigInteger)x) < (((bool)y) ? 1 : 0));
                 } else if(y == null) {
                     return Ops.Bool2Object(1 < 0);
+                } else if(y is double) {
+                    double dbl = (double)y;
+                    return Ops.Bool2Object( (((int)FloatOps.Compare(dbl, x))*-1) < 0 );
                 }
             } else if(x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
@@ -1425,9 +1444,25 @@ namespace IronPython.Runtime {
                 } else if(y == null) {
                     return (1 < 0);
                 } else {
+                    BigInteger bi = y as BigInteger;
+                    if(!Object.ReferenceEquals(bi, null)) {
+                        BigInteger self = BigInteger.Create((double)x);
+                        double dblSelf = (double)x;
+                        if(self == bi) {
+                            double mod = dblSelf % 1;
+                            if(mod != 0) {
+                                if(dblSelf > 0) 
+                                    return (1 < 0);
+                                return (0 < 1);
+                            }
+                        }
+
+                        return (self < bi);
+                    }
+
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return (((double)x) < val);
+                    if(conv < Conversion.None) return (((double)x) < val);            
                 }
             } else if (x is bool) {
                 if(y is bool) {
@@ -1451,6 +1486,9 @@ namespace IronPython.Runtime {
                     return (((BigInteger)x) < (((bool)y) ? 1 : 0));
                 } else if(y == null) {
                     return (1 < 0);
+                } else if(y is double) {
+                    double dbl = (double)y;
+                    return ( (((int)FloatOps.Compare(dbl, x))*-1) < 0 );
                 }
             } else if(x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
@@ -1573,9 +1611,25 @@ namespace IronPython.Runtime {
                 } else if(y == null) {
                     return Ops.Bool2Object(1 > 0);
                 } else {
+                    BigInteger bi = y as BigInteger;
+                    if(!Object.ReferenceEquals(bi, null)) {
+                        BigInteger self = BigInteger.Create((double)x);
+                        double dblSelf = (double)x;
+                        if(self == bi) {
+                            double mod = dblSelf % 1;
+                            if(mod != 0) {
+                                if(dblSelf > 0) 
+                                    return Ops.Bool2Object(1 > 0);
+                                return Ops.Bool2Object(0 > 1);
+                            }
+                        }
+
+                        return Ops.Bool2Object(self > bi);
+                    }
+
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) > val);
+                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) > val);            
                 }
             } else if (x is bool) {
                 if(y is bool) {
@@ -1599,6 +1653,9 @@ namespace IronPython.Runtime {
                     return Ops.Bool2Object(((BigInteger)x) > (((bool)y) ? 1 : 0));
                 } else if(y == null) {
                     return Ops.Bool2Object(1 > 0);
+                } else if(y is double) {
+                    double dbl = (double)y;
+                    return Ops.Bool2Object( (((int)FloatOps.Compare(dbl, x))*-1) > 0 );
                 }
             } else if(x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
@@ -1721,9 +1778,25 @@ namespace IronPython.Runtime {
                 } else if(y == null) {
                     return (1 > 0);
                 } else {
+                    BigInteger bi = y as BigInteger;
+                    if(!Object.ReferenceEquals(bi, null)) {
+                        BigInteger self = BigInteger.Create((double)x);
+                        double dblSelf = (double)x;
+                        if(self == bi) {
+                            double mod = dblSelf % 1;
+                            if(mod != 0) {
+                                if(dblSelf > 0) 
+                                    return (1 > 0);
+                                return (0 > 1);
+                            }
+                        }
+
+                        return (self > bi);
+                    }
+
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return (((double)x) > val);
+                    if(conv < Conversion.None) return (((double)x) > val);            
                 }
             } else if (x is bool) {
                 if(y is bool) {
@@ -1747,6 +1820,9 @@ namespace IronPython.Runtime {
                     return (((BigInteger)x) > (((bool)y) ? 1 : 0));
                 } else if(y == null) {
                     return (1 > 0);
+                } else if(y is double) {
+                    double dbl = (double)y;
+                    return ( (((int)FloatOps.Compare(dbl, x))*-1) > 0 );
                 }
             } else if(x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
@@ -1869,9 +1945,25 @@ namespace IronPython.Runtime {
                 } else if(y == null) {
                     return Ops.Bool2Object(1 <= 0);
                 } else {
+                    BigInteger bi = y as BigInteger;
+                    if(!Object.ReferenceEquals(bi, null)) {
+                        BigInteger self = BigInteger.Create((double)x);
+                        double dblSelf = (double)x;
+                        if(self == bi) {
+                            double mod = dblSelf % 1;
+                            if(mod != 0) {
+                                if(dblSelf > 0) 
+                                    return Ops.Bool2Object(1 <= 0);
+                                return Ops.Bool2Object(0 <= 1);
+                            }
+                        }
+
+                        return Ops.Bool2Object(self <= bi);
+                    }
+
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) <= val);
+                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) <= val);            
                 }
             } else if (x is bool) {
                 if(y is bool) {
@@ -1895,6 +1987,9 @@ namespace IronPython.Runtime {
                     return Ops.Bool2Object(((BigInteger)x) <= (((bool)y) ? 1 : 0));
                 } else if(y == null) {
                     return Ops.Bool2Object(1 <= 0);
+                } else if(y is double) {
+                    double dbl = (double)y;
+                    return Ops.Bool2Object( (((int)FloatOps.Compare(dbl, x))*-1) <= 0 );
                 }
             } else if(x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
@@ -2017,9 +2112,25 @@ namespace IronPython.Runtime {
                 } else if(y == null) {
                     return (1 <= 0);
                 } else {
+                    BigInteger bi = y as BigInteger;
+                    if(!Object.ReferenceEquals(bi, null)) {
+                        BigInteger self = BigInteger.Create((double)x);
+                        double dblSelf = (double)x;
+                        if(self == bi) {
+                            double mod = dblSelf % 1;
+                            if(mod != 0) {
+                                if(dblSelf > 0) 
+                                    return (1 <= 0);
+                                return (0 <= 1);
+                            }
+                        }
+
+                        return (self <= bi);
+                    }
+
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return (((double)x) <= val);
+                    if(conv < Conversion.None) return (((double)x) <= val);            
                 }
             } else if (x is bool) {
                 if(y is bool) {
@@ -2043,6 +2154,9 @@ namespace IronPython.Runtime {
                     return (((BigInteger)x) <= (((bool)y) ? 1 : 0));
                 } else if(y == null) {
                     return (1 <= 0);
+                } else if(y is double) {
+                    double dbl = (double)y;
+                    return ( (((int)FloatOps.Compare(dbl, x))*-1) <= 0 );
                 }
             } else if(x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
@@ -2165,9 +2279,25 @@ namespace IronPython.Runtime {
                 } else if(y == null) {
                     return Ops.Bool2Object(1 >= 0);
                 } else {
+                    BigInteger bi = y as BigInteger;
+                    if(!Object.ReferenceEquals(bi, null)) {
+                        BigInteger self = BigInteger.Create((double)x);
+                        double dblSelf = (double)x;
+                        if(self == bi) {
+                            double mod = dblSelf % 1;
+                            if(mod != 0) {
+                                if(dblSelf > 0) 
+                                    return Ops.Bool2Object(1 >= 0);
+                                return Ops.Bool2Object(0 >= 1);
+                            }
+                        }
+
+                        return Ops.Bool2Object(self >= bi);
+                    }
+
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) >= val);
+                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) >= val);            
                 }
             } else if (x is bool) {
                 if(y is bool) {
@@ -2191,6 +2321,9 @@ namespace IronPython.Runtime {
                     return Ops.Bool2Object(((BigInteger)x) >= (((bool)y) ? 1 : 0));
                 } else if(y == null) {
                     return Ops.Bool2Object(1 >= 0);
+                } else if(y is double) {
+                    double dbl = (double)y;
+                    return Ops.Bool2Object( (((int)FloatOps.Compare(dbl, x))*-1) >= 0 );
                 }
             } else if(x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
@@ -2313,9 +2446,25 @@ namespace IronPython.Runtime {
                 } else if(y == null) {
                     return (1 >= 0);
                 } else {
+                    BigInteger bi = y as BigInteger;
+                    if(!Object.ReferenceEquals(bi, null)) {
+                        BigInteger self = BigInteger.Create((double)x);
+                        double dblSelf = (double)x;
+                        if(self == bi) {
+                            double mod = dblSelf % 1;
+                            if(mod != 0) {
+                                if(dblSelf > 0) 
+                                    return (1 >= 0);
+                                return (0 >= 1);
+                            }
+                        }
+
+                        return (self >= bi);
+                    }
+
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return (((double)x) >= val);
+                    if(conv < Conversion.None) return (((double)x) >= val);            
                 }
             } else if (x is bool) {
                 if(y is bool) {
@@ -2339,6 +2488,9 @@ namespace IronPython.Runtime {
                     return (((BigInteger)x) >= (((bool)y) ? 1 : 0));
                 } else if(y == null) {
                     return (1 >= 0);
+                } else if(y is double) {
+                    double dbl = (double)y;
+                    return ( (((int)FloatOps.Compare(dbl, x))*-1) >= 0 );
                 }
             } else if(x is short) {
                 object res = IntOps.Compare((int)(short)x, y);

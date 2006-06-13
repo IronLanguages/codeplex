@@ -629,18 +629,7 @@ namespace IronPython.Runtime {
             } else if ((num = other as INumber)!=null) {
                 return num.ReversePower(x);
             } else if ((ec = other as ExtensibleComplex) != null) {
-                return ec.Power(x);
-/*            } else if ((el = other as ExtensibleLong)!=null) {
-                return el.ReversePower(x);
-                BigInteger lexp = el.Value;
-                int iexp;
-                if (lexp.AsInt32(out iexp)) {
-                    return Power(x, iexp);
-                } else {
-                    if (x == 0) return 0;
-                    if (x == 1) return 1;
-                    throw Ops.ValueError("number too big");
-                }*/
+                return ec.ReversePower(x);
             }            
             return Ops.NotImplemented;
         }

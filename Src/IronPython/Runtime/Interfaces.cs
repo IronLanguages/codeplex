@@ -244,9 +244,34 @@ namespace IronPython.Runtime {
         object RichNotEquals(object other);
     }
 
+
+    /// <summary>
+    /// Defines the internal interface used for accessing weak references and adding finalizers
+    /// to user-defined types.
+    /// </summary>
     public interface IWeakReferenceable {
+        /// <summary>
+        /// Gets the current WeakRefTracker for an object that can be used to
+        /// append additional weak references.
+        /// </summary>
         WeakRefTracker GetWeakRef();
-        void SetWeakRef(WeakRefTracker value);
+
+        /// <summary>
+        /// Attempts to set the WeakRefTracker for an object.  Used on the first
+        /// addition of a weak ref tracker to an object.  If the object doesn't
+        /// support adding weak references then it returns false.
+        /// </summary>
+        bool SetWeakRef(WeakRefTracker value);
+
+        /// <summary>
+        /// Sets a WeakRefTracker on an object for the purposes of supporting finalization.
+        /// All user types (new-style & old-style) support finalization even if they don't
+        /// support weak-references, and therefore this function always succeeds.  Note the
+        /// slot used to store the WeakRefTracker is still shared between SetWeakRef and 
+        /// SetFinalizer if a type supports both.
+        /// </summary>
+        /// <param name="value"></param>
+        void SetFinalizer(WeakRefTracker value);
     }
 
     public interface IProxyObject {

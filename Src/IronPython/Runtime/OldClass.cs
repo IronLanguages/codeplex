@@ -316,35 +316,6 @@ namespace IronPython.Runtime {
     }
 
     /// <summary>
-    /// Finalizable object used to hook up finalization calls for OldInstances.
-    /// 
-    /// We create one of these each time an object w/ a finalizer gets created.  The
-    /// only reference to this object is the OldInstance so when that goes out of scope
-    /// this does as well and this will get finalized.  
-    /// </summary>
-    public sealed class OldInstanceFinalizer : ICallable {
-        OldInstance instance;
-
-        public OldInstanceFinalizer(OldInstance inst) {
-            Debug.Assert(inst != null);
-
-            instance = inst;
-        }
-
-        #region ICallable Members
-
-        public object Call(params object[] args) {
-            object o;
-            if (instance.TryGetAttr(DefaultContext.Default, SymbolTable.Unassign, out o)) {
-                Ops.Call(o);
-            }
-            return null;
-        }
-
-        #endregion
-    }   
-
-    /// <summary>
     /// Custom dictionary use for old class instances so commonly used
     /// items can be accessed quickly w/o requiring dictionary access.
     /// 
@@ -723,8 +694,13 @@ namespace IronPython.Runtime {
             return weakRef;
         }
 
-        void IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
+        bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
             weakRef = value;
+            return true;
+        }
+
+        void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
+            ((IWeakReferenceable)this).SetWeakRef(value);
         }
 
         #endregion
@@ -803,7 +779,7 @@ namespace IronPython.Runtime {
         }
 
         private void AddFinalizer() {
-            OldInstanceFinalizer oif = new OldInstanceFinalizer(this);
+            InstanceFinalizer oif = new InstanceFinalizer(this);
             weakRef = new WeakRefTracker(oif, oif);
         }
 
@@ -814,7 +790,7 @@ namespace IronPython.Runtime {
             if (wrt != null) {
                 // find our handler and remove it (other users could have created weak refs to us)
                 for (int i = 0; i < wrt.HandlerCount; i++) {
-                    if (wrt.GetHandlerCallback(i) is OldInstanceFinalizer) {
+                    if (wrt.GetHandlerCallback(i) is InstanceFinalizer) {
                         wrt.RemoveHandlerAt(i);
                         break;
                     }
@@ -833,7 +809,7 @@ namespace IronPython.Runtime {
                 WeakRefTracker wrt = weakRef;
                 if (wrt != null) {
                     for (int i = 0; i < wrt.HandlerCount; i++) {
-                        if (wrt.GetHandlerCallback(i) is OldInstanceFinalizer) {
+                        if (wrt.GetHandlerCallback(i) is InstanceFinalizer) {
                             return true;
                         }
                     }

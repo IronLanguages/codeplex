@@ -1846,7 +1846,7 @@ namespace IronPython.Runtime {
             } catch (PythonSystemExit x) {
                 return x.GetExitCode(compiledEngine.DefaultModuleScope);
             } catch (Exception e) {
-                Console.WriteLine(compiledEngine.FormatException(e));
+                Ops.Write(compiledEngine.Sys, compiledEngine.Sys.stderr, compiledEngine.FormatException(e));
                 return -1;
             }
             return 0;
