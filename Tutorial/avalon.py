@@ -53,19 +53,18 @@ def start():
         are.Set()
         app.Run()
     finally:
-        IronPython.Hosting.PythonEngine.ExecWrapper = None
+        IronPython.Hosting.PythonEngine.ConsoleCommandDispatcher = None
 
-t = Thread(start)
+t = Thread(ThreadStart(start))
 t.ApartmentState = ApartmentState.STA
 t.Start()
 are.WaitOne()
 
-def go(inner):
-    if inner:
-        dispatcher.Invoke(DispatcherPriority.Normal,
-                          IronPython.Runtime.CallTarget0(inner))
+def DispatchConsoleCommand(consoleCommand):
+    if consoleCommand:
+        dispatcher.Invoke(DispatcherPriority.Normal, consoleCommand)
 
-IronPython.Hosting.PythonEngine.ExecWrapper = go
+IronPython.Hosting.PythonEngine.ConsoleCommandDispatcher = DispatchConsoleCommand
 
 def LoadXaml(filename):
     from System.IO import *

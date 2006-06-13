@@ -594,8 +594,8 @@ namespace IronPythonConsole {
                 continueInteraction = true;
 
                 if (line == null) {
-                    if (PythonEngine.ExecWrapper != null) {
-                        Ops.Call(PythonEngine.ExecWrapper, new object[] { null });
+                    if (PythonEngine.ConsoleCommandDispatcher != null) {
+                        PythonEngine.ConsoleCommandDispatcher(null);
                     }
                     continueInteraction = false;
                     return null;

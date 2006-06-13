@@ -131,8 +131,17 @@ namespace IronPython.Runtime {
             return new Dict(0);
         }
 
+        /// <summary>
+        /// Is "other" a base type?
+        /// </summary>
+        /// <param name="other">This is usually a DynamicType. However, it only really needs to satisfy 
+        /// "inspect.isclass(other)" which holds for DynamicTypes as well any object with a "__bases__" attribute.</param>
         public virtual bool IsSubclassOf(object other) {
             throw new NotImplementedException();
+        }
+
+        internal bool IsInstanceOfType(object o) {
+            return Ops.GetDynamicType(o).IsSubclassOf(this);
         }
 
         internal static DynamicType GetDeclaringType(MemberInfo member) {

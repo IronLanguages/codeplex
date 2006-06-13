@@ -449,10 +449,6 @@ namespace IronPython.Runtime {
         public virtual object Call(params object[] args) { throw new NotImplementedException(); }
         public virtual DynamicType GetDynamicType() { throw new NotImplementedException(); }
 
-        internal bool IsInstanceOfType(object o) {
-            return Ops.GetDynamicType(o).IsSubclassOf(this);
-        }
-
         public override string Repr(object self) {
             Initialize();
             return (string)__repr__F.Invoke(self);

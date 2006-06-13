@@ -75,6 +75,7 @@ namespace IronPython.Hosting {
 
         #region Static Non-Public Members
         internal static Options options;
+        private static CommandDispatcher consoleCommandDispatcher;
         #endregion
 
         #region Private Data Members
@@ -347,9 +348,15 @@ namespace IronPython.Hosting {
             mod.Initialize();
         }
 
+        public delegate void CommandDispatcher(Delegate consoleCommand);
+
         // This can be set to a method like System.Windows.Forms.Control.Invoke for Winforms scenario 
         // to cause code to be executed on a separate thread.
-        public static object ExecWrapper = null;
+        // It will be called with a null argument to indicate that the console session should be terminated.
+        public static CommandDispatcher ConsoleCommandDispatcher {
+            get { return consoleCommandDispatcher; }
+            set { consoleCommandDispatcher = value; }
+        }
 
         public void ExecuteToConsole(string text) { ExecuteToConsole(text, defaultScope); }
         public void ExecuteToConsole(string text, ModuleScope defaultScope) {
@@ -364,13 +371,15 @@ namespace IronPython.Hosting {
                 CompiledCode compiledCode = OutputGenerator.GenerateSnippet(compilerContext, s, true, false);
                 Exception ex = null;
 
-                if (ExecWrapper != null) {
+                if (consoleCommandDispatcher != null) {
                     CallTarget0 runCode = delegate() {
                         try { compiledCode.Run(defaultScope); } catch (Exception e) { ex = e; }
                         return null;
                     };
-                    object callable = new Function0(defaultScope.Module, "wrapper", runCode, new string[0], new object[0]);
-                    Ops.Call(ExecWrapper, callable);
+
+                    consoleCommandDispatcher(runCode);
+
+                    // We catch and rethrow the exception since it could have been thrown on another thread
                     if (ex != null)
                         throw ex;
                 } else {

@@ -213,7 +213,6 @@
     <Compile Include="Runtime\FunctionEnvironment.cs" />
     <Compile Include="Runtime\ExceptionConverter.cs" />
     <Compile Include="Runtime\FloatOps.cs" />
-    <Compile Include="Runtime\Frame.cs" />
     <Compile Include="Runtime\Function.cs" />
     <Compile Include="Runtime\Function.Generated.cs" />
     <Compile Include="Runtime\FunctionEnvironment.Generated.cs" />
@@ -232,6 +231,7 @@
     <Compile Include="Runtime\LiteralParser.cs" />
     <Compile Include="Runtime\LongOps.cs" />
     <Compile Include="Runtime\LongOps.Generated.cs" />
+    <Compile Include="Runtime\ModuleScope.cs" />
     <Compile Include="Runtime\OldClass.cs" />
     <Compile Include="Runtime\OldClass.Generated.cs" />
     <Compile Include="Runtime\Ops.cs" />

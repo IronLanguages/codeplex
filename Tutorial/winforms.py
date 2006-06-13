@@ -21,6 +21,7 @@ clr.AddReferenceByPartialName("IronPython")
 from System.Drawing import Size
 from System.Windows.Forms import Form, Application
 from System.Threading import Thread
+from System.Threading import ThreadStart
 from IronPython.Runtime import CallTarget0
 from System.Threading import AutoResetEvent
 import IronPython
@@ -32,21 +33,22 @@ def thread_proc():
     try:
         global dispatcher
         global are
+        # Create a dummy Control so that we can use it to dispatch commands to the WinForms thread
         dispatcher = Form(Size = Size(0,0))
         dispatcher.Show()
         dispatcher.Hide()
         are.Set()
         Application.Run()
     finally:
-        IronPython.Hosting.PythonEngine.ExecWrapper = None
+        IronPython.Hosting.PythonEngine.ConsoleCommandDispatcher = None
 
-def callback(code):
-    if code:
-        dispatcher.Invoke(CallTarget0(code))
+def DispatchConsoleCommand(consoleCommand):
+    if consoleCommand:
+        dispatcher.Invoke(consoleCommand)
     else:
         Application.Exit()
 
-t = Thread(thread_proc)
+t = Thread(ThreadStart(thread_proc))
 t.Start()
 are.WaitOne()
-IronPython.Hosting.PythonEngine.ExecWrapper = callback
+IronPython.Hosting.PythonEngine.ConsoleCommandDispatcher = DispatchConsoleCommand
