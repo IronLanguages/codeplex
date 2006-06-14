@@ -34,7 +34,7 @@ if doRun:
     proc = Process()
     proc.StartInfo.FileName = sys.executable
     proc.StartInfo.WorkingDirectory = sys.prefix + '\\Src\\Tests'
-    proc.StartInfo.Arguments = '-X:TabCompletion -X:ColorfulConsole'
+    proc.StartInfo.Arguments = '-X:TabCompletion -X:AutoIndent -X:ColorfulConsole'
     proc.StartInfo.UseShellExecute = True	
     proc.StartInfo.WindowStyle = ProcessWindowStyle.Normal
     proc.StartInfo.CreateNoWindow = False

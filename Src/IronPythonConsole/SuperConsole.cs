@@ -145,7 +145,12 @@ namespace IronPythonConsole {
 
             public void Place(int index) {
                 Console.CursorLeft = (anchorLeft + index) % Console.BufferWidth;
-                Console.CursorTop = anchorTop + (anchorLeft + index) / Console.BufferWidth;
+                int cursorTop = anchorTop + (anchorLeft + index) / Console.BufferWidth;
+                if (cursorTop >= Console.BufferHeight) {
+                    anchorTop -= cursorTop - Console.BufferHeight + 1;
+                    cursorTop = Console.BufferHeight - 1;
+                }
+                Console.CursorTop = cursorTop;
             }
 
             public void Move(int delta) {

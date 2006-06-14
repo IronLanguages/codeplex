@@ -33,9 +33,8 @@ namespace IronPythonConsole {
     /// A simple Python command-line should mimic the standard python.exe
     /// </summary>
     class PythonCommandLine {
-        private static bool HandleExceptions = true;
-        private static bool PressKeyToContinue = false;
         private static bool tabCompletion = false;
+        private static bool autoIndent = false;
         private static bool colorfulConsole = false;
         private static bool mta = false;
         private static PythonEngine engine;
@@ -46,6 +45,15 @@ namespace IronPythonConsole {
             }
             set {
                 tabCompletion = value;
+            }
+        }
+
+        public static bool AutoIndent {
+            get {
+                return autoIndent;
+            }
+            set {
+                autoIndent = value;
             }
         }
 
@@ -93,7 +101,7 @@ namespace IronPythonConsole {
                 if (TabCompletion) {
                     UseSuperConsole(engine);
                 } else {
-                    MyConsole = new BasicConsole();
+                    MyConsole = new BasicConsole(engine.Sys, ColorfulConsole);
                 }
 
                 if (Options.WarningFilters != null)
@@ -186,6 +194,7 @@ namespace IronPythonConsole {
                     case "-X:ShowCLSExceptions": options.ShowCLSExceptions = true; break;
                     case "-X:StaticMethods": Options.GenerateDynamicMethods = false; break;
                     case "-X:TabCompletion": TabCompletion = true; break;
+                    case "-X:AutoIndent": AutoIndent = true; break;
                     case "-X:TrackPerformance": // accepted but ignored on retail builds
 #if DEBUG
                         Options.TrackPerformance = true;
@@ -357,21 +366,13 @@ namespace IronPythonConsole {
 
             string startup = Environment.GetEnvironmentVariable("IRONPYTHONSTARTUP");
             if (startup != null && startup.Length > 0) {
-                if (HandleExceptions) {
-                    try {
-                        engine.ExecuteFile(startup);
-                    } catch (Exception e) {
-                        if (e is PythonSystemExit) throw;
-                        MyConsole.Write(engine.FormatException(e), Style.Error);
-                    } finally {
-                        engine.DumpDebugInfo();
-                    }
-                } else {
-                    try {
-                        engine.ExecuteFile(startup);
-                    } finally {
-                        engine.DumpDebugInfo();
-                    }
+                try {
+                    engine.ExecuteFile(startup);
+                } catch (Exception e) {
+                    if (e is PythonSystemExit) throw;
+                    MyConsole.Write(engine.FormatException(e), Style.Error);
+                } finally {
+                    engine.DumpDebugInfo();
                 }
             }
         }
@@ -403,38 +404,19 @@ namespace IronPythonConsole {
             ExecutionOptions executionOptions = ExecutionOptions.Default;
             if (Options.SkipFirstLine) executionOptions |= ExecutionOptions.SkipFirstLine;
 
-            if (HandleExceptions) {
-                try {
-                    ModuleScope scope;
-                    if (Options.Introspection) 
-                        ExecuteFileConsole(fileName, executionOptions, out scope);
-                    else
-                        engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
-                    result = 0;
-                } catch (PythonSystemExit pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
-                }  catch (Exception e) {
-                    MyConsole.Write(engine.FormatException(e), Style.Error);
-                } finally {
-                    engine.DumpDebugInfo();
-                }
-            } else {
-                try {
-                    ModuleScope scope;
-                    if (Options.Introspection)
-                        ExecuteFileConsole(fileName, executionOptions, out scope);
-                    else
-                        engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
-                    result = 0;
-                } catch (PythonSystemExit pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
-                } finally {
-                    engine.DumpDebugInfo();
-                }
-            }
-
-            if (PressKeyToContinue) {
-                WaitForAnyKey();
+            try {
+                ModuleScope scope;
+                if (Options.Introspection) 
+                    ExecuteFileConsole(fileName, executionOptions, out scope);
+                else
+                    engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+                result = 0;
+            } catch (PythonSystemExit pythonSystemExit) {
+                result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+            }  catch (Exception e) {
+                MyConsole.Write(engine.FormatException(e), Style.Error);
+            } finally {
+                engine.DumpDebugInfo();
             }
 
             return result;
@@ -449,31 +431,16 @@ namespace IronPythonConsole {
 
             ((List)engine.Sys.argv)[0] = "-c";
 
-            if (HandleExceptions) {
-                try {
-                    //engine.Execute(command, engine.DefaultModuleScope, ExecutionOptions.PrintExpressions);
-                    engine.ExecuteToConsole(command);
-                    result = 0;
-                } catch (PythonSystemExit pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
-                } catch(Exception e) {
-                    MyConsole.Write(engine.FormatException(e), Style.Error);
-                } finally {
-                    engine.DumpDebugInfo();
-                }
-            } else {
-                try {
-                    engine.ExecuteToConsole(command);
-                    result = 0;
-                } catch (PythonSystemExit pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
-                } finally {
-                    engine.DumpDebugInfo();
-                }
-            }
-
-            if (PressKeyToContinue) {
-                WaitForAnyKey();
+            try {
+                //engine.Execute(command, engine.DefaultModuleScope, ExecutionOptions.PrintExpressions);
+                engine.ExecuteToConsole(command);
+                result = 0;
+            } catch (PythonSystemExit pythonSystemExit) {
+                result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+            } catch(Exception e) {
+                MyConsole.Write(engine.FormatException(e), Style.Error);
+            } finally {
+                engine.DumpDebugInfo();
             }
 
             return result;
@@ -532,7 +499,7 @@ namespace IronPythonConsole {
         public static IConsole MyConsole {
             get {
                 if (_console == null) {
-                    _console = new BasicConsole();
+                    _console = new BasicConsole(engine.Sys, ColorfulConsole);
                 }
                 return _console;
             }
@@ -623,7 +590,7 @@ namespace IronPythonConsole {
                 bool s = engine.ParseInteractiveInput(b.ToString(), allowIncompleteStatement);
                 if (s) return b.ToString();
 
-                if (Options.AutoIndentSize != 0) {
+                if (AutoIndent && Options.AutoIndentSize != 0) {
                     autoIndentSize = Parser.GetNextAutoIndentSize(b.ToString(), Options.AutoIndentSize);
                 }
 
@@ -705,13 +672,25 @@ namespace IronPythonConsole {
     }
     
     public class BasicConsole : IConsole {
-        private TextWriter Out;
-        private TextReader In;
+
+        public ConsoleColor PromptColor = Console.ForegroundColor;
+        public ConsoleColor OutColor = Console.ForegroundColor;
+        public ConsoleColor ErrorColor = Console.ForegroundColor;
+
+        public void SetupColors() {
+            PromptColor = ConsoleColor.DarkGray;
+            OutColor = ConsoleColor.DarkBlue;
+            ErrorColor = ConsoleColor.DarkRed;
+        }
+
+        private SystemState sys;
         private AutoResetEvent ctrlCEvent;
         private Thread MainEngineThread = Thread.CurrentThread;
 
-        public BasicConsole()
-            : this(Console.Out, Console.In) {
+        public BasicConsole(SystemState _sys, bool colorful) {
+            if (colorful)
+                SetupColors();
+            sys = _sys;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
             ctrlCEvent = new AutoResetEvent(false);
         }
@@ -724,15 +703,11 @@ namespace IronPythonConsole {
             }
         }
 
-        public BasicConsole(TextWriter _out, TextReader _in) {
-            this.Out = _out;
-            this.In = _in;
-        }
-
         #region IConsole Members
 
-        public string ReadLine(int autoIndentSize) {         
-            string res= In.ReadLine();
+        public string ReadLine(int autoIndentSize) {
+            Write("".PadLeft(autoIndentSize), Style.Prompt);
+            string res = Console.In.ReadLine();
             if (res == null) {
                 // we have a race - the Ctrl-C event is delivered
                 // after ReadLine returns.  We need to wait for a little
@@ -748,16 +723,27 @@ namespace IronPythonConsole {
                     return null;
                 }
             }
-            return res;
+            return "".PadLeft(autoIndentSize) + res;
         }
 
         public void Write(string text, Style style) {
-            Out.Write(text);
-            Out.Flush();
+            switch (style) {
+                case Style.Prompt: WriteColor(text, style, PromptColor); break;
+                case Style.Out: WriteColor(text, style, OutColor); break;
+                case Style.Error: WriteColor(text, style, ErrorColor); break;
+            }
+        }
+
+        private void WriteColor(string s, Style style, ConsoleColor c) {
+            ConsoleColor origColor = Console.ForegroundColor;
+            Console.ForegroundColor = c;
+            Console.Out.Write(s);
+            Console.Out.Flush();
+            Console.ForegroundColor = origColor;
         }
 
         public void WriteLine(string text, Style style) {
-            Out.WriteLine(text);
+            Write(text + Environment.NewLine, style);
         }
 
         #endregion

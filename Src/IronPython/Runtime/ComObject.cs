@@ -357,8 +357,10 @@ namespace IronPython.Runtime {
         private static Type GetInterfaceForGuid(ICallerContext context, Guid typeInfoGuid, IntPtr typeInfoPtr) {
             Type interfaceType;
             if (ComTypeCache.TryGetValue(typeInfoGuid, out interfaceType) == false) {
-                Assembly interopAssembly = SearchForInteropAssembly(typeInfoGuid);
-
+                Assembly interopAssembly = null;
+#if COM_GAC_CRAWLER
+                interopAssembly = SearchForInteropAssembly(typeInfoGuid);
+#endif
                 if (interopAssembly != null) {
                     context.SystemState.TopPackage.LoadAssembly(context.SystemState, interopAssembly, false);
                     ComTypeCache.TryGetValue(typeInfoGuid, out interfaceType);
@@ -443,6 +445,7 @@ namespace IronPython.Runtime {
             }
         }
 
+#if COM_GAC_CRAWLER
         /// <summary>
         /// Try to search the GAC for an assembly that seems to match the given type GUID
         /// </summary>
@@ -528,6 +531,7 @@ namespace IronPython.Runtime {
 
             return null;
         }
+#endif 
 
         public void AddInterface(Type type) {
             interfaces.Add(Ops.GetDynamicTypeFromType(type));
@@ -578,6 +582,7 @@ namespace IronPython.Runtime {
     }
 }
 
+#if COM_GAC_CRAWLER
 namespace IronPython.Runtime {
     [ComImport, GuidAttribute("31BCFCE2-DAFB-11D2-9F81-00C04F79A0A3"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IMetaDataDispenserEx {
@@ -765,3 +770,4 @@ namespace IronPython.Runtime {
         }
     }
 }
+#endif

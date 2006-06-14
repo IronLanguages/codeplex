@@ -327,7 +327,7 @@ namespace IronPython.Modules {
             if (globals == null) globals = Globals(context);
             if (locals == null) locals = Locals(context);
 
-            PythonModule mod = new PythonModule("<eval>", globals, context.SystemState, null, context.ContextFlags);
+            PythonModule mod = new PythonModule(context.Module.ModuleName, globals, context.SystemState, null, context.ContextFlags);
             if (Options.FastEval) {
                 // Direct evaluation can be much faster than codegen (>100x)
                 return e.Evaluate(new NameEnv(mod, locals));

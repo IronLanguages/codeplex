@@ -31,7 +31,7 @@ namespace IronPython.Runtime {
 
     [PythonType(typeof(PythonModule))]
     public class SystemState : ICustomAttributes {
-        internal Encoding DefaultEncoding;
+        public Encoding DefaultEncoding;
 
         private IAttributesDictionary __dict__;
         private object exception_type, exception_value, exception_traceback;
