@@ -889,6 +889,8 @@ namespace IronPython.Runtime {
                     // and skip the rest of the checks.
                     return -1;
                 }
+            } else if (x is ExtensibleComplex || y is ExtensibleComplex) {
+                ret = ExtensibleComplex.TrueCompare(x, y);
             }
 
             if (ret != Ops.NotImplemented) return ConvertToCompareInt(ret);

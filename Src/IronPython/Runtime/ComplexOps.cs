@@ -109,6 +109,28 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+
+        internal static object TrueCompare(object x, object y) {
+            Debug.Assert(x is ExtensibleComplex || y is ExtensibleComplex);
+
+            object res;
+            if (x is ExtensibleComplex) {
+                // Was __cmp__ overriden ?
+                if (Ops.TryToInvoke(x, SymbolTable.Cmp, out res)) {
+                    return res;
+                }
+                // if not, compare to the complex value
+                return ComplexOps.TrueCompare(((ExtensibleComplex)x).value, y);
+            } else {
+                Debug.Assert(y is ExtensibleComplex);
+                // Was __cmp__ overriden ?
+                if (Ops.TryToInvoke(y, SymbolTable.Cmp, out res)) {
+                    return res;
+                }
+                // if not, compare to the complex value
+                return ComplexOps.TrueCompare(x, ((ExtensibleComplex)y).value);
+            }
+        }
     }
 
     public static partial class ComplexOps {
