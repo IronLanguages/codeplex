@@ -22,7 +22,6 @@ from System.Drawing import Size
 from System.Windows.Forms import Form, Application
 from System.Threading import Thread
 from System.Threading import ThreadStart
-from IronPython.Runtime import CallTarget0
 from System.Threading import AutoResetEvent
 import IronPython
 

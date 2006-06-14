@@ -489,8 +489,15 @@ namespace IronPythonConsole {
         public static bool DoOneInteractive(ModuleScope topFrame) {
             bool continueInteraction;
             string s = ReadStatement(out continueInteraction);
+
             if (continueInteraction == false)
                 return false;
+
+            if (s == null) {
+                // Is it an empty line?
+                MyConsole.Write(String.Empty, Style.Out);
+                return true;
+            }
 
             engine.ExecuteToConsole(s, topFrame);
 
@@ -583,6 +590,12 @@ namespace IronPythonConsole {
             return false;
         }
 
+        /// <summary>
+        /// Read a statement, which can potentially be a multiple-line statement suite (like a class declaration).
+        /// </summary>
+        /// <param name="continueInteraction">Should the console session continue, or did the user indicate 
+        /// that it should be terminated?</param>
+        /// <returns>Expression to evaluate. null for empty input</returns>
         public static string ReadStatement(out bool continueInteraction) {
             StringBuilder b = new StringBuilder();
             int autoIndentSize = 0;

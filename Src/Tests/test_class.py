@@ -282,7 +282,12 @@ if is_cli:
 
     class MyExceptionComparer(System.Exception, System.Collections.IComparer):
         def Compare(self, x, y): return 0
+    class MyDerivedExceptionComparer(MyExceptionComparer): pass
+
     e = MyExceptionComparer()
+    
+    MyDerivedExceptionComparer.__bases__ = (System.Exception, System.Collections.IComparer)
+    MyDerivedExceptionComparer.__bases__ = (MyExceptionComparer,)
     
     class OldType:
         def OldTypeMethod(self): return "OldTypeMethod"
@@ -300,12 +305,10 @@ if is_cli:
     class MyIncompatibleExceptionComparer(System.Exception, System.Collections.IComparer, System.IDisposable):
         def Compare(self, x, y): return 0
         def Displose(self): pass
-    try:
-        MyExceptionComparer.__bases__ = MyIncompatibleExceptionComparer.__bases__
-        Assert(None)
-    except TypeError:
-        (exc_type, exc_value, exc_traceback) = sys.exc_info()
-        AreEqual(exc_value.msg, "cannot add CLI type <type 'IDisposable'> to <class '%s.MyExceptionComparer'>.__bases__" % __name__)
+    AssertErrorWithMatch(TypeError, "__bases__ assignment: 'MyExceptionComparer' object layout differs from 'IronPython.NewTypes.System.Exception#IComparer#IDisposable_*",
+                         setattr, MyExceptionComparer, "__bases__", MyIncompatibleExceptionComparer.__bases__)
+    AssertErrorWithMatch(TypeError, "__class__ assignment: 'MyExceptionComparer' object layout differs from 'IronPython.NewTypes.System.Exception#IComparer#IDisposable_*",
+                         setattr, MyExceptionComparer(), "__class__", MyIncompatibleExceptionComparer().__class__)
     
     # Inherting from an open generic instantiation should fail with a good error message
     try:

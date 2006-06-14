@@ -126,8 +126,23 @@ namespace IronPython.Runtime {
         /// Set up the type
         /// </summary>
         /// <param name="resetType">Is an existing type being reset?</param>
-        void InitializeUserType(Tuple bases, IAttributesDictionary newDict, bool resetType) {
+        void InitializeUserType(Tuple newBases, IAttributesDictionary newDict, bool resetType) {
+            newBases = EnsureBaseType(newBases);
+
+            for (int i = 0; i < newBases.Count; i++) {
+                for (int j = 0; j < newBases.Count; j++) {
+                    if (i != j && newBases[i] == newBases[j]) {
+                        throw Ops.TypeError("duplicate base class {0}", ((DynamicType)newBases[i]).__name__);
+                    }
+                }
+            }
+
             if (resetType) {
+                // Ensure that we are not switching the CLI type
+                Type newType = NewTypeMaker.GetNewType(__name__.ToString(), newBases, (IDictionary<object, object>)dict);
+                if (type != newType)
+                    throw Ops.TypeErrorForIncompatibleObjectLayout("__bases__ assignment", this, newType);
+
                 foreach (object baseTypeObj in BaseClasses) {
                     if (baseTypeObj is OldClass) continue;
                     PythonType baseType = baseTypeObj as PythonType;
@@ -135,19 +150,12 @@ namespace IronPython.Runtime {
                 }
             }
 
-            this.bases = EnsureBaseType(bases);
-
-            for (int i = 0; i < this.bases.Count; i++) {
-                for (int j = 0; j < this.bases.Count; j++) {
-                    if (i != j && this.bases[i] == this.bases[j]) {
-                        throw Ops.TypeError("duplicate base class {0}", ((DynamicType)this.bases[i]).__name__);
-                    }
-                }
-            }
+            this.bases = newBases;
 
             // if our dict, or any of our children, have a finalizer, then
             // we have a finalizer.
             bool hasFinalizer = newDict.ContainsKey(SymbolTable.Unassign);
+
             foreach (object baseTypeObj in BaseClasses) {
                 if (baseTypeObj is OldClass) continue;
                 PythonType baseType = baseTypeObj as PythonType;
@@ -199,23 +207,25 @@ namespace IronPython.Runtime {
             return type.BaseType;
         }
 
+        private void EnsureNewStyleBase(Tuple bases) {
+            bool newBasesIncludeNewStyleClass = false;
+
+            foreach (DynamicType baseType in bases) {
+                if (!(baseType is OldClass))
+                    newBasesIncludeNewStyleClass = true;
+            }
+
+            if (!newBasesIncludeNewStyleClass)
+                throw Ops.TypeError("new-style class {0} can't have only classic bases", this);
+        }
+
         public override Tuple BaseClasses {
             [PythonName("__bases__")]
             get { return bases; }
 
             [PythonName("__bases__")]
             set {
-                foreach (DynamicType baseType in bases) {
-                    if (baseType is OldClass) continue;
-                    if (baseType is UserType) continue;
-                    if (!value.ContainsValue(baseType)) throw Ops.TypeError("cannot remove CLI type {0} from {1}.__bases__", baseType, this);
-                }
-
-                foreach (DynamicType baseType in value) {
-                    if (baseType is OldClass) continue;
-                    if (baseType is UserType) continue;
-                    if (!bases.ContainsValue(baseType)) throw Ops.TypeError("cannot add CLI type {0} to {1}.__bases__", baseType, this);
-                }
+                EnsureNewStyleBase(value);
 
                 // Ensure that the MRO is legal
                 CalculateMro(value);
@@ -325,7 +335,7 @@ namespace IronPython.Runtime {
                     throw Ops.TypeError("__class__ must be set to new-style class, not '{0}' object", Ops.GetDynamicType(value).__name__);
                 }
                 if (newType.type != this.type) {
-                    throw Ops.TypeError("__class__ assignment: '{0}' object layout differs from '{1}'", __name__, newType.__name__);
+                    throw Ops.TypeErrorForIncompatibleObjectLayout("__class__ assignment", this, newType.type);
                 }
                 ((ISuperDynamicObject)self).SetDynamicType(newType);
                 return;

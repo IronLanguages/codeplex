@@ -20,19 +20,21 @@ using System.Text;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler {
+    /// <summary>
+    /// TypeInfo captures the minimal CLI information required by NewTypeMaker for a Python object
+    /// that inherits from a CLI type.
+    /// </summary>
     class NewTypeInfo {
         // The CLI base-type.
         private Type baseType;
 
         private IList<Type> interfaceTypes;
-        private IList<OldClass> oldClassTypes;
         private IList<string> slots;
         private Nullable<int> hash;
 
-        public NewTypeInfo(Type baseType, IList<Type> interfaceTypes, IList<OldClass> oldClasses, IList<string> slots) {
+        public NewTypeInfo(Type baseType, IList<Type> interfaceTypes, IList<string> slots) {
             this.baseType = baseType;
             this.interfaceTypes = interfaceTypes;
-            this.oldClassTypes = oldClasses;
             this.slots = slots;
         }
 
@@ -50,21 +52,11 @@ namespace IronPython.Compiler {
             get { return interfaceTypes; }
         }
 
-        public IEnumerable<OldClass> OldClassTypes {
-            get {
-                return oldClassTypes;
-            }
-        }
-
         public override int GetHashCode() {
             if (hash == null) {
                 int hashCode = baseType.GetHashCode();
                 for (int i = 0; i < interfaceTypes.Count; i++) {
                     hashCode ^= interfaceTypes[i].GetHashCode();
-                }
-
-                for (int i = 0; i < oldClassTypes.Count; i++) {
-                    hashCode ^= oldClassTypes[i].GetHashCode();
                 }
 
                 if (slots != null) {
@@ -86,16 +78,11 @@ namespace IronPython.Compiler {
 
             if (baseType.Equals(other.baseType) &&
                 interfaceTypes.Count == other.interfaceTypes.Count &&
-                oldClassTypes.Count == other.oldClassTypes.Count &&
                 ((slots == null && other.slots == null) ||
                 (slots != null && other.slots != null && slots.Count == other.slots.Count))) {
 
                 for (int i = 0; i < interfaceTypes.Count; i++) {
                     if (!interfaceTypes[i].Equals(other.interfaceTypes[i])) return false;
-                }
-
-                for (int i = 0; i < oldClassTypes.Count; i++) {
-                    if (!oldClassTypes[i].Equals(other.oldClassTypes[i])) return false;
                 }
 
                 if (slots != null) {

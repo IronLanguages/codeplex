@@ -2289,6 +2289,10 @@ namespace IronPython.Runtime {
             return TypeError("unhashable type");
         }
 
+        internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, PythonType type, Type newType) {
+            return TypeError("{0}: '{1}' object layout differs from '{2}'", prefix, type.__name__, newType);
+        }
+
         public static Exception TypeErrorForNonStringAttribute() {
             return TypeError("attribute name must be string");
         }

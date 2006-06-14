@@ -41,6 +41,9 @@ ipi.ExecutePartialLine("if False: print 3")
 ipi.ExecutePartialLine("else: print 'hello'")
 AreEqual(r'hello', ipi.ExecuteLine(""))
 
+# Empty line
+AreEqual("", ipi.ExecuteLine(""))
+
 ipi.End()
 
 
