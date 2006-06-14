@@ -1184,8 +1184,7 @@ def genenum(cw, et, v):
         return ""
 
     for i in v:
-        cw.writeline("case TypeCode.%s:" % i.typecode)
-        cw.indent += 1
+        cw.case_label("case TypeCode.%s:" % i.typecode)
         if et.name == i.name:
             cw.writeline("return (%s)(value);" % et.name)
         else:
@@ -1206,7 +1205,7 @@ def genenum(cw, et, v):
                 cw.writeline("break;")
             else:
                 cw.writeline("return (%s)(%s)(value);" % (et.name, i.name))
-        cw.indent -= 1
+        cw.dedent()
 
     cw.exit_block()
     cw.writeline("conversion = Conversion.None;")

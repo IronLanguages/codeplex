@@ -366,13 +366,9 @@ def gen_binaries(cw, left):
     for bin in binaries:
         gen_binary_prologue(cw, bin, left)
         for right in types:
-            cw.enter_block("case TypeCode.%(right_type)s:" % {'right_type' : right.name })
-            cw.indent += 1
-
+            cw.case_block("case TypeCode.%(right_type)s:", right_type = right.name)
             gen_binary_body(cw, left, right, right, bin, fixup_normal_brace)
-
-            cw.exit_block()
-            cw.indent -= 1
+            cw.exit_case_block()
 
         cw.exit_block()
         cw.exit_block()
@@ -441,12 +437,9 @@ def gen_bitwise(cw, left):
         gen_binary_prologue(cw, bin, left)
         for right in types:
             if right.fp: continue
-            cw.enter_block("case TypeCode.%(right_type)s:" % {'right_type' : right.name })
-            cw.indent += 1
-
+            cw.case_block("case TypeCode.%(right_type)s:", right_type = right.name)
             gen_bitwise_body(cw, left, right, right, bin, fixup_normal)
-            cw.exit_block()
-            cw.indent -= 1
+            cw.exit_case_block()
 
         cw.exit_block()
         cw.exit_block()
@@ -510,10 +503,9 @@ def gen_manual_ones(cw, left):
         for right in types:
             # skip if not defined for float point types
             if right.fp and not bin.gen_fp: continue
-            cw.write("case TypeCode.%(right_type)s:" % {'right_type' : right.name })
-            cw.indent += 1
+            cw.case_label("case TypeCode.%(right_type)s:", right_type = right.name)
             gen_manual_ones_body(cw, left, right, right, bin, fixup_normal)
-            cw.indent -= 1
+            cw.dedent()
 
         cw.exit_block()
         cw.exit_block()

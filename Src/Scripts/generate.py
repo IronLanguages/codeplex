@@ -44,7 +44,7 @@ except Exception, e:
 class CodeWriter:
     def __init__(self, indent=0):
         self.lines = []
-        self.indent = indent
+        self.__indent = indent
 
     def begin_generated(self):
         self.writeline()
@@ -56,11 +56,14 @@ class CodeWriter:
         self.writeline("// *** END GENERATED CODE ***")
         self.writeline()
 
+    def indent(self): self.__indent += 1
+    def dedent(self): self.__indent -= 1
+
     def writeline(self, text=None):
         if text is None or text.strip() == "":
             self.lines.append("")
         else:
-            self.lines.append("    "*self.indent + text)
+            self.lines.append("    "*self.__indent + text)
 
     def write(self, template, **kw):
         if kw:
@@ -71,31 +74,43 @@ class CodeWriter:
     def enter_block(self, text=None, **kw):
         if text is not None:
             self.writeline((text % kw) + " {")
-        self.indent += 1
+        self.indent()
 
     def else_block(self, text=None, **kw):
-        self.indent -= 1
+        self.dedent()
         if text:
             self.writeline("} else " + (text % kw) + " {")
         else:
             self.writeline("} else {")
-        self.indent += 1
+        self.indent()
+        
+    def case_block(self, text=None, **kw):
+        self.enter_block(text, **kw)
+        self.indent()
+        
+    def case_label(self, text=None, **kw):
+        self.write(text, **kw)
+        self.indent()
+        
+    def exit_case_block(self):
+        self.exit_block()
+        self.dedent()
 
     def catch_block(self, text=None, **kw):
-        self.indent -= 1
+        self.dedent()
         if text:
             self.writeline("} catch " + (text % kw) + " {")
         else:
             self.writeline("} catch {")
-        self.indent += 1
+        self.indent()
 
     def finally_block(self):
-        self.indent -= 1
+        self.dedent()
         self.writeline("} finally {")
-        self.indent += 1
+        self.indent()
 
     def exit_block(self):
-        self.indent -= 1
+        self.dedent()
         self.writeline('}')
 
     def text(self):
