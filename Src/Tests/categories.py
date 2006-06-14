@@ -124,6 +124,7 @@ IronPythonTests = {
                 test_class
                 test_index
                 test_number
+                test_numtypes
                 test_property
                 ''',
             'stress':

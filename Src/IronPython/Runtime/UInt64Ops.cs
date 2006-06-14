@@ -48,7 +48,12 @@ namespace IronPython.Runtime {
         [PythonName("__invert__")]
         public static object Invert(object value) {
             Debug.Assert(value is UInt64);
-            return ~(UInt64)value;
+            UInt64 valueUInt64 = (UInt64)value;
+            if (valueUInt64 < Int64.MaxValue) {
+                return ~(Int64)valueUInt64;
+            } else {
+                return LongOps.Invert(valueUInt64);
+            }
         }
 
         #endregion
@@ -96,7 +101,7 @@ namespace IronPython.Runtime {
         }
 
         internal static object MultiplyImpl(UInt64 left, UInt64 right) {
-            if (left > UInt64.MaxValue / right) {
+            if (right != 0 && left > UInt64.MaxValue / right) {
                 return BigInteger.Create(left) * BigInteger.Create(right);
             }
             return left * right;

@@ -149,7 +149,7 @@ namespace IronPython.Runtime {
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Add(xc.value, Complex64.MakeReal(x));
             if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
-                return x + y;
+                return y + x;
             }
             return Ops.NotImplemented;
         }
@@ -195,7 +195,7 @@ namespace IronPython.Runtime {
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Subtract(xc.value, Complex64.MakeReal(x));
             if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
-                return x - y;
+                return y - x;
             }
             return Ops.NotImplemented;
         }
@@ -241,7 +241,7 @@ namespace IronPython.Runtime {
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Multiply(xc.value, Complex64.MakeReal(x));
             if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
-                return x * y;
+                return y * x;
             }
             return Ops.NotImplemented;
         }

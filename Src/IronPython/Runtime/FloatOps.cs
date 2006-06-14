@@ -596,32 +596,23 @@ namespace IronPython.Runtime {
         }
 
         internal static object ReverseTrueDivide(double x, double y) {
-            if (x == 0) throw Ops.ZeroDivisionError();
-            return y / x;
+            return TrueDivide(y, x);
         }
 
         private static object ReverseTrueDivide(double x, float y) {
-            if (x == 0) throw Ops.ZeroDivisionError();
-
-            return y / x;
+            return TrueDivide(y, x);
         }
 
         private static object ReverseTrueDivide(double x, int y) {
-            if (x == 0) throw Ops.ZeroDivisionError();
-
-            return y / x;
+            return TrueDivide(y, x);
         }
 
         private static object ReverseTrueDivide(double x, BigInteger y) {
-            if (x == 0) throw Ops.ZeroDivisionError();
-
-            return y / x;
+            return TrueDivide((double)y, x);
         }
 
         private static object ReverseTrueDivide(double x, long y) {
-            if (x == 0) throw Ops.ZeroDivisionError();
-
-            return y / x;
+            return TrueDivide(y, x);
         }
 
         [PythonName("__cmp__")]

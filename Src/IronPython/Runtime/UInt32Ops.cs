@@ -46,7 +46,12 @@ namespace IronPython.Runtime {
         [PythonName("__invert__")]
         public static object Invert(object value) {
             Debug.Assert(value is UInt32);
-            return ~(UInt32)value;
+            UInt32 valueUInt32 = (UInt32)value;
+            if (valueUInt32 < Int32.MaxValue) {
+                return ~(Int32)valueUInt32;
+            } else {
+                return ~(Int64)value;
+            }
         }
 
         #endregion

@@ -468,6 +468,7 @@ namespace IronPython.Runtime {
             ret[typeof(ExtensibleInt)] = ret[typeof(int)];
 
             ret[typeof(double)] = FloatOps.MakeDynamicType();
+            ret[typeof(Single)] = SingleOps.MakeDynamicType();
             ret[typeof(ExtensibleFloat)] = ret[typeof(double)];
 
             ret[typeof(BigInteger)] = LongOps.MakeDynamicType();

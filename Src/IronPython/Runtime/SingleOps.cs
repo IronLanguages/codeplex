@@ -42,14 +42,16 @@ namespace IronPython.Runtime {
         #endregion
 
         internal static object DivideImpl(Single left, Single right) {
+            if (right == 0.0) throw Ops.ZeroDivisionError();
             return left / right;
         }
 
         internal static object ReverseDivideImpl(Single left, Single right) {
-            return right / left;
+            return DivideImpl(right, left);
         }
 
         internal static object FloorDivideImpl(Single left, Single right) {
+            if (right == 0.0) throw Ops.ZeroDivisionError();
             return Math.Floor(left / right);
         }
 
@@ -58,6 +60,8 @@ namespace IronPython.Runtime {
         }
 
         internal static double ModImpl(Single left, Single right) {
+            if (right == 0.0) throw Ops.ZeroDivisionError();
+
             double r = left % right;
             if (r > 0 && right < 0) {
                 r = r + right;

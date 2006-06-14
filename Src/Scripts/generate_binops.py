@@ -235,7 +235,7 @@ public static object Reverse%(name)s(double x, object other) {
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.%(name)s(xc.value, Complex64.MakeReal(x));
     if (other is IConvertible) {
         double y = ((IConvertible)other).ToDouble(null);
-        return x %(sym)s y;
+        return y %(sym)s x;
     }
     return Ops.NotImplemented;
 }

@@ -88,31 +88,31 @@ def rxor(a,b): return b ^ a
 
 
 # Binary operator which can use symbol directly for its implementation and overflows to the next order
-binary_s_o = """%(oper_type)s result = (%(oper_type)s)(((%(oper_type)s)left%(left_type)s) %(symbol)s ((%(oper_type)s)%(right_value)s));
+binary_s_o = """%(oper_type)s result = (%(oper_type)s)(((%(oper_type)s)%(left_value)s) %(symbol)s ((%(oper_type)s)%(right_value)s));
 if (%(left_type)s.MinValue <= result && result <= %(left_type)s.MaxValue) {
     return (%(left_type)s)result;
 } else return result;"""
 
 # Binary code with float point argument (same as above, except doesn't try to back-fit the result and leaves it as float point)
-binary_f = "return (%(oper_type)s)(((%(oper_type)s)left%(left_type)s) %(symbol)s ((%(oper_type)s)%(right_value)s));"
+binary_f = "return (%(oper_type)s)(((%(oper_type)s)%(left_value)s) %(symbol)s ((%(oper_type)s)%(right_value)s));"
 
 # Binary operator which cannot use symbol ('//') and must call method to implement the operation
-binary_m = "return %(oper_ops)sOps.%(method_impl)s((%(oper_type)s)left%(left_type)s, (%(oper_type)s)%(right_value)s);"
+binary_m = "return %(oper_ops)sOps.%(method_impl)s((%(oper_type)s)%(left_value)s, (%(oper_type)s)%(right_value)s);"
 
 # Call to custom code for binary operator
-binary_c = """return %(oper_ops)sOps.%(method_impl)s(left%(left_type)s, (%(right_type)s)right);"""
+binary_c = """return %(oper_ops)sOps.%(method_impl)s(%(left_value)s, %(right_value)s);"""
 
 # Call to custom code for binary operator
-binary_c_v = "return %(oper_ops)sOps.%(method_impl)s(%(left_name)s, %(right_name)s);"
+binary_c_v = "return %(oper_ops)sOps.%(method_impl)s(%(left_value)s, %(right_value)s);"
 
 # Binary operator which can use symbol directly for its implementation and overflows to the next order
-r_binary_s_o = """%(oper_type)s result = (%(oper_type)s)(((%(oper_type)s)%(right_value)s) %(symbol)s ((%(oper_type)s)left%(left_type)s));
+r_binary_s_o = """%(oper_type)s result = (%(oper_type)s)(((%(oper_type)s)%(right_value)s) %(symbol)s ((%(oper_type)s)%(left_value)s));
 if (%(left_type)s.MinValue <= result && result <= %(left_type)s.MaxValue) {
     return (%(left_type)s)result;
 } else return result;"""
 
 # Binary code with float point argument (same as above, except doesn't try to back-fit the result and leaves it as float point)
-r_binary_f = "return (%(oper_type)s)(((%(oper_type)s)%(right_value)s) %(symbol)s ((%(oper_type)s)left%(left_type)s));"
+r_binary_f = "return (%(oper_type)s)(((%(oper_type)s)%(right_value)s) %(symbol)s ((%(oper_type)s)%(left_value)s));"
 
 class BinaryOp:
     def __init__(self, symbol, name, method, rmethod, operation, overflow, intcode, altcode, fpcode):
@@ -193,6 +193,9 @@ unary = [
 ]
 
 def get_common_type(l, r, op):
+    if l.name == "Complex64": return l, op.altcode
+    if l.name == "Complex64": return r, op.altcode
+
     if l <= r: return r, op.intcode
     if r <= l: return l, op.intcode
     
@@ -212,6 +215,10 @@ def get_common_type(l, r, op):
     return b, op.altcode
 
 def get_overflow_type(l, r, op):
+    # complex is handled in ComplexOps
+    if l.name == "Complex64": return l, op.altcode
+    if r.name == "Complex64": return r, op.altcode
+
     values = [op.operation(ll, rr) for ll in [l.min,l.max] for rr in [r.min, r.max]]
     minv = min(values)
     maxv = max(values)
@@ -278,6 +285,30 @@ def find_type_include(*l):
         else:
             return t
 
+def fixup_normal(kw):
+    lval = "left%(left_type)s" % kw
+    rval = "(%(right_type)s)right" % kw
+    kw["left_value"]  = lval
+    kw["right_value"] = rval
+
+def fixup_normal_brace(kw):
+    lval = "left%(left_type)s" % kw
+    rval = "((%(right_type)s)right)" % kw
+    kw["left_value"]  = lval
+    kw["right_value"] = rval
+    
+def fixup_extensible(kw):
+    lval = "left%(left_type)s" % kw
+    rval = "((%(right_type)s)right).value" % kw
+    kw["left_value"]  = lval
+    kw["right_value"] = rval
+
+def fixup_extensible_long(kw):
+    lval = "left%(left_type)s" % kw
+    rval = "((%(right_type)s)right).Value" % kw
+    kw["left_value"]  = lval
+    kw["right_value"] = rval
+
 def gen_binary_prologue(cw, bin, left):
     cw.write("[PythonName(\"%(python_name)s\")]", python_name=bin.name)
     cw.enter_block("public static object %(method_name)s(object left, object right)", method_name=bin.method)
@@ -289,6 +320,48 @@ def gen_binary_prologue(cw, bin, left):
     cw.enter_block("if ((rightConvertible = right as IConvertible) != null)")
     cw.enter_block("switch (rightConvertible.GetTypeCode())")
 
+def gen_binary_body(cw, left, right, alt_right, bin, fixup):
+    ot, code = get_binop_type(left, alt_right, bin)
+
+    kw = {
+        'left_type'     : left.name,
+        'right_type'    : right.name,
+        'symbol'        : bin.symbol,
+        'method'        : bin.method,
+        'left_ops'      : left.ops,
+        'right_ops'     : right.ops,
+        'oper_type'     : ot.name,
+        'oper_ops'      : ot.ops,
+    }
+
+    fixup(kw)
+
+    # For existing OpsXXX, call the method with the same name,
+    # For new ops, call with Impl suffix to prevent stack overflows
+    if ot.gen: kw['method_impl'] = bin.method + "Impl"
+    else: kw['method_impl'] = bin.method
+
+    cw.write(code % kw)
+
+def generate_binop_bigint(cw, left, right, bin, fixup):
+    ot, code = get_binop_bigint_type(left, bin)
+    kw = {
+        'left_type'     : left.name,
+        'right_type'    : right.name,
+        'symbol'        : bin.symbol,
+        'method'        : bin.method,
+        'left_ops'      : left.ops,
+        'right_ops'     : bigint_type.ops,
+        'oper_type'     : ot.name,
+        'oper_ops'      : ot.ops,
+    }
+    fixup(kw)
+
+    if ot.gen: kw['method_impl'] = bin.method + "Impl"
+    else: kw['method_impl'] = bin.method
+
+    cw.write(code % kw)
+
 def gen_binaries(cw, left):
     for bin in binaries:
         gen_binary_prologue(cw, bin, left)
@@ -296,52 +369,25 @@ def gen_binaries(cw, left):
             cw.enter_block("case TypeCode.%(right_type)s:" % {'right_type' : right.name })
             cw.indent += 1
 
-            ot, code = get_binop_type(left, right, bin)
+            gen_binary_body(cw, left, right, right, bin, fixup_normal_brace)
 
-            kw = {
-                'left_type'     : left.name,
-                'right_type'    : right.name,
-                'symbol'        : bin.symbol,
-                'method'        : bin.method,
-                'left_ops'      : left.ops,
-                'right_ops'     : right.ops,
-                'oper_type'     : ot.name,
-                'oper_ops'      : ot.ops,
-            }
-            
-            kw["right_value"] = "((%(right_type)s)right)" % kw
-            
-            # For existing OpsXXX, call the method with the same name,
-            # For new ops, call with Impl suffix to prevent stack overflows
-            if ot.gen: kw['method_impl'] = bin.method + "Impl"
-            else: kw['method_impl'] = bin.method
-
-            cw.write(code % kw)
             cw.exit_block()
             cw.indent -= 1
 
         cw.exit_block()
-        cw.else_block("if (right is BigInteger)")
-        ot, code = get_binop_bigint_type(left, bin)
-        kw = {
-            'left_type'     : left.name,
-            'right_type'    : bigint_type.name,
-            'symbol'        : bin.symbol,
-            'method'        : bin.method,
-            'left_ops'      : left.ops,
-            'right_ops'     : bigint_type.ops,
-            'oper_type'     : ot.name,
-            'oper_ops'      : ot.ops,
-        }
-        kw["right_value"] = "((%(right_type)s)right)" % kw
-        if ot.gen: kw['method_impl'] = bin.method + "Impl"
-        else: kw['method_impl'] = bin.method
-
-        cw.write(code % kw)
+        cw.exit_block()
+        cw.enter_block("if (right is BigInteger)")
+        generate_binop_bigint(cw, left, bigint_type, bin, fixup_normal)
         cw.else_block("if (right is Complex64)")
-        cw.write("return ComplexOps.%(method)s(left%(left_type)s, (Complex64)right);" % kw)
-        cw.else_block("if (right is INumber)")
-        cw.write("return ((INumber)right).%s(left);" % bin.rmethod)
+        gen_binary_body(cw, left, cmplx_type, cmplx_type, bin, fixup_normal)
+        cw.else_block("if (right is ExtensibleInt)")
+        gen_binary_body(cw, left, x_int_type, int32_type, bin, fixup_extensible)
+        cw.else_block("if (right is ExtensibleLong)")
+        generate_binop_bigint(cw, left, x_bigint_type, bin, fixup_extensible_long)
+        cw.else_block("if (right is ExtensibleFloat)")
+        gen_binary_body(cw, left, x_float_type, double_type, bin, fixup_extensible)
+        cw.else_block("if (right is ExtensibleComplex)")
+        gen_binary_body(cw, left, x_cmplx_type, cmplx_type, bin, fixup_extensible)
         cw.exit_block()
         cw.write("return Ops.NotImplemented;")
         cw.exit_block()
@@ -370,12 +416,12 @@ def gen_bitwise_body(cw, left, right, alt_right, bin, fixup):
     fixup(kw)
 
     if ltype.size < ot.size:
-        cw.write("%(oper_type)s left%(oper_type)s = (%(oper_type)s)%(left_name)s;" % kw)
-        kw["left_name"] = lval = "left%(oper_type)s" % kw
+        cw.write("%(oper_type)s left%(oper_type)s = (%(oper_type)s)%(left_value)s;" % kw)
+        kw["left_value"] = lval = "left%(oper_type)s" % kw
         ltype = ot
     if rtype.size < ot.size:
-        cw.write("%(oper_type)s right%(oper_type)s = (%(oper_type)s)%(right_name)s;" % kw)
-        kw["right_name"] = rval = "right%(oper_type)s" % kw
+        cw.write("%(oper_type)s right%(oper_type)s = (%(oper_type)s)%(right_value)s;" % kw)
+        kw["right_value"] = rval = "right%(oper_type)s" % kw
         rtype = ot
 
     lc = get_cast(ltype, ot)
@@ -384,26 +430,8 @@ def gen_bitwise_body(cw, left, right, alt_right, bin, fixup):
     kw["left_cast"]  = lc
     kw["right_cast"] = rc
 
-    code = "return %(left_cast)s%(left_name)s %(symbol)s %(right_cast)s%(right_name)s;"
+    code = "return %(left_cast)s%(left_value)s %(symbol)s %(right_cast)s%(right_value)s;"
     cw.write(code % kw)
-
-def fixup_normal(kw):
-    lval = "left%(left_type)s" % kw
-    rval = "(%(right_type)s)right" % kw
-    kw["left_name"]  = lval
-    kw["right_name"] = rval
-    
-def fixup_extensible(kw):
-    lval = "left%(left_type)s" % kw
-    rval = "((%(right_type)s)right).value" % kw
-    kw["left_name"]  = lval
-    kw["right_name"] = rval
-
-def fixup_extensible_long(kw):
-    lval = "left%(left_type)s" % kw
-    rval = "((%(right_type)s)right).Value" % kw
-    kw["left_name"]  = lval
-    kw["right_name"] = rval
 
 def gen_bitwise(cw, left):
     # no bitwise for floats
@@ -421,7 +449,8 @@ def gen_bitwise(cw, left):
             cw.indent -= 1
 
         cw.exit_block()
-        cw.else_block("if (right is BigInteger)")
+        cw.exit_block()
+        cw.enter_block("if (right is BigInteger)")
         gen_bitwise_body(cw, left, bigint_type, bigint_type, bin, fixup_normal)
         cw.else_block("if (right is ExtensibleInt)")
         gen_bitwise_body(cw, left, x_int_type, int32_type, bin, fixup_extensible)
@@ -487,7 +516,8 @@ def gen_manual_ones(cw, left):
             cw.indent -= 1
 
         cw.exit_block()
-        cw.else_block("if (right is BigInteger)")
+        cw.exit_block()
+        cw.enter_block("if (right is BigInteger)")
         gen_manual_ones_body(cw, left, bigint_type, bigint_type, bin, fixup_normal)
         cw.else_block("if (right is ExtensibleInt)")
         gen_manual_ones_body(cw, left, x_int_type, int32_type, bin, fixup_extensible)
