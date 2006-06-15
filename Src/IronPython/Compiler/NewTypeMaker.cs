@@ -692,11 +692,11 @@ namespace IronPython.Compiler {
                     
                     slotsSlots.Add(s);
 
-                    PropertyBuilder pb = tg.DefineProperty(slots[i], PropertyAttributes.None, typeof(object));
+                    PropertyBuilder pb = tg.DefineProperty(slots[i], PropertyAttributes.None, s.Type);
 
                     CodeGen getter = tg.DefineMethod(MethodAttributes.Public, 
                         "get_" + slots[i], 
-                        typeof(object), 
+                        s.Type, 
                         new Type[0], 
                         new string[0]);
                     s.EmitGet(getter);
@@ -709,7 +709,7 @@ namespace IronPython.Compiler {
                     CodeGen setter = tg.DefineMethod(MethodAttributes.Public, 
                         "set_" + slots[i], 
                         typeof(void), 
-                        new Type[] { typeof(object) }, 
+                        new Type[] { s.Type }, 
                         new string[] { "value" });
                     
                     setter.EmitArgGet(0);

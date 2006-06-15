@@ -103,7 +103,7 @@ namespace IronPython.Runtime {
 
     /// <summary>
     /// This interface represents a dictionary that can be accessed using symbols and also arbitrary objects.
-    /// This should conceptually inherit from IDictionary<object, object>, but we do not do that as we want the default indexer
+    /// This should conceptually inherit from IDictionary&lt;object, object&gt;, but we do not do that as we want the default indexer
     /// property to be indexed by SymbolId, not by object.
     /// </summary>
     public interface IAttributesDictionary : IEnumerable<KeyValuePair<object, object>> {

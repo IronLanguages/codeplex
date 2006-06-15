@@ -74,6 +74,7 @@ IronPythonTests = {
                 test_nt
                 test_operator
                 test_re
+                test_socket
                 test_struct
                 test_sys
                 test_thread
@@ -456,46 +457,28 @@ CompatTests = {
 }             
         
 LibraryExpectedFailures = {
-        "BaseHTTPServer"     : "No module named _socket",
-        "CGIHTTPServer"      : "No module named _socket",
-        "DocXMLRPCServer"    : "No module named _socket",
-        "SimpleHTTPServer"   : "No module named _socket",
-        "SimpleXMLRPCServer" : "No module named _socket",
-        "SocketServer"       : "No module named _socket",
-        "_LWPCookieJar"      : "No module named _socket",
-        "_MozillaCookieJar"  : "No module named _socket",
+        "CGIHTTPServer"      : "No module named select",
+        "_LWPCookieJar"      : "Cannot import name LWPCookieJar",
+        "_MozillaCookieJar"  : "Cannot import name MozillaCookieJar",
         "__phello__.foo"     : "No module named __phello__.foo",
         "_strptime"          : "'module' object has no attribute 'struct_time'",
-        "asynchat"           : "No module named _socket",
+        "asynchat"           : "No module named select",
         "asyncore"           : "No module named select",
-        "cgi"                : "No module named _socket",
-        "cookielib"          : "No module named _socket",
         "csv"                : "No module named _csv",
         "dbhash"             : "No module named _bsddb",
-        "ftplib"             : "No module named _socket",
         "gzip"               : "No module named zlib",
-        "httplib"            : "No module named _socket",
-        "imaplib"            : "No module named _socket",
-        "macurl2path"        : "No module named _socket",
-        "mimetypes"          : "No module named _socket",
-        "nntplib"            : "No module named _socket",
-        "poplib"             : "No module named _socket",
         "pty"                : "No module named select",
         "reconvert"          : "No module named regex", 
         "regsub"             : "No module named regex", 
         "rlcompleter"        : "No module named readline",
-        "robotparser"        : "No module named _socket",
-        "smtpd"              : "No module named _socket",
-        "smtplib"            : "No module named _socket",
-        "socket"             : "No module named _socket",
+        "smtpd"              : "No module named select",
         "stringprep"         : "No module named unicodedata",
         "subprocess"         : "No module named select",
         "symtable"           : "No module named _symtable",
-        "telnetlib"          : "No module named _socket",
+        "telnetlib"          : "No module named select",
         "tty"                : "No module named termios",
         "tzparse"            : "'TZ'",
-        "urllib"             : "No module named _socket",
-        "urllib2"            : "No module named _socket",
+        "urllib2"            : "No module named md5",
     }
 
 if __name__ == '__main__':

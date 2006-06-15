@@ -129,6 +129,7 @@
     <Compile Include="Compiler\Options.cs" />
     <Compile Include="Compiler\OutputGenerator.cs" />
     <Compile Include="Compiler\MethodBinder.cs" />
+    <Compile Include="Modules\_socket.cs" />
     <Compile Include="Runtime\ByteOps.cs" />
     <Compile Include="Runtime\ByteOps.Generated.cs" />
     <Compile Include="Runtime\FastCallable.Generated.cs" />

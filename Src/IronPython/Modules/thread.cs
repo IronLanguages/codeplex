@@ -175,7 +175,9 @@ namespace IronPython.Modules {
                         Ops.CallWithArgsTupleAndKeywordDictAndContext(context, func, new object[0], new string[0], args, kwargs);
                     } else {
                         Ops.CallWithArgsTuple(func, new object[0], args);
-                    } 
+                    }
+                } catch (PythonSystemExit) {
+                    // ignore and quit
                 } catch (Exception e) {
                     Ops.Print(context.SystemState, "Unhandled exception on thread");
                     Ops.Print(context.SystemState, e);

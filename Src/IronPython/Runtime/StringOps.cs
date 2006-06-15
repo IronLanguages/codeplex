@@ -1175,6 +1175,28 @@ namespace IronPython.Runtime {
             return false;
         }
 
+        internal static byte[] ToByteArray(string s) {
+            byte[] ret = new byte[s.Length];
+            for (int i = 0; i < s.Length; i++) {
+                if (s[i] < 0x100) ret[i] = (byte)s[i];
+                else throw Ops.UnicodeDecodeError("'ascii' codec can't decode byte {0:X} in position {1}: ordinal not in range", (int)ret[i], i);
+            }
+            return ret;
+        }
+
+        internal static string FromByteArray(byte[] bytes) {
+            return FromByteArray(bytes, bytes.Length);
+        }
+
+        internal static string FromByteArray(byte[] bytes, int maxBytes) {
+            int bytesToCopy = Math.Min(bytes.Length, maxBytes);
+            StringBuilder b = new StringBuilder(bytesToCopy);
+            for (int i = 0; i < bytesToCopy; i++) {
+                b.Append((char)bytes[i]);
+            }
+            return b.ToString();
+        }
+
 
         #endregion
 
@@ -1383,23 +1405,6 @@ namespace IronPython.Runtime {
             }
 
             codecs = d;
-        }
-
-        private static byte[] ToByteArray(string s) {
-            byte[] ret = new byte[s.Length];
-            for (int i = 0; i < s.Length; i++) {
-                if (s[i] < 0x100) ret[i] = (byte)s[i];
-                else throw Ops.UnicodeDecodeError("'ascii' codec can't decode byte {0:X} in position {1}: ordinal not in range", (int)ret[i], i);
-            }
-            return ret;
-        }
-
-        private static string FromByteArray(byte[] bytes) {
-            StringBuilder b = new StringBuilder(bytes.Length);
-            for (int i = 0; i < bytes.Length; i++) {
-                b.Append((char)bytes[i]);
-            }
-            return b.ToString();
         }
 
         private static List SplitEmptyString(bool separators) {

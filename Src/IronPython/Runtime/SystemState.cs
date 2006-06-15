@@ -38,12 +38,26 @@ namespace IronPython.Runtime {
         private TopReflectedPackage topPackage;
         private ClrModule clrModule;
 
+        // See _socket.cs for details
+        internal bool isSocketRefCountHookInstalled;
+
         public SystemState() {
 #if DEBUG
             // All fields should be initialized in Initialize()
             FieldInfo[] fields = typeof(SystemState).GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             foreach (FieldInfo field in fields) {
-                Debug.Assert(field.GetValue(this) == null || ((int)field.GetValue(this)) == 0);
+                object value = field.GetValue(this);
+                try {
+                    Debug.Assert(value == null || ((int)value) == 0);
+                    continue;
+                } catch (InvalidCastException) { }
+                
+                try {
+                    Debug.Assert(((bool)value) == false);
+                    continue;
+                } catch (InvalidCastException) { }
+
+                Debug.Assert(false, "Unhandled type in SystemState initialization check");
             }
 #endif
             Initialize();
@@ -64,6 +78,7 @@ namespace IronPython.Runtime {
                 path = List.Make();
                 ps1 = ">>> ";
                 ps2 = "... ";
+                isSocketRefCountHookInstalled = false;
                 __stdin__ = new PythonFile(Console.OpenStandardInput(),
                                             Console.InputEncoding, 
                                             "<stdin>", 
