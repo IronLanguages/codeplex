@@ -172,12 +172,27 @@ namespace IronPythonConsole {
                         }
                         Options.BinariesDirectory = (string)args[0];
                         break;
-                    case "-X:ColorfulConsole": ColorfulConsole = true; break;
-                    case "-X:ExceptionDetail": options.ExceptionDetail = true; break;
                     case "-X:FastEval": Options.FastEval = true; break;
                     case "-X:Frames": Options.Frames = true; break;
                     case "-X:GenerateAsSnippets": Options.GenerateModulesAsSnippets = true; break;
                     case "-X:ILDebug": Options.ILDebug = true; break;
+                    case "-c":
+                        args.RemoveAt(0);
+                        if (args.Count == 0) {
+                            PrintUsageAndExit();
+                        }
+                        Options.Command = (string)args[0];
+                        return options;
+#if !IRONPYTHON_WINDOW
+                    case "-X:ColorfulConsole": ColorfulConsole = true; break;
+                    case "-X:ExceptionDetail": options.ExceptionDetail = true; break;
+                    case "-X:TabCompletion": TabCompletion = true; break;
+                    case "-X:AutoIndent": AutoIndent = true; break;
+                    case "-i": Options.Introspection = true; break;
+                    case "-V":
+                        Options.PrintVersionAndExit = true;
+                        return options;
+#endif
                     case "-X:MTA": mta = true; break;
                     case "-X:NoOptimize": Options.OptimizeReflectCalls = false; break;
                     case "-X:NoTraceback": Options.TracebackSupport = false; break;
@@ -193,27 +208,14 @@ namespace IronPythonConsole {
                     case "-X:SaveAssemblies": Options.SaveAndReloadBinaries = true; break;
                     case "-X:ShowCLSExceptions": options.ShowCLSExceptions = true; break;
                     case "-X:StaticMethods": Options.GenerateDynamicMethods = false; break;
-                    case "-X:TabCompletion": TabCompletion = true; break;
-                    case "-X:AutoIndent": AutoIndent = true; break;
                     case "-X:TrackPerformance": // accepted but ignored on retail builds
 #if DEBUG
                         Options.TrackPerformance = true;
 #endif
                         break;
-                    case "-i": Options.Introspection = true; break;
                     case "-x": Options.SkipFirstLine = true; break;
                     case "-v": options.Verbose = true; break;
                     case "-u": Options.UnbufferedStdOutAndError = true; break;
-                    case "-c":
-                        args.RemoveAt(0);
-                        if (args.Count == 0) {
-                            PrintUsageAndExit();
-                        }
-                        Options.Command = (string)args[0];
-                        return options;
-                    case "-V":
-                        Options.PrintVersionAndExit = true;
-                        return options;
                     case "-S":
                         Options.ImportSite = false;
                         break;
@@ -284,8 +286,11 @@ namespace IronPythonConsole {
 #endif
             // the following extension switches should be printed in alphabetic order
             Console.WriteLine("  -X:AssembliesDir       Set the directory for saving generated assemblies");
+#if !IRONPYTHON_WINDOW
+            Console.WriteLine("  -X:AutoIndent          Automatically insert indentation");
             Console.WriteLine("  -X:ColorfulConsole     Enable ColorfulConsole");
             Console.WriteLine("  -X:ExceptionDetail     Enable ExceptionDetail mode");
+#endif
             Console.WriteLine("  -X:FastEval            Enable fast eval");
             Console.WriteLine("  -X:Frames              Generate custom frames");
             Console.WriteLine("  -X:GenerateAsSnippets  Generate code to run in snippet mode");
@@ -298,13 +303,19 @@ namespace IronPythonConsole {
             Console.WriteLine("  -X:SaveAssemblies      Save generated assemblies");
             Console.WriteLine("  -X:ShowCLSExceptions   Display CLS Exception information");
             Console.WriteLine("  -X:StaticMethods       Generate static methods only");
+#if !IRONPYTHON_WINDOW
             Console.WriteLine("  -X:TabCompletion       Enable TabCompletion mode");
+#endif
 #if DEBUG
             Console.WriteLine("  -X:TrackPerformance    Track performance sensitive areas");
 #endif
+#if !IRONPYTHON_WINDOW
             Console.WriteLine("  -i                     Inspect interactively after running script");
+#endif
             Console.WriteLine("  -x                     Skip first line of the source");
+#if !IRONPYTHON_WINDOW
             Console.WriteLine("  -v                     Verbose (trace import statements) (also PYTHONVERBOSE=x)");
+#endif
             Console.WriteLine("  -h                     Display usage");
             Console.WriteLine("  -u                     Unbuffered stdout & stderr");
             Console.WriteLine("  -c cmd                 Program passed in as string (terminates option list)");
