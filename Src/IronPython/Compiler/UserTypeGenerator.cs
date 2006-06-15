@@ -740,9 +740,25 @@ namespace IronPython.Compiler {
                 CodeGen ret = cg;
 
                 // just a call to the helper method
+                gdtCg.EmitThis();
+                gdtCg.EmitCall(typeof(object), "GetType");
+                gdtCg.EmitType(newType.myType);
+                Label differ = gdtCg.DefineLabel();
+                gdtCg.Emit(OpCodes.Bne_Un, differ);
+
                 gdtCg.EmitCall(cg.MethodInfo);
                 gdtCg.EmitReturn();
+
+                gdtCg.MarkLabel(differ);
+
+                gdtCg.EmitThis();
+                gdtCg.EmitCall(typeof(object), "GetType");
+                gdtCg.EmitCall(typeof(Ops), "GetDynamicTypeFromType");
+                gdtCg.EmitReturn();
+
                 gdtCg.Finish();
+
+
 
                 /* GetDict */
                 cg = newType.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("GetDict"));

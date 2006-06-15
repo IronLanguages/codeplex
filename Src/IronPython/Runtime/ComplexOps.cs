@@ -160,8 +160,12 @@ namespace IronPython.Runtime {
                 if (real is string) throw Ops.TypeError("complex() can't take second arg if first is a string");
                 if (imag is string) throw Ops.TypeError("complex() second arg can't be a string");
                 imag2 = Converter.TryConvertToComplex64(imag, out conv);
-                if (conv == Conversion.None)
+                if (conv == Conversion.None) {
+                    if (imag is BigInteger || imag is ExtensibleLong)
+                        throw Ops.OverflowError("long too large to convert to float");
+
                     throw Ops.TypeError("complex() argument must be a string or a number");
+                }
             }
 
             if (real != null) {
@@ -169,11 +173,15 @@ namespace IronPython.Runtime {
                     real2 = LiteralParser.ParseComplex64((string)real);
                 else if (real is Complex64) {
                     if (imag == null && cls == ComplexType) return real;
-                    else real2 = (Complex64)real;
+                    else real2 = (Complex64)real;                
                 } else {
                     real2 = Converter.TryConvertToComplex64(real, out conv);
-                    if (conv == Conversion.None)
+                    if (conv == Conversion.None) {
+                        if (real is BigInteger || real is ExtensibleLong)
+                            throw Ops.OverflowError("long too large to convert to float");
+
                         throw Ops.TypeError("complex() argument must be a string or a number");
+                    }
                 }
             }
 

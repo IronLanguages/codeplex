@@ -54,10 +54,32 @@ def test_add_mul():
     AreEqual((1,2,3) * 2, (1,2,3,1,2,3))
     AreEqual(2 * (1,2,3), (1,2,3,1,2,3))
 
+def test_tuple_hash():
+    class myhashable(object):
+        def __init__(self):
+            self.hashcalls = 0
+        def __hash__(self):
+            self.hashcalls += 1
+            return 42
+        def __eq__(self, other):
+            return type(self) == type(other)
+    
+    
+    test = (myhashable(), myhashable(), myhashable())
+    
+    hash(test)
+    
+    AreEqual(test[0].hashcalls, 1)
+    AreEqual(test[1].hashcalls, 1)
+    AreEqual(test[2].hashcalls, 1)
+    
+def test_tuple_cli_interactions():
+    # verify you can call ToString on a tuple after importing clr
+    import clr
+    a = (0,)
+    
+    AreEqual(str(a), a.ToString())
+    
+
 run_test(__name__)
 
-# verify you can call ToString on a tuple after importing clr
-import clr
-a = (0,)
-
-AreEqual(str(a), a.ToString())

@@ -91,39 +91,58 @@ namespace IronPython.CodeDom {
                 targetKind = PEFileKinds.WindowApplication;
             }
 
+            // The new domain needs to be set up with the same ApplicationBase and PrivateBinPath
+            // as the current domain to make sure that the python assembly is loadable from there
+            AppDomainSetup currentDomainSetup = AppDomain.CurrentDomain.SetupInformation;
+            AppDomainSetup newDomainSetup = new AppDomainSetup();
+            newDomainSetup.ApplicationBase = currentDomainSetup.ApplicationBase;
+            newDomainSetup.PrivateBinPath = currentDomainSetup.PrivateBinPath;
+            
             AppDomain compileDomain = null;
             try {
-                // The new domain needs to be set up with the same ApplicationBase and PrivateBinPath
-                // as the current domain to make sure that the python assembly is loadable from there
-                AppDomainSetup currentDomainSetup = AppDomain.CurrentDomain.SetupInformation;
-                AppDomainSetup newDomainSetup = new AppDomainSetup();
-                newDomainSetup.ApplicationBase = currentDomainSetup.ApplicationBase;
-                newDomainSetup.PrivateBinPath = currentDomainSetup.PrivateBinPath;
-
                 compileDomain = AppDomain.CreateDomain("compilation domain", null, newDomainSetup);
-                RemoteCompiler rc = (RemoteCompiler)compileDomain.CreateInstanceAndUnwrap(
-                    Assembly.GetExecutingAssembly().FullName,
-                    "IronPython.CodeDom.RemoteCompiler");
 
-                rc.Initialize(files, options.OutputAssembly, options.IncludeDebugInformation, options.ReferencedAssemblies, targetKind);
+                // This is a horrible hack: When running in a multi app domain scenario, where
+                // IronPython has not been strong named, and exists on both sides of the app domain
+                // boundary, we need some common type that both sides can agree on.  That common
+                // type needs to live in the GAC on both sides.  So we abuse IReflect and use it
+                // as our communication channel across the app domain boundary.
+                IReflect rc = (IReflect)compileDomain.CreateInstanceFromAndUnwrap(
+                    Assembly.GetExecutingAssembly().Location,
+                    "IronPython.CodeDom.RemoteCompiler",
+                    false, 
+                    BindingFlags.Public|BindingFlags.CreateInstance|BindingFlags.Instance, 
+                    null,
+                    new object[] { files, options.OutputAssembly, options.IncludeDebugInformation, options.ReferencedAssemblies, targetKind },
+                    null,
+                    null,
+                    null);
 
-                rc.DoCompile();
-                res.NativeCompilerReturnValue = rc.ErrorCount;
-                for (int i = 0; i < rc.Errors.Count; i++) {
-                    res.Errors.Add(rc.Errors[i]);
+                //rc.Initialize(files, options.OutputAssembly, options.IncludeDebugInformation, options.ReferencedAssemblies, targetKind);
+
+                InvokeCompiler(rc, "Compile");
+
+                res.NativeCompilerReturnValue = (int)InvokeCompiler(rc, "get_ErrorCount"); 
+                List<CompilerError> errors = (List<CompilerError>)(InvokeCompiler(rc, "get_Errors"));
+                for (int i = 0; i < errors.Count; i++) {
+                    res.Errors.Add(errors[i]);
                 }
                 try {
                     if (options.GenerateInMemory)
-                        res.CompiledAssembly = rc.CompiledAssembly;
+                        res.CompiledAssembly = (Assembly)InvokeCompiler(rc, "get_Assembly");
                     else
                         res.PathToAssembly = options.OutputAssembly;
                 } catch {
                 }
             } finally {
-                AppDomain.Unload(compileDomain);
+                if(compileDomain != null) AppDomain.Unload(compileDomain);
             }
 
             return res;
+        }
+
+        private object InvokeCompiler(IReflect compiler, string api) {
+            return compiler.InvokeMember(api, BindingFlags.Public, null, null, null, null, null, null);
         }
 
         private CompilerResults FromSourceWorker(CompilerParameters options, params string[] sources) {
@@ -182,7 +201,7 @@ namespace IronPython.CodeDom {
         }
     }
 
-    class RemoteCompiler : MarshalByRefObject {
+    public class RemoteCompiler : MarshalByRefObject, IReflect {
         static RemoteCompiler instance;
 
         string[] files;
@@ -195,7 +214,11 @@ namespace IronPython.CodeDom {
         List<CompilerError> errors = new List<CompilerError>();
 
         public RemoteCompiler() {
+        }
+
+        public RemoteCompiler(string[] filenames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind) {
             instance = this;
+            Initialize(filenames, outputAssembly, includeDebug, references, targetKind);
         }
 
         public void Initialize(string[] filenames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind) {
@@ -261,9 +284,68 @@ namespace IronPython.CodeDom {
         }
 
         public List<CompilerError> Errors {
+            
             get {
                 return errors;
             }
         }
+
+        #region IReflect Members
+
+        public FieldInfo GetField(string name, BindingFlags bindingAttr) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public FieldInfo[] GetFields(BindingFlags bindingAttr) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public MemberInfo[] GetMember(string name, BindingFlags bindingAttr) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public MemberInfo[] GetMembers(BindingFlags bindingAttr) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public MethodInfo GetMethod(string name, BindingFlags bindingAttr) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public MethodInfo GetMethod(string name, BindingFlags bindingAttr, Binder binder, Type[] types, ParameterModifier[] modifiers) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public MethodInfo[] GetMethods(BindingFlags bindingAttr) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public PropertyInfo[] GetProperties(BindingFlags bindingAttr) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public PropertyInfo GetProperty(string name, BindingFlags bindingAttr, Binder binder, Type returnType, Type[] types, ParameterModifier[] modifiers) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public PropertyInfo GetProperty(string name, BindingFlags bindingAttr) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        public object InvokeMember(string name, BindingFlags invokeAttr, Binder binder, object target, object[] args, ParameterModifier[] modifiers, System.Globalization.CultureInfo culture, string[] namedParameters) {
+            switch(name){
+                case "Compile":        DoCompile(); break;
+                case "get_ErrorCount": return ErrorCount;
+                case "get_Errors":     return Errors;
+                case "get_Assembly":   return CompiledAssembly;
+            }
+            return null;
+        }
+
+        public Type UnderlyingSystemType {
+            get { throw new Exception("The method or operation is not implemented."); }
+        }
+
+        #endregion
     }
 }

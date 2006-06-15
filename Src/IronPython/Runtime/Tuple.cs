@@ -158,12 +158,13 @@ namespace IronPython.Runtime {
 
         [PythonName("__mul__")]
         public virtual object MultiplySequence(object count) {
-            int val = Converter.ConvertToSequenceLength(count);
-
-            if (val <= 0) return Tuple.EMPTY;
-            if (val == 1 && GetType() == typeof(Tuple)) return this;
-            return MakeTuple(ArrayOps.Multiply(data, data.Length, val));
+            return Ops.MultiplySequence<Tuple>(MultiplySequenceWorker, this, count);
         }
+
+        private static Tuple MultiplySequenceWorker(Tuple self, int count) {
+            return MakeTuple(ArrayOps.Multiply(self.data, self.data.Length, count));
+        }
+
         [PythonName("__imul__")]
         public virtual object __imul__(object count) {
             return MultiplySequence(count);
@@ -259,10 +260,9 @@ namespace IronPython.Runtime {
 
         [PythonName("__hash__")]
         public override int GetHashCode() {
-            int ret = 0;
+            int ret = 6551;
             foreach (object o in data) {
-                if (o == null) ret ^= NoneType.NoneHashCode;
-                else  ret ^= o.GetHashCode();
+                ret = (ret << 5) ^ (ret >> 26) ^ Ops.Hash(o);
             }
             return ret;
         }

@@ -97,8 +97,8 @@ namespace IronPython.Compiler {
         public static NameType TryGetName(DynamicType dt, PropertyInfo pi, MethodInfo prop, out string name) {
             Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(pi)));
 
-            name = null;
-            string namePrefix = "";
+            name = pi.Name;
+            string namePrefix = null;
             NameType res = NameType.Property; 
 
             if (prop.IsPrivate || (prop.IsAssembly && !prop.IsFamilyOrAssembly)) {
@@ -110,12 +110,22 @@ namespace IronPython.Compiler {
                         // mangle protectes to private
                         namePrefix = "_" + dt.__name__ + "__";
                     }
+                } else {
+                    // explicitly implemented interface
+
+                    // drop the namespace, leave the interface name, and replace 
+                    // the dot with an underscore.  Eg System.IConvertible.ToBoolean
+                    // becomes IConvertible_ToBoolean
+                    int lastDot = name.LastIndexOf(Type.Delimiter);
+                    if (lastDot != -1) {
+                        name = name.Substring(lastDot + 1);
+                    }
                 }
             } 
 
             object[] attribute = prop.GetCustomAttributes(typeof(PythonNameAttribute), false);
 
-            name = namePrefix + pi.Name; 
+            if(namePrefix != null) name = namePrefix + pi.Name; 
             if (attribute.Length > 0) {
                 PythonNameAttribute attr = attribute[0] as PythonNameAttribute;
                 if (attr.name != null && attr.name.Length > 0) {
@@ -124,7 +134,6 @@ namespace IronPython.Compiler {
                 }
             }
             
-
             return res;
         }
 

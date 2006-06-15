@@ -222,7 +222,7 @@ namespace IronPython.Runtime {
         }
 
         public virtual object MultiplySequence(object count) {
-            return StringOps.Multiply(self, Converter.ConvertToSequenceLength(count));
+            return Ops.MultiplySequence<string>(StringOps.Multiply, self, count);
         }
 
         public object this[int index] {

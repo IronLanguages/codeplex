@@ -414,6 +414,19 @@ namespace IronPython.Runtime {
             }
         }
 
+        internal static void DoCoerce(ref object self, ref object other) {
+            OldInstance ois = self as OldInstance;
+    
+            if (ois != null) {
+                Tuple coerced = OldInstanceType.Instance.Coerce(ois, other) as Tuple;
+                if (coerced != null) {
+                    self = coerced[0];
+                    other = coerced[1];
+                    return;
+                }
+            }
+        }
+
         #region Object overrides 
 
         public override string ToString() {

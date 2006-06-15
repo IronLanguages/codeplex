@@ -137,11 +137,11 @@ namespace IronPython.Runtime {
         }
 
         public static List operator *(List l, int count) {
-            return l.MultiplySequenceWorker(count);
+            return List.MultiplySequenceWorker(l, count);            
         }
 
         public static List operator *(int count, List l) {
-            return l.MultiplySequenceWorker(count);
+            return List.MultiplySequenceWorker(l, count);            
         }
 
         public object[] GetObjectArray() {
@@ -227,24 +227,23 @@ namespace IronPython.Runtime {
 
         [PythonName("__mul__")]
         public virtual object MultiplySequence(object count) {
-            return MultiplySequenceWorker(Converter.ConvertToSequenceLength(count));
+            return Ops.MultiplySequence<List>(List.MultiplySequenceWorker, this, count);
         }
 
-
-        private List MultiplySequenceWorker(int count) {
+        private static List MultiplySequenceWorker(List self, int count) {
             if (count <= 0) return MakeEmptyList(0);
 
             int n, newCount;
             object[] ret;
-            lock (this) {
-                n = this.size;
+            lock (self) {
+                n = self.size;
                 //??? is this useful optimization
                 //???if (n == 1) return new List(Array.ArrayList.Repeat(this[0], count));
 
                 newCount = n * count;
                 ret = new object[newCount];
 
-                Array.Copy(data, 0, ret, 0, n);
+                Array.Copy(self.data, 0, ret, 0, n);
             }
 
             // this should be extremely fast for large count as it uses the same algoithim as efficient integer powers

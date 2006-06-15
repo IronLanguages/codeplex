@@ -820,17 +820,23 @@ CodeGenerator("SymbolTable Ops Symbols", gen_SymbolTable_ops_symbols).doit()
 OLDS = """
 public override object %(clrName)s(object self, object other) {
     object func;
+    OldInstance.DoCoerce(ref self, ref other);
+    
     if (Ops.TryGetAttr(self, SymbolTable.Op%(clrName)s, out func)) return Ops.Call(func, other);
     return Ops.NotImplemented;
 }
 public override object Reverse%(clrName)s(object self, object other) {
     object func;
+    OldInstance.DoCoerce(ref self, ref other);
+    
     if (Ops.TryGetAttr(self, SymbolTable.OpReverse%(clrName)s, out func)) return Ops.Call(func, other);
     return Ops.NotImplemented;
 
 }
 public override object InPlace%(clrName)s(object self, object other) {
     object func;
+    OldInstance.DoCoerce(ref self, ref other);
+    
     if (Ops.TryGetAttr(self, SymbolTable.OpInPlace%(clrName)s, out func)) return Ops.Call(func, other);
     return Ops.NotImplemented;
 }"""
@@ -838,6 +844,7 @@ public override object InPlace%(clrName)s(object self, object other) {
 OLD_CMP = """
 public override object %(clrName)s(object self, object other) {
     object func;
+
     if (Ops.TryGetAttr(self, SymbolTable.Op%(clrName)s, out func)) return Ops.Call(func, other);
     return Ops.NotImplemented;
 }"""

@@ -414,13 +414,14 @@ RegressionTests = {
     "test.test_bisect",     # doctest support
     "test.test_bool",       # 4 scenarios disabled due to pickle
     "test.test_codecs",     # Pyunycode, Nameprep, and idna not implemented, need to manually import encodings
+    "test.test_coercion",   # no copy module
     "test.test_decimal",    # Bugs 972, 975, 973; another 2 cases disabled due to pickle
     "test.test_deque",      # weakref, pickle, itertools not implemented
     "test.test_eof",        # tests for the whole exception string verbatim, changed to test for substring
     "test.test_exceptions", # warnings module
     "test.test_iter",       # reference counter behavior
     "test.test_itertools",
-    "test.test_long",       # subclass long, test_float_overflow(), test_logs(), test_mixed_compares()
+    "test.test_long",       # test_logs() - log of big int's unconvertible to floats
     "test.test_marshal",    # code not implemented, file() operations need to be explicitly closed
     "test.test_repr",       # repr for array module commentted out
     "test.test_richcmp",    # VectorTest disabled (due to __cast?), Also "False is False" == False(rarely)

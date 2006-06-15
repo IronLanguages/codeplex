@@ -544,6 +544,48 @@ namespace IronPython.Runtime {
             return EqualRetBool(x, y);
         }
 
+        internal delegate T MultiplySequenceWorker<T>(T self, int count);
+
+        /// <summary>
+        /// Wraps up all the semantics of multiplying sequences so that all of our sequences
+        /// don't duplicate the same logic.  When multiplying sequences we need to deal with
+        /// only multiplying by valid sequence types (ints, not floats), support coercion
+        /// to integers if the type supports it, not multiplying by None, and getting the
+        /// right semantics for multiplying by negative numbers and 1 (w/ and w/o subclasses).
+        /// </summary>
+        internal static object MultiplySequence<T>(MultiplySequenceWorker<T> multiplier, T sequence, object count) {
+            Conversion conv;
+            int value = Converter.TryConvertToInt32(count, out conv);
+            if(conv == Conversion.None) {
+                // check __coerce__...
+                Tuple coerced = Ops.GetDynamicType(count).Coerce(count, 1) as Tuple;
+                if (coerced != null) {
+                    value = Converter.TryConvertToInt32(coerced[0], out conv);
+                    if (conv <= Conversion.Implicit) {
+                        if (value < 0) value = 0;
+                        if (value == 1 && sequence.GetType() == typeof(T)) return sequence;
+
+                        return multiplier(sequence, value);
+                    }
+                }
+
+                if (count != null && !(count is Complex64 || count is ExtensibleComplex)) {
+                    // try __rmul__
+                    object ret;
+                    if (Ops.TryToInvoke(count, SymbolTable.OpReverseMultiply, out ret, sequence)) {
+                        return ret;
+                    }
+                }
+            } else if (conv <= Conversion.Implicit) {
+                if (value < 0) value = 0;
+                if (value == 1 && sequence.GetType() == typeof(T)) return sequence;
+
+                return multiplier(sequence, value);
+            }
+
+            throw Ops.TypeError("can't multiply sequence by non-int");
+        }        
+
         public static object Equal(object x, object y) {
             ExtensibleString es;
 
