@@ -635,7 +635,7 @@ namespace IronPython.Compiler {
                 ExceptionBlock eb = tryBlocks.Peek();
                 eb.AddYieldTarget(node, topYields[node.index], cg);
             } else {
-                throw new NotImplementedException("yield in more than one try block");
+                cg.Context.AddError("yield in more than one try block", node);
             }
         }
 

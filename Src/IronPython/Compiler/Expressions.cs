@@ -45,7 +45,7 @@ namespace IronPython.Compiler {
         }
 
         internal virtual void EmitDel(CodeGen cg) {
-            throw new NotImplementedException("EmitDel: " + this);
+            cg.Context.AddError("can't perform deletion", this);
         }
 
         internal static object[] Evaluate(Expr[] items, NameEnv env) {
@@ -62,7 +62,7 @@ namespace IronPython.Compiler {
         }
 
         internal override void Emit(CodeGen cg) {
-            throw new NotImplementedException("ErrorExpr.Emit");
+            cg.Context.AddError("can't generate error expression", this);
         }
     }
 

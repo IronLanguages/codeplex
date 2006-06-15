@@ -35,9 +35,7 @@ namespace IronPython.Compiler {
             throw new NotImplementedException("execute: " + this);
         }
 
-        internal virtual void Emit(CodeGen cg) {
-            throw new NotImplementedException("Emit: " + this);
-        }
+        internal abstract void Emit(CodeGen cg);
 
         public virtual string GetDocString() {
             return null;
