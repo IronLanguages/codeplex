@@ -82,19 +82,19 @@ def get_values(values, itypes, ftypes):
         sv  = str(v)
         py  = int(v)
         clr = get_clr_values(sv, itypes)
-#        clr.append(myint(py))
-#        clr.append(mylong(py))
+        clr.append(myint(py))
+        clr.append(mylong(py))
         all.append( (py, clr) )
 
         py  = long(v)
         clr = get_clr_values(sv, itypes)
-#        clr.append(myint(py))
-#        clr.append(mylong(py))
+        clr.append(myint(py))
+        clr.append(mylong(py))
         all.append( (py, clr) )
 
         py  = float(v)        
         clr = get_clr_values(sv, ftypes)
-#        clr.append(myfloat(py))
+        clr.append(myfloat(py))
         all.append( (py, clr) )
 
     return all
@@ -145,7 +145,7 @@ def get_messageun(a, op, x_s, x_v, g_s, g_v):
         'g_s' : str(g_s),
         'g_v' : str(g_v)
     }
-    
+
 def verify_b(a, b, op, x_s, x_v, g_s, g_v):
     Assert(x_s == g_s, get_message(a, b, op, x_s, x_v, g_s, g_v))
 
@@ -181,6 +181,10 @@ def verify_implemented_u(implemented, op, a):
     if not implemented:
         print ("Operation not defined: %(op)s( (%(ta)s) (%(a)s))" % { 'op' : op, 'ta' : str(a.GetType()), 'a'  : str(a), })
 
+def extensible(l, r):
+    ii = isinstance
+    return ii(l, myint) or ii(l, mylong) or ii(l, myfloat) or ii(r, myint) or ii(r, mylong) or ii(r, myfloat)
+
 def validate_binary_ops(all):
     total = 0
     for l_rec in all:
@@ -203,26 +207,28 @@ def validate_binary_ops(all):
                             verify_b(l, r, name, x_s, x_v, g_s, g_v)
                             total += 1
 
-                        # l.__xxx__(r)
-                        m_name = "__" + name + "__"
-                        if hasattr(l, m_name):
-                            m = getattr(l, m_name)
-                            g_s, g_v = calc(m, r)
-                            if g_v != NotImplemented:
-                                implemented = True
-                                verify_b(l, r, m_name, x_s, x_v, g_s, g_v)
-                                total += 1
-                                
-                        # r.__rxxx__(l)
-                        m_name = "__r" + name + "__"
-                        if hasattr(r, m_name):
-                            m = getattr(r, m_name)
-                            g_s, g_v = calc(m, l)
-                            if g_v != NotImplemented:
-                                implemented = True
-                                verify_b(l, r, m_name, x_s, x_v, g_s, g_v)
-                                total += 1
-                                
+                        # call __xxx__ and __rxxx__ for non-extensibled types only
+                        if not extensible(l, r):
+                            # l.__xxx__(r)
+                            m_name = "__" + name + "__"
+                            if hasattr(l, m_name):
+                                m = getattr(l, m_name)
+                                g_s, g_v = calc(m, r)
+                                if g_v != NotImplemented:
+                                    implemented = True
+                                    verify_b(l, r, m_name, x_s, x_v, g_s, g_v)
+                                    total += 1
+                                    
+                            # r.__rxxx__(l)
+                            m_name = "__r" + name + "__"
+                            if hasattr(r, m_name):
+                                m = getattr(r, m_name)
+                                g_s, g_v = calc(m, l)
+                                if g_v != NotImplemented:
+                                    implemented = True
+                                    verify_b(l, r, m_name, x_s, x_v, g_s, g_v)
+                                    total += 1
+
                         verify_implemented_b(implemented, name, l, r)
     return total
 

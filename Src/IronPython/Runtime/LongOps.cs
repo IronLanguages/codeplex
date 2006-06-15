@@ -338,7 +338,8 @@ namespace IronPython.Runtime {
             return self.ToFloat64();
         }
 
-        internal static object Power(BigInteger x, ulong exp) {
+        [PythonName("__pow__")]
+        public static object Power(BigInteger x, ulong exp) {
             if (exp == 0) {
                 return BigInteger.One;
             } else if (exp == 1) {
