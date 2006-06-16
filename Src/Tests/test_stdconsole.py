@@ -74,7 +74,7 @@ usageRegex = "IronPython console:(.+)Usage.*"
 
 # Test the -c (command as string) option.
 TestCommandLine(("-c", "print 'foo'"), "foo\n")
-TestCommandLine(("-c", "raise 'foo'"), ("lastline", "StringException: foo\n"), 1)
+TestCommandLine(("-c", "raise 'foo'"), ("lastline", "foo\n"), 1)
 TestCommandLine(("-c", "import sys; sys.exit(123)"), "", 123)
 TestCommandLine(("-c", "import sys; print sys.argv", "foo", "bar", "baz"), "['-c', 'foo', 'bar', 'baz']\n")
 TestCommandLine(("-c",), ("regexp", usageRegex))

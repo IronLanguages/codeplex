@@ -162,20 +162,28 @@ namespace IronPython.Hosting {
             if (python != null) {
                 string str = python as string;
                 if (str != null) {
-                    result += str + Environment.NewLine;
+                    result += str;
+                } else if (python is StringException) {
+                    result += python.ToString();
                 } else {
                     string className = "";
                     object val;
                     if (Ops.TryGetAttr(python, SymbolTable.Class, out val)) {
                         if (Ops.TryGetAttr(val, SymbolTable.Name, out val)) {
                             className = val.ToString();
+                            if (Ops.TryGetAttr(python, SymbolTable.Module, out val)) {
+                                string moduleName = val.ToString();
+                                if (moduleName != ExceptionConverter.defaultExceptionModule) {
+                                    className = moduleName + "." + className;
+                                }
+                            }
                         }
                     }
-                    result += className + ": " + python.ToString() + Environment.NewLine;
+                    result += className + ": " + python.ToString();
                 }
             }
 
-            return result;
+            return result + Environment.NewLine;
         }
 
         private string FormatCLSException(Exception e) {

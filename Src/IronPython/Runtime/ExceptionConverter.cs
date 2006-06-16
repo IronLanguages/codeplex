@@ -50,7 +50,7 @@ namespace IronPython.Runtime.Exceptions {
 
         const string pythonExceptionKey = "PythonExceptionInfo";
         const string prevStackTraces = "PreviousStackTraces";
-        const string defaultExceptionModule = "exceptions";
+        internal const string defaultExceptionModule = "exceptions";
         static readonly DynamicType defaultExceptionBaseType; // assigned in static constructor
 
         /*********************************************************

@@ -31,43 +31,37 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
 
-[assembly: PythonModule("_socket", typeof(IronPython.Modules.PythonSocket))]
+[assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]
 namespace IronPython.Modules {
     public static class PythonSocket {
         public static string __doc__ = "Implementation module for socket operations.\n\n"
-            + "See the socket module for documentation.\n"
             + "This module is a loose wrapper around the .NET System.Net.Sockets API, so you\n"
             + "may find the corresponding MSDN documentation helpful in decoding error\n"
             + "messages and understanding corner cases.\n"
             + "\n"
-            + "This implementation of _socket differs slightly from the standard CPython\n"
-            + "_socket module. Most of these differences are due to the implementation of the\n"
+            + "This implementation of socket differs slightly from the standard CPython\n"
+            + "socket module. Many of these differences are due to the implementation of the\n"
             + ".NET socket libraries. These differences are summarized below. For full\n"
             + "details, check the docstrings of the functions mentioned.\n"
             + " - s.accept(), s.connect(), and s.connect_ex() do not support timeouts.\n"
             + " - Timeouts in s.sendall() don't work correctly.\n"
+            + " - makefile() and s.dup() are not implemented.\n"
             + " - getaddrinfo(), getservbyname(), and getservbyport() are not implemented.\n"
             + " - SSL support is not implemented."
-            + " - socket objects implement their own reference counting and modify socket.py's\n"
-            + "   _socketobject._sock descriptor to automatically manage reference counts.\n"
-            + "   See the documentation for InstallRefCountHook() in _socket.cs for more\n"
-            + "   details.\n"
             + "\n"
-            + "Extra IronPython-specific functions are exposed only if the clr module is\n"
+            + "An Extra IronPython-specific function is exposed only if the clr module is\n"
             + "imported:\n"
             + " - s.HandleToSocket() returns the System.Net.Sockets.Socket object associated\n"
             + "   with a particular \"file descriptor number\" (as returned by s.fileno()).\n"
-            + " - s.RefCount, s.AcquireRef(), and s.ReleaseRef() provide access to socket\n"
-            + "   reference counting (see above)."
             ;
 
         #region Socket object
 
         public static DynamicType socket = Ops.GetDynamicTypeFromType(typeof(SocketObj));
-        // SocketType is implemented by socket.py, so we don't need to define it here
+        public static DynamicType SocketType = socket;
 
         [PythonType("socket")]
-        public class SocketObj : IRefCounted {
+        public class SocketObj : IWeakReferenceable {
             public static string __doc__ = "socket([family[, type[, proto]]]) -> socket object\n\n"
                 + "Create a socket (a network connection endpoint) of the given family, type,\n"
                 + "and protocol. socket() accepts keyword arguments.\n"
@@ -93,27 +87,36 @@ namespace IronPython.Modules {
             private const int DefaultProtocolType = (int)ProtocolType.Unspecified;
 
             private Socket socket;
-            private int refCount = 0;
+            private WeakRefTracker weakRefTracker = null;
 
             #endregion
 
             #region Public API
 
-            [Documentation("__new__() -> socket object\n\n"
-                + "Create a new socket and install the _socketobject refcounting hook if it hasn't\n"
-                + "already been installed"
-                )]
-            [PythonName("__new__")]
-            public static object Make(ICallerContext context, DynamicType @class,
-                [DefaultParameterValue(DefaultAddressFamily)] int addressFamily,
+            public SocketObj([DefaultParameterValue(DefaultAddressFamily)] int addressFamily,
                 [DefaultParameterValue(DefaultSocketType)] int socketType,
                 [DefaultParameterValue(DefaultProtocolType)] int protocolType) {
 
-                if (!context.SystemState.isSocketRefCountHookInstalled) {
-                    InstallRefCountHook(context);
+                System.Net.Sockets.SocketType type = (System.Net.Sockets.SocketType)Enum.ToObject(typeof(System.Net.Sockets.SocketType), socketType);
+                if (!Enum.IsDefined(typeof(System.Net.Sockets.SocketType), type)) {
+                    throw MakeException(new SocketException((int)SocketError.SocketNotSupported));
+                }
+                AddressFamily family = (AddressFamily)Enum.ToObject(typeof(AddressFamily), addressFamily);
+                if (!Enum.IsDefined(typeof(AddressFamily), family)) {
+                    throw MakeException(new SocketException((int)SocketError.AddressFamilyNotSupported));
+                }
+                ProtocolType proto = (ProtocolType)Enum.ToObject(typeof(ProtocolType), protocolType);
+                if (!Enum.IsDefined(typeof(ProtocolType), proto)) {
+                    throw MakeException(new SocketException((int)SocketError.ProtocolNotSupported));
                 }
 
-                return new SocketObj(addressFamily, socketType, protocolType);
+                Socket newSocket;
+                try {
+                    newSocket = new Socket(family, type, proto);
+                } catch (SocketException e) {
+                    throw MakeException(e);
+                }
+                Initialize(newSocket);
             }
 
             [Documentation("accept() -> (conn, address)\n\n"
@@ -161,7 +164,6 @@ namespace IronPython.Modules {
             [Documentation("close() -> None\n\nClose the socket. It cannot be used after being closed.")]
             [PythonName("close")]
             public void Close() {
-                Debug.Assert(RefCount == 0, "refcount must be zero before closing socket");
                 lock (handleToSocket) {
                     List<Socket> sockets;
                     if (handleToSocket.TryGetValue((IntPtr)socket.Handle, out sockets)) {
@@ -613,69 +615,24 @@ namespace IronPython.Modules {
 
             #endregion
 
-            #region IRefCounted Members
+            #region IWeakReferenceable Implementation
 
-            /// <summary>
-            /// The number of references to this socket held by other code. (Read only.)
-            /// </summary>
-            public int RefCount {
-                get { return refCount; }
+            public WeakRefTracker GetWeakRef() {
+                return weakRefTracker;
             }
 
-            /// <summary>
-            /// Increment the reference count and return the new value.
-            /// </summary>
-            public int AcquireRef() {
-                lock (this) {
-                    refCount++;
-                    return refCount;
-                }
+            public bool SetWeakRef(WeakRefTracker value) {
+                weakRefTracker = value;
+                return true;
             }
-            
-            /// <summary>
-            /// Decrement the reference count and return the new value. Close() is called
-            /// automatically when the reference count reaches zero.
-            /// </summary>
-            public int ReleaseRef() {
-                lock (this) {
-                    if (refCount < 1) throw Ops.RuntimeError("cannot have negative refcount");
-                    refCount--;
-                    if (refCount == 0) {
-                        Close();
-                    }
-                    return refCount;
-                }
+
+            public void SetFinalizer(WeakRefTracker value) {
+                weakRefTracker = value;
             }
 
             #endregion
 
-            #region Private Methods
-
-            private SocketObj([DefaultParameterValue(DefaultAddressFamily)] int addressFamily,
-                [DefaultParameterValue(DefaultSocketType)] int socketType,
-                [DefaultParameterValue(DefaultProtocolType)] int protocolType) {
-
-                System.Net.Sockets.SocketType type = (System.Net.Sockets.SocketType)Enum.ToObject(typeof(System.Net.Sockets.SocketType), socketType);
-                if (!Enum.IsDefined(typeof(System.Net.Sockets.SocketType), type)) {
-                    throw MakeException(new SocketException((int)SocketError.SocketNotSupported));
-                }
-                AddressFamily family = (AddressFamily)Enum.ToObject(typeof(AddressFamily), addressFamily);
-                if (!Enum.IsDefined(typeof(AddressFamily), family)) {
-                    throw MakeException(new SocketException((int)SocketError.AddressFamilyNotSupported));
-                }
-                ProtocolType proto = (ProtocolType)Enum.ToObject(typeof(ProtocolType), protocolType);
-                if (!Enum.IsDefined(typeof(ProtocolType), proto)) {
-                    throw MakeException(new SocketException((int)SocketError.ProtocolNotSupported));
-                }
-
-                Socket newSocket;
-                try {
-                    newSocket = new Socket(family, type, proto);
-                } catch (SocketException e) {
-                    throw MakeException(e);
-                }
-                Initialize(newSocket);
-            }
+            #region Private Implementation
 
             /// <summary>
             /// Create a Python socket object from an existing .NET socket object
@@ -683,52 +640,6 @@ namespace IronPython.Modules {
             /// </summary>
             private SocketObj(Socket socket) {
                 Initialize(socket);
-            }
-
-            /// <summary>
-            /// This is a hack to implement reference counting for socket objects created by
-            /// _socketobject instances.
-            /// 
-            /// Python's socket.py proxies calls to socket objects through a _socketobject wrapper, which
-            /// maintains a reference to the real socket object (this) through its _sock attribute.
-            /// _socketobject.close() doesn't call _sock.close(); rather, it sets _sock to an instance
-            /// of _closedsocket, and relies on Python's garbage collector to clean up the socket. That works
-            /// fine with CPython's reference counting GC, but causes problems with the CLR GC since connected
-            /// sockets can hang around for a long time.
-            /// 
-            /// To solve this problem, we retrofit reference counting into _socketobject by replacing its _sock
-            /// descriptor (which is normally a standard property descriptor) with a special descriptor that
-            /// maintains reference counts when _socketobject._sock is assigned to. SocketObj instances
-            /// automatically close themselves when their reference count reaches zero.
-            /// 
-            /// Note that this breaks down if user code obtains a reference to _socketobject._sock manually
-            /// and then disposes of the _socketobject. The reference counting will close the socket even
-            /// though there's still a reference hanging around. To avoid this, the user code should import
-            /// the clr module (to gain access to hidden reference counting methods) and then call
-            /// _sock.AcquireRef() and _sock.ReleaseRef() at appropriate times. The current reference count
-            /// may be retrieved using _sock.RefCount
-            /// 
-            /// References:
-            /// http://mail.python.org/pipermail/python-dev/2006-June/065991.html
-            /// http://mail.python.org/pipermail/python-dev/2006-June/065999.html
-            /// </summary>
-            private static void InstallRefCountHook(ICallerContext context) {
-                object socketObjectAttr;
-                bool hasSocketObjectAttr = context.Module.__dict__.TryGetObjectValue("_socketobject", out socketObjectAttr);
-                PythonType socketObjectType = socketObjectAttr as PythonType;
-
-                if (context.Module.ModuleName == "socket"
-                    && hasSocketObjectAttr
-                    && socketObjectType != null
-                    && socketObjectType.dict.ContainsObjectKey("_sock")
-                    ) {
-
-                    ReflectedProperty _sockDescriptor = socketObjectType.dict[SymbolTable.StringToId("_sock")] as ReflectedProperty;
-                    if (_sockDescriptor != null) {
-                        socketObjectType.dict[SymbolTable.StringToId("_sock")] = new RefCountedReflectedProperty(_sockDescriptor);
-                        context.SystemState.isSocketRefCountHookInstalled = true;
-                    }
-                }
             }
 
             /// <summary>
@@ -876,6 +787,41 @@ namespace IronPython.Modules {
         [PythonName("getaddrinfo")]
         public static Tuple GetAddrInfo(string host, object port) {
             throw Ops.NotImplementedError("getaddrinfo() is not currently implemented");
+        }
+
+        [Documentation("getfqdn([hostname_or_ip]) -> hostname\n\n"
+            + "Return the fully-qualified domain name for the specified hostname or IP\n"
+            + "address. An unspecified or empty name is interpreted as the local host. If the\n"
+            + "name lookup fails, the passed-in name is returned as-is."
+            )]
+        [PythonName("getfqdn")]
+        public static string GetFQDN(string host) {
+            host = host.Trim();
+            if (host == BroadcastAddrToken) {
+                return host;
+            }
+            try {
+                IPHostEntry hostEntry = Dns.GetHostEntry(host);
+                if (hostEntry.HostName.Contains(".")) {
+                    return hostEntry.HostName;
+                } else {
+                    foreach (string addr in hostEntry.Aliases) {
+                        if (addr.Contains(".")) {
+                            return addr;
+                        }
+                    }
+                }
+            } catch (SocketException) {
+                // ignore and return host below
+            }
+            // seems to match CPython behavior, although docs say gethostname() should be returned
+            return host;
+        }
+
+        [Documentation("")]
+        [PythonName("getfqdn")]
+        public static string GetFQDN() {
+            return GetFQDN(LocalhostAddrToken);
         }
 
         [Documentation("gethostbyname(hostname) -> ip address\n\n"
@@ -1395,81 +1341,6 @@ namespace IronPython.Modules {
 
         #region Private implementation
 
-        private interface IRefCounted {
-            int RefCount { get; }
-            int AcquireRef();
-            int ReleaseRef();
-        }
-
-        private class RefCountedReflectedProperty : IDataDescriptor, IContextAwareMember {
-            private ReflectedProperty origProp;
-
-            public RefCountedReflectedProperty(ReflectedProperty origProp) {
-                this.origProp = origProp;
-            }
-
-            public string Documentation {
-                [PythonName("__doc__")]
-                get { return origProp.Documentation; }
-            }
-
-            #region IDataDescriptor Members
-
-            [PythonName("__get__")]
-            public object GetAttribute(object instance, object context) {
-                return origProp.GetAttribute(instance, context);
-            }
-
-            [PythonName("__set__")]
-            public bool SetAttribute(object instance, object value) {
-                IRefCounted oldValue = null;
-                try {
-                    oldValue = GetAttribute(instance, DefaultContext.Default) as IRefCounted;
-                } catch (MissingMemberException) {
-                    // attribute doesn't currently have a value, which is fine
-                }
-
-                bool success = origProp.SetAttribute(instance, value);
-
-                // Do refcounting after upstream call in case upstream fails
-                if (success) {
-                    if (value is IRefCounted) ((IRefCounted)value).AcquireRef();
-                    if (oldValue != null) oldValue.ReleaseRef();
-                }
-                return success;
-            }
-
-            [PythonName("__delete__")]
-            public virtual bool DeleteAttribute(object instance) {
-                IRefCounted oldValue = null;
-                try {
-                    oldValue = GetAttribute(instance, DefaultContext.Default) as IRefCounted;
-                } catch (MissingMemberException) {
-                    // if the attribute doesn't exist, we'll let the DeleteAttribute call below complain instead of GetAttribute above
-                }
-                bool success = origProp.DeleteAttribute(instance);
-                if (success) {
-                    if (oldValue != null) oldValue.ReleaseRef();
-                }
-                return success;
-            }
-
-            [PythonName("__str__")]
-            public override string ToString() {
-                return string.Format("<refcountedproperty# {0} on {1}>", origProp.info.Name, origProp.info.DeclaringType.Name);
-            }
-
-            #endregion
-
-            #region IContextAwareMember Members
-
-            public bool IsVisible(ICallerContext context) {
-                return origProp.IsVisible(context);
-            }
-
-            #endregion
-        }
-
         /// <summary>
         /// Return a standard socket exception (socket.error) whose message and error code come from a SocketException
         /// This will eventually be enhanced to generate the correct error type (error, herror, gaierror) based on the error code.
@@ -1605,40 +1476,6 @@ namespace IronPython.Modules {
             } catch (SocketException e) {
                 throw MakeException(gaierror, e.ErrorCode, "no IPv4 addresses associated with host");
             }
-        }
-
-        /// <summary>
-        /// Return the fully-qualified domain name for the specified hostname. An
-        /// unspecified or empty name is interpreted as the local host. If the name lookup
-        /// fails, the passed-in name is returned as-is.
-        /// </summary>
-        private static string GetFQDN(string host) {
-            // This function is implemented in socket.py, so we don't export it. However, we have
-            // to define it here because we need a version to use internally.
-            host = host.Trim();
-            if (host == BroadcastAddrToken) {
-                return host;
-            }
-            try {
-                IPHostEntry hostEntry = Dns.GetHostEntry(host);
-                if (hostEntry.HostName.Contains(".")) {
-                    return hostEntry.HostName;
-                } else {
-                    foreach (string addr in hostEntry.Aliases) {
-                        if (addr.Contains(".")) {
-                            return addr;
-                        }
-                    }
-                }
-            } catch (SocketException) {
-                // ignore and return host below
-            }
-            // seems to match CPython behavior, although docs say gethostname() should be returned
-            return host;
-        }
-
-        private static string GetFQDN() {
-            return GetFQDN(LocalhostAddrToken);
         }
 
         /// <summary>
