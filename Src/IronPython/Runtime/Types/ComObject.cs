@@ -587,7 +587,7 @@ namespace IronPython.Runtime.Types {
 }
 
 #if COM_GAC_CRAWLER
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Types {
     [ComImport, GuidAttribute("31BCFCE2-DAFB-11D2-9F81-00C04F79A0A3"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IMetaDataDispenserEx {
         uint DefineScope(ref Guid rclsid, uint dwCreateFlags, ref Guid riid, [MarshalAs(UnmanagedType.Interface)]out object ppIUnk);

@@ -18,10 +18,9 @@ using System.Collections;
 using System.Collections.Generic;
 
 using IronPython.Runtime.Types;
-
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
-    using IronPython.Runtime.Calls;
 
     internal interface IExtensible<T> {
         T Value {
@@ -258,33 +257,5 @@ namespace IronPython.Runtime {
 
     public interface ICustomExceptionConversion {
         object ToPythonException();
-    }
-}
-
-namespace IronPython.Runtime.Calls {
-    public interface ICallable {
-        object Call(params object[] args);
-    }
-
-    public interface IFancyCallable {
-        object Call(ICallerContext context, object[] args, string[] names);
-    }
-
-    public interface ICallableWithCallerContext {
-        object Call(ICallerContext context, object[] args);
-    }
-    public interface IContextAwareMember {
-        bool IsVisible(ICallerContext context);
-    }
-
-    public interface ICallerContext {
-        PythonModule Module { get; }
-        SystemState SystemState { get;} 
-        object Locals { get; }
-        IAttributesDictionary Globals { get; }
-        object GetStaticData(int index);
-        bool TrueDivision { get; set; }
-        CallerContextFlags ContextFlags { get; set; }
-        IronPython.Compiler.CompilerContext CreateCompilerContext();
     }
 }
