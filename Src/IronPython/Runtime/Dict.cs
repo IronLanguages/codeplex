@@ -33,6 +33,11 @@ namespace IronPython.Runtime {
 
         internal Dictionary<object, object> data;
 
+        internal static object MakeDict(PythonType cls) {            
+            if(cls == TypeCache.Dict) return new Dict();            
+            return cls.Call();
+        }
+
         #region Constructors
         public Dict() {
             this.data = new Dictionary<object, object>(Comparer);
@@ -46,6 +51,17 @@ namespace IronPython.Runtime {
         internal Dict(int size) { data = new Dictionary<object, object>(size, Comparer); }
 
         [PythonName("__init__")]
+        public void Initialize(object o, [ParamDict] Dict kwArgs) {
+            Update(o);
+            Update(kwArgs);
+        }
+
+        [PythonName("__init__")]
+        public void Initialize([ParamDict] Dict kwArgs) {
+            Update(kwArgs);
+        }
+
+        [PythonName("__init__")]
         public void Initialize(object o) {
             Update(o);
         }
@@ -54,16 +70,6 @@ namespace IronPython.Runtime {
         public void Initialize() {
         }
 
-        /// <summary>
-        /// Helper function for creating a dictionary of the specified type (either
-        /// Dict's type or a subtype of dict)
-        /// </summary>
-        internal static object MakeDict(PythonType cls) {
-            if (cls == TypeCache.Dict) {
-                return new Dict();
-            }
-            return cls.Call(new object[0]);
-        }
         #endregion
 
         #region Object overrides
@@ -312,7 +318,7 @@ namespace IronPython.Runtime {
             XRange xr = seq as XRange;
             if (xr != null) {
                 int n = xr.GetLength();
-                object ret = MakeDict(cls);
+                object ret = cls.Call();
                 if (ret.GetType() == typeof(Dict)) {
                     Dict dr = ret as Dict;
                     for (int i = 0; i < n; i++) {
@@ -809,28 +815,6 @@ namespace IronPython.Runtime {
             ritems.Sort();
 
             return litems.CompareTo(ritems);
-        }
-    }
-
-    public class DictDynamicType : IronPython.Runtime.Types.ReflectedType, IFancyCallable {
-        public DictDynamicType()
-            : base(typeof(Dict)) {
-        }
-
-        public object Call(ICallerContext context, object[] args, string[] names) {
-            Initialize();
-
-            object[] newArgs = new object[(args.Length - names.Length) + 1];
-            Array.Copy(args, 0, newArgs, 1, newArgs.Length - 1);
-            newArgs[0] = TypeCache.Dict;
-            Dict ret = (Dict)ctor.Call(newArgs);
-            if (newArgs.Length > 2) throw Ops.TypeError("dict expected at most 1 arguments, got {0}",newArgs.Length-1);
-            if (newArgs.Length == 2) ret.Initialize(newArgs[1]);            
-
-            for (int i = 0; i < names.Length; i++) {
-                ret[names[i]] = args[i + (newArgs.Length - 1)];
-            }
-            return ret;
         }
     }
 

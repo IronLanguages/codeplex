@@ -111,6 +111,7 @@ namespace IronPython.Runtime.Calls {
         public FastCallable OptimizedTarget {
             get {
                 if (optimizedTarget == null) {
+                    if (targets.Length == 0) throw Ops.TypeError("cannot call generic method w/o specifying type");
                     optimizedTarget = MethodBinder.MakeFastCallable(Name, targets, FunctionType);
                     if (IsReversedOperator) optimizedTarget = new ReversedFastCallableWrapper(optimizedTarget);
                 }

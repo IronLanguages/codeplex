@@ -799,6 +799,11 @@ if is_cli:
     AreEqual(clr.GetClrType(str), ''.GetType())
     # and ensure we're not just auto-converting back on both of them
     Assert(clr.GetClrType(str) != str)
+    
+    # as well as GetPythonType
+    import System
+    AreEqual(clr.GetPythonType(System.Int32), int)
+    AreEqual(clr.GetPythonType(clr.GetClrType(int)), int)
 
 
 

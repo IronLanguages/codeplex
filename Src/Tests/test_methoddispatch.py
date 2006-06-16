@@ -1197,3 +1197,18 @@ res = clr.GetClrType(str).InvokeMember('ToString', System.Reflection.BindingFlag
 AreEqual(res, 'abc')
 
 
+#***** Above code are from 'BindingTest' *****
+
+
+# verify calling a generic method w/o args throws a reasonable exception
+
+import System
+x = System.Array.CreateInstance(System.Byte, 1024)
+try:
+    System.Array.Resize(x, 2048)
+    AreEqual(True, False)
+except TypeError:
+    pass
+
+
+System.Array.Resize[System.Byte](x, 2048)

@@ -117,6 +117,8 @@ namespace IronPython.Compiler {
                 if (ts.NeedsContext) needsContext = true;
             }
 
+            if (targetSets.Count == 0) return new FastCallableUgly(this);
+
             if (targetSets.Count == 1 && paramsMakers.Count == 0) {
                 TargetSet ts = new List<TargetSet>(targetSets.Values)[0];
                 if (ts.count <= Ops.MaximumCallArgs) return ts.MakeFastCallable();
@@ -147,7 +149,8 @@ namespace IronPython.Compiler {
             }
         }
 
-        private Exception BadArgumentCount(CallType callType, int argCount) {
+        private Exception BadArgumentCount(CallType callType, int argCount) {            
+            if (targetSets.Count == 0) return Ops.TypeError("no callable targets, if this is a generic method make sure specify the type parameters");
             int minArgs, maxArgs;
             GetMinAndMaxArgs(out minArgs, out maxArgs);
 

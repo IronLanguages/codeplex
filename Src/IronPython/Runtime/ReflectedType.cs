@@ -1465,6 +1465,8 @@ namespace IronPython.Runtime.Types {
                     return ifc.Call(context, args, names);
                 }
             } else {
+                if (rc.GetMaximumArguments() == 0) return rc.Call(); //??? not-enough args case
+
                 // calling ctor (non-derived class)
                 IFancyCallable ifc = callTarget as IFancyCallable;
                 if (ifc != null) {

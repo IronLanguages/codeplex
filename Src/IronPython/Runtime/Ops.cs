@@ -481,7 +481,6 @@ namespace IronPython.Runtime.Operations {
 
             ret[typeof(long)] = Int64Ops.MakeDynamicType((ReflectedType)ret[typeof(BigInteger)]);
             ret[typeof(bool)] = BoolOps.MakeDynamicType((ReflectedType)ret[typeof(int)]);
-            ret[typeof(Dict)] = new DictDynamicType();
             ret[typeof(OldInstance)] = OldInstanceType.Instance;
             ret[typeof(Array)] = ArrayOps.MakeDynamicType();
             ret[typeof(Assembly)] = ReflectedAssemblyType.MakeDynamicType();

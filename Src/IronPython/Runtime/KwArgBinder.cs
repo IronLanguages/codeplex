@@ -80,7 +80,7 @@ namespace IronPython.Runtime.Calls {
                         kwDict = pis.Length - 2;
                     }
                 }else if (pis[pis.Length - 1].IsDefined(typeof(ParamDictAttribute), false)) {
-                    paramsArray = pis.Length - 1;
+                    kwDict = pis.Length - 1;
                 }  
             }
 

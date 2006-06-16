@@ -159,6 +159,10 @@ namespace IronPython.Modules {
             return type;
         }
 
+        public DynamicType GetPythonType(Type t) {
+            return Ops.GetDynamicTypeFromType(t);
+        }
+
         #endregion
 
         public class Reference {

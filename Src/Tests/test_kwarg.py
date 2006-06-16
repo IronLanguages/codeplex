@@ -659,3 +659,10 @@ AreEqual(a, ['abc'])
 # types
 
 AreEqual(list.__call__(sequence='abc'), ['a', 'b', 'c'])
+
+
+# calling dict subtype w/ kwargs:
+
+class x(dict): pass
+
+AreEqual(x(a=1)['a'], 1)
