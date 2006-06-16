@@ -377,9 +377,8 @@ sys.exc_type = None
 
 
 AreEqual(str(Exception()), '')
-#***** Above code are from 'Exceptions' *****
 
-#***** Copying from 'errors' *****
+#####################################################################
 
 if is_cli:
     import System

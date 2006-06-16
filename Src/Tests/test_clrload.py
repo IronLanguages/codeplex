@@ -233,4 +233,3 @@ AssertError(AttributeError, f)
 del x.BarNamespace.Bar
 AssertError(AttributeError, lambda: x.BarNamespace.Bar)
 
-#***** Above code are from 'Loader' *****

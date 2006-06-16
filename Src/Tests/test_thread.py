@@ -68,4 +68,3 @@ Thread.Sleep(1000)  # wait a bit and make sure we don't get ripped.
 
 sys.stdout = so
 sys.stderr = se
-#***** Above code are from 'Thread' *****

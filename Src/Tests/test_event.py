@@ -68,4 +68,3 @@ except TypeError:
     pass
     
 
-#***** Above code are from 'Events' *****

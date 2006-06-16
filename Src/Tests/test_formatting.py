@@ -226,4 +226,4 @@ AreEqual("%5s" % None, ' None')
 AreEqual("%5s" % 'abc', '  abc')
 AreEqual("%+5s" % 'abc', '  abc')
 AreEqual("%-5s" % 'abc', 'abc  ')
-#***** Above code are from 'Formatting' *****
+ 

@@ -69,4 +69,3 @@ y = eval("a.Split(' ')")
 AreEqual(y[0], "hello")
 AreEqual(y[1], "world")
 
-#***** Above code are from 'HideCLS' *****

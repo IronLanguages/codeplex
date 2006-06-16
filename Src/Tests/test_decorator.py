@@ -162,4 +162,4 @@ def f():
 
 AreEqual(f, ['first', 'dn.d5', 'd4', 'dn.d3', 'd2', 'dn.d1'])
 
-#***** Above code are from 'Decorators' *****
+ 

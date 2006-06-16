@@ -609,4 +609,3 @@ Assert(not prov.Supports(SCC.GeneratorSupport.Win32Resources))
 
 AreEqual(prov.FileExtension, 'py')
 
-#***** Above code are from 'CodeDom' *****

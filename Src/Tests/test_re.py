@@ -245,7 +245,8 @@ Assert(tup == ('cdcdcdcdcdcd', 6))
 
 # bug 870
 AreEqual(re.search('b', 'abc').string, 'abc')
-#***** Above code are from 'regexp' *****
+
+#####################################################################
 
 s = ''
 for i in range(32, 128):

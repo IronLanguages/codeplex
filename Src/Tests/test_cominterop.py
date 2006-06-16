@@ -199,4 +199,3 @@ if IntPtr.Size < 8:
     ppt_test()
 else:
     print "Warning: Skipping Interop tests on 64-bit machines"
-#***** Above code are from 'Interop' *****

@@ -219,4 +219,3 @@ TestCommandLine(("-Q", "old", "-c", "3/2"), "1\n")
 TestCommandLine(("-Q", "warn", "-c", "3/2"), "1\n")
 TestCommandLine(("-Q", "warnall", "-c", "3/2"), "1\n")
 
-#***** Above code are from 'StdConsole' *****

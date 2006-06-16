@@ -428,9 +428,7 @@ AreEqual(dir(test).count('max'), 0)     # used builtin, never assigned to
 AreEqual(dir(test).count('cmp'), 0)     # used, assigned to, deleted, shouldn't be visibled
 AreEqual(dir(test).count('del'), 0)     # assigned to, deleted, never used
 
-#***** Above code are from 'Import' *****
 #########################################################################################
-#***** Copying from 'ImportAs' *****
 
 import clr
 clr.AddReferenceByPartialName("System.Windows.Forms")

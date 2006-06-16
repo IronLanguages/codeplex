@@ -584,9 +584,6 @@ Assert(d2 <= d1)
 
 #####################################################################
 
-#***** Above code are from 'Dictionary' *****
-
-
 # subclassing dict, overriding __init__
 
 class foo(dict):

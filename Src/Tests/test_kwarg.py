@@ -637,7 +637,9 @@ if is_cli:
 def Regress444(**kw):
     return kw['kw']
 Assert(100 == Regress444(kw=100))
-#***** Above code are from 'KwArgs' *****
+
+
+#####################################################################
 
 
 # using __call__ w/ keyword args should be the same as doing a call w/ kw-args

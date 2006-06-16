@@ -50,4 +50,3 @@ while j > k:
 
 Assert(12297829382473034410)
 
-#***** Above code are from 'BigInt' *****

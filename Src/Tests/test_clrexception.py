@@ -110,4 +110,3 @@ clr_to_py_positive(System.NotFiniteNumberException, ArithmeticError, msg = "Syst
 # StopIteration can be caught as an InvalidOperationException
 py_to_clr_positive(StopIteration, System.InvalidOperationException, msg = "StopIteration -> System.InvalidOperationException")
 
-#***** Above code are from 'ExceptionMapping' *****

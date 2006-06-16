@@ -84,4 +84,4 @@ AreEqual(x.fget, None)
 AreEqual(x.fset, None)
 AreEqual(x.fdel, None)
 AreEqual(x.__doc__, 'Holliday')
-#***** Above code are from 'properties' *****
+ 

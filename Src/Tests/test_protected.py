@@ -68,4 +68,3 @@ AreEqual(a.ProtectedProperty, "MyInherited.Protected")
 AreEqual(a.CallProtectedProp(), "MyInherited.Protected")
 
 
-#***** Above code are from 'ProtectedTests' *****

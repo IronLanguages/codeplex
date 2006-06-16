@@ -93,4 +93,3 @@ AssertErrorWithMessages(TypeError, "iter() takes at least 1 argument (0 given)",
                                    "iter expected at least 1 arguments, got 0", iter)
 
 
-#***** Above code are from 'Iterator' *****

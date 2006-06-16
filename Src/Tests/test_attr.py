@@ -123,4 +123,3 @@ AssertErrorWithMessages(AttributeError, "attribute 'center' of 'str' object is r
 AssertErrorWithMessages(AttributeError, "attribute 'center' of 'str' object is read-only", 
                                         "'str' object attribute 'center' is read-only", s.__delattr__, "center")
 
-#***** Above code are from 'Attrs' *****

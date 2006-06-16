@@ -173,4 +173,3 @@ if doRun:
 
     Assert(re.match(testRegex, chopped))
 
-#***** Above code are from 'SuperConsole' *****

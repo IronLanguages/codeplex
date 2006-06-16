@@ -1054,4 +1054,3 @@ for x in range(50):
     a.funcCalled = False
     
 
-#***** Above code are from 'Inheritance' *****

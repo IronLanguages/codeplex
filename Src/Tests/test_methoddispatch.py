@@ -1197,4 +1197,3 @@ res = clr.GetClrType(str).InvokeMember('ToString', System.Reflection.BindingFlag
 AreEqual(res, 'abc')
 
 
-#***** Above code are from 'BindingTest' *****

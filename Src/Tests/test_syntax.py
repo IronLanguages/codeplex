@@ -373,4 +373,3 @@ test_multiline_compound_stmts()
 
 def endoffile():
     return "Hi" # and some comment here
-#***** Above code are from 'Syntax' *****

@@ -177,4 +177,4 @@ def f():
 
 AreEqual(list(f()), [1, 2, 3, 11, 12, 13])
 
-#***** Above code are from 'Generators' *****
+ 

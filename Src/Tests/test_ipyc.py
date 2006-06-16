@@ -332,4 +332,3 @@ sink = TestSink()
 CompileWithSink(source1, assembly, sink)
 Assert(len(sink.errors) > 0)
 
-#***** Above code are from 'compiler' *****

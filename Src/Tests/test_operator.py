@@ -305,7 +305,7 @@ AreEqual(divmod(DM(), 10), "__divmod__")
 AreEqual(divmod(NewDM(10), NewDM(5)), (2, 0))
 AreEqual(divmod(CallDM(), 2), "__call__")
 
-#***** Above code are from 'Operators' *****
+#####################################################################
 
 # object identity of booleans - __ne__ should return "True" or "False", not a new boxed bool
 

@@ -96,4 +96,3 @@ names = {}
 eval(e, names)
 AreEqual(names['z'], 5)
 
-#***** Above code are from 'EvalLeaks' *****
