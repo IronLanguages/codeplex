@@ -99,7 +99,9 @@ namespace IronPython.Compiler.Generation {
         }
 
         private static NewTypeMaker GetTypeMaker(Tuple bases, string typeName, NewTypeInfo ti) {
-            if (IsInstanceType(ti.BaseType)) return new NewSubtypeMaker(bases, typeName, ti);
+            if (IsInstanceType(ti.BaseType)) {
+                return new NewSubtypeMaker(bases, typeName, ti);
+            }
 
             return new NewTypeMaker(bases, typeName, ti);
         }
@@ -212,6 +214,14 @@ namespace IronPython.Compiler.Generation {
                                 (slots2[0] == "__dict__" && slots1[0] == "__weakref__"))) {
                                 isOkConflit = true;
                                 curTypeToExtend = curBasePythonType.type.BaseType;
+                                if (slots != null) {
+                                    if (slots.Contains("__weakref__"))
+                                        throw Ops.TypeError("__weakref__ disallowed, base class already defines this");
+
+                                    slots.Add("__weakref__");
+                                    if (!slots.Contains("__dict__"))
+                                        slots.Add("__dict__");
+                                }                                
                             }
                         }
                         if(!isOkConflit) throw Ops.TypeError(typeName + ": can only extend one CLI or builtin type, not both {0} (for {1}) and {2} (for {3})",
