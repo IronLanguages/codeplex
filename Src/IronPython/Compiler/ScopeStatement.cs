@@ -17,11 +17,12 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Diagnostics;
-using IronPython.Runtime;
-
 using System.Reflection.Emit;
 
-namespace IronPython.Compiler {
+using IronPython.Runtime;
+using IronPython.Compiler.Generation;
+
+namespace IronPython.Compiler.AST {
     public abstract partial class ScopeStatement : Stmt {
         public class Binding {
             [Flags]

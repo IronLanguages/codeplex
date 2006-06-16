@@ -19,7 +19,7 @@ load_iron_python_test()
 import IronPythonTest
 
 import System
-from IronPython.Runtime import ExceptionConverter as EC
+from IronPython.Runtime.Exceptions import ExceptionConverter as EC
 
 # CreatePythonException
 

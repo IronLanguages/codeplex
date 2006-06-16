@@ -18,9 +18,12 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Collections.Generic;
 using System.Diagnostics;
-using IronPython.Runtime;
 
-namespace IronPython.Compiler {
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+
+namespace IronPython.Compiler.Generation {
     abstract class SlotFactory {
         public Slot MakeSlot(SymbolId name) {
             return MakeSlot(name, typeof(object));

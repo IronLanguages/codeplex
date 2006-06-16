@@ -18,10 +18,12 @@ using System.Collections.Generic;
 using System.Text;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 
-[assembly: PythonModule("binascii", typeof(IronPython.Modules.BinaryAscii))]
+[assembly: PythonModule("binascii", typeof(IronPython.Modules.PythonBinaryAscii))]
 namespace IronPython.Modules {
-    public static class BinaryAscii {
+    public static class PythonBinaryAscii {
         public static object Error = ExceptionConverter.CreatePythonException("Error", "binascii");
 
         [PythonName("a2b_uu")]

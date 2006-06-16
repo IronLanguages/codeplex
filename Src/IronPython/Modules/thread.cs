@@ -21,7 +21,9 @@ using System.Threading;
 using System.Diagnostics;
 
 using IronPython.Runtime;
-
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {

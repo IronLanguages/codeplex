@@ -16,7 +16,7 @@
 using IronPython.Compiler;
 
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.AST {
 
     #region Generated AST Walker
 

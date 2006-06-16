@@ -21,9 +21,14 @@ using System.Reflection;
 
 using System.Threading;
 
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 using Builtin = IronPython.Modules.Builtin;
+using IronPython.Compiler.AST;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Exceptions {
 
     /// <summary>
     /// Converts CLR exceptions to Python exceptions and vice-versa.
@@ -78,7 +83,7 @@ namespace IronPython.Runtime {
                             new ExceptionMapping("TabError", typeof(PythonTabError), SyntaxErrorExceptionCreator)
                         }),
                     }),
-                    new ExceptionMapping("TypeError", typeof(IronPython.Runtime.ArgumentTypeException)),
+                    new ExceptionMapping("TypeError", typeof(ArgumentTypeException)),
                     new ExceptionMapping("AssertionError", typeof(PythonAssertionError)),
                     new ExceptionMapping("LookupError", typeof(PythonLookupError), new ExceptionMapping[]{
                         new ExceptionMapping("IndexError", typeof(System.IndexOutOfRangeException)),
@@ -116,16 +121,16 @@ namespace IronPython.Runtime {
         };
 
         static ExceptionConverter() {
-            exceptionInitMethod = new FunctionX(null, "__init__", new CallTargetN(ExceptionConverter.ExceptionInit), new string[] { "args" }, new object[0], IronPython.Compiler.FuncDefType.ArgList);
-            exceptionGetItemMethod = new FunctionX(null, "__getitem__", new CallTargetN(ExceptionConverter.ExceptionGetItem), new string[] { "args" }, new object[0], IronPython.Compiler.FuncDefType.ArgList);
-            exceptionStrMethod = new FunctionX(null, "__str__", new CallTargetN(ExceptionConverter.ExceptionToString), new string[] { "args" }, new object[0], IronPython.Compiler.FuncDefType.ArgList);
+            exceptionInitMethod = new FunctionX(null, "__init__", new CallTargetN(ExceptionConverter.ExceptionInit), new string[] { "args" }, new object[0], FuncDefType.ArgList);
+            exceptionGetItemMethod = new FunctionX(null, "__getitem__", new CallTargetN(ExceptionConverter.ExceptionGetItem), new string[] { "args" }, new object[0], FuncDefType.ArgList);
+            exceptionStrMethod = new FunctionX(null, "__str__", new CallTargetN(ExceptionConverter.ExceptionToString), new string[] { "args" }, new object[0], FuncDefType.ArgList);
             syntaxErrorStrMethod = new FunctionX(null, "__str__",
-                new CallTargetN(ExceptionConverter.SyntaxErrorToString), new string[] { "args" }, new object[0], IronPython.Compiler.FuncDefType.ArgList);
+                new CallTargetN(ExceptionConverter.SyntaxErrorToString), new string[] { "args" }, new object[0], FuncDefType.ArgList);
             unicodeErrorInit = new FunctionX(null,
                 "__init__",
                 new CallTargetN(ExceptionConverter.UnicodeErrorInit),
-                new string[] { "self", "encoding", "object", "start", "end", "reason" }, new object[0], IronPython.Compiler.FuncDefType.None);
-            systemExitInitMethod = new FunctionX(null, "__init__", new CallTargetN(ExceptionConverter.SystemExitExceptionInit), new string[] { "args" }, new object[0], IronPython.Compiler.FuncDefType.ArgList);
+                new string[] { "self", "encoding", "object", "start", "end", "reason" }, new object[0], FuncDefType.None);
+            systemExitInitMethod = new FunctionX(null, "__init__", new CallTargetN(ExceptionConverter.SystemExitExceptionInit), new string[] { "args" }, new object[0], FuncDefType.ArgList);
 
             for (int i = 0; i < exceptionMappings.Length; i++) {
                 CreateExceptionMapping(null, exceptionMappings[i]);

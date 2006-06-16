@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.Serialization;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Exceptions {
     #region Generated PythonException Classes
 
     // *** BEGIN GENERATED CODE ***

@@ -20,7 +20,7 @@ using System.Text;
 
 using IronPython.Compiler;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Calls {
     #region Generated CallTargets
 
     // *** BEGIN GENERATED CODE ***

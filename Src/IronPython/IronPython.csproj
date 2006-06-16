@@ -130,6 +130,8 @@
     <Compile Include="Compiler\OutputGenerator.cs" />
     <Compile Include="Compiler\MethodBinder.cs" />
     <Compile Include="Modules\_socket.cs" />
+    <Compile Include="Modules\Builtin.cs" />
+    <Compile Include="Modules\Builtin.Generated.cs" />
     <Compile Include="Runtime\ByteOps.cs" />
     <Compile Include="Runtime\ByteOps.Generated.cs" />
     <Compile Include="Runtime\FastCallable.Generated.cs" />
@@ -156,7 +158,6 @@
     <Compile Include="Hosting\PythonCompiler.cs" />
     <Compile Include="Hosting\PythonEngine.cs" />
     <Compile Include="Modules\binascii.cs" />
-    <Compile Include="Modules\Builtin.cs" />
     <Compile Include="Modules\clr.cs" />
     <Compile Include="Modules\codecs.cs" />
     <Compile Include="Modules\collections.cs" />
@@ -180,7 +181,6 @@
     <Compile Include="Modules\_random.cs" />
     <Compile Include="Modules\_sre.cs" />
     <Compile Include="Modules\_weakref.cs" />
-    <Compile Include="Modules\Builtin.Generated.cs" />
     <Compile Include="Runtime\ArrayOps.cs" />
     <Compile Include="Runtime\Attributes.cs" />
     <Compile Include="Runtime\BoolOps.cs" />

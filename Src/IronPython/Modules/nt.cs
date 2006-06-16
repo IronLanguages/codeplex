@@ -19,6 +19,9 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {

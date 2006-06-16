@@ -18,7 +18,10 @@ using System.Collections;
 using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Text;
+
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("collections", typeof(IronPython.Modules.PythonCollections))]
 namespace IronPython.Modules {

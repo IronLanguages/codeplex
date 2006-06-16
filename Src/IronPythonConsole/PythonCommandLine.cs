@@ -26,6 +26,7 @@ using SystemThread = System.Threading.Thread;
 using IronPython.Hosting;
 using IronPython.Compiler;
 using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
 using System.Diagnostics;
 
 namespace IronPythonConsole {
@@ -149,7 +150,7 @@ namespace IronPythonConsole {
                     return RunFile(engine, fileName);
                 }
             } catch (System.Threading.ThreadAbortException tae) {
-                if (tae.ExceptionState is IronPython.Runtime.PythonKeyboardInterrupt) {
+                if (tae.ExceptionState is PythonKeyboardInterrupt) {
                     Thread.ResetAbort();
                 }
                 return -1;
@@ -710,7 +711,7 @@ namespace IronPythonConsole {
             if (e.SpecialKey == ConsoleSpecialKey.ControlC) {
                 e.Cancel = true;
                 ctrlCEvent.Set();
-                MainEngineThread.Abort(new IronPython.Runtime.PythonKeyboardInterrupt(""));
+                MainEngineThread.Abort(new PythonKeyboardInterrupt(""));
             }
         }
 

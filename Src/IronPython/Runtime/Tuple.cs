@@ -18,6 +18,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
     [PythonType("tuple")]
     public class Tuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IComparable, IDynamicObject, IList<object> {

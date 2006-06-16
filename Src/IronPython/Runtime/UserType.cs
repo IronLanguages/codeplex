@@ -19,11 +19,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-using IronPython.Compiler;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+using IronPython.Compiler.Generation;
 using IronPython.Modules;
 using IronMath;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Types {
     //public enum VTableSource {
     //    Declared, Inherited, InheritedFromObject
     //}

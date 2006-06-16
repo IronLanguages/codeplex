@@ -19,6 +19,8 @@ using System.Collections.Generic;
 using System.Text;
 
 using IronMath;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
     public static partial class Converter {

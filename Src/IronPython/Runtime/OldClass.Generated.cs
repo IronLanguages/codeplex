@@ -17,7 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Operations;
+
+namespace IronPython.Runtime.Types {
     partial class OldInstanceType {
         #region Generated OldClass Binary Ops
 

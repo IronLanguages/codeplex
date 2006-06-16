@@ -20,8 +20,11 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Threading;
 
-namespace IronPython.Runtime {
-    public class ReflectedAssemblyType : OpsReflectedType{
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Runtime.Types {
+    public class ReflectedAssemblyType : OpsReflectedType {
         static ReflectedAssemblyType AssemblyType;
         Dictionary<Assembly, ReflectedAssembly> assemblyMap = new Dictionary<Assembly, ReflectedAssembly>();
 

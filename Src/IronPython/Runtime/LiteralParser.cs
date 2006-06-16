@@ -20,6 +20,7 @@ using System.Diagnostics;
 
 using IronPython.Runtime;
 using IronPython.Compiler;
+using IronPython.Runtime.Operations;
 
 using IronMath;
 
@@ -27,7 +28,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Summary description for ConstantValue.
     /// </summary>
-    public static class LiteralParser {
+    static class LiteralParser {
         public static string ParseString(string text, bool isRaw, bool isUni) {
             return ParseString(text, isRaw, isUni, true);
         }

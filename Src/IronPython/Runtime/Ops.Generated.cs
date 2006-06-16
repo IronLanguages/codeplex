@@ -18,8 +18,12 @@ using System.Collections.Generic;
 using System.Text;
 
 using IronMath;
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Exceptions;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
     public static partial class Ops {
         #region Generated Call Ops
 

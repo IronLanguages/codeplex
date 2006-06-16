@@ -16,7 +16,7 @@
 using System;
 using System.Diagnostics;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Calls {
     #region Generated environment types
 
     // *** BEGIN GENERATED CODE ***

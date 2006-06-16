@@ -16,6 +16,7 @@
 using System;
 using System.Xml;
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
 
 namespace IronPythonTest {
     public class AttrInjectorTest {

@@ -24,6 +24,10 @@ using System.Text;
 using System.Threading;
 
 using IronPython.Compiler;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
 
 using ClrModule = IronPython.Modules.ClrModule;
 

@@ -18,7 +18,11 @@ using System.IO;
 using System.Diagnostics;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Compiler.AST;
+using IronPython.Compiler.Generation;
 using IronPython.Compiler;
+using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("imp", typeof(IronPython.Modules.PythonImport))]
 namespace IronPython.Modules {

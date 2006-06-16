@@ -19,6 +19,8 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
     class WeakHash<TKey, TValue> : IDictionary<TKey, TValue> {
         // The one and only comparer instance.
@@ -167,7 +169,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    public class WeakObject<T> {
+    internal class WeakObject<T> {
         WeakReference weakReference;
         int hashCode;
 

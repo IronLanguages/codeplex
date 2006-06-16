@@ -19,8 +19,10 @@ using System.Collections;
 using System.Reflection;
 
 using IronMath;
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
 
     public static partial class Int64Ops {
         public static ReflectedType MakeDynamicType(ReflectedType integerType) {

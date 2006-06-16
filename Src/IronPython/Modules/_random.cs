@@ -17,10 +17,10 @@ using System;
 
 using IronPython.Runtime;
 
-[assembly: PythonModule("_random", typeof(IronPython.Modules.InternalRandom))]
+[assembly: PythonModule("_random", typeof(IronPython.Modules.PythonRandom))]
 namespace IronPython.Modules {
     [PythonType("_random")]
-    public static class InternalRandom {
+    public static class PythonRandom {
         [PythonType("Random")]
         public class Random {
             System.Random rnd;

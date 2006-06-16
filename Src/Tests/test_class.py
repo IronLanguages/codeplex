@@ -855,7 +855,7 @@ delattr(a, 'bar')
 Assert(test.TestProperties(a, ['__doc__', '__module__'], ['bar']))
 
 x = test.GetClassName(a)
-Assert(x == 'IronPython.Runtime.OldClass')
+Assert(x == 'IronPython.Runtime.Types.OldClass')
 
 x = test.CallCanConvertToForInt(a)
 Assert(x == False)

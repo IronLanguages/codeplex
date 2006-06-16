@@ -21,6 +21,9 @@ using System.Reflection;
 
 using IronPython.Runtime;
 using IronPython.Hosting;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Compiler {
     /// <summary>

@@ -21,11 +21,14 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 
 
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
 using IronPython.Compiler;
 using IronPython.Modules;
 using IronMath;
 
-namespace IronPython.Runtime {  
+namespace IronPython.Runtime.Types {  
     public class ReflectedField : IDataDescriptor, IContextAwareMember {
         public readonly FieldInfo info;
         private NameType nameType;

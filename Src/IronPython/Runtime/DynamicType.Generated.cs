@@ -17,7 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Operations;
+
+namespace IronPython.Runtime.Types {
     public abstract partial class DynamicType {
         #region Generated DynamicType Binary Ops
 

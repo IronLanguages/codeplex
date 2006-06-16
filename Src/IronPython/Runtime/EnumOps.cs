@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
     public static class EnumOps {
 
         public static object Equal(object self, object other) {

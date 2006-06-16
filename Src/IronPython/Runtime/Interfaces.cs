@@ -17,38 +17,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
+using IronPython.Runtime.Types;
+
+
 namespace IronPython.Runtime {
-    public interface ICallable {
-        object Call(params object[] args);
-    }
+    using IronPython.Runtime.Calls;
 
-    public interface IFancyCallable {
-        object Call(ICallerContext context, object[] args, string[] names);
-    }
-
-    public interface ICallableWithCallerContext {
-        object Call(ICallerContext context, object[] args);
-    }
-
-    public interface IExtensible<T> {
+    internal interface IExtensible<T> {
         T Value {
             get;
         }
-    }
-
-    public interface IContextAwareMember {
-        bool IsVisible(ICallerContext context);
-    }
-
-    public interface ICallerContext {
-        PythonModule Module { get; }
-        SystemState SystemState { get;} 
-        object Locals { get; }
-        IAttributesDictionary Globals { get; }
-        object GetStaticData(int index);
-        bool TrueDivision { get; set; }
-        CallerContextFlags ContextFlags { get; set; }
-        IronPython.Compiler.CompilerContext CreateCompilerContext();
     }
 
     public interface IModuleScope {
@@ -280,5 +258,33 @@ namespace IronPython.Runtime {
 
     public interface ICustomExceptionConversion {
         object ToPythonException();
+    }
+}
+
+namespace IronPython.Runtime.Calls {
+    public interface ICallable {
+        object Call(params object[] args);
+    }
+
+    public interface IFancyCallable {
+        object Call(ICallerContext context, object[] args, string[] names);
+    }
+
+    public interface ICallableWithCallerContext {
+        object Call(ICallerContext context, object[] args);
+    }
+    public interface IContextAwareMember {
+        bool IsVisible(ICallerContext context);
+    }
+
+    public interface ICallerContext {
+        PythonModule Module { get; }
+        SystemState SystemState { get;} 
+        object Locals { get; }
+        IAttributesDictionary Globals { get; }
+        object GetStaticData(int index);
+        bool TrueDivision { get; set; }
+        CallerContextFlags ContextFlags { get; set; }
+        IronPython.Compiler.CompilerContext CreateCompilerContext();
     }
 }

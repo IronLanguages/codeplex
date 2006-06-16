@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using IronPython.Runtime;
+using IronPython.Compiler.AST;
 
 namespace IronPython.Compiler {
 

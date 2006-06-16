@@ -17,54 +17,59 @@ using System;
 using IronPython.Runtime;
 using System.Collections.Generic;
 
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+
+
 [assembly: PythonModule("operator", typeof(IronPython.Modules.PythonOperator))]
 namespace IronPython.Modules {
-
-    public class AttributeGetter {
-        private readonly object name;
-        public AttributeGetter(object name) {
-            this.name = name;
-        }
-
-        public override string ToString() {
-            return String.Format("<operator.attrgetter: {0}>", name == null ? "None" : name);
-        }
-
-        [PythonName("__call__")]
-        public object Call(object param) {
-            string s = name as string;
-            if (s == null) {
-                throw Ops.TypeError("attribute name must be string");
-            }
-            return Ops.GetAttr(DefaultContext.Default, param, SymbolTable.StringToId(s));
-        }
-    }
-
-    public class ItemGetter {
-        private readonly object item;
-        public ItemGetter(object item) {
-            this.item = item;
-        }
-
-        public override string ToString() {
-            return String.Format("<operator.itemgetter: {0}>", item == null ? "None" : item);
-        }
-
-        [PythonName("__call__")]
-        public object Call(object param) {
-            try {
-                return Ops.GetIndex(param, item);
-            } catch (IndexOutOfRangeException) {
-                throw;
-            } catch (KeyNotFoundException) {
-                throw;
-            } catch {
-                throw Ops.TypeError("invalid parameter for itemgetter");
-            }
-        }
-    }
-
     public static class PythonOperator {
+        [PythonType("attrgetter")]
+        public class AttributeGetter {
+            private readonly object name;
+            public AttributeGetter(object name) {
+                this.name = name;
+            }
+
+            public override string ToString() {
+                return String.Format("<operator.attrgetter: {0}>", name == null ? "None" : name);
+            }
+
+            [PythonName("__call__")]
+            public object Call(object param) {
+                string s = name as string;
+                if (s == null) {
+                    throw Ops.TypeError("attribute name must be string");
+                }
+                return Ops.GetAttr(DefaultContext.Default, param, SymbolTable.StringToId(s));
+            }
+        }
+
+        [PythonType("itemgetter")]
+        public class ItemGetter {
+            private readonly object item;
+            public ItemGetter(object item) {
+                this.item = item;
+            }
+
+            public override string ToString() {
+                return String.Format("<operator.itemgetter: {0}>", item == null ? "None" : item);
+            }
+
+            [PythonName("__call__")]
+            public object Call(object param) {
+                try {
+                    return Ops.GetIndex(param, item);
+                } catch (IndexOutOfRangeException) {
+                    throw;
+                } catch (KeyNotFoundException) {
+                    throw;
+                } catch {
+                    throw Ops.TypeError("invalid parameter for itemgetter");
+                }
+            }
+        }
+
         [PythonName("lt")]
         public static object LessThan(object a, object b) {
             return Ops.LessThan(a, b);
@@ -450,16 +455,6 @@ namespace IronPython.Modules {
                    o is System.Collections.IList);
         }
 
-        [PythonName("attrgetter")]
-        public static object AttrGetter(object attr) {
-            return new AttributeGetter(attr);
-        }
-
-        [PythonName("itemgetter")]
-        public static object ItemGetter(object item) {
-            return new ItemGetter(item);
-        }
-
         private static int SliceToInt(object o) {
             Conversion c;
             int i = Converter.TryConvertToInt32(o, out c);
@@ -468,6 +463,7 @@ namespace IronPython.Modules {
             }
             return i;
         }
+
         private static object MakeSlice(object a, object b) {
             return Ops.MakeSlice(SliceToInt(a), SliceToInt(b), null);
         }

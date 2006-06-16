@@ -26,7 +26,7 @@ using System.Security.Permissions;
 using IronPython.Runtime;
 using IronMath;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
     class TypeGen {
         public readonly AssemblyGen myAssembly;
         public readonly TypeBuilder myType;

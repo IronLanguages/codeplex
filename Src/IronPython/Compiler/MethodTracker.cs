@@ -32,7 +32,7 @@ namespace IronPython.Compiler {
     /// A MethodTracker can be constructed from either a baked MethodInfo or from an unbaked
     /// MethodBuilder or ConstructorInfo if the ParameterInfo is also supplied.
     /// </summary>
-    public class MethodTracker {
+    class MethodTracker {
         MethodBase mi;
         ParameterInfo[] sig;
         string name;

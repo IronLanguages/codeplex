@@ -17,11 +17,13 @@ using System;
 using System.Text;
 using System.Collections;
 using System.Diagnostics;
-
-using IronMath;
 using System.Runtime.InteropServices;
 
-namespace IronPython.Runtime {
+using IronMath;
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+
+namespace IronPython.Runtime.Operations {
     public partial class ExtensibleComplex : IRichComparable, IExtensible<Complex64> {
         public Complex64 value;
         

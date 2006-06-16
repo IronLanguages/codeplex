@@ -16,8 +16,10 @@
 using System;
 using System.Diagnostics;
 using IronMath;
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
     static partial class SByteOps {
         #region Generated SByteOps
 

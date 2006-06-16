@@ -84,8 +84,8 @@ using IronPython.Runtime;
  *  00 .. may be uninitialized
  */
 
-namespace IronPython.Compiler {
-    public class FlowDefiner : AstWalkerNonRecursive {
+namespace IronPython.Compiler.AST {
+    class FlowDefiner : AstWalkerNonRecursive {
         private FlowChecker fc;
         public FlowDefiner(FlowChecker fc) {
             this.fc = fc;
@@ -105,7 +105,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class FlowDeleter : AstWalkerNonRecursive {
+    class FlowDeleter : AstWalkerNonRecursive {
         private FlowChecker fc;
         public FlowDeleter(FlowChecker fc) {
             this.fc = fc;
@@ -117,7 +117,7 @@ namespace IronPython.Compiler {
         }
     }
 
-    public class FlowChecker : AstWalker {
+    class FlowChecker : AstWalker {
         private BitArray bits;
         private Stack<BitArray> loops;
         private Dictionary<SymbolId, ScopeStatement.Binding> bindings;

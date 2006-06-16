@@ -16,7 +16,9 @@
 using System;
 using System.Diagnostics;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime;
+
+namespace IronPython.Runtime.Operations {
     static partial class SByteOps {
         #region Unary operators
         [PythonName("__abs__")]

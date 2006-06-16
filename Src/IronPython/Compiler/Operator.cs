@@ -16,8 +16,10 @@
 using System;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Compiler.Generation;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.AST {
     public abstract partial class Operator {
         public static readonly BinaryOperator Is = new BinaryOperator("is", new CallTarget2(Ops.Is), null, -1);
         public static readonly BinaryOperator IsNot = new BinaryOperator("is not", new CallTarget2(Ops.IsNot), null, -1);

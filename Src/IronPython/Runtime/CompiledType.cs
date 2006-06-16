@@ -17,7 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Runtime.Types {
     public class CompiledType : ReflectedType {
         public static CompiledType GetTypeForType(Type t) {
             return new CompiledType(t);

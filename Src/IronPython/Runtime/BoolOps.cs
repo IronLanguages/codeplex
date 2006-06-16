@@ -19,8 +19,11 @@ using System.Collections;
 using System.Threading;
 
 using IronMath;
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
 
     public static class BoolOps {
         internal static ReflectedType BoolType;

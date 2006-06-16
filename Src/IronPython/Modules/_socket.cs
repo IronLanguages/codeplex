@@ -26,10 +26,14 @@ using System.Text;
 using System.Threading;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Exceptions;
 
-[assembly: PythonModule("_socket", typeof(IronPython.Modules.SocketModule))]
+[assembly: PythonModule("_socket", typeof(IronPython.Modules.PythonSocket))]
 namespace IronPython.Modules {
-    public static class SocketModule {
+    public static class PythonSocket {
         public static string __doc__ = "Implementation module for socket operations.\n\n"
             + "See the socket module for documentation.\n"
             + "This module is a loose wrapper around the .NET System.Net.Sockets API, so you\n"

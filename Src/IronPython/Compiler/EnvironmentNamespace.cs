@@ -19,7 +19,7 @@ using System.Reflection;
 using System.Diagnostics;
 using IronPython.Runtime;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
     class EnvironmentNamespace {
         private EnvironmentFactory factory;
         private Dictionary<SymbolId, EnvironmentReference> references = new Dictionary<SymbolId, EnvironmentReference>();

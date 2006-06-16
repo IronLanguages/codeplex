@@ -23,9 +23,12 @@ using System.Diagnostics;
 
 using IronPython.Compiler;
 using IronPython.Modules;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Exceptions;
 using IronMath;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Types {
     // ReflectedType represents types that the user did not define. These include:
     // 1. Built-in types supported intrinsically by the engine (and implemented as CLI types in the engine)
     // 2. Non-Python types imported from CLI assemblies
@@ -1138,7 +1141,7 @@ namespace IronPython.Runtime {
         #region IFancyCallable Members
 
         [PythonName("__call__")]
-        object IronPython.Runtime.IFancyCallable.Call(ICallerContext context, object[] args, string[] names) {
+        object IronPython.Runtime.Calls.IFancyCallable.Call(ICallerContext context, object[] args, string[] names) {
             Initialize();
 
             if (ctor == null) throw Ops.TypeError("cannot create an instance of {0}", this);

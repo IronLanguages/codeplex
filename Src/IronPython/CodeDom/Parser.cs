@@ -23,11 +23,12 @@ using System.CodeDom;
 using System.CodeDom.Compiler;
 
 using IronPython.Compiler;
+using IronPython.Compiler.AST;
 using IronPython.Runtime;
 using System.Diagnostics;
 
 namespace IronPython.CodeDom {
-    public class PythonParser : CodeParser  {
+    class PythonParser : CodeParser  {
         private List<string> references = new List<string>();
         private SystemState state = new SystemState();
 
@@ -218,7 +219,7 @@ namespace IronPython.CodeDom {
     }
 
     
-    public class CodeObjectSuite : CodeObject {
+    class CodeObjectSuite : CodeObject {
         List<CodeObject> objects = new List<CodeObject>();
 
         public CodeObjectSuite() {

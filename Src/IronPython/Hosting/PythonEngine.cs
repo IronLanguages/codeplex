@@ -23,8 +23,14 @@ using System.Diagnostics;
 using System.Threading;
 
 using IronPython.Compiler;
+using IronPython.Compiler.Generation;
+using IronPython.Compiler.AST;
 using IronPython.Modules;
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Hosting {
 

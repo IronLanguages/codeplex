@@ -24,10 +24,13 @@ using System.CodeDom;
 using System.Diagnostics;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
 using IronPython.CodeDom;
 
+using IronPython.Compiler.Generation;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.AST {
     public abstract class Stmt : Node {
         public static readonly object NextStmt = new object();
 

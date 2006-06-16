@@ -20,9 +20,14 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Reflection.Emit;
 
+using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Compiler.Generation;
 using IronPython.Compiler;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Types {
     public class ReflectedDelegateType : ReflectedType {
         private FastCallable invoker;
 

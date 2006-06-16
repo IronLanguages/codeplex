@@ -19,6 +19,7 @@ using System.Text;
 using System.IO;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
 using IronMath;
 
 [assembly: PythonModule("struct", typeof(IronPython.Modules.PythonStruct))]

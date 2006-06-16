@@ -18,13 +18,15 @@ using System.Text;
 using System.Globalization;
 using System.Collections;
 using System.Diagnostics;
+
 using IronMath;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     /// <summary>
     /// StringFormatter provides Python's % style string formatting services.
     /// </summary>
-    public class StringFormatter {
+    internal class StringFormatter {
 
         // This is a ThreadStatic since so that formatting operations on one thread do not interfere with other threads
         [ThreadStatic]

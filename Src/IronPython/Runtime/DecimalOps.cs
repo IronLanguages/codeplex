@@ -17,7 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+
+namespace IronPython.Runtime.Operations {
     public static class DecimalOps {
 
         public static DynamicType MakeDynamicType() {

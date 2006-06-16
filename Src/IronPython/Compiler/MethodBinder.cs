@@ -21,16 +21,20 @@ using System.Diagnostics;
 using System.Text;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
 using IronPython.Modules;
+using IronPython.Compiler.Generation;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler {
     [Flags]
-    public enum CallType {
+    enum CallType {
         None = 0,
         ImplicitInstance,
     }
 
-    public class MethodBinder {
+    class MethodBinder {
         string name;
         private Dictionary<int, TargetSet> targetSets = new Dictionary<int, TargetSet>();
         private List<ParamsMethodMaker> paramsMakers = new List<ParamsMethodMaker>();

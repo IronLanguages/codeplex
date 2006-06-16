@@ -19,8 +19,10 @@ using System.Text;
 using System.Reflection;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Compiler.Generation;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.AST {
     public abstract partial class ScopeStatement {
         private static Type GetEnvironmentType(int size, CodeGen cg, out ConstructorInfo ctor, out EnvironmentFactory ef) {
             Type envType;

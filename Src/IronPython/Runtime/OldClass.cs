@@ -23,7 +23,10 @@ using System.Runtime.Serialization;
 using System.Threading;
 using System.Diagnostics;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+
+namespace IronPython.Runtime.Types {
     // OldClass represents the type of old-style Python classes (which could not inherit from 
     // built-in Python types). 
     // 

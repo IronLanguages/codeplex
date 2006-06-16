@@ -21,9 +21,13 @@ using System.Diagnostics;
 using System.Reflection;
 
 using System.Threading;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+using IronPython.Compiler.Generation;
 using IronPython.Compiler;
 
-namespace IronPython.Runtime {
+
+namespace IronPython.Runtime.Calls {
     public delegate object CallTargetN(params object[] args);
     public delegate object CallTargetWithContextN(ICallerContext context, params object[] args);
 
@@ -80,7 +84,7 @@ namespace IronPython.Runtime {
         public abstract object Call(ICallerContext context, params object[] args);
         public abstract object CallInstance(ICallerContext context, object instance, params object[] args);
 
-        protected static Exception BadArgumentError(string name, int minArgs, int maxArgs, CallType callType, int argCount) {
+        internal static Exception BadArgumentError(string name, int minArgs, int maxArgs, CallType callType, int argCount) {
             if (callType == CallType.ImplicitInstance) {
                 argCount -= 1;
                 minArgs -= 1;
@@ -161,7 +165,7 @@ namespace IronPython.Runtime {
     public class FastCallableUgly : FastCallable {
         private MethodBinder binder;
 
-        public FastCallableUgly(MethodBinder binder) {
+        internal FastCallableUgly(MethodBinder binder) {
             this.binder = binder;
         }
 

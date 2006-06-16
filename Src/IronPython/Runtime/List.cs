@@ -23,6 +23,8 @@ using System.Diagnostics;
 using System.Threading;
 
 using IronPython.Compiler;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
 

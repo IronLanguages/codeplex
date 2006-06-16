@@ -19,8 +19,9 @@ using System.Text;
 using System.Reflection;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Types;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
     /// <summary>
     /// Creates sub-types of new-types.  Sub-types of new types are created when
     /// the new-type is created with slots, and therefore has a concrete object

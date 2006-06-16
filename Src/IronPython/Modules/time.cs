@@ -21,11 +21,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
 
 
-[assembly: PythonModule("time", typeof(IronPython.Modules.Time))]
+[assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
 namespace IronPython.Modules {
-    public static class Time {
+    public static class PythonTime {
         private const int YearIndex = 0;
         private const int MonthIndex = 1;
         private const int DayIndex = 2;

@@ -19,6 +19,9 @@ using System.Diagnostics;
 
 using System.Reflection;
 
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 using IronPython.Compiler;
 using IronPython.Modules;
 

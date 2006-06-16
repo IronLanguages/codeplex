@@ -20,12 +20,16 @@ using System.Reflection;
 using System.Collections;
 using System.Text;
 
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
 namespace IronPython.Runtime {
 
     /// <summary>
     /// Common interface shared by both Set and FrozenSet
     /// </summary>
-    public interface ISet : IEnumerable {
+    internal interface ISet : IEnumerable {
         int GetLength();
 
         // return Ops.FALSE or Ops.TRUE
@@ -253,16 +257,16 @@ namespace IronPython.Runtime {
         }
 
         ISet ISet.PrivDifference(IEnumerable s) {
-            return Difference(s);
+            return (ISet)Difference(s);
         }
         ISet ISet.PrivIntersection(IEnumerable s) {
-            return Intersection(s);
+            return (ISet)Intersection(s);
         }
         ISet ISet.PrivSymmetricDifference(IEnumerable s) {
-            return SymmetricDifference(s);
+            return (ISet)SymmetricDifference(s);
         }
         ISet ISet.PrivUnion(IEnumerable s) {
-            return Union(s);
+            return (ISet)Union(s);
         }
         void ISet.PrivAdd(object o) {
             Add(o);
@@ -291,22 +295,22 @@ namespace IronPython.Runtime {
         #region NonOperator Operations
 
         [PythonName("union")]
-        public ISet Union(object s) {
+        public object Union(object s) {
             return SetHelpers.Union(this, s);
         }
 
         [PythonName("intersection")]
-        public ISet Intersection(object s) {
+        public object Intersection(object s) {
             return SetHelpers.Intersection(this, s);
         }
 
         [PythonName("difference")]
-        public ISet Difference(object s) {
+        public object Difference(object s) {
             return SetHelpers.Difference(this, s);
         }
 
         [PythonName("symmetric_difference")]
-        public ISet SymmetricDifference(object s) {
+        public object SymmetricDifference(object s) {
             return SetHelpers.SymmetricDifference(this, s);
         }
 
@@ -434,34 +438,38 @@ namespace IronPython.Runtime {
         #region Operators
 
         [PythonName("__iand__")]
-        public SetCollection __iand__(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for &=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public SetCollection __iand__(object s) {
+            ISet set = s as ISet; 
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for &=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            IntersectionUpdate(s);
+            IntersectionUpdate(set);
             return this;
         }
 
         [PythonName("__ior__")]
-        public SetCollection __ior__(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for |=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public SetCollection __ior__(object s) {
+            ISet set = s as ISet; 
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for |=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            Update(s);
+            Update(set);
             return this;
         }
 
         [PythonName("__isub__")]
-        public SetCollection __isub__(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for -=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public SetCollection __isub__(object s) {
+            ISet set = s as ISet;
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for -=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            DifferenceUpdate(s);
+            DifferenceUpdate(set);
             return this;
         }
 
         [PythonName("__ixor__")]
-        public SetCollection __ixor__(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for ^=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public SetCollection __ixor__(object s) {
+            ISet set = s as ISet;
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for ^=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            SymmetricDifferenceUpdate(s);
+            SymmetricDifferenceUpdate(set);
             return this;
         }
 
@@ -471,62 +479,66 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__and__")]
-        public ISet __and__(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for &: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public object __and__(object s) {
+            ISet set = s as ISet;
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for &: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            if (s.GetLength() < GetLength()) {
-                return Intersection(s);
+            if (set.GetLength() < GetLength()) {
+                return Intersection(set);
             }
 
-            SetCollection set = s as SetCollection;
-            if (set != null) {
-                return set.Intersection(this);
+            SetCollection setc = s as SetCollection;
+            if (setc != null) {
+                return setc.Intersection(this);
             }
 
-            return SetHelpers.MakeSet(this, s.PrivIntersection(this));
+            return SetHelpers.MakeSet(this, set.PrivIntersection(this));
         }
 
         [PythonName("__ror__")]
-        public ISet __ror__(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for |: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public object __ror__(object s) {
+            ISet set = s as ISet;
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for |: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            if (s.GetLength() < GetLength()) {
-                return Union(s);
+            if (set.GetLength() < GetLength()) {
+                return Union(set);
             }
 
-            SetCollection set = s as SetCollection;
-            if (set != null) {
-                return set.Union(this);
+            SetCollection setc = set as SetCollection;
+            if (setc != null) {
+                return setc.Union(this);
             }
 
-            return SetHelpers.MakeSet(this, s.PrivUnion(this));
+            return SetHelpers.MakeSet(this, set.PrivUnion(this));
         }
 
         [PythonName("__rsub__")]
-        public ISet __rsub__(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for -: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public object __rsub__(object s) {
+            ISet set = s as ISet;
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for -: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            SetCollection set = s as SetCollection;
-            if (set != null) {
-                return set.Difference(this);
+            SetCollection setc = s as SetCollection;
+            if (setc != null) {
+                return setc.Difference(this);
             }
 
-            return SetHelpers.MakeSet(this, s.PrivDifference(this));
+            return SetHelpers.MakeSet(this, set.PrivDifference(this));
         }
 
         [PythonName("__rxor__")]
-        public ISet __rxor__(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for ^: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public object __rxor__(object s) {
+            ISet set = s as ISet; 
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for ^: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            if (s.GetLength() < GetLength()) {
-                return SymmetricDifference(s);
+            if (set.GetLength() < GetLength()) {
+                return SymmetricDifference(set);
             }
-            SetCollection set = s as SetCollection;
-            if (set != null) {
-                return set.SymmetricDifference(this);
+            SetCollection setc = s as SetCollection;
+            if (setc != null) {
+                return setc.SymmetricDifference(this);
             }
 
-            return SetHelpers.MakeSet(this, s.PrivSymmetricDifference(this));
+            return SetHelpers.MakeSet(this, set.PrivSymmetricDifference(this));
         }
 
         #endregion
@@ -732,16 +744,16 @@ namespace IronPython.Runtime {
         }
 
         ISet ISet.PrivDifference(IEnumerable s) {
-            return Difference(s);
+            return (ISet)Difference(s);
         }
         ISet ISet.PrivIntersection(IEnumerable s) {
-            return Intersection(s);
+            return (ISet)Intersection(s);
         }
         ISet ISet.PrivSymmetricDifference(IEnumerable s) {
-            return SymmetricDifference(s);
+            return (ISet)SymmetricDifference(s);
         }
         ISet ISet.PrivUnion(IEnumerable s) {
-            return Union(s);
+            return (ISet)Union(s);
         }
 
         void ISet.PrivAdd(object o) {
@@ -781,22 +793,22 @@ namespace IronPython.Runtime {
         #region NonOperator operations
 
         [PythonName("union")]
-        public ISet Union(object s) {
+        public object Union(object s) {
             return SetHelpers.Union(this, s);
         }
 
         [PythonName("intersection")]
-        public ISet Intersection(object s) {
+        public object Intersection(object s) {
             return (SetHelpers.Intersection(this, s));
         }
 
         [PythonName("difference")]
-        public ISet Difference(object s) {
+        public object Difference(object s) {
             return SetHelpers.Difference(this, s);
         }
 
         [PythonName("symmetric_difference")]
-        public ISet SymmetricDifference(object s) {
+        public object SymmetricDifference(object s) {
             return SetHelpers.SymmetricDifference(this, s);
         }
 
@@ -849,10 +861,11 @@ namespace IronPython.Runtime {
         #region Operators
 
         [PythonName("__and__")]
-        public object OperatorAnd(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for &: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public object OperatorAnd(object s) {
+            ISet set = s as ISet;
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for &: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            if (s.GetLength() < GetLength()) {
+            if (set.GetLength() < GetLength()) {
                 return Intersection(s);
             }
 
@@ -861,17 +874,18 @@ namespace IronPython.Runtime {
                 return fs.Intersection(this);
             }
 
-            ISet set = SetHelpers.MakeSet(this, s.PrivIntersection(this));
-            set.PrivFreeze();
-            return set;
+            ISet newset = SetHelpers.MakeSet(this, set.PrivIntersection(this));
+            newset.PrivFreeze();
+            return newset;
         }
 
         [PythonName("__ior__")]
-        public object OperatorInPlaceOr(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for |=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public object OperatorInPlaceOr(object s) {
+            ISet set = s as ISet; 
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for |=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            if (s.GetLength() < GetLength()) {
-                return Union(s);
+            if (set.GetLength() < GetLength()) {
+                return Union(set);
             }
 
             FrozenSetCollection fs = s as FrozenSetCollection;
@@ -879,23 +893,25 @@ namespace IronPython.Runtime {
                 return fs.Union(this);
             }
 
-            ISet set = SetHelpers.MakeSet(this, s.PrivUnion(this));
-            set.PrivFreeze();
-            return set;
+            ISet newset = SetHelpers.MakeSet(this, set.PrivUnion(this));
+            newset.PrivFreeze();
+            return newset;
         }
 
         [PythonName("__isub__")]
-        public object OperatorInPlaceSub(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for -=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public object OperatorInPlaceSub(object s) {
+            ISet set = s as ISet; 
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for -=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            return Difference(s);
+            return Difference(set);
         }
 
         [PythonName("__ixor__")]
-        public object OperatorInPlaceXor(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for ^=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public object OperatorInPlaceXor(object s) {
+            ISet set = s as ISet; 
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for ^=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            if (s.GetLength() < GetLength()) {
+            if (set.GetLength() < GetLength()) {
                 return SymmetricDifference(s);
             }
 
@@ -904,29 +920,31 @@ namespace IronPython.Runtime {
                 return fs.SymmetricDifference(this);
             }
 
-            ISet set = SetHelpers.MakeSet(this, s.PrivSymmetricDifference(this));
-            set.PrivFreeze();
-            return set;
+            ISet newset = SetHelpers.MakeSet(this, set.PrivSymmetricDifference(this));
+            newset.PrivFreeze();
+            return newset;
         }
 
         [PythonName("__ror__")]
-        public object OperatorReverseOr(ISet s) {
-            if (s == null) throw Ops.TypeError("unsupported operand type(s) for |: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
+        public object OperatorReverseOr(object s) {
+            ISet set = s as ISet; 
+            if (set == null) throw Ops.TypeError("unsupported operand type(s) for |: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            if (s.GetLength() < GetLength()) {
+            if (set.GetLength() < GetLength()) {
                 return Union(s);
             }
             FrozenSetCollection fs = s as FrozenSetCollection;
             if (fs != null) {
                 return fs.Union(this);
             }
-            ISet set = SetHelpers.MakeSet(this, s.PrivUnion(this));
-            set.PrivFreeze();
-            return set;
+            ISet newset = SetHelpers.MakeSet(this, set.PrivUnion(this));
+            newset.PrivFreeze();
+            return newset;
         }
 
         [PythonName("__rsub__")]
-        public ISet OperatorReverseSubtract(ISet s) {
+        public object OperatorReverseSubtract(object s) {
+            ISet set = s as ISet; 
             if (s == null) throw Ops.TypeError("unsupported operand type(s) for -: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
             
             FrozenSetCollection fs = s as FrozenSetCollection;
@@ -934,25 +952,26 @@ namespace IronPython.Runtime {
                 return fs.Difference(this);
             }
 
-            ISet set = SetHelpers.MakeSet(this, s.PrivDifference(this));
-            set.PrivFreeze();
-            return set;
+            ISet newset = SetHelpers.MakeSet(this, set.PrivDifference(this));
+            newset.PrivFreeze();
+            return newset;
         }
 
         [PythonName("__rxor__")]
-        public ISet OperatorReverseXor(ISet s) {
+        public object OperatorReverseXor(object s) {
+            ISet set = s as ISet; 
             if (s == null) throw Ops.TypeError("unsupported operand type(s) for ^: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
-            if (s.GetLength() < GetLength()) {
+            if (set.GetLength() < GetLength()) {
                 return SymmetricDifference(s);
             }
             FrozenSetCollection fs = s as FrozenSetCollection;
             if (fs != null) {
                 return fs.SymmetricDifference(this);
             }
-            ISet set = SetHelpers.MakeSet(this, s.PrivSymmetricDifference(this));
-            set.PrivFreeze();
-            return set;
+            ISet newset = SetHelpers.MakeSet(this, set.PrivSymmetricDifference(this));
+            newset.PrivFreeze();
+            return newset;
         }
 
         #endregion

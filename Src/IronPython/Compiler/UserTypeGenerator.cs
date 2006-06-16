@@ -23,9 +23,13 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+using IronPython.Compiler.AST;
 using IronPython.CodeDom;
+using IronPython.Runtime.Operations;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
     /// <summary>
     /// Create's static .NET types from Python types.  Python types must have __slots__
     /// definition to get this concrete form created.  These types then disallow arbitrary

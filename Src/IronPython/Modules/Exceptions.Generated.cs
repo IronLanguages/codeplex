@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Modules {
     public static partial class PythonExceptions {

@@ -22,8 +22,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
 
     // Slot refers to a reference to an object. For eg, a global variable, a local variable, etc.
     // A Slot is referred to using a Name. The Namespace is used to map a Name to a Slot.

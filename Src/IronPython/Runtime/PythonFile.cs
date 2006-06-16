@@ -17,6 +17,10 @@ using System;
 using System.Text;
 using System.IO;
 
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
 
     // The following set of classes is used to translate between pythonic file stream semantics and those of

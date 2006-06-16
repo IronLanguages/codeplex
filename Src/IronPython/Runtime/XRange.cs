@@ -17,6 +17,8 @@ using System;
 using System.Text;
 using System.Collections;
 
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
     [PythonType("xrange")]
     public class XRange : ISequence, IEnumerable {

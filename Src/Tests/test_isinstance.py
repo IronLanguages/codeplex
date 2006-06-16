@@ -823,7 +823,7 @@ if is_cli:
 
 
 # verify we can't create *Ops classes    
-from IronPython.Runtime import FloatOps
+from IronPython.Runtime.Operations import FloatOps
 AssertError(TypeError, FloatOps)
     
 

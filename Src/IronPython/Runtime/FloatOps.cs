@@ -19,9 +19,13 @@ using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
-using IronMath;
 
-namespace IronPython.Runtime {
+using IronMath;
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Runtime.Operations {
     public partial class ExtensibleFloat : IRichComparable, IComparable, INumber {
         public double value;
 

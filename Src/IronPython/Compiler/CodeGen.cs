@@ -28,9 +28,11 @@ using System.IO;
 
 using IronPython.Runtime;
 using IronMath;
+using IronPython.Compiler.AST;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
 
-
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
     /// <summary>
     /// Summary description for CodeGen.
     /// </summary>

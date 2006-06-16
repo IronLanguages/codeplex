@@ -17,8 +17,9 @@ using System;
 using System.Reflection;
 using System.Diagnostics;
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
     abstract class EnvironmentFactory {
         public EnvironmentReference MakeEnvironmentReference(SymbolId name) {
             return MakeEnvironmentReference(name, typeof(object));

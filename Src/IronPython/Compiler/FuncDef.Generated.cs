@@ -17,8 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.AST {
     public partial class FuncDef {
         #region Generated FuncDef Code
 

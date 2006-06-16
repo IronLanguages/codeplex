@@ -22,8 +22,11 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 using IronPython.Compiler;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Calls {
     /// <summary>
     /// BuiltinFunction represents any standard CLR function exposed to Python.
     /// This is used for both methods on standard Python types such as list or tuple
@@ -549,13 +552,11 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                 ParamArray = 0x4
             }
             public MethodBase method;
-            public MethodTracker tracker;
             public object[] arguments;
             public object instance;
             public Conversion[] conversions;
             public Conversion instConversion;
             public MethodBindingSettings flags;
-
 
             public bool ThisCallWithoutThis {
                 get {

@@ -22,7 +22,11 @@ using System.Reflection.Emit;
 using System.Threading;
 using IronPython.Runtime;
 
-namespace IronPython.Compiler {
+using IronPython.Compiler.AST;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Compiler.Generation {
 
     // IronPython has two units of compilation:
     // 1. Snippets - These are small pieces of code compiled for these cases:
@@ -102,7 +106,7 @@ namespace IronPython.Compiler {
         }
 
         public static CompiledCode GenerateSnippet(CompilerContext context, Stmt body, string name, bool printExprStmts, bool enableDebugging) {
-            GlobalSuite gs = Binder.Bind(body, context);
+            GlobalSuite gs = AST.Binder.Bind(body, context);
 
             if (name.Length == 0) name = "<empty>"; // The empty string isn't a legal method name
             CodeGen cg;
@@ -166,7 +170,7 @@ namespace IronPython.Compiler {
                 return GenerateModuleAsSnippets(state, context, body, moduleName);
             }
 
-            GlobalSuite gs = IronPython.Compiler.Binder.Bind(body, context);
+            GlobalSuite gs = AST.Binder.Bind(body, context);
             string suffix = "";
             int counter = 0;
 
@@ -184,7 +188,7 @@ namespace IronPython.Compiler {
                 return GenerateModuleAsSnippets(state, context, body, moduleName);
             }
 
-            GlobalSuite gs = IronPython.Compiler.Binder.Bind(body, context);
+            GlobalSuite gs = AST.Binder.Bind(body, context);
             return DoGenerateModule(state, context, gs, moduleName, context.SourceFile, outSuffix);
         }
 

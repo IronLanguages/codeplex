@@ -18,9 +18,11 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Text;
 
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
 
-    public class ListGenericWrapper<T> : IList<T> {
+    internal class ListGenericWrapper<T> : IList<T> {
         private IList<object> value;
 
         public ListGenericWrapper(IList<object> value) { this.value = value; }
@@ -101,7 +103,7 @@ namespace IronPython.Runtime {
     }
 
 
-    public class DictionaryGenericWrapper<K, V> : IDictionary<K, V> {
+    internal class DictionaryGenericWrapper<K, V> : IDictionary<K, V> {
         private IDictionary<object, object> self;
 
         public DictionaryGenericWrapper(IDictionary<object, object> self) {
@@ -219,7 +221,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Exposes a Python List as a C# IList
     /// </summary>
-    public class ListWrapperForIList<T> : IList<T> {
+    internal class ListWrapperForIList<T> : IList<T> {
         List list;
 
         public ListWrapperForIList(List wrappedList) {
@@ -310,7 +312,7 @@ namespace IronPython.Runtime {
 
     }
 
-    public class DictWrapperForIDict<TKey, TValue> : IDictionary<TKey, TValue> {
+    internal class DictWrapperForIDict<TKey, TValue> : IDictionary<TKey, TValue> {
         Dict dict;
 
         public DictWrapperForIDict(Dict dictionary) {
@@ -426,7 +428,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    public class DictWrapperForHashtableDictionary : Hashtable {
+    internal class DictWrapperForHashtableDictionary : Hashtable {
         Dict dict;
 
         public DictWrapperForHashtableDictionary(Dict dictionary) {
@@ -565,7 +567,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Exposes a Python List as a C# ArrayList
     /// </summary>
-    public class ListWrapperForArrayListCollection : ArrayList {
+    internal class ListWrapperForArrayListCollection : ArrayList {
         List list;
 
         public ListWrapperForArrayListCollection(List wrappedList) {
@@ -785,7 +787,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    public class IEnumeratorOfTWrapper<T> : IEnumerator<T> {
+    internal class IEnumeratorOfTWrapper<T> : IEnumerator<T> {
         IEnumerator enumerable;
         public IEnumeratorOfTWrapper(IEnumerator enumerable) {
             this.enumerable = enumerable;

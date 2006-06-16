@@ -19,11 +19,15 @@ using System.Text;
 using System.Runtime.InteropServices;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 
-[assembly: PythonModule("_weakref", typeof(IronPython.Modules.WeakRef))]
+[assembly: PythonModule("_weakref", typeof(IronPython.Modules.PythonWeakRef))]
 namespace IronPython.Modules {
     [PythonType("weakref")]
-    public static class WeakRef {
+    public static class PythonWeakRef {
         [PythonName("getweakrefcount")]
         public static int GetWeakRefCount(object @object) {
             return PythonWeakReference.GetWeakRefCount(@object);

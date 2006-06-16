@@ -17,6 +17,7 @@ using System;
 using IronPython.Runtime;
 using IronMath;
 
+using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("math", typeof(IronPython.Modules.PythonMath))]
 namespace IronPython.Modules {

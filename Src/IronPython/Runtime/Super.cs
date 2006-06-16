@@ -17,6 +17,10 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
     [PythonType("super")]
     public class Super : IDynamicObject, ICustomAttributes, IDescriptor {

@@ -19,9 +19,9 @@ using System.Text;
 
 using IronPython.Runtime;
 
-[assembly: PythonModule("_sre", typeof(IronPython.Modules.SRegEx))]
+[assembly: PythonModule("_sre", typeof(IronPython.Modules.PythonSRegEx))]
 namespace IronPython.Modules {
-    public static class SRegEx {
+    public static class PythonSRegEx {
         public static object MAGIC = 20031017;
         public static object CODESIZE = 2;
 

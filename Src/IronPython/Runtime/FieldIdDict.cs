@@ -18,6 +18,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
     /// <summary>
     /// Represents a dictionary that can be looked up by SymbolId (that corresponds to a string) 

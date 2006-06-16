@@ -24,9 +24,13 @@ using System.Text;
 using System.CodeDom;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using IronPython.Compiler.Generation;
 using IronPython.CodeDom;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.AST {
     [FlagsAttribute]
     public enum FuncDefType { None = 0, ArgList, KeywordDict }
 

@@ -16,9 +16,11 @@
 using System;
 using System.Reflection;
 using System.Diagnostics;
-using IronPython.Runtime;
 
-namespace IronPython.Compiler {
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Compiler.Generation {
     abstract class EnvironmentReference {
         protected Type type;
 

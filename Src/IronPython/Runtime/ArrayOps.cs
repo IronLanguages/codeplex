@@ -19,8 +19,10 @@ using System.Collections;
 using System.Diagnostics;
 
 using IronMath;
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
     [PythonType("array")]
     public static class ArrayOps {
         internal static object ArrayType;

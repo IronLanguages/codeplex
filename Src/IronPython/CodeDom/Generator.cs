@@ -20,6 +20,8 @@ using System.Text;
 using System.Diagnostics;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+
 using System.CodeDom;
 using System.CodeDom.Compiler;
 
@@ -50,7 +52,7 @@ namespace IronPython.CodeDom {
      * 
      */
 
-    public partial class PythonGenerator : CodeCompiler, ICodeCompiler, ICodeGenerator {
+    partial class PythonGenerator : CodeCompiler, ICodeCompiler, ICodeGenerator {
         CodeEntryPointMethod entryPoint = null;
         string entryPointNamespace = null;
         string lastNamespace;

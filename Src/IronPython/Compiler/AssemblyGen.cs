@@ -26,8 +26,9 @@ using System.Security.Permissions;
 using System.Threading;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
     class AssemblyGen {
         public static readonly Guid PythonLanguageGuid = new Guid("03ed4b80-d10b-442f-ad9a-47dae85b2051");
         public readonly AssemblyBuilder myAssembly;
@@ -173,7 +174,7 @@ namespace IronPython.Compiler {
             string verifyFile = null;
 
             try {
-                string pythonPath = new FileInfo(typeof(IronPython.Runtime.Ops).Assembly.Location).DirectoryName;
+                string pythonPath = new FileInfo(typeof(Ops).Assembly.Location).DirectoryName;
 
                 string assemblyFile = Path.Combine(outDir, outFileName).ToLower();
                 string assemblyName = Path.GetFileNameWithoutExtension(outFileName);
@@ -215,7 +216,7 @@ namespace IronPython.Compiler {
             }
 
             if (exitCode != 0) {
-                throw IronPython.Runtime.Ops.RuntimeError("Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n",
+                throw Ops.RuntimeError("Non-verifiable assembly generated: {0}:\nAssembly preserved as {1}\nError text:\n{2}\n",
                     outFileName, verifyFile, strOut == null ? "" : strOut);
             }
 

@@ -20,6 +20,8 @@ using System.Text;
 using System.Diagnostics;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler {
     /// <summary>

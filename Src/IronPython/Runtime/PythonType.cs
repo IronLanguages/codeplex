@@ -21,7 +21,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+
+namespace IronPython.Runtime.Types {
     // PythonType is the base of the hierarchy of new-style types in the Python world, and builtins.
     // 
     // It is extended by:

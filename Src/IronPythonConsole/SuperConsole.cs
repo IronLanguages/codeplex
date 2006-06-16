@@ -17,7 +17,9 @@ using System;
 using System.Text;
 using System.Collections;
 using System.Threading;
+
 using IronPython.Hosting;
+using IronPython.Runtime.Exceptions;
 
 namespace IronPythonConsole {
     public class SuperConsole : IConsole {
@@ -214,7 +216,7 @@ namespace IronPythonConsole {
             if (e.SpecialKey == ConsoleSpecialKey.ControlC) {
                 e.Cancel = true;
                 ctrlCEvent.Set();
-                MainEngineThread.Abort(new IronPython.Runtime.PythonKeyboardInterrupt(""));
+                MainEngineThread.Abort(new PythonKeyboardInterrupt(""));
             }
         }
 

@@ -22,6 +22,9 @@ using IronPython.Hosting;
 using System.Diagnostics;
 
 using System.Collections.Generic;
+using IronPython.Compiler.AST;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Compiler {
     /// <summary>

@@ -23,9 +23,12 @@ using System.Text;
 using System.Diagnostics;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
 using IronPython.CodeDom;
+using IronPython.Compiler.Generation;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.AST {
     /// <summary>
     /// Summary description for Expr.
     /// </summary>

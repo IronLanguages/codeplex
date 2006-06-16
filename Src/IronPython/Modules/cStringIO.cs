@@ -19,9 +19,11 @@ using System.IO;
 using System.Text;
 using IronPython.Runtime;
 
+using IronPython.Runtime.Operations;
+
 [assembly: PythonModule("cStringIO", typeof(IronPython.Modules.PythonStringIO))]
 namespace IronPython.Modules {
-    public class StringStream {
+    class StringStream {
         private string data;
         private int position;
         private int length;
@@ -163,343 +165,346 @@ namespace IronPython.Modules {
         }
     }
 
-    public class StringI {
-        private StringStream sr;
-
-        internal StringI(string data) {
-            sr = new StringStream(data);
-        }
-
-        [PythonName("close")]
-        public void Close() {
-            sr = null;
-        }
-
-        public bool Closed {
-            [PythonName("closed")]
-            get {
-                return sr == null;
-            }
-        }
-
-        [PythonName("flush")]
-        public void Flush() {
-            ThrowIfClosed();
-        }
-
-        [PythonName("getvalue")]
-        public string GetValue() {
-            ThrowIfClosed();
-            return sr.Data;
-        }
-
-        [PythonName("getvalue")]
-        public string GetValue(bool usePos) {
-            return sr.Prefix;
-        }
-
-        [PythonName("isatty")]
-        public int IsAtty() {
-            return 0;
-        }
-
-        [PythonName("__iter__")]
-        public object Iter() {
-            return this;
-        }
-
-        [PythonName("next")]
-        public string Next() {
-            ThrowIfClosed();
-            if (sr.EOF) {
-                throw Ops.StopIteration();
-            }
-            return ReadLine();
-        }
-
-        [PythonName("read")]
-        public string Read() {
-            ThrowIfClosed();
-            return sr.ReadToEnd();
-        }
-
-        [PythonName("read")]
-        public string Read(int s) {
-            ThrowIfClosed();
-            return sr.Read(s);
-        }
-
-        [PythonName("readline")]
-        public string ReadLine() {
-            ThrowIfClosed();
-            return sr.ReadLine();
-        }
-
-        [PythonName("readlines")]
-        public List ReadLines() {
-            ThrowIfClosed();
-            List list = List.Make();
-            while (!sr.EOF) {
-                list.AddNoLock(ReadLine());
-            }
-            return list;
-        }
-
-        [PythonName("readlines")]
-        public List ReadLines(int size) {
-            ThrowIfClosed();
-            List list = List.Make();
-            while (!sr.EOF) {
-                string line = ReadLine();
-                list.AddNoLock(line);
-                if (line.Length >= size) break;
-                size -= line.Length;
-            }
-            return list;
-        }
-
-        [PythonName("reset")]
-        public void Reset() {
-            ThrowIfClosed();
-            sr.Reset();
-        }
-
-        [PythonName("seek")]
-        public void Seek(int position) {
-            Seek(position, 0);
-        }
-
-        [PythonName("seek")]
-        public void Seek(int position, int mode) {
-            ThrowIfClosed();
-            SeekOrigin so;
-            switch (mode) {
-                case 1: so = SeekOrigin.Current; break;
-                case 2: so = SeekOrigin.End; break;
-                default: so = SeekOrigin.Begin; break;
-            }
-            sr.Seek(position, so);
-        }
-
-        [PythonName("tell")]
-        public int Tell() {
-            ThrowIfClosed();
-            return sr.Position;
-        }
-
-        [PythonName("truncate")]
-        public void Truncate() {
-            ThrowIfClosed();
-            sr.Truncate();
-        }
-
-        [PythonName("truncate")]
-        public void Truncate(int size) {
-            ThrowIfClosed();
-            sr.Truncate(size);
-        }
-
-        private void ThrowIfClosed() {
-            if (Closed) {
-                throw Ops.ValueError("I/O operation on closed file");
-            }
-        }
-    }
-
-    public class StringO {
-        private StringWriter sw = new StringWriter();
-        private StringStream sr = new StringStream("");
-        private int softspace;
-
-        internal StringO() {
-        }
-
-        [PythonName("__iter__")]
-        public object Iter() {
-            return this;
-        }
-
-        [PythonName("close")]
-        public void Close() {
-            if (sw != null) { sw.Close(); sw = null; }
-            if (sr != null) { sr = null; }
-        }
-
-        public bool Closed {
-            [PythonName("closed")]
-            get {
-                return sw == null || sr == null;
-            }
-        }
-
-        [PythonName("flush")]
-        public void Flush() {
-            FixStreams();
-        }
-
-        [PythonName("getvalue")]
-        public string GetValue() {
-            ThrowIfClosed();
-            FixStreams();
-            return sr.Data;
-        }
-
-        [PythonName("getvalue")]
-        public string GetValue(bool usePos) {
-            ThrowIfClosed();
-            FixStreams();
-            return sr.Prefix;
-        }
-
-        [PythonName("isatty")]
-        public int IsAtty() {
-            return 0;
-        }
-
-        [PythonName("next")]
-        public string Next() {
-            ThrowIfClosed();
-            FixStreams();
-            if (sr.EOF) {
-                throw Ops.StopIteration();
-            }
-            return ReadLine();
-        }
-
-        [PythonName("read")]
-        public string Read() {
-            ThrowIfClosed();
-            FixStreams();
-            return sr.ReadToEnd();
-        }
-
-        [PythonName("read")]
-        public string Read(int i) {
-            ThrowIfClosed();
-            FixStreams();
-            return sr.Read(i);
-        }
-
-        [PythonName("readline")]
-        public string ReadLine() {
-            ThrowIfClosed();
-            FixStreams();
-            return sr.ReadLine();
-        }
-
-        [PythonName("readlines")]
-        public List ReadLines() {
-            ThrowIfClosed();
-            List list = List.Make();
-            while (!sr.EOF) {
-                list.AddNoLock(ReadLine());
-            }
-            return list;
-        }
-
-        [PythonName("readlines")]
-        public List ReadLines(int size) {
-            ThrowIfClosed();
-            List list = List.Make();
-            while(!sr.EOF) {
-                string line = ReadLine();
-                list.AddNoLock(line);
-                if (line.Length >= size) break;
-                size -= line.Length;
-            }
-            return list;
-        }
-
-        [PythonName("reset")]
-        public void Reset() {
-            ThrowIfClosed();
-            FixStreams();
-            sr.Reset();
-        }
-
-        [PythonName("seek")]
-        public void Seek(int position) {
-            Seek(position, 0);
-        }
-
-        [PythonName("seek")]
-        public void Seek(int offset, int origin) {
-            ThrowIfClosed();
-            FixStreams();
-            SeekOrigin so;
-            switch (origin) {
-                case 1: so = SeekOrigin.Current; break;
-                case 2: so = SeekOrigin.End; break;
-                default: so = SeekOrigin.Begin; break;
-            }
-            sr.Seek(offset, so);
-        }
-
-        public int SoftSpace {
-            [PythonName("softspace")]
-            get { return softspace; }
-            [PythonName("softspace")]
-            set { softspace = value; }
-        }
-
-        [PythonName("tell")]
-        public int Tell() {
-            ThrowIfClosed();
-            FixStreams();
-            return sr.Position;
-        }
-
-        [PythonName("truncate")]
-        public void Truncate() {
-            ThrowIfClosed();
-            FixStreams();
-            sr.Truncate();
-        }
-
-        [PythonName("truncate")]
-        public void Truncate(int size) {
-            ThrowIfClosed();
-            FixStreams();
-            sr.Truncate(size);
-        }
-
-        [PythonName("write")]
-        public void Write(string s) {
-            ThrowIfClosed();
-            sw.Write(s);
-        }
-
-        [PythonName("writelines")]
-        public void WriteLines(object o) {
-            ThrowIfClosed();
-            IEnumerator e = Ops.GetEnumerator(o);
-            while (e.MoveNext()) {
-                string s = e.Current as string;
-                if (s == null) {
-                    throw Ops.ValueError("string expected");
-                }
-                Write(s);
-            }
-        }
-
-        private void FixStreams() {
-            if (sr != null) {
-                StringBuilder sb = sw.GetStringBuilder();
-                if (sb != null && sb.Length > 0) {
-                    sr.Write(sb.ToString());
-                    sb.Length = 0;
-                }
-            }
-        }
-
-        private void ThrowIfClosed() {
-            if (Closed) {
-                throw Ops.ValueError("I/O operation on closed file");
-            }
-        }
-    }
-
     public static class PythonStringIO {
+        public static object InputType = Ops.GetDynamicType(typeof(StringI));
+        public static object OutputType = Ops.GetDynamicType(typeof(StringO));
+
+        public class StringI {
+            private StringStream sr;
+
+            internal StringI(string data) {
+                sr = new StringStream(data);
+            }
+
+            [PythonName("close")]
+            public void Close() {
+                sr = null;
+            }
+
+            public bool Closed {
+                [PythonName("closed")]
+                get {
+                    return sr == null;
+                }
+            }
+
+            [PythonName("flush")]
+            public void Flush() {
+                ThrowIfClosed();
+            }
+
+            [PythonName("getvalue")]
+            public string GetValue() {
+                ThrowIfClosed();
+                return sr.Data;
+            }
+
+            [PythonName("getvalue")]
+            public string GetValue(bool usePos) {
+                return sr.Prefix;
+            }
+
+            [PythonName("isatty")]
+            public int IsAtty() {
+                return 0;
+            }
+
+            [PythonName("__iter__")]
+            public object Iter() {
+                return this;
+            }
+
+            [PythonName("next")]
+            public string Next() {
+                ThrowIfClosed();
+                if (sr.EOF) {
+                    throw Ops.StopIteration();
+                }
+                return ReadLine();
+            }
+
+            [PythonName("read")]
+            public string Read() {
+                ThrowIfClosed();
+                return sr.ReadToEnd();
+            }
+
+            [PythonName("read")]
+            public string Read(int s) {
+                ThrowIfClosed();
+                return sr.Read(s);
+            }
+
+            [PythonName("readline")]
+            public string ReadLine() {
+                ThrowIfClosed();
+                return sr.ReadLine();
+            }
+
+            [PythonName("readlines")]
+            public List ReadLines() {
+                ThrowIfClosed();
+                List list = List.Make();
+                while (!sr.EOF) {
+                    list.AddNoLock(ReadLine());
+                }
+                return list;
+            }
+
+            [PythonName("readlines")]
+            public List ReadLines(int size) {
+                ThrowIfClosed();
+                List list = List.Make();
+                while (!sr.EOF) {
+                    string line = ReadLine();
+                    list.AddNoLock(line);
+                    if (line.Length >= size) break;
+                    size -= line.Length;
+                }
+                return list;
+            }
+
+            [PythonName("reset")]
+            public void Reset() {
+                ThrowIfClosed();
+                sr.Reset();
+            }
+
+            [PythonName("seek")]
+            public void Seek(int position) {
+                Seek(position, 0);
+            }
+
+            [PythonName("seek")]
+            public void Seek(int position, int mode) {
+                ThrowIfClosed();
+                SeekOrigin so;
+                switch (mode) {
+                    case 1: so = SeekOrigin.Current; break;
+                    case 2: so = SeekOrigin.End; break;
+                    default: so = SeekOrigin.Begin; break;
+                }
+                sr.Seek(position, so);
+            }
+
+            [PythonName("tell")]
+            public int Tell() {
+                ThrowIfClosed();
+                return sr.Position;
+            }
+
+            [PythonName("truncate")]
+            public void Truncate() {
+                ThrowIfClosed();
+                sr.Truncate();
+            }
+
+            [PythonName("truncate")]
+            public void Truncate(int size) {
+                ThrowIfClosed();
+                sr.Truncate(size);
+            }
+
+            private void ThrowIfClosed() {
+                if (Closed) {
+                    throw Ops.ValueError("I/O operation on closed file");
+                }
+            }
+        }
+
+        public class StringO {
+            private StringWriter sw = new StringWriter();
+            private StringStream sr = new StringStream("");
+            private int softspace;
+
+            internal StringO() {
+            }
+
+            [PythonName("__iter__")]
+            public object Iter() {
+                return this;
+            }
+
+            [PythonName("close")]
+            public void Close() {
+                if (sw != null) { sw.Close(); sw = null; }
+                if (sr != null) { sr = null; }
+            }
+
+            public bool Closed {
+                [PythonName("closed")]
+                get {
+                    return sw == null || sr == null;
+                }
+            }
+
+            [PythonName("flush")]
+            public void Flush() {
+                FixStreams();
+            }
+
+            [PythonName("getvalue")]
+            public string GetValue() {
+                ThrowIfClosed();
+                FixStreams();
+                return sr.Data;
+            }
+
+            [PythonName("getvalue")]
+            public string GetValue(bool usePos) {
+                ThrowIfClosed();
+                FixStreams();
+                return sr.Prefix;
+            }
+
+            [PythonName("isatty")]
+            public int IsAtty() {
+                return 0;
+            }
+
+            [PythonName("next")]
+            public string Next() {
+                ThrowIfClosed();
+                FixStreams();
+                if (sr.EOF) {
+                    throw Ops.StopIteration();
+                }
+                return ReadLine();
+            }
+
+            [PythonName("read")]
+            public string Read() {
+                ThrowIfClosed();
+                FixStreams();
+                return sr.ReadToEnd();
+            }
+
+            [PythonName("read")]
+            public string Read(int i) {
+                ThrowIfClosed();
+                FixStreams();
+                return sr.Read(i);
+            }
+
+            [PythonName("readline")]
+            public string ReadLine() {
+                ThrowIfClosed();
+                FixStreams();
+                return sr.ReadLine();
+            }
+
+            [PythonName("readlines")]
+            public List ReadLines() {
+                ThrowIfClosed();
+                List list = List.Make();
+                while (!sr.EOF) {
+                    list.AddNoLock(ReadLine());
+                }
+                return list;
+            }
+
+            [PythonName("readlines")]
+            public List ReadLines(int size) {
+                ThrowIfClosed();
+                List list = List.Make();
+                while (!sr.EOF) {
+                    string line = ReadLine();
+                    list.AddNoLock(line);
+                    if (line.Length >= size) break;
+                    size -= line.Length;
+                }
+                return list;
+            }
+
+            [PythonName("reset")]
+            public void Reset() {
+                ThrowIfClosed();
+                FixStreams();
+                sr.Reset();
+            }
+
+            [PythonName("seek")]
+            public void Seek(int position) {
+                Seek(position, 0);
+            }
+
+            [PythonName("seek")]
+            public void Seek(int offset, int origin) {
+                ThrowIfClosed();
+                FixStreams();
+                SeekOrigin so;
+                switch (origin) {
+                    case 1: so = SeekOrigin.Current; break;
+                    case 2: so = SeekOrigin.End; break;
+                    default: so = SeekOrigin.Begin; break;
+                }
+                sr.Seek(offset, so);
+            }
+
+            public int SoftSpace {
+                [PythonName("softspace")]
+                get { return softspace; }
+                [PythonName("softspace")]
+                set { softspace = value; }
+            }
+
+            [PythonName("tell")]
+            public int Tell() {
+                ThrowIfClosed();
+                FixStreams();
+                return sr.Position;
+            }
+
+            [PythonName("truncate")]
+            public void Truncate() {
+                ThrowIfClosed();
+                FixStreams();
+                sr.Truncate();
+            }
+
+            [PythonName("truncate")]
+            public void Truncate(int size) {
+                ThrowIfClosed();
+                FixStreams();
+                sr.Truncate(size);
+            }
+
+            [PythonName("write")]
+            public void Write(string s) {
+                ThrowIfClosed();
+                sw.Write(s);
+            }
+
+            [PythonName("writelines")]
+            public void WriteLines(object o) {
+                ThrowIfClosed();
+                IEnumerator e = Ops.GetEnumerator(o);
+                while (e.MoveNext()) {
+                    string s = e.Current as string;
+                    if (s == null) {
+                        throw Ops.ValueError("string expected");
+                    }
+                    Write(s);
+                }
+            }
+
+            private void FixStreams() {
+                if (sr != null) {
+                    StringBuilder sb = sw.GetStringBuilder();
+                    if (sb != null && sb.Length > 0) {
+                        sr.Write(sb.ToString());
+                        sb.Length = 0;
+                    }
+                }
+            }
+
+            private void ThrowIfClosed() {
+                if (Closed) {
+                    throw Ops.ValueError("I/O operation on closed file");
+                }
+            }
+        }
+
         [PythonName("StringIO")]
         public static object StringIO() {
             return new StringO();

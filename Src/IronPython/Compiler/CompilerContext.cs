@@ -14,6 +14,7 @@
  * **********************************************************************************/
 
 using IronPython.Hosting;
+using IronPython.Compiler.AST;
 
 namespace IronPython.Compiler {
     public class CompilerContext {

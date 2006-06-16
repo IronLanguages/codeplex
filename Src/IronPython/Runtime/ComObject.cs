@@ -30,7 +30,11 @@ using Microsoft.Win32;
 using System.Diagnostics;
 using System.Threading;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Runtime.Types {
     [
     ComImport,
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown),

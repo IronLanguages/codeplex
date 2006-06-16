@@ -18,6 +18,8 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
     static class ReflectionUtil {
 

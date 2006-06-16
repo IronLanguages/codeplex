@@ -19,8 +19,10 @@ using System.Collections;
 using System.Threading;
 
 using IronMath;
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
     /// <summary>
     /// BigInteger doesn't have the right ctor's on it for us to call 
     /// the derived class from a base class, so we define ExtensibeLong

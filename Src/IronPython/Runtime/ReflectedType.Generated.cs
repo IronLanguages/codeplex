@@ -17,7 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Operations;
+
+namespace IronPython.Runtime.Types {
     partial class ReflectedType {
         // 36 operators
         #region Generated ReflectedType Binary Operators

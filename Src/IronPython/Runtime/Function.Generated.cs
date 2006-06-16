@@ -18,7 +18,9 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Text;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Operations;
+
+namespace IronPython.Runtime.Calls {
     public abstract partial class PythonFunction {
         #region Generated Function FastCallable Members
 

@@ -17,7 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Runtime.Types {
     //41 operators
     partial class UserType {
         #region Generated UserType Binary Operators

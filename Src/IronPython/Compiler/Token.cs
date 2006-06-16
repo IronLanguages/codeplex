@@ -16,6 +16,8 @@
 using System;
 using IronPython.Runtime;
 
+using IronPython.Compiler.AST;
+
 namespace IronPython.Compiler {
     /// <summary>
     /// Summary description for Token.

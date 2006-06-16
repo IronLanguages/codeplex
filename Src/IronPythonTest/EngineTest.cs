@@ -18,6 +18,8 @@ using System.Collections.Generic;
 using System.Text;
 using IronPython.Hosting;
 using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 using System.IO;
 
 namespace IronPythonTest {
@@ -149,7 +151,7 @@ namespace IronPythonTest {
             try {
                 pe2.Execute("print a");
                 throw new Exception("Scenario3");
-            } catch (IronPython.Runtime.PythonNameError) { }
+            } catch (IronPython.Runtime.Exceptions.PythonNameError) { }
         }
 
         public void ScenarioEvaluateInAnonymousModuleScope() {
@@ -324,7 +326,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
                 try {
                     pe.ExecuteFile(tempFile1);
                     throw new Exception("Scenario7");
-                } catch (IronPython.Runtime.PythonImportError) { }
+                } catch (IronPython.Runtime.Exceptions.PythonImportError) { }
 
                 pe.AddToPath(Common.ScriptTestDirectory);
 
@@ -349,7 +351,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
             try {
                 standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.EnableDebugging);
                 throw new Exception("We should not get here");
-            } catch (StringException e1) {
+            } catch (IronPython.Runtime.Exceptions.StringException e1) {
                 if (!e1.StackTrace.Contains(lineNumber1) || !e1.StackTrace.Contains(lineNumber2))
                     throw new Exception("Debugging is not enabled even though ExecutionOptions.EnableDebugging is specified");
             }

@@ -23,6 +23,9 @@ using System.Diagnostics;
 
 using IronPython.Compiler;
 using IronPython.Modules;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
 

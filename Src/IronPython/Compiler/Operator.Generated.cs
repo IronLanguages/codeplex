@@ -18,8 +18,10 @@ using System.Collections.Generic;
 using System.Text;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.AST {
     public abstract partial class Operator {
         #region Generated Operators
 

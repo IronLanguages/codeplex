@@ -17,6 +17,8 @@ using System;
 using System.Collections;
 using System.Text;
 
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
     [PythonType("buffer")]
     public class PythonBuffer {

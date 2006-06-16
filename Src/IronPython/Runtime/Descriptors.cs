@@ -15,8 +15,10 @@
 
 using System;
 using System.Runtime.InteropServices;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Calls {
     [PythonType("staticmethod")]
     public class StaticMethod : IDescriptor {
         private object func;

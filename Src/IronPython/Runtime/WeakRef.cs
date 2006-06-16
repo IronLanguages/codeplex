@@ -17,8 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
-
 using System.Diagnostics;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -137,7 +139,7 @@ namespace IronPython.Runtime {
     /// only reference to this object is the instance so when that goes out of scope
     /// this does as well and this will get finalized.  
     /// </summary>
-    public sealed class InstanceFinalizer : ICallable {
+    internal sealed class InstanceFinalizer : ICallable {
         object instance;
 
         public InstanceFinalizer(object inst) {

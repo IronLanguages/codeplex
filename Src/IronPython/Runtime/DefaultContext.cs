@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using IronPython.Compiler;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Calls {
     class DefaultContext : ICallerContext{
         public static DefaultContext Default = new DefaultContext(CallerContextFlags.None);
         public static DefaultContext DefaultCLS = new DefaultContext(CallerContextFlags.ShowCls);

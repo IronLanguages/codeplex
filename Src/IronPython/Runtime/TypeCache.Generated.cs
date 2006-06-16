@@ -16,9 +16,13 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using IronPython.Modules;
 
-namespace IronPython.Runtime {
+using IronPython.Modules;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Runtime.Types {
     public static class TypeCache {
         #region Generated TypeCache Storage
 

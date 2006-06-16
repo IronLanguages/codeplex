@@ -21,7 +21,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 using IronPython.Runtime;
-
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Exceptions;
 
 [assembly: PythonModule("re", typeof(IronPython.Modules.PythonRegex))]
 namespace IronPython.Modules {

@@ -19,7 +19,7 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Calls {
     public partial class BuiltinFunction {
         #region Generated BuiltinFunction targets
 

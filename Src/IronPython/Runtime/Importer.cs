@@ -22,7 +22,12 @@ using System.IO;
 using System.Diagnostics;
 
 using IronPython.Compiler;
+using IronPython.Compiler.AST;
+using IronPython.Compiler.Generation;
 using IronPython.Modules;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
     /// <summary>

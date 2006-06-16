@@ -19,7 +19,11 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Text;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Runtime.Operations {
     /// <summary>
     /// Helper class that all custom type descriptor implementations call for
     /// the bulk of their implementation.

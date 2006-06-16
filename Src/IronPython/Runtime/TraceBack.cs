@@ -20,7 +20,7 @@ using System.Diagnostics;
 
 using IronPython.Runtime;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Exceptions {
     [PythonType("traceback")]
     public class TraceBack {
         TraceBack next;

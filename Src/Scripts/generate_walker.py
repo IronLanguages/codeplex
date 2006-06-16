@@ -44,7 +44,7 @@ class Ast:
     def Add(self, t):
         if not t:
             return None
-        elif t.FullName == "IronPython.Compiler.Node":
+        elif t.FullName == "IronPython.Compiler.AST.Node":
             if self.root == None:
                 self.root = AstNode(t, None)
             return self.root
@@ -63,7 +63,7 @@ def get_ast():
     ast = Ast()
 
     for t in asm.GetExportedTypes():
-        if t.FullName.StartsWith("IronPython.Compiler"):
+        if t.FullName.StartsWith("IronPython.Compiler.AST"):
             ast.Add(t)
 
     return ast
@@ -77,9 +77,9 @@ def inherits(n, f):
         return inherits(n.p, f)
 
 def isexpr(n):
-    return inherits(n, "IronPython.Compiler.Expr")
+    return inherits(n, "IronPython.Compiler.AST.Expr")
 def isstmt(n):
-    return inherits(n, "IronPython.Compiler.Stmt")
+    return inherits(n, "IronPython.Compiler.AST.Stmt")
 
 def compare(a, b):
     if isexpr(a):

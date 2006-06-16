@@ -16,7 +16,16 @@
 using System;
 using System.Collections;
 
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
+    /* 
+     * Enumeraters exposed to Python code directly
+     * 
+     */
+
     [PythonType("enumerate")]
     public class Enumerate : IEnumerator, IDynamicObject {
         private readonly IEnumerator iter;
@@ -57,126 +66,6 @@ namespace IronPython.Runtime {
         }
 
         #endregion
-    }
-
-    public class PythonEnumerator : IEnumerator, IEnumerable {
-        private readonly object baseObject;
-        private object nextMethod;
-        private object current = null;
-
-        public static bool Create(object baseEnumerator, out IEnumerator enumerator) {
-            object iter;
-
-            if (Ops.TryGetAttr(baseEnumerator, SymbolTable.Iterator, out iter)) {
-                object iterator = Ops.Call(iter);
-                enumerator = new PythonEnumerator(iterator);
-                return true;
-            } else {
-                enumerator = null;
-                return false;
-            }
-        }
-
-        public PythonEnumerator(object iter) {
-            this.baseObject = iter;
-        }
-
-
-        #region IEnumerator Members
-
-        public void Reset() {
-            throw new NotImplementedException();
-        }
-
-        public object Current {
-            get {
-                return current;
-            }
-        }
-
-        public bool MoveNext() {
-            if (nextMethod == null) {
-                if (!Ops.TryGetAttr(baseObject, SymbolTable.GeneratorNext, out nextMethod) || nextMethod == null) {
-                    throw Ops.TypeError("instance has no next() method");
-                }
-            }
-
-            try {
-                current = Ops.Call(nextMethod);
-                return true;
-            } catch (StopIterationException) {
-                return false;
-            }
-        }
-
-        #endregion
-
-        #region IEnumerable Members
-
-        [PythonName("__iter__")]
-        public IEnumerator GetEnumerator() {
-            return this;
-        }
-
-        #endregion
-    }
-
-    public class ItemEnumerator : IEnumerator {
-        private readonly object getItemMethod;
-        private object current = null;
-        private int index = 0;
-
-        public static bool Create(object baseObject, out IEnumerator enumerator) {
-            object getitem;
-
-            if (Ops.TryGetAttr(baseObject, SymbolTable.GetItem, out getitem)) {
-                enumerator = new ItemEnumerator(getitem);
-                return true;
-            } else {
-                enumerator = null;
-                return false;
-            }
-        }
-
-        public ItemEnumerator(object getItemMethod) {
-            this.getItemMethod = getItemMethod;
-        }
-
-        #region IEnumerator members
-
-        public object Current {
-            get {
-                return current;
-            }
-        }
-
-        public bool MoveNext() {
-            if (index < 0) {
-                return false;
-            }
-
-            try {
-                current = Ops.Call(getItemMethod, index);
-                index++;
-                return true;
-            } catch (IndexOutOfRangeException) {
-                current = null;
-                index = -1;     // this is the end
-                return false;
-            } catch (StopIterationException) {
-                current = null;
-                index = -1;     // this is the end
-                return false;
-            }
-        }
-
-        public void Reset() {
-            index = 0;
-            current = null;
-        }
-
-        #endregion
-
     }
 
     [PythonType("ReversedEnumerator")]
@@ -270,4 +159,130 @@ namespace IronPython.Runtime {
 
         #endregion
     }
+
+    /* 
+     * Enumeraters exposed to .NET code
+     * 
+     */
+
+    internal class PythonEnumerator : IEnumerator, IEnumerable {
+        private readonly object baseObject;
+        private object nextMethod;
+        private object current = null;
+
+        public static bool Create(object baseEnumerator, out IEnumerator enumerator) {
+            object iter;
+
+            if (Ops.TryGetAttr(baseEnumerator, SymbolTable.Iterator, out iter)) {
+                object iterator = Ops.Call(iter);
+                enumerator = new PythonEnumerator(iterator);
+                return true;
+            } else {
+                enumerator = null;
+                return false;
+            }
+        }
+
+        public PythonEnumerator(object iter) {
+            this.baseObject = iter;
+        }
+
+
+        #region IEnumerator Members
+
+        public void Reset() {
+            throw new NotImplementedException();
+        }
+
+        public object Current {
+            get {
+                return current;
+            }
+        }
+
+        public bool MoveNext() {
+            if (nextMethod == null) {
+                if (!Ops.TryGetAttr(baseObject, SymbolTable.GeneratorNext, out nextMethod) || nextMethod == null) {
+                    throw Ops.TypeError("instance has no next() method");
+                }
+            }
+
+            try {
+                current = Ops.Call(nextMethod);
+                return true;
+            } catch (StopIterationException) {
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region IEnumerable Members
+
+        [PythonName("__iter__")]
+        public IEnumerator GetEnumerator() {
+            return this;
+        }
+
+        #endregion
+    }
+
+    internal class ItemEnumerator : IEnumerator {
+        private readonly object getItemMethod;
+        private object current = null;
+        private int index = 0;
+
+        public static bool Create(object baseObject, out IEnumerator enumerator) {
+            object getitem;
+
+            if (Ops.TryGetAttr(baseObject, SymbolTable.GetItem, out getitem)) {
+                enumerator = new ItemEnumerator(getitem);
+                return true;
+            } else {
+                enumerator = null;
+                return false;
+            }
+        }
+
+        public ItemEnumerator(object getItemMethod) {
+            this.getItemMethod = getItemMethod;
+        }
+
+        #region IEnumerator members
+
+        public object Current {
+            get {
+                return current;
+            }
+        }
+
+        public bool MoveNext() {
+            if (index < 0) {
+                return false;
+            }
+
+            try {
+                current = Ops.Call(getItemMethod, index);
+                index++;
+                return true;
+            } catch (IndexOutOfRangeException) {
+                current = null;
+                index = -1;     // this is the end
+                return false;
+            } catch (StopIterationException) {
+                current = null;
+                index = -1;     // this is the end
+                return false;
+            }
+        }
+
+        public void Reset() {
+            index = 0;
+            current = null;
+        }
+
+        #endregion
+
+    }
+
 }

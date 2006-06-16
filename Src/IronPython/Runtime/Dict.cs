@@ -20,6 +20,9 @@ using System.Text;
 using System.Diagnostics;
 
 using IronPython.Compiler;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
 
@@ -140,7 +143,7 @@ namespace IronPython.Runtime {
         #region IEnumerable<KeyValuePair<object,object>> Members
 
         [PythonName("__iter__")]
-        public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
+        public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {            
             return new DictKeyValueEnumerator(data);
         }
 
@@ -602,7 +605,7 @@ namespace IronPython.Runtime {
         }
     }
 
-    public static class DictOps {
+    internal static class DictOps {
         static object nullObject = new object();
 
         public static object GetIndex(IDictionary<object, object> self, object key) {
@@ -809,7 +812,7 @@ namespace IronPython.Runtime {
         }
     }
 
-    public class DictDynamicType : ReflectedType, IFancyCallable {
+    public class DictDynamicType : IronPython.Runtime.Types.ReflectedType, IFancyCallable {
         public DictDynamicType()
             : base(typeof(Dict)) {
         }

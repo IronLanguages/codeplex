@@ -23,6 +23,7 @@ using System.Diagnostics;
 
 using IronPython.Runtime;
 using IronPython.Compiler;
+using IronPython.Runtime.Operations;
 
 using IronMath;
 

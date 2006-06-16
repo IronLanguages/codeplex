@@ -20,7 +20,9 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Diagnostics;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Operations;
+
+namespace IronPython.Runtime.Calls {
     /// <summary>
     /// Helper class for performing keyword argument binding over multiple methods.
     /// 

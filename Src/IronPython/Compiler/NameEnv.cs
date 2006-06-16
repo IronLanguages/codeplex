@@ -19,6 +19,9 @@ using System.Collections.Generic;
 
 using IronPython.Compiler;
 using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 using IronPython.Modules;
 
 namespace IronPython.Compiler {

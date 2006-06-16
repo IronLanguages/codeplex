@@ -18,7 +18,7 @@ using System;
 namespace IronPython.Runtime {
 
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
-    public class PythonHiddenFieldAttribute : Attribute {
+    internal class PythonHiddenFieldAttribute : Attribute {
     }
 
     /// <summary>
@@ -82,7 +82,7 @@ namespace IronPython.Runtime {
     }
    
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-    public sealed class PythonClassMethodAttribute : PythonNameAttribute {
+    internal sealed class PythonClassMethodAttribute : PythonNameAttribute {
         public PythonClassMethodAttribute(string name)
             : base(name) {
         }

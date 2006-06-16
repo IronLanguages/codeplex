@@ -16,6 +16,10 @@
 using System;
 using System.Collections;
 
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime {
     [PythonType("generator")]
     public sealed class Generator : IDynamicObject, IEnumerator, IEnumerable, ICustomAttributes {

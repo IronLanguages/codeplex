@@ -22,7 +22,7 @@ using System.Reflection.Emit;
 
 using IronPython.Runtime;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
     // Namespaces can be nested to get lexical scoping. Python looks up name as follows.
     //
     // Assignments to a name :

@@ -17,11 +17,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using IronPython.Runtime;
 
-[assembly: PythonModule("itertools", typeof(IronPython.Modules.IterTools))]
+using IronPython.Runtime;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+
+[assembly: PythonModule("itertools", typeof(IronPython.Modules.PythonIterTools))]
 namespace IronPython.Modules {
-    public static class IterTools {
+    public static class PythonIterTools {
         [PythonName("tee")]
         public static object Tee(object iterable) {
             return Tee(iterable, 2);

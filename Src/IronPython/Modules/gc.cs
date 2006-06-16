@@ -19,6 +19,8 @@ using IronPython.Runtime;
 using System.Text;
 using System.Runtime.InteropServices;
 
+using IronPython.Runtime.Operations;
+
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
 namespace IronPython.Modules {
     public static class PythonGC {

@@ -42,7 +42,7 @@ using IronPython.Runtime;
  *         print x
  */
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.AST {
     class DefineBinder : AstWalkerNonRecursive {
         protected Binder binder;
         public DefineBinder(Binder binder) {

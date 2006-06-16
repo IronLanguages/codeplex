@@ -18,7 +18,10 @@ using System.Diagnostics;
 using System.Text;
 using IronMath;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+
+namespace IronPython.Runtime.Operations {
     static partial class UInt64Ops {
 
         #region Generated UInt64Ops

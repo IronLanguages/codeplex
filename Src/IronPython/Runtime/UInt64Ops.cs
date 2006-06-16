@@ -17,7 +17,9 @@ using System;
 using System.Diagnostics;
 using IronMath;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime;
+
+namespace IronPython.Runtime.Operations {
     static partial class UInt64Ops {
         #region Unary operators
 

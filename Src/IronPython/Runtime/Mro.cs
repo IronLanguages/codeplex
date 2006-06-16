@@ -19,7 +19,10 @@ using System.Text;
 
 using System.Diagnostics;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
+
+namespace IronPython.Runtime.Types {
     /// <summary>
     /// Calculates the method resolution order for a Python class
     /// the rules are:

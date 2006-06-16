@@ -21,9 +21,12 @@ using System.Diagnostics;
 using System.Reflection;
 
 using System.Threading;
+using IronPython.Runtime.Operations;
+using IronPython.Compiler.AST;
 using IronPython.Compiler;
+using IronPython.Runtime.Types;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Calls {
 
     /// <summary>
     /// Represents a piece of code.  This can reference either a CompiledCode

@@ -25,7 +25,8 @@ using System.CodeDom;
 using System.CodeDom.Compiler;
 
 using IronPython.Runtime;
-using IronPython.Compiler;
+using IronPython.Compiler.AST;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.CodeDom {
     class CodeWalker : IAstWalker {

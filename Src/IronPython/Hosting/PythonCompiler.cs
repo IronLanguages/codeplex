@@ -21,6 +21,8 @@ using System.Reflection.Emit;
 using System.IO;
 
 using IronPython.Compiler;
+using IronPython.Compiler.Generation;
+using IronPython.Compiler.AST;
 using IronPython.Modules;
 using IronPython.Runtime;
 
@@ -255,7 +257,7 @@ namespace IronPython.Hosting {
 
             if (sink.Errors > 0) return;
 
-            GlobalSuite gs = IronPython.Compiler.Binder.Bind(body, context);
+            GlobalSuite gs = Compiler.AST.Binder.Bind(body, context);
             string moduleName = GetModuleFromFilename(fileName);
             TypeGen tg = OutputGenerator.GenerateModuleType(moduleName, assemblyGen);
             CodeGen init = CompileModuleInit(context, gs, tg, moduleName);

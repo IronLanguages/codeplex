@@ -20,11 +20,13 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+using IronPython.Runtime.Operations;
 using IronPython.Compiler;
 using IronPython.Modules;
+using IronPython.Runtime.Calls;
 using IronMath;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Types {
     /// <summary>
     /// OpsReflectedType is the Python representation of primitive CLI valuetypes,
     /// and some Python valuetypes. This allows the engine to present a uniform

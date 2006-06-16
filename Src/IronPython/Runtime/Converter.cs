@@ -18,6 +18,9 @@ using IronMath;
 using System.Reflection;
 using System.Collections;
 
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
 namespace IronPython.Runtime {
 
     public enum Conversion {

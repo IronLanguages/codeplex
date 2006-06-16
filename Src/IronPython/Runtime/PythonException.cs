@@ -19,8 +19,11 @@ using System.Text;
 using IronPython.Hosting;
 
 using IronPython.Modules;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Exceptions {
     [Serializable]
     public class ArgumentTypeException : Exception {
         public ArgumentTypeException()

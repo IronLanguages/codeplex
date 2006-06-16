@@ -31,7 +31,7 @@ namespace IronPython.CodeDom {
     /// <summary>
     /// Compiler half of the Python CodeDom Generator.
     /// </summary>
-    public partial class PythonGenerator {
+    partial class PythonGenerator {
         #region CodeCompiler overrides
         protected override string FileExtension {
             get { return "py"; }

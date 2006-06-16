@@ -19,10 +19,13 @@ using System.Collections;
 using System.Reflection;
 using System.Threading;
 
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
 using IronPython.Compiler;
 using IronMath;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
 
     public partial class ExtensibleInt : IRichComparable, IComparable, INumber {
         public int value;

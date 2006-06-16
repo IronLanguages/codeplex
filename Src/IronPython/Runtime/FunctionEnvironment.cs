@@ -16,9 +16,9 @@
 using System;
 using System.Diagnostics;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Calls {
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
-    public sealed class EnvironmentIndexAttribute : PythonHiddenFieldAttribute {
+    internal sealed class EnvironmentIndexAttribute : PythonHiddenFieldAttribute {
         public readonly int index;
         public EnvironmentIndexAttribute(int index) {
             this.index = index;

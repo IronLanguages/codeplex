@@ -18,8 +18,9 @@ using System.Collections.Generic;
 using System.Text;
 
 using IronMath;
+using IronPython.Runtime;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
     public partial class ExtensibleComplex {
         #region Generated Extensible ComplexOps
 

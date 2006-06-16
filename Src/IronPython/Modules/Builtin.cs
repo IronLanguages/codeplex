@@ -22,7 +22,13 @@ using System.Reflection;
 using System.Diagnostics;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Calls;
 using IronPython.Compiler;
+using IronPython.Compiler.Generation;
+using IronPython.Compiler.AST;
+using IronPython.Runtime.Operations;
 
 using IronMath;
 

@@ -18,7 +18,10 @@ using System.Collections.Generic;
 using System.Text;
 using System.Collections;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Runtime.Operations {
     public class InstanceOps {
         public static object NextMethod(object self) {
             IEnumerator i = (IEnumerator)self;

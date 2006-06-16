@@ -21,43 +21,7 @@ using IronPython.Hosting;
 using IronPython.CodeDom;
 
 
-namespace IronPython.Compiler {
-    public struct Location {
-        public int line;
-        public int column;
-
-        public Location(int lineNo, int columnNo){
-            line = lineNo;
-            column = columnNo;
-        }
-        public static bool operator <(Location a, Location b) {
-            return a.line < b.line || (a.line == b.line && a.column < b.column);
-        }
-        public static bool operator >(Location a, Location b) {
-            return a.line > b.line || (a.line == b.line && a.column > b.column);
-        }
-        public static bool operator <=(Location a, Location b) {
-            return a.line < b.line || (a.line == b.line && a.column <= b.column);
-        }
-        public static bool operator >=(Location a, Location b) {
-            return a.line > b.line || (a.line == b.line && a.column >= b.column);
-        }
-
-        public static int Compare(Location a, Location b) {
-            int res = a.line - b.line;
-            if (res < 0) return -1;
-            if (res > 0) return 1;
-
-            res = a.column - b.column;
-            if (res < 0) return -1;
-            if (res > 0) return 1;
-
-            return 0;
-        }
-
-        public static readonly Location None = new Location(0xFEEFEE, 0);
-    }
-
+namespace IronPython.Compiler.AST {
     public abstract class Node {
         public Location start;
         public Location end;

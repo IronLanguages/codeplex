@@ -23,12 +23,18 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
 using IronPython.Modules;
 using IronPython.Compiler;
+using IronPython.Compiler.Generation;
+using IronPython.Compiler.AST;
 
 using IronMath;
 
-namespace IronPython.Runtime {
+namespace IronPython.Runtime.Operations {
 
     /// <summary>
     /// Contains functions that are called directly from

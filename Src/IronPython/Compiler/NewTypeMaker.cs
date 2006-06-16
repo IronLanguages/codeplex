@@ -29,8 +29,11 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 
-namespace IronPython.Compiler {
+namespace IronPython.Compiler.Generation {
     /// <summary>
     /// Python class hierarchy is represented using the __class__ field in the object. It does not 
     /// use the CLI type system for pure Python types. However, Python types which inherit from a 

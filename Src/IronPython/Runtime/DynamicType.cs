@@ -16,7 +16,10 @@
 using System;
 using System.Reflection;
 
-namespace IronPython.Runtime {
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Calls;
+
+namespace IronPython.Runtime.Types {
     // DynamicType represents a type which allows member-lookup by name.
     // Currently, the types deriving from DynamicType are:
     // 1. OldClass
