@@ -312,7 +312,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        private static Guid GetITypeInfoGuid(IntPtr typeInfoPtr) {
+        private static ComTypes.TYPEATTR GetITypeInfoAttr(IntPtr typeInfoPtr) {
             IntPtr typeAttrPtr;
             ComTypes.TYPEATTR typeAttr;
             ComTypes.ITypeInfo typeInfo;
@@ -326,7 +326,7 @@ namespace IronPython.Runtime.Types {
                 typeInfo.ReleaseTypeAttr(typeAttrPtr);
             }
 
-            return typeAttr.guid;
+            return typeAttr;
         }
 
         private static Dictionary<Type, IList<Type>> s_hiddenInterfaces = new Dictionary<Type, IList<Type>>();
@@ -358,34 +358,88 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private static Type GetInterfaceForGuid(ICallerContext context, Guid typeInfoGuid, IntPtr typeInfoPtr) {
-            Type interfaceType;
-            if (ComTypeCache.TryGetValue(typeInfoGuid, out interfaceType) == false) {
-                Assembly interopAssembly = null;
-#if COM_GAC_CRAWLER
-                interopAssembly = SearchForInteropAssembly(typeInfoGuid);
-#endif
-                if (interopAssembly != null) {
-                    context.SystemState.TopPackage.LoadAssembly(context.SystemState, interopAssembly, false);
-                    ComTypeCache.TryGetValue(typeInfoGuid, out interfaceType);
-                }
+        private static Type ConvertTypeLibToAssembly(ICallerContext context, IntPtr typeInfoPtr, Guid typeInfoGuid) {
+            if (IronPython.Hosting.PythonEngine.options.Verbose)
+                Console.WriteLine("Generating Interop assembly for " + typeInfoGuid);
 
-                if (interfaceType == null && typeInfoPtr != IntPtr.Zero) {
-                    // This can be very slow. Hence we call SearchForInteropAssembly before we do this.
-                    interfaceType = Marshal.GetTypeForITypeInfo(typeInfoPtr);
+            // This can be very slow. If this is taking a long time, you need to add a reference
+            // to the Primary Interop Assembly using clr.AddReference
+            Type interfaceType = Marshal.GetTypeForITypeInfo(typeInfoPtr);
 
-                    if (interfaceType != null) {
-                        ComTypeCache[typeInfoGuid] = interfaceType;
-                    }
-                }
+            if (IronPython.Hosting.PythonEngine.options.Verbose) {
+                if (interfaceType == null)
+                    Console.WriteLine("Could not find COM interface " + typeInfoGuid);
+                else
+                    Console.WriteLine("Resulting type is " + interfaceType.AssemblyQualifiedName);
             }
 
-            return interfaceType;
+            if (interfaceType == null)
+                return null;
+
+            // Publish the generated Interop assembly. Note that we should not be doing this 
+            // if the PIA is already loaded since some GUIDs will be mapped to the PIA, and some will
+            // get mapped to the generated Interop assembly, and it will lead to type-identity problems.
+            // We ensure this by publishing all COM types whenever an assembly is loaded.
+            context.SystemState.TopPackage.LoadAssembly(context.SystemState, interfaceType.Assembly, true);
+
+            Debug.Assert(ComTypeCache.ContainsKey(typeInfoGuid));
+            if (!ComTypeCache.ContainsKey(typeInfoGuid))
+                throw new COMException("TypeLib " + interfaceType.Assembly + " does not contain COM interface + " + typeInfoGuid);
+            return ComTypeCache[typeInfoGuid];
         }
 
-        private void AddInterfaces(ICallerContext context, Guid typeInfoGuid, IntPtr typeInfoPtr)
-        {
-            Type interfaceType = ComObject.GetInterfaceForGuid(context, typeInfoGuid, typeInfoPtr);
+        private static Type GetInterfaceForTypeInfo(ICallerContext context, IntPtr typeInfoPtr) {
+            Debug.Assert(typeInfoPtr != IntPtr.Zero);
+
+            ComTypes.TYPEATTR typeInfoAttr = GetITypeInfoAttr(typeInfoPtr);
+            Guid typeInfoGuid = typeInfoAttr.guid;
+
+            // Have we seen the GUID before in a previously-loaded assembly?
+
+            Type interfaceType = null;
+            if (ComTypeCache.TryGetValue(typeInfoGuid, out interfaceType))
+                return interfaceType;
+
+            // Try to find a registered Primary Interop Assembly (PIA)
+
+            TypeLibConverter tlc = new TypeLibConverter();
+            string asmName = null, asmCodeBase = null;
+            if (tlc.GetPrimaryInteropAssembly(
+                    typeInfoGuid, 
+                    typeInfoAttr.wMajorVerNum, 
+                    typeInfoAttr.wMinorVerNum, 
+                    0, 
+                    out asmName, 
+                    out asmCodeBase)) {
+                try {
+                    Assembly interopAssembly = Assembly.Load(asmName);
+                    context.SystemState.TopPackage.LoadAssembly(context.SystemState, interopAssembly, true);
+                    Debug.Assert(ComTypeCache.ContainsKey(typeInfoGuid));
+                    if (!ComTypeCache.ContainsKey(typeInfoGuid))
+                        throw new COMException("TypeLib " + asmName + " does not contain COM interface + " + typeInfoGuid);
+                    return ComTypeCache[typeInfoGuid];
+                } catch (FileNotFoundException) { }
+            }
+
+#if COM_GAC_CRAWLER
+            Assembly interopAssembly = SearchForInteropAssemblyInGAC(typeInfoGuid, typeInfoAttr.wMajorVerNum, typeInfoAttr.wMinorVerNum);
+            if (interopAssembly != null) {
+                context.SystemState.TopPackage.LoadAssembly(context.SystemState, interopAssembly, false);
+                Debug.Assert(ComTypeCache.ContainsKey(typeInfoGuid));
+                if (!ComTypeCache.ContainsKey(typeInfoGuid))
+                    throw new COMException("TypeLib " + interopAssebly + " does not contain COM interface + " + typeInfoGuid);
+                return ComTypeCache[typeInfoGuid];
+            }
+#endif
+            // Try creating an Interop assembly on the fly
+            return ConvertTypeLibToAssembly(context, typeInfoPtr, typeInfoGuid);
+        }
+
+        private void AddInterfacesForTypeInfo(ICallerContext context, IntPtr typeInfoPtr) {
+            AddInterfacesForType(GetInterfaceForTypeInfo(context, typeInfoPtr));
+        }
+
+        private void AddInterfacesForType(Type interfaceType) {
             if (interfaceType == null)
                 return;
 
@@ -418,7 +472,7 @@ namespace IronPython.Runtime.Types {
 
             if (dispatch == null) {
                 // We have to treat it just as __ComObject
-                AddInterfaces(context, obj.GetType().GUID, new IntPtr());
+                AddInterfacesForType(ComType.comObjectType);
                 return;
             }
 
@@ -437,65 +491,18 @@ namespace IronPython.Runtime.Types {
                     }
 
                     try {
-                        Guid guid = GetITypeInfoGuid(typeInfoPtr);
-                        AddInterfaces(context, guid, typeInfoPtr);
+                        AddInterfacesForTypeInfo(context, typeInfoPtr);
                     } finally {
                         Marshal.Release(typeInfoPtr);
                     }
                 }
             } else {
                 // We have to treat it just as __ComObject
-                AddInterfaces(context, obj.GetType().GUID, new IntPtr());
+                AddInterfacesForType(ComType.comObjectType);
             }
         }
 
 #if COM_GAC_CRAWLER
-        /// <summary>
-        /// Try to search the GAC for an assembly that seems to match the given type GUID
-        /// </summary>
-        private static Assembly SearchForInteropAssembly(Guid typeInfoGuid) {
-            Assembly assembly = null;
-
-            try {
-                string typelibPath = @"Interface\{" + typeInfoGuid + @"}\TypeLib";
-                RegistryKey typelibKey = Registry.ClassesRoot.OpenSubKey(typelibPath);
-                if (typelibKey == null)
-                    return null;
-
-                // Read HKCR\Interface\{<typeInfoGuid>}\TypeLib\(Default)"
-                Guid typelibGuid = new Guid(typelibKey.GetValue(null, null) as string);
-
-                // Read HKCR\Interface\{<typeInfoGuid>}\TypeLib\Version"
-                string typelibVersion = typelibKey.GetValue("Version") as String;
-                if (typelibVersion == null)
-                    return null;
-
-                string[] versionSplit = typelibVersion.Split('.');
-                int major = int.Parse(versionSplit[0]);
-                int minor = int.Parse(versionSplit[1]);
-
-                // Try using TypeLibConverter
-                TypeLibConverter tlc = new TypeLibConverter();
-                string asmName = null, asmCodeBase = null;
-                tlc.GetPrimaryInteropAssembly(typelibGuid, major, minor, 0, out asmName, out asmCodeBase);
-
-                if (asmName != null)
-                    assembly = Assembly.Load(asmName);
-
-                if (assembly != null)
-                    return assembly;
-
-                // Next, try looking up the GAC
-                assembly = SearchForInteropAssemblyInGAC(typeInfoGuid, major, minor);
-
-            } catch (Exception e) {
-                if (IronPython.Hosting.PythonEngine.options.EngineDebug)
-                    throw e;
-            }
-
-            return assembly;
-        }
-
         /// <summary>
         /// Search assemblies in the GAC for a type with the same GUID as "typeInfoGuid"
         /// </summary>

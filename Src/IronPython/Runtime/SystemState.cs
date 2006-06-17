@@ -47,21 +47,15 @@ namespace IronPython.Runtime {
 
         public SystemState() {
 #if DEBUG
-            // All fields should be initialized in Initialize()
+            // All fields should be initialized in Initialize(). So ensure that the fields have default values
             FieldInfo[] fields = typeof(SystemState).GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             foreach (FieldInfo field in fields) {
                 object value = field.GetValue(this);
-                try {
-                    Debug.Assert(value == null || ((int)value) == 0);
-                    continue;
-                } catch (InvalidCastException) { }
-                
-                try {
-                    Debug.Assert(((bool)value) == false);
-                    continue;
-                } catch (InvalidCastException) { }
-
-                Debug.Assert(false, "Unhandled type in SystemState initialization check");
+                // If this throws an InvalidCastException, it must mean that a new field was added of a type 
+                // that is not handled here. The assert will need to be relaxed to handle the new type.
+                Debug.Assert(value == null ||
+                    (value is int && ((int)value) == 0) ||
+                    (value is bool && ((bool)value) == false));
             }
 #endif
             Initialize();
