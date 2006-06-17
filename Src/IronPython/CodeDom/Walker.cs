@@ -756,6 +756,10 @@ namespace IronPython.CodeDom {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
+        public bool Walk(CondExpr node) {
+            throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
+        }
+
         public bool Walk(Arg node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
@@ -840,6 +844,9 @@ namespace IronPython.CodeDom {
         public void PostWalk(TupleExpr node) {
         }
         public void PostWalk(UnaryExpr node) {
+        }
+
+        public void PostWalk(CondExpr node) {
         }
 
 

@@ -987,4 +987,47 @@ namespace IronPython.Compiler.AST {
             w.PostWalk(this);
         }
     }
+
+    public class CondExpr : Expr {
+        public readonly Expr testExpr;
+        public readonly Expr trueExpr;
+        public readonly Expr falseExpr;
+
+        public CondExpr(Expr testExpr, Expr trueExpr, Expr falseExpr) {
+            this.testExpr = testExpr;
+            this.trueExpr = trueExpr;
+            this.falseExpr = falseExpr;
+
+        }
+
+        internal override object Evaluate(NameEnv env) {
+            object ret = testExpr.Evaluate(env);
+            if (Ops.IsTrue(ret))
+                return trueExpr.Evaluate(env);
+            else
+                return falseExpr.Evaluate(env);
+        }
+
+        internal override void Emit(CodeGen cg) {
+            Label eoi = cg.DefineLabel();
+            Label next = cg.DefineLabel();
+            cg.EmitTestTrue(testExpr);
+            cg.Emit(OpCodes.Brfalse, next);
+            trueExpr.Emit(cg);
+            cg.Emit(OpCodes.Br, eoi);
+            cg.MarkLabel(next);
+            falseExpr.Emit(cg);
+            cg.MarkLabel(eoi);
+        }
+
+        public override void Walk(IAstWalker w) {
+            if (w.Walk(this)) {
+                testExpr.Walk(w);
+                trueExpr.Walk(w);
+                falseExpr.Walk(w);
+            }
+            w.PostWalk(this);
+        }
+    }
+
 }

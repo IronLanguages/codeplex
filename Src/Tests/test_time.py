@@ -33,5 +33,5 @@ AreEqual(x, x1 + ' ' + x2)
 x = time.clock()
 time.sleep(1)
 y = time.clock()
-Assert(y-x > .95 and y-x < 1.10)  # make sure we're close...
+Assert(y-x > .95 and y-x < 1.30)  # make sure we're close...
 

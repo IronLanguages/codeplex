@@ -38,6 +38,9 @@ namespace IronPython.Compiler.AST {
         bool Walk(CallExpr node);
         void PostWalk(CallExpr node);
 
+        bool Walk(CondExpr node);
+        void PostWalk(CondExpr node);
+
         bool Walk(ConstantExpr node);
         void PostWalk(ConstantExpr node);
 
@@ -197,6 +200,10 @@ namespace IronPython.Compiler.AST {
         // CallExpr
         public virtual bool Walk(CallExpr node) { return true; }
         public virtual void PostWalk(CallExpr node) { }
+
+        // CondExpr
+        public virtual bool Walk(CondExpr node) { return true; }
+        public virtual void PostWalk(CondExpr node) { }
 
         // ConstantExpr
         public virtual bool Walk(ConstantExpr node) { return true; }
@@ -403,6 +410,10 @@ namespace IronPython.Compiler.AST {
         // CallExpr
         public virtual bool Walk(CallExpr node) { return false; }
         public virtual void PostWalk(CallExpr node) { }
+
+        // CondExpr
+        public virtual bool Walk(CondExpr node) { return false; }
+        public virtual void PostWalk(CondExpr node) { }
 
         // ConstantExpr
         public virtual bool Walk(ConstantExpr node) { return false; }

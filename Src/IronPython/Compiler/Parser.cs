@@ -1149,6 +1149,27 @@ namespace IronPython.Compiler {
             return MakeTupleOrExpr(list, trailingComma);
         }
 
+        //Python2.5 -> old_lambdef: 'lambda' [varargslist] ':' old_test
+        private int oldLambdaCount;
+        private Expr FinishOldLambdef() {
+            Location start = GetStart();
+            Expr[] parameters, defaults;
+            FuncDefType flags;
+            ParseVarArgsList(out parameters, out defaults, out flags, TokenKind.Colon);
+            Location mid = GetEnd();
+
+            Expr expr = ParseOldTest();
+            Stmt body = new ReturnStmt(expr);
+            body.SetLoc(expr.start, expr.end);
+            FuncDef func = new FuncDef(SymbolTable.StringToId("<lambda$" + (oldLambdaCount++) + ">"), parameters, defaults, flags, body, context.SourceFile);
+            func.SetLoc(start, GetEnd());
+            func.header = mid;
+            LambdaExpr ret = new LambdaExpr(func);
+            ret.SetLoc(start, GetEnd());
+            return ret;
+        }
+
+
         //lambdef: 'lambda' [varargslist] ':' test
         private int lambdaCount;
         private Expr FinishLambdef() {
@@ -1331,19 +1352,59 @@ namespace IronPython.Compiler {
         }
 
 
-        // test: and_test ('or' and_test)* | lambdef
+
+        // Python 2.5 -> old_test: or_test | old_lambdef
+        private Expr ParseOldTest() {
+            if (MaybeEat(TokenKind.KeywordLambda)) {
+                return FinishOldLambdef();
+            }
+            return ParseOrTest();
+        }
+
+
+
+        // Python2.5 -> test: or_test ['if' or_test 'else' test] | lambdef
         private Expr ParseTest() {
+
+            if (Options.Python25 == false) {
+                return ParseOldTest();
+            }
+
             if (MaybeEat(TokenKind.KeywordLambda)) {
                 return FinishLambdef();
             }
+
+            Expr ret = ParseOrTest();
+            if (MaybeEat(TokenKind.KeywordIf)) {
+                Location start = ret.start;
+                ret = ParseConditionalTest(ret);
+                ret.SetLoc(start, GetEnd());
+            }
+
+            return ret;
+        }
+
+        // Python2.5 -> or_test: and_test ('or' and_test)*
+        private Expr ParseOrTest() {
             Expr ret = ParseAndTest();
             while (MaybeEat(TokenKind.KeywordOr)) {
                 Location start = ret.start;
-                ret = new OrExpr(ret, ParseTest());
+                ret = new OrExpr(ret, ParseAndTest());
                 ret.SetLoc(start, GetEnd());
             }
             return ret;
         }
+
+        private Expr ParseConditionalTest(Expr trueExpr) {
+            Expr test = ParseOrTest();
+            Eat(TokenKind.KeywordElse);
+            Location start = test.start;
+            Expr falseExpr = ParseTest();
+            test.SetLoc(start, GetEnd());
+            return new CondExpr(test, trueExpr, falseExpr);
+        }
+
+
 
         // and_test: not_test ('and' not_test)*
         private Expr ParseAndTest() {
@@ -1800,6 +1861,32 @@ namespace IronPython.Compiler {
             return ParseTestList(out tmp);
         }
 
+        private Expr ParseTestListAsSafeExpr() {
+            bool trailingComma;
+            List<Expr> l = ParseTestListSafe(out trailingComma);
+            //  the case when no expression was parsed e.g. when we have an empty test list
+            if (l.Count == 0 && !trailingComma) {
+                ReportSyntaxError("invalid syntax");
+            }
+            return MakeTupleOrExpr(l, trailingComma);
+        }
+
+        //   Python 2.5 -> testlist_safe: old_test [(',' old_test)+ [',']]
+        private List<Expr> ParseTestListSafe(out bool trailingComma) {
+            List<Expr> l = new List<Expr>();
+            trailingComma = false;
+            while (true) {
+                if (NeverTestToken(PeekToken())) break;
+                l.Add(ParseOldTest());
+                if (!MaybeEat(TokenKind.Comma)) {
+                    trailingComma = false;
+                    break;
+                }
+                trailingComma = true;
+            }
+            return l;
+        }
+
         //        testlist: test (',' test)* [',']
         //        testlist_safe: test [(',' test)+ [',']]
         //        testlist1: test (',' test)*
@@ -1936,14 +2023,21 @@ namespace IronPython.Compiler {
             return nested;
         }
 
-        // "for" expression_list "in" test
+        // Python 2.5 -> "for" expression_list "in" or_test
         private ForStmt ParseGenExprFor() {
             Location start = GetStart();
             Eat(TokenKind.KeywordFor);
             List<Expr> l = ParseExprList();
             Expr lhs = MakeTupleOrExpr(l, false);
             Eat(TokenKind.KeywordIn);
-            Expr test = ParseTest();
+
+            Expr test = null;
+            if (Options.Python25 == true) {
+                test = ParseOrTest();
+            } else {
+                test = ParseTest();
+            }
+
             ForStmt gef = new ForStmt(lhs, test, null, null);
             Location end = GetEnd();
             gef.SetLoc(start, end);
@@ -1951,11 +2045,11 @@ namespace IronPython.Compiler {
             return gef;
         }
 
-        //  genexpr_if   ::= "if" test
+        //  Python 2.5 -> genexpr_if   ::= "if" old_test
         private IfStmt ParseGenExprIf() {
             Location start = GetStart();
             Eat(TokenKind.KeywordIf);
-            Expr test = ParseTest();
+            Expr test = ParseOldTest();
             IfStmtTest ist = new IfStmtTest(test, null);
             Location end = GetEnd();
             ist.header = end;
@@ -1964,6 +2058,7 @@ namespace IronPython.Compiler {
             gei.SetLoc(start, end);
             return gei;
         }
+
 
         //dictmaker: test ':' test (',' test ':' test)* [',']
         private Expr FinishDictValue() {
@@ -2070,7 +2165,13 @@ namespace IronPython.Compiler {
 
             Expr lhs = MakeTupleOrExpr(l, false);
             Eat(TokenKind.KeywordIn);
-            Expr list = ParseTestListAsExpr(false);
+
+            Expr list = null;
+            if (Options.Python25 == true) {
+                list = ParseTestListAsSafeExpr();
+            } else {
+                list = ParseTestListAsExpr(false);
+            }
 
             ListCompFor ret = new ListCompFor(lhs, list);
 
@@ -2078,12 +2179,11 @@ namespace IronPython.Compiler {
             return ret;
         }
 
-        // list_if: 'if' test [list_iter]
+        // list_if: 'if' old_test [list_iter]
         private ListCompIf ParseListCompIf() {
             Eat(TokenKind.KeywordIf);
             Location start = GetStart();
-            Expr test = ParseTest();
-
+            Expr test = ParseOldTest();
             ListCompIf ret = new ListCompIf(test);
 
             ret.SetLoc(start, GetEnd());

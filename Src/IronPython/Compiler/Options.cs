@@ -119,6 +119,9 @@ namespace IronPython.Compiler {
 
         public static DivisionOptions Division = DivisionOptions.Old;
 
+        // should the Python 2.5 features be enabled (-X:Python25 commandline option) ?
+        public static bool Python25 = false;
+
         #endregion
 
         #region Instance options

@@ -15,6 +15,7 @@
 
 from lib.assert_util import *
 import sys
+from lib.process_util import *
 
 year = 2005
 month = 3
@@ -373,3 +374,9 @@ test_multiline_compound_stmts()
 
 def endoffile():
     return "Hi" # and some comment here
+#***** Above code are from 'Syntax' *****
+
+# **** test for conditional operator **********
+
+result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_conditional.py"), ["-X:Python25"])
+AreEqual(result, 0)

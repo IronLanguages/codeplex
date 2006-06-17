@@ -206,6 +206,7 @@ namespace IronPythonConsole {
                         Options.MaximumRecursion = maxRecurVal;
                         break;
                     case "-X:PrivateBinding": Options.PrivateBinding = true; break;
+                    case "-X:Python25": Options.Python25 = true; break; 
                     case "-X:SaveAssemblies": Options.SaveAndReloadBinaries = true; break;
                     case "-X:ShowCLSExceptions": options.ShowCLSExceptions = true; break;
                     case "-X:StaticMethods": Options.GenerateDynamicMethods = false; break;
