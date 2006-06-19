@@ -119,8 +119,8 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     if (other is int) return IntOps.%(altname)s((int)other, x);
     if (other is Complex64) {
         Complex64 y = (Complex64)other;
-        if(y.IsZero) throw Ops.ZeroDivisionError();
-        return ComplexOps.%(altname)s(y, Complex64.MakeReal(x));
+        if (x == 0) throw Ops.ZeroDivisionError();
+        return ComplexOps.%(name)s(y, Complex64.MakeReal(x));
     }
     if (other is double) return FloatOps.%(name)s((double)other, x);
     if (other is bool) return %(altname)s((bool)other ? 1 : 0, x);
@@ -129,7 +129,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     if ((object)(num = other as INumber) != null) return num.%(name)s(x);
     if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
-        if(y.IsZero) throw Ops.ZeroDivisionError();
+        if (x == 0) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(y, Complex64.MakeReal(x));
     }
     if (other is byte) return IntOps.%(altname)s((int)((byte)other), x);
@@ -452,11 +452,15 @@ public static object %(name)s(%(type)s x, object other) {
         return FloatOps.%(name)s(x, (double)other);
     } else if (other is Complex64) {
         Complex64 y = (Complex64)other;
-        if(y.IsZero) throw Ops.ZeroDivisionError();
+        if (y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(Complex64.MakeReal(x), y);
     } else if (other is bool) {
-        bool b = (bool)other;
-        return x %(altsym)s (b ? 1 : 0);
+        int y = (bool)other ? 1 : 0;
+        try {
+            return Ops.%(titleType)s2Object(%(altname)s(x, y));
+        } catch (OverflowException) {
+            return LongOps.%(name)s(BigInteger.Create(x) , y);
+        }
     } else if (other is long) {
         long y = (long)other;
         try {
@@ -472,7 +476,7 @@ public static object %(name)s(%(type)s x, object other) {
         return num.Reverse%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
-        if(y.IsZero) throw Ops.ZeroDivisionError();
+        if (y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(Complex64.MakeReal(x), y);
 	}
 
@@ -499,11 +503,15 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         return FloatOps.Reverse%(name)s(x, (double)other);
     } else if (other is Complex64) {
         Complex64 y = (Complex64)other;
-        if(y.IsZero) throw Ops.ZeroDivisionError();
+        if (x == 0) throw Ops.ZeroDivisionError();
         return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), y);
     } else if (other is bool) {
-        bool b = (bool)other;
-        return (b ? 1 : 0) %(altsym)s x;
+        int y = ((bool)other) ? 1 : 0;
+        try {
+            return Ops.%(titleType)s2Object(Reverse%(altname)s(x, y));
+        } catch (OverflowException) {
+            return LongOps.Reverse%(name)s(BigInteger.Create(x) , y);
+        }
     } else if (other is long) {
         long y = (long)other;
         try {
@@ -519,7 +527,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         return num.%(name)s(x);
     } else if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
-        if(y.IsZero) throw Ops.ZeroDivisionError();
+        if (x == 0) throw Ops.ZeroDivisionError();
         return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), y);
 	}
     return Ops.NotImplemented;

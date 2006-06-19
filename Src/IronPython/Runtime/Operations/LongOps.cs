@@ -176,9 +176,9 @@ namespace IronPython.Runtime.Operations {
                 if (x is string) return ParseBigIntegerSign((string)x, 10);
                 if (x is IronMath.BigInteger) return (IronMath.BigInteger)x;
                 else if ((el = x as ExtensibleLong) != null) return el.Value;
-                else if (x is int) return (long)(int)x;
+                else if (x is int) return BigInteger.Create((int)x);
                 else if (x is double) return IronMath.BigInteger.Create((double)x);
-                else if (x is long) return x;
+                else if (x is long) return IronMath.BigInteger.Create((long)x);
                 else {
                     Conversion conv;
                     BigInteger intVal;
@@ -327,7 +327,7 @@ namespace IronPython.Runtime.Operations {
             return result;
         }
 
-        [PythonName("__pow__")]
+        //[PythonName("__pow__")]
         public static object Power(BigInteger x, int y) {
             if (y < 0) {
                 return FloatOps.Power(x.ToFloat64(), y);
@@ -340,7 +340,7 @@ namespace IronPython.Runtime.Operations {
             return self.ToFloat64();
         }
 
-        [PythonName("__pow__")]
+        //[PythonName("__pow__")]
         public static object Power(BigInteger x, ulong exp) {
             if (exp == 0) {
                 return BigInteger.One;
@@ -357,7 +357,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__pow__")]
+        //[PythonName("__pow__")]
         public static object Power(BigInteger x, long y) {
             if ((int)y == y) {
                 return Power(x, (int)y);
@@ -375,7 +375,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__pow__")]
+        //[PythonName("__pow__")]
         public static object Power(BigInteger x, double y) {
             return FloatOps.Power(x.ToFloat64(), y);
         }
@@ -458,7 +458,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        [PythonName("__pow__")]
+        //[PythonName("__pow__")]
         public static object Power(BigInteger x, BigInteger y) {
             if (Object.ReferenceEquals(x, null)) throw Ops.TypeError("unsupported operands for __pow__: NoneType and long");
             if (Object.ReferenceEquals(y, null)) throw Ops.TypeError("unsupported operands for __pow__: long and NoneType");
@@ -517,56 +517,56 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__div__")]
+//        [PythonName("__div__")]
         public static object Divide(BigInteger x, int y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
-        [PythonName("__div__")]
+//        [PythonName("__div__")]
         public static object Divide(BigInteger x, long y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
-        [PythonName("__div__")]
+//        [PythonName("__div__")]
         public static object Divide(BigInteger x, uint y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
-        [PythonName("__div__")]
+//        [PythonName("__div__")]
         public static object Divide(BigInteger x, ulong y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
-        [PythonName("__div__")]
+//        [PythonName("__div__")]
         public static object Divide(BigInteger x, BigInteger y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
-        [PythonName("__mod__")]
+        //[PythonName("__mod__")]
         public static object Mod(BigInteger x, int y) {
             BigInteger r;
             DivMod(x, y, out r);
             return r;
         }
-        [PythonName("__mod__")]
+        //[PythonName("__mod__")]
         public static object Mod(BigInteger x, long y) {
             BigInteger r;
             DivMod(x, y, out r);
             return r;
         }
-        [PythonName("__mod__")]
+        //[PythonName("__mod__")]
         public static object Mod(BigInteger x, uint y) {
             BigInteger r;
             DivMod(x, y, out r);
             return r;
         }
-        [PythonName("__mod__")]
+        //[PythonName("__mod__")]
         public static object Mod(BigInteger x, ulong y) {
             BigInteger r;
             DivMod(x, y, out r);
             return r;
         }
-        [PythonName("__mod__")]
+        //[PythonName("__mod__")]
         public static object Mod(BigInteger x, BigInteger y) {
             BigInteger r;
             DivMod(x, y, out r);
@@ -749,7 +749,7 @@ namespace IronPython.Runtime.Operations {
             } else if ((el = other as ExtensibleLong) != null) {
                 return el.LeftShift(x);
             } else if (other is byte) {
-                return IntOps.LeftShift((bool)other ? 1 : 0, x);
+                return IntOps.LeftShift((int)(byte)other, x);
             }
             return Ops.NotImplemented;
         }
@@ -772,7 +772,7 @@ namespace IronPython.Runtime.Operations {
             } else if ((el = other as ExtensibleLong) != null) {
                 return el.RightShift(x);
             } else if (other is byte) {
-                return IntOps.RightShift((bool)other ? 1 : 0, x);
+                return IntOps.RightShift((int)(byte)other, x);
             }
             return Ops.NotImplemented;
         }

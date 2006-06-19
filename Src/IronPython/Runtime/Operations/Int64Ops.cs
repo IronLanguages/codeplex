@@ -14,7 +14,7 @@
  * **********************************************************************************/
 
 using System;
-using System.Text;
+using System.Threading;
 using System.Collections;
 using System.Reflection;
 
@@ -25,27 +25,51 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Operations {
 
     public static partial class Int64Ops {
-        public static ReflectedType MakeDynamicType(ReflectedType integerType) {
-            OpsReflectedType ret = new OpsReflectedType("int64", typeof(long), typeof(Int64Ops), null);
-            ret.effectivePythonType = integerType;
-            return ret;
+        private static ReflectedType Int64Type;
+        public static DynamicType MakeDynamicType() {
+            if (Int64Type == null) {
+                OpsReflectedType ort = new OpsReflectedType("Int64", typeof(Int64), typeof(Int64Ops), null);
+                if (Interlocked.CompareExchange<ReflectedType>(ref Int64Type, ort, null) == null) {
+                    return ort;
+                }
+            }
+            return Int64Type;
         }
 
-        //		public static int __cmp__(int self, object obj) {
-        //			int oi = Converter.ConvertToInt32(obj);
-        //			return self == oi ? 0 : (self < oi ? -1 : +1);
-        //		}
-        //
-        //		public static object Make(string s, int radix) {
-        //			return LiteralParser.ParseInteger( s, radix);
-        //		}		
-        //
-        //		public static object Make(object o) {
-        //			if (o is string) return LiteralParser.ParseInteger( (string) o, 10);
-        //			if (o is double) return (int) (double)o;
-        //
-        //			return Converter.ConvertToInt32(o);
-        //		}
+        [PythonName("__new__")]
+        public static object Make(PythonType cls, object value) {
+            if (cls != Int64Type) {
+                throw Ops.TypeError("Int64.__new__: first argument must be Int64 type.");
+            }
+            IConvertible valueConvertible;
+            if ((valueConvertible = value as IConvertible) != null) {
+                switch (valueConvertible.GetTypeCode()) {
+                    case TypeCode.Byte: return (Int64)(Byte)value;
+                    case TypeCode.SByte: return (Int64)(SByte)value;
+                    case TypeCode.Int16: return (Int64)(Int16)value;
+                    case TypeCode.UInt16: return (Int64)(UInt16)value;
+                    case TypeCode.Int32: return (Int64)(Int32)value;
+                    case TypeCode.UInt32: return (Int64)(UInt32)value;
+                    case TypeCode.Int64: return (Int64)(Int64)value;
+                    case TypeCode.UInt64: return (Int64)(UInt64)value;
+                    case TypeCode.Single: return (Int64)(Single)value;
+                    case TypeCode.Double: return (Int64)(Double)value;
+                }
+            }
+            if (value is String) {
+                return Int64.Parse((String)value);
+            } else if (value is BigInteger) {
+                return (Int64)(BigInteger)value;
+            } else if (value is ExtensibleInt) {
+                return (Int64)((ExtensibleInt)value).value;
+            } else if (value is ExtensibleLong) {
+                return (Int64)((ExtensibleLong)value).Value;
+            } else if (value is ExtensibleFloat) {
+                return (Int64)((ExtensibleFloat)value).value;
+            }
+            throw Ops.ValueError("invalid value for Int64.__new__");
+        }
+
 
         [PythonName("__abs__")]
         public static object Abs(long x) {

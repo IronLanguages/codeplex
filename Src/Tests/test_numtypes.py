@@ -24,11 +24,13 @@ from lib.assert_util import *
 from operator import add, sub, mul, div, mod, and_, or_, xor, floordiv, truediv, lshift, rshift, neg, pos, abs, invert
 
 if is_cli:
-    from System import Byte, UInt16, UInt32, UInt64, SByte, Int16, Int32, Int64, Single, Double
+    from System import Boolean, Byte, UInt16, UInt32, UInt64, SByte, Int16, Int32, Int64, Single, Double
+    import clr
 
 class myint(int): pass
 class mylong(long): pass
 class myfloat(float): pass
+class mycomplex(complex): pass
 
 biops = [
     ("add", add),
@@ -82,12 +84,14 @@ def get_values(values, itypes, ftypes):
         sv  = str(v)
         py  = int(v)
         clr = get_clr_values(sv, itypes)
+        clr.append(long(py))
         clr.append(myint(py))
         clr.append(mylong(py))
         all.append( (py, clr) )
 
         py  = long(v)
         clr = get_clr_values(sv, itypes)
+        clr.append(py)
         clr.append(myint(py))
         clr.append(mylong(py))
         all.append( (py, clr) )
@@ -96,6 +100,13 @@ def get_values(values, itypes, ftypes):
         clr = get_clr_values(sv, ftypes)
         clr.append(myfloat(py))
         all.append( (py, clr) )
+
+        for imag in [0j, 1j, -1j]:
+            py = complex(v + imag)
+            all.append( (py, [ py, mycomplex(py) ] ) )
+
+    all.append( (True, [ True ] ))
+    all.append( (False, [ False ] ))
 
     return all
 
@@ -173,20 +184,21 @@ def calc(op, *args):
 
 def verify_implemented_b(implemented, op, a, b):
     if not implemented:
-        print ("Operation not defined: %(op)s( (%(ta)s) (%(a)s), (%(tb)s) (%(b)s) )" % {
+        Fail("Operation not defined: %(op)s( (%(ta)s) (%(a)s), (%(tb)s) (%(b)s) )" % {
             'op' : op, 'ta' : str(a.GetType()), 'tb' : str(b.GetType()), 'a'  : str(a), 'b'  : str(b)
             })
 
 def verify_implemented_u(implemented, op, a):
     if not implemented:
-        print ("Operation not defined: %(op)s( (%(ta)s) (%(a)s))" % { 'op' : op, 'ta' : str(a.GetType()), 'a'  : str(a), })
+        Fail("Operation not defined: %(op)s( (%(ta)s) (%(a)s))" % { 'op' : op, 'ta' : str(a.GetType()), 'a'  : str(a), })
 
 def extensible(l, r):
     ii = isinstance
-    return ii(l, myint) or ii(l, mylong) or ii(l, myfloat) or ii(r, myint) or ii(r, mylong) or ii(r, myfloat)
+    return ii(l, myint) or ii(l, mylong) or ii(l, myfloat) or ii(l, mycomplex) or ii(r, myint) or ii(r, mylong) or ii(r, myfloat) or ii(r, mycomplex)
 
 def validate_binary_ops(all):
     total = 0
+    last  = 0
     for l_rec in all:
         for r_rec in all:
             py_l, clr_l = l_rec
@@ -230,6 +242,11 @@ def validate_binary_ops(all):
                                     total += 1
 
                         verify_implemented_b(implemented, name, l, r)
+
+                        if total - last > 100000:
+                            print ".",
+                            last = total
+
     return total
 
 def validate_unary_ops(all):
@@ -263,6 +280,17 @@ def validate_unary_ops(all):
                 verify_implemented_u(implemented, name, l)
     return total
 
+def validate_constructors(values):
+    types = [Byte, UInt16, UInt32, UInt64, SByte, Int16, Int32, Int64]
+    total = 0
+    for value in values:
+        for first in types:
+            v1 = first(value)
+            for second in types:
+                v2 = first(second((value)))
+            total += 1
+    return total
+
 def test_numeric_types():
     values = [-2, -3, -5, 2, 3, 5, 0]
     itypes = [Byte, UInt16, UInt32, UInt64, SByte, Int16, Int32, Int64]
@@ -274,9 +302,10 @@ def test_numeric_types():
     
     total = 0
     total += validate_binary_ops(all)
-    total += validate_unary_ops(all)                        
+    total += validate_unary_ops(all)
+    total += validate_constructors(values)
 
-    # print total, "tests ran."
+    print total, "tests ran."
 
 if is_cli:
     test_numeric_types()

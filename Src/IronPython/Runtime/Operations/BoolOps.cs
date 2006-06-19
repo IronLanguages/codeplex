@@ -89,7 +89,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__divmod__")]
+        [PythonName("__div__")]
         public static object Divide(bool x, object other) {
             if (other is bool) {
                 return IntOps.Divide(x ? 1 : 0, (bool)other ? 1 : 0);
@@ -98,7 +98,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__div__")]
+        [PythonName("__truediv__")]
         public static object TrueDivide(bool x, object other) {
             return IntOps.TrueDivide(x ? 1 : 0, other);
         }

@@ -39,6 +39,7 @@ max_bigint =  40000000000000000000000000000000000000000
 
 # types
 #                      name         ops,        min                               max                             gen     float  next
+bool_type   = TypeInfo('Boolean',    "Bool",     0,                               1,                              False,  False, True)
 byte_type   = TypeInfo('Byte' ,      "Byte",     0,                               255,                            True,   False, True)
 sbyte_type  = TypeInfo('SByte',      "SByte",   -128,                             127,                            True,   False, True)
 int16_type  = TypeInfo('Int16',      "Int16",   -32768,                           32767,                          True,   False, True)
@@ -63,7 +64,7 @@ x_float_type = TypeInfo('ExtensibleFloat',   "Float",       -1.79769313486e+308,
 x_cmplx_type = TypeInfo("ExtensibleComplex", "Complex",   -1.79769313486e+308-1.79769313486e+308j, 1.79769313486e+308+1.79769313486e+308j, False, True, False)
 
 
-int_types = [ byte_type, sbyte_type, int16_type, uint16_type, int32_type, uint32_type, int64_type, uint64_type]
+int_types = [ bool_type, byte_type, sbyte_type, int16_type, uint16_type, int32_type, uint32_type, int64_type, uint64_type]
 
 fp_types = [ single_type, double_type ]
 
@@ -89,8 +90,8 @@ def rxor(a,b): return b ^ a
 
 # Binary operator which can use symbol directly for its implementation and overflows to the next order
 binary_s_o = """%(oper_type)s result = (%(oper_type)s)(((%(oper_type)s)%(left_value)s) %(symbol)s ((%(oper_type)s)%(right_value)s));
-if (%(left_type)s.MinValue <= result && result <= %(left_type)s.MaxValue) {
-    return (%(left_type)s)result;
+if (%(result_type)s.MinValue <= result && result <= %(result_type)s.MaxValue) {
+    return (%(result_type)s)result;
 } else return result;"""
 
 # Binary code with float point argument (same as above, except doesn't try to back-fit the result and leaves it as float point)
@@ -107,8 +108,8 @@ binary_c_v = "return %(oper_ops)sOps.%(method_impl)s(%(left_value)s, %(right_val
 
 # Binary operator which can use symbol directly for its implementation and overflows to the next order
 r_binary_s_o = """%(oper_type)s result = (%(oper_type)s)(((%(oper_type)s)%(right_value)s) %(symbol)s ((%(oper_type)s)%(left_value)s));
-if (%(left_type)s.MinValue <= result && result <= %(left_type)s.MaxValue) {
-    return (%(left_type)s)result;
+if (%(result_type)s.MinValue <= result && result <= %(result_type)s.MaxValue) {
+    return (%(result_type)s)result;
 } else return result;"""
 
 # Binary code with float point argument (same as above, except doesn't try to back-fit the result and leaves it as float point)
@@ -235,6 +236,10 @@ def get_overflow_type(l, r, op):
     t, c = get_common_type(l, r, op)
     return t, op.altcode
 
+def get_preferred_result_type(l, r):
+    if l <= r: return r
+    return l
+
 def get_binop_type(l, r, op):
     if op.overflow:
         return get_overflow_type(l,r,op)
@@ -287,13 +292,19 @@ def find_type_include(*l):
 
 def fixup_normal(kw):
     lval = "left%(left_type)s" % kw
-    rval = "(%(right_type)s)right" % kw
+    if kw["right_type"] == "Boolean":
+        rval = "((%(right_type)s)right ? (%(left_type)s)1 : (%(left_type)s)0)" % kw
+    else:
+        rval = "(%(right_type)s)right" % kw
     kw["left_value"]  = lval
     kw["right_value"] = rval
 
 def fixup_normal_brace(kw):
     lval = "left%(left_type)s" % kw
-    rval = "((%(right_type)s)right)" % kw
+    if kw["right_type"] == "Boolean":
+        rval = "((%(right_type)s)right ? (%(left_type)s)1 : (%(left_type)s)0)" % kw
+    else:
+        rval = "((%(right_type)s)right)" % kw
     kw["left_value"]  = lval
     kw["right_value"] = rval
     
@@ -322,6 +333,9 @@ def gen_binary_prologue(cw, bin, left):
 
 def gen_binary_body(cw, left, right, alt_right, bin, fixup):
     ot, code = get_binop_type(left, alt_right, bin)
+    # get the type of the two that is the optimal result (unless overflow happens)
+    # e.g. Byte + Int  ==> preferably Int, but ban overflow to Long
+    rt = get_preferred_result_type(left, alt_right)
 
     kw = {
         'left_type'     : left.name,
@@ -332,6 +346,7 @@ def gen_binary_body(cw, left, right, alt_right, bin, fixup):
         'right_ops'     : right.ops,
         'oper_type'     : ot.name,
         'oper_ops'      : ot.ops,
+        'result_type'   : rt.name
     }
 
     fixup(kw)
@@ -527,17 +542,10 @@ def gen_manual_ones(cw, left):
         cw.exit_block()
 
 div_impl_code_unsigned = """internal static object DivideImpl(%(type_name)s x, %(type_name)s y) {
-    %(type_name)s q = (%(type_name)s)(x / y);
-    if (x >= 0) {
-        if (y > 0) return q;
-        else if (x %% y == 0) return q;
-        else return q - 1;
-    } else {
-        if (y > 0) {
-            if (x %% y == 0) return q;
-            else return q - 1;
-        } else return q;
-    }
+    return (%(type_name)s)(x / y);
+}
+internal static object ModImpl(%(type_name)s x, %(type_name)s y) {
+    return (%(type_name)s)(x %% y);
 }
 """
 
@@ -558,19 +566,6 @@ div_impl_code_signed = """internal static object DivideImpl(%(type_name)s x, %(t
         } else return q;
     }
 }
-"""
-
-implementation_code = """
-internal static object DivModImpl(%(type_name)s x, %(type_name)s y) {
-    object div = DivideImpl(x, y);
-    if (div == Ops.NotImplemented) return div;
-    object mod = ModImpl(x, y);
-    if (mod == Ops.NotImplemented) return mod;
-    return Tuple.MakeTuple(div, mod);
-}
-internal static object ReverseDivideImpl(%(type_name)s x, %(type_name)s y) {
-    return DivideImpl(y, x);
-}
 internal static object ModImpl(%(type_name)s x, %(type_name)s y) {
     %(type_name)s r = (%(type_name)s)(x %% y);
     if (x >= 0) {
@@ -583,6 +578,19 @@ internal static object ModImpl(%(type_name)s x, %(type_name)s y) {
             else return r + y;
         } else return r;
     }
+}
+"""
+
+implementation_code = """
+internal static object DivModImpl(%(type_name)s x, %(type_name)s y) {
+    object div = DivideImpl(x, y);
+    if (div == Ops.NotImplemented) return div;
+    object mod = ModImpl(x, y);
+    if (mod == Ops.NotImplemented) return mod;
+    return Tuple.MakeTuple(div, mod);
+}
+internal static object ReverseDivideImpl(%(type_name)s x, %(type_name)s y) {
+    return DivideImpl(y, x);
 }
 internal static object ReverseModImpl(%(type_name)s x, %(type_name)s y) {
     return ModImpl(y, x);
@@ -617,8 +625,45 @@ def gen_implementations(cw, t):
     cw.write(implementation_code, type_name = t.name)
 
 def gen_make_dynamic_type(cw, t):
+    cw.write("private static ReflectedType %(type_name)sType;", type_name = t.name)
     cw.enter_block("public static DynamicType MakeDynamicType()")
-    cw.write("return new OpsReflectedType(\"%(type_name)s\", typeof(%(type_name)s), typeof(%(type_name)sOps), null);", type_name = t.name)
+    cw.enter_block("if (%(type_name)sType == null)", type_name = t.name)
+    cw.write("OpsReflectedType ort = new OpsReflectedType(\"%(type_name)s\", typeof(%(type_name)s), typeof(%(type_name)sOps), null);", type_name = t.name)
+    cw.enter_block("if (Interlocked.CompareExchange<ReflectedType>(ref %(type_name)sType, ort, null) == null)", type_name = t.name)
+    cw.write("return ort;")
+    cw.exit_block()
+    cw.exit_block()
+    cw.write("return %(type_name)sType;", type_name = t.name)
+    cw.exit_block()
+    cw.write("")
+
+def gen_constructor(cw, t):
+    cw.write('[PythonName("__new__")]')
+    cw.enter_block("public static object Make(PythonType cls, object value)")
+    cw.enter_block("if (cls != %(type_name)sType)", type_name = t.name)
+    cw.write("throw Ops.TypeError(\"%(type_name)s.__new__: first argument must be %(type_name)s type.\");", type_name = t.name)
+    cw.exit_block()
+    cw.write("IConvertible valueConvertible;")
+    cw.enter_block("if ((valueConvertible = value as IConvertible) != null)")
+    cw.enter_block("switch (valueConvertible.GetTypeCode())")
+    for right in types:
+        if right.name == "Boolean": continue    # not from Boolean
+        cw.case_label("case TypeCode.%(right_type)s: return (%(type_name)s)(%(right_type)s)value;", right_type = right.name, type_name = t.name)
+        cw.dedent()
+    cw.exit_block()
+    cw.exit_block()
+    cw.enter_block("if (value is String)")
+    cw.write("return %(type_name)s.Parse((String)value);", type_name = t.name)
+    cw.else_block("if (value is BigInteger)")
+    cw.write("return (%(type_name)s)(BigInteger)value;", type_name = t.name)
+    cw.else_block("if (value is ExtensibleInt)")
+    cw.write("return (%(type_name)s)((ExtensibleInt)value).value;", type_name = t.name)
+    cw.else_block("if (value is ExtensibleLong)")
+    cw.write("return (%(type_name)s)((ExtensibleLong)value).Value;", type_name = t.name)
+    cw.else_block("if (value is ExtensibleFloat)")
+    cw.write("return (%(type_name)s)((ExtensibleFloat)value).value;", type_name = t.name)
+    cw.exit_block()
+    cw.write('throw Ops.ValueError("invalid value for %(type_name)s.__new__");', type_name = t.name)
     cw.exit_block()
     cw.write("")
 
@@ -628,6 +673,7 @@ class TypeGenerator:
 
     def __call__(self, cw):
         gen_make_dynamic_type(cw, t)
+        gen_constructor(cw, t)
         gen_binaries(cw, t)
         gen_bitwise(cw, t)
         gen_manual_ones(cw, t)

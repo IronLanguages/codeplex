@@ -398,9 +398,6 @@ public static object %(name)s(object x, object y) {
     } else if (x is bool) {
         ret = BoolOps.%(name)s((bool)x, y);
         if (ret != NotImplemented) return ret;
-    } else if (x is byte) {
-        ret = IntOps.%(name)s((int)(byte)x, y);
-        if (ret != NotImplemented) return Int2ByteOrInt(ret);
     }
     ret = GetDynamicType(x).%(name)s(x, y);
     if (ret != NotImplemented) return ret;
@@ -438,18 +435,12 @@ public static object %(name)s(object x, object y) {
     } else if (x is long) {
         ret = Int64Ops.%(name)s((long)x, y);
         if (ret != NotImplemented) return ret;
-    } else if (x is float) {
-        ret = FloatOps.%(name)s((float)x, y);
-        if (ret != NotImplemented) return ret;
     } else if ((inum = x as INumber)!=null) {
         ret = inum.%(name)s(y);
         if (ret != NotImplemented) return ret;
     } else if (x is bool) {
         ret = BoolOps.%(name)s((bool)x, y);
         if (ret != NotImplemented) return ret;
-    } else if (x is byte) {
-        ret = IntOps.%(name)s((int)(byte)x, y);
-        if (ret != NotImplemented) return Int2ByteOrInt(ret);
     }
 
 %(extra_code)s
@@ -654,20 +645,14 @@ public static object %(inname)s(object x, object y) {
     } else if (x is IronMath.Complex64) {
         ret = ComplexOps.%(name)s((Complex64)x, y);
         if (ret != NotImplemented) return ret;
-    } else if (x is float) {
-        ret = FloatOps.%(name)s((float)x, y);
-        if (ret != NotImplemented) return ret;
     } else if (x is ExtensibleFloat) {
         ret = FloatOps.%(name)s(((ExtensibleFloat)x).value, y);
         if (ret != NotImplemented) return ret;
     } else if (x is bool) {
         ret = BoolOps.%(name)s((bool)x, y);
         if (ret != NotImplemented) return ret;
-    } else if (x is byte) {
-        ret = IntOps.%(name)s((int)(byte)x, y);
-        if (ret != NotImplemented) return Int2ByteOrInt(ret);
     }
-
+    
 %(extra_code)s
 
     DynamicType dt = GetDynamicType(x);
@@ -700,9 +685,6 @@ public static object %(inname)s(object x, object y) {
     } else if (x is bool) {
         ret = BoolOps.%(name)s((bool)x, y);
         if (ret != NotImplemented) return ret;
-    } else if (x is byte) {
-        ret = IntOps.%(name)s((int)(byte)x, y);
-        if (ret != NotImplemented) return Int2ByteOrInt(ret);
     }
 
     ret = GetDynamicType(x).%(inname)s(x, y);

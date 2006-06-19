@@ -145,7 +145,11 @@ namespace IronPythonConsole {
                 if (Options.Command != null) {
                     return RunString(engine, Options.Command);
                 } else if (fileName == null) {
+#if !IRONPYTHON_WINDOW
                     return RunInteractive(engine);
+#else
+                    return 0;
+#endif
                 } else {
                     return RunFile(engine, fileName);
                 }
@@ -419,10 +423,15 @@ namespace IronPythonConsole {
 
             try {
                 ModuleScope scope;
-                if (Options.Introspection) 
+#if !IRONPYTHON_WINDOW
+                if (Options.Introspection) {
                     ExecuteFileConsole(fileName, executionOptions, out scope);
-                else
+                } else {
                     engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+                }
+#else
+                engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+#endif
                 result = 0;
             } catch (PythonSystemExit pythonSystemExit) {
                 result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
@@ -484,6 +493,7 @@ namespace IronPythonConsole {
             return true;
         }
 
+#if !IRONPYTHON_WINDOW
         public static void ExecuteFileConsole(string fileName, ExecutionOptions executionOptions, out ModuleScope moduleScope) {
             moduleScope = null;
 
@@ -507,7 +517,7 @@ namespace IronPythonConsole {
                 RunInteractiveLoop();
             }
         }
-
+#endif
         static IConsole _console;
         public static IConsole MyConsole {
             get {
@@ -633,6 +643,7 @@ namespace IronPythonConsole {
             return RunInteractiveLoop();
         }
 
+#if !IRONPYTHON_WINDOW
         private static int RunInteractive(PythonEngine engine) {
             string version = InitializeModules(engine);
             engine.AddToPath(Environment.CurrentDirectory);
@@ -661,7 +672,7 @@ namespace IronPythonConsole {
             engine.DumpDebugInfo();
             return (int) result;
         }
-
+#endif
         private static void DefaultExceptionHandler(object sender, UnhandledExceptionEventArgs args) {
             MyConsole.WriteLine("Unhandled exception: ", Style.Error);
             MyConsole.Write(engine.FormatException((Exception)args.ExceptionObject), Style.Error);

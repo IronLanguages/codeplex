@@ -15,7 +15,6 @@
 
 using System;
 using System.Diagnostics;
-
 using IronPython.Runtime;
 
 namespace IronPython.Runtime.Operations {

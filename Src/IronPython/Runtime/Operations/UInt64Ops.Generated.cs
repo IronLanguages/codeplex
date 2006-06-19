@@ -15,9 +15,8 @@
 
 using System;
 using System.Diagnostics;
-using System.Text;
+using System.Threading;
 using IronMath;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
 
@@ -28,8 +27,49 @@ namespace IronPython.Runtime.Operations {
 
         // *** BEGIN GENERATED CODE ***
 
+        private static ReflectedType UInt64Type;
         public static DynamicType MakeDynamicType() {
-            return new OpsReflectedType("UInt64", typeof(UInt64), typeof(UInt64Ops), null);
+            if (UInt64Type == null) {
+                OpsReflectedType ort = new OpsReflectedType("UInt64", typeof(UInt64), typeof(UInt64Ops), null);
+                if (Interlocked.CompareExchange<ReflectedType>(ref UInt64Type, ort, null) == null) {
+                    return ort;
+                }
+            }
+            return UInt64Type;
+        }
+
+        [PythonName("__new__")]
+        public static object Make(PythonType cls, object value) {
+            if (cls != UInt64Type) {
+                throw Ops.TypeError("UInt64.__new__: first argument must be UInt64 type.");
+            }
+            IConvertible valueConvertible;
+            if ((valueConvertible = value as IConvertible) != null) {
+                switch (valueConvertible.GetTypeCode()) {
+                    case TypeCode.Byte: return (UInt64)(Byte)value;
+                    case TypeCode.SByte: return (UInt64)(SByte)value;
+                    case TypeCode.Int16: return (UInt64)(Int16)value;
+                    case TypeCode.UInt16: return (UInt64)(UInt16)value;
+                    case TypeCode.Int32: return (UInt64)(Int32)value;
+                    case TypeCode.UInt32: return (UInt64)(UInt32)value;
+                    case TypeCode.Int64: return (UInt64)(Int64)value;
+                    case TypeCode.UInt64: return (UInt64)(UInt64)value;
+                    case TypeCode.Single: return (UInt64)(Single)value;
+                    case TypeCode.Double: return (UInt64)(Double)value;
+                }
+            }
+            if (value is String) {
+                return UInt64.Parse((String)value);
+            } else if (value is BigInteger) {
+                return (UInt64)(BigInteger)value;
+            } else if (value is ExtensibleInt) {
+                return (UInt64)((ExtensibleInt)value).value;
+            } else if (value is ExtensibleLong) {
+                return (UInt64)((ExtensibleLong)value).Value;
+            } else if (value is ExtensibleFloat) {
+                return (UInt64)((ExtensibleFloat)value).value;
+            }
+            throw Ops.ValueError("invalid value for UInt64.__new__");
         }
 
         [PythonName("__add__")]
@@ -39,6 +79,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.AddImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.AddImpl(leftUInt64, ((Byte)right));
                         }
@@ -93,6 +136,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
                         }
@@ -147,6 +193,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
                         }
@@ -201,6 +250,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
                         }
@@ -255,6 +307,12 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            UInt64 result = (UInt64)(((UInt64)leftUInt64) * ((UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0)));
+                            if (UInt64.MinValue <= result && result <= UInt64.MaxValue) {
+                                return (UInt64)result;
+                            } else return result;
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.MultiplyImpl(leftUInt64, ((Byte)right));
                         }
@@ -309,6 +367,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.SubtractImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.SubtractImpl(leftUInt64, ((Byte)right));
                         }
@@ -363,6 +424,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.ReverseAddImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.ReverseAddImpl(leftUInt64, ((Byte)right));
                         }
@@ -417,6 +481,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
                         }
@@ -471,6 +538,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
                         }
@@ -525,6 +595,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
                         }
@@ -579,6 +652,12 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            UInt64 result = (UInt64)(((UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0)) * ((UInt64)leftUInt64));
+                            if (UInt64.MinValue <= result && result <= UInt64.MaxValue) {
+                                return (UInt64)result;
+                            } else return result;
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.ReverseMultiplyImpl(leftUInt64, ((Byte)right));
                         }
@@ -633,6 +712,9 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
+                        }
                     case TypeCode.Byte: {
                             return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((Byte)right));
                         }
@@ -687,6 +769,10 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            UInt64 rightUInt64 = (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0);
+                            return leftUInt64 & rightUInt64;
+                        }
                     case TypeCode.Byte: {
                             UInt64 rightUInt64 = (UInt64)(Byte)right;
                             return leftUInt64 & rightUInt64;
@@ -738,6 +824,10 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            UInt64 rightUInt64 = (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0);
+                            return leftUInt64 & rightUInt64;
+                        }
                     case TypeCode.Byte: {
                             UInt64 rightUInt64 = (UInt64)(Byte)right;
                             return leftUInt64 & rightUInt64;
@@ -789,6 +879,10 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            UInt64 rightUInt64 = (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0);
+                            return leftUInt64 | rightUInt64;
+                        }
                     case TypeCode.Byte: {
                             UInt64 rightUInt64 = (UInt64)(Byte)right;
                             return leftUInt64 | rightUInt64;
@@ -840,6 +934,10 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            UInt64 rightUInt64 = (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0);
+                            return leftUInt64 | rightUInt64;
+                        }
                     case TypeCode.Byte: {
                             UInt64 rightUInt64 = (UInt64)(Byte)right;
                             return leftUInt64 | rightUInt64;
@@ -891,6 +989,10 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            UInt64 rightUInt64 = (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0);
+                            return leftUInt64 ^ rightUInt64;
+                        }
                     case TypeCode.Byte: {
                             UInt64 rightUInt64 = (UInt64)(Byte)right;
                             return leftUInt64 ^ rightUInt64;
@@ -942,6 +1044,10 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean: {
+                            UInt64 rightUInt64 = (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0);
+                            return leftUInt64 ^ rightUInt64;
+                        }
                     case TypeCode.Byte: {
                             UInt64 rightUInt64 = (UInt64)(Byte)right;
                             return leftUInt64 ^ rightUInt64;
@@ -993,6 +1099,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return UInt64Ops.DivModImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return UInt64Ops.DivModImpl(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1037,6 +1145,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return UInt64Ops.ReverseDivModImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return UInt64Ops.ReverseDivModImpl(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1081,6 +1191,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return UInt64Ops.LeftShiftImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return UInt64Ops.LeftShiftImpl(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1115,6 +1227,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return UInt64Ops.ReverseLeftShiftImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return UInt64Ops.ReverseLeftShiftImpl(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1149,6 +1263,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return UInt64Ops.PowerImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return UInt64Ops.PowerImpl(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1193,6 +1309,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return UInt64Ops.ReversePowerImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return UInt64Ops.ReversePowerImpl(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1237,6 +1355,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return UInt64Ops.RightShiftImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return UInt64Ops.RightShiftImpl(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1271,6 +1391,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return UInt64Ops.ReverseRightShiftImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return UInt64Ops.ReverseRightShiftImpl(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1305,6 +1427,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return FloatOps.TrueDivide(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return FloatOps.TrueDivide(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1349,6 +1473,8 @@ namespace IronPython.Runtime.Operations {
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
                 switch (rightConvertible.GetTypeCode()) {
+                    case TypeCode.Boolean:
+                        return FloatOps.ReverseTrueDivide(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                     case TypeCode.Byte:
                         return FloatOps.ReverseTrueDivide(leftUInt64, (Byte)right);
                     case TypeCode.SByte:
@@ -1387,17 +1513,10 @@ namespace IronPython.Runtime.Operations {
             return Ops.NotImplemented;
         }
         internal static object DivideImpl(UInt64 x, UInt64 y) {
-            UInt64 q = (UInt64)(x / y);
-            if (x >= 0) {
-                if (y > 0) return q;
-                else if (x % y == 0) return q;
-                else return q - 1;
-            } else {
-                if (y > 0) {
-                    if (x % y == 0) return q;
-                    else return q - 1;
-                } else return q;
-            }
+            return (UInt64)(x / y);
+        }
+        internal static object ModImpl(UInt64 x, UInt64 y) {
+            return (UInt64)(x % y);
         }
 
 
@@ -1410,19 +1529,6 @@ namespace IronPython.Runtime.Operations {
         }
         internal static object ReverseDivideImpl(UInt64 x, UInt64 y) {
             return DivideImpl(y, x);
-        }
-        internal static object ModImpl(UInt64 x, UInt64 y) {
-            UInt64 r = (UInt64)(x % y);
-            if (x >= 0) {
-                if (y > 0) return r;
-                else if (r == 0) return 0;
-                else return r + y;
-            } else {
-                if (y > 0) {
-                    if (r == 0) return r;
-                    else return r + y;
-                } else return r;
-            }
         }
         internal static object ReverseModImpl(UInt64 x, UInt64 y) {
             return ModImpl(y, x);

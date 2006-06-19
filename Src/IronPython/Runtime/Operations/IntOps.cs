@@ -136,12 +136,42 @@ namespace IronPython.Runtime.Operations {
 
             if (o is string) return Make(null, (string)o, 10);
             if (o is double) return FloatOps.ToInteger((double)o);
-            if (o is int || o is long) return o;
+            if (o is int) return o;
             if (o is BigInteger) return o;
             if ((el = o as ExtensibleLong)!=null) return el.Value;
             if (o is float) return FloatOps.ToInteger((double)(float)o);
 
             if (o is Complex64) throw Ops.TypeError("can't convert complex to int; use int(abs(z))");
+
+            if (o is Byte) return (Int32)(Byte)o;
+            if (o is SByte) return (Int32)(SByte)o;
+            if (o is Int16) return (Int32)(Int16)o;
+            if (o is Int64) {
+                Int64 val = (Int64)o;
+                if (Int32.MinValue<= val && val <= Int32.MaxValue) {
+                    return (Int32)val;
+                } else {
+                    return BigInteger.Create(val);
+                }
+            }
+            if (o is UInt16) return (Int32)(UInt16)o;
+
+            if (o is UInt32) {
+                UInt32 val = (UInt32)o;
+                if (val < Int32.MaxValue) {
+                    return (Int32)val;
+                } else {
+                    return BigInteger.Create(val);
+                }
+            }
+            if (o is UInt64) {
+                UInt64 val = (UInt64)o;
+                if (val < Int32.MaxValue) {
+                    return (Int32)val;
+                } else {
+                    return BigInteger.Create(val);
+                }
+            }
 
             return Converter.ConvertToInt32(o);
         }

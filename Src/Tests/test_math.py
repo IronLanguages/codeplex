@@ -15,7 +15,7 @@
 
 from lib.assert_util import *
 if is_cli:
-    from System import Int64, Byte
+    from System import Int64, Byte, Int16
     
     
 Assert("pypypypypy" == 5 * "py")
@@ -156,19 +156,19 @@ if is_cli:
     AreEqual(type(a), Byte)
     AreEqual(a, 0)
 
-    b = a + 1
+    b = a + Byte(1)
     AreEqual(b, 1)
     AreEqual(type(b), Byte)
 
-    bprime = b * 10
-    AreEqual(type(b), Byte)
+    bprime = b * Byte(10)
+    AreEqual(type(bprime), Byte)
 
-    d = a + 255
-    AreEqual(type(b), Byte)
+    d = a + Byte(255)
+    AreEqual(type(d), Byte)
 
-    c = b + 255
+    c = b + Byte(255)
     AreEqual(c, 256)
-    AreEqual(type(c), int)
+    AreEqual(type(c), Int16)
 
 Assert(not (20 == False))
 Assert(not (20 == None))

@@ -207,6 +207,7 @@ namespace IronPython.Runtime.Operations {
             return y / x;
         }
 
+        [PythonName("__abs__")]
         public static object Abs(Complex64 x) {
             return x.Abs();
         }
@@ -285,7 +286,7 @@ namespace IronPython.Runtime.Operations {
                 return Ops.NotImplemented;
             }
         }
-
+        // other % x = other - (x * (other // y ))
         [PythonName("__rmod__")]
         public static object ReverseMod(Complex64 x, object other) {
             object rawQuotient = ComplexOps.ReverseFloorDivide(x, other);
@@ -294,8 +295,8 @@ namespace IronPython.Runtime.Operations {
             }
             if (rawQuotient is Complex64) {
                 Complex64 complexQuotient = (Complex64)rawQuotient;
-                Complex64 product = (Complex64)ComplexOps.ReverseMultiply(complexQuotient, other);
-                return ComplexOps.ReverseSubtract(x, product);
+                Complex64 product = (Complex64)ComplexOps.ReverseMultiply(complexQuotient, x);
+                return ComplexOps.ReverseSubtract(product, other);
             } else {
                 return Ops.NotImplemented;
             }

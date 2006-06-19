@@ -149,18 +149,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Add((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Add((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if ((inum = x as INumber)!=null) {
                 ret = inum.Add(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Add((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Add((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -199,18 +193,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is IronMath.Complex64) {
                 ret = ComplexOps.Add((Complex64)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Add((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Add(((ExtensibleFloat)x).value, y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Add((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Add((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -259,18 +247,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Subtract((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Subtract((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if ((inum = x as INumber)!=null) {
                 ret = inum.Subtract(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Subtract((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Subtract((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -306,18 +288,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is IronMath.Complex64) {
                 ret = ComplexOps.Subtract((Complex64)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Subtract((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Subtract(((ExtensibleFloat)x).value, y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Subtract((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Subtract((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -358,18 +334,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Power((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Power((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if ((inum = x as INumber)!=null) {
                 ret = inum.Power(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Power((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Power((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -405,18 +375,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is IronMath.Complex64) {
                 ret = ComplexOps.Power((Complex64)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Power((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Power(((ExtensibleFloat)x).value, y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Power((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Power((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -457,18 +421,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Multiply((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Multiply((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if ((inum = x as INumber)!=null) {
                 ret = inum.Multiply(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Multiply((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Multiply((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -510,18 +468,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is IronMath.Complex64) {
                 ret = ComplexOps.Multiply((Complex64)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Multiply((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Multiply(((ExtensibleFloat)x).value, y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Multiply((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Multiply((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -562,18 +514,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.FloorDivide((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.FloorDivide((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if ((inum = x as INumber)!=null) {
                 ret = inum.FloorDivide(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.FloorDivide((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.FloorDivide((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -609,18 +555,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is IronMath.Complex64) {
                 ret = ComplexOps.FloorDivide((Complex64)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.FloorDivide((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.FloorDivide(((ExtensibleFloat)x).value, y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.FloorDivide((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.FloorDivide((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -661,18 +601,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Divide((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Divide((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if ((inum = x as INumber)!=null) {
                 ret = inum.Divide(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Divide((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Divide((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -708,18 +642,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is IronMath.Complex64) {
                 ret = ComplexOps.Divide((Complex64)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Divide((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Divide(((ExtensibleFloat)x).value, y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Divide((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Divide((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -760,18 +688,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.TrueDivide((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.TrueDivide((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if ((inum = x as INumber)!=null) {
                 ret = inum.TrueDivide(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.TrueDivide((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.TrueDivide((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -807,18 +729,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is IronMath.Complex64) {
                 ret = ComplexOps.TrueDivide((Complex64)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.TrueDivide((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.TrueDivide(((ExtensibleFloat)x).value, y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.TrueDivide((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.TrueDivide((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -859,18 +775,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Mod((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Mod((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if ((inum = x as INumber)!=null) {
                 ret = inum.Mod(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Mod((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Mod((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -906,18 +816,12 @@ namespace IronPython.Runtime.Operations {
             } else if (x is IronMath.Complex64) {
                 ret = ComplexOps.Mod((Complex64)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is float) {
-                ret = FloatOps.Mod((float)x, y);
-                if (ret != NotImplemented) return ret;
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Mod(((ExtensibleFloat)x).value, y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
                 ret = BoolOps.Mod((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Mod((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
 
@@ -952,9 +856,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.LeftShift((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.LeftShift((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
             ret = GetDynamicType(x).LeftShift(x, y);
             if (ret != NotImplemented) return ret;
@@ -984,9 +885,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.LeftShift((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.LeftShift((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
             ret = GetDynamicType(x).InPlaceLeftShift(x, y);
@@ -1016,9 +914,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.RightShift((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.RightShift((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
             ret = GetDynamicType(x).RightShift(x, y);
             if (ret != NotImplemented) return ret;
@@ -1048,9 +943,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.RightShift((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.RightShift((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
             ret = GetDynamicType(x).InPlaceRightShift(x, y);
@@ -1080,9 +972,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.BitwiseAnd((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.BitwiseAnd((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
             ret = GetDynamicType(x).BitwiseAnd(x, y);
             if (ret != NotImplemented) return ret;
@@ -1112,9 +1001,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.BitwiseAnd((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.BitwiseAnd((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
             ret = GetDynamicType(x).InPlaceBitwiseAnd(x, y);
@@ -1144,9 +1030,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.BitwiseOr((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.BitwiseOr((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
             ret = GetDynamicType(x).BitwiseOr(x, y);
             if (ret != NotImplemented) return ret;
@@ -1176,9 +1059,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.BitwiseOr((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.BitwiseOr((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
             ret = GetDynamicType(x).InPlaceBitwiseOr(x, y);
@@ -1208,9 +1088,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.Xor((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Xor((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
             ret = GetDynamicType(x).Xor(x, y);
             if (ret != NotImplemented) return ret;
@@ -1240,9 +1117,6 @@ namespace IronPython.Runtime.Operations {
             } else if (x is bool) {
                 ret = BoolOps.Xor((bool)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if (x is byte) {
-                ret = IntOps.Xor((int)(byte)x, y);
-                if (ret != NotImplemented) return Int2ByteOrInt(ret);
             }
 
             ret = GetDynamicType(x).InPlaceXor(x, y);

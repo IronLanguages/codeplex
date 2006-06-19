@@ -39,36 +39,4 @@ namespace IronPython.Runtime {
 
         #endregion
     }
-
-    /// <summary>Comparer used when the key is always an attribute name </summary>
-    class AttributeNameComparer : IEqualityComparer<object> {
-        #region IEqualityComparer<object> Members
-
-        bool IEqualityComparer<object>.Equals(object x, object y) {
-            Debug.Assert(x is string, "expected only a string (x)");
-            Debug.Assert(y is string, "expected only a string (y)");
-
-            // first check for object equality...
-            if (x == y) return true;
-
-            string sx = x as string;
-            string sy = y as string;
-
-            // if the strings are different lengths they're not equal
-            if (sx.Length != sy.Length) return false;
-
-            // finally compare the bits...
-            if (String.CompareOrdinal(sx, sy) != 0) return false;
-
-            return true;
-        }
-
-        public int GetHashCode(object obj) {
-            Debug.Assert(obj is string, "expected only a string (GetHashCode)");
-
-            return obj.GetHashCode();
-        }
-
-        #endregion
-    }
 }

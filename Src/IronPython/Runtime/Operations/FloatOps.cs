@@ -33,7 +33,7 @@ namespace IronPython.Runtime.Operations {
         public ExtensibleFloat(double value) { this.value = value; }
 
         public override string ToString() {
-            return value.ToString();
+            return FloatOps.ToString(value);
         }
 
         [PythonName("__cmp__")]
