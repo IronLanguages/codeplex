@@ -170,8 +170,13 @@ namespace IronPython.Runtime.Types {
         private Tuple ValidateBases(object value) {
             Tuple t = value as Tuple;
             if (t == null) throw Ops.TypeError("__bases__ must be a tuple object");
-            foreach (object o in __bases__) {
-                if (!(o is OldClass)) throw Ops.TypeError("__bases__ items must be classes (got {0})", Ops.GetDynamicType(o).__name__);
+            foreach (object o in t) {
+                OldClass oc = o as OldClass;
+                if (oc == null) throw Ops.TypeError("__bases__ items must be classes (got {0})", Ops.GetDynamicType(o).__name__);
+
+                if (oc.IsSubclassOf(this)) {
+                    throw Ops.TypeError("a __bases__ item causes an inheritance cycle");
+                }
             }
             return t;
         }

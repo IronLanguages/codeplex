@@ -1344,4 +1344,17 @@ for x in [None, 'abc', 3]:
     except TypeError: pass
 
 
+# test for inheritance cycle
+class CycleA: pass
+class CycleB: pass
 
+try:
+  CycleA.__bases__ = (CycleA,)
+  AreEqual(True, False)
+except TypeError: pass
+
+try:
+  CycleA.__bases__ = (CycleB,)
+  CycleB.__bases__ = (CycleA,)
+  AreEqual(True, False)
+except TypeError: pass
