@@ -69,7 +69,7 @@ class testpath:
         ipython_executable  = sys.executable
         cpython_executable  = path_combine(external_dir, r'Regress\Python24\python.exe')
     else: 
-        ipython_executable  = path_combine(sys.prefix, r'ironpythonconsole.exe')
+        ipython_executable  = path_combine(sys.prefix, r'ipy.exe')
         cpython_executable  = sys.executable
     
     team_dir            = path_combine(ip_root, r'Team')

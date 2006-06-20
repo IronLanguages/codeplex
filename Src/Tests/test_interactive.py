@@ -48,7 +48,7 @@ ipi.End()
 
 
 ###############################################################################
-# Test "ironpythonconsole.exe -i script.py"
+# Test "ipy.exe -i script.py"
 
 inputScript = testpath.test_inputs_dir + "\\simpleCommand.py"
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -i \"" + inputScript + "\"")

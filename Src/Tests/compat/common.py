@@ -43,12 +43,12 @@ def get_all_paths():
     elif sys.platform == "win32":
         cpython_executable = sys.executable
         cpython_lib_path   = sys.prefix + "/Lib"
-        ipython_executable = sys.prefix + "/../../../Public/IronPythonConsole.exe"
+        ipython_executable = sys.prefix + "/../../../Public/ipy.exe"
         compat_test_path   = sys.prefix + "/../../../Public/Src/Tests/Compat/"
   
         # second try    
         if file_exists(ipython_executable) == False:
-            ipython_executable = nt.environ['IP_ROOT'] + "/Public/IronPythonConsole.exe"
+            ipython_executable = nt.environ['IP_ROOT'] + "/Public/ipy.exe"
             compat_test_path   = nt.environ['IP_ROOT'] + "/Public/Src/Tests/Compat/"
     
     else:

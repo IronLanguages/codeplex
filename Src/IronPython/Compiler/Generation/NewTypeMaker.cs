@@ -43,7 +43,7 @@ namespace IronPython.Compiler.Generation {
     /// they will just have different values for the __class__ field.
     /// 
     /// The easiest way to inspect the functionality implemented by NewTypeMaker is to persist the
-    /// generated IL using "IronPythonConsole.exe -X:SaveAssemblies", and then inspect the
+    /// generated IL using "ipy.exe -X:SaveAssemblies", and then inspect the
     /// persisted IL using ildasm.
     /// </summary>
     class NewTypeMaker {

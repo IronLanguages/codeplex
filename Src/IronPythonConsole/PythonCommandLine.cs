@@ -284,7 +284,7 @@ namespace IronPythonConsole {
         private static void PrintUsage() {
             Console.WriteLine("IronPython console: " + PythonEngine.VersionString);
             Console.WriteLine(PythonEngine.Copyright);
-            Console.WriteLine("Usage: IronPythonConsole [options] [file.py|- [arguments]]");
+            Console.WriteLine("Usage: ipy [options] [file.py|- [arguments]]");
             Console.WriteLine("Options:");
             Console.WriteLine("  -O:                    Enable optimizations");
 #if DEBUG

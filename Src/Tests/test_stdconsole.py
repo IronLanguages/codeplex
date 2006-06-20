@@ -19,7 +19,7 @@ import nt
 import re
 from System import *
 
-# Test that IronPythonConsole behaves as expected (command line argument processing etc.).
+# Test that IronPython console behaves as expected (command line argument processing etc.).
 
 # Get a temporary directory in which the tests can scribble.
 tmpdir = Environment.GetEnvironmentVariable("TEMP")
@@ -45,7 +45,7 @@ f.close()
 #       "regexp"    : valuestring is a regular expression compared against the entire output
 def TestCommandLine(args, expected_output, expected_exitcode = 0):
     exitcode = nt.spawnl(0, batfile, *args)
-    cmdline = "IronPythonConsole " + ' '.join(args)
+    cmdline = "ipy " + ' '.join(args)
     Assert(exitcode == expected_exitcode, "'" + cmdline + "' generated unexpected exit code " + str(exitcode))
     if (expected_output != None):
         f = file(tmpfile)

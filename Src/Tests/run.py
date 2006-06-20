@@ -14,7 +14,7 @@
 ######################################################################################
 
 '''
-This is mainly a wrapper to run iprun.py and IronPythonConsole.exe with
+This is mainly a wrapper to run iprun.py and IronPython console with
 different extension switchs. Two set of switches are run by default.
 You can specify the extension mode as shown below:
 
@@ -112,9 +112,9 @@ def test_exit_code():
         sys.exit(1)    
 
 def clean_log_files():
-    # clean log files if i am the only one running ironpythonconsole.exe
+    # clean log files if i am the only one running ipy.exe
     try:
-        ipys = [x for x in nt.popen('tasklist.exe').readlines() if x.lower().startswith('ironpythonconsole.exe')]
+        ipys = [x for x in nt.popen('tasklist.exe').readlines() if x.lower().startswith('ipy.exe')]
         if len(ipys) == 1:
             for x in range(1, 20): 
                 delete_files('result%i.log' % x)

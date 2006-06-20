@@ -35,7 +35,7 @@ def test_coverage():
     
     # 2. ...
 
-# verify no interferece between PythonEngine used in IronPythonConsole and user created one
+# verify no interferece between PythonEngine used in IronPython console and user created one
 def test_no_interference(): 
     # 1. path
     oldpath = sys.path
