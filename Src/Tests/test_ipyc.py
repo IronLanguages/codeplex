@@ -318,9 +318,12 @@ RunPythonExe(".\\" + assembly, 24, -22, -2, System.IO.Path.Combine(sys.prefix, a
 FileRemoval(source1, assembly)
 
 class TestSink(CompilerSink):
-    errors = []
+    def __init__(self):
+        self.errors = []
+
     def AddError(self, path, message, lineText, span, errorCode, severity):
         self.errors.append((path, message, span, errorCode, severity))
+
 
 
 FileRemoval(source1, assembly)
@@ -331,4 +334,65 @@ class Class:zxvc
 sink = TestSink()
 CompileWithSink(source1, assembly, sink)
 Assert(len(sink.errors) > 0)
+
+FileRemoval(source1, assembly)
+write_to_file(source1, """
+(1 and 1) = 1
+""")
+s = TestSink()
+CompileWithSink(source1, assembly, s)
+Assert(len(s.errors) > 0)
+
+
+FileRemoval(source1, assembly)
+write_to_file(source1, """
+(lambda x: x = 1 )
+""")
+s = TestSink()
+CompileWithSink(source1, assembly, s)
+Assert(len(s.errors) > 0)
+
+
+FileRemoval(source1, assembly)
+write_to_file(source1, """
+	print 1
+""")
+s = TestSink()
+CompileWithSink(source1, assembly, s)
+Assert(len(s.errors) > 0)
+
+
+FileRemoval(source1, assembly)
+write_to_file(source1, """
+name = 1
+""")
+s = TestSink()
+CompileWithSink(source1, assembly, s)
+Assert(len(s.errors) == 0)
+
+FileRemoval(source1, assembly)
+write_to_file(source1, """
+(name) = 1
+""")
+s = TestSink()
+CompileWithSink(source1, assembly, s)
+Assert(len(s.errors) == 0)
+
+
+FileRemoval(source1, assembly)
+write_to_file(source1, """
+(name1,name2) = (1,2)
+""")
+s = TestSink()
+CompileWithSink(source1, assembly, s)
+Assert(len(s.errors) == 0)
+
+
+FileRemoval(source1, assembly)
+write_to_file(source1, """
+(name1 =1) = 1
+""")
+s = TestSink()
+CompileWithSink(source1, assembly, s)
+Assert(len(s.errors) > 0)
 
