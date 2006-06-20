@@ -135,6 +135,10 @@ def test_reverse():
     x.reverse()
     Assert(x == ['n','o','h','t','y','p',' ','n','o','r','i'])
 
+
+def test_equal():
+    AreEqual([2,3] == '', False)
+
 ######################################################################
 # Verify behavior of index when the list changes...
 

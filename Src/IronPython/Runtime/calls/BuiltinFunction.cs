@@ -250,6 +250,9 @@ namespace IronPython.Runtime.Calls {
                     // updating the Tuple here instead of the user's object.
 
                     if (targets[0].DeclaringType.IsDefined(typeof(PythonTypeAttribute), false)) {
+                        // calling ctor w/ kw-args w/ zero args, let it go, don't do any sets.
+                        if (args.Length == names.Length) return ret;
+
                         throw Ops.TypeError("'{0}' is an invalid keyword argument for this function",
                             bestUnboundArgs[0].Name,
                             Name);

@@ -1107,7 +1107,7 @@ namespace IronPython.Runtime {
                     while (ie.MoveNext()) {
                         if (curIndex >= size || !Ops.EqualRetBool(ie.Current, this[curIndex++])) return Ops.FALSE;
                     }
-                    return Ops.TRUE;
+                    if(curIndex == this.size) return Ops.TRUE;
                 }
 
                 return Ops.FALSE;

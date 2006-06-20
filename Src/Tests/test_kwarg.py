@@ -563,10 +563,10 @@ def builtInTest():
     import clr
     clr.AddReferenceByPartialName('System.Windows.Forms')
     import System.Windows.Forms as WinForms
-    a = Button(Text='abc')
-    Assert(a.Text, 'abc', 'failed to set property via built in constructor')
+    a = WinForms.Button(Text='abc')
+    Assert(a.Text, 'abc')
 
-	
+builtInTest()	
 ########################################################
 # Known bugs
 
@@ -666,3 +666,4 @@ AreEqual(list.__call__(sequence='abc'), ['a', 'b', 'c'])
 class x(dict): pass
 
 AreEqual(x(a=1)['a'], 1)
+

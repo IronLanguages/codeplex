@@ -49,6 +49,16 @@ def test_none():
     AssertError(TypeError, re.subn, 'abc', 'abc', None)
 
     AssertError(TypeError, re.escape, None)
+    
+def test_comment():
+    pattern = "a(?#foo)bc"
+    c = re.compile(pattern)
+    AreEqual(c.findall("abc"), ['abc'])
+
+def test_optional_paren():
+     pattern = r"""\(?\w+\)?"""
+     c = re.compile(pattern, re.X)
+     AreEqual(c.findall('abc'), ['abc'])
 
 x = '\n   #region Generated Foo\nblah\nblah#end region'
 a = re.compile("^([ \t]+)#region Generated Foo.*?#end region", re.MULTILINE|re.DOTALL)

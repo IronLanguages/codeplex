@@ -1465,15 +1465,22 @@ namespace IronPython.Runtime.Types {
                     return ifc.Call(context, args, names);
                 }
             } else {
-                if (rc.GetMaximumArguments() == 0) return rc.Call(); //??? not-enough args case
-
                 // calling ctor (non-derived class)
                 IFancyCallable ifc = callTarget as IFancyCallable;
                 if (ifc != null) {
-                    // call to ctor, strip the class parameter and call it.
-                    object[] newArgs = new object[args.Length - 1];
-                    for (int i = 0; i < newArgs.Length; i++) {
-                        newArgs[i] = args[i + 1];
+                    object[] newArgs;
+                    if (rc.GetMaximumArguments() == 0) {
+                        //??? not-enough args case                    
+                        // remove all non-kw args, and call only w/ kw args
+                        newArgs = new object[names.Length];
+                        for(int i = 0; i<names.Length;i++){
+                            newArgs[i] = args[i + (args.Length - names.Length)];
+                        }
+                    }else{
+                        newArgs = new object[args.Length - 1];
+                        for (int i = 0; i < newArgs.Length; i++) {
+                            newArgs[i] = args[i + 1];
+                        }
                     }
 
                     return ifc.Call(context, newArgs, names);

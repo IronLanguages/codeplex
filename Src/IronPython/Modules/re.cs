@@ -773,6 +773,20 @@ namespace IronPython.Modules {
 
             for (; ; ) {
                 nameIndex = pattern.IndexOf("(", cur);
+                if (nameIndex > 0 && pattern[nameIndex - 1] == '\\') {
+                    int curIndex = nameIndex - 2;
+                    int backslashCount = 1;
+                    while (curIndex >= 0 && pattern[curIndex] == '\\') {
+                        backslashCount++;
+                        curIndex--;
+                    }
+                    // odd number of back slashes, this is an optional
+                    // paren that we should ignore.
+                    if ((backslashCount & 0x01) != 0) {
+                        cur++;
+                        continue;
+                    }
+                }
 
                 if (nameIndex == -1) break;
                 if (nameIndex == pattern.Length - 1) break;
@@ -803,6 +817,7 @@ namespace IronPython.Modules {
                             case '=': break; // look ahead assertion
                             case '<': break; // positive look behind assertion
                             case '!': break; // negative look ahead assertion
+                            case '#': break; // inline comment
                             case '(':  // yes/no if group exists, we don't support this
                             default: throw ExceptionConverter.CreateThrowable(error, "Unrecognized extension " + pattern[nameIndex]);
                         }
