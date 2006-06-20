@@ -145,7 +145,7 @@ namespace IronPython.Runtime.Types {
         [PythonName("__delete__")]
         public override bool DeleteAttribute(object instance) {
             if (instance != null) {
-                SetAttribute(instance, new Uninitialized(info.Name));
+                SetAttribute(instance, new Uninitialized(Info.Name));
                 return true;
             }
             return false;
@@ -153,8 +153,9 @@ namespace IronPython.Runtime.Types {
     }
 
     public class ReflectedProperty : IDataDescriptor, IContextAwareMember {
-        public readonly MethodInfo getter, setter;
-        public readonly PropertyInfo info;
+        private readonly MethodInfo getter, setter;
+        private readonly PropertyInfo info;
+
         private NameType nameType;
         private BuiltinFunction optGetter, optSetter;
 
@@ -163,6 +164,18 @@ namespace IronPython.Runtime.Types {
             this.getter = getter;
             this.setter = setter;
             this.nameType = nt;
+        }
+
+        public MethodInfo Setter {
+            get { return setter; }
+        }
+
+        public MethodInfo Getter {
+            get { return getter; }
+        }
+
+        public PropertyInfo Info {
+            get { return info; }
         }
 
         public string Documentation {

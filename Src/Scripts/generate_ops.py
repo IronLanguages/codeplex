@@ -346,10 +346,18 @@ def tokens_generator(cw):
         else:
             creator = 'new SymbolToken(TokenKind.%s, "%s")' % (
                 op.title_name(), op.symbol)
-        cw.write("public static readonly Token %sToken = %s;" %
+        cw.write("private static readonly Token sym%sToken = %s;" %
                    (op.title_name(), creator))
+                       
 
     cw.writeline()
+    
+    for op in ops:
+        cw.enter_block("public static Token %sToken" % op.title_name())
+        cw.write("get { return sym%sToken; }" % op.title_name())
+        cw.exit_block()
+        cw.write("")
+    
     keyword_list = list(kwlist)
     keyword_list.sort()
 
@@ -358,15 +366,27 @@ def tokens_generator(cw):
     for kw in keyword_list:
         creator = 'new SymbolToken(TokenKind.Keyword%s, "%s")' % (
             kw.title(), kw)
-        cw.write("public static readonly Token Keyword%sToken = %s;" %
+        cw.write("private static readonly Token kw%sToken = %s;" %
                (kw.title(), creator))
 
-        dict_init.append("Keywords[SymbolTable.StringToId(\"%s\")] = Keyword%sToken;" %
+        dict_init.append("Keywords[SymbolTable.StringToId(\"%s\")] = kw%sToken;" %
                          (kw, kw.title()))
 
+    cw.write("")
+    cw.write("")
+    for kw in keyword_list:
+        cw.enter_block("public static Token Keyword%sToken" % kw.title())
+        cw.write("get { return kw%sToken; }" % kw.title())
+        cw.exit_block()
+        cw.write("")
+        
     cw.writeline()
-    cw.write("public static readonly Dictionary<SymbolId, Token> Keywords = new Dictionary<SymbolId, Token>();");
+    cw.write("private static readonly Dictionary<SymbolId, Token> kws = new Dictionary<SymbolId, Token>();");
     cw.writeline()
+    cw.enter_block("public static IDictionary<SymbolId, Token> Keywords")
+    cw.write("get { return kws; }")
+    cw.exit_block()
+
     cw.enter_block("static Tokens()")
     for l in dict_init: cw.write(l)
     cw.exit_block()
@@ -379,7 +399,20 @@ def operators_generator(cw):
         if op.name == "lg": continue
 
         creator = op.getCreator()
-        cw.write("public static readonly BinaryOperator %s = %s;" % (op.title_name(), creator))
+        cw.write("private static readonly BinaryOperator %s = %s;" % (op.name, creator))
+    
+    cw.write("")
+    cw.write("")
+    
+    for op in ops:
+        if not isinstance(op, Operator): continue
+        if op.name == "lg": continue
+        
+        cw.enter_block("public static BinaryOperator %s" % op.title_name())
+        cw.write("get { return %s; }" % op.name)
+        cw.exit_block()
+        cw.write("")
+        
 
 CodeGenerator("Operators", operators_generator).doit()
 

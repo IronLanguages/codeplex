@@ -234,17 +234,17 @@ namespace IronPython.Compiler.Generation {
             Debug.Assert(suite != null, "invalid statement");
 
             //  Convert document string into assignment
-            if (suite.stmts.Length > 0) {
-                ExprStmt es = suite.stmts[0] as ExprStmt;
+            if (suite.Statements.Count > 0) {
+                ExprStmt es = suite.Statements[0] as ExprStmt;
                 if (es != null) {
-                    ConstantExpr ce = es.expr as ConstantExpr;
-                    if (ce != null && ce.value is string) {
-                        suite.stmts[0] = new AssignStmt(new Expr[] { new NameExpr(SymbolTable.Doc) }, ce);
+                    ConstantExpr ce = es.Expression as ConstantExpr;
+                    if (ce != null && ce.Value is string) {
+                        suite.Statements[0] = new AssignStmt(new Expr[] { new NameExpr(SymbolTable.Doc) }, ce);
                     }
                 }
             }
 
-            foreach (Stmt stmt in suite.stmts) {
+            foreach (Stmt stmt in suite.Statements) {
                 // GenerateSnippet will do the binding
                 smr.AddSnippet(GenerateSnippet(context, stmt, moduleName, true, false));
             }

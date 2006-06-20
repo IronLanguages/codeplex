@@ -102,7 +102,7 @@ namespace IronPython.Runtime.Calls {
                 return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function0(Module, Name, target, argNames, defaults);
+                return new Function0(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -114,11 +114,11 @@ namespace IronPython.Runtime.Calls {
             this.target = target;
         }
         public override object Call(ICallerContext context) {
-            if (defaults.Length < 1) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(defaults[defaults.Length - 1]);
+            if (Defaults.Length < 1) throw BadArgumentError(0);
+            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(defaults[defaults.Length - 1]);
+                return target(Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
@@ -149,7 +149,7 @@ namespace IronPython.Runtime.Calls {
                 return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function1(Module, Name, target, argNames, defaults);
+                return new Function1(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -161,21 +161,21 @@ namespace IronPython.Runtime.Calls {
             this.target = target;
         }
         public override object Call(ICallerContext context) {
-            if (defaults.Length < 2) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 2) throw BadArgumentError(0);
+            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0) {
-            if (defaults.Length < 1) throw BadArgumentError(1);
-            if(!EnforceRecursion) return target(arg0, defaults[defaults.Length - 1]);
+            if (Defaults.Length < 1) throw BadArgumentError(1);
+            if(!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, defaults[defaults.Length - 1]);
+                return target(arg0, Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
@@ -207,7 +207,7 @@ namespace IronPython.Runtime.Calls {
                 return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function2(Module, Name, target, argNames, defaults);
+                return new Function2(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -219,31 +219,31 @@ namespace IronPython.Runtime.Calls {
             this.target = target;
         }
         public override object Call(ICallerContext context) {
-            if (defaults.Length < 3) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 3) throw BadArgumentError(0);
+            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0) {
-            if (defaults.Length < 2) throw BadArgumentError(1);
-            if(!EnforceRecursion) return target(arg0, defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 2) throw BadArgumentError(1);
+            if(!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(arg0, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
-            if (defaults.Length < 1) throw BadArgumentError(2);
-            if(!EnforceRecursion) return target(arg0, arg1, defaults[defaults.Length - 1]);
+            if (Defaults.Length < 1) throw BadArgumentError(2);
+            if(!EnforceRecursion) return target(arg0, arg1, Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, arg1, defaults[defaults.Length - 1]);
+                return target(arg0, arg1, Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
@@ -276,7 +276,7 @@ namespace IronPython.Runtime.Calls {
                 return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function3(Module, Name, target, argNames, defaults);
+                return new Function3(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -288,41 +288,41 @@ namespace IronPython.Runtime.Calls {
             this.target = target;
         }
         public override object Call(ICallerContext context) {
-            if (defaults.Length < 4) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(defaults[defaults.Length - 4], defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 4) throw BadArgumentError(0);
+            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(defaults[defaults.Length - 4], defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0) {
-            if (defaults.Length < 3) throw BadArgumentError(1);
-            if(!EnforceRecursion) return target(arg0, defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 3) throw BadArgumentError(1);
+            if(!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(arg0, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
-            if (defaults.Length < 2) throw BadArgumentError(2);
-            if(!EnforceRecursion) return target(arg0, arg1, defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 2) throw BadArgumentError(2);
+            if(!EnforceRecursion) return target(arg0, arg1, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, arg1, defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(arg0, arg1, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
-            if (defaults.Length < 1) throw BadArgumentError(3);
-            if(!EnforceRecursion) return target(arg0, arg1, arg2, defaults[defaults.Length - 1]);
+            if (Defaults.Length < 1) throw BadArgumentError(3);
+            if(!EnforceRecursion) return target(arg0, arg1, arg2, Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, arg1, arg2, defaults[defaults.Length - 1]);
+                return target(arg0, arg1, arg2, Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
@@ -356,7 +356,7 @@ namespace IronPython.Runtime.Calls {
                 return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function4(Module, Name, target, argNames, defaults);
+                return new Function4(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -368,51 +368,51 @@ namespace IronPython.Runtime.Calls {
             this.target = target;
         }
         public override object Call(ICallerContext context) {
-            if (defaults.Length < 5) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(defaults[defaults.Length - 5], defaults[defaults.Length - 4], defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 5) throw BadArgumentError(0);
+            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 5], Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(defaults[defaults.Length - 5], defaults[defaults.Length - 4], defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(Defaults[Defaults.Length - 5], Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0) {
-            if (defaults.Length < 4) throw BadArgumentError(1);
-            if(!EnforceRecursion) return target(arg0, defaults[defaults.Length - 4], defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 4) throw BadArgumentError(1);
+            if(!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, defaults[defaults.Length - 4], defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(arg0, Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
-            if (defaults.Length < 3) throw BadArgumentError(2);
-            if(!EnforceRecursion) return target(arg0, arg1, defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 3) throw BadArgumentError(2);
+            if(!EnforceRecursion) return target(arg0, arg1, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, arg1, defaults[defaults.Length - 3], defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(arg0, arg1, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
-            if (defaults.Length < 2) throw BadArgumentError(3);
-            if(!EnforceRecursion) return target(arg0, arg1, arg2, defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+            if (Defaults.Length < 2) throw BadArgumentError(3);
+            if(!EnforceRecursion) return target(arg0, arg1, arg2, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, arg1, arg2, defaults[defaults.Length - 2], defaults[defaults.Length - 1]);
+                return target(arg0, arg1, arg2, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
-            if (defaults.Length < 1) throw BadArgumentError(4);
-            if(!EnforceRecursion) return target(arg0, arg1, arg2, arg3, defaults[defaults.Length - 1]);
+            if (Defaults.Length < 1) throw BadArgumentError(4);
+            if(!EnforceRecursion) return target(arg0, arg1, arg2, arg3, Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
-                return target(arg0, arg1, arg2, arg3, defaults[defaults.Length - 1]);
+                return target(arg0, arg1, arg2, arg3, Defaults[Defaults.Length - 1]);
             } finally {
                 PopFrame();
             }
@@ -447,7 +447,7 @@ namespace IronPython.Runtime.Calls {
                 return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function5(Module, Name, target, argNames, defaults);
+                return new Function5(Module, Name, target, ArgNames, Defaults);
         }
     }
 

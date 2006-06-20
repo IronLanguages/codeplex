@@ -70,8 +70,8 @@ namespace IronPython.Compiler.AST {
     }
 
     public class CallExpr : Expr {
-        public readonly Expr target;
-        public readonly Arg[] args;
+        private readonly Expr target;
+        private readonly Arg[] args;
         private bool hasArgsTuple, hasKeywordDict;
         private int keywordCount, extraArgs;
 
@@ -84,17 +84,25 @@ namespace IronPython.Compiler.AST {
             this.extraArgs = extraArgs;
         }
 
+        public IList<Arg> Args {
+            get { return args; }
+        }
+
+        public Expr Target {
+            get { return target; }
+        }
+
         public bool MightNeedLocalsDictionary() {
             NameExpr nameExpr = target as NameExpr;
             if (nameExpr == null) return false;
 
             if (args.Length == 0) {
-                if (nameExpr.name == SymbolTable.Locals) return true;
-                if (nameExpr.name == SymbolTable.Vars) return true;
-                if (nameExpr.name == SymbolTable.Dir) return true;
+                if (nameExpr.Name == SymbolTable.Locals) return true;
+                if (nameExpr.Name == SymbolTable.Vars) return true;
+                if (nameExpr.Name == SymbolTable.Dir) return true;
                 return false;
             } else {
-                if (nameExpr.name == SymbolTable.Eval) return true;
+                if (nameExpr.Name == SymbolTable.Eval) return true;
             }
             return false;
         }
@@ -109,8 +117,8 @@ namespace IronPython.Compiler.AST {
             object[] cargs = new object[args.Length];
             int index = 0;
             foreach (Arg arg in args) {
-                if (arg.name != SymbolTable.Empty) throw new NotImplementedException("keywords");
-                cargs[index++] = arg.expr.Evaluate(env);
+                if (arg.Name != SymbolTable.Empty) throw new NotImplementedException("keywords");
+                cargs[index++] = arg.Expression.Evaluate(env);
             }
 
             switch (cargs.Length) {
@@ -128,14 +136,14 @@ namespace IronPython.Compiler.AST {
             string[] keywordNames = new string[keywordCount];
             int index = 0, keywordIndex = 0;
             foreach (Arg arg in args) {
-                if (arg.name == SymbolTable.Star) {
-                    argsTuple = arg.expr; continue;
-                } else if (arg.name == SymbolTable.StarStar) {
-                    keywordDict = arg.expr; continue;
-                } else if (arg.name != SymbolTable.Empty) {
-                    keywordNames[keywordIndex++] = arg.name.GetString();
+                if (arg.Name == SymbolTable.Star) {
+                    argsTuple = arg.Expression; continue;
+                } else if (arg.Name == SymbolTable.StarStar) {
+                    keywordDict = arg.Expression; continue;
+                } else if (arg.Name != SymbolTable.Empty) {
+                    keywordNames[keywordIndex++] = arg.Name.GetString();
                 }
-                exprs[index++] = arg.expr;
+                exprs[index++] = arg.Expression;
             }
 
             if (hasKeywordDict || (hasArgsTuple && keywordCount > 0)) {
@@ -197,14 +205,23 @@ namespace IronPython.Compiler.AST {
     }
 
     public class Arg : Node {
-        public readonly SymbolId name;
-        public readonly Expr expr;
+        private readonly SymbolId name;
+        private readonly Expr expr;
+
         public Arg(Expr expr) : this(SymbolTable.Empty, expr) { }
 
         public Arg(SymbolId name, Expr expr) {
             this.name = name;
             this.expr = expr;
         }
+
+        public SymbolId Name {
+            get { return name; }
+        }
+
+        public Expr Expression {
+            get { return expr; }
+        } 
 
         public override void Walk(IAstWalker w) {
             if (w.Walk(this)) {
@@ -215,11 +232,20 @@ namespace IronPython.Compiler.AST {
     }
 
     public class FieldExpr : Expr {
-        public readonly Expr target;
-        public readonly SymbolId name;
+        private readonly Expr target;
+        private readonly SymbolId name;
+
         public FieldExpr(Expr target, SymbolId name) {
             this.target = target;
             this.name = name;
+        }
+
+        public Expr Target {
+            get { return target; }
+        }
+
+        public SymbolId Name {
+            get { return name; }
         }
 
         internal override object Evaluate(NameEnv env) {
@@ -264,11 +290,20 @@ namespace IronPython.Compiler.AST {
     }
 
     public class IndexExpr : Expr {
-        public readonly Expr target;
-        public readonly Expr index;
+        private readonly Expr target;
+        private readonly Expr index;
+
         public IndexExpr(Expr target, Expr index) {
             this.target = target;
             this.index = index;
+        }
+
+        public Expr Target {
+            get { return target; }
+        }
+
+        public Expr Index {
+            get { return index; }
         }
 
         internal override object Evaluate(NameEnv env) {
@@ -312,16 +347,20 @@ namespace IronPython.Compiler.AST {
     }
 
     public abstract class SequenceExpr : Expr {
-        public readonly Expr[] items;
-        protected SequenceExpr(params Expr[] items) { this.items = items; }
+        private readonly Expr[] items;
 
+        protected SequenceExpr(params Expr[] items) { this.items = items; }
         protected abstract string EmptySequenceString { get; }
+
+        public Expr[] Items {
+            get { return items; }
+        } 
 
         internal override void Assign(object val, NameEnv env) {
             // Disallow "[] = l", "[], a = l, l", "[[]] = [l]", etc
             if (items.Length == 0) {
                 throw Ops.SyntaxError("can't assign to " + EmptySequenceString, "<unknown>",
-                    start.line, start.column, null, 0, IronPython.Hosting.Severity.Error);
+                    Start.line, Start.column, null, 0, IronPython.Hosting.Severity.Error);
             }
 
             IEnumerator ie = Ops.GetEnumerator(val);
@@ -410,7 +449,7 @@ namespace IronPython.Compiler.AST {
 
 
     public class TupleExpr : SequenceExpr {
-        bool expandable;
+        private bool expandable;
 
         public TupleExpr(params Expr[] items)
             : this(false, items) {
@@ -423,17 +462,17 @@ namespace IronPython.Compiler.AST {
         protected override string EmptySequenceString { get { return "()"; } }
 
         internal override object Evaluate(NameEnv env) {
-            return Ops.MakeTuple(Evaluate(items, env));
+            return Ops.MakeTuple(Evaluate(Items, env));
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitObjectArray(items);
+            cg.EmitObjectArray(Items);
             cg.EmitCall(typeof(Ops), expandable ? "MakeExpandableTuple" : "MakeTuple", new Type[] { typeof(object[]) });
         }
 
         public override void Walk(IAstWalker w) {
             if (w.Walk(this)) {
-                foreach (Expr e in items) e.Walk(w);
+                foreach (Expr e in Items) e.Walk(w);
             }
             w.PostWalk(this);
         }
@@ -445,30 +484,35 @@ namespace IronPython.Compiler.AST {
         protected override string EmptySequenceString { get { return "[]"; } }
 
         internal override object Evaluate(NameEnv env) {
-            return Ops.MakeList(Evaluate(items, env));
+            return Ops.MakeList(Evaluate(Items, env));
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitObjectArray(items);
+            cg.EmitObjectArray(Items);
             cg.EmitCall(typeof(Ops), "MakeList", new Type[] { typeof(object[]) });
         }
 
         public override void Walk(IAstWalker w) {
             if (w.Walk(this)) {
-                foreach (Expr e in items) e.Walk(w);
+                foreach (Expr e in Items) e.Walk(w);
             }
             w.PostWalk(this);
         }
     }
 
     public class DictExpr : Expr {
-        public readonly SliceExpr[] items;
+        private readonly SliceExpr[] items;
+
         public DictExpr(params SliceExpr[] items) { this.items = items; }
+
+        public SliceExpr[] Items {
+            get { return items; }
+        }
 
         internal override object Evaluate(NameEnv env) {
             IDictionary<object, object> dict = Ops.MakeDict(items.Length);
             foreach (SliceExpr s in items) {
-                dict[s.sliceStart.Evaluate(env)] = s.sliceStop.Evaluate(env);
+                dict[s.SliceStart.Evaluate(env)] = s.SliceStop.Evaluate(env);
             }
             return dict;
         }
@@ -478,8 +522,8 @@ namespace IronPython.Compiler.AST {
             cg.EmitCall(typeof(Ops), "MakeDict");
             foreach (SliceExpr s in items) {
                 cg.Emit(OpCodes.Dup);
-                s.sliceStart.Emit(cg);
-                s.sliceStop.Emit(cg);
+                s.SliceStart.Emit(cg);
+                s.SliceStop.Emit(cg);
                 cg.EmitCall(typeof(Dict).GetProperty("Item").GetSetMethod());
             }
         }
@@ -493,12 +537,26 @@ namespace IronPython.Compiler.AST {
     }
 
     public class SliceExpr : Expr {
-        public readonly Expr sliceStart, sliceStop, sliceStep;
+        private readonly Expr sliceStart, sliceStop, sliceStep;
+
         public SliceExpr(Expr start, Expr stop, Expr step) {
             this.sliceStart = start;
             this.sliceStop = stop;
             this.sliceStep = step;
         }
+
+
+        public Expr SliceStep {
+            get { return sliceStep; }
+        }
+
+        public Expr SliceStop {
+            get { return sliceStop; }
+        }
+
+        public Expr SliceStart {
+            get { return sliceStart; }
+        } 
 
         internal override object Evaluate(NameEnv env) {
             object e1 = sliceStart.Evaluate(env);
@@ -526,8 +584,13 @@ namespace IronPython.Compiler.AST {
 
 
     public class BackquoteExpr : Expr {
-        public readonly Expr expr;
+        private readonly Expr expr;
+
         public BackquoteExpr(Expr expr) { this.expr = expr; }
+
+        public Expr Expression {
+            get { return expr; }
+        }
 
         internal override object Evaluate(NameEnv env) {
             return Ops.Repr(expr.Evaluate(env));
@@ -546,8 +609,13 @@ namespace IronPython.Compiler.AST {
         }
     }
     public class ParenExpr : Expr {
-        public readonly Expr expr;
+        private readonly Expr expr;
+
         public ParenExpr(Expr expr) { this.expr = expr; }
+
+        public Expr Expression {
+            get { return expr; }
+        }
 
         internal override object Evaluate(NameEnv env) {
             return expr.Evaluate(env);
@@ -579,10 +647,15 @@ namespace IronPython.Compiler.AST {
 
 
     public class ConstantExpr : Expr {
-        public readonly object value;
+        private readonly object value;
+
         public ConstantExpr(object value) {
             this.value = value;
         }
+
+        public object Value {
+            get { return this.value; }
+        } 
 
         internal override object Evaluate(NameEnv env) {
             return value;
@@ -609,10 +682,19 @@ namespace IronPython.Compiler.AST {
     }
 
     public class NameExpr : Expr {
-        public readonly SymbolId name;
-        public bool defined;
+        private readonly SymbolId name;
+        private bool defined;
 
         public NameExpr(SymbolId name) { this.name = name; }
+
+        public SymbolId Name {
+            get { return name; }
+        }
+
+        public bool IsDefined {
+            get { return defined; }
+            set { defined = value; }
+        }
 
         internal override object Evaluate(NameEnv env) {
             return env.Get(name.GetString());
@@ -644,13 +726,22 @@ namespace IronPython.Compiler.AST {
 
 
     public class AndExpr : Expr {
-        public readonly Expr left, right;
+        private readonly Expr left, right;
+
         public AndExpr(Expr left, Expr right) {
             this.left = left;
             this.right = right;
-            this.start = left.start;
-            this.end = right.end;
+            this.Start = left.Start;
+            this.End = right.End;
         }
+
+        public Expr Right {
+            get { return right; }
+        }
+
+        public Expr Left {
+            get { return left; }
+        }         
 
         internal override object Evaluate(NameEnv env) {
             object ret = left.Evaluate(env);
@@ -680,12 +771,21 @@ namespace IronPython.Compiler.AST {
     }
 
     public class OrExpr : Expr {
-        public readonly Expr left, right;
+        private readonly Expr left, right;
+
         public OrExpr(Expr left, Expr right) {
             this.left = left; this.right = right;
-            this.start = left.start; this.end = right.end;
+            this.Start = left.Start; this.End = right.End;
         }
 
+        public Expr Right {
+            get { return right; }
+        }
+
+        public Expr Left {
+            get { return left; }
+        } 
+      
         internal override object Evaluate(NameEnv env) {
             object ret = left.Evaluate(env);
             if (!Ops.IsTrue(ret)) return right.Evaluate(env);
@@ -714,11 +814,20 @@ namespace IronPython.Compiler.AST {
     }
 
     public class UnaryExpr : Expr {
-        public readonly Expr expr;
-        public readonly UnaryOperator op;
+        private readonly Expr expr;
+        private readonly UnaryOperator op;
+
         public UnaryExpr(UnaryOperator op, Expr expr) {
             this.op = op; this.expr = expr;
-            this.end = expr.end;
+            this.End = expr.End;
+        }
+
+        public Expr Expression {
+            get { return expr; }
+        }
+
+        public UnaryOperator Operator {
+            get { return op; }
         }
 
         internal override object Evaluate(NameEnv env) {
@@ -727,7 +836,7 @@ namespace IronPython.Compiler.AST {
 
         internal override void Emit(CodeGen cg) {
             expr.Emit(cg);
-            cg.EmitCall(op.target.Method);
+            cg.EmitCall(op.Target.Method);
         }
 
         public override void Walk(IAstWalker w) {
@@ -739,12 +848,25 @@ namespace IronPython.Compiler.AST {
     }
 
     public class BinaryExpr : Expr {
-        public readonly Expr left, right;
-        public readonly BinaryOperator op;
+        private readonly Expr left, right;
+        private readonly BinaryOperator op;
+
         public BinaryExpr(BinaryOperator op, Expr left, Expr right) {
             this.op = op; this.left = left; this.right = right;
-            this.start = left.start; this.end = right.end;
+            this.Start = left.Start; this.End = right.End;
         }
+
+        public Expr Right {
+            get { return right; }
+        }
+
+        public Expr Left {
+            get { return left; }
+        }
+
+        public BinaryOperator Operator {
+            get { return op; }
+        } 
 
         internal override object Evaluate(NameEnv env) {
             object l = left.Evaluate(env);
@@ -781,7 +903,7 @@ namespace IronPython.Compiler.AST {
             cg.Emit(OpCodes.Dup);
             valTmp.EmitSet(cg);
 
-            cg.EmitCall(op.target.Method);
+            cg.EmitCall(op.Target.Method);
             cg.Emit(OpCodes.Dup);
             retTmp.EmitSet(cg);
             cg.EmitTestTrue();
@@ -795,7 +917,7 @@ namespace IronPython.Compiler.AST {
                 bright.FinishCompare(cg);
             } else {
                 bright.right.Emit(cg);
-                cg.EmitCall(bright.op.target.Method);
+                cg.EmitCall(bright.op.Target.Method);
             }
 
             retTmp.EmitSet(cg);
@@ -813,9 +935,14 @@ namespace IronPython.Compiler.AST {
     }
 
     public class LambdaExpr : Expr {
-        public readonly FuncDef func;
+        private readonly FuncDef func;
+
         public LambdaExpr(FuncDef func) {
             this.func = func;
+        }
+
+        public FuncDef Function {
+            get { return func; }
         }
 
         internal override object Evaluate(NameEnv env) {
@@ -824,7 +951,7 @@ namespace IronPython.Compiler.AST {
 
         internal override void Emit(CodeGen cg) {
             func.Emit(cg);
-            cg.EmitGet(func.name, false);
+            cg.EmitGet(func.Name, false);
         }
 
         public override void Walk(IAstWalker w) {
@@ -839,10 +966,18 @@ namespace IronPython.Compiler.AST {
     }
 
     public class ListCompFor : ListCompIter {
-        public readonly Expr lhs, list;
+        private readonly Expr lhs, list;
 
         public ListCompFor(Expr lhs, Expr list) {
             this.lhs = lhs; this.list = list;
+        }
+
+        public Expr List {
+            get { return list; }
+        }
+
+        public Expr Left {
+            get { return lhs; }
         }
 
         public override void Walk(IAstWalker w) {
@@ -855,10 +990,14 @@ namespace IronPython.Compiler.AST {
     }
 
     public class ListCompIf : ListCompIter {
-        public readonly Expr test;
+        private readonly Expr test;
 
         public ListCompIf(Expr test) {
             this.test = test;
+        }
+
+        public Expr Test {
+            get { return test; }
         }
 
         public override void Walk(IAstWalker w) {
@@ -870,11 +1009,19 @@ namespace IronPython.Compiler.AST {
     }
 
     public class ListComp : Expr {
-        public readonly Expr item;
-        public readonly ListCompIter[] iters;
+        private readonly Expr item;
+        private readonly ListCompIter[] iters;
 
         public ListComp(Expr item, ListCompIter[] citers) {
             this.item = item; this.iters = citers;
+        }
+
+        public Expr Item {
+            get { return item; }
+        }
+
+        public IList<ListCompIter> Iterators {
+            get { return iters; }
         }
 
         internal override void Emit(CodeGen cg) {
@@ -906,7 +1053,7 @@ namespace IronPython.Compiler.AST {
             foreach (ListCompIter iter in iters) {
                 if (iter is ListCompFor) {
                     ListCompFor cfor = iter as ListCompFor;
-                    cfor.list.Emit(cg);
+                    cfor.List.Emit(cg);
                     cg.EmitCall(typeof(Ops), "GetEnumerator");
                     enumerators[iFors].EmitSet(cg);
 
@@ -919,12 +1066,12 @@ namespace IronPython.Compiler.AST {
                     enumerators[iFors].EmitGet(cg);
                     cg.EmitCall(typeof(IEnumerator).GetProperty("Current").GetGetMethod());
 
-                    cfor.lhs.EmitSet(cg);
+                    cfor.Left.EmitSet(cg);
                     iFors++;
                 } else if (iter is ListCompIf) {
                     ListCompIf cif = iter as ListCompIf;
 
-                    cg.EmitTestTrue(cif.test);
+                    cg.EmitTestTrue(cif.Test);
                     cg.Emit(OpCodes.Brfalse, exitTargets[jIters]);
                 }
 
@@ -966,12 +1113,20 @@ namespace IronPython.Compiler.AST {
     }
 
     public class GenExpr : Expr {
-        public readonly FuncDef func;
-        public readonly CallExpr call;
+        private readonly FuncDef func;
+        private readonly CallExpr call;
 
         public GenExpr(FuncDef func, CallExpr call) {
             this.func = func;
             this.call = call;
+        }
+
+        public FuncDef Function {
+            get { return func; }
+        }
+
+        public CallExpr Call {
+            get { return call; }
         }
 
         internal override void Emit(CodeGen cg) {
@@ -989,15 +1144,27 @@ namespace IronPython.Compiler.AST {
     }
 
     public class CondExpr : Expr {
-        public readonly Expr testExpr;
-        public readonly Expr trueExpr;
-        public readonly Expr falseExpr;
+        private readonly Expr testExpr;
+        private readonly Expr trueExpr;
+        private readonly Expr falseExpr;
+
 
         public CondExpr(Expr testExpr, Expr trueExpr, Expr falseExpr) {
             this.testExpr = testExpr;
             this.trueExpr = trueExpr;
             this.falseExpr = falseExpr;
+        }
 
+        public Expr FalseExpression {
+            get { return falseExpr; }
+        }
+
+        public Expr Test {
+            get { return testExpr; }
+        }
+
+        public Expr TrueExpression {
+            get { return trueExpr; }
         }
 
         internal override object Evaluate(NameEnv env) {

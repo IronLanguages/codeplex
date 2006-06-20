@@ -288,8 +288,8 @@ namespace IronPython.Hosting {
                         FromImportStmt stmt = new FromImportStmt(
                             new DottedName(new SymbolId[] { SymbolTable.StringToId(otherModName) }),
                             FromImportStmt.Star, null);
-                        stmt.start = dummyLocation;
-                        stmt.end = dummyLocation;
+                        stmt.Start = dummyLocation;
+                        stmt.End = dummyLocation;
                         stmt.Emit(cg);
                     }
 
@@ -320,8 +320,8 @@ namespace IronPython.Hosting {
                         ImportStmt importStmt = new ImportStmt(
                             new DottedName[] { dottedName },
                             new SymbolId[] { SymbolTable.Empty });
-                        importStmt.start = dummyLocation;
-                        importStmt.end = dummyLocation;
+                        importStmt.Start = dummyLocation;
+                        importStmt.End = dummyLocation;
                         importStmt.Emit(cg);
                     }
                 });

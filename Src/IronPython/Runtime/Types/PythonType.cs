@@ -259,7 +259,7 @@ namespace IronPython.Runtime.Types {
             return l;
         }
 
-        protected static readonly List<Type> EmptyListOfInterfaces = new List<Type>();
+        internal static readonly List<Type> EmptyListOfInterfaces = new List<Type>();
 
         /// <summary>
         /// Python has different rules for which types may or may not be extended.

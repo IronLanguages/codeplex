@@ -98,7 +98,7 @@ namespace IronPython.Compiler.Generation {
                 // a namespace.  If it only contains class defintions
                 // and no slots then it's a namespace.
                 if (IsNamespace(cd)) {  
-                    namespaces.Add(cd.name.GetString());
+                    namespaces.Add(cd.Name.GetString());
                     return true;
                 } 
 
@@ -112,7 +112,7 @@ namespace IronPython.Compiler.Generation {
                 List<Type> baseTypes = GetBaseType(cd, out baseTg);
                 if (baseTypes == null) {
                     // we don't know the base types, just emit it the old way...
-                    namespaces.Add(cd.name.GetString());
+                    namespaces.Add(cd.Name.GetString());
                     return true;
                 }
 
@@ -150,9 +150,9 @@ namespace IronPython.Compiler.Generation {
 
                         cg.EmitCallerContext();
                         cg.EmitCall(typeof(Assembly), "GetExecutingAssembly");
-                        cg.EmitString(cd.name.GetString());
+                        cg.EmitString(cd.Name.GetString());
                         cg.EmitCall(typeof(Ops), "GetNamespace");                        
-                        cg.EmitSet(cd.name);
+                        cg.EmitSet(cd.Name);
                     } 
                     return;
                 }
@@ -162,7 +162,7 @@ namespace IronPython.Compiler.Generation {
 
                 info.StaticConstructor.Emit(OpCodes.Ret);
                 declaredTypes.RemoveAt(declaredTypes.Count - 1);
-                declaredTypes[declaredTypes.Count - 1][cd.name.GetString()] = finished;
+                declaredTypes[declaredTypes.Count - 1][cd.Name.GetString()] = finished;
 
                 Type baseType = baseTypes[0];
 
@@ -185,7 +185,7 @@ namespace IronPython.Compiler.Generation {
 
                     if (namespaces.Count == 0) {
                         cg.EmitCall(info.GetCompiledType.MethodInfo);
-                        cg.EmitSet(cd.name);
+                        cg.EmitSet(cd.Name);
                     }
                 }                
             }
@@ -200,7 +200,7 @@ namespace IronPython.Compiler.Generation {
                     return false;
                 }
 
-                string strName = node.name.GetString();
+                string strName = node.Name.GetString();
 
                 SignatureInfo sigInfo = node.GetSignature(typeCctor);
 
@@ -246,20 +246,20 @@ namespace IronPython.Compiler.Generation {
                     return false;
                 }
 
-                CallExpr rhsCall = node.rhs as CallExpr;
+                CallExpr rhsCall = node.Right as CallExpr;
                 if (rhsCall != null) {
                     bool fCantEmit = false;
-                    NameExpr ne = rhsCall.target as NameExpr;
+                    NameExpr ne = rhsCall.Target as NameExpr;
                     string get=null, set=null;
                     if (ne != null) {
-                        if (ne.name.GetString() == "property") {
+                        if (ne.Name.GetString() == "property") {
                             // property definition...
                             fCantEmit = GetPropertyAccessors(rhsCall, ref ne, ref get, ref set);
                         }
                     }
 
                     if (!fCantEmit) {
-                        PropertyBuilder pb = stack.Peek().Type.DefineProperty(((NameExpr)node.lhs[0]).name.GetString(), PropertyAttributes.None, typeof(object));
+                        PropertyBuilder pb = stack.Peek().Type.DefineProperty(((NameExpr)node.Left[0]).Name.GetString(), PropertyAttributes.None, typeof(object));
 
                         foreach (CodeGen cg in stack.Peek().Methods) {
                             if (get != null && cg.methodInfo.Name == get) {
@@ -272,17 +272,17 @@ namespace IronPython.Compiler.Generation {
                     }
                 }
 
-                ConstantExpr rhsConstant = node.rhs as ConstantExpr;
+                ConstantExpr rhsConstant = node.Right as ConstantExpr;
                 NameExpr rhsName;
                 if (rhsConstant != null) {
-                    if (rhsConstant.value != null) {
-                        stack.Peek().Type.AddStaticField(rhsConstant.value.GetType(), ((NameExpr)node.lhs[0]).name.GetString());
+                    if (rhsConstant.Value != null) {
+                        stack.Peek().Type.AddStaticField(rhsConstant.Value.GetType(), ((NameExpr)node.Left[0]).Name.GetString());
                     } else {
-                        stack.Peek().Type.AddStaticField(typeof(object), ((NameExpr)node.lhs[0]).name.GetString());
+                        stack.Peek().Type.AddStaticField(typeof(object), ((NameExpr)node.Left[0]).Name.GetString());
                     }
-                } else if ((rhsName = node.rhs as NameExpr)!=null && 
-                    (rhsName.name.GetString() == "True" || rhsName.name.GetString() == "False")) {
-                    stack.Peek().Type.AddStaticField(typeof(bool), ((NameExpr)node.lhs[0]).name.GetString());
+                } else if ((rhsName = node.Right as NameExpr)!=null && 
+                    (rhsName.Name.GetString() == "True" || rhsName.Name.GetString() == "False")) {
+                    stack.Peek().Type.AddStaticField(typeof(bool), ((NameExpr)node.Left[0]).Name.GetString());
                 }else{
                     Emit(node);
                 }
@@ -316,21 +316,21 @@ namespace IronPython.Compiler.Generation {
             #region Private implementation details
             private static bool GetPropertyAccessors(CallExpr rhsCall, ref NameExpr ne, ref string get, ref string set) {
                 bool fCantEmit = false;
-                for (int i = 0; i < rhsCall.args.Length; i++) {
+                for (int i = 0; i < rhsCall.Args.Count; i++) {
                     // fget, fset, fdel, doc
-                    if (rhsCall.args[i].name != SymbolTable.Empty) {
-                        switch (rhsCall.args[i].name.GetString()) {
+                    if (rhsCall.Args[i].Name != SymbolTable.Empty) {
+                        switch (rhsCall.Args[i].Name.GetString()) {
                             case "fget":
-                                ne = rhsCall.args[i].expr as NameExpr;
+                                ne = rhsCall.Args[i].Expression as NameExpr;
                                 if (ne == null) { fCantEmit = true; break; }
 
-                                get = ne.name.GetString();
+                                get = ne.Name.GetString();
                                 break;
                             case "fset":
-                                ne = rhsCall.args[i].expr as NameExpr;
+                                ne = rhsCall.Args[i].Expression as NameExpr;
                                 if (ne == null) { fCantEmit = true; break; }
 
-                                set = ne.name.GetString();
+                                set = ne.Name.GetString();
                                 break;
                             default:
                                 fCantEmit = true;
@@ -339,16 +339,16 @@ namespace IronPython.Compiler.Generation {
                     } else {
                         switch (i) {
                             case 0:
-                                ne = rhsCall.args[i].expr as NameExpr;
+                                ne = rhsCall.Args[i].Expression as NameExpr;
                                 if (ne == null) { fCantEmit = true; break; }
 
-                                get = ne.name.GetString();
+                                get = ne.Name.GetString();
                                 break;
                             case 1:
-                                ne = rhsCall.args[i].expr as NameExpr;
+                                ne = rhsCall.Args[i].Expression as NameExpr;
                                 if (ne == null) { fCantEmit = true; break; }
 
-                                set = ne.name.GetString();
+                                set = ne.Name.GetString();
                                 break;
                             default:
                                 fCantEmit = true;
@@ -368,14 +368,14 @@ namespace IronPython.Compiler.Generation {
             private bool IsNamespace(ClassDef cd) {
                 SlotFinder sf = new SlotFinder();
                 cd.Walk(sf);
-                if (sf.HasSubTypes && !sf.HasFunctions && !sf.FoundSlots && cd.bases.Length == 0) {                    
+                if (sf.HasSubTypes && !sf.HasFunctions && !sf.FoundSlots && cd.Bases.Count == 0) {                    
                     return true;
                 }
                 return false;
             }
 
             private CodeGen CreateNewMethod(FuncDef node, CodeGen typeCctor, SignatureInfo sigInfo) {
-                string strName = node.name.GetString();
+                string strName = node.Name.GetString();
                 MethodAttributes attrs = GetMethodAttributes(node, strName);
 
                 int offset = (sigInfo.HasContext ? 2 : 1);
@@ -459,14 +459,14 @@ namespace IronPython.Compiler.Generation {
                 if (strName == "__new__") {
                     attrs |= MethodAttributes.Static;
                 } else {
-                    CallExpr decExpr = node.decorators as CallExpr;
+                    CallExpr decExpr = node.Decorators as CallExpr;
                     while (decExpr != null) {
-                        NameExpr ne = decExpr.target as NameExpr;
-                        if (ne != null && ne.name.GetString() == "staticmethod") {
+                        NameExpr ne = decExpr.Target as NameExpr;
+                        if (ne != null && ne.Name.GetString() == "staticmethod") {
                             attrs |= MethodAttributes.Static;
                         }
 
-                        decExpr = decExpr.args[0].expr as CallExpr;
+                        decExpr = decExpr.Args[0].Expression as CallExpr;
                     }
                 }
                 return attrs;
@@ -482,14 +482,14 @@ namespace IronPython.Compiler.Generation {
             }
 
             private void EmitArgsToTuple(FuncDef fd, CodeGen icg, SignatureInfo sigInfo, int cnt) {                
-                if ((fd.flags & FuncDefType.ArgList) != 0) {
+                if ((fd.Flags & FuncDefType.ArgList) != 0) {
                     // transform params object[] into tuple on call...
 
                     LocalBuilder lb = icg.DeclareLocal(typeof(object));
                     Slot argsSlot = new LocalSlot(lb, icg);
                     int index;
 
-                    if ((fd.flags & FuncDefType.KeywordDict) != 0) {
+                    if ((fd.Flags & FuncDefType.KeywordDict) != 0) {
                         index = sigInfo.ParamNames.Length - 2;
                         icg.EmitArgGet(cnt - 2);
                     } else {
@@ -506,11 +506,11 @@ namespace IronPython.Compiler.Generation {
 
             private object[] GetStaticDefaults(FuncDef fd, int count) {
                 object[] funcDefaults = CompilerHelpers.MakeRepeatedArray<object>(DBNull.Value, count);
-                if (fd.defaults != null) {
-                    for (int i = 0; i < fd.defaults.Length; i++) {
-                        ConstantExpr ce = fd.defaults[i] as ConstantExpr;
+                if (fd.Defaults != null) {
+                    for (int i = 0; i < fd.Defaults.Count; i++) {
+                        ConstantExpr ce = fd.Defaults[i] as ConstantExpr;
                         if (ce != null) {
-                            funcDefaults[i + (count - fd.defaults.Length)] = ce.value;
+                            funcDefaults[i + (count - fd.Defaults.Count)] = ce.Value;
                         } else {
                             throw new InvalidOperationException(String.Format("can't handle default: {0}", funcDefaults[i]));
                         }
@@ -523,14 +523,14 @@ namespace IronPython.Compiler.Generation {
                 typeArr = CompilerHelpers.MakeRepeatedArray(typeof(object), sigInfo.ParamNames.Length - offset);
                 cabs = null;
                 int curIndex = typeArr.Length - 1;
-                if ((node.flags & FuncDefType.KeywordDict) != 0) {
+                if ((node.Flags & FuncDefType.KeywordDict) != 0) {
                     typeArr[curIndex] = typeof(Dict);
                     cabs = new CustomAttributeBuilder[typeArr.Length];
                     cabs[curIndex] = new CustomAttributeBuilder(typeof(ParamDictAttribute).GetConstructor(new Type[0]), new object[0]);
 
                     curIndex--;
                 }
-                if ((node.flags & FuncDefType.ArgList) != 0) {
+                if ((node.Flags & FuncDefType.ArgList) != 0) {
                     if (cabs == null) cabs = new CustomAttributeBuilder[typeArr.Length];
 
                     typeArr[curIndex] = typeof(object[]);
@@ -624,14 +624,14 @@ namespace IronPython.Compiler.Generation {
             /// Creates the new type, sets PythonTypeAttribute on it, and sets the documentation string
             /// </summary>
             private TypeGen DefineNewType(ClassDef cd, List<Type> baseTypes) {
-                Debug.Assert(baseTypes.Count > 0, "type has no bases", String.Format("for class {0}",cd.name.ToString()));
+                Debug.Assert(baseTypes.Count > 0, "type has no bases", String.Format("for class {0}",cd.Name.ToString()));
 
                 StringBuilder typeName = new StringBuilder();
                 for (int i = 0; i < namespaces.Count; i++) {
                     typeName.Append(namespaces[i]);
                     typeName.Append('.');
                 }
-                typeName.Append(cd.name.GetString());
+                typeName.Append(cd.Name.GetString());
 
                 TypeGen newType = DefineTypeInParent(baseTypes, typeName);
 
@@ -692,7 +692,7 @@ namespace IronPython.Compiler.Generation {
                     baseAccess.EmitReturn();
                 }
 
-                newType.SetCustomAttribute(typeof(PythonTypeAttribute), new object[] { cd.name.GetString() });
+                newType.SetCustomAttribute(typeof(PythonTypeAttribute), new object[] { cd.Name.GetString() });
                 string doc = cd.GetDocString();
                 if (doc != null) {
                     newType.SetCustomAttribute(typeof(DocumentationAttribute), new object[] { doc });
@@ -849,23 +849,23 @@ namespace IronPython.Compiler.Generation {
                 //!!! need to handle types declared before us
                 // but within our module's scope, and what do
                 // we do if we don't know the base type?
-                List<Type> types = new List<Type>(cd.bases.Length);
+                List<Type> types = new List<Type>(cd.Bases.Count);
                 tg = null;
-                if (cd.bases.Length == 0) {
+                if (cd.Bases.Count == 0) {
                     types.Add(typeof(object));
                     return types;
                 }
                 Type baseType = typeof(object);
                 string baseName = null;
-                for (int i = 0; i < cd.bases.Length; i++) {
-                    NameExpr ne = cd.bases[i] as NameExpr;
+                for (int i = 0; i < cd.Bases.Count; i++) {
+                    NameExpr ne = cd.Bases[i] as NameExpr;
                     FieldExpr fe;
                     if (ne != null) {
-                        baseName = ne.name.GetString();
-                    } else if ((fe = cd.bases[i] as FieldExpr) != null) {
+                        baseName = ne.Name.GetString();
+                    } else if ((fe = cd.Bases[i] as FieldExpr) != null) {
                         baseName = CodeDom.CodeWalker.GetFieldString(fe);
                     } else {
-                        throw new NotImplementedException(String.Format("non-name expr base type {0}",cd.bases[i].GetType()));
+                        throw new NotImplementedException(String.Format("non-name expr base type {0}",cd.Bases[i].GetType()));
                     }
 
                     if (baseName == null) throw new InvalidOperationException("couldn't find basetype");
@@ -992,20 +992,20 @@ namespace IronPython.Compiler.Generation {
             #region AstWalkerNonRecursive Method Overrides
             
             public override bool Walk(AssignStmt node) {
-                if (!FoundSlots && node.lhs.Length == 1) {
-                    NameExpr ne = node.lhs[0] as NameExpr;
-                    if (ne != null && ne.name.GetString() == "__slots__") {
-                        ListExpr le = node.rhs as ListExpr;
+                if (!FoundSlots && node.Left.Count == 1) {
+                    NameExpr ne = node.Left[0] as NameExpr;
+                    if (ne != null && ne.Name.GetString() == "__slots__") {
+                        ListExpr le = node.Right as ListExpr;
                         if (le != null) {
-                            string[] slotRes = new string[le.items.Length];
-                            for (int i = 0; i < le.items.Length; i++) {
-                                ConstantExpr ce = le.items[i] as ConstantExpr;
+                            string[] slotRes = new string[le.Items.Length];
+                            for (int i = 0; i < le.Items.Length; i++) {
+                                ConstantExpr ce = le.Items[i] as ConstantExpr;
                                 if (ce == null) {
                                     slotRes = null;
                                     break;
                                 }
 
-                                string slotStr = ce.value as string;
+                                string slotStr = ce.Value as string;
                                 if (slotStr == null) {
                                     slotRes = null;
                                     break;

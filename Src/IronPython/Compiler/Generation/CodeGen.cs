@@ -561,32 +561,32 @@ namespace IronPython.Compiler.Generation {
             // more convoluted case of <a> <cmp> <b> <cmp> <c> but that's less likely to occur
             // anyway.
             BinaryExpr be = e as BinaryExpr;
-            if (be != null && BinaryExpr.IsComparision(be) && !BinaryExpr.IsComparision(be.right)) {
+            if (be != null && BinaryExpr.IsComparision(be) && !BinaryExpr.IsComparision(be.Right)) {
                 string call;
-                if (be.op == BinaryOperator.Equal)
+                if (be.Operator == BinaryOperator.Equal)
                     call = "EqualRetBool";
-                else if (be.op == BinaryOperator.NotEqual)
+                else if (be.Operator == BinaryOperator.NotEqual)
                     call = "NotEqualRetBool";
-                else if (be.op == BinaryOperator.LessThan)
+                else if (be.Operator == BinaryOperator.LessThan)
                     call = "LessThanRetBool";
-                else if (be.op == BinaryOperator.LessThanOrEqual)
+                else if (be.Operator == BinaryOperator.LessThanOrEqual)
                     call = "LessThanOrEqualRetBool";
-                else if (be.op == BinaryOperator.GreaterThan)
+                else if (be.Operator == BinaryOperator.GreaterThan)
                     call = "GreaterThanRetBool";
-                else if (be.op == BinaryOperator.GreaterThanOrEqual)
+                else if (be.Operator == BinaryOperator.GreaterThanOrEqual)
                     call = "GreaterThanOrEqualRetBool";
-                else if (be.op == BinaryOperator.In)
+                else if (be.Operator == BinaryOperator.In)
                     call = "InRetBool";
-                else if (be.op == BinaryOperator.NotIn)
+                else if (be.Operator == BinaryOperator.NotIn)
                     call = "NotInRetBool";
-                else if (be.op == BinaryOperator.Is)
+                else if (be.Operator == BinaryOperator.Is)
                     call = "IsRetBool";
-                else if (be.op == BinaryOperator.IsNot)
+                else if (be.Operator == BinaryOperator.IsNot)
                     call = "IsNotRetBool";
                 else
-                    throw new NotImplementedException("optimized comparison: " + be.op.symbol);
-                be.left.Emit(this);
-                be.right.Emit(this);
+                    throw new NotImplementedException("optimized comparison: " + be.Operator.symbol);
+                be.Left.Emit(this);
+                be.Right.Emit(this);
                 EmitCall(typeof(Ops), call);
             } else {
                 e.Emit(this);

@@ -50,7 +50,7 @@ namespace IronPython.Compiler.AST {
         }
 
         public override bool Walk(NameExpr node) {
-            binder.Define(node.name);
+            binder.Define(node.Name);
             return false;
         }
 
@@ -74,7 +74,7 @@ namespace IronPython.Compiler.AST {
         }
 
         public override bool Walk(NameExpr node) {
-            binder.DefineParameter(node.name);
+            binder.DefineParameter(node.Name);
             return false;
         }
 
@@ -94,7 +94,7 @@ namespace IronPython.Compiler.AST {
         }
 
         public override bool Walk(NameExpr node) {
-            binder.Deleted(node.name);
+            binder.Deleted(node.Name);
             return false;
         }
     }
@@ -150,19 +150,19 @@ namespace IronPython.Compiler.AST {
                 FuncDef func;
                 if ((func = scope as FuncDef) != null) {
                     if (func.ContainsImportStar && func.IsClosure) {
-                        ReportSyntaxError(String.Format("import * is not allowed in function '{0}' because it is a nested function", func.name.GetString()), func);
+                        ReportSyntaxError(String.Format("import * is not allowed in function '{0}' because it is a nested function", func.Name.GetString()), func);
                     }
                     if (func.ContainsImportStar && func.parent is FuncDef) {
-                        ReportSyntaxError(String.Format("import * is not allowed in function '{0}' because it is a nested function", func.name.GetString()), func);
+                        ReportSyntaxError(String.Format("import * is not allowed in function '{0}' because it is a nested function", func.Name.GetString()), func);
                     }
                     if (func.ContainsImportStar && func.ContainsNestedFreeVariables) {
-                        ReportSyntaxError(String.Format("import * is not allowed in function '{0}' because it contains a nested function with free variables", func.name.GetString()), func);
+                        ReportSyntaxError(String.Format("import * is not allowed in function '{0}' because it contains a nested function with free variables", func.Name.GetString()), func);
                     }
                     if (func.ContainsUnqualifiedExec && func.ContainsNestedFreeVariables) {
-                        ReportSyntaxError(String.Format("unqualified exec is not allowed in function '{0}' it contains a nested function with free variables", func.name.GetString()), func);
+                        ReportSyntaxError(String.Format("unqualified exec is not allowed in function '{0}' it contains a nested function with free variables", func.Name.GetString()), func);
                     }
                     if (func.ContainsUnqualifiedExec && func.IsClosure) {
-                        ReportSyntaxError(String.Format("unqualified exec is not allowed in function '{0}' it is a nested function", func.name.GetString()), func);
+                        ReportSyntaxError(String.Format("unqualified exec is not allowed in function '{0}' it is a nested function", func.Name.GetString()), func);
                     }
                 }
 
@@ -193,13 +193,13 @@ namespace IronPython.Compiler.AST {
 
         // NameExpr
         public override bool Walk(NameExpr node) {
-            Reference(node.name);
+            Reference(node.Name);
             return true;
         }
 
         // AssignStmt
         public override bool Walk(AssignStmt node) {
-            foreach (Expr e in node.lhs) {
+            foreach (Expr e in node.Left) {
                 e.Walk(define);
             }
             return true;
@@ -207,16 +207,16 @@ namespace IronPython.Compiler.AST {
 
         // AugAssignStmt
         public override bool Walk(AugAssignStmt node) {
-            node.lhs.Walk(define);
+            node.Left.Walk(define);
             return true;
         }
 
         // ClassDef
         public override bool Walk(ClassDef node) {
-            Define(node.name);
+            Define(node.Name);
 
             // Base references are in the outer scope
-            foreach (Expr b in node.bases) b.Walk(this);
+            foreach (Expr b in node.Bases) b.Walk(this);
 
             // And so is the __name__ reference
             Reference(SymbolTable.Name);
@@ -240,7 +240,7 @@ namespace IronPython.Compiler.AST {
 
         // DelStmt
         public override bool Walk(DelStmt node) {
-            foreach (Expr e in node.exprs) {
+            foreach (Expr e in node.Expressions) {
                 e.Walk(delete);
             }
             return true;
@@ -248,7 +248,7 @@ namespace IronPython.Compiler.AST {
 
         // ExecStmt
         public override bool Walk(ExecStmt node) {
-            if (node.locals == null && node.globals == null) {
+            if (node.Locals == null && node.Globals == null) {
                 Debug.Assert(current != null);
                 current.ContainsUnqualifiedExec = true;
             }
@@ -257,7 +257,7 @@ namespace IronPython.Compiler.AST {
 
         // ForStmt
         public override bool Walk(ForStmt node) {
-            node.lhs.Walk(define);
+            node.Left.Walk(define);
             // Add locals
             Debug.Assert(current != null);
             current.tempsCount += node.LocalSlots;
@@ -266,9 +266,9 @@ namespace IronPython.Compiler.AST {
 
         // FromImportStmt
         public override bool Walk(FromImportStmt node) {
-            if (node.names != FromImportStmt.Star) {
-                for (int i = 0; i < node.names.Length; i++) {
-                    Define(node.asNames[i] != SymbolTable.Empty ? node.asNames[i] : node.names[i]);
+            if (node.Names != FromImportStmt.Star) {
+                for (int i = 0; i < node.Names.Count; i++) {
+                    Define(node.AsNames[i] != SymbolTable.Empty ? node.AsNames[i] : node.Names[i]);
                 }
             } else {
                 Debug.Assert(current != null);
@@ -280,20 +280,20 @@ namespace IronPython.Compiler.AST {
         // FuncDef
         public override bool Walk(FuncDef node) {
             // Name is defined in the enclosing scope
-            Define(node.name);
+            Define(node.Name);
 
             // process the default arg values in the outer scope
-            foreach (Expr e in node.defaults) {
+            foreach (Expr e in node.Defaults) {
                 e.Walk(this);
             }
             // process the decorators in the outer scope
-            if (node.decorators != null) {
-                node.decorators.Walk(this);
+            if (node.Decorators != null) {
+                node.Decorators.Walk(this);
             }
 
             node.parent = current;
             current = node;
-            foreach (Expr e in node.parameters) {
+            foreach (Expr e in node.Parameters) {
                 e.Walk(parameter);
             }
 
@@ -309,7 +309,7 @@ namespace IronPython.Compiler.AST {
 
         // GlobalStmt
         public override bool Walk(GlobalStmt node) {
-            foreach (SymbolId n in node.names) {
+            foreach (SymbolId n in node.Names) {
                 if (current != null) {
                     ScopeStatement.Binding binding;
                     if (current.Bindings.TryGetValue(n, out binding)) {
@@ -334,17 +334,17 @@ namespace IronPython.Compiler.AST {
 
         // ImportStmt
         public override bool Walk(ImportStmt node) {
-            for (int i = 0; i < node.names.Length; i++) {
-                Define(node.asNames[i] != SymbolTable.Empty ? node.asNames[i] : node.names[i].names[0]);
+            for (int i = 0; i < node.Names.Count; i++) {
+                Define(node.AsNames[i] != SymbolTable.Empty ? node.AsNames[i] : node.Names[i].Names[0]);
             }
             return true;
         }
 
         // TryStmt
         public override bool Walk(TryStmt node) {
-            foreach (TryStmtHandler tsh in node.handlers) {
-                if (tsh.target != null) {
-                    tsh.target.Walk(define);
+            foreach (TryStmtHandler tsh in node.Handlers) {
+                if (tsh.Target != null) {
+                    tsh.Target.Walk(define);
                 }
             }
             return true;
@@ -352,13 +352,13 @@ namespace IronPython.Compiler.AST {
 
         // DottedName
         public override bool Walk(DottedName node) {
-            Reference(node.names[0]);
+            Reference(node.Names[0]);
             return true;
         }
 
         // ListCompFor
         public override bool Walk(ListCompFor node) {
-            node.lhs.Walk(define);
+            node.Left.Walk(define);
             return true;
         }
 

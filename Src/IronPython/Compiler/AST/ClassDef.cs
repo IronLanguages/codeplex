@@ -34,9 +34,10 @@ namespace IronPython.Compiler.AST {
     /// Summary description for ClassDef.
     /// </summary>
     public class ClassDef : ScopeStatement {
-        public Location header;
-        public SymbolId name;
-        public Expr[] bases;
+        private Location header;
+        private SymbolId name;
+        private Expr[] bases;
+        private static int index = 0;
 
         public ClassDef(SymbolId name, Expr[] bases, Stmt body)
             : base(body) {
@@ -44,9 +45,22 @@ namespace IronPython.Compiler.AST {
             this.bases = bases;
         }
 
-        private static int index = 0;
+        public Location Header {
+            get { return header; }
+            set { header = value; }
+        }
+        
+        public SymbolId Name {
+            get { return name; }
+            set { name = value; }
+        }
+
+        public IList<Expr> Bases {
+            get { return bases; }
+        }
+
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, header);
+            cg.EmitPosition(Start, header);
 
             CodeGen icg = CreateClassMaker(cg);
             try {

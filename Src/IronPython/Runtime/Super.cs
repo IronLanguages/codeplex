@@ -26,9 +26,9 @@ namespace IronPython.Runtime {
     public class Super : IDynamicObject, ICustomAttributes, IDescriptor {
         private static DynamicType SuperType = Ops.GetDynamicTypeFromType(typeof(Super));
 
-        public readonly PythonType __thisclass__;
-        public readonly object __self__;
-        public readonly object __self_class__;
+        private readonly PythonType __thisclass__;
+        private readonly object __self__;
+        private readonly object __self_class__;
 
         public Super(PythonType type) : this(type, null) { }
         public Super(PythonType type, object obj) {
@@ -49,6 +49,21 @@ namespace IronPython.Runtime {
                 this.__thisclass__ = type;
             }
         }
+
+        public PythonType ThisClass {
+            [PythonName("__thisclass__")]
+            get { return __thisclass__; }
+        }
+
+        public object Self {
+            [PythonName("__self__")]
+            get { return __self__; }
+        }
+
+        public object SelfClass {
+            [PythonName("__self_class__")]
+            get { return __self_class__; }
+        } 
 
         public override string ToString() {
             return string.Format("<super: {0}, {1}>", Ops.StringRepr(__thisclass__), Ops.StringRepr(__self__));

@@ -23,8 +23,8 @@ using IronPython.CodeDom;
 
 namespace IronPython.Compiler.AST {
     public abstract class Node {
-        public Location start;
-        public Location end;
+        private Location start;
+        private Location end;
 
         protected Node() {
             start.line = -1;
@@ -52,5 +52,14 @@ namespace IronPython.Compiler.AST {
         }
 
         public abstract void Walk(IAstWalker w);
+
+        public Location Start {
+            get { return start; }
+            set { start = value; }
+        }
+        public Location End {
+            get { return end; }
+            set { end = value; }
+        }
     }
 }

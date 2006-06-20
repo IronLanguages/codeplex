@@ -122,10 +122,15 @@ namespace IronPython.Compiler {
     }
 
     public class OperatorToken : Token {
-        public readonly Operator op;
+        private readonly Operator op;
+
         public OperatorToken(TokenKind kind, Operator op)
             : base(kind) {
             this.op = op;
+        }
+
+        public Operator Operator {
+            get { return op; }
         }
 
         public override object GetValue() {

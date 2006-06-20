@@ -79,7 +79,7 @@ namespace IronPython.Runtime.Calls {
             [PythonName("co_argcount")]
             get {
                 if (compiledCode != null) return 0;
-                return func.argNames.Length;
+                return func.ArgNames.Length;
             }
         }
 
@@ -215,12 +215,12 @@ namespace IronPython.Runtime.Calls {
             List<Tuple> nested = new List<Tuple>();
 
 
-            for (int i = 0; i < func.argNames.Length; i++) {
-                if (func.argNames[i].IndexOf('#') != -1 && func.argNames[i].IndexOf('!') != -1) {
+            for (int i = 0; i < func.ArgNames.Length; i++) {
+                if (func.ArgNames[i].IndexOf('#') != -1 && func.ArgNames[i].IndexOf('!') != -1) {
                     names.Add("." + (i * 2).ToString());
-                    nested.Add(FuncDef.DecodeTupleParamName(func.argNames[i]));
+                    nested.Add(FuncDef.DecodeTupleParamName(func.ArgNames[i]));
                 } else {
-                    names.Add(func.argNames[i]);
+                    names.Add(func.ArgNames[i]);
                 }
             }
 
@@ -280,10 +280,9 @@ namespace IronPython.Runtime.Calls {
         internal static bool EnforceRecursion = false;    // true to enforce maximum depth, false otherwise
 
         #region instance members
-        private string name;
-        public string[] argNames;
-        // The default values of the last few arguments
-        protected readonly object[] defaults;
+        private readonly string name;
+        private readonly string[] argNames;
+        private readonly object[] defaults;
 
         private PythonModule module;
         private object doc;
@@ -306,8 +305,13 @@ namespace IronPython.Runtime.Calls {
             this.module = globals;
             this.FunctionCode = new FunctionCode(this);
         }
-
+       
         #region Public APIs
+        
+        public string[] ArgNames {
+            get { return argNames; }
+        }
+
         public object FunctionGlobals {
             [PythonName("func_globals")]
             get {
@@ -446,8 +450,11 @@ namespace IronPython.Runtime.Calls {
 
         #endregion
 
-
         #region Protected APIs
+
+        protected object[] Defaults {
+            get { return defaults; }
+        } 
 
         protected void PushFrame() {
             // ManagedThreadId starts at 1 and increases as we get more threads.
@@ -686,16 +693,16 @@ namespace IronPython.Runtime.Calls {
 
         [PythonName("__call__")]
         public override object Call(ICallerContext context, params object[] args) {
-            int nparams = argNames.Length;
+            int nparams = ArgNames.Length;
             int nargs = args.Length;
             if (nargs < nparams) {
-                if (nargs + defaults.Length < nparams) {
-                    throw BadArgumentError(nargs + defaults.Length);
+                if (nargs + Defaults.Length < nparams) {
+                    throw BadArgumentError(nargs + Defaults.Length);
                 }
                 object[] inArgs = args;
                 args = new object[nparams];
                 for (int i = 0; i < nargs; i++) args[i] = inArgs[i];
-                object[] defs = defaults;
+                object[] defs = Defaults;
                 int di = defs.Length - 1;
                 for (int i = nparams - 1; i >= nargs; i--) {
                     args[i] = defs[di--];
@@ -730,7 +737,7 @@ namespace IronPython.Runtime.Calls {
         #endregion
 
         public override object Clone() {
-            return new FunctionN(Module, Name, target, argNames, defaults);
+            return new FunctionN(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -774,14 +781,14 @@ namespace IronPython.Runtime.Calls {
         public override object Call(ICallerContext context, params object[] args) {
             int nargs = args.Length;
             object argList = null;
-            object[] outArgs = new object[argNames.Length];
+            object[] outArgs = new object[ArgNames.Length];
 
             if (nargs < nparams) {
-                if (nargs + defaults.Length < nparams) {
+                if (nargs + Defaults.Length < nparams) {
                     throw BadArgumentError(nargs);
                 }
                 for (int i = 0; i < nargs; i++) outArgs[i] = args[i];
-                object[] defs = defaults;
+                object[] defs = Defaults;
                 int di = defs.Length - 1;
                 for (int i = nparams - 1; i >= nargs; i--) {
                     outArgs[i] = defs[di--];
@@ -823,10 +830,10 @@ namespace IronPython.Runtime.Calls {
         [PythonName("__call__")]
         public override object Call(ICallerContext context, object[] args, string[] names) {
             KwArgBinder argBinder = new KwArgBinder(args, names);
-            object[] defaults = this.defaults;
-            if (defaults.Length != argNames.Length) {
+            object[] defaults = this.Defaults;
+            if (defaults.Length != ArgNames.Length) {
                 // we need a 1<->1 mapping here for kwarg binder.  
-                object[] newDefs = new object[argNames.Length];
+                object[] newDefs = new object[ArgNames.Length];
 
                 for (int i = 0; i < (nparams - defaults.Length); i++) {
                     newDefs[i] = DBNull.Value;
@@ -836,7 +843,7 @@ namespace IronPython.Runtime.Calls {
                 defaults = newDefs;
             }
 
-            object[] realArgs = argBinder.DoBind(Name, argNames, defaults, kwDictPos, argListPos);
+            object[] realArgs = argBinder.DoBind(Name, ArgNames, defaults, kwDictPos, argListPos);
 
             if (realArgs != null) {
                 if (!EnforceRecursion) return target(realArgs);
@@ -854,7 +861,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         protected override Exception BadArgumentError(int count) {
-            throw PythonFunction.TypeErrorForIncorrectArgumentCount(Name, nparams, defaults.Length, count, argListPos != -1, false);
+            throw PythonFunction.TypeErrorForIncorrectArgumentCount(Name, nparams, Defaults.Length, count, argListPos != -1, false);
         }
 
         internal FuncDefType Flags {
@@ -864,7 +871,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         public override object Clone() {
-            return new FunctionX(Module, Name, target, argNames, defaults, flags);
+            return new FunctionX(Module, Name, target, ArgNames, Defaults, flags);
         }
     }
 

@@ -117,126 +117,423 @@ namespace IronPython.Compiler {
     }
 
     public static class Tokens {
-        public static readonly Token EofToken = new SymbolToken(TokenKind.EndOfFile, "<eof>");
-        public static readonly Token NewlineToken = new SymbolToken(TokenKind.Newline, "<newline>");
-        public static readonly Token IndentToken = new SymbolToken(TokenKind.Indent, "<indent>");
-        public static readonly Token DedentToken = new SymbolToken(TokenKind.Dedent, "<dedent>");
-        public static readonly Token CommentToken = new SymbolToken(TokenKind.Comment, "<comment>");
-        public static readonly Token NoneToken = new ConstantValueToken(null);
+        public static Token EofToken = new SymbolToken(TokenKind.EndOfFile, "<eof>");
+        public static Token NewlineToken = new SymbolToken(TokenKind.Newline, "<newline>");
+        public static Token IndentToken = new SymbolToken(TokenKind.Indent, "<indent>");
+        public static Token DedentToken = new SymbolToken(TokenKind.Dedent, "<dedent>");
+        public static Token CommentToken = new SymbolToken(TokenKind.Comment, "<comment>");
+        public static Token NoneToken = new ConstantValueToken(null);
 
-        public static readonly Token DotToken = new SymbolToken(TokenKind.Dot, ".");
+        public static Token DotToken = new SymbolToken(TokenKind.Dot, ".");
 
         #region Generated Tokens
 
         // *** BEGIN GENERATED CODE ***
 
-        public static readonly Token AddToken = new OperatorToken(TokenKind.Add, Operator.Add);
-        public static readonly Token AddEqualToken = new SymbolToken(TokenKind.AddEqual, "+=");
-        public static readonly Token SubtractToken = new OperatorToken(TokenKind.Subtract, Operator.Subtract);
-        public static readonly Token SubEqualToken = new SymbolToken(TokenKind.SubEqual, "-=");
-        public static readonly Token PowerToken = new OperatorToken(TokenKind.Power, Operator.Power);
-        public static readonly Token PowEqualToken = new SymbolToken(TokenKind.PowEqual, "**=");
-        public static readonly Token MultiplyToken = new OperatorToken(TokenKind.Multiply, Operator.Multiply);
-        public static readonly Token MulEqualToken = new SymbolToken(TokenKind.MulEqual, "*=");
-        public static readonly Token FloorDivideToken = new OperatorToken(TokenKind.FloorDivide, Operator.FloorDivide);
-        public static readonly Token FloordivEqualToken = new SymbolToken(TokenKind.FloordivEqual, "//=");
-        public static readonly Token DivideToken = new OperatorToken(TokenKind.Divide, Operator.Divide);
-        public static readonly Token DivEqualToken = new SymbolToken(TokenKind.DivEqual, "/=");
-        public static readonly Token ModToken = new OperatorToken(TokenKind.Mod, Operator.Mod);
-        public static readonly Token ModEqualToken = new SymbolToken(TokenKind.ModEqual, "%=");
-        public static readonly Token LeftShiftToken = new OperatorToken(TokenKind.LeftShift, Operator.LeftShift);
-        public static readonly Token LshiftEqualToken = new SymbolToken(TokenKind.LshiftEqual, "<<=");
-        public static readonly Token RightShiftToken = new OperatorToken(TokenKind.RightShift, Operator.RightShift);
-        public static readonly Token RshiftEqualToken = new SymbolToken(TokenKind.RshiftEqual, ">>=");
-        public static readonly Token BitwiseAndToken = new OperatorToken(TokenKind.BitwiseAnd, Operator.BitwiseAnd);
-        public static readonly Token AndEqualToken = new SymbolToken(TokenKind.AndEqual, "&=");
-        public static readonly Token BitwiseOrToken = new OperatorToken(TokenKind.BitwiseOr, Operator.BitwiseOr);
-        public static readonly Token OrEqualToken = new SymbolToken(TokenKind.OrEqual, "|=");
-        public static readonly Token XorToken = new OperatorToken(TokenKind.Xor, Operator.Xor);
-        public static readonly Token XorEqualToken = new SymbolToken(TokenKind.XorEqual, "^=");
-        public static readonly Token LessThanToken = new OperatorToken(TokenKind.LessThan, Operator.LessThan);
-        public static readonly Token GreaterThanToken = new OperatorToken(TokenKind.GreaterThan, Operator.GreaterThan);
-        public static readonly Token LessThanOrEqualToken = new OperatorToken(TokenKind.LessThanOrEqual, Operator.LessThanOrEqual);
-        public static readonly Token GreaterThanOrEqualToken = new OperatorToken(TokenKind.GreaterThanOrEqual, Operator.GreaterThanOrEqual);
-        public static readonly Token EqualToken = new OperatorToken(TokenKind.Equal, Operator.Equal);
-        public static readonly Token NotEqualToken = new OperatorToken(TokenKind.NotEqual, Operator.NotEqual);
-        public static readonly Token LessThanGreaterThanToken = new SymbolToken(TokenKind.LessThanGreaterThan, "<>");
-        public static readonly Token LParenToken = new SymbolToken(TokenKind.LParen, "(");
-        public static readonly Token RParenToken = new SymbolToken(TokenKind.RParen, ")");
-        public static readonly Token LBracketToken = new SymbolToken(TokenKind.LBracket, "[");
-        public static readonly Token RBracketToken = new SymbolToken(TokenKind.RBracket, "]");
-        public static readonly Token LBraceToken = new SymbolToken(TokenKind.LBrace, "{");
-        public static readonly Token RBraceToken = new SymbolToken(TokenKind.RBrace, "}");
-        public static readonly Token CommaToken = new SymbolToken(TokenKind.Comma, ",");
-        public static readonly Token ColonToken = new SymbolToken(TokenKind.Colon, ":");
-        public static readonly Token BackquoteToken = new SymbolToken(TokenKind.Backquote, "`");
-        public static readonly Token SemicolonToken = new SymbolToken(TokenKind.Semicolon, ";");
-        public static readonly Token AssignToken = new SymbolToken(TokenKind.Assign, "=");
-        public static readonly Token TwidleToken = new SymbolToken(TokenKind.Twidle, "~");
-        public static readonly Token AtToken = new SymbolToken(TokenKind.At, "@");
+        private static readonly Token symAddToken = new OperatorToken(TokenKind.Add, Operator.Add);
+        private static readonly Token symAddEqualToken = new SymbolToken(TokenKind.AddEqual, "+=");
+        private static readonly Token symSubtractToken = new OperatorToken(TokenKind.Subtract, Operator.Subtract);
+        private static readonly Token symSubEqualToken = new SymbolToken(TokenKind.SubEqual, "-=");
+        private static readonly Token symPowerToken = new OperatorToken(TokenKind.Power, Operator.Power);
+        private static readonly Token symPowEqualToken = new SymbolToken(TokenKind.PowEqual, "**=");
+        private static readonly Token symMultiplyToken = new OperatorToken(TokenKind.Multiply, Operator.Multiply);
+        private static readonly Token symMulEqualToken = new SymbolToken(TokenKind.MulEqual, "*=");
+        private static readonly Token symFloorDivideToken = new OperatorToken(TokenKind.FloorDivide, Operator.FloorDivide);
+        private static readonly Token symFloordivEqualToken = new SymbolToken(TokenKind.FloordivEqual, "//=");
+        private static readonly Token symDivideToken = new OperatorToken(TokenKind.Divide, Operator.Divide);
+        private static readonly Token symDivEqualToken = new SymbolToken(TokenKind.DivEqual, "/=");
+        private static readonly Token symModToken = new OperatorToken(TokenKind.Mod, Operator.Mod);
+        private static readonly Token symModEqualToken = new SymbolToken(TokenKind.ModEqual, "%=");
+        private static readonly Token symLeftShiftToken = new OperatorToken(TokenKind.LeftShift, Operator.LeftShift);
+        private static readonly Token symLshiftEqualToken = new SymbolToken(TokenKind.LshiftEqual, "<<=");
+        private static readonly Token symRightShiftToken = new OperatorToken(TokenKind.RightShift, Operator.RightShift);
+        private static readonly Token symRshiftEqualToken = new SymbolToken(TokenKind.RshiftEqual, ">>=");
+        private static readonly Token symBitwiseAndToken = new OperatorToken(TokenKind.BitwiseAnd, Operator.BitwiseAnd);
+        private static readonly Token symAndEqualToken = new SymbolToken(TokenKind.AndEqual, "&=");
+        private static readonly Token symBitwiseOrToken = new OperatorToken(TokenKind.BitwiseOr, Operator.BitwiseOr);
+        private static readonly Token symOrEqualToken = new SymbolToken(TokenKind.OrEqual, "|=");
+        private static readonly Token symXorToken = new OperatorToken(TokenKind.Xor, Operator.Xor);
+        private static readonly Token symXorEqualToken = new SymbolToken(TokenKind.XorEqual, "^=");
+        private static readonly Token symLessThanToken = new OperatorToken(TokenKind.LessThan, Operator.LessThan);
+        private static readonly Token symGreaterThanToken = new OperatorToken(TokenKind.GreaterThan, Operator.GreaterThan);
+        private static readonly Token symLessThanOrEqualToken = new OperatorToken(TokenKind.LessThanOrEqual, Operator.LessThanOrEqual);
+        private static readonly Token symGreaterThanOrEqualToken = new OperatorToken(TokenKind.GreaterThanOrEqual, Operator.GreaterThanOrEqual);
+        private static readonly Token symEqualToken = new OperatorToken(TokenKind.Equal, Operator.Equal);
+        private static readonly Token symNotEqualToken = new OperatorToken(TokenKind.NotEqual, Operator.NotEqual);
+        private static readonly Token symLessThanGreaterThanToken = new SymbolToken(TokenKind.LessThanGreaterThan, "<>");
+        private static readonly Token symLParenToken = new SymbolToken(TokenKind.LParen, "(");
+        private static readonly Token symRParenToken = new SymbolToken(TokenKind.RParen, ")");
+        private static readonly Token symLBracketToken = new SymbolToken(TokenKind.LBracket, "[");
+        private static readonly Token symRBracketToken = new SymbolToken(TokenKind.RBracket, "]");
+        private static readonly Token symLBraceToken = new SymbolToken(TokenKind.LBrace, "{");
+        private static readonly Token symRBraceToken = new SymbolToken(TokenKind.RBrace, "}");
+        private static readonly Token symCommaToken = new SymbolToken(TokenKind.Comma, ",");
+        private static readonly Token symColonToken = new SymbolToken(TokenKind.Colon, ":");
+        private static readonly Token symBackquoteToken = new SymbolToken(TokenKind.Backquote, "`");
+        private static readonly Token symSemicolonToken = new SymbolToken(TokenKind.Semicolon, ";");
+        private static readonly Token symAssignToken = new SymbolToken(TokenKind.Assign, "=");
+        private static readonly Token symTwidleToken = new SymbolToken(TokenKind.Twidle, "~");
+        private static readonly Token symAtToken = new SymbolToken(TokenKind.At, "@");
 
-        public static readonly Token KeywordAndToken = new SymbolToken(TokenKind.KeywordAnd, "and");
-        public static readonly Token KeywordAssertToken = new SymbolToken(TokenKind.KeywordAssert, "assert");
-        public static readonly Token KeywordBreakToken = new SymbolToken(TokenKind.KeywordBreak, "break");
-        public static readonly Token KeywordClassToken = new SymbolToken(TokenKind.KeywordClass, "class");
-        public static readonly Token KeywordContinueToken = new SymbolToken(TokenKind.KeywordContinue, "continue");
-        public static readonly Token KeywordDefToken = new SymbolToken(TokenKind.KeywordDef, "def");
-        public static readonly Token KeywordDelToken = new SymbolToken(TokenKind.KeywordDel, "del");
-        public static readonly Token KeywordElifToken = new SymbolToken(TokenKind.KeywordElif, "elif");
-        public static readonly Token KeywordElseToken = new SymbolToken(TokenKind.KeywordElse, "else");
-        public static readonly Token KeywordExceptToken = new SymbolToken(TokenKind.KeywordExcept, "except");
-        public static readonly Token KeywordExecToken = new SymbolToken(TokenKind.KeywordExec, "exec");
-        public static readonly Token KeywordFinallyToken = new SymbolToken(TokenKind.KeywordFinally, "finally");
-        public static readonly Token KeywordForToken = new SymbolToken(TokenKind.KeywordFor, "for");
-        public static readonly Token KeywordFromToken = new SymbolToken(TokenKind.KeywordFrom, "from");
-        public static readonly Token KeywordGlobalToken = new SymbolToken(TokenKind.KeywordGlobal, "global");
-        public static readonly Token KeywordIfToken = new SymbolToken(TokenKind.KeywordIf, "if");
-        public static readonly Token KeywordImportToken = new SymbolToken(TokenKind.KeywordImport, "import");
-        public static readonly Token KeywordInToken = new SymbolToken(TokenKind.KeywordIn, "in");
-        public static readonly Token KeywordIsToken = new SymbolToken(TokenKind.KeywordIs, "is");
-        public static readonly Token KeywordLambdaToken = new SymbolToken(TokenKind.KeywordLambda, "lambda");
-        public static readonly Token KeywordNotToken = new SymbolToken(TokenKind.KeywordNot, "not");
-        public static readonly Token KeywordOrToken = new SymbolToken(TokenKind.KeywordOr, "or");
-        public static readonly Token KeywordPassToken = new SymbolToken(TokenKind.KeywordPass, "pass");
-        public static readonly Token KeywordPrintToken = new SymbolToken(TokenKind.KeywordPrint, "print");
-        public static readonly Token KeywordRaiseToken = new SymbolToken(TokenKind.KeywordRaise, "raise");
-        public static readonly Token KeywordReturnToken = new SymbolToken(TokenKind.KeywordReturn, "return");
-        public static readonly Token KeywordTryToken = new SymbolToken(TokenKind.KeywordTry, "try");
-        public static readonly Token KeywordWhileToken = new SymbolToken(TokenKind.KeywordWhile, "while");
-        public static readonly Token KeywordYieldToken = new SymbolToken(TokenKind.KeywordYield, "yield");
+        public static Token AddToken {
+            get { return symAddToken; }
+        }
 
-        public static readonly Dictionary<SymbolId, Token> Keywords = new Dictionary<SymbolId, Token>();
+        public static Token AddEqualToken {
+            get { return symAddEqualToken; }
+        }
 
+        public static Token SubtractToken {
+            get { return symSubtractToken; }
+        }
+
+        public static Token SubEqualToken {
+            get { return symSubEqualToken; }
+        }
+
+        public static Token PowerToken {
+            get { return symPowerToken; }
+        }
+
+        public static Token PowEqualToken {
+            get { return symPowEqualToken; }
+        }
+
+        public static Token MultiplyToken {
+            get { return symMultiplyToken; }
+        }
+
+        public static Token MulEqualToken {
+            get { return symMulEqualToken; }
+        }
+
+        public static Token FloorDivideToken {
+            get { return symFloorDivideToken; }
+        }
+
+        public static Token FloordivEqualToken {
+            get { return symFloordivEqualToken; }
+        }
+
+        public static Token DivideToken {
+            get { return symDivideToken; }
+        }
+
+        public static Token DivEqualToken {
+            get { return symDivEqualToken; }
+        }
+
+        public static Token ModToken {
+            get { return symModToken; }
+        }
+
+        public static Token ModEqualToken {
+            get { return symModEqualToken; }
+        }
+
+        public static Token LeftShiftToken {
+            get { return symLeftShiftToken; }
+        }
+
+        public static Token LshiftEqualToken {
+            get { return symLshiftEqualToken; }
+        }
+
+        public static Token RightShiftToken {
+            get { return symRightShiftToken; }
+        }
+
+        public static Token RshiftEqualToken {
+            get { return symRshiftEqualToken; }
+        }
+
+        public static Token BitwiseAndToken {
+            get { return symBitwiseAndToken; }
+        }
+
+        public static Token AndEqualToken {
+            get { return symAndEqualToken; }
+        }
+
+        public static Token BitwiseOrToken {
+            get { return symBitwiseOrToken; }
+        }
+
+        public static Token OrEqualToken {
+            get { return symOrEqualToken; }
+        }
+
+        public static Token XorToken {
+            get { return symXorToken; }
+        }
+
+        public static Token XorEqualToken {
+            get { return symXorEqualToken; }
+        }
+
+        public static Token LessThanToken {
+            get { return symLessThanToken; }
+        }
+
+        public static Token GreaterThanToken {
+            get { return symGreaterThanToken; }
+        }
+
+        public static Token LessThanOrEqualToken {
+            get { return symLessThanOrEqualToken; }
+        }
+
+        public static Token GreaterThanOrEqualToken {
+            get { return symGreaterThanOrEqualToken; }
+        }
+
+        public static Token EqualToken {
+            get { return symEqualToken; }
+        }
+
+        public static Token NotEqualToken {
+            get { return symNotEqualToken; }
+        }
+
+        public static Token LessThanGreaterThanToken {
+            get { return symLessThanGreaterThanToken; }
+        }
+
+        public static Token LParenToken {
+            get { return symLParenToken; }
+        }
+
+        public static Token RParenToken {
+            get { return symRParenToken; }
+        }
+
+        public static Token LBracketToken {
+            get { return symLBracketToken; }
+        }
+
+        public static Token RBracketToken {
+            get { return symRBracketToken; }
+        }
+
+        public static Token LBraceToken {
+            get { return symLBraceToken; }
+        }
+
+        public static Token RBraceToken {
+            get { return symRBraceToken; }
+        }
+
+        public static Token CommaToken {
+            get { return symCommaToken; }
+        }
+
+        public static Token ColonToken {
+            get { return symColonToken; }
+        }
+
+        public static Token BackquoteToken {
+            get { return symBackquoteToken; }
+        }
+
+        public static Token SemicolonToken {
+            get { return symSemicolonToken; }
+        }
+
+        public static Token AssignToken {
+            get { return symAssignToken; }
+        }
+
+        public static Token TwidleToken {
+            get { return symTwidleToken; }
+        }
+
+        public static Token AtToken {
+            get { return symAtToken; }
+        }
+
+        private static readonly Token kwAndToken = new SymbolToken(TokenKind.KeywordAnd, "and");
+        private static readonly Token kwAssertToken = new SymbolToken(TokenKind.KeywordAssert, "assert");
+        private static readonly Token kwBreakToken = new SymbolToken(TokenKind.KeywordBreak, "break");
+        private static readonly Token kwClassToken = new SymbolToken(TokenKind.KeywordClass, "class");
+        private static readonly Token kwContinueToken = new SymbolToken(TokenKind.KeywordContinue, "continue");
+        private static readonly Token kwDefToken = new SymbolToken(TokenKind.KeywordDef, "def");
+        private static readonly Token kwDelToken = new SymbolToken(TokenKind.KeywordDel, "del");
+        private static readonly Token kwElifToken = new SymbolToken(TokenKind.KeywordElif, "elif");
+        private static readonly Token kwElseToken = new SymbolToken(TokenKind.KeywordElse, "else");
+        private static readonly Token kwExceptToken = new SymbolToken(TokenKind.KeywordExcept, "except");
+        private static readonly Token kwExecToken = new SymbolToken(TokenKind.KeywordExec, "exec");
+        private static readonly Token kwFinallyToken = new SymbolToken(TokenKind.KeywordFinally, "finally");
+        private static readonly Token kwForToken = new SymbolToken(TokenKind.KeywordFor, "for");
+        private static readonly Token kwFromToken = new SymbolToken(TokenKind.KeywordFrom, "from");
+        private static readonly Token kwGlobalToken = new SymbolToken(TokenKind.KeywordGlobal, "global");
+        private static readonly Token kwIfToken = new SymbolToken(TokenKind.KeywordIf, "if");
+        private static readonly Token kwImportToken = new SymbolToken(TokenKind.KeywordImport, "import");
+        private static readonly Token kwInToken = new SymbolToken(TokenKind.KeywordIn, "in");
+        private static readonly Token kwIsToken = new SymbolToken(TokenKind.KeywordIs, "is");
+        private static readonly Token kwLambdaToken = new SymbolToken(TokenKind.KeywordLambda, "lambda");
+        private static readonly Token kwNotToken = new SymbolToken(TokenKind.KeywordNot, "not");
+        private static readonly Token kwOrToken = new SymbolToken(TokenKind.KeywordOr, "or");
+        private static readonly Token kwPassToken = new SymbolToken(TokenKind.KeywordPass, "pass");
+        private static readonly Token kwPrintToken = new SymbolToken(TokenKind.KeywordPrint, "print");
+        private static readonly Token kwRaiseToken = new SymbolToken(TokenKind.KeywordRaise, "raise");
+        private static readonly Token kwReturnToken = new SymbolToken(TokenKind.KeywordReturn, "return");
+        private static readonly Token kwTryToken = new SymbolToken(TokenKind.KeywordTry, "try");
+        private static readonly Token kwWhileToken = new SymbolToken(TokenKind.KeywordWhile, "while");
+        private static readonly Token kwYieldToken = new SymbolToken(TokenKind.KeywordYield, "yield");
+
+
+        public static Token KeywordAndToken {
+            get { return kwAndToken; }
+        }
+
+        public static Token KeywordAssertToken {
+            get { return kwAssertToken; }
+        }
+
+        public static Token KeywordBreakToken {
+            get { return kwBreakToken; }
+        }
+
+        public static Token KeywordClassToken {
+            get { return kwClassToken; }
+        }
+
+        public static Token KeywordContinueToken {
+            get { return kwContinueToken; }
+        }
+
+        public static Token KeywordDefToken {
+            get { return kwDefToken; }
+        }
+
+        public static Token KeywordDelToken {
+            get { return kwDelToken; }
+        }
+
+        public static Token KeywordElifToken {
+            get { return kwElifToken; }
+        }
+
+        public static Token KeywordElseToken {
+            get { return kwElseToken; }
+        }
+
+        public static Token KeywordExceptToken {
+            get { return kwExceptToken; }
+        }
+
+        public static Token KeywordExecToken {
+            get { return kwExecToken; }
+        }
+
+        public static Token KeywordFinallyToken {
+            get { return kwFinallyToken; }
+        }
+
+        public static Token KeywordForToken {
+            get { return kwForToken; }
+        }
+
+        public static Token KeywordFromToken {
+            get { return kwFromToken; }
+        }
+
+        public static Token KeywordGlobalToken {
+            get { return kwGlobalToken; }
+        }
+
+        public static Token KeywordIfToken {
+            get { return kwIfToken; }
+        }
+
+        public static Token KeywordImportToken {
+            get { return kwImportToken; }
+        }
+
+        public static Token KeywordInToken {
+            get { return kwInToken; }
+        }
+
+        public static Token KeywordIsToken {
+            get { return kwIsToken; }
+        }
+
+        public static Token KeywordLambdaToken {
+            get { return kwLambdaToken; }
+        }
+
+        public static Token KeywordNotToken {
+            get { return kwNotToken; }
+        }
+
+        public static Token KeywordOrToken {
+            get { return kwOrToken; }
+        }
+
+        public static Token KeywordPassToken {
+            get { return kwPassToken; }
+        }
+
+        public static Token KeywordPrintToken {
+            get { return kwPrintToken; }
+        }
+
+        public static Token KeywordRaiseToken {
+            get { return kwRaiseToken; }
+        }
+
+        public static Token KeywordReturnToken {
+            get { return kwReturnToken; }
+        }
+
+        public static Token KeywordTryToken {
+            get { return kwTryToken; }
+        }
+
+        public static Token KeywordWhileToken {
+            get { return kwWhileToken; }
+        }
+
+        public static Token KeywordYieldToken {
+            get { return kwYieldToken; }
+        }
+
+
+        private static readonly Dictionary<SymbolId, Token> kws = new Dictionary<SymbolId, Token>();
+
+        public static IDictionary<SymbolId, Token> Keywords {
+            get { return kws; }
+        }
         static Tokens() {
-            Keywords[SymbolTable.StringToId("and")] = KeywordAndToken;
-            Keywords[SymbolTable.StringToId("assert")] = KeywordAssertToken;
-            Keywords[SymbolTable.StringToId("break")] = KeywordBreakToken;
-            Keywords[SymbolTable.StringToId("class")] = KeywordClassToken;
-            Keywords[SymbolTable.StringToId("continue")] = KeywordContinueToken;
-            Keywords[SymbolTable.StringToId("def")] = KeywordDefToken;
-            Keywords[SymbolTable.StringToId("del")] = KeywordDelToken;
-            Keywords[SymbolTable.StringToId("elif")] = KeywordElifToken;
-            Keywords[SymbolTable.StringToId("else")] = KeywordElseToken;
-            Keywords[SymbolTable.StringToId("except")] = KeywordExceptToken;
-            Keywords[SymbolTable.StringToId("exec")] = KeywordExecToken;
-            Keywords[SymbolTable.StringToId("finally")] = KeywordFinallyToken;
-            Keywords[SymbolTable.StringToId("for")] = KeywordForToken;
-            Keywords[SymbolTable.StringToId("from")] = KeywordFromToken;
-            Keywords[SymbolTable.StringToId("global")] = KeywordGlobalToken;
-            Keywords[SymbolTable.StringToId("if")] = KeywordIfToken;
-            Keywords[SymbolTable.StringToId("import")] = KeywordImportToken;
-            Keywords[SymbolTable.StringToId("in")] = KeywordInToken;
-            Keywords[SymbolTable.StringToId("is")] = KeywordIsToken;
-            Keywords[SymbolTable.StringToId("lambda")] = KeywordLambdaToken;
-            Keywords[SymbolTable.StringToId("not")] = KeywordNotToken;
-            Keywords[SymbolTable.StringToId("or")] = KeywordOrToken;
-            Keywords[SymbolTable.StringToId("pass")] = KeywordPassToken;
-            Keywords[SymbolTable.StringToId("print")] = KeywordPrintToken;
-            Keywords[SymbolTable.StringToId("raise")] = KeywordRaiseToken;
-            Keywords[SymbolTable.StringToId("return")] = KeywordReturnToken;
-            Keywords[SymbolTable.StringToId("try")] = KeywordTryToken;
-            Keywords[SymbolTable.StringToId("while")] = KeywordWhileToken;
-            Keywords[SymbolTable.StringToId("yield")] = KeywordYieldToken;
+            Keywords[SymbolTable.StringToId("and")] = kwAndToken;
+            Keywords[SymbolTable.StringToId("assert")] = kwAssertToken;
+            Keywords[SymbolTable.StringToId("break")] = kwBreakToken;
+            Keywords[SymbolTable.StringToId("class")] = kwClassToken;
+            Keywords[SymbolTable.StringToId("continue")] = kwContinueToken;
+            Keywords[SymbolTable.StringToId("def")] = kwDefToken;
+            Keywords[SymbolTable.StringToId("del")] = kwDelToken;
+            Keywords[SymbolTable.StringToId("elif")] = kwElifToken;
+            Keywords[SymbolTable.StringToId("else")] = kwElseToken;
+            Keywords[SymbolTable.StringToId("except")] = kwExceptToken;
+            Keywords[SymbolTable.StringToId("exec")] = kwExecToken;
+            Keywords[SymbolTable.StringToId("finally")] = kwFinallyToken;
+            Keywords[SymbolTable.StringToId("for")] = kwForToken;
+            Keywords[SymbolTable.StringToId("from")] = kwFromToken;
+            Keywords[SymbolTable.StringToId("global")] = kwGlobalToken;
+            Keywords[SymbolTable.StringToId("if")] = kwIfToken;
+            Keywords[SymbolTable.StringToId("import")] = kwImportToken;
+            Keywords[SymbolTable.StringToId("in")] = kwInToken;
+            Keywords[SymbolTable.StringToId("is")] = kwIsToken;
+            Keywords[SymbolTable.StringToId("lambda")] = kwLambdaToken;
+            Keywords[SymbolTable.StringToId("not")] = kwNotToken;
+            Keywords[SymbolTable.StringToId("or")] = kwOrToken;
+            Keywords[SymbolTable.StringToId("pass")] = kwPassToken;
+            Keywords[SymbolTable.StringToId("print")] = kwPrintToken;
+            Keywords[SymbolTable.StringToId("raise")] = kwRaiseToken;
+            Keywords[SymbolTable.StringToId("return")] = kwReturnToken;
+            Keywords[SymbolTable.StringToId("try")] = kwTryToken;
+            Keywords[SymbolTable.StringToId("while")] = kwWhileToken;
+            Keywords[SymbolTable.StringToId("yield")] = kwYieldToken;
         }
 
         // *** END GENERATED CODE ***

@@ -92,7 +92,7 @@ namespace IronPython.Compiler.AST {
         }
 
         public override bool Walk(NameExpr node) {
-            fc.Define(node.name);
+            fc.Define(node.Name);
             return false;
         }
 
@@ -112,7 +112,7 @@ namespace IronPython.Compiler.AST {
         }
 
         public override bool Walk(NameExpr node) {
-            fc.Delete(node.name);
+            fc.Delete(node.Name);
             return false;
         }
     }
@@ -141,8 +141,8 @@ namespace IronPython.Compiler.AST {
         [Conditional("DEBUG")]
         public void Dump(BitArray bits) {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            sb.AppendFormat("FlowChecker ({0})", scope is FuncDef ? ((FuncDef)scope).name.GetString() :
-                                                 scope is ClassDef ? ((ClassDef)scope).name.GetString() : "");
+            sb.AppendFormat("FlowChecker ({0})", scope is FuncDef ? ((FuncDef)scope).Name.GetString() :
+                                                 scope is ClassDef ? ((ClassDef)scope).Name.GetString() : "");
             sb.Append('{');
             bool comma = false;
             foreach (KeyValuePair<SymbolId, ScopeStatement.Binding> binding in bindings) {
@@ -208,8 +208,8 @@ namespace IronPython.Compiler.AST {
             BitArray save = bits;
             bits = new BitArray(bits);
 
-            foreach (ListCompIter iter in node.iters) iter.Walk(this);
-            node.item.Walk(this);
+            foreach (ListCompIter iter in node.Iterators) iter.Walk(this);
+            node.Item.Walk(this);
 
             bits = save;
             return false;
@@ -218,10 +218,10 @@ namespace IronPython.Compiler.AST {
         // NameExpr
         public override bool Walk(NameExpr node) {
             ScopeStatement.Binding binding;
-            if (bindings.TryGetValue(node.name, out binding)) {
+            if (bindings.TryGetValue(node.Name, out binding)) {
                 int index = binding.Index * 2;
-                node.defined = bits.Get(index);
-                if (!node.defined) {
+                node.IsDefined = bits.Get(index);
+                if (!node.IsDefined) {
                     binding.UninitializedUse();
                 }
                 if (!bits.Get(index + 1)) {
@@ -235,8 +235,8 @@ namespace IronPython.Compiler.AST {
 
         // AssignStmt
         public override bool Walk(AssignStmt node) {
-            node.rhs.Walk(this);
-            foreach (Expr e in node.lhs) {
+            node.Right.Walk(this);
+            foreach (Expr e in node.Left) {
                 e.Walk(fdef);
             }
             return false;
@@ -246,7 +246,7 @@ namespace IronPython.Compiler.AST {
         // AugAssignStmt
         public override bool Walk(AugAssignStmt node) { return true; }
         public override void PostWalk(AugAssignStmt node) {
-            node.lhs.Walk(fdef);
+            node.Left.Walk(fdef);
         }
 
         // BreakStmt
@@ -263,7 +263,7 @@ namespace IronPython.Compiler.AST {
             if (scope == node) {
                 return true;
             } else {
-                Define(node.name);
+                Define(node.Name);
                 return false;
             }
         }
@@ -273,7 +273,7 @@ namespace IronPython.Compiler.AST {
 
         // DelStmt
         public override void PostWalk(DelStmt node) {
-            foreach (Expr e in node.exprs) {
+            foreach (Expr e in node.Expressions) {
                 e.Walk(fdel);
             }
         }
@@ -281,26 +281,26 @@ namespace IronPython.Compiler.AST {
         // ForStmt
         public override bool Walk(ForStmt node) {
             // Walk the expression
-            node.list.Walk(this);
+            node.List.Walk(this);
 
             BitArray opte = new BitArray(bits);
             BitArray exit = new BitArray(bits.Length, true);
             PushLoop(exit);
 
             // Define the lhs
-            node.lhs.Walk(fdef);
+            node.Left.Walk(fdef);
             // Walk the body
-            node.body.Walk(this);
+            node.Body.Walk(this);
 
             PopLoop();
 
             bits.And(exit);
 
-            if (node.elseStmt != null) {
+            if (node.ElseStatement != null) {
                 // Flow the else
                 BitArray save = bits;
                 bits = opte;
-                node.elseStmt.Walk(this);
+                node.ElseStatement.Walk(this);
                 // Restore the bits
                 bits = save;
             }
@@ -313,9 +313,9 @@ namespace IronPython.Compiler.AST {
 
         // FromImportStmt
         public override bool Walk(FromImportStmt node) {
-            if (node.names != FromImportStmt.Star) {
-                for (int i = 0; i < node.names.Length; i++) {
-                    Define(node.asNames[i] != SymbolTable.Empty ? node.asNames[i] : node.names[i]);
+            if (node.Names != FromImportStmt.Star) {
+                for (int i = 0; i < node.Names.Count; i++) {
+                    Define(node.AsNames[i] != SymbolTable.Empty ? node.AsNames[i] : node.Names[i]);
                 }
             }
             return true;
@@ -324,12 +324,12 @@ namespace IronPython.Compiler.AST {
         // FuncDef
         public override bool Walk(FuncDef node) {
             if (node == scope) {
-                foreach (Expr e in node.parameters) {
+                foreach (Expr e in node.Parameters) {
                     e.Walk(fdef);
                 }
                 return true;
             } else {
-                Define(node.name);
+                Define(node.Name);
                 return false;
             }
         }
@@ -341,15 +341,15 @@ namespace IronPython.Compiler.AST {
 
             bits = new BitArray(bits.Length);
 
-            foreach (IfStmtTest ist in node.tests) {
+            foreach (IfStmtTest ist in node.Tests) {
                 // Set the initial branch value to bits
                 bits.SetAll(false);
                 bits.Or(save);
 
                 // Flow the test first
-                ist.test.Walk(this);
+                ist.Test.Walk(this);
                 // Flow the body
-                ist.body.Walk(this);
+                ist.Body.Walk(this);
                 // Intersect
                 result.And(bits);
             }
@@ -358,9 +358,9 @@ namespace IronPython.Compiler.AST {
             bits.SetAll(false);
             bits.Or(save);
 
-            if (node.elseStmt != null) {
+            if (node.ElseStatement != null) {
                 // Flow the else_
-                node.elseStmt.Walk(this);
+                node.ElseStatement.Walk(this);
             }
 
             // Intersect
@@ -376,8 +376,8 @@ namespace IronPython.Compiler.AST {
 
         // ImportStmt
         public override bool Walk(ImportStmt node) {
-            for (int i = 0; i < node.names.Length; i++) {
-                Define(node.asNames[i] != SymbolTable.Empty ? node.asNames[i] : node.names[i].names[0]);
+            for (int i = 0; i < node.Names.Count; i++) {
+                Define(node.AsNames[i] != SymbolTable.Empty ? node.AsNames[i] : node.Names[i].Names[0]);
             }
             return true;
         }
@@ -389,10 +389,10 @@ namespace IronPython.Compiler.AST {
             BitArray save = bits;
             bits = new BitArray(bits);
             // Flow the body
-            node.body.Walk(this);
+            node.Body.Walk(this);
             bits = save;
             // Flow finally - this executes no matter what
-            node.finallyStmt.Walk(this);
+            node.FinallyStmt.Walk(this);
             return false;
         }
 
@@ -403,34 +403,34 @@ namespace IronPython.Compiler.AST {
             bits = new BitArray(bits);
 
             // Flow the body
-            node.body.Walk(this);
+            node.Body.Walk(this);
             result.And(bits);
 
-            foreach (TryStmtHandler tsh in node.handlers) {
+            foreach (TryStmtHandler tsh in node.Handlers) {
                 // Restore to saved state
                 bits.SetAll(false);
                 bits.Or(save);
 
                 // Flow the test
-                if (tsh.test != null) {
-                    tsh.test.Walk(this);
+                if (tsh.Test != null) {
+                    tsh.Test.Walk(this);
                 }
 
                 // Define the target
-                if (tsh.target != null) {
-                    tsh.target.Walk(fdef);
+                if (tsh.Target != null) {
+                    tsh.Target.Walk(fdef);
                 }
 
                 // Flow the body
-                tsh.body.Walk(this);
+                tsh.Body.Walk(this);
                 result.And(bits);
             }
 
-            if (node.elseStmt != null) {
+            if (node.ElseStatement != null) {
                 bits.SetAll(false);
                 bits.Or(save);
 
-                node.elseStmt.Walk(this);
+                node.ElseStatement.Walk(this);
                 result.And(bits);
             }
 
@@ -443,22 +443,22 @@ namespace IronPython.Compiler.AST {
         // WhileStmt
         public override bool Walk(WhileStmt node) {
             // Walk the expression
-            node.test.Walk(this);
+            node.Test.Walk(this);
 
-            BitArray opte = node.elseStmt != null ? new BitArray(bits) : null;
+            BitArray opte = node.ElseStatement != null ? new BitArray(bits) : null;
             BitArray exit = new BitArray(bits.Length, true);
 
             PushLoop(exit);
-            node.body.Walk(this);
+            node.Body.Walk(this);
             PopLoop();
 
             bits.And(exit);
 
-            if (node.elseStmt != null) {
+            if (node.ElseStatement != null) {
                 // Flow the else
                 BitArray save = bits;
                 bits = opte;
-                node.elseStmt.Walk(this);
+                node.ElseStatement.Walk(this);
                 // Restore the bits
                 bits = save;
 

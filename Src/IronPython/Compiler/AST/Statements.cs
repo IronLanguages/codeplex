@@ -46,7 +46,12 @@ namespace IronPython.Compiler.AST {
     }
 
     public class SuiteStmt : Stmt {
-        public readonly Stmt[] stmts;
+        private readonly Stmt[] stmts;
+
+        public IList<Stmt> Statements {
+            get { return stmts; }
+        } 
+
         public SuiteStmt(Stmt[] stmts) {
             this.stmts = stmts;
         }
@@ -77,8 +82,8 @@ namespace IronPython.Compiler.AST {
         public override string GetDocString() {
             if (stmts.Length > 0 && stmts[0] is ExprStmt) {
                 ExprStmt es = (ExprStmt)stmts[0];
-                if (es.expr is ConstantExpr) {
-                    object val = ((ConstantExpr)es.expr).value;
+                if (es.Expression is ConstantExpr) {
+                    object val = ((ConstantExpr)es.Expression).Value;
                     if (val is string && !Options.StripDocStrings) return (string)val;
                 }
             }
@@ -87,17 +92,26 @@ namespace IronPython.Compiler.AST {
     }
 
     public class IfStmt : Stmt {
-        public readonly IfStmtTest[] tests;
-        public readonly Stmt elseStmt;
+        private readonly IfStmtTest[] tests;
+        private readonly Stmt elseStmt;
+
         public IfStmt(IfStmtTest[] tests, Stmt else_) {
             this.tests = tests; this.elseStmt = else_;
         }
 
+        public IList<IfStmtTest> Tests {
+            get { return tests; }
+        }
+
+        public Stmt ElseStatement {
+            get { return elseStmt; }
+        }
+
         public override object Execute(NameEnv env) {
             foreach (IfStmtTest t in tests) {
-                object val = t.test.Evaluate(env);
+                object val = t.Test.Evaluate(env);
                 if (Ops.IsTrue(val)) {
-                    return t.body.Execute(env);
+                    return t.Body.Execute(env);
                 }
             }
             if (elseStmt != null) {
@@ -110,10 +124,10 @@ namespace IronPython.Compiler.AST {
             Label eoi = cg.DefineLabel();
             foreach (IfStmtTest t in tests) {
                 Label next = cg.DefineLabel();
-                cg.EmitPosition(t.start, t.header);
-                cg.EmitTestTrue(t.test);
+                cg.EmitPosition(t.Start, t.Header);
+                cg.EmitTestTrue(t.Test);
                 cg.Emit(OpCodes.Brfalse, next);
-                t.body.Emit(cg);
+                t.Body.Emit(cg);
                 // optimize no else case
                 cg.Emit(OpCodes.Br, eoi);
                 cg.MarkLabel(next);
@@ -134,11 +148,26 @@ namespace IronPython.Compiler.AST {
     }
 
     public class IfStmtTest : Node {
-        public Location header;
-        public readonly Expr test;
-        public Stmt body;
+        private Location header;
+        private readonly Expr test;
+        private Stmt body;
+
         public IfStmtTest(Expr test, Stmt body) {
             this.test = test; this.body = body;
+        }
+
+        public Location Header {
+            get { return header; }
+            set { header = value; }
+        }
+        
+        public Expr Test {
+            get { return test; }
+        }
+
+        public Stmt Body {
+            get { return body; }
+            set { body = value; }
         }
 
         public override void Walk(IAstWalker w) {
@@ -151,13 +180,31 @@ namespace IronPython.Compiler.AST {
     }
 
     public class WhileStmt : Stmt {
-        public Location header;
-        public readonly Expr test;
-        public readonly Stmt body;
-        public readonly Stmt elseStmt;
+        private Location header;
+        private readonly Expr test;
+        private readonly Stmt body;
+        private readonly Stmt elseStmt;
+
         public WhileStmt(Expr test, Stmt body, Stmt else_) {
             this.test = test; this.body = body; this.elseStmt = else_;
         }
+
+        public Location Header {
+            get { return header; }
+            set { header = value; }
+        }
+
+        public Expr Test {
+            get { return test; }
+        }
+
+        public Stmt Body {
+            get { return body; }
+        }
+
+        public Stmt ElseStatement {
+            get { return elseStmt; }
+        } 
 
         public override object Execute(NameEnv env) {
             object ret = NextStmt;
@@ -178,7 +225,7 @@ namespace IronPython.Compiler.AST {
 
             cg.MarkLabel(continueTarget);
 
-            cg.EmitPosition(start, header);
+            cg.EmitPosition(Start, header);
             cg.EmitTestTrue(test);
             cg.Emit(OpCodes.Brfalse, eol);
 
@@ -206,21 +253,45 @@ namespace IronPython.Compiler.AST {
             w.PostWalk(this);
         }
         public void SetLoc(Location start, Location header, Location end) {
-            this.start = start;
+            this.Start = start;
             this.header = header;
-            this.end = end;
+            this.End = end;
         }
     }
 
     public class ForStmt : Stmt {
-        public Location header;
-        public readonly Expr lhs;
-        public Expr list;
-        public Stmt body;
-        public readonly Stmt elseStmt;
+        private Location header;
+        private readonly Expr lhs;
+        private Expr list;
+        private Stmt body;
+        private readonly Stmt elseStmt;
+
         public ForStmt(Expr lhs, Expr list, Stmt body, Stmt else_) {
             this.lhs = lhs; this.list = list;
             this.body = body; this.elseStmt = else_;
+        }
+
+        public Location Header {
+            get { return header; }
+            set { header = value; }
+        }
+
+        public Expr Left {
+            get { return lhs; }
+        }
+
+        public Expr List {
+            get { return list; }
+            set { list = value; }
+        }
+
+        public Stmt Body {
+            get { return body; }
+            set { body = value; }
+        }
+
+        public Stmt ElseStatement {
+            get { return elseStmt; }
         }
 
         public override object Execute(NameEnv env) {
@@ -245,7 +316,7 @@ namespace IronPython.Compiler.AST {
             Label breakTarget = cg.DefineLabel();
             Label continueTarget = cg.DefineLabel();
 
-            cg.EmitPosition(start, header);
+            cg.EmitPosition(Start, header);
 
             list.Emit(cg);
             cg.EmitCall(typeof(Ops), "GetEnumerator");
@@ -307,15 +378,41 @@ namespace IronPython.Compiler.AST {
     }
 
     public class TryStmt : Stmt {
-        public Location header;
-        public readonly Stmt body;
-        public readonly TryStmtHandler[] handlers;
-        public readonly Stmt elseStmt;
+        private Location header;
+        private readonly Stmt body;
+        private readonly TryStmtHandler[] handlers;
+        private readonly Stmt elseStmt;
+        private bool yieldInExcept = false;
+        private List<YieldTarget> yieldTargets = new List<YieldTarget>();
 
-        public bool yieldInExcept = false;
-        public ArrayList yieldTargets = new ArrayList();
         public TryStmt(Stmt body, TryStmtHandler[] handlers, Stmt else_) {
             this.body = body; this.handlers = handlers; this.elseStmt = else_;
+        }
+
+        public Location Header {
+            get { return header; }
+            set { header = value; }
+        }
+
+        public Stmt Body {
+            get { return body; }
+        }
+
+        public IList<TryStmtHandler> Handlers {
+            get { return handlers; }
+        }
+
+        public Stmt ElseStatement {
+            get { return elseStmt; }
+        }
+
+        public bool YieldInExcept {
+            get { return yieldInExcept; }
+            set { yieldInExcept = value; }
+        }
+
+        public IList<YieldTarget> YieldTargets {
+            get { return yieldTargets; }
         }
 
         public void AddYieldTarget(YieldTarget t) {
@@ -324,7 +421,7 @@ namespace IronPython.Compiler.AST {
 
         internal override void Emit(CodeGen cg) {
             Slot choiceVar = null;
-            cg.EmitPosition(start, header);
+            cg.EmitPosition(Start, header);
 
             if (yieldTargets.Count > 0) {
                 Label startOfBlock = cg.DefineLabel();
@@ -379,13 +476,13 @@ namespace IronPython.Compiler.AST {
             }
 
             foreach (TryStmtHandler handler in handlers) {
-                cg.EmitPosition(handler.start, handler.header);
+                cg.EmitPosition(handler.Start, handler.Header);
                 Label next = cg.DefineLabel();
-                if (handler.test != null) {
+                if (handler.Test != null) {
                     pyExc.EmitGet(cg);
-                    handler.test.Emit(cg);
+                    handler.Test.Emit(cg);
                     cg.EmitCall(typeof(Ops), "CheckException");
-                    if (handler.target != null) {
+                    if (handler.Target != null) {
                         tmpExc.EmitSet(cg);
                         tmpExc.EmitGet(cg);
                     }
@@ -394,14 +491,14 @@ namespace IronPython.Compiler.AST {
                     cg.Emit(OpCodes.Brtrue, next);
                 }
 
-                if (handler.target != null) {
+                if (handler.Target != null) {
                     tmpExc.EmitGet(cg);
-                    handler.target.EmitSet(cg);
+                    handler.Target.EmitSet(cg);
                 }
 
                 cg.PushExceptionBlock(Targets.TargetBlockType.Catch, null);
 
-                handler.body.Emit(cg);
+                handler.Body.Emit(cg);
                 cg.EmitCallerContext();
                 cg.EmitCall(typeof(Ops), "ClearException");
 
@@ -447,13 +544,30 @@ namespace IronPython.Compiler.AST {
     }
 
     public class TryStmtHandler : Node {
-        public Location header;
-        public readonly Expr test, target;
-        public readonly Stmt body;
+        private Location header;
+        private readonly Expr test, target;
+        private readonly Stmt body;
 
         public TryStmtHandler(Expr test, Expr target, Stmt body) {
             this.test = test; this.target = target; this.body = body;
         }
+
+        public Location Header {
+            get { return header; }
+            set { header = value; }
+        }
+
+        public Expr Target {
+            get { return target; }
+        }
+
+        public Expr Test {
+            get { return test; }
+        }
+
+        public Stmt Body {
+            get { return body; }
+        } 
 
         public override void Walk(IAstWalker w) {
             if (w.Walk(this)) {
@@ -467,18 +581,34 @@ namespace IronPython.Compiler.AST {
 
 
     public class TryFinallyStmt : Stmt {
-        public Location header;
-        public readonly Stmt body;
-        public readonly Stmt finallyStmt;
-
-        public ArrayList yieldTargets = new ArrayList();
+        private Location header;
+        private readonly Stmt body;
+        private readonly Stmt finallyStmt;
+        private List<YieldTarget> yieldTargets = new List<YieldTarget>();
 
         public TryFinallyStmt(Stmt body, Stmt finally_) {
             this.body = body; this.finallyStmt = finally_;
         }
 
+        public Location Header {
+            get { return header; }
+            set { header = value; }
+        }
+
+        public Stmt Body {
+            get { return body; }
+        }
+
+        public Stmt FinallyStmt {
+            get { return finallyStmt; }
+        }
+
+        public IList<YieldTarget> YieldTargets {
+            get { return yieldTargets; }
+        }
+
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, header);
+            cg.EmitPosition(Start, header);
             Slot choiceVar = null;
             Slot returnVar = null;
             Label endOfTry = new Label();
@@ -566,8 +696,13 @@ namespace IronPython.Compiler.AST {
     }
 
     public class ExprStmt : Stmt {
-        public readonly Expr expr;
+        private readonly Expr expr;
+
         public ExprStmt(Expr expr) { this.expr = expr; }
+
+        public Expr Expression {
+            get { return expr; }
+        }
 
         public override object Execute(NameEnv env) {
             expr.Evaluate(env);
@@ -575,7 +710,7 @@ namespace IronPython.Compiler.AST {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             if (cg.printExprStmts) {
                 // emit & print expression.
                 cg.EmitSystemState();
@@ -609,7 +744,7 @@ namespace IronPython.Compiler.AST {
         public override string GetDocString() {
             ConstantExpr ce = expr as ConstantExpr;
             if (ce != null) {
-                return ce.value as string;
+                return ce.Value as string;
             }
             return null;
         }
@@ -618,15 +753,22 @@ namespace IronPython.Compiler.AST {
     public class AssignStmt : Stmt {
         // lhs.Length is 1 for simple assignments like "x = 1"
         // lhs.Lenght will be 3 for "x = y = z = 1"
-        public readonly Expr[] lhs;
-
-        public readonly Expr rhs;
+        private readonly Expr[] lhs;
+        private readonly Expr rhs;
 
         public AssignStmt(Expr[] lhs, Expr rhs) { 
             this.lhs = lhs;
             this.rhs = rhs; 
         }
 
+        public IList<Expr> Left {
+            get { return lhs; }
+        }
+
+        public Expr Right {
+            get { return rhs; }
+        } 
+        
         public override object Execute(NameEnv env) {
             object v = rhs.Evaluate(env);
             foreach (Expr e in lhs) {
@@ -636,7 +778,7 @@ namespace IronPython.Compiler.AST {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             rhs.Emit(cg);
             for (int i = 0; i < lhs.Length; i++) {
                 if (i < lhs.Length - 1) cg.Emit(OpCodes.Dup);
@@ -655,15 +797,28 @@ namespace IronPython.Compiler.AST {
     }
 
     public class AugAssignStmt : Stmt {
-        public readonly BinaryOperator op;
-        public readonly Expr lhs;
-        public readonly Expr rhs;
+        private readonly BinaryOperator op;
+        private readonly Expr lhs;
+        private readonly Expr rhs;
+
         public AugAssignStmt(BinaryOperator op, Expr lhs, Expr rhs) {
             this.op = op; this.lhs = lhs; this.rhs = rhs;
         }
 
+        public BinaryOperator Operator {
+            get { return op; }
+        }
+
+        public Expr Left {
+            get { return lhs; }
+        }
+
+        public Expr Right {
+            get { return rhs; }
+        }
+
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
 
             // if lhs is a complex expression (eg foo[x] or foo.bar)
             // then it's EmitSet needs to do the right thing.
@@ -686,12 +841,25 @@ namespace IronPython.Compiler.AST {
 
 
     public class PrintStmt : Stmt {
-        public readonly Expr dest;
-        public readonly Expr[] exprs;
-        public readonly bool trailingComma;
+        private readonly Expr dest;
+        private readonly Expr[] exprs;
+        private readonly bool trailingComma;
+
         public PrintStmt(Expr dest, Expr[] exprs, bool trailingComma) {
             this.dest = dest; this.exprs = exprs;
             this.trailingComma = trailingComma;
+        }
+
+        public Expr Destination {
+            get { return dest; }
+        }
+
+        public IList<Expr> Expressions {
+            get { return exprs; }
+        }
+
+        public bool TrailingComma {
+            get { return trailingComma; }
         }
 
         public override object Execute(NameEnv env) {
@@ -706,7 +874,7 @@ namespace IronPython.Compiler.AST {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             string suffix = "";
             if (dest != null) suffix = "WithDest";
             if (exprs.Length == 0) {
@@ -745,8 +913,13 @@ namespace IronPython.Compiler.AST {
     }
 
     public class DottedName : Node {
-        public readonly SymbolId[] names;
+        private readonly SymbolId[] names;
+
         public DottedName(SymbolId[] names) { this.names = names; }
+
+        public IList<SymbolId> Names {
+            get { return names; }
+        }
 
         public string MakeString() {
             StringBuilder ret = new StringBuilder(names[0].GetString());
@@ -767,15 +940,24 @@ namespace IronPython.Compiler.AST {
 
 
     public class ImportStmt : Stmt {
-        public readonly DottedName[] names;
-        public readonly SymbolId[] asNames;
+        private readonly DottedName[] names;
+        private readonly SymbolId[] asNames;
+
         public ImportStmt(DottedName[] names, SymbolId[] asNames) {
             this.names = names;
             this.asNames = asNames;
         }
 
+        public IList<DottedName> Names {
+            get { return names; }
+        }
+
+        public IList<SymbolId> AsNames {
+            get { return asNames; }
+        }
+
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
 
             for (int i = 0; i < names.Length; i++) {
                 DottedName name = names[i];
@@ -783,7 +965,7 @@ namespace IronPython.Compiler.AST {
                 cg.EmitString(name.MakeString());
                 if (asNames[i] == SymbolTable.Empty) {
                     cg.EmitCall(typeof(Ops), "Import");
-                    cg.EmitSet(name.names[0]);
+                    cg.EmitSet(name.Names[0]);
                 } else {
                     cg.EmitString(asNames[i].GetString());
                     cg.EmitCall(typeof(Ops), "ImportAs");
@@ -799,15 +981,30 @@ namespace IronPython.Compiler.AST {
     }
 
     public class FromImportStmt : Stmt {
-        public static readonly SymbolId[] Star = new SymbolId[1];
-
-        public readonly DottedName root;
-        public readonly SymbolId[] names;
-        public readonly SymbolId[] asNames;
+        private static readonly SymbolId[] star = new SymbolId[1];
+        private readonly DottedName root;
+        private readonly SymbolId[] names;
+        private readonly SymbolId[] asNames;
         private readonly bool fromFuture;
 
         public FromImportStmt(DottedName root, SymbolId[] names, SymbolId[] asNames)
             : this(root, names, asNames, false) {
+        }
+
+        public static SymbolId[] Star {
+            get { return FromImportStmt.star; }
+        }
+
+        public DottedName Root {
+            get { return root; }
+        }
+
+        public IList<SymbolId> Names {
+            get { return names; }
+        }
+
+        public IList<SymbolId> AsNames {
+            get { return asNames; }
         }
 
         public FromImportStmt(DottedName root, SymbolId[] names, SymbolId[] asNames, bool fromFuture) {
@@ -824,11 +1021,11 @@ namespace IronPython.Compiler.AST {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
 
             cg.EmitModuleInstance();
             cg.EmitString(root.MakeString());
-            if (names == Star) {
+            if (names == star) {
                 cg.EmitCall(typeof(Ops), "ImportStar");
             } else {
                 Slot fromObj = cg.GetLocalTmp(typeof(object));
@@ -873,9 +1070,14 @@ namespace IronPython.Compiler.AST {
     }
 
     public class GlobalStmt : Stmt {
-        public readonly SymbolId[] names;
+        private readonly SymbolId[] names;
+
         public GlobalStmt(SymbolId[] names) {
             this.names = names;
+        }
+
+        public IList<SymbolId> Names {
+            get { return names; }
         }
 
         public override object Execute(NameEnv env) {
@@ -892,13 +1094,18 @@ namespace IronPython.Compiler.AST {
     }
 
     public class DelStmt : Stmt {
-        public readonly Expr[] exprs;
+        private readonly Expr[] exprs;
+
         public DelStmt(Expr[] exprs) {
             this.exprs = exprs;
         }
 
+        public IList<Expr> Expressions {
+            get { return exprs; }
+        }
+
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             foreach (Expr expr in exprs) {
                 expr.EmitDel(cg);
             }
@@ -913,13 +1120,27 @@ namespace IronPython.Compiler.AST {
     }
 
     public class RaiseStmt : Stmt {
-        public readonly Expr type, value, traceback;
+        private readonly Expr type, value, traceback;
+
         public RaiseStmt(Expr type, Expr _value, Expr traceback) {
             this.type = type; this.value = _value; this.traceback = traceback;
         }
 
+        public Expr Traceback {
+            get { return traceback; }
+        }
+
+        public Expr Value {
+            get { return this.value; }
+        }
+
+
+        public Expr ExceptionType {
+            get { return type; }
+        }
+
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             if (type == null && value == null && traceback == null) {
                 cg.EmitCall(typeof(Ops), "Raise", Type.EmptyTypes);
                 return;
@@ -942,15 +1163,24 @@ namespace IronPython.Compiler.AST {
     }
 
     public class AssertStmt : Stmt {
-        public readonly Expr test, message;
+        private readonly Expr test, message;
+
         public AssertStmt(Expr test, Expr message) {
             this.test = test;
             this.message = message;
         }
 
+        public Expr Message {
+            get { return message; }
+        }
+
+        public Expr Test {
+            get { return test; }
+        }
+
         internal override void Emit(CodeGen cg) {
             if (IronPython.Hosting.PythonEngine.options.DebugMode) {
-                cg.EmitPosition(start, end);
+                cg.EmitPosition(Start, End);
                 cg.EmitTestTrue(test);
                 Label endLabel = cg.DefineLabel();
                 cg.Emit(OpCodes.Brtrue, endLabel);
@@ -972,11 +1202,24 @@ namespace IronPython.Compiler.AST {
     }
 
     public class ExecStmt : Stmt {
-        public readonly Expr code, locals, globals;
+        private readonly Expr code, locals, globals;
+
         public ExecStmt(Expr code, Expr locals, Expr globals) {
             this.code = code;
             this.locals = locals;
             this.globals = globals;
+        }
+
+        public Expr Globals {
+            get { return globals; }
+        }
+
+        public Expr Locals {
+            get { return locals; }
+        }
+
+        public Expr Code {
+            get { return code; }
         }
 
         public bool NeedsLocalsDictionary() {
@@ -984,7 +1227,7 @@ namespace IronPython.Compiler.AST {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             cg.EmitCallerContext();
             code.Emit(cg);
             if (locals == null && globals == null) {
@@ -1024,9 +1267,14 @@ namespace IronPython.Compiler.AST {
     }
 
     public class ReturnStmt : Stmt {
-        public readonly Expr expr;
+        private readonly Expr expr;
+
         public ReturnStmt(Expr expr) {
             this.expr = expr;
+        }
+
+        public Expr Expression {
+            get { return expr; }
         }
 
         public override object Execute(NameEnv env) {
@@ -1034,7 +1282,7 @@ namespace IronPython.Compiler.AST {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             cg.EmitReturn(expr);
         }
 
@@ -1047,17 +1295,30 @@ namespace IronPython.Compiler.AST {
     }
 
     public class YieldStmt : Stmt {
-        public readonly Expr expr;
-        public readonly int index;
-        public Label label;
+        private readonly Expr expr;
+        private readonly int index;
+        private Label label;
+
         public YieldStmt(Expr expr, int index) {
             this.expr = expr;
             this.index = index;
         }
 
+        public Expr Expression {
+            get { return expr; }
+        }
+
+        public int Index {
+            get { return index; }
+        }
+
+        public Label Label {
+            get { return label; }
+            set { label = value; }
+        }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             cg.EmitYield(expr, index, label);
         }
 
@@ -1078,7 +1339,7 @@ namespace IronPython.Compiler.AST {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
         }
 
         public override void Walk(IAstWalker w) {
@@ -1097,7 +1358,7 @@ namespace IronPython.Compiler.AST {
                 cg.Context.AddError("'break' not properly in loop", this);
                 return;
             }
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             cg.EmitBreak();
         }
 
@@ -1117,7 +1378,7 @@ namespace IronPython.Compiler.AST {
                 cg.Context.AddError("'continue' not properly in loop", this);
                 return;
             }
-            cg.EmitPosition(start, end);
+            cg.EmitPosition(Start, End);
             cg.EmitContinue();
         }
 

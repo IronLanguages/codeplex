@@ -275,13 +275,13 @@ def gen_call(nargs, nparams, cw):
     # first emit error checking...
     ndefaults = nparams-nargs
     if nargs != nparams:    
-        cw.write("if (defaults.Length < %d) throw BadArgumentError(%d);" % (ndefaults,nargs))
+        cw.write("if (Defaults.Length < %d) throw BadArgumentError(%d);" % (ndefaults,nargs))
     
     # emit the common case of no recursion check
     if (nargs == nparams):
         cw.write("if(!EnforceRecursion) return target(%s);" % ", ".join(args))
     else:        
-        dargs = args + ["defaults[defaults.Length - %d]" % i for i in range(ndefaults, 0, -1)]
+        dargs = args + ["Defaults[Defaults.Length - %d]" % i for i in range(ndefaults, 0, -1)]
         cw.write("if(!EnforceRecursion) return target(%s);" % ", ".join(dargs))
     
     # emit non-common case of recursion check
@@ -292,7 +292,7 @@ def gen_call(nargs, nparams, cw):
     if (nargs == nparams):
         cw.write("return target(%s);" % ", ".join(args))
     else:        
-        dargs = args + ["defaults[defaults.Length - %d]" % i for i in range(ndefaults, 0, -1)]
+        dargs = args + ["Defaults[Defaults.Length - %d]" % i for i in range(ndefaults, 0, -1)]
         cw.write("return target(%s);" % ", ".join(dargs))
     
     cw.finally_block()
@@ -379,7 +379,7 @@ def gen_function(nparams, cw):
     cw.exit_block()
 
     cw.enter_block("public override object Clone()")
-    cw.write("    return new Function%d(Module, Name, target, argNames, defaults);" % nparams)
+    cw.write("    return new Function%d(Module, Name, target, ArgNames, Defaults);" % nparams)
     cw.exit_block()
 
     cw.exit_block()

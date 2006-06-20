@@ -27,24 +27,98 @@ namespace IronPython.Compiler.AST {
 
         // *** BEGIN GENERATED CODE ***
 
-        public static readonly BinaryOperator Add = new BinaryOperator("+", new CallTarget2(Ops.Add), new CallTarget2(Ops.InPlaceAdd), 4);
-        public static readonly BinaryOperator Subtract = new BinaryOperator("-", new CallTarget2(Ops.Subtract), new CallTarget2(Ops.InPlaceSubtract), 4);
-        public static readonly BinaryOperator Power = new BinaryOperator("**", new CallTarget2(Ops.Power), new CallTarget2(Ops.InPlacePower), 6);
-        public static readonly BinaryOperator Multiply = new BinaryOperator("*", new CallTarget2(Ops.Multiply), new CallTarget2(Ops.InPlaceMultiply), 5);
-        public static readonly BinaryOperator FloorDivide = new BinaryOperator("//", new CallTarget2(Ops.FloorDivide), new CallTarget2(Ops.InPlaceFloorDivide), 5);
-        public static readonly BinaryOperator Divide = new DivisionOperator("/", new CallTarget2(Ops.Divide), new CallTarget2(Ops.InPlaceDivide), new CallTarget2(Ops.TrueDivide), new CallTarget2(Ops.InPlaceTrueDivide), 5);
-        public static readonly BinaryOperator Mod = new BinaryOperator("%", new CallTarget2(Ops.Mod), new CallTarget2(Ops.InPlaceMod), 5);
-        public static readonly BinaryOperator LeftShift = new BinaryOperator("<<", new CallTarget2(Ops.LeftShift), new CallTarget2(Ops.InPlaceLeftShift), 3);
-        public static readonly BinaryOperator RightShift = new BinaryOperator(">>", new CallTarget2(Ops.RightShift), new CallTarget2(Ops.InPlaceRightShift), 3);
-        public static readonly BinaryOperator BitwiseAnd = new BinaryOperator("&", new CallTarget2(Ops.BitwiseAnd), new CallTarget2(Ops.InPlaceBitwiseAnd), 2);
-        public static readonly BinaryOperator BitwiseOr = new BinaryOperator("|", new CallTarget2(Ops.BitwiseOr), new CallTarget2(Ops.InPlaceBitwiseOr), 0);
-        public static readonly BinaryOperator Xor = new BinaryOperator("^", new CallTarget2(Ops.Xor), new CallTarget2(Ops.InPlaceXor), 1);
-        public static readonly BinaryOperator LessThan = new BinaryOperator("<", new CallTarget2(Ops.LessThan), null, -1);
-        public static readonly BinaryOperator GreaterThan = new BinaryOperator(">", new CallTarget2(Ops.GreaterThan), null, -1);
-        public static readonly BinaryOperator LessThanOrEqual = new BinaryOperator("<=", new CallTarget2(Ops.LessThanOrEqual), null, -1);
-        public static readonly BinaryOperator GreaterThanOrEqual = new BinaryOperator(">=", new CallTarget2(Ops.GreaterThanOrEqual), null, -1);
-        public static readonly BinaryOperator Equal = new BinaryOperator("==", new CallTarget2(Ops.Equal), null, -1);
-        public static readonly BinaryOperator NotEqual = new BinaryOperator("!=", new CallTarget2(Ops.NotEqual), null, -1);
+        private static readonly BinaryOperator add = new BinaryOperator("+", new CallTarget2(Ops.Add), new CallTarget2(Ops.InPlaceAdd), 4);
+        private static readonly BinaryOperator sub = new BinaryOperator("-", new CallTarget2(Ops.Subtract), new CallTarget2(Ops.InPlaceSubtract), 4);
+        private static readonly BinaryOperator pow = new BinaryOperator("**", new CallTarget2(Ops.Power), new CallTarget2(Ops.InPlacePower), 6);
+        private static readonly BinaryOperator mul = new BinaryOperator("*", new CallTarget2(Ops.Multiply), new CallTarget2(Ops.InPlaceMultiply), 5);
+        private static readonly BinaryOperator floordiv = new BinaryOperator("//", new CallTarget2(Ops.FloorDivide), new CallTarget2(Ops.InPlaceFloorDivide), 5);
+        private static readonly BinaryOperator div = new DivisionOperator("/", new CallTarget2(Ops.Divide), new CallTarget2(Ops.InPlaceDivide), new CallTarget2(Ops.TrueDivide), new CallTarget2(Ops.InPlaceTrueDivide), 5);
+        private static readonly BinaryOperator mod = new BinaryOperator("%", new CallTarget2(Ops.Mod), new CallTarget2(Ops.InPlaceMod), 5);
+        private static readonly BinaryOperator lshift = new BinaryOperator("<<", new CallTarget2(Ops.LeftShift), new CallTarget2(Ops.InPlaceLeftShift), 3);
+        private static readonly BinaryOperator rshift = new BinaryOperator(">>", new CallTarget2(Ops.RightShift), new CallTarget2(Ops.InPlaceRightShift), 3);
+        private static readonly BinaryOperator and = new BinaryOperator("&", new CallTarget2(Ops.BitwiseAnd), new CallTarget2(Ops.InPlaceBitwiseAnd), 2);
+        private static readonly BinaryOperator or = new BinaryOperator("|", new CallTarget2(Ops.BitwiseOr), new CallTarget2(Ops.InPlaceBitwiseOr), 0);
+        private static readonly BinaryOperator xor = new BinaryOperator("^", new CallTarget2(Ops.Xor), new CallTarget2(Ops.InPlaceXor), 1);
+        private static readonly BinaryOperator lt = new BinaryOperator("<", new CallTarget2(Ops.LessThan), null, -1);
+        private static readonly BinaryOperator gt = new BinaryOperator(">", new CallTarget2(Ops.GreaterThan), null, -1);
+        private static readonly BinaryOperator le = new BinaryOperator("<=", new CallTarget2(Ops.LessThanOrEqual), null, -1);
+        private static readonly BinaryOperator ge = new BinaryOperator(">=", new CallTarget2(Ops.GreaterThanOrEqual), null, -1);
+        private static readonly BinaryOperator eq = new BinaryOperator("==", new CallTarget2(Ops.Equal), null, -1);
+        private static readonly BinaryOperator ne = new BinaryOperator("!=", new CallTarget2(Ops.NotEqual), null, -1);
+
+
+        public static BinaryOperator Add {
+            get { return add; }
+        }
+
+        public static BinaryOperator Subtract {
+            get { return sub; }
+        }
+
+        public static BinaryOperator Power {
+            get { return pow; }
+        }
+
+        public static BinaryOperator Multiply {
+            get { return mul; }
+        }
+
+        public static BinaryOperator FloorDivide {
+            get { return floordiv; }
+        }
+
+        public static BinaryOperator Divide {
+            get { return div; }
+        }
+
+        public static BinaryOperator Mod {
+            get { return mod; }
+        }
+
+        public static BinaryOperator LeftShift {
+            get { return lshift; }
+        }
+
+        public static BinaryOperator RightShift {
+            get { return rshift; }
+        }
+
+        public static BinaryOperator BitwiseAnd {
+            get { return and; }
+        }
+
+        public static BinaryOperator BitwiseOr {
+            get { return or; }
+        }
+
+        public static BinaryOperator Xor {
+            get { return xor; }
+        }
+
+        public static BinaryOperator LessThan {
+            get { return lt; }
+        }
+
+        public static BinaryOperator GreaterThan {
+            get { return gt; }
+        }
+
+        public static BinaryOperator LessThanOrEqual {
+            get { return le; }
+        }
+
+        public static BinaryOperator GreaterThanOrEqual {
+            get { return ge; }
+        }
+
+        public static BinaryOperator Equal {
+            get { return eq; }
+        }
+
+        public static BinaryOperator NotEqual {
+            get { return ne; }
+        }
+
 
         // *** END GENERATED CODE ***
 

@@ -24,15 +24,64 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.AST {
     public abstract partial class Operator {
-        public static readonly BinaryOperator Is = new BinaryOperator("is", new CallTarget2(Ops.Is), null, -1);
-        public static readonly BinaryOperator IsNot = new BinaryOperator("is not", new CallTarget2(Ops.IsNot), null, -1);
-        public static readonly BinaryOperator In = new BinaryOperator("in", new CallTarget2(Ops.In), null, -1);
-        public static readonly BinaryOperator NotIn = new BinaryOperator("not in", new CallTarget2(Ops.NotIn), null, -1);
+        private static readonly BinaryOperator binIs = new BinaryOperator("is", new CallTarget2(Ops.Is), null, -1);
+        private static readonly BinaryOperator binIsNot = new BinaryOperator("is not", new CallTarget2(Ops.IsNot), null, -1);
+        private static readonly BinaryOperator binIn = new BinaryOperator("in", new CallTarget2(Ops.In), null, -1);
+        private static readonly BinaryOperator binNotIn = new BinaryOperator("not in", new CallTarget2(Ops.NotIn), null, -1);
 
-        public static readonly UnaryOperator Pos = new UnaryOperator("+", new CallTarget1(Ops.Plus));
-        public static readonly UnaryOperator Neg = new UnaryOperator("-", new CallTarget1(Ops.Negate));
-        public static readonly UnaryOperator Invert = new UnaryOperator("~", new CallTarget1(Ops.OnesComplement));
-        public static readonly UnaryOperator Not = new UnaryOperator("not", new CallTarget1(Ops.Not));
+        private static readonly UnaryOperator unPos = new UnaryOperator("+", new CallTarget1(Ops.Plus));
+        private static readonly UnaryOperator unNeg = new UnaryOperator("-", new CallTarget1(Ops.Negate));
+        private static readonly UnaryOperator unInvert = new UnaryOperator("~", new CallTarget1(Ops.OnesComplement));
+        private static readonly UnaryOperator unNot = new UnaryOperator("not", new CallTarget1(Ops.Not));
+
+
+        public static BinaryOperator Is {
+            get {
+                return binIs;
+            }
+        }
+
+        public static BinaryOperator IsNot {
+            get {
+                return binIsNot;
+            }
+        }
+
+        public static BinaryOperator In {
+            get {
+                return binIn;
+            }
+        }
+
+        public static BinaryOperator NotIn {
+            get {
+                return binNotIn;
+            }
+        }
+
+        public static UnaryOperator Pos {
+            get {
+                return unPos;
+            }
+        }
+
+        public static UnaryOperator Neg {
+            get {
+                return unNeg;
+            }
+        }
+
+        public static UnaryOperator Invert {
+            get {
+                return unInvert;
+            }
+        }
+
+        public static UnaryOperator Not {
+            get {
+                return unNot;   
+            }
+        }
 
         public readonly string symbol;
         public readonly int precedence;
@@ -44,7 +93,7 @@ namespace IronPython.Compiler.AST {
     }
 
     public class UnaryOperator : Operator {
-        public readonly CallTarget1 target;
+        private readonly CallTarget1 target;
 
         public UnaryOperator(string symbol, CallTarget1 target)
             : base(symbol, -1) {
@@ -54,16 +103,34 @@ namespace IronPython.Compiler.AST {
         public object Evaluate(object o) {
             return target(o);
         }
+
+        public CallTarget1 Target {
+            get {
+                return target;
+            }
+        }
     }
 
     public class BinaryOperator : Operator {
-        public readonly CallTarget2 target;
-        public readonly CallTarget2 inPlaceTarget;
+        private readonly CallTarget2 target;
+        private readonly CallTarget2 inPlaceTarget;
 
         public BinaryOperator(string symbol, CallTarget2 target, CallTarget2 inPlaceTarget, int precedence)
             : base(symbol, precedence) {
             this.target = target;
             this.inPlaceTarget = inPlaceTarget;
+        }
+
+        public CallTarget2 Target {
+            get {
+                return target;
+            }
+        }
+
+        public CallTarget2 InPlaceTarget {
+            get {
+                return inPlaceTarget;
+            }
         }
 
         internal virtual void Emit(CodeGen cg) {
@@ -86,8 +153,17 @@ namespace IronPython.Compiler.AST {
     }
 
     public class DivisionOperator : BinaryOperator {
-        public readonly CallTarget2 targetTrue;
-        public readonly CallTarget2 inPlaceTargetTrue;
+        private readonly CallTarget2 targetTrue;
+        private readonly CallTarget2 inPlaceTargetTrue;
+
+        public CallTarget2 TargetTrue {
+            get { return targetTrue; }
+        }
+
+        public CallTarget2 InPlaceTargetTrue {
+            get { return inPlaceTargetTrue; }
+        } 
+
 
         public DivisionOperator(string symbol, CallTarget2 target, CallTarget2 inPlaceTarget, CallTarget2 targetTrue, CallTarget2 inPlaceTargetTrue, int precedence)
             : base(symbol, target, inPlaceTarget, precedence) {

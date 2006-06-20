@@ -42,14 +42,14 @@ namespace IronPython.Compiler.AST {
 
         const string tupleArgHeader = "tupleArg#";
 
-        public Location header;
-        public readonly SymbolId name;
-        public readonly Expr[] parameters;
-        public readonly Expr[] defaults;
-        public readonly FuncDefType flags;
-        public Expr decorators;
-        public string filename;
-        public int yieldCount = 0;
+        private Location header;
+        private readonly SymbolId name;
+        private readonly Expr[] parameters;
+        private readonly Expr[] defaults;        
+        private readonly FuncDefType flags;        
+        private Expr decorators;        
+        private string filename;        
+        private int yieldCount = 0;        
 
         public FuncDef(SymbolId name, Expr[] parameters, Expr[] defaults, FuncDefType flags, string sourceFile)
             : this(name, parameters, defaults, flags, null, sourceFile) {
@@ -63,6 +63,42 @@ namespace IronPython.Compiler.AST {
             this.flags = flags;
             this.decorators = null;
             this.filename = sourceFile;
+        }
+
+        public Location Header {
+            get { return header; }
+            set { header = value; }
+        }
+
+        public SymbolId Name {
+            get { return name; }
+        }
+
+        public IList<Expr> Parameters {
+            get { return parameters; }
+        }
+
+        public IList<Expr> Defaults {
+            get { return defaults; }
+        }
+
+        public FuncDefType Flags {
+            get { return flags; }
+        }
+
+        public Expr Decorators {
+            get { return decorators; }
+            set { decorators = value; }
+        }
+
+        public string Filename {
+            get { return filename; }
+            set { filename = value; }
+        }
+
+        public int YieldCount {
+            get { return yieldCount; }
+            set { yieldCount = value; }
         }
 
         public object MakeFunction(NameEnv env) {
@@ -86,7 +122,7 @@ namespace IronPython.Compiler.AST {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(start, header);
+            cg.EmitPosition(Start, header);
             SignatureInfo sigInfo = GetSignature(cg);
 
             FlowChecker.Check(this);
@@ -161,7 +197,7 @@ namespace IronPython.Compiler.AST {
             cg.Emit(OpCodes.Castclass, typeof(FunctionCode));
             cg.Emit(OpCodes.Dup);
             functionCode.EmitSet(cg);
-            cg.EmitInt(this.start.line);
+            cg.EmitInt(this.Start.line);
             cg.EmitCall(typeof(FunctionCode), "SetLineNumber");
 
             functionCode.EmitGet(cg);
@@ -415,14 +451,14 @@ namespace IronPython.Compiler.AST {
         }
 
         private static void AppendTupleParamNames(StringBuilder sb, TupleExpr param) {
-            for (int i = 0; i < param.items.Length; i++) {
-                NameExpr ne = param.items[i] as NameExpr;
+            for (int i = 0; i < param.Items.Length; i++) {
+                NameExpr ne = param.Items[i] as NameExpr;
                 if (ne != null) {
                     sb.Append('!');
-                    sb.Append(ne.name.GetString());
+                    sb.Append(ne.Name.GetString());
                 } else {
                     // nested tuple
-                    AppendTupleParamNames(sb, param.items[i] as TupleExpr);
+                    AppendTupleParamNames(sb, param.Items[i] as TupleExpr);
                 }
             }
         }
@@ -460,7 +496,7 @@ namespace IronPython.Compiler.AST {
             if (ne == null) {
                 return EncodeTupleParamName((TupleExpr)param);
             } else {
-                return ne.name;
+                return ne.Name;
             }
         }
 
@@ -541,11 +577,11 @@ namespace IronPython.Compiler.AST {
                 switch (state) {
                     case State.Try:
                         stmt.AddYieldTarget(yt.FixForTry(cg));
-                        ys.label = yt.tryBranchTarget;
+                        ys.Label = yt.tryBranchTarget;
                         break;
                     case State.Handler:
-                        stmt.yieldInExcept = true;
-                        ys.label = yt.topBranchTarget;
+                        stmt.YieldInExcept = true;
+                        ys.Label = yt.topBranchTarget;
                         break;
                 }
             }
@@ -569,7 +605,7 @@ namespace IronPython.Compiler.AST {
                         break;
                     case State.Finally:
                         stmt.AddYieldTarget(yt.FixForFinally(cg));
-                        ys.label = yt.tryBranchTarget;
+                        ys.Label = yt.tryBranchTarget;
                         break;
                 }
             }
@@ -583,7 +619,7 @@ namespace IronPython.Compiler.AST {
         private YieldLabelBuilder(FuncDef func, CodeGen cg) {
             this.func = func;
             this.cg = cg;
-            this.topYields = new YieldTarget[func.yieldCount];
+            this.topYields = new YieldTarget[func.YieldCount];
         }
 
         public static YieldTarget[] BuildYieldTargets(FuncDef func, CodeGen cg) {
@@ -602,9 +638,9 @@ namespace IronPython.Compiler.AST {
         public override bool Walk(TryFinallyStmt node) {
             TryFinallyBlock tfb = new TryFinallyBlock(node);
             tryBlocks.Push(tfb);
-            node.body.Walk(this);
+            node.Body.Walk(this);
             tfb.state = ExceptionBlock.State.Finally;
-            node.finallyStmt.Walk(this);
+            node.FinallyStmt.Walk(this);
             ExceptionBlock eb = tryBlocks.Pop();
             Debug.Assert((object)eb == (object)tfb);
             return false;
@@ -614,30 +650,30 @@ namespace IronPython.Compiler.AST {
         public override bool Walk(TryStmt node) {
             TryBlock tb = new TryBlock(node);
             tryBlocks.Push(tb);
-            node.body.Walk(this);
+            node.Body.Walk(this);
 
             tb.state = TryBlock.State.Handler;
-            foreach (TryStmtHandler handler in node.handlers) {
+            foreach (TryStmtHandler handler in node.Handlers) {
                 handler.Walk(this);
             }
 
             ExceptionBlock eb = tryBlocks.Pop();
             Debug.Assert((object)tb == (object)eb);
 
-            if (node.elseStmt != null) {
-                node.elseStmt.Walk(this);
+            if (node.ElseStatement != null) {
+                node.ElseStatement.Walk(this);
             }
             return false;
         }
 
         public override void PostWalk(YieldStmt node) {
-            topYields[node.index] = new YieldTarget(cg.DefineLabel());
+            topYields[node.Index] = new YieldTarget(cg.DefineLabel());
 
             if (tryBlocks.Count == 0) {
-                node.label = topYields[node.index].topBranchTarget;
+                node.Label = topYields[node.Index].topBranchTarget;
             } else if (tryBlocks.Count == 1) {
                 ExceptionBlock eb = tryBlocks.Peek();
-                eb.AddYieldTarget(node, topYields[node.index], cg);
+                eb.AddYieldTarget(node, topYields[node.Index], cg);
             } else {
                 cg.Context.AddError("yield in more than one try block", node);
             }

@@ -92,8 +92,13 @@ namespace IronPython.Modules {
             throw Ops.NotImplementedError("gc.get_referents isn't implemented");
         }
 
-        [PythonName("garbage")]
-        public static readonly List garbage = new List();
+        
+        public static List Garbage {
+            [PythonName("garbage")]
+            get {
+                return new List();
+            }
+        }
 
     }
 }

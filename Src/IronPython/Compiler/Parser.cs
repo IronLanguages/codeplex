@@ -308,8 +308,8 @@ namespace IronPython.Compiler {
                 l.Add(s);
                 fromFutureAllowed = false;
                 if (s is ExprStmt) {
-                    ConstantExpr ce = ((ExprStmt)s).expr as ConstantExpr;
-                    if (ce != null && ce.value is string) {
+                    ConstantExpr ce = ((ExprStmt)s).Expression as ConstantExpr;
+                    if (ce != null && ce.Value is string) {
                         // doc string
                         fromFutureAllowed = true;
                     }
@@ -498,7 +498,7 @@ namespace IronPython.Compiler {
         private Stmt ParseSimpleStmt() {
             Stmt s = ParseSmallStmt();
             if (MaybeEat(TokenKind.Semicolon)) {
-                Location start = s.start;
+                Location start = s.Start;
                 List<Stmt> l = new List<Stmt>();
                 l.Add(s);
                 while (true) {
@@ -604,7 +604,7 @@ namespace IronPython.Compiler {
             if (current == null) {
                 ReportSyntaxError("'yield' outside function");
             } else {
-                yieldId = current.yieldCount++;
+                yieldId = current.YieldCount++;
             }
             Expr e = ParseTestListAsExpr(false);
             YieldStmt ret = new YieldStmt(e, yieldId);
@@ -633,19 +633,19 @@ namespace IronPython.Compiler {
 
                 //We check for legal assignment targets during code generation rather than parsing
                 Stmt ret = new AssignStmt(lhss, rhs);
-                ret.SetLoc(lhs.start, GetEnd());
+                ret.SetLoc(lhs.Start, GetEnd());
                 return ret;
             } else {
                 BinaryOperator op = GetAssignOp(PeekToken());
                 if (op == null) {
                     Stmt ret = new ExprStmt(lhs);
-                    ret.SetLoc(lhs.start, GetEnd());
+                    ret.SetLoc(lhs.Start, GetEnd());
                     return ret;
                 } else {
                     NextToken();
                     Expr rhs = ParseTestListAsExpr(false);
                     Stmt ret = new AugAssignStmt(op, lhs, rhs);
-                    ret.SetLoc(lhs.start, GetEnd());
+                    ret.SetLoc(lhs.Start, GetEnd());
                     return ret;
                 }
             }
@@ -729,7 +729,7 @@ namespace IronPython.Compiler {
 
             // Process from __future__ statement
 
-            if (dname.names.Length == 1 && dname.names[0] == SymbolTable.Future) {
+            if (dname.Names.Count == 1 && dname.Names[0] == SymbolTable.Future) {
                 if (!fromFutureAllowed) {
                     ReportSyntaxError("from __future__ imports must occur at the beginning of the file");
                 }
@@ -930,7 +930,7 @@ namespace IronPython.Compiler {
             privatePrefix = savedPrefix;
 
             ClassDef ret = new ClassDef(name, bases, body);
-            ret.header = mid;
+            ret.Header = mid;
             ret.SetLoc(start, GetEnd());
             return ret;
         }
@@ -974,15 +974,15 @@ namespace IronPython.Compiler {
             Location start = GetStart();
             List<Expr> decorators = ParseDecorators();
             FuncDef fnc = ParseFuncDef();
-            Expr root = new NameExpr(fnc.name);
+            Expr root = new NameExpr(fnc.Name);
             root.SetLoc(start, GetEnd());
 
             for (int i = decorators.Count; i > 0; i--) {
                 Expr decorator = (Expr)decorators[i - 1];
                 root = FinishCallExpr(decorator, new Arg(root));
-                root.SetLoc(decorator.start, decorator.end);
+                root.SetLoc(decorator.Start, decorator.End);
             }
-            fnc.decorators = root;
+            fnc.Decorators = root;
 
             return fnc;
         }
@@ -1014,7 +1014,7 @@ namespace IronPython.Compiler {
             System.Diagnostics.Debug.Assert(ret == ret2);
 
             ret.body = body;
-            ret.header = rEnd;
+            ret.Header = rEnd;
 
             context.Sink.MatchPair(new CodeSpan(lStart, lEnd), new CodeSpan(rStart, rEnd), grouping);
 
@@ -1160,10 +1160,10 @@ namespace IronPython.Compiler {
 
             Expr expr = ParseOldTest();
             Stmt body = new ReturnStmt(expr);
-            body.SetLoc(expr.start, expr.end);
+            body.SetLoc(expr.Start, expr.End);
             FuncDef func = new FuncDef(SymbolTable.StringToId("<lambda$" + (oldLambdaCount++) + ">"), parameters, defaults, flags, body, context.SourceFile);
             func.SetLoc(start, GetEnd());
-            func.header = mid;
+            func.Header = mid;
             LambdaExpr ret = new LambdaExpr(func);
             ret.SetLoc(start, GetEnd());
             return ret;
@@ -1181,10 +1181,10 @@ namespace IronPython.Compiler {
 
             Expr expr = ParseTest();
             Stmt body = new ReturnStmt(expr);
-            body.SetLoc(expr.start, expr.end);
+            body.SetLoc(expr.Start, expr.End);
             FuncDef func = new FuncDef(SymbolTable.StringToId("<lambda$" + (lambdaCount++) + ">"), parameters, defaults, flags, body, context.SourceFile);
             func.SetLoc(start, GetEnd());
-            func.header = mid;
+            func.Header = mid;
             LambdaExpr ret = new LambdaExpr(func);
             ret.SetLoc(start, GetEnd());
             return ret;
@@ -1230,7 +1230,7 @@ namespace IronPython.Compiler {
                 else_ = ParseSuite();
             }
             ForStmt ret = new ForStmt(lhs, list, body, else_);
-            ret.header = header;
+            ret.Header = header;
             ret.SetLoc(start, GetEnd());
             return ret;
         }
@@ -1263,8 +1263,8 @@ namespace IronPython.Compiler {
             Location header = GetEnd();
             Stmt suite = ParseSuite();
             IfStmtTest ret = new IfStmtTest(test, suite);
-            ret.SetLoc(start, suite.end);
-            ret.header = header;
+            ret.SetLoc(start, suite.End);
+            ret.Header = header;
             return ret;
         }
 
@@ -1282,7 +1282,7 @@ namespace IronPython.Compiler {
             if (MaybeEat(TokenKind.KeywordFinally)) {
                 Stmt finally_ = ParseSuite();
                 TryFinallyStmt tfs = new TryFinallyStmt(body, finally_);
-                tfs.header = mid;
+                tfs.Header = mid;
                 ret = tfs;
             } else {
                 List<TryStmtHandler> l = new List<TryStmtHandler>();
@@ -1297,7 +1297,7 @@ namespace IronPython.Compiler {
                 }
 
                 TryStmt ts = new TryStmt(body, handlers, else_);
-                ts.header = mid;
+                ts.Header = mid;
                 ret = ts;
             }
             ret.SetLoc(start, GetEnd());
@@ -1318,7 +1318,7 @@ namespace IronPython.Compiler {
             Location mid = GetEnd();
             Stmt body = ParseSuite();
             TryStmtHandler ret = new TryStmtHandler(test1, test2, body);
-            ret.header = mid;
+            ret.Header = mid;
             ret.SetLoc(start, GetEnd());
             return ret;
         }
@@ -1376,7 +1376,7 @@ namespace IronPython.Compiler {
 
             Expr ret = ParseOrTest();
             if (MaybeEat(TokenKind.KeywordIf)) {
-                Location start = ret.start;
+                Location start = ret.Start;
                 ret = ParseConditionalTest(ret);
                 ret.SetLoc(start, GetEnd());
             }
@@ -1388,7 +1388,7 @@ namespace IronPython.Compiler {
         private Expr ParseOrTest() {
             Expr ret = ParseAndTest();
             while (MaybeEat(TokenKind.KeywordOr)) {
-                Location start = ret.start;
+                Location start = ret.Start;
                 ret = new OrExpr(ret, ParseAndTest());
                 ret.SetLoc(start, GetEnd());
             }
@@ -1398,7 +1398,7 @@ namespace IronPython.Compiler {
         private Expr ParseConditionalTest(Expr trueExpr) {
             Expr test = ParseOrTest();
             Eat(TokenKind.KeywordElse);
-            Location start = test.start;
+            Location start = test.Start;
             Expr falseExpr = ParseTest();
             test.SetLoc(start, GetEnd());
             return new CondExpr(test, trueExpr, falseExpr);
@@ -1410,7 +1410,7 @@ namespace IronPython.Compiler {
         private Expr ParseAndTest() {
             Expr ret = ParseNotTest();
             while (MaybeEat(TokenKind.KeywordAnd)) {
-                Location start = ret.start;
+                Location start = ret.Start;
                 ret = new AndExpr(ret, ParseAndTest());
                 ret.SetLoc(start, GetEnd());
             }
@@ -1457,7 +1457,7 @@ namespace IronPython.Compiler {
                 }
                 Expr rhs = ParseComparison();
                 BinaryExpr be = new BinaryExpr(op, ret, rhs);
-                be.SetLoc(ret.start, GetEnd());
+                be.SetLoc(ret.Start, GetEnd());
                 ret = be;
             }
         }
@@ -1481,12 +1481,12 @@ namespace IronPython.Compiler {
                 OperatorToken ot = t as OperatorToken;
                 if (ot == null) return ret;
 
-                int prec = ot.op.precedence;
+                int prec = ot.Operator.precedence;
                 if (prec >= precedence) {
                     NextToken();
                     Expr right = ParseExpr(prec + 1);
-                    Location start = ret.start;
-                    ret = new BinaryExpr((BinaryOperator)ot.op, ret, right);
+                    Location start = ret.Start;
+                    ret = new BinaryExpr((BinaryOperator)ot.Operator, ret, right);
                     ret.SetLoc(start, GetEnd());
                 } else {
                     return ret;
@@ -1535,7 +1535,7 @@ namespace IronPython.Compiler {
             Expr ret = ParsePrimary();
             ret = AddTrailers(ret);
             if (MaybeEat(TokenKind.Power)) {
-                Location start = ret.start;
+                Location start = ret.Start;
                 ret = new BinaryExpr(Operator.Power, ret, ParseFactor());
                 ret.SetLoc(start, GetEnd());
             }
@@ -1612,21 +1612,21 @@ namespace IronPython.Compiler {
                         NextToken();
                         Arg[] args = FinishArgListOrGenExpr();
                         CallExpr call = FinishCallExpr(ret, args);
-                        call.SetLoc(ret.start, GetEnd());
+                        call.SetLoc(ret.Start, GetEnd());
                         ret = call;
                         break;
                     case TokenKind.LBracket:
                         NextToken();
                         Expr index = ParseSubscriptList();
                         IndexExpr ie = new IndexExpr(ret, index);
-                        ie.SetLoc(ret.start, GetEnd());
+                        ie.SetLoc(ret.Start, GetEnd());
                         ret = ie;
                         break;
                     case TokenKind.Dot:
                         NextToken();
                         SymbolId name = ReadNameMaybeNone();
                         FieldExpr fe = new FieldExpr(ret, name);
-                        fe.SetLoc(ret.start, GetEnd());
+                        fe.SetLoc(ret.Start, GetEnd());
                         ret = fe;
                         break;
                     default:
@@ -1656,7 +1656,7 @@ namespace IronPython.Compiler {
                 } else {
                     e = ParseTest();
                     if (MaybeEat(TokenKind.Colon)) {
-                        e = FinishSlice(e, e.start);
+                        e = FinishSlice(e, e.Start);
                     }
                 }
 
@@ -1752,7 +1752,7 @@ namespace IronPython.Compiler {
 
                     if (a == null) {                            // Error recovery
                         a = new Arg(e);
-                        a.SetLoc(e.start, GetEnd());
+                        a.SetLoc(e.Start, GetEnd());
                     }
                 } else if (PeekToken(Tokens.KeywordForToken)) {    //  Generator expression
                     a = new Arg(ParseGeneratorExpression(e));
@@ -1762,7 +1762,7 @@ namespace IronPython.Compiler {
                     return new Arg[1] { a };       //  Generator expression is the argument
                 } else {
                     a = new Arg(e);
-                    a.SetLoc(e.start, e.end);
+                    a.SetLoc(e.Start, e.End);
                 }
 
                 //  Was this all?
@@ -1785,19 +1785,19 @@ namespace IronPython.Compiler {
             if (n == null) {
                 ReportSyntaxError("expected name");
                 Arg arg = new Arg(SymbolTable.StringToId(""), t);
-                arg.SetLoc(t.start, t.end);
+                arg.SetLoc(t.Start, t.End);
                 return arg;
             } else {
                 Expr val = ParseTest();
-                Arg arg = new Arg(n.name, val);
-                arg.SetLoc(n.start, val.end);
+                Arg arg = new Arg(n.Name, val);
+                arg.SetLoc(n.Start, val.End);
                 return arg;
             }
         }
 
         private void CheckUniqueArgument(Dictionary<SymbolId, SymbolId> names, Arg arg) {
-            if (arg != null && arg.name != SymbolTable.Empty) {
-                SymbolId name = arg.name;
+            if (arg != null && arg.Name != SymbolTable.Empty) {
+                SymbolId name = arg.Name;
                 if (names.ContainsKey(name)) {
                     ReportSyntaxError("duplicate keyword argument");
                 }
@@ -1989,7 +1989,7 @@ namespace IronPython.Compiler {
                     current = NestGenExpr(current, ParseGenExprIf());
                 } else {
                     YieldStmt ys = new YieldStmt(test, 0);
-                    ys.SetLoc(test.start, test.end);
+                    ys.SetLoc(test.Start, test.End);
                     NestGenExpr(current, ys);
                     break;
                 }
@@ -1998,27 +1998,27 @@ namespace IronPython.Compiler {
             SymbolId fname = SymbolTable.StringToId("__gen_" + System.Threading.Interlocked.Increment(ref genexp_counter));
             NameExpr pname = new NameExpr(SymbolTable.GeneratorParmName);
             FuncDef func = new FuncDef(fname, new Expr[] { pname }, new Expr[] { }, FuncDefType.None, root, context.SourceFile);
-            func.yieldCount = 1;
-            func.SetLoc(root.start, GetEnd());
-            func.header = root.end;
+            func.YieldCount = 1;
+            func.SetLoc(root.Start, GetEnd());
+            func.Header = root.End;
 
             //  Transform the root "for" statement
-            Expr outermost = root.list;
-            root.list = pname;
+            Expr outermost = root.List;
+            root.List = pname;
 
             CallExpr gexp = FinishCallExpr(new NameExpr(fname), new Arg(outermost));
             CallExpr iter = FinishCallExpr(new NameExpr(SymbolTable.Iter), new Arg(gexp));
 
             GenExpr ret = new GenExpr(func, iter);
-            ret.SetLoc(root.start, GetEnd());
+            ret.SetLoc(root.Start, GetEnd());
             return ret;
         }
 
         private static Stmt NestGenExpr(Stmt current, Stmt nested) {
             if (current is ForStmt) {
-                ((ForStmt)current).body = nested;
+                ((ForStmt)current).Body = nested;
             } else if (current is IfStmt) {
-                ((IfStmt)current).tests[0].body = nested;
+                ((IfStmt)current).Tests[0].Body = nested;
             }
             return nested;
         }
@@ -2041,7 +2041,7 @@ namespace IronPython.Compiler {
             ForStmt gef = new ForStmt(lhs, test, null, null);
             Location end = GetEnd();
             gef.SetLoc(start, end);
-            gef.header = end;
+            gef.Header = end;
             return gef;
         }
 
@@ -2052,7 +2052,7 @@ namespace IronPython.Compiler {
             Expr test = ParseOldTest();
             IfStmtTest ist = new IfStmtTest(test, null);
             Location end = GetEnd();
-            ist.header = end;
+            ist.Header = end;
             ist.SetLoc(start, end);
             IfStmt gei = new IfStmt(new IfStmtTest[] { ist }, null);
             gei.SetLoc(start, end);
@@ -2074,7 +2074,7 @@ namespace IronPython.Compiler {
                 Eat(TokenKind.Colon);
                 Expr e2 = ParseTest();
                 SliceExpr se = new SliceExpr(e1, e2, null);
-                se.SetLoc(e1.start, e2.end);
+                se.SetLoc(e1.Start, e2.End);
                 l.Add(se);
 
                 if (!MaybeEat(TokenKind.Comma)) {
@@ -2210,7 +2210,7 @@ namespace IronPython.Compiler {
             Expr[] exprs = l.ToArray();
             TupleExpr te = new TupleExpr(expandable && !trailingComma, exprs);
             if (exprs.Length > 0) {
-                te.SetLoc(exprs[0].start, exprs[exprs.Length - 1].end);
+                te.SetLoc(exprs[0].Start, exprs[exprs.Length - 1].End);
             }
             return te;
         }
@@ -2280,16 +2280,16 @@ namespace IronPython.Compiler {
             int extraArgs = 0;
 
             foreach (Arg arg in args) {
-                if (arg.name == SymbolTable.Empty) {
+                if (arg.Name == SymbolTable.Empty) {
                     if (hasArgsTuple || hasKeywordDict || keywordCount > 0) {
                         ReportSyntaxError("non-keyword arg after keyword arg");
                     }
-                } else if (arg.name == SymbolTable.Star) {
+                } else if (arg.Name == SymbolTable.Star) {
                     if (hasArgsTuple || hasKeywordDict) {
                         ReportSyntaxError("only one * allowed");
                     }
                     hasArgsTuple = true; extraArgs++;
-                } else if (arg.name == SymbolTable.StarStar) {
+                } else if (arg.Name == SymbolTable.StarStar) {
                     if (hasKeywordDict) {
                         ReportSyntaxError("only on ** allowed");
                     }

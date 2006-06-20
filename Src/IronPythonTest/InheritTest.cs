@@ -126,6 +126,45 @@ namespace IronPythonTest {
         }
     }
 
+    public class BigCtor {
+        public int A, B, C, D, E;
+        public BigCtor(int a, int b, int c, int d, int e) {
+            A = a;
+            B = b;
+            C = c;
+            D = d;
+            E = e;
+        }
+    }
+
+    public class BiggerCtor {
+        public int A, B, C, D, E, F;
+        public BiggerCtor(int a, int b, int c, int d, int e, int f) {
+            A = a;
+            B = b;
+            C = c;
+            D = d;
+            E = e;
+            F = f;
+        }
+    }
+
+    public class MixedBigCtor {
+        public int A, B, C, D, E;
+        public MixedBigCtor(int a, int b) {
+            A = a;
+            B = b;
+        }
+
+        public MixedBigCtor(int a, int b, int c, int d, int e) {
+            A = a;
+            B = b;
+            C = c;
+            D = d;
+            E = e;
+        }
+    }
+
     public class BindingTestClass {
         public static object Bind(bool parm) {
             return parm;

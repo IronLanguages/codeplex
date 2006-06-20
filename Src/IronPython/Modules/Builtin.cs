@@ -578,7 +578,7 @@ namespace IronPython.Modules {
                 if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}\n\n", pf.Name, pf.Module.ModuleName);
 
                 AppendIndent(doc, indent);
-                doc.AppendFormat("{0}({1})\n", pf.Name, String.Join(", ", pf.argNames));
+                doc.AppendFormat("{0}({1})\n", pf.Name, String.Join(", ", pf.ArgNames));
                 string pfDoc = Converter.ConvertToString(pf.Documentation);
                 if (!String.IsNullOrEmpty(pfDoc)) {
                     AppendMultiLine(doc, pfDoc, indent);
