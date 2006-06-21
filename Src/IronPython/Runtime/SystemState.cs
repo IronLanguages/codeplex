@@ -73,6 +73,9 @@ namespace IronPython.Runtime {
                 // These fields do not get reset on "reload(sys)"
                 argv = Ops.MakeList();
                 modules = new Dict();
+                modules["sys"] = this;
+                modules["__builtin__"] = Importer.MakePythonModule(this, "__builtin__", TypeCache.Builtin);
+
                 path = List.Make();
                 ps1 = ">>> ";
                 ps2 = "... ";
@@ -121,6 +124,7 @@ namespace IronPython.Runtime {
                 warnoptions = List.Make();
                 executable = "";
             }
+
         }
 
         public override string ToString() {

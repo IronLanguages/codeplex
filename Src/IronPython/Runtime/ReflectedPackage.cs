@@ -183,9 +183,6 @@ namespace IronPython.Runtime {
                 builtins.Remove("nt");
             }
 
-            state.modules["sys"] = state;
-            state.modules["__builtin__"] = Importer.MakePythonModule(state, "__builtin__", TypeCache.Builtin);
-
             state.builtin_module_names = Tuple.Make(builtins.Keys);            
         }
 

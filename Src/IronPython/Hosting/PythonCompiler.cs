@@ -97,7 +97,7 @@ namespace IronPython.Hosting {
 
     public class PythonCompiler {
         private IList<string> sourceFiles;
-        private SystemState state = new SystemState();
+        private SystemState state;
 
         public IList<string> SourceFiles {
             get { return sourceFiles; }
@@ -197,6 +197,8 @@ namespace IronPython.Hosting {
             this.resourceFiles = resourceFiles;
             this.outputAssembly = outputAssembly;
             this.compilerSink = compilerSink;
+            PythonEngine.options = new Options();
+            this.state = new SystemState();
         }
 
         public void Compile() {

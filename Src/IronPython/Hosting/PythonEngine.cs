@@ -87,7 +87,7 @@ namespace IronPython.Hosting {
         #region Private Data Members
         // Every PythonEngine has its own SystemState. This allows multiple engines to exist simultaneously,
         // while maintaingin unique significant state for every engine..
-        private SystemState systemState = new SystemState();
+        private SystemState systemState;
 
         private ModuleScope defaultScope;
         
@@ -101,6 +101,7 @@ namespace IronPython.Hosting {
 
             defaultScope = new ModuleScope("__main__");
             options = new Options();
+            systemState = new SystemState();
         }
 
         public PythonEngine(Options opts)
@@ -108,7 +109,7 @@ namespace IronPython.Hosting {
             if (opts == null) 
                 throw new ArgumentNullException("No options specified for PythonEngine");
             // Save the options. Clone it first to prevent the client from unexpectedly mutating it
-            options = opts.Clone();
+            options = opts.Clone();            
         }
 
         public void Shutdown() {
