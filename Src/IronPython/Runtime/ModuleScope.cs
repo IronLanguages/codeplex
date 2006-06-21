@@ -165,7 +165,10 @@ namespace IronPython.Runtime {
 
             // In theory, we need to check if "__builtins__" has been set by the user
             // to some custom module. However, we do not do that for perf reasons.
-            if (__builtin__.TryGetAttr(this, symbol, out ret)) return ret;
+            if (Ops.TryGetAttr(__module__.SystemState.modules["__builtin__"],
+                symbol,
+                out ret))
+                return ret;
 
             throw Ops.NameError("name '{0}' not defined", symbol);
         }

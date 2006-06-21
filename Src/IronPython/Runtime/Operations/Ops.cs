@@ -1612,7 +1612,7 @@ namespace IronPython.Runtime.Operations {
             return o;
         }
 
-        private static object GetBuiltinOrThrow(object o, ICallerContext context, Uninitialized ui) {
+        public static object GetBuiltinOrThrow(object o, ICallerContext context, Uninitialized ui) {
             if (!Ops.TryGetAttr(context.SystemState.modules["__builtin__"],
                 SymbolTable.StringToId(ui.name),
                 out o))
