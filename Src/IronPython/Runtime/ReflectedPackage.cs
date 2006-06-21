@@ -35,8 +35,17 @@ namespace IronPython.Runtime {
         private Dictionary<Assembly, bool> loadedAssemblies = new Dictionary<Assembly, bool>();
         private Dictionary<string, Type> builtins = new Dictionary<string, Type>();
         private int initialized;
+        private bool isolated;
 
         internal TopReflectedPackage() : base(String.Empty) {
+        }
+
+        /// <summary>
+        /// Creates a top reflected package that is optionally isolated
+        /// from all other packages in the system.
+        /// </summary>
+        internal TopReflectedPackage(bool isolated) : base(String.Empty) {
+            this.isolated = isolated;
         }
 
         #region Public API Surface
@@ -154,7 +163,7 @@ namespace IronPython.Runtime {
                 string[] pieces = ns.Split(Type.Delimiter);
                 for (int i = 0; i < pieces.Length; i++) {
                     if (!ret.packageAssemblies.Contains(assm)) ret.packageAssemblies.Add(assm);
-                    ret = ret.GetOrMakePackage(state, String.Join(".", pieces, 0, i + 1), pieces[i]);
+                    ret = ret.GetOrMakePackage(state, String.Join(".", pieces, 0, i + 1), pieces[i], isolated);
                 }
             }
 
@@ -273,7 +282,7 @@ namespace IronPython.Runtime {
             return tc;
         }
 
-        internal ReflectedPackage GetOrMakePackage(SystemState state, string fullName, string name) {
+        internal ReflectedPackage GetOrMakePackage(SystemState state, string fullName, string name, bool isolated) {
             object ret;
             if (__dict__.TryGetValue(SymbolTable.StringToId(name), out ret)) {
                 // if it's not a module we'll wipe it out below, eg def System(): pass then 
@@ -288,15 +297,15 @@ namespace IronPython.Runtime {
                 } while (pm != null);
             }
 
-            return MakePackage(state, fullName, name);
+            return MakePackage(state, fullName, name, isolated);
         }
 
-        internal ReflectedPackage MakePackage(SystemState state, string fullName, string name) {
+        private ReflectedPackage MakePackage(SystemState state, string fullName, string name, bool isolated) {
             ReflectedPackage rp = new ReflectedPackage();
             object mod;
             PythonModule pmod;
 
-            if (!Importer.TryGetExistingModule(state, name, out mod)) {
+            if (isolated || !Importer.TryGetExistingModule(state, name, out mod)) {
                 // no collisions (yet), create a new module for the package.
                 pmod = new PythonModule(name, new Dict(), state);
                 pmod.PackageImported = true;
@@ -360,6 +369,8 @@ namespace IronPython.Runtime {
                 LoadAllTypes();
 
             if (__dict__.TryGetValue(name, out value)) {
+                if (value is Uninitialized) return false;
+
                 int level;
                 if (!loadLevels.TryGetValue(name, out level) || level >= packageAssemblies.Count) {
                     return true;
@@ -409,6 +420,19 @@ namespace IronPython.Runtime {
             // could have been a namespace, try the dictionary one last time...
             if (__dict__.TryGetValue(name, out value)) return true;
 
+            if (name == SymbolTable.File) {
+                if (packageAssemblies.Count == 1) {
+                    value = packageAssemblies[0].FullName;
+                } else {
+                    List res = new List();
+                    for (int i = 0; i < packageAssemblies.Count; i++) {
+                        res.Add(packageAssemblies[i].FullName);
+                    }
+                    value = res;
+                }
+                return true;   
+            }
+
             value = null;
             return false;
         }
@@ -417,14 +441,18 @@ namespace IronPython.Runtime {
             __dict__[name] = value;
         }
 
-        public void DeleteAttr(ICallerContext context, SymbolId name) {
-            __dict__.Remove(name);
+        public void DeleteAttr(ICallerContext context, SymbolId name) {            
+            if (!__dict__.ContainsKey(name)) throw Ops.AttributeErrorForMissingAttribute(ToString(), name);
+
+            __dict__[name] = new Uninitialized(name.ToString());
         }
 
         public List GetAttrNames(ICallerContext context) {
             LoadAllTypes();
-
-            return new List(((IDictionary<object, object>)__dict__).Keys);
+            
+            List res = new List(((IDictionary<object, object>)__dict__).Keys);
+            res.Sort();
+            return res;
         }
 
         public IDictionary<object, object> GetAttrDict(ICallerContext context) {

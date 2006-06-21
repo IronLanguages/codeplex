@@ -1590,12 +1590,6 @@ namespace IronPython.Runtime.Operations {
             return GetDynamicType(o).GetAttrDict(context, o);
         }
 
-        public static void CheckInitialized(object o) {
-            if (o is Uninitialized) {
-                throw Ops.NameError("name '{0}' not defined", ((Uninitialized)o).name);
-            }
-        }
-
         public static void CheckInitializedAttribute(object o, object self) {
             if (o is Uninitialized) {
                 throw Ops.AttributeError("'{0}' object has no attribute '{1}'", 
@@ -1608,6 +1602,23 @@ namespace IronPython.Runtime.Operations {
             if (o is Uninitialized) {
                 throw Ops.UnboundLocalError("local variable '{0}' referenced before assignment", ((Uninitialized)o).name);
             }
+        }
+
+        public static object CheckInitializedOrBuiltin(object o, ICallerContext context) {
+            Uninitialized ui;
+            if ((ui = o as Uninitialized)!=null) {
+                o = GetBuiltinOrThrow(o, context, ui);
+            }
+            return o;
+        }
+
+        private static object GetBuiltinOrThrow(object o, ICallerContext context, Uninitialized ui) {
+            if (!Ops.TryGetAttr(context.SystemState.modules["__builtin__"],
+                SymbolTable.StringToId(ui.name),
+                out o))
+
+                throw Ops.NameError("name '{0}' not defined", ui.name);
+            return o;
         }
 
         public static object GetDescriptor(object o, object instance, object context) {

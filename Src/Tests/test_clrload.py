@@ -212,17 +212,17 @@ x = compileAndLoad('c3', get_local_filename('c3.cs') )
 
 AreEqual(repr(x), "c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null")
 AreEqual(repr(x.Foo), "<type 'Foo'>")
-AreEqual(repr(x.BarNamespace), "Namespace BarNamespace in assembly c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null")
-AreEqual(repr(x.BarNamespace.NestedNamespace), "Namespace BarNamespace.NestedNamespace in assembly c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null")
-AreEqual(repr(x.BarNamespace.Bar_NestedBar), "<type 'NestedBar'>")
+AreEqual(repr(x.BarNamespace), "<module 'BarNamespace' (CLS module from c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null)>")
+AreEqual(repr(x.BarNamespace.NestedNamespace), "<module 'NestedNamespace' (CLS module from c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null)>")
+AreEqual(repr(x.BarNamespace.Bar.NestedBar), "<type 'NestedBar'>")
 AreEqual(x.__dict__["BarNamespace"], x.BarNamespace)
 AreEqual(x.BarNamespace.__dict__["Bar"], x.BarNamespace.Bar)
 AreEqual(x.BarNamespace.__dict__["NestedNamespace"], x.BarNamespace.NestedNamespace)
-AreEqual(x.BarNamespace.NestedNamespace.__name__, "BarNamespace.NestedNamespace")
+AreEqual(x.BarNamespace.NestedNamespace.__name__, "NestedNamespace")
 AreEqual(x.BarNamespace.NestedNamespace.__file__, "c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null")
 AssertError(AttributeError, lambda: x.BarNamespace.NestedNamespace.not_exist)
 AssertError(AttributeError, lambda: x.Foo2)  # assembly c3 has no type Foo2
-Assert(set(['NestedNamespace', 'Bar', 'Bar_NestedBar', '__file__', '__name__']) <= set(dir(x.BarNamespace)))
+Assert(set(['NestedNamespace', 'Bar', '__builtins__', '__dict__', '__name__']) <= set(dir(x.BarNamespace)))
 
 x.BarNamespace.Bar = x.Foo
 AreEqual(repr(x.BarNamespace.Bar), "<type 'Foo'>")

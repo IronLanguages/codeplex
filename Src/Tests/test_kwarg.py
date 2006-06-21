@@ -667,3 +667,13 @@ class x(dict): pass
 
 AreEqual(x(a=1)['a'], 1)
 
+# calling unbound built-in __init__ w/ kw-args
+a = []
+list.__init__(a, 'abc')
+AreEqual(a, ['a', 'b', 'c'])
+
+# and doing it on a sub-class...
+class sublist(list): pass
+a = []
+sublist.__init__(a, 'abc')
+AreEqual(a, ['a', 'b', 'c'])

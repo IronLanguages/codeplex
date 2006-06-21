@@ -175,6 +175,13 @@ namespace IronPython.Runtime.Calls {
             //      1. Our error messages match CPython more closely 
             //      2. The attribute lookup is done lazily only if kw-args are supplied to a ctor
 
+            if (instance == null && (FunctionType & FunctionType.FunctionMethodMask) == FunctionType.Method) {
+                instance = args[0];
+                object[] realArgs = new object[args.Length - 1];
+                Array.Copy(args, 1, realArgs, 0, realArgs.Length);
+                args = realArgs;
+            }
+
             if (IsContextAware) {
                 object[] argsWithContext = new object[args.Length + 1];
                 argsWithContext[0] = context;

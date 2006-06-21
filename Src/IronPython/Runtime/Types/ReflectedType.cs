@@ -307,10 +307,14 @@ namespace IronPython.Runtime.Types {
             } else {
                 ctor = (ICallable)dict[SymbolTable.NewInst];
                 // __new__ is always a function, never a method.
-                BuiltinFunction bf = ctor as BuiltinFunction;
-                if (bf != null) {
-                    bf.FunctionType = (bf.FunctionType & ~FunctionType.FunctionMethodMask) | FunctionType.Function;
+                
+                BuiltinMethodDescriptor bmd = ctor as BuiltinMethodDescriptor;
+                if (bmd != null) {
+                    ctor = bmd.template;
+                    bmd.template.FunctionType = (bmd.template.FunctionType & ~FunctionType.FunctionMethodMask) | FunctionType.Function;
                 }
+
+                dict[SymbolTable.NewInst] = ctor;
             }
 
             if (!dict.ContainsKey(SymbolTable.Init)) {
@@ -757,22 +761,7 @@ namespace IronPython.Runtime.Types {
                         AddNestedType(ty);
                     }
 
-                    // interfaces can't have explicitly implemented interfaces
-                    if (!type.IsInterface) {
-                        foreach (Type ty in type.GetInterfaces()) {
-                            // GetInterfaceMap fails on array types
-                            if (!type.IsArray && !ty.IsGenericParameter) {
-                                InterfaceMapping mapping = type.GetInterfaceMap(ty);
-                                foreach (MethodInfo mi in mapping.TargetMethods) {
-                                    if (mi.IsFinal && mi.IsHideBySig && mi.IsPrivate && mi.IsVirtual) {
-                                        // explicitly implemented, add it now (otherwise it should
-                                        // have already been added).
-                                        AddExplicitInterfaceMethod(mi, defaultMembers);
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    AddExplicitInterfaceMethods(defaultMembers);
 
                     AddEnumOperators();
 
@@ -789,6 +778,41 @@ namespace IronPython.Runtime.Types {
                     AddModule();
                 }
             }
+        }
+
+        private void AddExplicitInterfaceMethods(MemberInfo[] defaultMembers) {
+            // interfaces can't have explicitly implemented interfaces
+            if (type.IsInterface) return;
+
+            foreach (Type ty in type.GetInterfaces()) {
+                // GetInterfaceMap fails on array types
+                if (!type.IsArray && !ty.IsGenericParameter) {
+                    InterfaceMapping mapping = type.GetInterfaceMap(ty);
+                    for (int i = 0; i < mapping.TargetMethods.Length; i++) {
+                        MethodInfo mi = mapping.TargetMethods[i];
+
+                        if (mi == null) {
+                            // COM objects can have interfaces that they don't appear
+                            // to implement.  When that happens our target method is 
+                            // null, but the interface method actually exists (we just need
+                            // to QI for it).  For those we store the interfaces method
+                            // directly into our dynamic type so the user can still call
+                            // the appropriate method directly from the type.
+                            Debug.Assert(type.IsCOMObject);
+                            StoreReflectedMethod(mapping.InterfaceMethods[i].Name,
+                                mapping.InterfaceMethods[i],
+                                NameType.PythonMethod);
+                            continue;
+                        }
+
+                        if (mi.IsFinal && mi.IsHideBySig && mi.IsPrivate && mi.IsVirtual) {
+                            // explicitly implemented, add it now (otherwise it should
+                            // have already been added).
+                            AddExplicitInterfaceMethod(mi, defaultMembers);
+                        }
+                    }
+                }
+            }            
         }
 
         #endregion
@@ -965,7 +989,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal void DeleteAttrWithCustomDict(ICallerContext context, ICustomAttributes self, IAttributesDictionary selfDict, SymbolId name) {
+        internal bool DeleteAttrWithCustomDict(ICallerContext context, ICustomAttributes self, IAttributesDictionary selfDict, SymbolId name) {
             Debug.Assert(IsInstanceOfType(self));
 
             if (name == SymbolTable.Dict)
@@ -973,14 +997,15 @@ namespace IronPython.Runtime.Types {
 
             if (selfDict.ContainsKey(name)) {
                 selfDict.Remove(name);
-                return;
+                return true;
             }
 
             object dummy;
             if (TryLookupSlot(context, name, out dummy)) {
-                selfDict[name] = new Uninitialized(name.ToString()); 
+                selfDict[name] = new Uninitialized(name.ToString());
+                return true;
             } else {
-                selfDict.Remove(name);
+                return selfDict.Remove(name);
             }
         }
 

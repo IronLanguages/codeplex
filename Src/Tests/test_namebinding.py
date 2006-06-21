@@ -781,3 +781,22 @@ try:
 except NameError:
     success = True
 Assert(success)
+
+
+# verify __builtin__ is accessed if a global isn't defined
+xyz = 'aaa'
+AreEqual(xyz, 'aaa')
+
+import __builtin__
+__builtin__.xyz = 'abc'
+
+xyz = 'def'
+AreEqual(xyz, 'def')
+del xyz
+AreEqual(xyz, 'abc')
+
+del __builtin__.xyz
+try:
+    a = xyz
+except NameError: pass
+

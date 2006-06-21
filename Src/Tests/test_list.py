@@ -138,7 +138,29 @@ def test_reverse():
 
 def test_equal():
     AreEqual([2,3] == '', False)
+    AreEqual(list.__eq__([], None), NotImplemented)
+    
+    class MyEquality(object):
+        def __eq__(self, other):
+            return 'abc'
+    
+    class MyOldEquality(object):
+        def __eq__(self, other):
+            return 'def'            
+            
+    AreEqual([] == MyEquality(), 'abc')        
+    AreEqual([] == MyOldEquality(), 'def')
+    
+    AreEqual([2,3] == (2,3), False)
 
+    class MyIterable(object):
+        def __iter__(self): return MyIterable()
+        def next(self):
+            yield 'a'
+            yield 'b'
+            
+    AreEqual(['a', 'b'] == MyIterable(), False)
+            
 ######################################################################
 # Verify behavior of index when the list changes...
 

@@ -1099,19 +1099,8 @@ namespace IronPython.Runtime {
         [PythonName("__eq__")]
         public virtual object RichEquals(object other) {
             List l = other as List;
-            if (l == null) {
-                IEnumerator ie;
-
-                if (Ops.TryGetEnumerator(other, out ie)) {
-                    int curIndex = 0;
-                    while (ie.MoveNext()) {
-                        if (curIndex >= size || !Ops.EqualRetBool(ie.Current, this[curIndex++])) return Ops.FALSE;
-                    }
-                    if(curIndex == this.size) return Ops.TRUE;
-                }
-
-                return Ops.FALSE;
-            }
+            if (l == null) return Ops.NotImplemented;
+            
             if (l.Count != this.Count) return Ops.FALSE;
             return Ops.Bool2Object(CompareTo(l) == 0);
         }

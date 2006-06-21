@@ -204,9 +204,18 @@ namespace IronPython.Runtime {
         [PythonName("__str__")]
         public override string ToString() {
             if (Filename == null) {
-                if (innerMod != null) 
-                    return String.Format("<module '{0}' (CLS module)>", ModuleName);
-                else 
+                if (innerMod != null) {
+                    ReflectedPackage rp = innerMod as ReflectedPackage;
+                    if (rp != null) {
+                        if (rp.packageAssemblies.Count != 1) {
+                            return String.Format("<module '{0}' (CLS module, {1} assemblies loaded)>", ModuleName, rp.packageAssemblies.Count);
+                        } else {
+                            return String.Format("<module '{0}' (CLS module from {1})>", ModuleName, rp.packageAssemblies[0].FullName);
+                        }
+                    } else {
+                        return String.Format("<module '{0}' (CLS module)>", ModuleName);
+                    }
+                } else
                     return String.Format("<module '{0}' (built-in)>", ModuleName);
             } else 
                 return String.Format("<module '{0}' from '{1}'>", ModuleName, Filename);
@@ -224,7 +233,12 @@ namespace IronPython.Runtime {
                 }
                 value = null;
             }
-            if (name == SymbolTable.Dict) { value = __dict__; return true; }
+            if (name == SymbolTable.Dict) {
+                if (packageImported) value = innerMod.GetAttrDict(context);
+                else value = __dict__; 
+                
+                return true; 
+            }
             if (packageImported) return innerMod.TryGetAttr(context, name, out value);
             if (TypeCache.Module.TryGetAttr(context, this, name, out value)) return true;
             return false;
@@ -235,7 +249,17 @@ namespace IronPython.Runtime {
         }
 
         public void DeleteAttr(ICallerContext context, SymbolId name) {
-            TypeCache.Module.DeleteAttrWithCustomDict(context, this, __dict__, name);
+            if (TypeCache.Module.DeleteAttrWithCustomDict(context, this, __dict__, name)) {
+                object dummy;
+                if (packageImported && innerMod.TryGetAttr(context, name, out dummy))
+                    innerMod.DeleteAttr(context, name);
+                return;
+            }
+            
+            if (packageImported) {
+                innerMod.DeleteAttr(context, name);
+            } else 
+                throw Ops.AttributeErrorForMissingAttribute(ModuleName, name);
         }
 
         public List GetAttrNames(ICallerContext context) {

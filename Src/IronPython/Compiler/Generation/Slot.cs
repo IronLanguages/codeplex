@@ -95,11 +95,12 @@ namespace IronPython.Compiler.Generation {
 
         public virtual void EmitCheck(CodeGen cg) {
             if (Options.CheckInitialized) {
-                cg.Emit(OpCodes.Dup);
                 if (local) {
+                    cg.Emit(OpCodes.Dup);
                     cg.EmitCall(typeof(Ops), "CheckInitializedLocal");
                 } else {
-                    cg.EmitCall(typeof(Ops), "CheckInitialized");
+                    cg.EmitCallerContext();
+                    cg.EmitCall(typeof(Ops), "CheckInitializedOrBuiltin");
                 }
             }
         }

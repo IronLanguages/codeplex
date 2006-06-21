@@ -15,17 +15,20 @@
 
 using System;
 
-class Foo{
+public class Foo{
+}
+
+class PrivateFoo{
 }
 
 namespace BarNamespace {
-    class Bar {
-        class NestedBar {
+    public class Bar {
+        public class NestedBar {
         }
     }
 
     namespace NestedNamespace {
-        class Baz {
+        public class Baz {
         }
     }
 }

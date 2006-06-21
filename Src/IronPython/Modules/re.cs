@@ -804,8 +804,23 @@ namespace IronPython.Modules {
                                 //  groups, even if the named groups are before the unnamed ones in the pattern;
                                 //  the artificial naming preserves the order of the groups and thus the order of
                                 //  the matches
-                                containsNamedGroup = true;
-                                pattern = pattern.Remove(nameIndex, 1);
+                                if (nameIndex+1 < pattern.Length && pattern[nameIndex+1] == '=') {
+                                    // match whatever was previously matched by the named group
+
+                                    // remove the (?P=
+                                    pattern = pattern.Remove(nameIndex - 2, 4);
+                                    pattern = pattern.Insert(nameIndex-2, "\\\\k<");
+                                    int tmpIndex = nameIndex;
+                                    while (tmpIndex < pattern.Length && pattern[tmpIndex] != ')')
+                                        tmpIndex++;
+
+                                    if (tmpIndex == pattern.Length) throw ExceptionConverter.CreateThrowable(error, "unexpected end of regex");
+
+                                    pattern = pattern.Substring(0, tmpIndex) + ">" + pattern.Substring(tmpIndex+1);
+                                } else {
+                                    containsNamedGroup = true;
+                                    pattern = pattern.Remove(nameIndex, 1);
+                                }
                                 break;
                             case 'i': res.Options |= RegexOptions.IgnoreCase; break;
                             case 'L': res.Options &= ~(RegexOptions.CultureInvariant); break;
