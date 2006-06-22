@@ -30,13 +30,13 @@ namespace IronPython.Runtime.Calls {
             : base(parent, moduleScope, names, outer) {
         }
         public override bool TrySetExtraValue(SymbolId key, object value) {
-            if(names.Length >= 1) {
-                if(names[0]==key) {
+            if (names.Length >= 1) {
+                if (names[0] == key) {
                     value0 = value;
                     return true;
                 }
-                if(names.Length >= 2) {
-                    if(names[1]==key) {
+                if (names.Length >= 2) {
+                    if (names[1] == key) {
                         value1 = value;
                         return true;
                     }
@@ -45,13 +45,13 @@ namespace IronPython.Runtime.Calls {
             return false;
         }
         public override bool TryGetExtraValue(SymbolId key, out object value) {
-            if(names.Length >= 1) {
-                if(names[0] == key) {
+            if (names.Length >= 1) {
+                if (names[0] == key) {
                     value = value0;
                     return true;
                 }
-                if(names.Length >= 2) {
-                    if(names[1] == key) {
+                if (names.Length >= 2) {
+                    if (names[1] == key) {
                         value = value1;
                         return true;
                     }
@@ -79,23 +79,23 @@ namespace IronPython.Runtime.Calls {
             : base(parent, moduleScope, names, outer) {
         }
         public override bool TrySetExtraValue(SymbolId key, object value) {
-            if(names.Length >= 1) {
-                if(names[0]==key) {
+            if (names.Length >= 1) {
+                if (names[0] == key) {
                     value0 = value;
                     return true;
                 }
-                if(names.Length >= 2) {
-                    if(names[1]==key) {
+                if (names.Length >= 2) {
+                    if (names[1] == key) {
                         value1 = value;
                         return true;
                     }
-                    if(names.Length >= 3) {
-                        if(names[2]==key) {
+                    if (names.Length >= 3) {
+                        if (names[2] == key) {
                             value2 = value;
                             return true;
                         }
-                        if(names.Length >= 4) {
-                            if(names[3]==key) {
+                        if (names.Length >= 4) {
+                            if (names[3] == key) {
                                 value3 = value;
                                 return true;
                             }
@@ -106,23 +106,23 @@ namespace IronPython.Runtime.Calls {
             return false;
         }
         public override bool TryGetExtraValue(SymbolId key, out object value) {
-            if(names.Length >= 1) {
-                if(names[0] == key) {
+            if (names.Length >= 1) {
+                if (names[0] == key) {
                     value = value0;
                     return true;
                 }
-                if(names.Length >= 2) {
-                    if(names[1] == key) {
+                if (names.Length >= 2) {
+                    if (names[1] == key) {
                         value = value1;
                         return true;
                     }
-                    if(names.Length >= 3) {
-                        if(names[2] == key) {
+                    if (names.Length >= 3) {
+                        if (names[2] == key) {
                             value = value2;
                             return true;
                         }
-                        if(names.Length >= 4) {
-                            if(names[3] == key) {
+                        if (names.Length >= 4) {
+                            if (names[3] == key) {
                                 value = value3;
                                 return true;
                             }

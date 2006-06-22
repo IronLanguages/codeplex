@@ -34,8 +34,8 @@ def gen_one_env(cw, i):
         cw.exit_block()
     else:
         for j in range(i):
-            cw.enter_block("if(names.Length >= %d)" % (j+1))
-            cw.enter_block("if(names[%d]==key)" % j)
+            cw.enter_block("if (names.Length >= %d)" % (j+1))
+            cw.enter_block("if (names[%d] == key)" % j)
             cw.writeline("value%d = value;" % j)
             cw.writeline("return true;")
             cw.exit_block()
@@ -55,8 +55,8 @@ def gen_one_env(cw, i):
         cw.exit_block()
     else:
         for j in range(i):
-            cw.enter_block("if(names.Length >= %d)" % (j+1))
-            cw.enter_block("if(names[%d] == key)" % j)
+            cw.enter_block("if (names.Length >= %d)" % (j+1))
+            cw.enter_block("if (names[%d] == key)" % j)
             cw.writeline("value = value%d;" % j)
             cw.writeline("return true;")
             cw.exit_block()

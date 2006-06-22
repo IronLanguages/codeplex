@@ -240,7 +240,7 @@ namespace IronPython.Runtime.Operations {
             if (other is long) return Power(x, (long)other);
             if (other is double) return Power(x, (double)other);
             if (other is Complex64) return ComplexOps.Power(x, (Complex64)other);
-            if (other is bool) return Power(x, (bool)other ? 1 : 0); 
+            if (other is bool) return Power(x, (bool)other ? 1 : 0);
             if (other is float) return Power(x, (float)other);
             if ((object)(num = other as INumber) != null) return num.ReversePower(x);
             if ((object)(xc = other as ExtensibleComplex) != null) return Power(x, xc.value);
@@ -375,7 +375,7 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Long2Object(Divide(x, y));
                 } catch (OverflowException) {
                     return BigInteger.Create(x) / y;
-                }    
+                }
             } else if (other is long) {
                 long y = (long)other;
                 try {
@@ -427,7 +427,7 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Long2Object(ReverseDivide(x, y));
                 } catch (OverflowException) {
                     return y / BigInteger.Create(x);
-                }    
+                }
             } else if (other is long) {
                 long y = (long)other;
                 try {
@@ -479,7 +479,7 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Long2Object(Divide(x, y));
                 } catch (OverflowException) {
                     return BigInteger.Create(x) / y;
-                }    
+                }
             } else if (other is long) {
                 long y = (long)other;
                 try {
@@ -531,7 +531,7 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Long2Object(ReverseDivide(x, y));
                 } catch (OverflowException) {
                     return y / BigInteger.Create(x);
-                }    
+                }
             } else if (other is long) {
                 long y = (long)other;
                 try {
@@ -569,7 +569,7 @@ namespace IronPython.Runtime.Operations {
             if (other is long) return TrueDivide(x, (long)other);
             if (other is double) return TrueDivide(x, (double)other);
             if (other is Complex64) return ComplexOps.TrueDivide(x, (Complex64)other);
-            if (other is bool) return TrueDivide(x, (bool)other ? 1 : 0); 
+            if (other is bool) return TrueDivide(x, (bool)other ? 1 : 0);
             if (other is float) return TrueDivide(x, (float)other);
             if ((object)(num = other as INumber) != null) return num.ReverseTrueDivide(x);
             if ((object)(xc = other as ExtensibleComplex) != null) return TrueDivide(x, xc.value);
@@ -603,7 +603,7 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Long2Object(Mod(x, y));
                 } catch (OverflowException) {
                     return BigInteger.Create(x) % y;
-                }    
+                }
             } else if (other is long) {
                 long y = (long)other;
                 try {
@@ -655,7 +655,7 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Long2Object(ReverseMod(x, y));
                 } catch (OverflowException) {
                     return y % BigInteger.Create(x);
-                }    
+                }
             } else if (other is long) {
                 long y = (long)other;
                 try {

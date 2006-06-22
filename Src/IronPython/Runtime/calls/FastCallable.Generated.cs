@@ -62,8 +62,7 @@ namespace IronPython.Runtime.Calls {
                     case 4: return new FastCallableWithContext4(name, (CallTargetWithContext4)target);
                     case 5: return new FastCallableWithContext5(name, (CallTargetWithContext5)target);
                 }
-            }
-            else {
+            } else {
                 switch (nargs) {
                     case 0: return new FastCallable0(name, (CallTarget0)target);
                     case 1: return new FastCallable1(name, (CallTarget1)target);
@@ -204,7 +203,7 @@ namespace IronPython.Runtime.Calls {
             throw BadArgumentError(CallType.ImplicitInstance, 5);
         }
         public override object Call(ICallerContext context, params object[] args) {
-            switch(args.Length) {
+            switch (args.Length) {
                 case 0: return Call(context);
                 case 1: return Call(context, args[0]);
                 case 2: return Call(context, args[0], args[1]);
@@ -216,7 +215,7 @@ namespace IronPython.Runtime.Calls {
             throw BadArgumentError(CallType.None, args.Length);
         }
         public override object CallInstance(ICallerContext context, object instance, params object[] args) {
-            switch(args.Length) {
+            switch (args.Length) {
                 case 0: return CallInstance(context, instance);
                 case 1: return CallInstance(context, instance, args[0]);
                 case 2: return CallInstance(context, instance, args[0], args[1]);
@@ -224,7 +223,7 @@ namespace IronPython.Runtime.Calls {
                 case 4: return CallInstance(context, instance, args[0], args[1], args[2], args[3]);
             }
             if (targetN != null) return targetN(PrependInstance(instance, args));
-            throw BadArgumentError(CallType.None, args.Length+1);
+            throw BadArgumentError(CallType.None, args.Length + 1);
         }
         private Exception BadArgumentError(CallType callType, int nargs) {
             return BadArgumentError(name, minArgs, maxArgs, callType, nargs);
@@ -290,7 +289,7 @@ namespace IronPython.Runtime.Calls {
             throw BadArgumentError(CallType.ImplicitInstance, 5);
         }
         public override object Call(ICallerContext context, params object[] args) {
-            switch(args.Length) {
+            switch (args.Length) {
                 case 0: return Call(context);
                 case 1: return Call(context, args[0]);
                 case 2: return Call(context, args[0], args[1]);
@@ -302,7 +301,7 @@ namespace IronPython.Runtime.Calls {
             throw BadArgumentError(CallType.None, args.Length);
         }
         public override object CallInstance(ICallerContext context, object instance, params object[] args) {
-            switch(args.Length) {
+            switch (args.Length) {
                 case 0: return CallInstance(context, instance);
                 case 1: return CallInstance(context, instance, args[0]);
                 case 2: return CallInstance(context, instance, args[0], args[1]);
@@ -310,7 +309,7 @@ namespace IronPython.Runtime.Calls {
                 case 4: return CallInstance(context, instance, args[0], args[1], args[2], args[3]);
             }
             if (targetN != null) return targetN(context, PrependInstance(instance, args));
-            throw BadArgumentError(CallType.None, args.Length+1);
+            throw BadArgumentError(CallType.None, args.Length + 1);
         }
         private Exception BadArgumentError(CallType callType, int nargs) {
             return BadArgumentError(name, minArgs, maxArgs, callType, nargs);

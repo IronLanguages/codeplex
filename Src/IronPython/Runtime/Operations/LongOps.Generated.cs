@@ -166,7 +166,7 @@ namespace IronPython.Runtime.Operations {
             if (other is double) return x + ((double)other);
             if ((object)(bi = other as BigInteger) != null) return x + bi;
             if ((num = other as INumber) != null) return num.ReverseAdd(x);
-            if (other is bool) return x + ((bool) other ? 1 : 0);
+            if (other is bool) return x + ((bool)other ? 1 : 0);
             if (other is long) return x + ((long)other);
             if ((object)(xc = other as ExtensibleComplex) != null) return x + xc.value;
             if (other is byte) return x + (int)((byte)other);
@@ -185,7 +185,7 @@ namespace IronPython.Runtime.Operations {
             if (other is double) return x - ((double)other);
             if ((object)(bi = other as BigInteger) != null) return x - bi;
             if ((num = other as INumber) != null) return num.ReverseSubtract(x);
-            if (other is bool) return x - ((bool) other ? 1 : 0);
+            if (other is bool) return x - ((bool)other ? 1 : 0);
             if (other is long) return x - ((long)other);
             if ((object)(xc = other as ExtensibleComplex) != null) return x - xc.value;
             if (other is byte) return x - (int)((byte)other);
@@ -241,7 +241,7 @@ namespace IronPython.Runtime.Operations {
             if (other is double) return x * ((double)other);
             if ((object)(bi = other as BigInteger) != null) return x * bi;
             if ((num = other as INumber) != null) return num.ReverseMultiply(x);
-            if (other is bool) return x * ((bool) other ? 1 : 0);
+            if (other is bool) return x * ((bool)other ? 1 : 0);
             if (other is long) return x * ((long)other);
             if ((object)(xc = other as ExtensibleComplex) != null) return x * xc.value;
             if (other is byte) return x * (int)((byte)other);
@@ -258,7 +258,7 @@ namespace IronPython.Runtime.Operations {
             if (other is int) return Divide(x, (int)other);
             if (other is Complex64) {
                 Complex64 y = (Complex64)other;
-                if(y.IsZero) throw Ops.ZeroDivisionError();
+                if (y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.Divide(Complex64.MakeReal(x), y);
             }
             if (other is double) return FloatOps.Divide(x, (double)other);
@@ -268,7 +268,7 @@ namespace IronPython.Runtime.Operations {
             if ((object)(num = other as INumber) != null) return num.ReverseDivide(x);
             if ((object)(xc = other as ExtensibleComplex) != null) {
                 Complex64 y = xc.value;
-                if(y.IsZero) throw Ops.ZeroDivisionError();
+                if (y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.Divide(Complex64.MakeReal(x), y);
             }
             if (other is byte) return Divide(x, (int)((byte)other));
@@ -313,7 +313,7 @@ namespace IronPython.Runtime.Operations {
             if (other is int) return Divide(x, (int)other);
             if (other is Complex64) {
                 Complex64 y = (Complex64)other;
-                if(y.IsZero) throw Ops.ZeroDivisionError();
+                if (y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.FloorDivide(Complex64.MakeReal(x), y);
             }
             if (other is double) return FloatOps.FloorDivide(x, (double)other);
@@ -323,7 +323,7 @@ namespace IronPython.Runtime.Operations {
             if ((object)(num = other as INumber) != null) return num.ReverseFloorDivide(x);
             if ((object)(xc = other as ExtensibleComplex) != null) {
                 Complex64 y = xc.value;
-                if(y.IsZero) throw Ops.ZeroDivisionError();
+                if (y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.FloorDivide(Complex64.MakeReal(x), y);
             }
             if (other is byte) return Divide(x, (int)((byte)other));
@@ -405,7 +405,7 @@ namespace IronPython.Runtime.Operations {
             if (other is int) return Mod(x, (int)other);
             if (other is Complex64) {
                 Complex64 y = (Complex64)other;
-                if(y.IsZero) throw Ops.ZeroDivisionError();
+                if (y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.Mod(Complex64.MakeReal(x), y);
             }
             if (other is double) return FloatOps.Mod(x, (double)other);
@@ -415,7 +415,7 @@ namespace IronPython.Runtime.Operations {
             if ((object)(num = other as INumber) != null) return num.ReverseMod(x);
             if ((object)(xc = other as ExtensibleComplex) != null) {
                 Complex64 y = xc.value;
-                if(y.IsZero) throw Ops.ZeroDivisionError();
+                if (y.IsZero) throw Ops.ZeroDivisionError();
                 return ComplexOps.Mod(Complex64.MakeReal(x), y);
             }
             if (other is byte) return Mod(x, (int)((byte)other));

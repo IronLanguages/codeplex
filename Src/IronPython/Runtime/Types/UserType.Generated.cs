@@ -38,7 +38,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseAdd(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseAdd, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseAdd, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -64,7 +64,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseSubtract(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseSubtract, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseSubtract, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -90,7 +90,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReversePower(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReversePower, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReversePower, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -116,7 +116,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseMultiply(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseMultiply, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseMultiply, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -142,7 +142,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseFloorDivide(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseFloorDivide, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseFloorDivide, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -168,7 +168,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseDivide(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseDivide, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseDivide, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -194,7 +194,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseTrueDivide(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseTrueDivide, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseTrueDivide, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -220,7 +220,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseMod(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseMod, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseMod, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -246,7 +246,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseLeftShift(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseLeftShift, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseLeftShift, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -272,7 +272,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseRightShift(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseRightShift, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseRightShift, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -298,7 +298,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseBitwiseAnd(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseBitwiseAnd, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseBitwiseAnd, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -324,7 +324,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseBitwiseOr(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseBitwiseOr, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseBitwiseOr, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }
@@ -350,7 +350,7 @@ namespace IronPython.Runtime.Types {
         }
         public override object ReverseXor(object self, object other) {
             object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseXor, out func)){
+            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverseXor, out func)) {
                 object ret;
                 if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
             }

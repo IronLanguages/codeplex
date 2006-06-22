@@ -58,10 +58,10 @@ CodeGenerator("Exception Factories", factory_gen).doit()
 CLASS1 = """
 [PythonType("%(name)s")]
 [Serializable]
-public class Python%(name)s:%(supername)s {
-    public Python%(name)s():base(){ }
-    public Python%(name)s(string msg):base(msg) { }
-    public Python%(name)s(SerializationInfo info, StreamingContext context) : base(info, context) {  }
+public class Python%(name)s : %(supername)s {
+    public Python%(name)s() : base() { }
+    public Python%(name)s(string msg) : base(msg) { }
+    public Python%(name)s(SerializationInfo info, StreamingContext context) : base(info, context) { }
 }
 """
 

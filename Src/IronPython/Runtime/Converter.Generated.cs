@@ -345,16 +345,18 @@ namespace IronPython.Runtime {
                 if (retType == typeof(bool) || retType == typeof(int)) {
                     Conversion dummy;
                     return TryConvertToBoolean(ret, out dummy);
+                } else {
+                    throw Ops.TypeError("__nonzero__ should return bool or int, returned {0}", Ops.GetClassName(ret));
                 }
-                else throw Ops.TypeError("__nonzero__ should return bool or int, returned {0}", Ops.GetClassName(ret));
             } else if (Ops.TryToInvoke(value, SymbolTable.Length, out ret)) {
                 conversion = Conversion.Eval;
                 Type retType = ret.GetType();
                 if (retType == typeof(bool) || retType == typeof(int)) {
                     Conversion dummy;
                     return TryConvertToBoolean(ret, out dummy);
+                } else {
+                    throw Ops.TypeError("an integer is required");
                 }
-                else throw Ops.TypeError("an integer is required");
             } else if (!Object.Equals((ei = value as ExtensibleInt), null)) {
                 conversion = Conversion.NonStandard;
                 return ei.value != 0;

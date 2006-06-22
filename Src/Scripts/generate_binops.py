@@ -52,7 +52,7 @@ class ExtensibleOpsGen:
 
 floatExcludes = ['LeftShift', 'RightShift', 'BitwiseAnd', 'BitwiseOr', 'Xor']
 
-for theType in [('Int',[]) , ('Long', []), ('Float', floatExcludes)]: #('Complex', floatExcludes)
+for theType in [('Int',[]), ('Long', []), ('Float', floatExcludes)]: #('Complex', floatExcludes)
     CodeGenerator("Extensible %sOps" % theType[0], ExtensibleOpsGen(theType[0], theType[1])).doit()
 
 def genInum(cw):
@@ -74,7 +74,7 @@ public static object %(name)s(%(type)s x, object other) {
     if (other is double) return x %(sym)s ((double)other);
     if ((object)(bi = other as BigInteger) != null) return x %(sym)s bi;
     if ((num = other as INumber) != null) return num.Reverse%(name)s(x);
-    if (other is bool) return x %(sym)s ((bool) other ? 1 : 0);
+    if (other is bool) return x %(sym)s ((bool)other ? 1 : 0);
     if (other is long) return x %(sym)s ((long)other);
     if ((object)(xc = other as ExtensibleComplex) != null) return x %(sym)s xc.value;
     if (other is byte) return x %(sym)s (int)((byte)other);
@@ -92,7 +92,7 @@ public static object %(name)s(%(type)s x, object other) {
     if (other is int) return %(altname)s(x, (int)other);
     if (other is Complex64) {
         Complex64 y = (Complex64)other;
-        if(y.IsZero) throw Ops.ZeroDivisionError();
+        if (y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(Complex64.MakeReal(x), y);
     }
     if (other is double) return FloatOps.%(name)s(x, (double)other);
@@ -102,7 +102,7 @@ public static object %(name)s(%(type)s x, object other) {
     if ((object)(num = other as INumber) != null) return num.Reverse%(name)s(x);
     if ((object)(xc = other as ExtensibleComplex) != null) {
         Complex64 y = xc.value;
-        if(y.IsZero) throw Ops.ZeroDivisionError();
+        if (y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(Complex64.MakeReal(x), y);
     }
     if (other is byte) return %(altname)s(x, (int)((byte)other));
@@ -258,7 +258,7 @@ public static object %(name)s(double x, object other) {
     if (other is long) return %(name)s(x, ((long)other));
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.%(name)s(Complex64.MakeReal(x), xc.value);
     if (other is byte) return %(name)s(x, (int)((byte)other));
-   return Ops.NotImplemented;
+    return Ops.NotImplemented;
 }
 
 [PythonName("__r%(pyName)s__")]
@@ -277,7 +277,7 @@ public static object Reverse%(name)s(double x, object other) {
     if (other is long) return Reverse%(name)s(x, ((long)other));
     if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), xc.value);
     if (other is byte) return Reverse%(name)s(x, (int)((byte)other));
-   return Ops.NotImplemented;
+    return Ops.NotImplemented;
 }
 """
 
@@ -303,7 +303,7 @@ public static object %(name)s(%(type)s x, object other) {
         return x %(sym)s xc.value;
     } else if ((object)(num = other as INumber) != null) {
         return num.Reverse%(name)s(x);
-    } else if(other is string) {
+    } else if (other is string) {
         return Ops.NotImplemented;
     } else if (other is IConvertible) {
         double y = ((IConvertible)other).ToDouble(null);
@@ -333,7 +333,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         return xc.value %(sym)s x;
     } else if ((object)(num = other as INumber) != null) {
         return num.%(name)s(x);
-    } else if(other is string) {
+    } else if (other is string) {
         return Ops.NotImplemented;
     } else if (other is IConvertible) {
         double y = ((IConvertible)other).ToDouble(null);
@@ -350,15 +350,15 @@ public static object %(name)s(%(type)s x, object other) {
     INumber num;
     ExtensibleComplex xc;
 
-    if (other is int) return %(name)s(x, (Complex64) ((int)other));
-    if (other is Complex64) return %(name)s(x, (Complex64) other);
-    if (other is double) return %(name)s(x, (Complex64) ((double) other));
-    if ((object)(bi = other as BigInteger) != null) return %(name)s(x, (Complex64) bi);
+    if (other is int) return %(name)s(x, (Complex64)((int)other));
+    if (other is Complex64) return %(name)s(x, (Complex64)other);
+    if (other is double) return %(name)s(x, (Complex64)((double)other));
+    if ((object)(bi = other as BigInteger) != null) return %(name)s(x, (Complex64)bi);
     if (other is bool) return %(name)s(x, (Complex64)((bool)other ? 1 : 0));
-    if (other is long) return %(name)s(x, (Complex64)((long) other));
+    if (other is long) return %(name)s(x, (Complex64)((long)other));
     if ((object)(xc = other as ExtensibleComplex) != null) return %(name)s(x, xc.value);
     if ((object)(num = other as INumber) != null) return num.Reverse%(name)s(x);
-    if (other is byte) return %(name)s(x, (Complex64) (int)((byte)other));
+    if (other is byte) return %(name)s(x, (Complex64)(int)((byte)other));
     return Ops.NotImplemented;
 }
 
@@ -369,15 +369,15 @@ public static object Reverse%(name)s(%(type)s x, object other) {
     ExtensibleComplex xc;
     INumber num;
 
-    if (other is int) return Reverse%(name)s(x, (Complex64) ((int)other));
-    if (other is Complex64) return Reverse%(name)s(x, (Complex64) other);
-    if (other is double) return Reverse%(name)s(x, (Complex64) ((double) other));
-    if ((object)(bi = other as BigInteger) != null) return Reverse%(name)s(x, (Complex64) bi);
+    if (other is int) return Reverse%(name)s(x, (Complex64)((int)other));
+    if (other is Complex64) return Reverse%(name)s(x, (Complex64)other);
+    if (other is double) return Reverse%(name)s(x, (Complex64)((double)other));
+    if ((object)(bi = other as BigInteger) != null) return Reverse%(name)s(x, (Complex64)bi);
     if (other is bool) return Reverse%(name)s(x, (Complex64)((bool)other ? 1 : 0));
-    if (other is long) return Reverse%(name)s(x, (Complex64)((long) other));
+    if (other is long) return Reverse%(name)s(x, (Complex64)((long)other));
     if ((object)(xc = other as ExtensibleComplex) != null) return Reverse%(name)s(x, xc.value);
     if ((object)(num = other as INumber) != null) return num.%(name)s(x);
-    if (other is byte) return Reverse%(name)s(x, (Complex64) (int)((byte)other));
+    if (other is byte) return Reverse%(name)s(x, (Complex64)(int)((byte)other));
     return Ops.NotImplemented;
 }
 """
@@ -444,7 +444,7 @@ public static object %(name)s(%(type)s x, object other) {
         try {
             return Ops.%(titleType)s2Object(%(altname)s(x, y));
         } catch (OverflowException) {
-            return LongOps.%(name)s(BigInteger.Create(x) , y);
+            return LongOps.%(name)s(BigInteger.Create(x), y);
         }
     } else if ((object)(bi = other as BigInteger) != null) {
         return LongOps.%(name)s(BigInteger.Create(x), bi);
@@ -459,7 +459,7 @@ public static object %(name)s(%(type)s x, object other) {
         try {
             return Ops.%(titleType)s2Object(%(altname)s(x, y));
         } catch (OverflowException) {
-            return LongOps.%(name)s(BigInteger.Create(x) , y);
+            return LongOps.%(name)s(BigInteger.Create(x), y);
         }
     } else if (other is long) {
         long y = (long)other;
@@ -478,7 +478,7 @@ public static object %(name)s(%(type)s x, object other) {
         Complex64 y = xc.value;
         if (y.IsZero) throw Ops.ZeroDivisionError();
         return ComplexOps.%(name)s(Complex64.MakeReal(x), y);
-	}
+    }
 
     return Ops.NotImplemented;
 }
@@ -495,7 +495,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         try {
             return Ops.%(titleType)s2Object(Reverse%(altname)s(x, y));
         } catch (OverflowException) {
-            return LongOps.Reverse%(name)s(BigInteger.Create(x) , y);
+            return LongOps.Reverse%(name)s(BigInteger.Create(x), y);
         }
     } else if ((object)(bi = other as BigInteger) != null) {
         return LongOps.Reverse%(name)s(BigInteger.Create(x), bi);
@@ -510,7 +510,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         try {
             return Ops.%(titleType)s2Object(Reverse%(altname)s(x, y));
         } catch (OverflowException) {
-            return LongOps.Reverse%(name)s(BigInteger.Create(x) , y);
+            return LongOps.Reverse%(name)s(BigInteger.Create(x), y);
         }
     } else if (other is long) {
         long y = (long)other;
@@ -529,7 +529,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
         Complex64 y = xc.value;
         if (x == 0) throw Ops.ZeroDivisionError();
         return ComplexOps.Reverse%(name)s(Complex64.MakeReal(x), y);
-	}
+    }
     return Ops.NotImplemented;
 }
 """
@@ -689,7 +689,7 @@ public static object %(name)s(%(type)s x, object other) {
             return Ops.%(titleType)s2Object(%(altname)s(x, y));
         } catch (OverflowException) {
             return BigInteger.Create(x) %(altsym)s y;
-        }    
+        }
     } else if (other is long) {
         long y = (long)other;
         try {
@@ -741,7 +741,7 @@ public static object Reverse%(name)s(%(type)s x, object other) {
             return Ops.%(titleType)s2Object(Reverse%(altname)s(x, y));
         } catch (OverflowException) {
             return y %(altsym)s BigInteger.Create(x);
-        }    
+        }
     } else if (other is long) {
         long y = (long)other;
         try {
@@ -807,7 +807,7 @@ public static object %(name)s(long x, object other) {
     if (other is long) return %(name)s(x, (long)other);
     if (other is double) return %(name)s(x, (double)other);
     if (other is Complex64) return ComplexOps.%(name)s(x, (Complex64)other);
-    if (other is bool) return %(name)s(x, (bool)other ? 1 : 0); 
+    if (other is bool) return %(name)s(x, (bool)other ? 1 : 0);
     if (other is float) return %(name)s(x, (float)other);
     if ((object)(num = other as INumber) != null) return num.Reverse%(name)s(x);
     if ((object)(xc = other as ExtensibleComplex) != null) return %(name)s(x, xc.value);

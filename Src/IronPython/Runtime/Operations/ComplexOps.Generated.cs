@@ -52,7 +52,7 @@ namespace IronPython.Runtime.Operations {
                 return x + xc.value;
             } else if ((object)(num = other as INumber) != null) {
                 return num.ReverseAdd(x);
-            } else if(other is string) {
+            } else if (other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
@@ -82,7 +82,7 @@ namespace IronPython.Runtime.Operations {
                 return xc.value + x;
             } else if ((object)(num = other as INumber) != null) {
                 return num.Add(x);
-            } else if(other is string) {
+            } else if (other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
@@ -112,7 +112,7 @@ namespace IronPython.Runtime.Operations {
                 return x - xc.value;
             } else if ((object)(num = other as INumber) != null) {
                 return num.ReverseSubtract(x);
-            } else if(other is string) {
+            } else if (other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
@@ -142,7 +142,7 @@ namespace IronPython.Runtime.Operations {
                 return xc.value - x;
             } else if ((object)(num = other as INumber) != null) {
                 return num.Subtract(x);
-            } else if(other is string) {
+            } else if (other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
@@ -158,15 +158,15 @@ namespace IronPython.Runtime.Operations {
             INumber num;
             ExtensibleComplex xc;
 
-            if (other is int) return Power(x, (Complex64) ((int)other));
-            if (other is Complex64) return Power(x, (Complex64) other);
-            if (other is double) return Power(x, (Complex64) ((double) other));
-            if ((object)(bi = other as BigInteger) != null) return Power(x, (Complex64) bi);
+            if (other is int) return Power(x, (Complex64)((int)other));
+            if (other is Complex64) return Power(x, (Complex64)other);
+            if (other is double) return Power(x, (Complex64)((double)other));
+            if ((object)(bi = other as BigInteger) != null) return Power(x, (Complex64)bi);
             if (other is bool) return Power(x, (Complex64)((bool)other ? 1 : 0));
-            if (other is long) return Power(x, (Complex64)((long) other));
+            if (other is long) return Power(x, (Complex64)((long)other));
             if ((object)(xc = other as ExtensibleComplex) != null) return Power(x, xc.value);
             if ((object)(num = other as INumber) != null) return num.ReversePower(x);
-            if (other is byte) return Power(x, (Complex64) (int)((byte)other));
+            if (other is byte) return Power(x, (Complex64)(int)((byte)other));
             return Ops.NotImplemented;
         }
 
@@ -177,15 +177,15 @@ namespace IronPython.Runtime.Operations {
             ExtensibleComplex xc;
             INumber num;
 
-            if (other is int) return ReversePower(x, (Complex64) ((int)other));
-            if (other is Complex64) return ReversePower(x, (Complex64) other);
-            if (other is double) return ReversePower(x, (Complex64) ((double) other));
-            if ((object)(bi = other as BigInteger) != null) return ReversePower(x, (Complex64) bi);
+            if (other is int) return ReversePower(x, (Complex64)((int)other));
+            if (other is Complex64) return ReversePower(x, (Complex64)other);
+            if (other is double) return ReversePower(x, (Complex64)((double)other));
+            if ((object)(bi = other as BigInteger) != null) return ReversePower(x, (Complex64)bi);
             if (other is bool) return ReversePower(x, (Complex64)((bool)other ? 1 : 0));
-            if (other is long) return ReversePower(x, (Complex64)((long) other));
+            if (other is long) return ReversePower(x, (Complex64)((long)other));
             if ((object)(xc = other as ExtensibleComplex) != null) return ReversePower(x, xc.value);
             if ((object)(num = other as INumber) != null) return num.Power(x);
-            if (other is byte) return ReversePower(x, (Complex64) (int)((byte)other));
+            if (other is byte) return ReversePower(x, (Complex64)(int)((byte)other));
             return Ops.NotImplemented;
         }
 
@@ -210,7 +210,7 @@ namespace IronPython.Runtime.Operations {
                 return x * xc.value;
             } else if ((object)(num = other as INumber) != null) {
                 return num.ReverseMultiply(x);
-            } else if(other is string) {
+            } else if (other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
@@ -240,7 +240,7 @@ namespace IronPython.Runtime.Operations {
                 return xc.value * x;
             } else if ((object)(num = other as INumber) != null) {
                 return num.Multiply(x);
-            } else if(other is string) {
+            } else if (other is string) {
                 return Ops.NotImplemented;
             } else if (other is IConvertible) {
                 double y = ((IConvertible)other).ToDouble(null);
@@ -256,15 +256,15 @@ namespace IronPython.Runtime.Operations {
             INumber num;
             ExtensibleComplex xc;
 
-            if (other is int) return TrueDivide(x, (Complex64) ((int)other));
-            if (other is Complex64) return TrueDivide(x, (Complex64) other);
-            if (other is double) return TrueDivide(x, (Complex64) ((double) other));
-            if ((object)(bi = other as BigInteger) != null) return TrueDivide(x, (Complex64) bi);
+            if (other is int) return TrueDivide(x, (Complex64)((int)other));
+            if (other is Complex64) return TrueDivide(x, (Complex64)other);
+            if (other is double) return TrueDivide(x, (Complex64)((double)other));
+            if ((object)(bi = other as BigInteger) != null) return TrueDivide(x, (Complex64)bi);
             if (other is bool) return TrueDivide(x, (Complex64)((bool)other ? 1 : 0));
-            if (other is long) return TrueDivide(x, (Complex64)((long) other));
+            if (other is long) return TrueDivide(x, (Complex64)((long)other));
             if ((object)(xc = other as ExtensibleComplex) != null) return TrueDivide(x, xc.value);
             if ((object)(num = other as INumber) != null) return num.ReverseTrueDivide(x);
-            if (other is byte) return TrueDivide(x, (Complex64) (int)((byte)other));
+            if (other is byte) return TrueDivide(x, (Complex64)(int)((byte)other));
             return Ops.NotImplemented;
         }
 
@@ -275,15 +275,15 @@ namespace IronPython.Runtime.Operations {
             ExtensibleComplex xc;
             INumber num;
 
-            if (other is int) return ReverseTrueDivide(x, (Complex64) ((int)other));
-            if (other is Complex64) return ReverseTrueDivide(x, (Complex64) other);
-            if (other is double) return ReverseTrueDivide(x, (Complex64) ((double) other));
-            if ((object)(bi = other as BigInteger) != null) return ReverseTrueDivide(x, (Complex64) bi);
+            if (other is int) return ReverseTrueDivide(x, (Complex64)((int)other));
+            if (other is Complex64) return ReverseTrueDivide(x, (Complex64)other);
+            if (other is double) return ReverseTrueDivide(x, (Complex64)((double)other));
+            if ((object)(bi = other as BigInteger) != null) return ReverseTrueDivide(x, (Complex64)bi);
             if (other is bool) return ReverseTrueDivide(x, (Complex64)((bool)other ? 1 : 0));
-            if (other is long) return ReverseTrueDivide(x, (Complex64)((long) other));
+            if (other is long) return ReverseTrueDivide(x, (Complex64)((long)other));
             if ((object)(xc = other as ExtensibleComplex) != null) return ReverseTrueDivide(x, xc.value);
             if ((object)(num = other as INumber) != null) return num.TrueDivide(x);
-            if (other is byte) return ReverseTrueDivide(x, (Complex64) (int)((byte)other));
+            if (other is byte) return ReverseTrueDivide(x, (Complex64)(int)((byte)other));
             return Ops.NotImplemented;
         }
 

@@ -50,6 +50,11 @@ def gen_args_call(nparams):
         comma = ", "
     return args
 
+def gen_args_array(nparams):
+    args = gen_args_call(nparams)
+    if args: return "{ " + args + " }"
+    else: return "{ }"
+
 def gen_callargs(nparams):
     args = ""
     comma = ""
@@ -137,7 +142,7 @@ def gen_fastcallable_any(cw, postfix="WithContext", extraParam=("ICallerContext 
 
 
     cw.enter_block("public override object Call(%(params)s)", params=", ".join(extraParam+("params object[] args",)))
-    cw.enter_block("switch(args.Length)")
+    cw.enter_block("switch (args.Length)")
     for i in xrange(MAX_ARGS+1):
         args = ", ".join(["context"]+["args[%d]" % ai for ai in xrange(i)])
         cw.write("case %(index)s: return Call(%(args)s);", index=i, args=args)
@@ -148,14 +153,14 @@ def gen_fastcallable_any(cw, postfix="WithContext", extraParam=("ICallerContext 
 
     
     cw.enter_block("public override object CallInstance(%(params)s)", params=", ".join(extraParam+("object instance", "params object[] args",)))
-    cw.enter_block("switch(args.Length)")
+    cw.enter_block("switch (args.Length)")
     for i in xrange(MAX_ARGS):
         args = ", ".join(["context", "instance",]+["args[%d]" % ai for ai in xrange(i)])
         cw.write("case %(index)s: return CallInstance(%(args)s);", index=i, args=args)
     cw.exit_block()
     
     cw.write("if (targetN != null) return targetN(%(args)s);", args = ", ".join(extraArg+("PrependInstance(instance, args)",)))
-    cw.write("throw BadArgumentError(CallType.None, args.Length+1);")
+    cw.write("throw BadArgumentError(CallType.None, args.Length + 1);")
     cw.exit_block()
     
     cw.enter_block("private Exception BadArgumentError(CallType callType, int nargs)")
@@ -222,8 +227,7 @@ def gen_fastmaker(cw):
     cw.enter_block("public static FastCallable Make(string name, bool needsContext, int nargs, Delegate target)")
     cw.enter_block("if (needsContext)")
     gen_fastmakers(cw, "WithContext")
-    cw.exit_block()
-    cw.enter_block("else")
+    cw.else_block()
     gen_fastmakers(cw, "")
     cw.exit_block()
     cw.write("throw new NotImplementedException();")
@@ -279,10 +283,10 @@ def gen_call(nargs, nparams, cw):
     
     # emit the common case of no recursion check
     if (nargs == nparams):
-        cw.write("if(!EnforceRecursion) return target(%s);" % ", ".join(args))
+        cw.write("if (!EnforceRecursion) return target(%s);" % ", ".join(args))
     else:        
         dargs = args + ["Defaults[Defaults.Length - %d]" % i for i in range(ndefaults, 0, -1)]
-        cw.write("if(!EnforceRecursion) return target(%s);" % ", ".join(dargs))
+        cw.write("if (!EnforceRecursion) return target(%s);" % ", ".join(dargs))
     
     # emit non-common case of recursion check
     cw.write("PushFrame();")
@@ -375,11 +379,11 @@ def gen_function(nparams, cw):
     cw.exit_block()
 
     cw.enter_block("public override int GetHashCode()")
-    cw.write("    return target.GetHashCode();")
+    cw.write("return target.GetHashCode();")
     cw.exit_block()
 
     cw.enter_block("public override object Clone()")
-    cw.write("    return new Function%d(Module, Name, target, ArgNames, Defaults);" % nparams)
+    cw.write("return new Function%d(Module, Name, target, ArgNames, Defaults);" % nparams)
     cw.exit_block()
 
     cw.exit_block()
@@ -428,7 +432,7 @@ def gen_callcontext_meth(nparams, cw):
     if nparams == 0:
         cw.write("return Ops.CallWithContext(context, func, EMPTY);")
     else:
-        cw.write("return Ops.CallWithContext(context, func, new object[]{" + gen_args_call(nparams) + "});")
+        cw.write("return Ops.CallWithContext(context, func, new object[] " + gen_args_array(nparams) + ");")
     cw.exit_block()
     cw.write("")
 
@@ -483,7 +487,7 @@ CodeGenerator("FuncDef Code", gen_funcdef).doit()
 def gen_functionN_fastcall(cw):
     for i in xrange(MAX_ARGS+1):
         cw.enter_block("public override object Call(" + make_params1(i) + ")")
-        cw.write("return Call(new object[] { " + gen_args_call(i) + "});")
+        cw.write("return Call(new object[] " + gen_args_array(i) + ");")
         cw.exit_block()
         cw.write("")
 

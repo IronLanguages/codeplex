@@ -84,35 +84,35 @@ namespace IronPython.Runtime.Operations {
             FastCallable fc = func as FastCallable;
             if (fc != null) return fc.Call(context, arg0);
 
-            return Ops.CallWithContext(context, func, new object[]{arg0});
+            return Ops.CallWithContext(context, func, new object[] { arg0 });
         }
 
         public static object CallWithContext(ICallerContext context, object func, object arg0, object arg1) {
             FastCallable fc = func as FastCallable;
             if (fc != null) return fc.Call(context, arg0, arg1);
 
-            return Ops.CallWithContext(context, func, new object[]{arg0, arg1});
+            return Ops.CallWithContext(context, func, new object[] { arg0, arg1 });
         }
 
         public static object CallWithContext(ICallerContext context, object func, object arg0, object arg1, object arg2) {
             FastCallable fc = func as FastCallable;
             if (fc != null) return fc.Call(context, arg0, arg1, arg2);
 
-            return Ops.CallWithContext(context, func, new object[]{arg0, arg1, arg2});
+            return Ops.CallWithContext(context, func, new object[] { arg0, arg1, arg2 });
         }
 
         public static object CallWithContext(ICallerContext context, object func, object arg0, object arg1, object arg2, object arg3) {
             FastCallable fc = func as FastCallable;
             if (fc != null) return fc.Call(context, arg0, arg1, arg2, arg3);
 
-            return Ops.CallWithContext(context, func, new object[]{arg0, arg1, arg2, arg3});
+            return Ops.CallWithContext(context, func, new object[] { arg0, arg1, arg2, arg3 });
         }
 
         public static object CallWithContext(ICallerContext context, object func, object arg0, object arg1, object arg2, object arg3, object arg4) {
             FastCallable fc = func as FastCallable;
             if (fc != null) return fc.Call(context, arg0, arg1, arg2, arg3, arg4);
 
-            return Ops.CallWithContext(context, func, new object[]{arg0, arg1, arg2, arg3, arg4});
+            return Ops.CallWithContext(context, func, new object[] { arg0, arg1, arg2, arg3, arg4 });
         }
 
 
@@ -128,14 +128,14 @@ namespace IronPython.Runtime.Operations {
         public static object Add(object x, object y) {
             object ret;
             INumber inum;
-            string sx,sy;
+            string sx, sy;
             ExtensibleString es = null;
 
             if (x is int) {
                 ret = IntOps.Add((int)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if((sx = x as string)!= null && ((sy = y as string)!=null || (es = y as ExtensibleString)!=null)) {
-                if(sy != null) return sx + sy;
+            } else if ((sx = x as string) != null && ((sy = y as string) != null || (es = y as ExtensibleString) != null)) {
+                if (sy != null) return sx + sy;
                 return sx + es.Value;
             } else if (x is double) {
                 ret = FloatOps.Add((double)x, y);
@@ -149,7 +149,7 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Add((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if ((inum = x as INumber)!=null) {
+            } else if ((inum = x as INumber) != null) {
                 ret = inum.Add(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
@@ -247,7 +247,7 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Subtract((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if ((inum = x as INumber)!=null) {
+            } else if ((inum = x as INumber) != null) {
                 ret = inum.Subtract(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
@@ -334,7 +334,7 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Power((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if ((inum = x as INumber)!=null) {
+            } else if ((inum = x as INumber) != null) {
                 ret = inum.Power(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
@@ -421,7 +421,7 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Multiply((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if ((inum = x as INumber)!=null) {
+            } else if ((inum = x as INumber) != null) {
                 ret = inum.Multiply(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
@@ -514,7 +514,7 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.FloorDivide((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if ((inum = x as INumber)!=null) {
+            } else if ((inum = x as INumber) != null) {
                 ret = inum.FloorDivide(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
@@ -601,7 +601,7 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Divide((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if ((inum = x as INumber)!=null) {
+            } else if ((inum = x as INumber) != null) {
                 ret = inum.Divide(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
@@ -688,7 +688,7 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.TrueDivide((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if ((inum = x as INumber)!=null) {
+            } else if ((inum = x as INumber) != null) {
                 ret = inum.TrueDivide(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
@@ -775,7 +775,7 @@ namespace IronPython.Runtime.Operations {
             } else if (x is long) {
                 ret = Int64Ops.Mod((long)x, y);
                 if (ret != NotImplemented) return ret;
-            } else if ((inum = x as INumber)!=null) {
+            } else if ((inum = x as INumber) != null) {
                 ret = inum.Mod(y);
                 if (ret != NotImplemented) return ret;
             } else if (x is bool) {
@@ -1138,31 +1138,31 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Bool2Object(((int)x) < ((int)y));
                 } else if (y is double) {
                     return Ops.Bool2Object(((int)x) < ((double)y));
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 < 0);
                 } else {
                     Conversion conv;
                     double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((int)x) < dbl);            
+                    if (conv < Conversion.None) return Ops.Bool2Object(((int)x) < dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
                     return Ops.Bool2Object(((double)x) < ((int)y));
                 } else if (y is double) {
                     return Ops.Bool2Object(((double)x) < ((double)y));
-                } else if(y is ExtensibleFloat) {
+                } else if (y is ExtensibleFloat) {
                     return Ops.Bool2Object(((double)x) < ((ExtensibleFloat)y).value);
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 < 0);
                 } else {
                     BigInteger bi = y as BigInteger;
-                    if(!Object.ReferenceEquals(bi, null)) {
+                    if (!Object.ReferenceEquals(bi, null)) {
                         BigInteger self = BigInteger.Create((double)x);
                         double dblSelf = (double)x;
-                        if(self == bi) {
+                        if (self == bi) {
                             double mod = dblSelf % 1;
-                            if(mod != 0) {
-                                if(dblSelf > 0) 
+                            if (mod != 0) {
+                                if (dblSelf > 0)
                                     return Ops.Bool2Object(1 < 0);
                                 return Ops.Bool2Object(0 < 1);
                             }
@@ -1173,57 +1173,57 @@ namespace IronPython.Runtime.Operations {
 
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) < val);            
+                    if (conv < Conversion.None) return Ops.Bool2Object(((double)x) < val);
                 }
             } else if (x is bool) {
-                if(y is bool) {
-                    return Ops.Bool2Object((((bool)x)? 1 : 0) < (((bool)y)? 1 : 0));
-                } else if(y == null) {
+                if (y is bool) {
+                    return Ops.Bool2Object((((bool)x) ? 1 : 0) < (((bool)y) ? 1 : 0));
+                } else if (y == null) {
                     return Ops.Bool2Object(1 < 0);
-                } else { 
+                } else {
                     Conversion conv;
                     int other = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) {
-                        if((bool)x)
+                    if (conv < Conversion.None) {
+                        if ((bool)x)
                             return Ops.Bool2Object(1 < (other));
                         else
                             return Ops.Bool2Object(0 < (other));
                     }
                 }
-            } else if(x is BigInteger) {
-                if(y is BigInteger) {
+            } else if (x is BigInteger) {
+                if (y is BigInteger) {
                     return Ops.Bool2Object(((BigInteger)x) < ((BigInteger)y));
-                } else if(y is bool) {
+                } else if (y is bool) {
                     return Ops.Bool2Object(((BigInteger)x) < (((bool)y) ? 1 : 0));
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 < 0);
-                } else if(y is double) {
+                } else if (y is double) {
                     double dbl = (double)y;
-                    return Ops.Bool2Object( (((int)FloatOps.Compare(dbl, x))*-1) < 0 );
+                    return Ops.Bool2Object((((int)FloatOps.Compare(dbl, x)) * -1) < 0);
                 }
-            } else if(x is short) {
+            } else if (x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
-            } else if(x is ushort) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
+            } else if (x is ushort) {
                 object res = IntOps.Compare((int)(ushort)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
-            } else if(x is byte) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
+            } else if (x is byte) {
                 object res = IntOps.Compare((int)(byte)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
-            } else if(x is sbyte) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
+            } else if (x is sbyte) {
                 object res = IntOps.Compare((int)(sbyte)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
-            } else if(x is ulong) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
+            } else if (x is ulong) {
                 object res = Int64Ops.Compare((ulong)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
-            } else if(x is uint) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
+            } else if (x is uint) {
                 object res = Int64Ops.Compare((long)(uint)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
-            } else if(x is decimal) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
+            } else if (x is decimal) {
                 object res = FloatOps.Compare((double)(decimal)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) < 0);
             } else if (x == null) {
-                if(y == null) return Ops.Bool2Object(false);
+                if (y == null) return Ops.Bool2Object(false);
 
                 if (y.GetType().IsPrimitive || y is BigInteger) {
                     // built-in type that doesn't implement our comparable
@@ -1305,31 +1305,31 @@ namespace IronPython.Runtime.Operations {
                     return (((int)x) < ((int)y));
                 } else if (y is double) {
                     return (((int)x) < ((double)y));
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 < 0);
                 } else {
                     Conversion conv;
                     double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if(conv < Conversion.None) return (((int)x) < dbl);            
+                    if (conv < Conversion.None) return (((int)x) < dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
                     return (((double)x) < ((int)y));
                 } else if (y is double) {
                     return (((double)x) < ((double)y));
-                } else if(y is ExtensibleFloat) {
+                } else if (y is ExtensibleFloat) {
                     return (((double)x) < ((ExtensibleFloat)y).value);
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 < 0);
                 } else {
                     BigInteger bi = y as BigInteger;
-                    if(!Object.ReferenceEquals(bi, null)) {
+                    if (!Object.ReferenceEquals(bi, null)) {
                         BigInteger self = BigInteger.Create((double)x);
                         double dblSelf = (double)x;
-                        if(self == bi) {
+                        if (self == bi) {
                             double mod = dblSelf % 1;
-                            if(mod != 0) {
-                                if(dblSelf > 0) 
+                            if (mod != 0) {
+                                if (dblSelf > 0)
                                     return (1 < 0);
                                 return (0 < 1);
                             }
@@ -1340,57 +1340,57 @@ namespace IronPython.Runtime.Operations {
 
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return (((double)x) < val);            
+                    if (conv < Conversion.None) return (((double)x) < val);
                 }
             } else if (x is bool) {
-                if(y is bool) {
-                    return ((((bool)x)? 1 : 0) < (((bool)y)? 1 : 0));
-                } else if(y == null) {
+                if (y is bool) {
+                    return ((((bool)x) ? 1 : 0) < (((bool)y) ? 1 : 0));
+                } else if (y == null) {
                     return (1 < 0);
-                } else { 
+                } else {
                     Conversion conv;
                     int other = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) {
-                        if((bool)x)
+                    if (conv < Conversion.None) {
+                        if ((bool)x)
                             return (1 < (other));
                         else
                             return (0 < (other));
                     }
                 }
-            } else if(x is BigInteger) {
-                if(y is BigInteger) {
+            } else if (x is BigInteger) {
+                if (y is BigInteger) {
                     return (((BigInteger)x) < ((BigInteger)y));
-                } else if(y is bool) {
+                } else if (y is bool) {
                     return (((BigInteger)x) < (((bool)y) ? 1 : 0));
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 < 0);
-                } else if(y is double) {
+                } else if (y is double) {
                     double dbl = (double)y;
-                    return ( (((int)FloatOps.Compare(dbl, x))*-1) < 0 );
+                    return ((((int)FloatOps.Compare(dbl, x)) * -1) < 0);
                 }
-            } else if(x is short) {
+            } else if (x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) < 0);
-            } else if(x is ushort) {
+                if (res != Ops.NotImplemented) return (((int)res) < 0);
+            } else if (x is ushort) {
                 object res = IntOps.Compare((int)(ushort)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) < 0);
-            } else if(x is byte) {
+                if (res != Ops.NotImplemented) return (((int)res) < 0);
+            } else if (x is byte) {
                 object res = IntOps.Compare((int)(byte)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) < 0);
-            } else if(x is sbyte) {
+                if (res != Ops.NotImplemented) return (((int)res) < 0);
+            } else if (x is sbyte) {
                 object res = IntOps.Compare((int)(sbyte)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) < 0);
-            } else if(x is ulong) {
+                if (res != Ops.NotImplemented) return (((int)res) < 0);
+            } else if (x is ulong) {
                 object res = Int64Ops.Compare((ulong)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) < 0);
-            } else if(x is uint) {
+                if (res != Ops.NotImplemented) return (((int)res) < 0);
+            } else if (x is uint) {
                 object res = Int64Ops.Compare((long)(uint)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) < 0);
-            } else if(x is decimal) {
+                if (res != Ops.NotImplemented) return (((int)res) < 0);
+            } else if (x is decimal) {
                 object res = FloatOps.Compare((double)(decimal)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) < 0);
+                if (res != Ops.NotImplemented) return (((int)res) < 0);
             } else if (x == null) {
-                if(y == null) return (false);
+                if (y == null) return (false);
 
                 if (y.GetType().IsPrimitive || y is BigInteger) {
                     // built-in type that doesn't implement our comparable
@@ -1472,31 +1472,31 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Bool2Object(((int)x) > ((int)y));
                 } else if (y is double) {
                     return Ops.Bool2Object(((int)x) > ((double)y));
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 > 0);
                 } else {
                     Conversion conv;
                     double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((int)x) > dbl);            
+                    if (conv < Conversion.None) return Ops.Bool2Object(((int)x) > dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
                     return Ops.Bool2Object(((double)x) > ((int)y));
                 } else if (y is double) {
                     return Ops.Bool2Object(((double)x) > ((double)y));
-                } else if(y is ExtensibleFloat) {
+                } else if (y is ExtensibleFloat) {
                     return Ops.Bool2Object(((double)x) > ((ExtensibleFloat)y).value);
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 > 0);
                 } else {
                     BigInteger bi = y as BigInteger;
-                    if(!Object.ReferenceEquals(bi, null)) {
+                    if (!Object.ReferenceEquals(bi, null)) {
                         BigInteger self = BigInteger.Create((double)x);
                         double dblSelf = (double)x;
-                        if(self == bi) {
+                        if (self == bi) {
                             double mod = dblSelf % 1;
-                            if(mod != 0) {
-                                if(dblSelf > 0) 
+                            if (mod != 0) {
+                                if (dblSelf > 0)
                                     return Ops.Bool2Object(1 > 0);
                                 return Ops.Bool2Object(0 > 1);
                             }
@@ -1507,57 +1507,57 @@ namespace IronPython.Runtime.Operations {
 
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) > val);            
+                    if (conv < Conversion.None) return Ops.Bool2Object(((double)x) > val);
                 }
             } else if (x is bool) {
-                if(y is bool) {
-                    return Ops.Bool2Object((((bool)x)? 1 : 0) > (((bool)y)? 1 : 0));
-                } else if(y == null) {
+                if (y is bool) {
+                    return Ops.Bool2Object((((bool)x) ? 1 : 0) > (((bool)y) ? 1 : 0));
+                } else if (y == null) {
                     return Ops.Bool2Object(1 > 0);
-                } else { 
+                } else {
                     Conversion conv;
                     int other = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) {
-                        if((bool)x)
+                    if (conv < Conversion.None) {
+                        if ((bool)x)
                             return Ops.Bool2Object(1 > (other));
                         else
                             return Ops.Bool2Object(0 > (other));
                     }
                 }
-            } else if(x is BigInteger) {
-                if(y is BigInteger) {
+            } else if (x is BigInteger) {
+                if (y is BigInteger) {
                     return Ops.Bool2Object(((BigInteger)x) > ((BigInteger)y));
-                } else if(y is bool) {
+                } else if (y is bool) {
                     return Ops.Bool2Object(((BigInteger)x) > (((bool)y) ? 1 : 0));
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 > 0);
-                } else if(y is double) {
+                } else if (y is double) {
                     double dbl = (double)y;
-                    return Ops.Bool2Object( (((int)FloatOps.Compare(dbl, x))*-1) > 0 );
+                    return Ops.Bool2Object((((int)FloatOps.Compare(dbl, x)) * -1) > 0);
                 }
-            } else if(x is short) {
+            } else if (x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
-            } else if(x is ushort) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
+            } else if (x is ushort) {
                 object res = IntOps.Compare((int)(ushort)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
-            } else if(x is byte) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
+            } else if (x is byte) {
                 object res = IntOps.Compare((int)(byte)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
-            } else if(x is sbyte) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
+            } else if (x is sbyte) {
                 object res = IntOps.Compare((int)(sbyte)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
-            } else if(x is ulong) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
+            } else if (x is ulong) {
                 object res = Int64Ops.Compare((ulong)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
-            } else if(x is uint) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
+            } else if (x is uint) {
                 object res = Int64Ops.Compare((long)(uint)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
-            } else if(x is decimal) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
+            } else if (x is decimal) {
                 object res = FloatOps.Compare((double)(decimal)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) > 0);
             } else if (x == null) {
-                if(y == null) return Ops.Bool2Object(false);
+                if (y == null) return Ops.Bool2Object(false);
 
                 if (y.GetType().IsPrimitive || y is BigInteger) {
                     // built-in type that doesn't implement our comparable
@@ -1639,31 +1639,31 @@ namespace IronPython.Runtime.Operations {
                     return (((int)x) > ((int)y));
                 } else if (y is double) {
                     return (((int)x) > ((double)y));
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 > 0);
                 } else {
                     Conversion conv;
                     double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if(conv < Conversion.None) return (((int)x) > dbl);            
+                    if (conv < Conversion.None) return (((int)x) > dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
                     return (((double)x) > ((int)y));
                 } else if (y is double) {
                     return (((double)x) > ((double)y));
-                } else if(y is ExtensibleFloat) {
+                } else if (y is ExtensibleFloat) {
                     return (((double)x) > ((ExtensibleFloat)y).value);
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 > 0);
                 } else {
                     BigInteger bi = y as BigInteger;
-                    if(!Object.ReferenceEquals(bi, null)) {
+                    if (!Object.ReferenceEquals(bi, null)) {
                         BigInteger self = BigInteger.Create((double)x);
                         double dblSelf = (double)x;
-                        if(self == bi) {
+                        if (self == bi) {
                             double mod = dblSelf % 1;
-                            if(mod != 0) {
-                                if(dblSelf > 0) 
+                            if (mod != 0) {
+                                if (dblSelf > 0)
                                     return (1 > 0);
                                 return (0 > 1);
                             }
@@ -1674,57 +1674,57 @@ namespace IronPython.Runtime.Operations {
 
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return (((double)x) > val);            
+                    if (conv < Conversion.None) return (((double)x) > val);
                 }
             } else if (x is bool) {
-                if(y is bool) {
-                    return ((((bool)x)? 1 : 0) > (((bool)y)? 1 : 0));
-                } else if(y == null) {
+                if (y is bool) {
+                    return ((((bool)x) ? 1 : 0) > (((bool)y) ? 1 : 0));
+                } else if (y == null) {
                     return (1 > 0);
-                } else { 
+                } else {
                     Conversion conv;
                     int other = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) {
-                        if((bool)x)
+                    if (conv < Conversion.None) {
+                        if ((bool)x)
                             return (1 > (other));
                         else
                             return (0 > (other));
                     }
                 }
-            } else if(x is BigInteger) {
-                if(y is BigInteger) {
+            } else if (x is BigInteger) {
+                if (y is BigInteger) {
                     return (((BigInteger)x) > ((BigInteger)y));
-                } else if(y is bool) {
+                } else if (y is bool) {
                     return (((BigInteger)x) > (((bool)y) ? 1 : 0));
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 > 0);
-                } else if(y is double) {
+                } else if (y is double) {
                     double dbl = (double)y;
-                    return ( (((int)FloatOps.Compare(dbl, x))*-1) > 0 );
+                    return ((((int)FloatOps.Compare(dbl, x)) * -1) > 0);
                 }
-            } else if(x is short) {
+            } else if (x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) > 0);
-            } else if(x is ushort) {
+                if (res != Ops.NotImplemented) return (((int)res) > 0);
+            } else if (x is ushort) {
                 object res = IntOps.Compare((int)(ushort)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) > 0);
-            } else if(x is byte) {
+                if (res != Ops.NotImplemented) return (((int)res) > 0);
+            } else if (x is byte) {
                 object res = IntOps.Compare((int)(byte)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) > 0);
-            } else if(x is sbyte) {
+                if (res != Ops.NotImplemented) return (((int)res) > 0);
+            } else if (x is sbyte) {
                 object res = IntOps.Compare((int)(sbyte)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) > 0);
-            } else if(x is ulong) {
+                if (res != Ops.NotImplemented) return (((int)res) > 0);
+            } else if (x is ulong) {
                 object res = Int64Ops.Compare((ulong)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) > 0);
-            } else if(x is uint) {
+                if (res != Ops.NotImplemented) return (((int)res) > 0);
+            } else if (x is uint) {
                 object res = Int64Ops.Compare((long)(uint)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) > 0);
-            } else if(x is decimal) {
+                if (res != Ops.NotImplemented) return (((int)res) > 0);
+            } else if (x is decimal) {
                 object res = FloatOps.Compare((double)(decimal)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) > 0);
+                if (res != Ops.NotImplemented) return (((int)res) > 0);
             } else if (x == null) {
-                if(y == null) return (false);
+                if (y == null) return (false);
 
                 if (y.GetType().IsPrimitive || y is BigInteger) {
                     // built-in type that doesn't implement our comparable
@@ -1806,31 +1806,31 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Bool2Object(((int)x) <= ((int)y));
                 } else if (y is double) {
                     return Ops.Bool2Object(((int)x) <= ((double)y));
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 <= 0);
                 } else {
                     Conversion conv;
                     double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((int)x) <= dbl);            
+                    if (conv < Conversion.None) return Ops.Bool2Object(((int)x) <= dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
                     return Ops.Bool2Object(((double)x) <= ((int)y));
                 } else if (y is double) {
                     return Ops.Bool2Object(((double)x) <= ((double)y));
-                } else if(y is ExtensibleFloat) {
+                } else if (y is ExtensibleFloat) {
                     return Ops.Bool2Object(((double)x) <= ((ExtensibleFloat)y).value);
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 <= 0);
                 } else {
                     BigInteger bi = y as BigInteger;
-                    if(!Object.ReferenceEquals(bi, null)) {
+                    if (!Object.ReferenceEquals(bi, null)) {
                         BigInteger self = BigInteger.Create((double)x);
                         double dblSelf = (double)x;
-                        if(self == bi) {
+                        if (self == bi) {
                             double mod = dblSelf % 1;
-                            if(mod != 0) {
-                                if(dblSelf > 0) 
+                            if (mod != 0) {
+                                if (dblSelf > 0)
                                     return Ops.Bool2Object(1 <= 0);
                                 return Ops.Bool2Object(0 <= 1);
                             }
@@ -1841,57 +1841,57 @@ namespace IronPython.Runtime.Operations {
 
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) <= val);            
+                    if (conv < Conversion.None) return Ops.Bool2Object(((double)x) <= val);
                 }
             } else if (x is bool) {
-                if(y is bool) {
-                    return Ops.Bool2Object((((bool)x)? 1 : 0) <= (((bool)y)? 1 : 0));
-                } else if(y == null) {
+                if (y is bool) {
+                    return Ops.Bool2Object((((bool)x) ? 1 : 0) <= (((bool)y) ? 1 : 0));
+                } else if (y == null) {
                     return Ops.Bool2Object(1 <= 0);
-                } else { 
+                } else {
                     Conversion conv;
                     int other = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) {
-                        if((bool)x)
+                    if (conv < Conversion.None) {
+                        if ((bool)x)
                             return Ops.Bool2Object(1 <= (other));
                         else
                             return Ops.Bool2Object(0 <= (other));
                     }
                 }
-            } else if(x is BigInteger) {
-                if(y is BigInteger) {
+            } else if (x is BigInteger) {
+                if (y is BigInteger) {
                     return Ops.Bool2Object(((BigInteger)x) <= ((BigInteger)y));
-                } else if(y is bool) {
+                } else if (y is bool) {
                     return Ops.Bool2Object(((BigInteger)x) <= (((bool)y) ? 1 : 0));
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 <= 0);
-                } else if(y is double) {
+                } else if (y is double) {
                     double dbl = (double)y;
-                    return Ops.Bool2Object( (((int)FloatOps.Compare(dbl, x))*-1) <= 0 );
+                    return Ops.Bool2Object((((int)FloatOps.Compare(dbl, x)) * -1) <= 0);
                 }
-            } else if(x is short) {
+            } else if (x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
-            } else if(x is ushort) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
+            } else if (x is ushort) {
                 object res = IntOps.Compare((int)(ushort)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
-            } else if(x is byte) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
+            } else if (x is byte) {
                 object res = IntOps.Compare((int)(byte)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
-            } else if(x is sbyte) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
+            } else if (x is sbyte) {
                 object res = IntOps.Compare((int)(sbyte)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
-            } else if(x is ulong) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
+            } else if (x is ulong) {
                 object res = Int64Ops.Compare((ulong)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
-            } else if(x is uint) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
+            } else if (x is uint) {
                 object res = Int64Ops.Compare((long)(uint)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
-            } else if(x is decimal) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
+            } else if (x is decimal) {
                 object res = FloatOps.Compare((double)(decimal)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) <= 0);
             } else if (x == null) {
-                if(y == null) return Ops.Bool2Object(true);
+                if (y == null) return Ops.Bool2Object(true);
 
                 if (y.GetType().IsPrimitive || y is BigInteger) {
                     // built-in type that doesn't implement our comparable
@@ -1973,31 +1973,31 @@ namespace IronPython.Runtime.Operations {
                     return (((int)x) <= ((int)y));
                 } else if (y is double) {
                     return (((int)x) <= ((double)y));
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 <= 0);
                 } else {
                     Conversion conv;
                     double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if(conv < Conversion.None) return (((int)x) <= dbl);            
+                    if (conv < Conversion.None) return (((int)x) <= dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
                     return (((double)x) <= ((int)y));
                 } else if (y is double) {
                     return (((double)x) <= ((double)y));
-                } else if(y is ExtensibleFloat) {
+                } else if (y is ExtensibleFloat) {
                     return (((double)x) <= ((ExtensibleFloat)y).value);
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 <= 0);
                 } else {
                     BigInteger bi = y as BigInteger;
-                    if(!Object.ReferenceEquals(bi, null)) {
+                    if (!Object.ReferenceEquals(bi, null)) {
                         BigInteger self = BigInteger.Create((double)x);
                         double dblSelf = (double)x;
-                        if(self == bi) {
+                        if (self == bi) {
                             double mod = dblSelf % 1;
-                            if(mod != 0) {
-                                if(dblSelf > 0) 
+                            if (mod != 0) {
+                                if (dblSelf > 0)
                                     return (1 <= 0);
                                 return (0 <= 1);
                             }
@@ -2008,57 +2008,57 @@ namespace IronPython.Runtime.Operations {
 
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return (((double)x) <= val);            
+                    if (conv < Conversion.None) return (((double)x) <= val);
                 }
             } else if (x is bool) {
-                if(y is bool) {
-                    return ((((bool)x)? 1 : 0) <= (((bool)y)? 1 : 0));
-                } else if(y == null) {
+                if (y is bool) {
+                    return ((((bool)x) ? 1 : 0) <= (((bool)y) ? 1 : 0));
+                } else if (y == null) {
                     return (1 <= 0);
-                } else { 
+                } else {
                     Conversion conv;
                     int other = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) {
-                        if((bool)x)
+                    if (conv < Conversion.None) {
+                        if ((bool)x)
                             return (1 <= (other));
                         else
                             return (0 <= (other));
                     }
                 }
-            } else if(x is BigInteger) {
-                if(y is BigInteger) {
+            } else if (x is BigInteger) {
+                if (y is BigInteger) {
                     return (((BigInteger)x) <= ((BigInteger)y));
-                } else if(y is bool) {
+                } else if (y is bool) {
                     return (((BigInteger)x) <= (((bool)y) ? 1 : 0));
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 <= 0);
-                } else if(y is double) {
+                } else if (y is double) {
                     double dbl = (double)y;
-                    return ( (((int)FloatOps.Compare(dbl, x))*-1) <= 0 );
+                    return ((((int)FloatOps.Compare(dbl, x)) * -1) <= 0);
                 }
-            } else if(x is short) {
+            } else if (x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) <= 0);
-            } else if(x is ushort) {
+                if (res != Ops.NotImplemented) return (((int)res) <= 0);
+            } else if (x is ushort) {
                 object res = IntOps.Compare((int)(ushort)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) <= 0);
-            } else if(x is byte) {
+                if (res != Ops.NotImplemented) return (((int)res) <= 0);
+            } else if (x is byte) {
                 object res = IntOps.Compare((int)(byte)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) <= 0);
-            } else if(x is sbyte) {
+                if (res != Ops.NotImplemented) return (((int)res) <= 0);
+            } else if (x is sbyte) {
                 object res = IntOps.Compare((int)(sbyte)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) <= 0);
-            } else if(x is ulong) {
+                if (res != Ops.NotImplemented) return (((int)res) <= 0);
+            } else if (x is ulong) {
                 object res = Int64Ops.Compare((ulong)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) <= 0);
-            } else if(x is uint) {
+                if (res != Ops.NotImplemented) return (((int)res) <= 0);
+            } else if (x is uint) {
                 object res = Int64Ops.Compare((long)(uint)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) <= 0);
-            } else if(x is decimal) {
+                if (res != Ops.NotImplemented) return (((int)res) <= 0);
+            } else if (x is decimal) {
                 object res = FloatOps.Compare((double)(decimal)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) <= 0);
+                if (res != Ops.NotImplemented) return (((int)res) <= 0);
             } else if (x == null) {
-                if(y == null) return (true);
+                if (y == null) return (true);
 
                 if (y.GetType().IsPrimitive || y is BigInteger) {
                     // built-in type that doesn't implement our comparable
@@ -2140,31 +2140,31 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Bool2Object(((int)x) >= ((int)y));
                 } else if (y is double) {
                     return Ops.Bool2Object(((int)x) >= ((double)y));
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 >= 0);
                 } else {
                     Conversion conv;
                     double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((int)x) >= dbl);            
+                    if (conv < Conversion.None) return Ops.Bool2Object(((int)x) >= dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
                     return Ops.Bool2Object(((double)x) >= ((int)y));
                 } else if (y is double) {
                     return Ops.Bool2Object(((double)x) >= ((double)y));
-                } else if(y is ExtensibleFloat) {
+                } else if (y is ExtensibleFloat) {
                     return Ops.Bool2Object(((double)x) >= ((ExtensibleFloat)y).value);
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 >= 0);
                 } else {
                     BigInteger bi = y as BigInteger;
-                    if(!Object.ReferenceEquals(bi, null)) {
+                    if (!Object.ReferenceEquals(bi, null)) {
                         BigInteger self = BigInteger.Create((double)x);
                         double dblSelf = (double)x;
-                        if(self == bi) {
+                        if (self == bi) {
                             double mod = dblSelf % 1;
-                            if(mod != 0) {
-                                if(dblSelf > 0) 
+                            if (mod != 0) {
+                                if (dblSelf > 0)
                                     return Ops.Bool2Object(1 >= 0);
                                 return Ops.Bool2Object(0 >= 1);
                             }
@@ -2175,57 +2175,57 @@ namespace IronPython.Runtime.Operations {
 
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return Ops.Bool2Object(((double)x) >= val);            
+                    if (conv < Conversion.None) return Ops.Bool2Object(((double)x) >= val);
                 }
             } else if (x is bool) {
-                if(y is bool) {
-                    return Ops.Bool2Object((((bool)x)? 1 : 0) >= (((bool)y)? 1 : 0));
-                } else if(y == null) {
+                if (y is bool) {
+                    return Ops.Bool2Object((((bool)x) ? 1 : 0) >= (((bool)y) ? 1 : 0));
+                } else if (y == null) {
                     return Ops.Bool2Object(1 >= 0);
-                } else { 
+                } else {
                     Conversion conv;
                     int other = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) {
-                        if((bool)x)
+                    if (conv < Conversion.None) {
+                        if ((bool)x)
                             return Ops.Bool2Object(1 >= (other));
                         else
                             return Ops.Bool2Object(0 >= (other));
                     }
                 }
-            } else if(x is BigInteger) {
-                if(y is BigInteger) {
+            } else if (x is BigInteger) {
+                if (y is BigInteger) {
                     return Ops.Bool2Object(((BigInteger)x) >= ((BigInteger)y));
-                } else if(y is bool) {
+                } else if (y is bool) {
                     return Ops.Bool2Object(((BigInteger)x) >= (((bool)y) ? 1 : 0));
-                } else if(y == null) {
+                } else if (y == null) {
                     return Ops.Bool2Object(1 >= 0);
-                } else if(y is double) {
+                } else if (y is double) {
                     double dbl = (double)y;
-                    return Ops.Bool2Object( (((int)FloatOps.Compare(dbl, x))*-1) >= 0 );
+                    return Ops.Bool2Object((((int)FloatOps.Compare(dbl, x)) * -1) >= 0);
                 }
-            } else if(x is short) {
+            } else if (x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
-            } else if(x is ushort) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
+            } else if (x is ushort) {
                 object res = IntOps.Compare((int)(ushort)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
-            } else if(x is byte) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
+            } else if (x is byte) {
                 object res = IntOps.Compare((int)(byte)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
-            } else if(x is sbyte) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
+            } else if (x is sbyte) {
                 object res = IntOps.Compare((int)(sbyte)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
-            } else if(x is ulong) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
+            } else if (x is ulong) {
                 object res = Int64Ops.Compare((ulong)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
-            } else if(x is uint) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
+            } else if (x is uint) {
                 object res = Int64Ops.Compare((long)(uint)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
-            } else if(x is decimal) {
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
+            } else if (x is decimal) {
                 object res = FloatOps.Compare((double)(decimal)x, y);
-                if(res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
+                if (res != Ops.NotImplemented) return Ops.Bool2Object(((int)res) >= 0);
             } else if (x == null) {
-                if(y == null) return Ops.Bool2Object(true);
+                if (y == null) return Ops.Bool2Object(true);
 
                 if (y.GetType().IsPrimitive || y is BigInteger) {
                     // built-in type that doesn't implement our comparable
@@ -2307,31 +2307,31 @@ namespace IronPython.Runtime.Operations {
                     return (((int)x) >= ((int)y));
                 } else if (y is double) {
                     return (((int)x) >= ((double)y));
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 >= 0);
                 } else {
                     Conversion conv;
                     double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if(conv < Conversion.None) return (((int)x) >= dbl);            
+                    if (conv < Conversion.None) return (((int)x) >= dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
                     return (((double)x) >= ((int)y));
                 } else if (y is double) {
                     return (((double)x) >= ((double)y));
-                } else if(y is ExtensibleFloat) {
+                } else if (y is ExtensibleFloat) {
                     return (((double)x) >= ((ExtensibleFloat)y).value);
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 >= 0);
                 } else {
                     BigInteger bi = y as BigInteger;
-                    if(!Object.ReferenceEquals(bi, null)) {
+                    if (!Object.ReferenceEquals(bi, null)) {
                         BigInteger self = BigInteger.Create((double)x);
                         double dblSelf = (double)x;
-                        if(self == bi) {
+                        if (self == bi) {
                             double mod = dblSelf % 1;
-                            if(mod != 0) {
-                                if(dblSelf > 0) 
+                            if (mod != 0) {
+                                if (dblSelf > 0)
                                     return (1 >= 0);
                                 return (0 >= 1);
                             }
@@ -2342,57 +2342,57 @@ namespace IronPython.Runtime.Operations {
 
                     Conversion conv;
                     int val = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) return (((double)x) >= val);            
+                    if (conv < Conversion.None) return (((double)x) >= val);
                 }
             } else if (x is bool) {
-                if(y is bool) {
-                    return ((((bool)x)? 1 : 0) >= (((bool)y)? 1 : 0));
-                } else if(y == null) {
+                if (y is bool) {
+                    return ((((bool)x) ? 1 : 0) >= (((bool)y) ? 1 : 0));
+                } else if (y == null) {
                     return (1 >= 0);
-                } else { 
+                } else {
                     Conversion conv;
                     int other = Converter.TryConvertToInt32(y, out conv);
-                    if(conv < Conversion.None) {
-                        if((bool)x)
+                    if (conv < Conversion.None) {
+                        if ((bool)x)
                             return (1 >= (other));
                         else
                             return (0 >= (other));
                     }
                 }
-            } else if(x is BigInteger) {
-                if(y is BigInteger) {
+            } else if (x is BigInteger) {
+                if (y is BigInteger) {
                     return (((BigInteger)x) >= ((BigInteger)y));
-                } else if(y is bool) {
+                } else if (y is bool) {
                     return (((BigInteger)x) >= (((bool)y) ? 1 : 0));
-                } else if(y == null) {
+                } else if (y == null) {
                     return (1 >= 0);
-                } else if(y is double) {
+                } else if (y is double) {
                     double dbl = (double)y;
-                    return ( (((int)FloatOps.Compare(dbl, x))*-1) >= 0 );
+                    return ((((int)FloatOps.Compare(dbl, x)) * -1) >= 0);
                 }
-            } else if(x is short) {
+            } else if (x is short) {
                 object res = IntOps.Compare((int)(short)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) >= 0);
-            } else if(x is ushort) {
+                if (res != Ops.NotImplemented) return (((int)res) >= 0);
+            } else if (x is ushort) {
                 object res = IntOps.Compare((int)(ushort)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) >= 0);
-            } else if(x is byte) {
+                if (res != Ops.NotImplemented) return (((int)res) >= 0);
+            } else if (x is byte) {
                 object res = IntOps.Compare((int)(byte)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) >= 0);
-            } else if(x is sbyte) {
+                if (res != Ops.NotImplemented) return (((int)res) >= 0);
+            } else if (x is sbyte) {
                 object res = IntOps.Compare((int)(sbyte)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) >= 0);
-            } else if(x is ulong) {
+                if (res != Ops.NotImplemented) return (((int)res) >= 0);
+            } else if (x is ulong) {
                 object res = Int64Ops.Compare((ulong)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) >= 0);
-            } else if(x is uint) {
+                if (res != Ops.NotImplemented) return (((int)res) >= 0);
+            } else if (x is uint) {
                 object res = Int64Ops.Compare((long)(uint)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) >= 0);
-            } else if(x is decimal) {
+                if (res != Ops.NotImplemented) return (((int)res) >= 0);
+            } else if (x is decimal) {
                 object res = FloatOps.Compare((double)(decimal)x, y);
-                if(res != Ops.NotImplemented) return (((int)res) >= 0);
+                if (res != Ops.NotImplemented) return (((int)res) >= 0);
             } else if (x == null) {
-                if(y == null) return (true);
+                if (y == null) return (true);
 
                 if (y.GetType().IsPrimitive || y is BigInteger) {
                     // built-in type that doesn't implement our comparable

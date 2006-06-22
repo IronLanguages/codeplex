@@ -221,16 +221,18 @@ class ToBool(To):
         cw.enter_block("if (retType == typeof(bool) || retType == typeof(int))")
         cw.writeline("Conversion dummy;")
         cw.writeline("return TryConvertToBoolean(ret, out dummy);")
+        cw.else_block()
+        cw.writeline("throw Ops.TypeError(\"__nonzero__ should return bool or int, returned {0}\", Ops.GetClassName(ret));");
         cw.exit_block()
-        cw.writeline("else throw Ops.TypeError(\"__nonzero__ should return bool or int, returned {0}\", Ops.GetClassName(ret));");
         cw.else_block("if (Ops.TryToInvoke(value, SymbolTable.Length, out ret))")
         cw.writeline("conversion = Conversion.Eval;")
         cw.writeline("Type retType = ret.GetType();")
         cw.enter_block("if (retType == typeof(bool) || retType == typeof(int))")
         cw.writeline("Conversion dummy;")
         cw.writeline("return TryConvertToBoolean(ret, out dummy);")
+        cw.else_block()
+        cw.writeline("throw Ops.TypeError(\"an integer is required\");");
         cw.exit_block()
-        cw.writeline("else throw Ops.TypeError(\"an integer is required\");");
         for f in self.fromlist:
             if f.fromtype.lowercase.startswith("Extensible"):
                 f.generate(cw, self.to, False)                    

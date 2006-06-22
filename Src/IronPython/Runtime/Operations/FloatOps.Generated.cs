@@ -264,7 +264,7 @@ namespace IronPython.Runtime.Operations {
             if (other is long) return TrueDivide(x, ((long)other));
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.TrueDivide(Complex64.MakeReal(x), xc.value);
             if (other is byte) return TrueDivide(x, (int)((byte)other));
-           return Ops.NotImplemented;
+            return Ops.NotImplemented;
         }
 
         [PythonName("__rtruediv__")]
@@ -283,7 +283,7 @@ namespace IronPython.Runtime.Operations {
             if (other is long) return ReverseTrueDivide(x, ((long)other));
             if ((object)(xc = other as ExtensibleComplex) != null) return ComplexOps.ReverseTrueDivide(Complex64.MakeReal(x), xc.value);
             if (other is byte) return ReverseTrueDivide(x, (int)((byte)other));
-           return Ops.NotImplemented;
+            return Ops.NotImplemented;
         }
 
 

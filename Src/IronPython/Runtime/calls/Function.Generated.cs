@@ -78,7 +78,7 @@ namespace IronPython.Runtime.Calls {
             this.target = target;
         }
         public override object Call(ICallerContext context) {
-            if(!EnforceRecursion) return target();
+            if (!EnforceRecursion) return target();
             PushFrame();
             try {
                 return target();
@@ -99,10 +99,10 @@ namespace IronPython.Runtime.Calls {
             return target == other.target;
         }
         public override int GetHashCode() {
-                return target.GetHashCode();
+            return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function0(Module, Name, target, ArgNames, Defaults);
+            return new Function0(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -115,7 +115,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context) {
             if (Defaults.Length < 1) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(Defaults[Defaults.Length - 1]);
@@ -124,7 +124,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
         public override object Call(ICallerContext context, object arg0) {
-            if(!EnforceRecursion) return target(arg0);
+            if (!EnforceRecursion) return target(arg0);
             PushFrame();
             try {
                 return target(arg0);
@@ -146,10 +146,10 @@ namespace IronPython.Runtime.Calls {
             return target == other.target;
         }
         public override int GetHashCode() {
-                return target.GetHashCode();
+            return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function1(Module, Name, target, ArgNames, Defaults);
+            return new Function1(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -162,7 +162,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context) {
             if (Defaults.Length < 2) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -172,7 +172,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0) {
             if (Defaults.Length < 1) throw BadArgumentError(1);
-            if(!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, Defaults[Defaults.Length - 1]);
@@ -181,7 +181,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
-            if(!EnforceRecursion) return target(arg0, arg1);
+            if (!EnforceRecursion) return target(arg0, arg1);
             PushFrame();
             try {
                 return target(arg0, arg1);
@@ -204,10 +204,10 @@ namespace IronPython.Runtime.Calls {
             return target == other.target;
         }
         public override int GetHashCode() {
-                return target.GetHashCode();
+            return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function2(Module, Name, target, ArgNames, Defaults);
+            return new Function2(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -220,7 +220,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context) {
             if (Defaults.Length < 3) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -230,7 +230,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0) {
             if (Defaults.Length < 2) throw BadArgumentError(1);
-            if(!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -240,7 +240,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
             if (Defaults.Length < 1) throw BadArgumentError(2);
-            if(!EnforceRecursion) return target(arg0, arg1, Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, arg1, Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, arg1, Defaults[Defaults.Length - 1]);
@@ -249,7 +249,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
-            if(!EnforceRecursion) return target(arg0, arg1, arg2);
+            if (!EnforceRecursion) return target(arg0, arg1, arg2);
             PushFrame();
             try {
                 return target(arg0, arg1, arg2);
@@ -273,10 +273,10 @@ namespace IronPython.Runtime.Calls {
             return target == other.target;
         }
         public override int GetHashCode() {
-                return target.GetHashCode();
+            return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function3(Module, Name, target, ArgNames, Defaults);
+            return new Function3(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -289,7 +289,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context) {
             if (Defaults.Length < 4) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -299,7 +299,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0) {
             if (Defaults.Length < 3) throw BadArgumentError(1);
-            if(!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -309,7 +309,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
             if (Defaults.Length < 2) throw BadArgumentError(2);
-            if(!EnforceRecursion) return target(arg0, arg1, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, arg1, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, arg1, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -319,7 +319,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
             if (Defaults.Length < 1) throw BadArgumentError(3);
-            if(!EnforceRecursion) return target(arg0, arg1, arg2, Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, arg1, arg2, Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, arg1, arg2, Defaults[Defaults.Length - 1]);
@@ -328,7 +328,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
-            if(!EnforceRecursion) return target(arg0, arg1, arg2, arg3);
+            if (!EnforceRecursion) return target(arg0, arg1, arg2, arg3);
             PushFrame();
             try {
                 return target(arg0, arg1, arg2, arg3);
@@ -353,10 +353,10 @@ namespace IronPython.Runtime.Calls {
             return target == other.target;
         }
         public override int GetHashCode() {
-                return target.GetHashCode();
+            return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function4(Module, Name, target, ArgNames, Defaults);
+            return new Function4(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -369,7 +369,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context) {
             if (Defaults.Length < 5) throw BadArgumentError(0);
-            if(!EnforceRecursion) return target(Defaults[Defaults.Length - 5], Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(Defaults[Defaults.Length - 5], Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(Defaults[Defaults.Length - 5], Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -379,7 +379,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0) {
             if (Defaults.Length < 4) throw BadArgumentError(1);
-            if(!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, Defaults[Defaults.Length - 4], Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -389,7 +389,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0, object arg1) {
             if (Defaults.Length < 3) throw BadArgumentError(2);
-            if(!EnforceRecursion) return target(arg0, arg1, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, arg1, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, arg1, Defaults[Defaults.Length - 3], Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -399,7 +399,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
             if (Defaults.Length < 2) throw BadArgumentError(3);
-            if(!EnforceRecursion) return target(arg0, arg1, arg2, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, arg1, arg2, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, arg1, arg2, Defaults[Defaults.Length - 2], Defaults[Defaults.Length - 1]);
@@ -409,7 +409,7 @@ namespace IronPython.Runtime.Calls {
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
             if (Defaults.Length < 1) throw BadArgumentError(4);
-            if(!EnforceRecursion) return target(arg0, arg1, arg2, arg3, Defaults[Defaults.Length - 1]);
+            if (!EnforceRecursion) return target(arg0, arg1, arg2, arg3, Defaults[Defaults.Length - 1]);
             PushFrame();
             try {
                 return target(arg0, arg1, arg2, arg3, Defaults[Defaults.Length - 1]);
@@ -418,7 +418,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            if(!EnforceRecursion) return target(arg0, arg1, arg2, arg3, arg4);
+            if (!EnforceRecursion) return target(arg0, arg1, arg2, arg3, arg4);
             PushFrame();
             try {
                 return target(arg0, arg1, arg2, arg3, arg4);
@@ -444,10 +444,10 @@ namespace IronPython.Runtime.Calls {
             return target == other.target;
         }
         public override int GetHashCode() {
-                return target.GetHashCode();
+            return target.GetHashCode();
         }
         public override object Clone() {
-                return new Function5(Module, Name, target, ArgNames, Defaults);
+            return new Function5(Module, Name, target, ArgNames, Defaults);
         }
     }
 
@@ -467,23 +467,23 @@ namespace IronPython.Runtime.Calls {
         }
 
         public override object Call(ICallerContext context, object arg0) {
-            return Call(new object[] { arg0});
+            return Call(new object[] { arg0 });
         }
 
         public override object Call(ICallerContext context, object arg0, object arg1) {
-            return Call(new object[] { arg0, arg1});
+            return Call(new object[] { arg0, arg1 });
         }
 
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2) {
-            return Call(new object[] { arg0, arg1, arg2});
+            return Call(new object[] { arg0, arg1, arg2 });
         }
 
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3) {
-            return Call(new object[] { arg0, arg1, arg2, arg3});
+            return Call(new object[] { arg0, arg1, arg2, arg3 });
         }
 
         public override object Call(ICallerContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            return Call(new object[] { arg0, arg1, arg2, arg3, arg4});
+            return Call(new object[] { arg0, arg1, arg2, arg3, arg4 });
         }
 
 

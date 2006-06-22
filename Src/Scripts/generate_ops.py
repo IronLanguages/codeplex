@@ -468,7 +468,7 @@ public static object %(name)s(object x, object y) {
     } else if (x is long) {
         ret = Int64Ops.%(name)s((long)x, y);
         if (ret != NotImplemented) return ret;
-    } else if ((inum = x as INumber)!=null) {
+    } else if ((inum = x as INumber) != null) {
         ret = inum.%(name)s(y);
         if (ret != NotImplemented) return ret;
     } else if (x is bool) {
@@ -499,31 +499,31 @@ public static %(rettype)s %(name)s%(suffix)s(object x, object y) {
             return %(boolTransform)s(((int)x) %(symbol)s ((int)y));
         } else if (y is double) {
             return %(boolTransform)s(((int)x) %(symbol)s ((double)y));
-        } else if(y == null) {
+        } else if (y == null) {
             return %(boolTransform)s(1 %(symbol)s 0);
         } else {
             Conversion conv;
             double dbl = Converter.TryConvertToDouble(y, out conv);
-            if(conv < Conversion.None) return %(boolTransform)s(((int)x) %(symbol)s dbl);            
+            if (conv < Conversion.None) return %(boolTransform)s(((int)x) %(symbol)s dbl);
         }
     } else if (x is double) {
         if (y is int) {
             return %(boolTransform)s(((double)x) %(symbol)s ((int)y));
         } else if (y is double) {
             return %(boolTransform)s(((double)x) %(symbol)s ((double)y));
-        } else if(y is ExtensibleFloat) {
+        } else if (y is ExtensibleFloat) {
             return %(boolTransform)s(((double)x) %(symbol)s ((ExtensibleFloat)y).value);
-        } else if(y == null) {
+        } else if (y == null) {
             return %(boolTransform)s(1 %(symbol)s 0);
         } else {
             BigInteger bi = y as BigInteger;
-            if(!Object.ReferenceEquals(bi, null)) {
+            if (!Object.ReferenceEquals(bi, null)) {
                 BigInteger self = BigInteger.Create((double)x);
                 double dblSelf = (double)x;
-                if(self == bi) {
+                if (self == bi) {
                     double mod = dblSelf %% 1;
-                    if(mod != 0) {
-                        if(dblSelf > 0) 
+                    if (mod != 0) {
+                        if (dblSelf > 0)
                             return %(boolTransform)s(1 %(symbol)s 0);
                         return %(boolTransform)s(0 %(symbol)s 1);
                     }
@@ -534,57 +534,57 @@ public static %(rettype)s %(name)s%(suffix)s(object x, object y) {
             
             Conversion conv;
             int val = Converter.TryConvertToInt32(y, out conv);
-            if(conv < Conversion.None) return %(boolTransform)s(((double)x) %(symbol)s val);            
+            if (conv < Conversion.None) return %(boolTransform)s(((double)x) %(symbol)s val);
         }
     } else if (x is bool) {
-        if(y is bool) {
-            return %(boolTransform)s((((bool)x)? 1 : 0) %(symbol)s (((bool)y)? 1 : 0));
-        } else if(y == null) {
+        if (y is bool) {
+            return %(boolTransform)s((((bool)x) ? 1 : 0) %(symbol)s (((bool)y) ? 1 : 0));
+        } else if (y == null) {
             return %(boolTransform)s(1 %(symbol)s 0);
-        } else { 
+        } else {
             Conversion conv;
             int other = Converter.TryConvertToInt32(y, out conv);
-            if(conv < Conversion.None) {
-                if((bool)x)
+            if (conv < Conversion.None) {
+                if ((bool)x)
                     return %(boolTransform)s(1 %(symbol)s (other));
                 else
                     return %(boolTransform)s(0 %(symbol)s (other));
             }
         }
-    } else if(x is BigInteger) {
-        if(y is BigInteger) {
+    } else if (x is BigInteger) {
+        if (y is BigInteger) {
             return %(boolTransform)s(((BigInteger)x) %(symbol)s ((BigInteger)y));
-        } else if(y is bool) {
+        } else if (y is bool) {
             return %(boolTransform)s(((BigInteger)x) %(symbol)s (((bool)y) ? 1 : 0));
-        } else if(y == null) {
+        } else if (y == null) {
             return %(boolTransform)s(1 %(symbol)s 0);
-        } else if(y is double) {
+        } else if (y is double) {
             double dbl = (double)y;
-            return %(boolTransform)s( (((int)FloatOps.Compare(dbl, x))*-1) %(symbol)s 0 );
+            return %(boolTransform)s((((int)FloatOps.Compare(dbl, x)) * -1) %(symbol)s 0);
         }
-    } else if(x is short) {
+    } else if (x is short) {
         object res = IntOps.Compare((int)(short)x, y);
-        if(res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
-    } else if(x is ushort) {
+        if (res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
+    } else if (x is ushort) {
         object res = IntOps.Compare((int)(ushort)x, y);
-        if(res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
-    } else if(x is byte) {
+        if (res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
+    } else if (x is byte) {
         object res = IntOps.Compare((int)(byte)x, y);
-        if(res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
-    } else if(x is sbyte) {
+        if (res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
+    } else if (x is sbyte) {
         object res = IntOps.Compare((int)(sbyte)x, y);
-        if(res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
-    } else if(x is ulong) {
+        if (res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
+    } else if (x is ulong) {
         object res = Int64Ops.Compare((ulong)x, y);
-        if(res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
-    } else if(x is uint) {
+        if (res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
+    } else if (x is uint) {
         object res = Int64Ops.Compare((long)(uint)x, y);
-        if(res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
-    } else if(x is decimal) {
+        if (res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
+    } else if (x is decimal) {
         object res = FloatOps.Compare((double)(decimal)x, y);
-        if(res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
+        if (res != Ops.NotImplemented) return %(boolTransform)s(((int)res) %(symbol)s 0);
     } else if (x == null) {
-        if(y == null) return %(boolTransform)s(%(bool1)s);
+        if (y == null) return %(boolTransform)s(%(bool1)s);
         
         if (y.GetType().IsPrimitive || y is BigInteger) {
             // built-in type that doesn't implement our comparable
@@ -738,12 +738,12 @@ public static object %(name)s(object x, object y) {
     throw new NotImplementedException("%(name)s");
 }
 """
-ADD_EXTRA_VARS = """    string sx,sy;
+ADD_EXTRA_VARS = """    string sx, sy;
     ExtensibleString es = null;
 """
 
-ADD_EXTRA_EARLY = """    } else if((sx = x as string)!= null && ((sy = y as string)!=null || (es = y as ExtensibleString)!=null)) {
-        if(sy != null) return sx + sy;
+ADD_EXTRA_EARLY = """    } else if ((sx = x as string) != null && ((sy = y as string) != null || (es = y as ExtensibleString) != null)) {
+        if (sy != null) return sx + sy;
         return sx + es.Value;"""
 
 ADD_EXTRA = """                
@@ -819,18 +819,18 @@ def gen_SymbolTable_ops_added(cw):
     for op in ops:
         if not isinstance(op, Operator): continue
         
-        x = x + op.genSymbolTableAdd(cw, x)  
+        x = x + op.genSymbolTableAdd(cw, x)
         
 def gen_SymbolTable_ops_symbols(cw):
     x = 1
     for op in ops:
         if not isinstance(op, Operator): continue
         
-        x = x + op.genSymbolTableSymbols(cw, x)                
+        x = x + op.genSymbolTableSymbols(cw, x)
         
 CodeGenerator("SymbolTable Ops Values", gen_SymbolTable_ops_values).doit()
-CodeGenerator("SymbolTable Ops Added", gen_SymbolTable_ops_added).doit()        
-CodeGenerator("SymbolTable Ops Symbols", gen_SymbolTable_ops_symbols).doit()        
+CodeGenerator("SymbolTable Ops Added", gen_SymbolTable_ops_added).doit()
+CodeGenerator("SymbolTable Ops Symbols", gen_SymbolTable_ops_symbols).doit()
 
 OLDS = """
 public override object %(clrName)s(object self, object other) {
@@ -933,7 +933,7 @@ public override object %(clrName)s(object self, object other) {
 }
 public override object Reverse%(clrName)s(object self, object other) {
     object func;
-    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverse%(clrName)s, out func)){
+    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverse%(clrName)s, out func)) {
         object ret;
         if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
     }
