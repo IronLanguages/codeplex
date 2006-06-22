@@ -105,28 +105,29 @@ IronPythonTests = {
                 ''',
             'standard':
                 '''
+                test_attr
+                test_class
                 test_closure
                 test_decorator
-                test_exec
+                test_doc
                 test_exceptions
+                test_exec
+                test_formatting
                 test_function
                 test_future
-                test_nofuture
                 test_generator
                 test_importpkg
+                test_index
+                test_ironmath
                 test_kwarg
                 test_lambda
                 test_listcomp
                 test_namebinding
-                test_doc
-                test_syntax
-                test_attr
-                test_formatting
-                test_class
-                test_index
+                test_nofuture
                 test_number
                 test_numtypes
                 test_property
+                test_syntax
                 ''',
             'stress':
                 '''

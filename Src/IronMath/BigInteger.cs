@@ -195,6 +195,13 @@ namespace IronMath {
             throw new OverflowException(IronMath.BigIntWontFitInt);
         }
 
+
+        public ulong ToUInt64() {
+            ulong ret;
+            if (AsUInt64(out ret)) return ret;
+            throw new OverflowException(IronMath.BigIntWontFitULong);
+        }
+
         public long ToInt64() {
             long ret;
             if (AsInt64(out ret)) return ret;
