@@ -204,11 +204,6 @@ namespace IronPython.Modules {
                 return sr.Prefix;
             }
 
-            [PythonName("isatty")]
-            public int IsAtty() {
-                return 0;
-            }
-
             [PythonName("__iter__")]
             public object Iter() {
                 return this;
@@ -355,11 +350,6 @@ namespace IronPython.Modules {
                 ThrowIfClosed();
                 FixStreams();
                 return sr.Prefix;
-            }
-
-            [PythonName("isatty")]
-            public int IsAtty() {
-                return 0;
             }
 
             [PythonName("next")]

@@ -68,12 +68,6 @@ def test_getvalue(i):
     i.close()
     AssertError(ValueError, i.getvalue)
 
-# isatty
-def test_isatty(i):
-    AreEqual(i.isatty(), 0)
-    i.close()
-    AreEqual(i.isatty(), 0)
-
 # __iter__, next
 def test_next(i):
     AreEqual(i.__iter__(), i)

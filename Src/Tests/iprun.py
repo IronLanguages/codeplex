@@ -219,7 +219,6 @@ class NullStream:
     def close(self):    pass
     def flush(self):    pass
     def fileno(self):   return 1
-    def isatty(self):   return False
     def read(self):     return ""
     def readline(self): return "\n"
     def write(self, s): pass

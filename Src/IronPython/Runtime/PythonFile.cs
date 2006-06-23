@@ -991,12 +991,6 @@ namespace IronPython.Runtime {
             return PythonFileManager.GetIdFromFile(this);
         }
 
-        [PythonName("isatty")]
-        public bool IsTtyDevice() {
-            ThrowIfClosed();
-            return false;
-        }
-
         [Documentation("gets the name of the file")]
         public string FileName {
             [PythonName("name")]

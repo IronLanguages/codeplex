@@ -51,7 +51,6 @@ def test_sanity():
 	    AssertError(ValueError, f.__iter__)
 	    AssertError(ValueError, f.flush)
 	    AssertError(ValueError, f.fileno)
-	    AssertError(ValueError, f.isatty)
 	    AssertError(ValueError, f.next)
 	    AssertError(ValueError, f.read)
 	    AssertError(ValueError, f.read, 10)
