@@ -18,6 +18,8 @@ using System.Reflection;
 
 namespace IronPython.Compiler {
     static class CompilerHelpers {
+        public static MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
+
         public static T[] MakeRepeatedArray<T>(T item, int count) {
             T[] ret = new T[count];
             for (int i = 0; i < count; i++) ret[i] = item;

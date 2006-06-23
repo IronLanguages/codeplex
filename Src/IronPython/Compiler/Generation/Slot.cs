@@ -439,45 +439,6 @@ namespace IronPython.Compiler.Generation {
         }
     }
 
-    class VTableSlot : Slot {
-        public readonly Slot typeSlot;
-        public readonly string name;
-        public readonly int index;
-
-        public VTableSlot(Slot typeSlot, string name, int index) {
-            this.typeSlot = typeSlot;
-            this.name = name;
-            this.index = index;
-        }
-
-        public override void EmitGet(CodeGen cg) {
-            throw new NotImplementedException("not much of a slot");
-        }
-
-        public void EmitTryGetNonInheritedValue(CodeGen cg, Slot valueOut) {
-            typeSlot.EmitGet(cg);
-            cg.EmitCall(typeof(UserType), "GetNamespaceDictionary");
-            cg.EmitInt(index);
-            valueOut.EmitGetAddr(cg);
-            cg.EmitCall(typeof(NamespaceDictionary), "TryGetNonInheritedValue");
-        }
-
-        public override void EmitGetAddr(CodeGen cg) {
-            //???we can do this
-            throw new NotImplementedException("address of vtable slot");
-        }
-
-        public override void EmitSet(CodeGen cg, Slot val) {
-            throw new NotImplementedException("shouldn't need this");
-        }
-
-        public override Type Type {
-            get {
-                return typeof(object);
-            }
-        }
-    }
-
     class IndexSlot : Slot {
         private Slot instance;
         private int index;
@@ -503,7 +464,7 @@ namespace IronPython.Compiler.Generation {
             instance.EmitGet(cg);
             cg.EmitInt(index);
             cg.Emit(OpCodes.Ldelem_Ref);
-            cg.EmitCastFromObject(Type);
+            cg.EmitConvertFromObject(Type);
         }
 
         public override void EmitSet(CodeGen cg) {
@@ -515,7 +476,7 @@ namespace IronPython.Compiler.Generation {
 
         public override void EmitSet(CodeGen cg, Slot val) {
             val.EmitGet(cg);
-            cg.EmitCastToObject(Type);
+            cg.EmitConvertToObject(Type);
             val = cg.GetLocalTmp(typeof(object));
             val.EmitSet(cg);
             instance.EmitGet(cg);

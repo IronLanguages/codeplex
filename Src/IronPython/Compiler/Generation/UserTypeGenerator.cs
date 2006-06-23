@@ -55,7 +55,6 @@ namespace IronPython.Compiler.Generation {
 
             public GeneratorWalker(CodeGen codeGen) {
                 Debug.Assert(codeGen.typeGen != null);
-                if (!Options.StaticModules) throw new NotImplementedException(); //.names = new FieldNamespace(null, tg, new ModuleSlot(tg.myType));                
 
                 assembly = codeGen.typeGen.myAssembly;
 

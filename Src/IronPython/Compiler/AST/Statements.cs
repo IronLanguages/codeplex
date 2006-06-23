@@ -1185,7 +1185,7 @@ namespace IronPython.Compiler.AST {
                 Label endLabel = cg.DefineLabel();
                 cg.Emit(OpCodes.Brtrue, endLabel);
                 cg.EmitExprOrNone(message);
-                cg.EmitCastFromObject(typeof(string));
+                cg.EmitConvertFromObject(typeof(string));
                 cg.EmitCall(typeof(Ops), "AssertionError", new Type[] { typeof(string) });
                 cg.Emit(OpCodes.Throw);
                 cg.MarkLabel(endLabel);
@@ -1240,7 +1240,7 @@ namespace IronPython.Compiler.AST {
                 // We must have globals now (locals is last and may be absent)
                 Debug.Assert(globals != null);
                 globals.Emit(cg);
-                cg.EmitCastFromObject(typeof(IAttributesDictionary));
+                cg.EmitConvertFromObject(typeof(IAttributesDictionary));
                 if (locals != null) {
                     locals.Emit(cg);        // emit locals
                 } else {

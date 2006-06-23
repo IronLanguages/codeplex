@@ -295,11 +295,7 @@ namespace IronPython.Compiler.Generation {
             CodeGen ncg = tg.DefineMethodOverride(typeof(CompiledModule).GetMethod("Initialize", BindingFlags.Public | BindingFlags.Instance));
             ncg.Context = context;
 
-            if (Options.StaticModules) {
-                ncg.Names = CodeGen.CreateStaticFieldNamespace(tg);
-            } else {
-                throw new NotImplementedException(); //.names = new FieldNamespace(null, tg, new ModuleSlot(tg.myType));
-            }
+            ncg.Names = CodeGen.CreateStaticFieldNamespace(tg);
 
             if (context.TrueDivision) {
                 ncg.ModuleSlot.EmitGet(ncg);

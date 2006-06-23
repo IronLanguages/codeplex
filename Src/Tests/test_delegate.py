@@ -71,11 +71,11 @@ for x in [(IronPythonTest.DelegateTest.StaticEvent, IronPythonTest.DelegateTest.
         
     AreEqual(handlerCalled, True)
 
-def ParamsHandler(self, *args):
+def ParamsHandler(self, args):
     global glblSelf, glblArgs, handlerCalled
     
     AreEqual(self, glblSelf)
-    AreEqual(args, tuple(range(glblArgs)))
+    AreEqual(tuple(args), tuple(range(glblArgs)))
     handlerCalled = True
 
 for x in [(IronPythonTest.DelegateTest.StaticParamsEvent, IronPythonTest.DelegateTest.FireParamsStatic), 
@@ -94,11 +94,11 @@ for x in [(IronPythonTest.DelegateTest.StaticParamsEvent, IronPythonTest.Delegat
         
         AreEqual(handlerCalled, True)
 
-def BigParamsHandler(self, a, b, c, d, *args):
+def BigParamsHandler(self, a, b, c, d, args):
     global glblSelf, glblArgs, handlerCalled
     
     AreEqual(self, glblSelf)
-    AreEqual(args, tuple(range(glblArgs)))
+    AreEqual(tuple(args), tuple(range(glblArgs)))
     AreEqual(a, 1)
     AreEqual(b, 2)
     AreEqual(c, 3)
@@ -122,13 +122,13 @@ for x in [(IronPythonTest.DelegateTest.StaticBigParamsEvent, IronPythonTest.Dele
         AreEqual(handlerCalled, True)
 
 # out param
-def OutHandler(sender):
+def OutHandler(sender, ret):
     global glblSelf, handlerCalled
     
     AreEqual(sender, glblSelf)
     handlerCalled = True
-    
-    return 23
+
+    ret.Value = 23
     
 for x in [(IronPythonTest.DelegateTest.StaticOutEvent, IronPythonTest.DelegateTest.FireOutStatic), 
            (dlgTst.OutEvent, dlgTst.FireOut)]:
@@ -149,10 +149,10 @@ def RefHandler(sender, refArg):
     global glblSelf, handlerCalled
     
     AreEqual(sender, glblSelf)
-    AreEqual(refArg, 42)
+    AreEqual(refArg.Value, 42)
     handlerCalled = True
     
-    return 23
+    refArg.Value = 23
     
 for x in [(IronPythonTest.DelegateTest.StaticRefEvent, IronPythonTest.DelegateTest.FireRefStatic), 
            (dlgTst.RefEvent, dlgTst.FireRef)]:
@@ -169,13 +169,15 @@ for x in [(IronPythonTest.DelegateTest.StaticRefEvent, IronPythonTest.DelegateTe
     AreEqual(handlerCalled, True)
 
 # out w/ return type
-def OutHandler(sender):
+def OutHandler(sender, ret):
     global glblSelf, handlerCalled
     
     AreEqual(sender, glblSelf)
     handlerCalled = True
+
+    ret.Value = 42
     
-    return ("23", 42)
+    return "23"
     
 for x in [(IronPythonTest.DelegateTest.StaticOutReturnEvent, IronPythonTest.DelegateTest.FireOutReturnStatic), 
            (dlgTst.OutReturnEvent, dlgTst.FireOutReturn)]:
@@ -196,10 +198,11 @@ def RefHandler(sender, refArg):
     global glblSelf, handlerCalled
     
     AreEqual(sender, glblSelf)
-    AreEqual(refArg, 42)
+    AreEqual(refArg.Value, 42)
     handlerCalled = True
-    
-    return (23, 42)
+
+    refArg.Value = 42
+    return 23
     
 for x in [(IronPythonTest.DelegateTest.StaticRefReturnEvent, IronPythonTest.DelegateTest.FireRefReturnStatic), 
            (dlgTst.RefReturnEvent, dlgTst.FireRefReturn)]:

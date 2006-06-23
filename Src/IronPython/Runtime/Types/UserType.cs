@@ -63,12 +63,42 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary>
-        /// called from generated code (VTableSlot)
+        /// called from generated code for overridden methods
         /// </summary>
-        public NamespaceDictionary GetNamespaceDictionary() {
-            //Console.WriteLine("dict = " + dict);
-            return (NamespaceDictionary)dict;
+        public bool TryGetNonInheritedMethodHelper(object instance, IAttributesDictionary instanceDict, SymbolId name, int key, out object value) {
+            if (instanceDict != null) {
+                if (instanceDict.TryGetValue(name, out value)) return true;
+            }
+            if (((NamespaceDictionary)dict).TryGetNonInheritedValue(key, out value)) {
+                value = Ops.GetDescriptor(value, instance, this);
+                return true;
+            }
+            return false;
         }
+
+        public bool TryGetNonInheritedValueHelper(int key, out object value) {
+            return ((NamespaceDictionary)dict).TryGetNonInheritedValue(key, out value);
+        }
+
+
+        public static object GetPropertyHelper(object prop, object instance, SymbolId name) {
+            IDescriptor desc = prop as IDescriptor;
+            if (desc == null) {
+                throw Ops.TypeError("Expected property for {0}, but found {1}", 
+                    name.GetString(), Ops.GetDynamicType(prop).__name__);
+            }
+            return desc.GetAttribute(instance, null);
+        }
+
+        public static void SetPropertyHelper(object prop, object instance, object newValue, SymbolId name) {
+            IDataDescriptor desc = prop as IDataDescriptor;
+            if (desc == null) {
+                throw Ops.TypeError("Expected settable property for {0}, but found {1}", 
+                    name.GetString(), Ops.GetDynamicType(prop).__name__);
+            }
+            desc.SetAttribute(instance, newValue);
+        }
+
 
         #endregion
 
@@ -786,6 +816,13 @@ namespace IronPython.Runtime.Types {
             }
 
             return PythonType.ReprMethod(o).ToString();
+        }
+
+        public static string ToStringReturnHelper(object o) {
+            if (o is string && o != null) {
+                return (string)o;
+            }
+            throw Ops.TypeError("__str__ returned non-string type ({0})", Ops.GetDynamicType(o).__name__);
         }
 
         #endregion

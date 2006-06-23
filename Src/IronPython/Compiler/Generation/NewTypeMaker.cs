@@ -62,7 +62,7 @@ namespace IronPython.Compiler.Generation {
         private bool hasBaseTypeField = false;
         private IList<Slot> slotsSlots;
 
-        private Dictionary<string, VTableSlot> vtable = new Dictionary<string, VTableSlot>();
+        private Dictionary<string, VTableEntry> vtable = new Dictionary<string, VTableEntry>();
 
         public static Type GetNewType(string typeName, Tuple bases, IDictionary<object, object> dict) {
             // we're really only interested in the "correct" base type pulled out of bases
@@ -476,7 +476,7 @@ namespace IronPython.Compiler.Generation {
 
         private void InitializeVTableStrings() {
             string[] names = new string[vtable.Count];
-            foreach (VTableSlot slot in vtable.Values) {
+            foreach (VTableEntry slot in vtable.Values) {
                 names[slot.index] = slot.name;
             }
 
@@ -508,7 +508,7 @@ namespace IronPython.Compiler.Generation {
             }
 
             cg.EmitCall(typeof(CustomTypeDescHelpers), m.Name, paramTypes);
-            cg.EmitCastToObject(m.ReturnType);
+            cg.EmitConvertToObject(m.ReturnType);
             cg.EmitReturn();
             cg.Finish();
         }
@@ -763,38 +763,42 @@ namespace IronPython.Compiler.Generation {
             foreach (PropertyInfo pi in pis) {
                 if (pi.GetIndexParameters().Length > 0) {
                     if (mi == pi.GetGetMethod(true)) {                        
-                        Slot methField = GetOrMakeField("__getitem__");
+                        Slot methField = GetExistingField("__getitem__");
                         CreateVirtualMethodOverride(mi, methField);
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(tg, mi);
                         break;
                     } else if (mi == pi.GetSetMethod(true)) {
-                        Slot methField = GetOrMakeField("__setitem__");
+                        Slot methField = GetExistingField("__setitem__");
                         CreateVirtualMethodOverride(mi, methField);
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(tg, mi);
                         break;
                     }
                 }else  if (mi == pi.GetGetMethod(true)) {
                     if (NameConverter.TryGetName(Ops.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
-                    Slot methField = GetOrMakeField(name);
-                    CreateVTableGetterOverride(tg, mi, methField as VTableSlot);
+                    CreateVTableGetterOverride(tg, mi, GetOrMakeVTableEntry(name));
                     break;
                 } else if (mi == pi.GetSetMethod(true)) {
                     if (NameConverter.TryGetName(Ops.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
-                    Slot methField = GetOrMakeField(name);
-                    CreateVTableSetterOverride(tg, mi, methField as VTableSlot);
+                    CreateVTableSetterOverride(tg, mi, GetOrMakeVTableEntry(name));
                     break;
                 } 
             }
         }
 
         // Loads all the incoming arguments of cg and forwards them to mi which
-        // has the same signature.
-        // The return value (if any) is left on the IL stack.
+        // has the same signature and then returns the result
         private static void EmitBaseMethodDispatch(MethodInfo mi, CodeGen cg) {
-            cg.EmitThis();
-            for (int i = 0; i < mi.GetParameters().Length; i++)
-                cg.EmitArgGet(i);
-            cg.EmitCall(OpCodes.Call, mi, null); // base call must be non-virtual
+            if (!mi.IsAbstract) {
+                cg.EmitThis();
+                foreach (Slot argSlot in cg.argumentSlots) argSlot.EmitGet(cg);
+                cg.EmitCall(OpCodes.Call, mi, null); // base call must be non-virtual
+                cg.EmitReturn();
+            } else {
+                cg.EmitThis();
+                cg.EmitString(mi.Name);
+                cg.EmitCall(typeof(Ops), "MissingInvokeMethodException");
+                cg.Emit(OpCodes.Throw);
+            }
         }
 
         private void OverrideBaseMethod(MethodInfo mi, Dictionary<string, bool> specialNames) {
@@ -821,132 +825,26 @@ namespace IronPython.Compiler.Generation {
             if (mi.DeclaringType == typeof(object) && mi.Name == "Finalize") return;
 
             specialNames[mi.Name] = false;
-            Slot methField = GetOrMakeField(name);
-
-            CreateVirtualMethodOverride(mi, methField);
+            Slot methField = GetExistingField(name);
+            if (methField != null) CreateVirtualMethodOverride(mi, methField);
+            else CreateVTableMethodOverride(mi, GetOrMakeVTableEntry(name));
             if (!mi.IsAbstract) CreateVirtualMethodHelper(tg, mi);
         }
 
-        private Slot GetVTableSlot(string name) {
-            VTableSlot ret;
+        private VTableEntry GetOrMakeVTableEntry(string name) {
+            VTableEntry ret;
             if (vtable.TryGetValue(name, out ret)) return ret;
 
-            ret = new VTableSlot(typeField, name, vtable.Count);
+            ret = new VTableEntry(name, vtable.Count);
             vtable[name] = ret;
             return ret;
         }
 
-        public Slot GetOrMakeField(string name) {
+        public Slot GetExistingField(string name) {
             name = NormalizeName(name);
             FieldInfo fi = typeof(PythonType).GetField(name + "F");
             if (fi != null) return new FieldSlot(typeField, fi);
-
-            //return null;
-
-            return GetVTableSlot(name);
-        }
-        private void CreateVTableMethodOverrideSimple(CodeGen cg, MethodInfo mi, VTableSlot methField) {
-            cg.EmitThis();
-
-            for (int i = 0; i < mi.GetParameters().Length; i++) {
-                cg.EmitArgGet(i);
-                cg.EmitCastToObject(mi.GetParameters()[i].ParameterType);
-            }
-            cg.EmitCall(typeof(Ops), "InvokeMethod", CompilerHelpers.MakeRepeatedArray(typeof(object), 3 + mi.GetParameters().Length));
-        }
-        private void CreateVTableMethodOverrideComplex(CodeGen cg, MethodInfo mi, VTableSlot methField) {
-            cg.EmitInt(mi.GetParameters().Length + 1);
-            cg.Emit(OpCodes.Newarr, typeof(object));
-
-            cg.Emit(OpCodes.Dup);
-            cg.EmitInt(0);
-            cg.EmitThis();
-            cg.Emit(OpCodes.Stelem_Ref);
-
-            for (int i = 0; i < mi.GetParameters().Length; i++) {
-                cg.Emit(OpCodes.Dup);
-                cg.EmitInt(i + 1);
-                cg.EmitArgGet(i);
-                cg.EmitCastToObject(mi.GetParameters()[i].ParameterType);
-                cg.Emit(OpCodes.Stelem_Ref);
-            }
-
-            cg.EmitCall(typeof(Ops), "InvokeMethod", new Type[] { typeof(object), typeof(object), typeof(object[]) });
-        }
-
-        private static void CreateVTableMethodOverrideParams(CodeGen cg, MethodInfo mi, VTableSlot methField, int paramsIndex) {
-            cg.EmitArgGet(paramsIndex);
-            cg.Emit(OpCodes.Ldlen);
-            cg.EmitInt(mi.GetParameters().Length);
-            cg.Emit(OpCodes.Add);
-            Slot destArray = cg.GetLocalTmp(typeof(object[]));
-            cg.Emit(OpCodes.Newarr, typeof(object));
-            cg.Emit(OpCodes.Dup);
-            destArray.EmitSet(cg);
-
-
-            cg.EmitInt(0);
-            cg.EmitThis();
-            cg.Emit(OpCodes.Stelem_Ref);
-            Slot tmp = cg.GetLocalTmp(typeof(int));
-            cg.EmitInt(1);
-            tmp.EmitSet(cg);
-
-            for (int i = 0; i < mi.GetParameters().Length; i++) {
-                if (i != paramsIndex) {
-                    // non params argument, just stick it in our array...
-                    destArray.EmitGet(cg);
-                    tmp.EmitGet(cg);
-                    cg.EmitArgGet(i);
-                    cg.EmitCastToObject(mi.GetParameters()[i].ParameterType);
-                    cg.Emit(OpCodes.Stelem_Ref);
-
-                    // increment the write counter
-                    tmp.EmitGet(cg);
-                    cg.EmitInt(1);
-                    cg.Emit(OpCodes.Add);
-                    tmp.EmitSet(cg);
-                } else {
-                    // params index, copy contents of array.
-                    cg.EmitArgGet(paramsIndex);
-                    cg.EmitInt(0);
-                    destArray.EmitGet(cg);
-                    tmp.EmitGet(cg);
-                    cg.EmitArgGet(paramsIndex);
-                    cg.Emit(OpCodes.Ldlen);
-
-                    cg.EmitCall(typeof(Array), "Copy", new Type[] { typeof(Array), typeof(int), typeof(Array), typeof(int), typeof(int) });
-
-                    // update the write counter
-                    tmp.EmitGet(cg);
-                    cg.EmitArgGet(paramsIndex);
-                    cg.Emit(OpCodes.Ldlen);
-                    cg.Emit(OpCodes.Add);
-                    tmp.EmitSet(cg);
-                }
-            }
-
-            destArray.EmitGet(cg);
-            cg.EmitCall(typeof(Ops), "InvokeMethod", new Type[] { typeof(object), typeof(object), typeof(object[]) });
-        }
-
-        private static bool CanOverride(MethodInfo mi, out int paramsIndex) {
-            bool fCanOverride = true;
-            paramsIndex = -1;
-
-            ParameterInfo[] pis = mi.GetParameters();
-            for (int i = 0; i < pis.Length; i++) {
-                if (pis[i].ParameterType.IsByRef) {
-                    fCanOverride = false;
-                } else {
-                    object[] paramArr = pis[i].GetCustomAttributes(typeof(ParamArrayAttribute), false);
-                    if (paramArr != null && paramArr.Length > 0) {
-                        paramsIndex = i;
-                    }
-                }
-            }
-
-            return fCanOverride;
+            else return null;
         }
 
         private static void EmitBadCallThrow(CodeGen cg, MethodInfo mi, string reason) {
@@ -962,74 +860,6 @@ namespace IronPython.Compiler.Generation {
         }
 
         /// <summary>
-        /// Emits code to check if the instance has overriden this specific
-        /// function from the base class.  For example:
-        /// 
-        /// a = MyDerivedType()
-        /// a.SomeVirtualFunction = myFunction
-        /// </summary>
-        private void EmitInstanceCallCheck(CodeGen cg, MethodInfo mi, VTableSlot methField) {
-            Slot tmp = cg.GetLocalTmp(typeof(object));
-            Label notThere = cg.DefineLabel(), done = cg.DefineLabel();
-
-            // first, see if we have a dict (usually we shouldn't)            
-            dictField.EmitGet(cg);
-            cg.Emit(OpCodes.Dup);
-            cg.Emit(OpCodes.Ldnull);
-            cg.Emit(OpCodes.Beq, notThere);
-
-            // then see if the dict contains our entry (usually it won't)...
-            cg.EmitSymbolId(methField.name);
-            tmp.EmitGetAddr(cg);
-            cg.EmitCall(typeof(IAttributesDictionary), "TryGetValue");
-            cg.Emit(OpCodes.Brfalse, done);
-            
-            // finally dispatch the call to function if it's there.
-
-            // load the function
-            tmp.EmitGet(cg);
-
-            // allocate an array for the parameters
-            ParameterInfo[] pis = mi.GetParameters();
-            cg.EmitInt(pis.Length);
-            cg.Emit(OpCodes.Newarr, typeof(object));
-                        
-            // the instance should be a bound parameter, so we
-            // don't pass it in here.
-            
-            // store args...            
-            for (int i = 0; i < pis.Length; i++) {
-                cg.Emit(OpCodes.Dup);
-                cg.EmitInt(i);
-                cg.EmitArgGet(i);
-                if (pis[i].IsOut || pis[i].ParameterType.IsByRef) {
-                    cg.EmitLoadValueIndirect(pis[i].ParameterType.GetElementType());
-                    cg.EmitCastToObject(pis[i].ParameterType.GetElementType());
-                } else {
-                    cg.EmitCastToObject(pis[i].ParameterType);
-                }
-                cg.Emit(OpCodes.Stelem_Ref);
-            }
-
-            // finally emit the call to Ops
-            cg.EmitCall(typeof(Ops), "Call", new Type[] { typeof(object), typeof(object[]) });
-
-            cg.EmitCastFromObject(mi.ReturnType);
-
-            // and return whatever it returns.
-            cg.Emit(OpCodes.Ret);
-
-            // we have no dict
-            cg.MarkLabel(notThere);
-            cg.Emit(OpCodes.Pop);
-
-            // we have a dict, but no overload.
-            cg.MarkLabel(done);
-
-            cg.FreeLocalTmp(tmp);
-        }
-
-        /// <summary>
         /// Emits code to check if the class has overriden this specific
         /// function.  For example:
         /// 
@@ -1040,149 +870,117 @@ namespace IronPython.Compiler.Generation {
         ///     def SomeVirtualFunction(self, ...):
         /// 
         /// </summary>
-        internal static Label EmitBaseClassCallCheck(CodeGen cg, VTableSlot methField) {
-            Label baseCall = cg.DefineLabel();
-            Slot resultOut = cg.GetLocalTmp(typeof(object));
+        internal Slot EmitBaseClassCallCheckForProperties(CodeGen cg, MethodInfo baseMethod, VTableEntry methField) {
+            Label instanceCall = cg.DefineLabel();
+            Slot callTarget = cg.GetLocalTmp(typeof(object));
 
-            methField.EmitTryGetNonInheritedValue(cg, resultOut);
-            cg.Emit(OpCodes.Brfalse, baseCall);
+            typeField.EmitGet(cg);
+            cg.EmitInt(methField.index);
+            callTarget.EmitGetAddr(cg);
+            cg.EmitCall(typeof(UserType), "TryGetNonInheritedValueHelper");
+            cg.Emit(OpCodes.Brtrue, instanceCall);
 
-            resultOut.EmitGet(cg);
+            EmitBaseMethodDispatch(baseMethod, cg);
 
-            return baseCall;
+            cg.MarkLabel(instanceCall);
+
+            return callTarget;
         }
 
-        internal static void EmitBaseClassCall(CodeGen cg, MethodInfo mi) {
-            if (!mi.IsAbstract) {
-                cg.EmitThis();
-                for (int i = 0; i < mi.GetParameters().Length; i++) cg.EmitArgGet(i);
-                cg.EmitCall(OpCodes.Call, mi, null); // base call must be non-virtual
-                cg.EmitReturn();
-            } else {
-                cg.EmitThis();
-                cg.EmitString(mi.Name);
-                cg.EmitCall(typeof(Ops), "MissingInvokeMethodException");
-                cg.Emit(OpCodes.Throw);
-            }
-        }
-
-        private static void CreateVTableGetterOverride(TypeGen tg, MethodInfo mi, VTableSlot methField) {
+        private void CreateVTableGetterOverride(TypeGen tg, MethodInfo mi, VTableEntry methField) {
             CodeGen cg = tg.DefineMethodOverride(mi);
-            Label baseCall = EmitBaseClassCallCheck(cg, methField);
+            Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
 
-            int paramsIndex;
-            bool fCanOverride = CanOverride(mi, out paramsIndex);
+            callTarget.EmitGet(cg);
+            cg.EmitThis();
+            cg.EmitSymbolId(methField.name);
+            cg.EmitCall(typeof(UserType), "GetPropertyHelper");
 
-            if (fCanOverride) {
-                // check that the value we pulled out is a
-                // descriptor and call __get__ on it for our
-                // instance, or throw if the user assigned it to something else.
-                cg.Emit(OpCodes.Isinst, typeof(IDescriptor));
-                cg.Emit(OpCodes.Dup);
-                cg.EmitPythonNone();
-                cg.Emit(OpCodes.Ceq);
-                Label notProp = cg.DefineLabel();
-
-                cg.Emit(OpCodes.Brtrue, notProp);
-
-                cg.EmitThis();
-                cg.EmitPythonNone();
-                cg.EmitCall(typeof(IDescriptor), "GetAttribute");
-
-                cg.EmitCastFromObject(mi.ReturnType);
-
-                cg.EmitReturn();
-
-                cg.MarkLabel(notProp);
-
-                EmitBadCallThrow(cg, mi, "is not a property");
-            } else {
-                EmitBadCallThrow(cg, mi, "it includes a by-ref parameter");
-            }
-
-            cg.MarkLabel(baseCall);
-            EmitBaseClassCall(cg, mi);
-
+            cg.EmitReturnFromObject();
             cg.Finish();
         }
 
-        private static void CreateVTableSetterOverride(TypeGen tg, MethodInfo mi, VTableSlot methField) {
+        private void CreateVTableSetterOverride(TypeGen tg, MethodInfo mi, VTableEntry methField) {
             CodeGen cg = tg.DefineMethodOverride(mi);
-            Label baseCall = EmitBaseClassCallCheck(cg, methField);
+            Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
 
-            int paramsIndex;
-            bool fCanOverride = CanOverride(mi, out paramsIndex);
+            callTarget.EmitGet(cg);
+            cg.EmitThis();
+            cg.EmitArgGet(0);
+            cg.EmitConvertToObject(mi.GetParameters()[0].ParameterType);
+            cg.EmitSymbolId(methField.name);
+            cg.EmitCall(typeof(UserType), "SetPropertyHelper");
 
-            if (fCanOverride) {
-                cg.Emit(OpCodes.Isinst, typeof(IDataDescriptor));
-                cg.Emit(OpCodes.Dup);
-                cg.EmitPythonNone();
-                cg.Emit(OpCodes.Ceq);
-                Label notProp = cg.DefineLabel();
-
-                cg.Emit(OpCodes.Brtrue, notProp);
-
-                cg.EmitThis();
-                cg.EmitArgGet(0);
-                cg.EmitCastToObject(mi.GetParameters()[0].ParameterType);
-                cg.EmitCall(typeof(IDataDescriptor), "SetAttribute");
-                cg.Emit(OpCodes.Pop);
-
-                cg.EmitReturn();
-
-                cg.MarkLabel(notProp);
-
-                EmitBadCallThrow(cg, mi, "is not a property");
-            } else {
-                EmitBadCallThrow(cg, mi, "it includes a by-ref parameter");
-            }
-
-            cg.MarkLabel(baseCall);
-            EmitBaseClassCall(cg, mi);
-
+            cg.EmitReturn();
             cg.Finish();
-
         }
 
-        private void CreateVTableMethodOverride(MethodInfo mi, VTableSlot methField) {
-            CodeGen cg = tg.DefineMethodOverride(mi);
+        public static void EmitCallFromClrToPython(CodeGen cg, Slot callTarget, int firstArg) {
+            callTarget.EmitGet(cg);
 
-            EmitInstanceCallCheck(cg, mi, methField);
-
-            Label baseCall = EmitBaseClassCallCheck(cg, methField);
-
-            typeField.EmitGet(cg);  // for InvokeMethod call, 2nd param (EmitCaseClassCallCheck emits method)
-
-            int paramsIndex;
-            bool fCanOverride = CanOverride(mi, out paramsIndex);
-
-            if (fCanOverride) {
-                if (paramsIndex != -1) {
-                    CreateVTableMethodOverrideParams(cg, mi, methField, paramsIndex);
-                } else if (mi.GetParameters().Length > 2) {
-                    CreateVTableMethodOverrideComplex(cg, mi, methField);
-                } else {
-                    CreateVTableMethodOverrideSimple(cg, mi, methField);
+            List<ReturnFixer> fixers = new List<ReturnFixer>(0);
+            Slot[] args = cg.argumentSlots;
+            int nargs = args.Length - firstArg;
+            if (nargs <= Ops.MaximumCallArgs) {
+                for (int i=firstArg; i < args.Length; i++) {
+                    ReturnFixer rf = EmitArgument(cg, args[i]);
+                    if (rf != null) fixers.Add(rf);
                 }
-                cg.EmitCastFromObject(mi.ReturnType);
-
-                cg.EmitReturn();
+                cg.EmitCall(typeof(Ops), "Call", CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 1));
             } else {
-                EmitBadCallThrow(cg, mi, "it includes a by-ref parameter");
+                cg.EmitObjectArray(nargs, delegate(int index) {
+                    ReturnFixer rf = EmitArgument(cg, args[index+firstArg]);
+                    if (rf != null) fixers.Add(rf);
+                });
+                cg.EmitCall(typeof(Ops), "Call", new Type[] { typeof(object), typeof(object[]) });
             }
+            foreach (ReturnFixer rf in fixers) {
+                rf.FixReturn(cg);
+            }
+            cg.EmitReturnFromObject();
+        }
 
-            cg.MarkLabel(baseCall);
-            EmitBaseClassCall(cg, mi);
+        private static ReturnFixer EmitArgument(CodeGen cg, Slot argSlot) {
+            argSlot.EmitGet(cg);
+            if (argSlot.Type.IsByRef) {
+                Slot refSlot = cg.GetLocalTmp(typeof(IronPython.Modules.ClrModule.Reference));
+                cg.EmitLoadValueIndirect(argSlot.Type.GetElementType());
+                cg.EmitConvertToObject(argSlot.Type.GetElementType());
+                cg.EmitNew(typeof(IronPython.Modules.ClrModule.Reference), new Type[] { typeof(object) });
+                refSlot.EmitSet(cg);
+                refSlot.EmitGet(cg);
+                return new ReturnFixer(refSlot, argSlot);
+            } else {
+                cg.EmitConvertToObject(argSlot.Type);
+                return null;
+            }
+        }
+
+
+        private void CreateVTableMethodOverride(MethodInfo mi, VTableEntry methField) {
+            CodeGen cg = tg.DefineMethodOverride(mi);
+            Label instanceCall = cg.DefineLabel();
+            Slot callTarget = cg.GetLocalTmp(typeof(object));
+
+            typeField.EmitGet(cg);
+            cg.EmitThis();
+            dictField.EmitGet(cg);
+            cg.EmitSymbolId(methField.name);
+            cg.EmitInt(methField.index);
+            callTarget.EmitGetAddr(cg);
+            cg.EmitCall(typeof(UserType), "TryGetNonInheritedMethodHelper");
+            cg.Emit(OpCodes.Brtrue, instanceCall);
+
+            EmitBaseMethodDispatch(mi, cg);
+
+            cg.MarkLabel(instanceCall);
+
+            EmitCallFromClrToPython(cg, callTarget, 0);
 
             cg.Finish();
         }
 
         private void CreateVirtualMethodOverride(MethodInfo mi, Slot methField) {
-            if (methField is VTableSlot) {
-                CreateVTableMethodOverride(mi, (VTableSlot)methField);
-                return;
-            }
-
             CodeGen cg = tg.DefineMethodOverride(mi);
             Label baseCall = cg.DefineLabel();
 
@@ -1194,21 +992,21 @@ namespace IronPython.Compiler.Generation {
             cg.EmitThis();
             for (int i = 0; i < mi.GetParameters().Length; i++) {
                 cg.EmitArgGet(i);
-                cg.EmitCastToObject(mi.GetParameters()[i].ParameterType);
+                cg.EmitConvertToObject(mi.GetParameters()[i].ParameterType);
             }
 
             if (mi.GetParameters().Length > 3) {
                 throw new NotImplementedException("OverrideBaseMethod: " + mi);
             }
-            //Console.WriteLine("Invoke: " + mi + ", " + mi.GetParameters().Length);
+
             cg.EmitCall(typeof(MethodWrapper), "Invoke", CompilerHelpers.MakeRepeatedArray(typeof(object), 1 + mi.GetParameters().Length));
             MethodInfo object_ToString = typeof(object).GetMethod("ToString");
 
             if (mi.MethodHandle != object_ToString.MethodHandle) {
-                cg.EmitCastFromObject(mi.ReturnType);
-                cg.EmitReturn();
+                cg.EmitReturnFromObject();
             } else {
-                EmitReturnNonNullString(cg);
+                cg.EmitCall(typeof(UserType), "ToStringReturnHelper");
+                cg.EmitReturn();
             }
 
             cg.MarkLabel(baseCall);
@@ -1223,50 +1021,9 @@ namespace IronPython.Compiler.Generation {
             } else {
                 // Just forward to the base method implementation
                 EmitBaseMethodDispatch(mi, cg);
-                cg.EmitReturn();
             }
                         
             cg.Finish();
-        }
-
-        private static void EmitReturnNonNullString(CodeGen cg) {
-            // need to check for null for ToString
-            Label badRet = cg.DefineLabel();
-            cg.Emit(OpCodes.Dup);
-            cg.Emit(OpCodes.Ldnull);
-            cg.Emit(OpCodes.Beq, badRet);
-
-            cg.Emit(OpCodes.Dup);
-            Slot s = cg.GetLocalTmp(typeof(Conversion));
-            cg.EmitTryCastFromObject(typeof(string), s);
-
-            Slot convertedVal = cg.GetLocalTmp(typeof(string));
-            convertedVal.EmitSet(cg);
-
-            s.EmitGet(cg);
-            cg.EmitInt((int)Conversion.None);
-            cg.Emit(OpCodes.Beq, badRet);
-            cg.Emit(OpCodes.Pop);   // remove unconverted value
-            convertedVal.EmitGet(cg);
-            cg.EmitReturn();    // value's good, return it
-
-            cg.FreeLocalTmp(s);
-            cg.FreeLocalTmp(convertedVal);
-
-            cg.MarkLabel(badRet);
-            // stack contains only unconverted value
-            Slot tmp = cg.GetLocalTmp(typeof(object));
-            tmp.EmitSet(cg);
-
-            cg.EmitString("__str__ returned non-string type ({0})");
-            cg.EmitObjectArray(1, delegate(int index) {
-                tmp.EmitGet(cg);
-                cg.EmitCall(typeof(Ops), "GetDynamicType");
-            });
-            cg.EmitCall(typeof(Ops), "TypeError");
-            cg.Emit(OpCodes.Throw);
-
-            cg.FreeLocalTmp(tmp);
         }
 
         internal static CodeGen CreateVirtualMethodHelper(TypeGen tg, MethodInfo mi) {
@@ -1284,9 +1041,35 @@ namespace IronPython.Compiler.Generation {
                                          "#base#" + mi.Name, mi.ReturnType, types, paramNames);
 
             EmitBaseMethodDispatch(mi, cg);
-            cg.EmitReturn();
             cg.Finish();
             return cg;
+        }
+    }
+
+    class ReturnFixer {
+        private Slot argSlot, refSlot;
+
+        public ReturnFixer(Slot refSlot, Slot argSlot) {
+            this.refSlot = refSlot;
+            this.argSlot = argSlot;
+        }
+
+        public void FixReturn(CodeGen cg) {
+            argSlot.EmitGet(cg);
+            refSlot.EmitGet(cg);
+            cg.EmitCall(typeof(IronPython.Modules.ClrModule.Reference).GetProperty("Value").GetGetMethod());
+            cg.EmitConvertFromObject(argSlot.Type.GetElementType());
+            cg.EmitStoreValueIndirect(argSlot.Type);
+        }
+    }
+
+    class VTableEntry {
+        public readonly string name;
+        public readonly int index;
+
+        public VTableEntry(string name, int index) {
+            this.name = name;
+            this.index = index;
         }
     }
 }

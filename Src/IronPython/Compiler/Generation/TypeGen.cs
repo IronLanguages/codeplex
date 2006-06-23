@@ -135,15 +135,11 @@ namespace IronPython.Compiler.Generation {
         }
 
         public CodeGen DefineMethod(string name, Type retType, Type[] paramTypes, string[] paramNames) {
-            MethodAttributes attrs = MethodAttributes.Public;
-            if (Options.StaticModules) attrs |= MethodAttributes.Static;
-            return DefineMethod(attrs, name, retType, paramTypes, paramNames);
+            return DefineMethod(CompilerHelpers.PublicStatic, name, retType, paramTypes, paramNames);
         }
 
         public CodeGen DefineMethod(string name, Type retType, Type[] paramTypes, string[] paramNames, object[] defaultVals) {
-            MethodAttributes attrs = MethodAttributes.Public;
-            if (Options.StaticModules) attrs |= MethodAttributes.Static;
-            return DefineMethod(attrs, name, retType, paramTypes, paramNames, defaultVals);
+            return DefineMethod(CompilerHelpers.PublicStatic, name, retType, paramTypes, paramNames, defaultVals);
         }
 
         public CodeGen DefineMethod(MethodAttributes attrs, string name, Type retType, Type[] paramTypes, string[] paramNames, object[] defaultVals) {
@@ -151,9 +147,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         public CodeGen DefineMethod(string name, Type retType, Type[] paramTypes, string[] paramNames, object[] defaultVals, CustomAttributeBuilder[] cabs) {
-            MethodAttributes attrs = MethodAttributes.Public;
-            if (Options.StaticModules) attrs |= MethodAttributes.Static;
-            return DefineMethod(attrs, name, retType, paramTypes, paramNames, defaultVals, cabs);
+            return DefineMethod(CompilerHelpers.PublicStatic, name, retType, paramTypes, paramNames, defaultVals, cabs);
         }
 
         public CodeGen DefineMethod(MethodAttributes attrs, string name, Type retType, Type[] paramTypes, string[] paramNames, object [] defaultVals, CustomAttributeBuilder[]cabs) {

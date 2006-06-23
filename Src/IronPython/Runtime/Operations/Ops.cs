@@ -1670,38 +1670,6 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        public static object[] ExtractArrayTail(object[] a0) {
-            int N = a0.Length - 1;
-            object[] ret = new object[N];
-            Array.Copy(a0, 1, ret, 0, N);
-            return ret;
-        }
-
-        public static object InvokeMethod(object meth, object type, object self) {
-            PythonFunction f = meth as PythonFunction;
-            if (f != null) return f.Call(self);
-            return Ops.Call(Ops.GetDescriptor(meth, self, type));
-        }
-        public static object InvokeMethod(object meth, object type, object self, object arg0) {
-            PythonFunction f = meth as PythonFunction;
-            if (f != null) return f.Call(self, arg0);
-            return Ops.Call(Ops.GetDescriptor(meth, self, type), arg0);
-        }
-        public static object InvokeMethod(object meth, object type, object self, object arg0, object arg1) {
-            PythonFunction f = meth as PythonFunction;
-            if (f != null) return f.Call(self, arg0, arg1);
-            return Ops.Call(Ops.GetDescriptor(meth, self, type), arg0, arg1);
-        }
-
-        public static object InvokeMethod(object meth, object type, object[] selfAndArgs) {
-            PythonFunction f = meth as PythonFunction;
-            if (f != null) return f.Call(selfAndArgs);
-            object self = selfAndArgs[0];
-            object[] args = new object[selfAndArgs.Length - 1];
-            Array.Copy(selfAndArgs, 1, args, 0, args.Length);
-            return Ops.Call(Ops.GetDescriptor(meth, self, type), args);
-        }
-
         public static Exception MissingInvokeMethodException(object self, string name) {
             return Ops.MakeAttributeError(self, name);
         }

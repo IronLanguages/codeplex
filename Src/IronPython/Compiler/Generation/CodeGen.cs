@@ -310,12 +310,11 @@ namespace IronPython.Compiler.Generation {
                 return;
             }
             EmitExprOrNone(expr);
+            EmitReturnFromObject();
+        }   
 
-            Type retType = CompilerHelpers.GetReturnType(methodInfo);
-            if (retType != typeof(void) && retType != typeof(object)) {
-                EmitCastFromObject(retType);
-            }
-
+        public void EmitReturnFromObject() {
+            EmitConvertFromObject(CompilerHelpers.GetReturnType(methodInfo));
             EmitReturn();
         }
 
@@ -834,167 +833,9 @@ namespace IronPython.Compiler.Generation {
                 Emit(OpCodes.Newobj, (ConstructorInfo)(delegateType.GetMember(".ctor")[0]));
             }
         }
+        
 
-        private void EmitTryConvertCall(string name, Type paramType, Slot conversion) {
-            conversion.EmitGetAddr(this);
-            EmitCall(typeof(Converter), name);
-            if (paramType.IsValueType) {
-                Emit(OpCodes.Box, paramType);
-            }
-        }
-        public void EmitTryCastFromObject(Type paramType, Slot conversion) {
-            if (paramType == typeof(object)) {
-                EmitInt((int)Conversion.Identity);
-                conversion.EmitSet(this);
-            }
-
-            if (paramType == typeof(void)) {
-                Emit(OpCodes.Pop);
-                EmitInt((int)Conversion.None);
-                conversion.EmitSet(this);
-            } else if (paramType == typeof(char)) {
-                EmitTryConvertCall("TryConvertToChar", paramType, conversion);
-            } else if (paramType == typeof(int)) {
-                EmitTryConvertCall("TryConvertToInt32", paramType, conversion);
-            } else if (paramType == typeof(string)) {
-                EmitTryConvertCall("TryConvertToString", paramType, conversion);
-            } else if (paramType == typeof(long)) {
-                EmitTryConvertCall("TryConvertToInt64", paramType, conversion);
-            } else if (paramType == typeof(double)) {
-                EmitTryConvertCall("TryConvertToDouble", paramType, conversion);
-            } else if (paramType == typeof(bool)) {
-                EmitTryConvertCall("TryConvertToBoolean", paramType, conversion);
-            } else if (paramType == typeof(BigInteger)) {
-                EmitTryConvertCall("TryConvertToBigInteger", paramType, conversion);
-            } else if (paramType == typeof(Complex64)) {
-                EmitTryConvertCall("TryConvertToComplex64", paramType, conversion);
-            } else if (paramType == typeof(IEnumerator)) {
-                EmitTryConvertCall("TryConvertToIEnumerator", paramType, conversion);
-            } else if (paramType == typeof(float)) {
-                EmitTryConvertCall("TryConvertToSingle", paramType, conversion);
-            } else if (paramType == typeof(byte)) {
-                EmitTryConvertCall("TryConvertToByte", paramType, conversion);
-            } else if (paramType == typeof(sbyte)) {
-                EmitTryConvertCall("TryConvertToSByte", paramType, conversion);
-            } else if (paramType == typeof(short)) {
-                EmitTryConvertCall("TryConvertToInt16", paramType, conversion);
-            } else if (paramType == typeof(uint)) {
-                EmitTryConvertCall("TryConvertToUInt32", paramType, conversion);
-            } else if (paramType == typeof(ulong)) {
-                EmitTryConvertCall("TryConvertToUInt64", paramType, conversion);
-            } else if (paramType == typeof(ushort)) {
-                EmitTryConvertCall("TryConvertToUInt16", paramType, conversion);
-            } else if (paramType == typeof(Type)) {
-                EmitTryConvertCall("TryConvertToType", paramType, conversion);
-            } else if (typeof(Delegate).IsAssignableFrom(paramType)) {
-                EmitType(paramType);
-                conversion.EmitGetAddr(this);
-                EmitCall(typeof(Converter), "TryConvertToDelegate");
-            } else {
-                EmitType(paramType);
-                conversion.EmitGetAddr(this);
-                EmitCall(typeof(Converter), "TryConvert");
-            }
-        }
-
-        public void EmitCastFromObject(Type paramType) {
-            if (paramType == typeof(object)) return;
-
-            if (paramType == typeof(void)) {
-                Emit(OpCodes.Pop);
-            } else if (paramType == typeof(char)) {
-                EmitCall(typeof(Converter), "ConvertToChar");
-            } else if (paramType == typeof(int)) {
-                EmitCall(typeof(Converter), "ConvertToInt32");
-            } else if (paramType == typeof(string)) {
-                EmitCall(typeof(Converter), "ConvertToString");
-            } else if (paramType == typeof(long)) {
-                EmitCall(typeof(Converter), "ConvertToInt64");
-            } else if (paramType == typeof(double)) {
-                EmitCall(typeof(Converter), "ConvertToDouble");
-            } else if (paramType == typeof(bool)) {
-                EmitCall(typeof(Ops), "IsTrue");
-            } else if (paramType == typeof(BigInteger)) {
-                EmitCall(typeof(Converter), "ConvertToBigInteger");
-            } else if (paramType == typeof(Complex64)) {
-                EmitCall(typeof(Converter), "ConvertToComplex64");
-            } else if (paramType == typeof(IEnumerator)) {
-                EmitCall(typeof(Converter), "ConvertToIEnumerator");
-            } else if (paramType == typeof(float)) {
-                EmitCall(typeof(Converter), "ConvertToSingle");
-            } else if (paramType == typeof(byte)) {
-                EmitCall(typeof(Converter), "ConvertToByte");
-            } else if (paramType == typeof(sbyte)) {
-                EmitCall(typeof(Converter), "ConvertToSByte");
-            } else if (paramType == typeof(short)) {
-                EmitCall(typeof(Converter), "ConvertToInt16");
-            } else if (paramType == typeof(uint)) {
-                EmitCall(typeof(Converter), "ConvertToUInt32");
-            } else if (paramType == typeof(ulong)) {
-                EmitCall(typeof(Converter), "ConvertToUInt64");
-            } else if (paramType == typeof(ushort)) {
-                EmitCall(typeof(Converter), "ConvertToUInt16");
-            } else if (paramType == typeof(Type)) {
-                EmitCall(typeof(Converter), "ConvertToType");
-            } else if (typeof(Delegate).IsAssignableFrom(paramType)) {
-                EmitType(paramType);
-                EmitCall(typeof(Converter), "ConvertToDelegate");
-                Emit(OpCodes.Castclass, paramType);
-            } else if (paramType.IsValueType) {
-                // if (val == null) {
-                //     throw Ops.TypeError("unexpected None as return value");
-                // } else {
-                //     // unbox 
-                // }
-
-                Label lelse = DefineLabel();
-
-                Emit(OpCodes.Dup);
-                Emit(OpCodes.Ldnull);
-                Emit(OpCodes.Ceq);
-                Emit(OpCodes.Brfalse_S, lelse);
-                EmitString("unexpected None as return value");
-                Emit(OpCodes.Ldnull);
-                EmitCall(typeof(Ops), "TypeError");
-                Emit(OpCodes.Throw);
-                MarkLabel(lelse);
-
-                if (paramType.IsEnum) {
-                    Emit(OpCodes.Unbox_Any, paramType);
-                } else {
-                    Emit(OpCodes.Unbox, paramType);
-                    EmitLoadValueIndirect(paramType);
-                }
-            } else {
-                // paramType is a reference type.
-
-                if (Options.GenerateSafeCasts) {
-                    // This is the pseudo-code of the generated IL, where val is the 
-                    // value on the stack :
-                    //
-                    //   if (val != null) {
-                    //       if (!(val is paramType)) {
-                    //           throw Ops.InvalidType(typeof(paramType))
-                    //       }
-                    //   }
-                    Label end = DefineLabel();
-                    Emit(OpCodes.Dup);
-                    Emit(OpCodes.Brfalse_S, end);
-                    Emit(OpCodes.Dup);
-                    Emit(OpCodes.Isinst, paramType);
-                    Emit(OpCodes.Brtrue_S, end);
-                    Emit(OpCodes.Ldtoken, paramType);
-                    EmitCall(typeof(Ops), "InvalidType");
-                    Emit(OpCodes.Throw);
-                    MarkLabel(end);
-                }
-
-                Emit(OpCodes.Castclass, paramType);
-            }
-        }
-
-
-        public void NewEmitCastFromObject(Type paramType) {
+        public void EmitConvertFromObject(Type paramType) {
             if (paramType == typeof(object)) return;
 
             if (paramType == typeof(void)) {
@@ -1059,7 +900,16 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        public void EmitCastToObject(Type retType) {
+        /// <summary>
+        /// Converts the value on the top of the stack to a System.Object.  If there is nothing
+        /// to convert then this will push a null on the stack.  For almost all value types this method
+        /// will box them in the standard way.  Int32 and Boolean are handled with optimized conversions
+        /// that reuse the same object for small values.  For Int32 this is purely a performance
+        /// optimization.  For Boolean this is use to ensure that True and False are always the same
+        /// objects.
+        /// </summary>
+        /// <param name="retType"></param>
+        public void EmitConvertToObject(Type retType) {
             if (retType == typeof(void)) {
                 Emit(OpCodes.Ldnull);
             } else if (retType.IsValueType) {
@@ -1318,9 +1168,7 @@ namespace IronPython.Compiler.Generation {
 
         public CodeGen DefineUserHiddenMethod(string name, Type retType, Type[] paramTypes) {
             if (typeGen != null) {
-                MethodAttributes attrs = MethodAttributes.Public;
-                if (Options.StaticModules) attrs |= MethodAttributes.Static;
-                return typeGen.DefineUserHiddenMethod(attrs, name, retType, paramTypes);
+                return typeGen.DefineUserHiddenMethod(CompilerHelpers.PublicStatic, name, retType, paramTypes);
             } else {
                 return DefineDynamicMethod(name, retType, paramTypes);
             }

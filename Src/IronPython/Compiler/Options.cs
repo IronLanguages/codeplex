@@ -36,9 +36,6 @@ namespace IronPython.Compiler {
 
         public static bool SkipFirstLine;
 
-        // Global module variables are implemented as CLI static fields
-        public static bool StaticModules = true;
-
         public static bool TracebackSupport = (IntPtr.Size == 4);  // currently only enabled on 32-bit
 
         // Emit CheckInitialized calls
@@ -74,13 +71,7 @@ namespace IronPython.Compiler {
         public static bool SaveAndReloadBinaries;
         public static string BinariesDirectory = null;
 
-        // Should the Reflection.Emit assembly be loaded from a byte array?
-        // This acts as a stress mode for byte array loading.
-        public static bool ReadBinariesByteArray;
-
         public static bool PrivateBinding;
-
-        public static List<string> Optimized = new List<string>();
 
         // true if we are emitting IL source for debugging generated code.
         public static bool ILDebug;

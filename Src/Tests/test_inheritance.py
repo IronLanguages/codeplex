@@ -179,14 +179,16 @@ class MetaClass2(type):
 
 #########################################################
 class OverrideParamTesting(MoreOverridding):
-    def Test1(self, *args):
+    def Test1(self, args):
         return "xx" + args[0] + args[1]
-    def Test2(self, x, *args):
+    def Test2(self, x, args):
         return "xx" + x + args[0] + args[1]
-    def Test3(self, x):
-        pass
-    def Test4(self, x, y):
-        pass
+    def Test3(self, xr):
+        xr.Value += "xx"
+        return "Test3"
+    def Test4(self, x, yr):
+        yr.Value += x
+        return "Test4"
     def Test5(self, sc):
         return "xx" + repr(sc)
     def Test6(self, x, sc):
@@ -197,6 +199,8 @@ x = a.CallTest1()
 Assert(x == 'xxaabb')
 x = a.CallTest2()
 Assert(x == 'xxaabbcc')
+AreEqual(a.CallTest3("@"), ("Test3", "@xx"))
+AreEqual(a.CallTest4("@"), ("Test4", "@aa"))
 x = a.CallTest5()
 Assert(x == 'xxOrdinal')
 x = a.CallTest6()
@@ -901,7 +905,7 @@ AreEqual(flag, 60)
 
 ## Char 
 DReturnTypes.M_Char = lambda self: ord('z')
-AreEqual(used.Use_Char(), System.Char.Parse('z'))
+AssertError(TypeError, used.Use_Char)
 
 DReturnTypes.M_Char = lambda self: 'y'
 AreEqual(used.Use_Char(), System.Char.Parse('y'))
@@ -924,13 +928,13 @@ AssertError(TypeError, used.Use_String)
 
 ## Int32
 DReturnTypes.M_Int32 = lambda self: System.Char.Parse('z')
-AreEqual(used.Use_Int32(), ord('z'))
+AssertError(TypeError, used.Use_Int32())
 
 DReturnTypes.M_Int32 = lambda self: System.SByte.Parse('-123')
 AreEqual(used.Use_Int32(), -123)
 
 DReturnTypes.M_Int32 = lambda self: 12345678901234
-AssertError(TypeError, used.Use_Int32)
+AssertError(OverflowError, used.Use_Int32)
 
 ## RtClass
 class MyRtClass(RtClass): 

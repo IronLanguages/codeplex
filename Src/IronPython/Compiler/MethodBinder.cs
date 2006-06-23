@@ -484,7 +484,7 @@ namespace IronPython.Compiler {
 
             public override void Generate(CodeGen cg, Slot contextSlot, Slot[] argSlots) {
                 argSlots[index].EmitGet(cg);
-                cg.NewEmitCastFromObject(parameter.Type);
+                cg.EmitConvertFromObject(parameter.Type);
             }
         }
 
@@ -598,7 +598,7 @@ namespace IronPython.Compiler {
                     cg.Emit(OpCodes.Dup);
                     cg.EmitInt(i);
                     argSlots[start+i].EmitGet(cg);
-                    cg.NewEmitCastFromObject(parameter.Type);
+                    cg.EmitConvertFromObject(parameter.Type);
                     cg.EmitStelem(parameter.Type);
                 }
             }
@@ -621,7 +621,7 @@ namespace IronPython.Compiler {
             }
 
             public virtual void Generate(CodeGen cg, Slot contextSlot, Slot[] argSlots) {
-                cg.EmitCastToObject(returnType);
+                cg.EmitConvertToObject(returnType);
                 cg.EmitReturn();
             }
         }

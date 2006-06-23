@@ -130,12 +130,6 @@ namespace IronPython.Compiler.Generation {
             string fullPath = Path.Combine(outDir, outFileName);
             Dump();
 
-            if (Options.ReadBinariesByteArray) {
-                byte[] il = File.ReadAllBytes(fullPath);
-                byte[] pdb = File.ReadAllBytes(Path.ChangeExtension(fullPath, "pdb"));
-                return Assembly.Load(il, pdb);
-            }
-
             return Assembly.LoadFile(fullPath);
         }
         public void Dump() {

@@ -173,7 +173,7 @@ namespace IronPython.Compiler.AST {
             } else {
                 cg.EmitCallerContext();
                 target.Emit(cg);
-                if (args.Length <= 4) {
+                if (args.Length <= Ops.MaximumCallArgs) {
                     Type[] argTypes = new Type[args.Length + 2];
                     int i = 0;
                     argTypes[i++] = typeof(ICallerContext);

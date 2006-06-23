@@ -58,7 +58,12 @@ namespace IronPythonTest {
             : this(new MySize(width, height)) {
         }
 
-        public MySize Size {
+        public void GetWidthAndHeight(out int height, out int width) {
+            height = this.Height;
+            width = this.Width;
+        }
+
+        public virtual MySize Size {
             get {
                 return size;
             }
@@ -67,7 +72,7 @@ namespace IronPythonTest {
             }
         }
 
-        public int Height {
+        public virtual int Height {
             get {
                 return size.height;
             }
@@ -76,7 +81,7 @@ namespace IronPythonTest {
             }
         }
 
-        public int Width {
+        public virtual int Width {
             get {
                 return size.width;
             }
@@ -368,12 +373,10 @@ namespace IronPythonTest {
         public object CallTest2() {
             return Test2("aa", "bb", "cc");
         }
-        public object CallTest3() {
-            object x = null;
+        public object CallTest3(ref object x) {
             return Test3(ref x);
         }
-        public object CallTest4() {
-            object y = null;
+        public object CallTest4(ref object y) {
             return Test4("aa", ref y);
         }
 

@@ -653,20 +653,20 @@ namespace IronPython.Runtime {
             if (toType == typeof(Type) && typeof(PythonType).IsAssignableFrom(fromType)) return true;
 
             // Support extensible types with simple implicit conversions to their base types
-            if (typeof(ExtensibleInt).IsAssignableFrom(fromType)) {
-                return toType == typeof(int);
+            if (typeof(ExtensibleInt).IsAssignableFrom(fromType) && CanConvertFrom(typeof(int), toType, allowNarrowing)) {
+                return true;
             }
-            if (typeof(ExtensibleLong).IsAssignableFrom(fromType)) {
-                return toType == typeof(IronMath.BigInteger);
+            if (typeof(ExtensibleLong).IsAssignableFrom(fromType) && CanConvertFrom(typeof(IronMath.BigInteger), toType, allowNarrowing)) {
+                return true;
             }
-            if (typeof(ExtensibleString).IsAssignableFrom(fromType)) {
-                return toType == typeof(string);
+            if (typeof(ExtensibleString).IsAssignableFrom(fromType) && CanConvertFrom(typeof(string), toType, allowNarrowing)) {
+                return true;
             }
-            if (typeof(ExtensibleFloat).IsAssignableFrom(fromType)) {
-                return toType == typeof(double);
+            if (typeof(ExtensibleFloat).IsAssignableFrom(fromType) && CanConvertFrom(typeof(float), toType, allowNarrowing)) {
+                return true;
             }
-            if (typeof(ExtensibleComplex).IsAssignableFrom(fromType)) {
-                return toType == typeof(IronMath.Complex64);
+            if (typeof(ExtensibleComplex).IsAssignableFrom(fromType) && CanConvertFrom(typeof(IronMath.Complex64), toType, allowNarrowing)) {
+                return true;
             }
 
             //!!!do user-defined implicit conversions here
@@ -700,6 +700,7 @@ namespace IronPython.Runtime {
 
         public static bool HasPythonProtocol(Type t, SymbolId name) {
             if (t.FullName.StartsWith("IronPython.NewTypes.")) return true;
+            if (t == typeof(OldInstance)) return true;
             ICustomAttributes dt = Ops.GetDynamicTypeFromType(t) as ICustomAttributes;
             if (dt == null) return false;
             object tmp;
@@ -725,22 +726,6 @@ namespace IronPython.Runtime {
                 if (toType == typeof(int) && HasPythonProtocol(fromType, SymbolTable.ConvertToInt)) return true;
                 if (toType == typeof(double) && HasPythonProtocol(fromType, SymbolTable.ConvertToFloat)) return true;
                 if (toType == typeof(BigInteger) && HasPythonProtocol(fromType, SymbolTable.ConvertToLong)) return true;
-
-                if (typeof(ExtensibleInt).IsAssignableFrom(fromType)) {
-                    return CanConvertFrom(typeof(int), toType, allowNarrowing);
-                }
-                if (typeof(ExtensibleLong).IsAssignableFrom(fromType)) {
-                    return CanConvertFrom(typeof(IronMath.BigInteger), toType, allowNarrowing);
-                }
-                if (typeof(ExtensibleString).IsAssignableFrom(fromType)) {
-                    return CanConvertFrom(typeof(string), toType, allowNarrowing);
-                }
-                if (typeof(ExtensibleFloat).IsAssignableFrom(fromType)) {
-                    return CanConvertFrom(typeof(double), toType, allowNarrowing);
-                }
-                if (typeof(ExtensibleComplex).IsAssignableFrom(fromType)) {
-                    return CanConvertFrom(typeof(IronMath.Complex64), toType, allowNarrowing);
-                }
             }
 
             if (toType.IsGenericType) {
