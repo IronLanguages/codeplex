@@ -2263,7 +2263,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception AssertionError(string message) {
-            return AssertionError(message != null ? message : String.Empty, new object[0]);
+            if (message == null) {
+                return AssertionError(String.Empty, new object[0]);
+            } else {
+                return AssertionError("{0}", new object[]{message});
+            }
         }
 
         public static Exception InvalidType(object o, RuntimeTypeHandle handle) {

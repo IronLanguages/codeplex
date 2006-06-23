@@ -105,6 +105,7 @@ IronPythonTests = {
                 ''',
             'standard':
                 '''
+                test_assert
                 test_attr
                 test_class
                 test_closure
