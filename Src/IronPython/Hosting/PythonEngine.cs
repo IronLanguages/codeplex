@@ -484,9 +484,19 @@ namespace IronPython.Hosting {
         }
 
         public void Execute(string text, ModuleScope moduleScope, ExecutionOptions executionOptions) {
+            Execute(text, null /*fileName*/, moduleScope, executionOptions);
+        }
+
+        public void Execute(string text, string fileName, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             EnsureValidArguments(moduleScope, executionOptions, ExecuteStringOptions);
 
-            Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, compilerContext, text);
+            CompilerContext context = compilerContext;
+
+            // When a fileName is passed in, it is used to generated debug info
+            if (fileName != null)
+                context = compilerContext.CopyWithNewSourceFile(fileName);
+
+            Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, context, text);
             ExecuteSnippet(p, moduleScope, executionOptions);
         }
 

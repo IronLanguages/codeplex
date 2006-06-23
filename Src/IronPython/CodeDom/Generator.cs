@@ -175,9 +175,16 @@ namespace IronPython.CodeDom {
         }
 
         protected override void GenerateArrayCreateExpression(CodeArrayCreateExpression e) {
+            CodeTypeReference elementType = e.CreateType.ArrayElementType;
+            if (elementType == null) {
+                // This is necessary to support clients which incorrectly pass a non-array
+                // type.  CSharpCodeProvider has similar logic.
+                elementType = e.CreateType;
+            }
+
             if (e.Initializers.Count > 0) {
                 Write("System.Array[");
-                OutputType(e.CreateType);
+                OutputType(elementType);
                 Write("]");
 
                 Write("((");
@@ -188,7 +195,7 @@ namespace IronPython.CodeDom {
                 Write("))");
             } else {
                 Write("System.Array.CreateInstance(");
-                OutputType(e.CreateType);
+                OutputType(elementType);
                 Write(",");
 
                 if (e.SizeExpression != null) {
@@ -1085,6 +1092,10 @@ namespace IronPython.CodeDom {
         }
 
         protected override string GetTypeOutput(CodeTypeReference value) {
+            if (value.ArrayRank > 0) {
+                return "System.Array[" + GetTypeOutput(value.ArrayElementType) + "]";
+            }
+
             if (value.TypeArguments != null && value.TypeArguments.Count > 0) {
                 // generate generic type reference
                 string nonGenericName = value.BaseType.Substring(0, value.BaseType.LastIndexOf('`'));
@@ -1100,6 +1111,7 @@ namespace IronPython.CodeDom {
                 baseName.Append(']');
                 return baseName.ToString();                
             }
+
             return PythonizeType(value.BaseType);
         }
 
