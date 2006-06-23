@@ -34,6 +34,7 @@ namespace IronPythonConsole {
     /// A simple Python command-line should mimic the standard python.exe
     /// </summary>
     class PythonCommandLine {
+        private static bool handleExceptions = true;
         private static bool tabCompletion = false;
         private static bool autoIndent = false;
         private static bool colorfulConsole = false;
@@ -188,6 +189,7 @@ namespace IronPythonConsole {
                         }
                         Options.Command = (string)args[0];
                         return options;
+                    case "-X:PassExceptions": handleExceptions = false; break;
 #if !IRONPYTHON_WINDOW
                     case "-X:ColorfulConsole": ColorfulConsole = true; break;
                     case "-X:ExceptionDetail": options.ExceptionDetail = true; break;
@@ -305,6 +307,7 @@ namespace IronPythonConsole {
             Console.WriteLine("  -X:MTA                 Run in multithreaded apartment");
             Console.WriteLine("  -X:NoOptimize          Disable optimized methods");
             Console.WriteLine("  -X:NoTraceback         Do not emit traceback code");
+            Console.WriteLine("  -X:PassExceptions      Do not catch exceptions that are unhandled by Python code");
             Console.WriteLine("  -X:PrivateBinding      Enable binding to private members");
             Console.WriteLine("  -X:SaveAssemblies      Save generated assemblies");
             Console.WriteLine("  -X:ShowCLSExceptions   Display CLS Exception information");
@@ -383,13 +386,21 @@ namespace IronPythonConsole {
 
             string startup = Environment.GetEnvironmentVariable("IRONPYTHONSTARTUP");
             if (startup != null && startup.Length > 0) {
-                try {
-                    engine.ExecuteFile(startup);
-                } catch (Exception e) {
-                    if (e is PythonSystemExit) throw;
-                    MyConsole.Write(engine.FormatException(e), Style.Error);
-                } finally {
-                    engine.DumpDebugInfo();
+                if (handleExceptions) {
+                    try {
+                        engine.ExecuteFile(startup);
+                    } catch (Exception e) {
+                        if (e is PythonSystemExit) throw;
+                        MyConsole.Write(engine.FormatException(e), Style.Error);
+                    } finally {
+                        engine.DumpDebugInfo();
+                    }
+                } else {
+                    try {
+                        engine.ExecuteFile(startup);
+                    } finally {
+                        engine.DumpDebugInfo();
+                    }
                 }
             }
         }
@@ -421,25 +432,46 @@ namespace IronPythonConsole {
             ExecutionOptions executionOptions = ExecutionOptions.Default;
             if (Options.SkipFirstLine) executionOptions |= ExecutionOptions.SkipFirstLine;
 
-            try {
-                ModuleScope scope;
+            if (handleExceptions) {
+                try {
+                    ModuleScope scope;
 #if !IRONPYTHON_WINDOW
-                if (Options.Introspection) {
-                    ExecuteFileConsole(fileName, executionOptions, out scope);
-                } else {
-                    engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
-                }
+                    if (Options.Introspection) {
+                        ExecuteFileConsole(fileName, executionOptions, out scope);
+                    } else {
+                        engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+                    }
 #else
                 engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
 #endif
-                result = 0;
-            } catch (PythonSystemExit pythonSystemExit) {
-                result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
-            }  catch (Exception e) {
-                MyConsole.Write(engine.FormatException(e), Style.Error);
-            } finally {
-                engine.DumpDebugInfo();
+                    result = 0;
+                } catch (PythonSystemExit pythonSystemExit) {
+                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                } catch (Exception e) {
+                    MyConsole.Write(engine.FormatException(e), Style.Error);
+                } finally {
+                    engine.DumpDebugInfo();
+                }
+            } else {
+                try {
+                    ModuleScope scope;
+#if !IRONPYTHON_WINDOW
+                    if (Options.Introspection) {
+                        ExecuteFileConsole(fileName, executionOptions, out scope);
+                    } else {
+                        engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+                    }
+#else
+                    engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+#endif
+                    result = 0;
+                } catch (PythonSystemExit pythonSystemExit) {
+                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                } finally {
+                    engine.DumpDebugInfo();
+                }
             }
+
 
             return result;
         }
@@ -453,16 +485,27 @@ namespace IronPythonConsole {
 
             ((List)engine.Sys.argv)[0] = "-c";
 
-            try {
-                //engine.Execute(command, engine.DefaultModuleScope, ExecutionOptions.PrintExpressions);
-                engine.ExecuteToConsole(command);
-                result = 0;
-            } catch (PythonSystemExit pythonSystemExit) {
-                result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
-            } catch(Exception e) {
-                MyConsole.Write(engine.FormatException(e), Style.Error);
-            } finally {
-                engine.DumpDebugInfo();
+            if (handleExceptions) {
+                try {
+                    //engine.Execute(command, engine.DefaultModuleScope, ExecutionOptions.PrintExpressions);
+                    engine.ExecuteToConsole(command);
+                    result = 0;
+                } catch (PythonSystemExit pythonSystemExit) {
+                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                } catch (Exception e) {
+                    MyConsole.Write(engine.FormatException(e), Style.Error);
+                } finally {
+                    engine.DumpDebugInfo();
+                }
+            } else {
+                try {
+                    engine.ExecuteToConsole(command);
+                    result = 0;
+                } catch (PythonSystemExit pythonSystemExit) {
+                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                } finally {
+                    engine.DumpDebugInfo();
+                }
             }
 
             return result;
