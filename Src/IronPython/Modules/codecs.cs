@@ -337,13 +337,19 @@ namespace IronPython.Modules {
         #endregion
 
         [PythonName("raw_unicode_escape_decode")]
-        public static object RawUnicodeEscapeDecode(ICallerContext context, object input, [DefaultParameterValue("strict")]string errors) {
-            return StringOps.Decode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors);
+        public static Tuple RawUnicodeEscapeDecode(ICallerContext context, object input, [DefaultParameterValue("strict")]string errors) {
+            return Tuple.MakeTuple(
+                StringOps.Decode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
+                Builtin.Length(input)
+            );
         }
 
         [PythonName("raw_unicode_escape_encode")]
-        public static object RawUnicodeEscapeEncode(ICallerContext context, object input, [DefaultParameterValue("strict")]string errors) {
-            return StringOps.Encode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors);
+        public static Tuple RawUnicodeEscapeEncode(ICallerContext context, object input, [DefaultParameterValue("strict")]string errors) {
+            return Tuple.MakeTuple(
+                StringOps.Encode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
+                Builtin.Length(input)
+            );
         }
 
         [PythonName("readbuffer_encode")]
