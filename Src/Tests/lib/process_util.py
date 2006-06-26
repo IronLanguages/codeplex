@@ -19,12 +19,14 @@ import nt
 import sys
 from assert_util import testpath, is_cli
 
+one_arg_params = ("-X:Optimize", "-W", "-c", "-X:MaxRecursion", "-X:AssembliesDir")
+
 def launch(executable, *params):
     if is_cli:
         return nt.spawnl(0, executable, *params)
     else:
         l = [ executable ]
-        for x in params: l.append(x)
+        for param in params: l.append(param)
         return nt.spawnv(0, executable, l)
 
 def launch_ironpython(pyfile, *args):
@@ -47,29 +49,29 @@ def _get_ip_testmode():
     import System
     lastConsumesNext = False
     switches = []
-    for x in System.Environment.GetCommandLineArgs():
-        if x.startswith('-T:') or x.startswith('-O:'): 
+    for param in System.Environment.GetCommandLineArgs():
+        if param.startswith('-T:') or param.startswith('-O:'): 
             continue
-        if x.startswith("-"):
-            switches.append(x)
-            if x == "-X:Optimize" or x == "-W" or x == "-c" or x == "-X:MaxRecursion" or x == "-X:AssembliesDir":
+        if param.startswith("-"):
+            switches.append(param)
+            if param in one_arg_params:
                 lastConsumesNext = True
         else:
             if lastConsumesNext:
-                 switches.append(x)   
+                 switches.append(param)   
             lastConsumesNext = False
     return switches
 
 def launch_ironpython_changing_extensions(test, add=[], remove=[]):
     final = _get_ip_testmode()
-    for x in add:
-        if x not in final: final.append(x)
+    for param in add:
+        if param not in final: final.append(param)
         
-    for x in remove:
-        if x in final:
-            pos = final.index(x)
-            if pos <> -1:
-                if x == "-X:Optimize" or x == "-W" or x == "-c" or x == "-X:MaxRecursion" or x == "-X:AssembliesDir":
+    for param in remove:
+        if param in final:
+            pos = final.index(param)
+            if pos != -1:
+                if param in one_arg_params:
                     del final[pos:pos+2]
                 else :
                     del final[pos]

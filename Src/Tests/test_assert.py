@@ -17,7 +17,9 @@
 # test assert
 #
 
+import System.Environment
 from lib.assert_util import *
+from lib.process_util import *
 
 def test_positive():
     ok = True
@@ -46,4 +48,7 @@ def test_doesnt_fail_on_curly():
         ok = True
     Assert(ok)
     
-run_test(__name__)
+if '-O' in System.Environment.GetCommandLineArgs():
+    AreEqual(0, launch_ironpython_changing_extensions(__file__, remove=["-O"]))
+else:
+    run_test(__name__, noOutputPlease=True)
