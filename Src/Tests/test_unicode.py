@@ -15,7 +15,20 @@
 
 from lib.assert_util import *
 
-# verify raw-unicode-escape works properly
-s = unicode('\u0663\u0661\u0664 ','raw-unicode-escape')
-AreEqual(len(s), 4)
-AreEqual(int(s), 314)
+def test_raw_unicode_escape():
+    # verify raw-unicode-escape works properly
+    s = unicode('\u0663\u0661\u0664 ','raw-unicode-escape')
+    AreEqual(len(s), 4)
+    AreEqual(int(s), 314)
+
+def test_raw_unicode_escape_dashes():
+    """Make sure that either dashes or underscores work in raw encoding name"""
+    ok = True
+    try:
+        unicode('hey', 'raw_unicode-escape')
+    except LookupError:
+        ok = False
+
+    Assert(ok, "dashes and underscores should be interchangable")
+
+run_test(__name__)

@@ -337,13 +337,13 @@ namespace IronPython.Modules {
         #endregion
 
         [PythonName("raw_unicode_escape_decode")]
-        public static object RawUnicodeEscapeDecode() {
-            throw Ops.NotImplementedError("raw_unicode_escape_decode");
+        public static object RawUnicodeEscapeDecode(ICallerContext context, object input, [DefaultParameterValue("strict")]string errors) {
+            return StringOps.Decode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors);
         }
 
         [PythonName("raw_unicode_escape_encode")]
-        public static object RawUnicodeEscapeEncode() {
-            throw Ops.NotImplementedError("raw_unicode_escape_encode");
+        public static object RawUnicodeEscapeEncode(ICallerContext context, object input, [DefaultParameterValue("strict")]string errors) {
+            return StringOps.Encode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors);
         }
 
         [PythonName("readbuffer_encode")]

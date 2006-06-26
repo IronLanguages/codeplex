@@ -1198,7 +1198,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static string RawDecode(SystemState state, string s, string encoding, string errors) {
-            if (encoding == "raw-unicode-escape") {
+            if (encoding.Replace('_', '-') == "raw-unicode-escape") {
                 return LiteralParser.ParseString(s, true, true);
             }
 
@@ -1233,7 +1233,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static string RawEncode(SystemState state, string s, string encoding, string errors) {
-            if (encoding == "raw-unicode-escape") {
+            if (encoding.Replace('_', '-') == "raw-unicode-escape") {
                 bool fUnicode = false;
                 return ReprEncode(s, ref fUnicode);
             }
