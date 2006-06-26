@@ -239,8 +239,8 @@ Assert(a.inheritGetPriv() == 'def')
 ##############################################################
 
 class Test(BaseClass):
-        def __init__(self):
-            BaseClass.__init__(self, Width = 20, Height = 30)
+        def __new__(cls):
+            return super(cls, Test).__new__(cls, Width=20, Height=30)
 
 a = Test()
 Assert(a.Width == 20)

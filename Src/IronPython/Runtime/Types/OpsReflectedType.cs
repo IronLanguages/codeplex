@@ -114,8 +114,10 @@ namespace IronPython.Runtime.Types {
             if (nt == NameType.None) return;
 
             FunctionType funcType = FunctionType.Method;
+            if (name == "__new__") funcType = FunctionType.Function;
             if (mi.DeclaringType == typeof(ArrayOps)) funcType |= FunctionType.SkipThisCheck;
             if (nt == NameType.PythonMethod) funcType |= FunctionType.PythonVisible;
+            
 
             RemoveNonOps(SymbolTable.StringToId(name));
 

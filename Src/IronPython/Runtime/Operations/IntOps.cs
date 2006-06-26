@@ -209,10 +209,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         // "int()" calls ReflectedType.Call(), which calls "Activator.CreateInstance" and return directly.
-        // this is for derived int creation...
+        // this is for derived int creation or direct calls to __new__...
         [PythonName("__new__")]
         public static object Make(PythonType cls) {
-            System.Diagnostics.Debug.Assert(cls != IntType);
+            if (cls == TypeCache.Int32) return 0;
+
             return cls.ctor.Call(cls);
         }
 

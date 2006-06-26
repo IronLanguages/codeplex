@@ -147,6 +147,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
+        public static object Make(PythonType cls) {
+            if (cls == ComplexType) return new Complex64();
+            return cls.ctor.Call(cls);
+        }
+
+        [PythonName("__new__")]
         public static object Make(
             PythonType cls,
             [DefaultParameterValueAttribute(null)]object real,

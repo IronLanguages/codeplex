@@ -829,7 +829,7 @@ namespace IronPython.Runtime.Calls {
 
         [PythonName("__call__")]
         public override object Call(ICallerContext context, object[] args, string[] names) {
-            KwArgBinder argBinder = new KwArgBinder(args, names);
+            KwArgBinder argBinder = new KwArgBinder(context, args, names);
             object[] defaults = this.Defaults;
             if (defaults.Length != ArgNames.Length) {
                 // we need a 1<->1 mapping here for kwarg binder.  

@@ -209,6 +209,14 @@ namespace IronPython.Runtime.Types {
 
         #region PythonType overrides
 
+        public override object AllocateObject(params object[] args) {
+            return base.AllocateObject(PrependThis(args));
+        }
+
+        public override object AllocateObject(Dict dict, params object[] args) {
+            return base.AllocateObject(dict, PrependThis(args));
+        }
+
         public override Type GetTypesToExtend(out IList<Type> interfacesToExtend) {
             interfacesToExtend = new List<Type>();
             foreach (object b in bases) {
@@ -676,7 +684,7 @@ namespace IronPython.Runtime.Types {
 
             if (newObject == null) return null;
 
-            InvokeInit(newObject, args, names);
+            InvokeInit(context, newObject, args, names);
 
             return newObject;
         }

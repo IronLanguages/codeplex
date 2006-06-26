@@ -162,7 +162,8 @@ namespace IronPython.Runtime.Operations {
 
         [PythonName("__new__")]
         public static object Make(PythonType cls) {
-            Debug.Assert(cls != FloatType);
+            if (cls == FloatType) return 0.0;
+
             return cls.ctor.Call(cls);
         }
 

@@ -44,6 +44,15 @@ namespace IronPython.Compiler {
                 || method.Method.ContainsGenericParameters;
         }
 
+        private static bool IsKwDictMethod(MethodTracker method) {
+            ParameterInfo[] pis = method.GetParameters();
+            for (int i = pis.Length - 1; i >= 0; i--) {
+                if (pis[i].IsDefined(typeof(ParamDictAttribute), false))
+                    return true;
+            }
+            return false;
+        }
+
         public static FastCallable MakeFastCallable(string name, MethodInfo mi, FunctionType funcType) {
             //??? In the future add optimization for simple case of nothing tricky in mi
             return new MethodBinder(name, new MethodTracker[] { new MethodTracker(mi) }, funcType).MakeFastCallable();
@@ -55,8 +64,9 @@ namespace IronPython.Compiler {
 
         private MethodBinder(string name, MethodTracker[] methods, FunctionType funcType) {
             this.name = name;
-            foreach (MethodTracker method in methods) {
+            foreach (MethodTracker method in methods) {                
                 if (IsUnsupported(method)) continue;
+                if (methods.Length > 1 && IsKwDictMethod(method)) continue;
                 AddBasicMethodTargets(method);
             }
 

@@ -108,6 +108,7 @@ IronPythonTests = {
                 test_assert
                 test_attr
                 test_class
+                test_cliclass
                 test_closure
                 test_decorator
                 test_doc

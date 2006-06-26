@@ -29,10 +29,20 @@ using IronPython.Compiler;
 
 namespace IronPython.Runtime.Types {
     public class ReflectedDelegateType : ReflectedType {
+        private static BuiltinFunction DelegateNew = BuiltinFunction.MakeMethod("__new__", typeof(ReflectedDelegateType).GetMethod("MakeNew"), FunctionType.Function | FunctionType.PythonVisible);
+        
+        public static Delegate MakeNew(PythonType type, object from) {
+            return Ops.GetDelegate(from, ((ReflectedType)type).type);
+        }
+
         private FastCallable invoker;
 
         public ReflectedDelegateType(Type delegateType)
             : base(delegateType) {
+        }
+
+        protected override void CreateNewMethod() {
+            dict[SymbolTable.NewInst] = ctor = DelegateNew;
         }
 
         public override object Call(object func, params object[] args) {

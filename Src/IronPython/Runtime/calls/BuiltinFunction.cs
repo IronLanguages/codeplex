@@ -175,21 +175,9 @@ namespace IronPython.Runtime.Calls {
             //      1. Our error messages match CPython more closely 
             //      2. The attribute lookup is done lazily only if kw-args are supplied to a ctor
 
-            if (instance == null && (FunctionType & FunctionType.FunctionMethodMask) == FunctionType.Method) {
-                instance = args[0];
-                object[] realArgs = new object[args.Length - 1];
-                Array.Copy(args, 1, realArgs, 0, realArgs.Length);
-                args = realArgs;
-            }
+            CoerceArgs(context, ref args, ref instance);
 
-            if (IsContextAware) {
-                object[] argsWithContext = new object[args.Length + 1];
-                argsWithContext[0] = context;
-                Array.Copy(args, 0, argsWithContext, 1, args.Length);
-                args = argsWithContext;
-            }
-
-            KwArgBinder kwArgBinder = new KwArgBinder(args, names, targets[0].IsConstructor);
+            KwArgBinder kwArgBinder = new KwArgBinder(context, args, names, targets[0].IsConstructor);
             MethodBinding bestBinding = new MethodBinding();
             List<UnboundArgument> bestUnboundArgs = null;
             
@@ -236,18 +224,17 @@ namespace IronPython.Runtime.Calls {
                 // we've bound the arguments to a real method,
                 // finally we're going to dispatch back to the 
                 // optimized version of the calls.
-                object[] callArgs;
-                if (IsContextAware) {
-                    object[] newArgs = new object[bestBinding.arguments.Length - 1];
-                    Array.Copy(bestBinding.arguments, 1, newArgs, 0, bestBinding.arguments.Length - 1);
-                    callArgs = newArgs;
-                } else {
-                    callArgs = bestBinding.arguments;
-                }
+                object[] callArgs = bestBinding.arguments;
 
+                ParameterInfo[]pis = bestBinding.method.GetParameters();
+                object[] dynamicArgs = new object[pis.Length];
+                for (int i = 0; i < pis.Length; i++) {
+                    dynamicArgs[i] = Ops.GetDynamicTypeFromType(pis[i].ParameterType);
+                }
+                BuiltinFunction bf = (BuiltinFunction)this.Overloads[new Tuple(true, dynamicArgs)];
                 object ret;
-                if (instance == null) ret = Call(context, callArgs);
-                else ret = CallInstance(context, instance, callArgs);
+                if (instance == null) ret = bf.Call(context, callArgs);
+                else ret = bf.CallInstance(context, instance, callArgs);
 
                 // any unbound arguments left over we assume the user
                 // wants to do a property set with.  We'll go ahead and try
@@ -280,6 +267,27 @@ namespace IronPython.Runtime.Calls {
             }
 
             throw Ops.TypeError("bad number of arguments for function {0}", FriendlyName);
+        }
+
+        /// <summary>
+        /// Updates args & instance based upon if we need to pass the instance or not and
+        /// if it's context aware or not.
+        /// </summary>
+        private void CoerceArgs(ICallerContext context, ref object[] args, ref object instance) {
+            if ((FunctionType & FunctionType.OpsFunction) != 0) {
+                if (instance != null) {
+                    object[] argsWithInstance = new object[args.Length + 1];
+                    argsWithInstance[0] = instance;
+                    Array.Copy(args, 0, argsWithInstance, 1, args.Length);
+                    args = argsWithInstance;
+                    instance = null;
+                }
+            } else if (instance == null && (FunctionType & FunctionType.FunctionMethodMask) == FunctionType.Method) {
+                instance = args[0];
+                object[] realArgs = new object[args.Length - 1];
+                Array.Copy(args, 1, realArgs, 0, realArgs.Length);
+                args = realArgs;
+            }
         }
 
         [PythonName("__call__")]
@@ -556,24 +564,11 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
 
         protected struct MethodBinding {
-            [Flags]
-            public enum MethodBindingSettings {
-                ThisCall = 0x1,
-                ArgIntoThis = 0x2,
-                ParamArray = 0x4
-            }
             public MethodBase method;
             public object[] arguments;
             public object instance;
             public Conversion[] conversions;
             public Conversion instConversion;
-            public MethodBindingSettings flags;
-
-            public bool ThisCallWithoutThis {
-                get {
-                    return (flags & MethodBindingSettings.ArgIntoThis) != 0;
-                }
-            }
         }
 
         #endregion

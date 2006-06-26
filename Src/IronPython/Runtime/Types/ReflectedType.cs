@@ -126,7 +126,8 @@ namespace IronPython.Runtime.Types {
                 if (docAttr != null && docAttr.Length > 0) {
                     return ((DocumentationAttribute)docAttr[0]).Value;
                 }
-                NewMethod newMeth = ctor as NewMethod;
+                
+                BuiltinFunction newMeth = ctor as BuiltinFunction;
                 if (newMeth == null) {
                     if (type.IsEnum) return ReflectionUtil.CreateEnumDoc(type);
 
@@ -184,7 +185,7 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary> Generic helper for doing the different types of method stores. </summary>
-        internal void StoreMethod(string name, MethodInfo mi, FunctionType ft) {
+        internal void StoreMethod(string name, MethodInfo mi, FunctionType ft) {            
             object existingMember;
             BuiltinFunction rm = null;
             SymbolId methodId = SymbolTable.StringToId(name);
@@ -283,43 +284,67 @@ namespace IronPython.Runtime.Types {
         #region Private APIs
 
         private void CreateInitCode() {
-            if (!dict.ContainsKey(SymbolTable.NewInst)) {
-                if (!type.IsAbstract) {
-                    BuiltinFunction reflectedCtors = null;
-                    foreach (ConstructorInfo ci in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic |
-                                                                        BindingFlags.Instance)) {
-                        if (ci.IsPublic || ci.IsFamily || ci.IsFamilyOrAssembly) {
-                            if (reflectedCtors == null) {
-                                reflectedCtors = BuiltinFunction.MakeMethod((string)__name__, ci, FunctionType.Function);
-                            } else {
-                                reflectedCtors.AddMethod(ci);
-                            }
-                        }
-                    }
+            // __new__
+            object newFunc;
+            if (dict.TryGetValue(SymbolTable.NewInst, out newFunc)) {
+                // user provided a __new__ method, first argument should be PythonType
+                // We will set our allocator to be a bound-method that passes our type
+                // through, and we'll leave __new__ unchanged, other than making sure
+                // it's a function, not a method.
+    
+                BuiltinFunction bf = newFunc as BuiltinFunction;
+                Debug.Assert(bf != null);
 
-                    if (type.IsSubclassOf(typeof(Delegate))) {
-                        ctor = new NewDelegateMethod(this);
-                        dict[SymbolTable.NewInst] = ctor;
-                    } else if (reflectedCtors != null) {
-                        dict[SymbolTable.NewInst] = ctor = new NewMethod(this, reflectedCtors);
-                    }
-                }
-            } else {
-                ctor = (ICallable)dict[SymbolTable.NewInst];
-                // __new__ is always a function, never a method.
+                ctor = bf;
                 
-                BuiltinMethodDescriptor bmd = ctor as BuiltinMethodDescriptor;
-                if (bmd != null) {
-                    ctor = bmd.template;
-                    bmd.template.FunctionType = (bmd.template.FunctionType & ~FunctionType.FunctionMethodMask) | FunctionType.Function;
-                }
-
-                dict[SymbolTable.NewInst] = ctor;
+                bf.FunctionType = (bf.FunctionType & ~FunctionType.FunctionMethodMask) | FunctionType.Function;
+            } else {
+                CreateNewMethod();
             }
 
+            // __init__
             if (!dict.ContainsKey(SymbolTable.Init)) {
-                dict[SymbolTable.Init] = InitMethod.GenericInit;
+                dict[SymbolTable.Init] = InstanceOps.Init;
+            }               
+        }
+
+        /// <summary>
+        /// Creates a __new__ method for the type.  If the type defines interesting constructors
+        /// then the __new__ method will call that.  Otherwise if it has only a single argless
+        /// </summary>
+        protected virtual void CreateNewMethod() {
+            if (!type.IsAbstract) {
+                BuiltinFunction reflectedCtors = GetConstructors();
+                if (reflectedCtors == null) return; // no ctors, no __new__
+
+                if (reflectedCtors.Targets.Length == 1 && 
+                    reflectedCtors.Targets[0].GetParameters().Length == 0) {
+                    ctor = reflectedCtors;
+                    if (IsPythonType) {
+                        dict[SymbolTable.NewInst] = InstanceOps.New;
+                    } else {
+                        dict[SymbolTable.NewInst] = InstanceOps.NewCls;
+                    }
+                } else {
+                    ctor = reflectedCtors;
+                    dict[SymbolTable.NewInst] = InstanceOps.CreateNonDefaultNew();
+                }
             }
+        }
+        
+        private BuiltinFunction GetConstructors() {
+            BuiltinFunction reflectedCtors = null;
+            foreach (ConstructorInfo ci in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic |
+                                                                BindingFlags.Instance)) {
+                if (ci.IsPublic || ci.IsFamily || ci.IsFamilyOrAssembly) {
+                    if (reflectedCtors == null) {
+                        reflectedCtors = BuiltinFunction.MakeMethod((string)__name__, ci, FunctionType.Function);
+                    } else {
+                        reflectedCtors.AddMethod(ci);
+                    }
+                }
+            }
+            return reflectedCtors;
         }
 
         private void AddPythonProtocolMethods() {
@@ -1139,16 +1164,16 @@ namespace IronPython.Runtime.Types {
                 if (type == typeof(bool)) return Ops.FALSE;
                 return Activator.CreateInstance(type);
             }
-            if (ctor == null) throw Ops.TypeError("cannot create an instance of {0}", this);
 
-            ICallableWithCallerContext contextCtor = ctor as ICallableWithCallerContext;
-            object newObject;
-            if (contextCtor == null) newObject = ctor.Call(PrependThis(args));
-            else newObject = contextCtor.Call(context, PrependThis(args));
+            object newFunc, newObject;
 
-            if (newObject == null) return null;
+            // object always has __new__, so we'll always find at least one            
+            TryLookupSlot(context, SymbolTable.NewInst, out newFunc);
+            Debug.Assert(newFunc != null);  
 
-            InvokeInit(newObject, args);
+            newObject = Ops.CallWithContext(context, newFunc, PrependThis(args));
+
+            if (newObject != null) InvokeInit(newObject, args);
 
             return newObject;
         }
@@ -1169,28 +1194,27 @@ namespace IronPython.Runtime.Types {
         object IronPython.Runtime.Calls.IFancyCallable.Call(ICallerContext context, object[] args, string[] names) {
             Initialize();
 
-            if (ctor == null) throw Ops.TypeError("cannot create an instance of {0}", this);
-            IFancyCallable ifc = ctor as IFancyCallable;
-            if (ifc != null) {
-                object newObject = ifc.Call(context, PrependThis(args), names);
-                if (newObject == null) return null;
+            object newFunc, newObject;
+            TryLookupSlot(context, SymbolTable.NewInst, out newFunc);
+            Debug.Assert(newFunc != null);
 
+            newObject = Ops.CallWithContext(context, newFunc, PrependThis(args), names);
+
+            if (newObject != null) {
                 // only invoke init if it's a user defined init.  This allows
                 // us to do kwargs -> property conversion when a user does an
                 // explicit call to init from their derived class.
                 object initFunc;
-                if (TryGetAttr(context, newObject, SymbolTable.Init, out initFunc) && !(initFunc is InitMethod)) {
-                    ifc = initFunc as IFancyCallable;
+                if (TryGetAttr(context, newObject, SymbolTable.Init, out initFunc)) {
+                    IFancyCallable ifc = initFunc as IFancyCallable;
                     if (ifc != null) {
                         ifc.Call(context, args, names);
                     } else {
                         throw Ops.TypeError("__init__ cannot be called with keyword arguments");
                     }
                 }
-
-                return newObject;
             }
-            throw Ops.TypeError("Cannot call this with keyword arguments");
+            return newObject;
         }
 
         #endregion
@@ -1280,270 +1304,6 @@ namespace IronPython.Runtime.Types {
                 return res.ToString();
             }
             return __name__.ToString();
-        }
-    }
-
-    /// <summary>
-    /// Nop Init method for classes that do not define
-    /// an init method. 
-    /// </summary>
-    public class InitMethod : ICallable, IFancyCallable, IDescriptor {
-        static InitMethod genericInit;
-
-        DynamicType type;
-        object instance;
-
-        public InitMethod(ReflectedType t) {
-            type = t;
-        }
-
-        public InitMethod(object instance) {
-            type = Ops.GetDynamicType(instance);
-            this.instance = instance;
-        }
-
-        #region IFancyCallable Members
-
-        public object Call(ICallerContext context, object[] args, string[] names) {
-            if (!(type is UserType)) {
-                // built in type doesn't define __init__, we'll
-                // pass the kw args on as property sets.
-                for (int i = 0; i < names.Length; i++) {
-                    if (instance == null) {
-                        // unbound call, first arg should be self.
-                        Ops.SetAttr(context, args[0], SymbolTable.StringToId(names[i]), args[args.Length - names.Length + i]);
-                    } else {
-                        Ops.SetAttr(context, instance, SymbolTable.StringToId(names[i]), args[args.Length - names.Length + i]);
-                    }
-                }
-            }
-            return null;
-        }
-
-        #endregion
-
-        #region ICallable Members
-        public object Call(params object[] args) {
-            // do nothing
-            return null;
-        }
-
-        #endregion
-
-        public override string ToString() {
-            return string.Format("<'__init__' of '{0}' objects>", type.__name__);
-        }
-
-        public static InitMethod GenericInit {
-            get {
-                if (genericInit == null) {
-                    genericInit = new InitMethod((ReflectedType)TypeCache.Object);
-                }
-                return genericInit;
-            }
-        }
-
-        #region IDescriptor Members
-
-        [PythonName("__get__")]
-        public object GetAttribute(object instance, object owner) {
-            return new InitMethod(instance);
-        }
-
-        #endregion
-    }
-
-    /// <summary>
-    /// Special new method for removing the type argument and calling
-    /// the appropriate constructor directly.
-    /// </summary>
-    public class NewMethod : ICallable, IFancyCallable {
-        private ReflectedType rt;
-        private BuiltinFunction rc;
-
-        public NewMethod(ReflectedType rt, BuiltinFunction rc) {
-            this.rt = rt;
-            this.rc = rc;
-        }
-
-        public string Documentation {
-            [PythonName("__doc__")]
-            get {
-                return rc.Documentation;
-            }
-        }
-
-        #region ICallable Members
-
-        public object Call(params object[] args) {
-            PythonType targetType = GetTargetType(args);
-
-            // NewMethod is only used for classes that don't override __new__.
-            ICallable toCall = GetCallTarget(targetType);
-
-            // Python allows combos of new & init that don't necessarily have their arguments
-            if (targetType is UserType && PythonType.GetMaxArgs(toCall) == 0) {// is ReflectedMethodBase && ((ReflectedMethodBase)targetType.init).GetMaxArgs() == 0) {
-                return toCall.Call();
-            } else if (targetType is UserType && PythonType.GetMaxArgs(toCall) == 1) {
-                // default constructor for user type 
-                object res = toCall.Call(targetType);
-                return res;
-            } else if (rc != toCall) {
-                //if (toCall is BuiltinFunction && ((BuiltinFunction)toCall).IsConstructor) {
-                //    // compiled user-type overriding __new__
-                //    return toCall.Call(RemoveClass(args));
-                //} else {
-                    // calling a __new__ method that takes a type (derived class)
-                    return toCall.Call(args);
-                //}
-            } else {
-                // calling a ctor directly (non-derived class)
-                if (rc.GetMaximumArguments() == 0) return rc.Call(); //??? not-enough args case
-                switch (args.Length) {
-                    case 1: return rc.Call();
-                    case 2: return rc.Call(args[1]);
-                    case 3: return rc.Call(args[1], args[2]);
-                    case 4: return rc.Call(args[1], args[2], args[3]);
-                    case 5: return rc.Call(args[1], args[2], args[3], args[4]);
-                    default: return rc.Call(RemoveClass(args));
-                }
-            }
-        }
-        #endregion
-
-        public object[] RemoveClass(object[] args) {
-            object[] ctorArgs = new object[args.Length - 1];
-            Array.Copy(args, 1, ctorArgs, 0, ctorArgs.Length);
-            return ctorArgs;
-        }
-
-        public override string ToString() {
-            return string.Format("<method {0}.__new__>", rt.__name__);
-        }
-
-        ICallable GetCallTarget(PythonType targetType) {
-            ICallable toCall;
-
-            if (targetType == rt) {
-                // asking for a new instance of this class.
-                toCall = rc;
-            } else if (!targetType.IsSubclassOf(rt)) {
-                throw Ops.TypeError("{0} is not a subclass of {1}", targetType.__name__, rt.__name__);
-            } else if (targetType is UserType) {
-                // should be a user type...
-                toCall = targetType.ctor;
-            } else {
-                // should be a reflected type
-                Debug.Assert(targetType is ReflectedType, "Expected ReflectedType");
-                // compiled user type, user is calling base class on
-                // type, we need to get the real default ctor.
-                toCall = BuiltinFunction.MakeMethod((string)targetType.__name__, targetType.type.GetConstructor(new Type[0]), FunctionType.Function);
-            }
-
-
-            if (toCall == null) throw Ops.TypeError("no constructor for {0}", rt.__name__);
-
-            return toCall;
-        }
-
-        private static PythonType GetTargetType(object[] args) {
-            return GetTargetType(args, 0);
-        }
-
-        private static PythonType GetTargetType(object[] args, int index) {
-            return (PythonType)Ops.ConvertTo(args[index], typeof(PythonType));
-        }
-
-        private static PythonType GetTargetType(object[] args, string[] names) {
-            PythonType targetType = null;
-            for (int i = 0; i < names.Length; i++) {
-                if (names[i] == "cls") {
-                    // pull out the target type...
-                    int argIndex = i + (args.Length - names.Length);
-                    targetType = GetTargetType(args, argIndex);
-                    break;
-                }
-            }
-
-            if (targetType == null && args.Length != names.Length) {
-                // looks like cls is being passed as a non-named parameter.  
-                targetType = GetTargetType(args);
-            }
-
-            if (targetType == null) throw Ops.TypeError("cls parameter not present or not a type");
-
-            return targetType;
-        }
-
-        #region IFancyCallable Members
-
-        public object Call(ICallerContext context, object[] args, string[] names) {
-            PythonType targetType = GetTargetType(args, names);
-            ICallable callTarget = GetCallTarget(targetType);
-
-            if (targetType is UserType && PythonType.GetMaxArgs(callTarget) == 1) {
-                return callTarget.Call(targetType);
-            } else if (rc != callTarget) {
-                // calling __new__ method (derived class)
-                IFancyCallable ifc = callTarget as IFancyCallable;
-                if (ifc != null) {
-                    return ifc.Call(context, args, names);
-                }
-            } else {
-                // calling ctor (non-derived class)
-                IFancyCallable ifc = callTarget as IFancyCallable;
-                if (ifc != null) {
-                    object[] newArgs;
-                    if (rc.GetMaximumArguments() == 0) {
-                        //??? not-enough args case                    
-                        // remove all non-kw args, and call only w/ kw args
-                        newArgs = new object[names.Length];
-                        for(int i = 0; i<names.Length;i++){
-                            newArgs[i] = args[i + (args.Length - names.Length)];
-                        }
-                    }else{
-                        newArgs = new object[args.Length - 1];
-                        for (int i = 0; i < newArgs.Length; i++) {
-                            newArgs[i] = args[i + 1];
-                        }
-                    }
-
-                    return ifc.Call(context, newArgs, names);
-                }
-            }
-            throw Ops.TypeError("Cannot call {0}'s constructor with keyword arguments", rt.__name__);
-
-        }        
-
-        #endregion
-    }
-
-    public class NewDelegateMethod : ICallable {
-        private ReflectedType rt;
-        public NewDelegateMethod(ReflectedType rt) {
-            this.rt = rt;
-        }
-
-        public string Documentation {
-            get {
-                return string.Format("{0}(object)", rt.ToString());
-            }
-        }
-
-        #region ICallable Members
-
-        public object Call(params object[] args) {
-            if (args.Length != 2) { // 1st param is type, 2nd param is object
-                throw Ops.TypeError("Expected 1 argument, found {0}", args.Length);
-            }
-
-            return Ops.GetDelegate(args[1], rt.type);
-        }
-
-        #endregion
-
-        public override string ToString() {
-            return string.Format("<method {0}.__new__>", rt.__name__);
         }
     }
 

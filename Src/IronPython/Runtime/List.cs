@@ -33,28 +33,6 @@ namespace IronPython.Runtime {
         private int size;
         private object[] data;
 
-        [PythonName("__new__")]
-        public static object MakeList(PythonType cls, [ParamDict] Dict dict, params object[] args) {
-            return MakeList(cls);
-        }
-
-        [PythonName("__new__")]
-        public static object MakeList(PythonType cls, params object[] args) {
-            return MakeList(cls);
-        }
-        
-        [PythonName("__new__")]
-        public static object MakeList(PythonType cls, object sequence) {
-            return MakeList(cls);
-        }
-
-        [PythonName("__new__")]
-        public static object MakeList(PythonType cls) {
-            if(cls == TypeCache.List) return new List();
-
-            return cls.ctor.Call(cls);
-        }
-
         [PythonName("__init__")]
         public void Initialize() {
             data = new object[8];

@@ -33,7 +33,11 @@ namespace IronPython.Runtime.Types {
 
     [PythonType("type")]
     public abstract class PythonType : DynamicType, IDynamicObject, ICallable, ICustomAttributes {
-        public ICallable ctor;
+        /// <summary>
+        /// allocates space for the object.  The ctor takes the type as the first parameter
+        /// and any additional arguments after that.  Arguments are typically used for immutable types.
+        /// </summary>
+        internal FastCallable ctor;
         private List<WeakReference> subclasses = new List<WeakReference>();
 
         // The CLI type represented by this PythonType
@@ -55,7 +59,7 @@ namespace IronPython.Runtime.Types {
         public MethodWrapper __setattr__F;
         public MethodWrapper __delattr__F;
 
-        private static object DefaultNewInst;
+        private static object DefaultNewInst;   
 
         [PythonName("__new__")]
         public static object Make(ICallerContext context, object cls, string name, Tuple bases, IDictionary<object, object> dict) {
@@ -116,6 +120,29 @@ namespace IronPython.Runtime.Types {
         [PythonName("__new__")]
         public static object Make(ICallerContext context, object cls, object o) {
             return Ops.GetDynamicType(o);
+        }
+
+        public virtual object AllocateObject(params object []args) {
+            Initialize();
+            if (ctor == null) throw Ops.TypeError("Cannot create instances of {0}", this);
+            return ctor.Call(args);
+        }
+
+        public virtual object AllocateObject(Dict dict, params object[] args) {
+            Initialize();
+            if (ctor == null) throw Ops.TypeError("Cannot create instances of {0}", this);
+
+            object []finalArgs = new object[args.Length + dict.Count];
+            Array.Copy(args, finalArgs, args.Length);
+            string[] names = new string[dict.Count];
+            int i = 0;
+            foreach (KeyValuePair<object, object> kvp in dict) {
+                names[i] = (string)kvp.Key;
+                finalArgs[i + args.Length] = kvp.Value;
+                i++;
+            }
+
+            return ((BuiltinFunction)ctor).CallHelper(DefaultContext.Default, finalArgs, names, null);
         }
 
         protected PythonType(Type type) {
@@ -481,13 +508,13 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public void InvokeInit(object inst, object[] args, string[] names) {
+        public void InvokeInit(ICallerContext context, object inst, object[] args, string[] names) {
             if (Ops.GetDynamicType(inst).IsSubclassOf(this)) {
                 object initFunc;
-                if (TryLookupBoundSlot(DefaultContext.Default, inst, SymbolTable.Init, out initFunc)) {
+                if (TryLookupBoundSlot(context, inst, SymbolTable.Init, out initFunc)) {
                     IFancyCallable ifc = initFunc as IFancyCallable;
                     if (ifc != null) {
-                        ifc.Call(DefaultContext.Default, args, names);
+                        ifc.Call(context, args, names);
                     } else {
                         throw Ops.TypeError("__init__ cannot be called with keyword arguments");
                     }
@@ -565,7 +592,7 @@ namespace IronPython.Runtime.Types {
                     IContextAwareMember icaa = kvp.Value as IContextAwareMember;
                     if (icaa == null || icaa.IsVisible(context)) {
                         // This is a non-CLS attribute. Include it.
-                        names.AddNoLock(kvp.Key.ToString());
+                        names.AddNoLock(kvp.Key);
                     }
                 }
             } else {

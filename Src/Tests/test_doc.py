@@ -161,7 +161,8 @@ def test_func_meth_class():
 if is_cli: 
     def test_clr_doc():
         import System
-        Assert(System.Collections.ArrayList.__new__.__doc__[:7] == "__new__")
+        Assert(System.Collections.ArrayList.__new__.__doc__[:9] == "T.__new__")
+        Assert(System.Collections.ArrayList.__doc__[:9] == "__new__()")
         Assert(System.Collections.ArrayList.Repeat.__doc__.startswith("static "))
 
         # static (bool, float) TryParse(str s)

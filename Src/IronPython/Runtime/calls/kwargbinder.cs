@@ -43,16 +43,18 @@ namespace IronPython.Runtime.Calls {
         private bool fAllowUnboundArgs; 
         private List<UnboundArgument> unboundArgs;
         private Exception error;
+        private ICallerContext ctx;
 
-        public KwArgBinder(object[] args, string[] keyNames)
-            : this(args, keyNames, false) {
+        public KwArgBinder(ICallerContext context, object[] args, string[] keyNames)
+            : this(context, args, keyNames, false) {
         }
 
-        public KwArgBinder(object[] args, string[] keyNames, bool allowUnboundArgs) {
+        public KwArgBinder(ICallerContext context, object[] args, string[] keyNames, bool allowUnboundArgs) {
             arguments = args;
             kwNames = keyNames;
             Debug.Assert(keyNames.Length <= args.Length);
             fAllowUnboundArgs = allowUnboundArgs;
+            ctx = context;
         }
 
         /// <summary>
@@ -60,12 +62,20 @@ namespace IronPython.Runtime.Calls {
         /// </summary>
         public object[] DoBind(MethodBase target, string name) {
             ParameterInfo[] pis = target.GetParameters();
+            if (pis.Length > 0 && pis[0].ParameterType == typeof(ICallerContext)) {
+                // calling a context aware method, remove context from the parameters
+                // for the purpose of the bind.
+                ParameterInfo[] newPis = new ParameterInfo[pis.Length - 1];
+                Array.Copy(pis, 1, newPis, 0, newPis.Length);
+                pis = newPis;
+            }
+
             string[] argNames = new string[pis.Length];
             object[] defaultVals = new object[pis.Length];
             methodName = target.Name;
             targetsCls = true;
             int kwDict = -1, paramsArray = -1;
-
+           
             if (pis.Length > 0) {
                 // populate argument information
                 for (int i = 0; i < pis.Length; i++) {
@@ -153,13 +163,13 @@ namespace IronPython.Runtime.Calls {
             int maxNormalArgs = arguments.Length - kwNames.Length;
 
             for (int i = 0; i < maxNormalArgs; i++) {
-                if (i == paramArrayIndex) {
-                    haveArg[i] = true;
+                if (i == paramArrayIndex || (i == kwDict && paramArrayIndex != -1)) {
+                    haveArg[paramArrayIndex] = true;
                     object[] paramArray = new object[maxNormalArgs - i];
                     for (int j = i; j < maxNormalArgs; j++) {
                         paramArray[j - i] = arguments[j];
                     }
-                    realArgs[i] = targetsCls ? (object)paramArray : (object)Tuple.MakeTuple(paramArray);
+                    realArgs[paramArrayIndex] = targetsCls ? (object)paramArray : (object)Tuple.MakeTuple(paramArray);
                     return true;
                 } else if (i == kwDict) {
                     // we shouldn't bind to the kwDict during normal arg binding

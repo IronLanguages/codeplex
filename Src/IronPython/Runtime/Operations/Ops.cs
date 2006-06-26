@@ -1215,6 +1215,9 @@ namespace IronPython.Runtime.Operations {
 
             object hex;
             if(TryToInvoke(o, SymbolTable.ConvertToHex, out hex)) {
+                if (!(hex is string) && !(hex is ExtensibleString))
+                    throw Ops.TypeError("hex expected string type as return, got {0}", Ops.StringRepr(Ops.GetDynamicType(hex)));
+
                 return hex;
             }
             throw TypeError("hex() argument cannot be converted to hex");
@@ -1231,6 +1234,9 @@ namespace IronPython.Runtime.Operations {
 
             object octal;
             if (TryToInvoke(o, SymbolTable.ConvertToOctal, out octal)) {
+                if (!(octal is string) && !(octal is ExtensibleString))
+                    throw Ops.TypeError("hex expected string type as return, got {0}", Ops.StringRepr(Ops.GetDynamicType(octal)));
+
                 return octal;
             }
             throw TypeError("hex() argument cannot be converted to hex");
