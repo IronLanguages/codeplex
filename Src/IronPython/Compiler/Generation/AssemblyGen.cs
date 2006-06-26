@@ -234,7 +234,7 @@ namespace IronPython.Compiler.Generation {
                 cg = new CodeGen(this, null, target, target.GetILGenerator(), paramTypes);
                 //Console.WriteLine("----> {0} DynamicMethod", target.Name);
             } else {
-                TypeGen tg = DefinePublicType("Type" + methodName + index++, typeof(object));
+                TypeGen tg = DefinePublicType("Type$" + methodName + "$" + index++, typeof(object));
                 cg = tg.DefineUserHiddenMethod(MethodAttributes.Public | MethodAttributes.Static,
                     "Handle", returnType, paramTypes);
             }

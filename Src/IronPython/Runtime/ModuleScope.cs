@@ -48,10 +48,6 @@ namespace IronPython.Runtime {
 
         private string moduleName;
 
-        public static ModuleScope MakeScopeForFunction(PythonModule context) {
-            return new ModuleScope(context, context.__dict__, new FieldIdDict());
-        }
-
         /// <summary>
         /// These overloads of the constructor allows delayed creating of the PythonModule. The ModuleScope cannot
         /// be used until EnsureInitialized has been called.
@@ -73,6 +69,11 @@ namespace IronPython.Runtime {
 
         internal ModuleScope(PythonModule mod, IAttributesDictionary globals, object locals) {
             Initialize(mod, globals, locals);
+        }
+
+        internal ModuleScope(PythonModule mod, IAttributesDictionary globals, object locals, ICallerContext context) 
+            : this(mod, globals, locals) {
+            trueDivision = context.TrueDivision;
         }
 
         internal void EnsureInitialized(SystemState state) {

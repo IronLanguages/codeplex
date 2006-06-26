@@ -38,7 +38,9 @@ namespace IronPython.Modules {
         public static object True = Ops.Bool2Object(true);
         public static object False = Ops.Bool2Object(false);
 
-        public static object None;
+        // This will always stay null
+        public static readonly object None;
+
         public static object Ellipsis = Ops.Ellipsis;
         public static object NotImplemented = Ops.NotImplemented;
 
@@ -318,30 +320,31 @@ namespace IronPython.Modules {
 
         [PythonName("eval")]
         public static object Eval(ICallerContext context, string expression, IAttributesDictionary globals, object locals) {
-            return Eval(context, expression, globals, locals, IronPython.Hosting.ExecutionOptions.Default);
-        }
-
-        internal static object Eval(ICallerContext context, string expression, IAttributesDictionary globals, object locals, IronPython.Hosting.ExecutionOptions executionOptions) {
             if (locals != null && PythonOperator.IsMappingType(context, locals) == Ops.FALSE) {
                 throw Ops.TypeError("locals must be mapping");
             }
-
-            CompilerContext cc = context.CreateCompilerContext();
-            Parser p = Parser.FromString(context.SystemState, cc, expression.TrimStart(' ', '\t'));
-            Expr e = p.ParseTestListAsExpression();
 
             if (globals == null) globals = Globals(context);
             if (locals == null) locals = Locals(context);
 
             PythonModule mod = new PythonModule(context.Module.ModuleName, globals, context.SystemState, null, context.ContextFlags);
+            ModuleScope moduleScope = new ModuleScope(mod, globals, locals, context);
+            return Eval(moduleScope, expression, IronPython.Hosting.ExecutionOptions.Default);
+        }
+
+        internal static object Eval(ModuleScope moduleScope, string expression, IronPython.Hosting.ExecutionOptions executionOptions) {
+            CompilerContext cc = moduleScope.CreateCompilerContext();
+            Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, cc, expression.TrimStart(' ', '\t'));
+            Expr e = p.ParseTestListAsExpression();
+
             if (Options.FastEval) {
                 // Direct evaluation can be much faster than codegen (>100x)
-                return e.Evaluate(new NameEnv(mod, locals));
+                return e.Evaluate(new NameEnv(moduleScope.Module, ((ICallerContext)moduleScope).Locals));
             } else {
                 Stmt s = new ReturnStmt(e);
                 bool enableDebugging = (executionOptions & IronPython.Hosting.ExecutionOptions.EnableDebugging) != 0;
                 CompiledCode compiledCode = OutputGenerator.GenerateSnippet(cc, s, false, enableDebugging);
-                return compiledCode.Run(new ModuleScope(mod, globals, locals));
+                return compiledCode.Run(moduleScope);
             }
         }
 

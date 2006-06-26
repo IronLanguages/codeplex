@@ -215,6 +215,10 @@ namespace IronPython.Compiler.AST {
             this.expr = expr;
         }
 
+        public override string ToString() {
+            return base.ToString() + ":" + name.ToString();
+        }
+
         public SymbolId Name {
             get { return name; }
         }
@@ -238,6 +242,10 @@ namespace IronPython.Compiler.AST {
         public FieldExpr(Expr target, SymbolId name) {
             this.target = target;
             this.name = name;
+        }
+
+        public override string ToString() {
+            return base.ToString() + ":" + name.ToString();
         }
 
         public Expr Target {
@@ -686,6 +694,10 @@ namespace IronPython.Compiler.AST {
         private bool defined;
 
         public NameExpr(SymbolId name) { this.name = name; }
+
+        public override string ToString() {
+            return base.ToString() + ":" + name.ToString();
+        }
 
         public SymbolId Name {
             get { return name; }

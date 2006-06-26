@@ -17,6 +17,7 @@ using System;
 using IronMath;
 using System.Reflection;
 using System.Collections;
+using System.Diagnostics;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -268,11 +269,12 @@ namespace IronPython.Runtime {
 
 
         public static object ConvertToDelegate(object value, Type to) {
+            Debug.Assert(typeof(Delegate).IsAssignableFrom(to));
             Conversion conv;
             object res = TryConvertToDelegate(value, to, out conv);
             if (conv != Conversion.None) return res;
 
-            throw Ops.TypeError("expected compatible function, found ", Ops.GetDynamicType(value).__name__);
+            throw Ops.TypeError("expected compatible function, found {0}", Ops.GetDynamicType(value).__name__);
         }
 
         public static object TryConvertToDelegate(object value, Type to, out Conversion conversion) {
@@ -495,6 +497,7 @@ namespace IronPython.Runtime {
         }
 
         public static object ConvertToDelegate(object o, Type t) {
+            Debug.Assert(typeof(Delegate).IsAssignableFrom(t));
             return Converter.ConvertToDelegate(o, t);
         }
 

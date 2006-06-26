@@ -51,7 +51,8 @@ namespace IronPython.Compiler {
         // If false, environments are stored in FunctionEnvironmentN only
         public static bool OptimizeEnvironments = true;
 
-        // Experimenting with a HUGE (>100x) performance boost to simple evals
+        // Should we interpret the eval expression instead of compiling it?
+        // This yields a HUGE (>100x) performance boost to simple evals.
         // Its disabled for compatibility
         public static bool FastEval;
 
@@ -60,6 +61,8 @@ namespace IronPython.Compiler {
 
         public static bool GenerateDynamicMethods = true;
 
+        // Constants can be generated either by caching the boxed value in a static,
+        // or by boxing it every time its needed.
         public static bool DoNotCacheConstants;
 
         // Explicitly call Ops.InvalidType() for cast operations that will fail
@@ -74,7 +77,11 @@ namespace IronPython.Compiler {
         public static bool PrivateBinding;
 
         // true if we are emitting IL source for debugging generated code.
-        public static bool ILDebug;
+        static bool ilDebug;
+        public static bool ILDebug {
+            get { return ilDebug; }
+            set { ilDebug = value; if (ilDebug) GenerateDynamicMethods = false; }
+        }
 
         // true to import modules as though a sequence of snippets
         public static bool GenerateModulesAsSnippets;

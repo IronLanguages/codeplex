@@ -190,6 +190,77 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
             AreEqual(1, standardEngine.Evaluate<int>("x_from_published_scope_test"));
         }
 
+        class CustomModuleScope : ModuleScope {
+            // Make "customSymbol" always be accessible. This could have been accomplished just by
+            // doing SetGlobal. However, this mechanism could be used for other extensibility
+            // purposes like getting a callback whenever the symbol is read
+            internal static readonly SymbolId customSymbol = (SymbolId)"customSymbol";
+            internal const int customSymbolValue = 100;
+
+            public override object GetGlobal(SymbolId symbol) {
+                if (symbol == customSymbol) return customSymbolValue;
+                return base.GetGlobal(symbol);
+            }
+
+            public override bool TryGetGlobal(SymbolId symbol, out object value) {
+                if (symbol == customSymbol) {
+                    value = customSymbolValue;
+                    return true;
+                }
+                return base.TryGetGlobal(symbol, out value);
+            }
+
+            public override void SetGlobal(SymbolId symbol, object value) {
+                if (symbol == customSymbol)
+                    throw new PythonNameError("Cannot set " + symbol);
+                base.SetGlobal(symbol, value);
+            }
+
+            public override void DelGlobal(SymbolId symbol) {
+                if (symbol == customSymbol)
+                    throw new PythonNameError("Cannot delete " + symbol);
+                base.DelGlobal(symbol);
+            }
+        }
+
+        public void ScenarioCustomModuleScope() {
+            CustomModuleScope customScope = new CustomModuleScope();
+
+            // Evaluate
+            AreEqual(standardEngine.Evaluate<int>("customSymbol + 1", customScope, ExecutionOptions.Default), CustomModuleScope.customSymbolValue + 1);
+
+            // Execute
+            standardEngine.Execute("customSymbolPlusOne = customSymbol + 1", customScope, ExecutionOptions.Default);
+            AreEqual(standardEngine.Evaluate<int>("customSymbolPlusOne", customScope, ExecutionOptions.Default), CustomModuleScope.customSymbolValue + 1);
+            AreEqual((int)standardEngine.GetGlobal((SymbolId)"customSymbolPlusOne", customScope), CustomModuleScope.customSymbolValue + 1);
+
+            // Compile
+            CompiledCode code = standardEngine.Compile("customSymbolPlusTwo = customSymbol + 2", ExecutionOptions.Default);
+            standardEngine.Execute(code, customScope);
+            AreEqual(standardEngine.Evaluate<int>("customSymbolPlusTwo", customScope, ExecutionOptions.Default), CustomModuleScope.customSymbolValue + 2);
+            AreEqual((int)standardEngine.GetGlobal((SymbolId)"customSymbolPlusTwo", customScope), CustomModuleScope.customSymbolValue + 2);
+
+            // override SetGlobal
+            try {
+                standardEngine.Execute(@"global customSymbol
+customSymbol = 1", customScope, ExecutionOptions.Default);
+                throw new Exception("We should not reach here");
+            } catch (PythonNameError) { }
+
+            // override DelGlobal
+            try {
+                standardEngine.Execute(@"global customSymbol
+del customSymbol", customScope, ExecutionOptions.Default);
+                throw new Exception("We should not reach here");
+            } catch (PythonNameError) { }
+
+            // This shows that SetGlobal is used only if the variable is explicitly declared as "global var"
+            standardEngine.Execute("customSymbol = customSymbol + 1", customScope, ExecutionOptions.Default);
+            AreEqual(standardEngine.Evaluate<int>("customSymbol", customScope, ExecutionOptions.Default), CustomModuleScope.customSymbolValue + 1);
+            AreEqual((int)standardEngine.GetGlobal(CustomModuleScope.customSymbol, customScope), CustomModuleScope.customSymbolValue + 1);
+
+        }
+
         // Evaluate
         public void ScenarioEvaluate() {
             PythonEngine pe = new PythonEngine();

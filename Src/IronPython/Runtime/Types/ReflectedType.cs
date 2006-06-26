@@ -964,13 +964,13 @@ namespace IronPython.Runtime.Types {
 
         public override void DelAttr(ICallerContext context, object self, SymbolId name) {
             object slot;
-            bool slotExists = TryGetSlot(context, name, out slot);
+            bool slotExists = TryGetAttr(context, self, name, out slot);
             ThrowAttributeError(slotExists, name);
         }
 
         protected override void RawSetSlot(SymbolId name, object value) {
             object slot;
-            bool slotExists = TryGetSlot(DefaultContext.Default, name, out slot);
+            bool slotExists = TryGetAttr(DefaultContext.Default, name, out slot);
             ThrowAttributeError(slotExists, name);
         }
 

@@ -45,6 +45,11 @@ namespace IronPython.Runtime {
             object len;
 
             if (items != null) {
+                if (this == items) {
+                    // list.__init__(l, l) resets l
+                    size = 0;
+                    return;
+                }
                 data = new object[items.Count];
                 int i = 0;
                 foreach (object item in items) {

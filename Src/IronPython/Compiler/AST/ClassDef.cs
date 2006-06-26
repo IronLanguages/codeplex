@@ -98,6 +98,8 @@ namespace IronPython.Compiler.AST {
             Type[] signature = new Type[2];
             signature[0] = IsClosure ? cg.EnvironmentSlot.Type : typeof(FunctionEnvironmentDictionary);
             signature[1] = cg.ContextSlot != null ? cg.ContextSlot.Type : typeof(ICallerContext);
+            Debug.Assert(typeof(IModuleScope).IsAssignableFrom(signature[0]));
+            Debug.Assert(typeof(ICallerContext).IsAssignableFrom(signature[1]));
             CodeGen icg = cg.DefineUserHiddenMethod(name.GetString() + "$maker" + System.Threading.Interlocked.Increment(ref index),
                 typeof(IDictionary<object, object>), signature);
 

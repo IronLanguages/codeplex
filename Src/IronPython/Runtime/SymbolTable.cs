@@ -119,23 +119,22 @@ namespace IronPython.Runtime {
         }
 
         public static SymbolId StringToId(string field) {
-            if (field == null) {
-                return Empty;
-            } else {
-                PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "FieldTable " + field.ToString());
+            if (field == null)
+                throw IronPython.Runtime.Operations.Ops.TypeError("attribute name must be string");
 
-                int res;
-                lock (lockObj) {
-                    if (!idToFieldTable.TryGetValue(field, out res)) {
-                        // register new id...
-                        res = ids.Count;
-                        // Console.WriteLine("Registering {0} as {1}", field, res);
-                        ids.Add(field);
-                        idToFieldTable[field] = res;
-                    }
+            PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "FieldTable " + field.ToString());
+
+            int res;
+            lock (lockObj) {
+                if (!idToFieldTable.TryGetValue(field, out res)) {
+                    // register new id...
+                    res = ids.Count;
+                    // Console.WriteLine("Registering {0} as {1}", field, res);
+                    ids.Add(field);
+                    idToFieldTable[field] = res;
                 }
-                return new SymbolId(res);
             }
+            return new SymbolId(res);
         }
 
         public static string IdToString(SymbolId id) {
@@ -151,12 +150,19 @@ namespace IronPython.Runtime {
             }
             return ret;
         }
+
+        static void PublishWellKnownSymbol(string name, SymbolId expectedSymbol) {
+            SymbolId symbolId = StringToId(name);
+            Debug.Assert(symbolId == expectedSymbol);
+        }
     }
 
     class DictionaryUnionEnumerator : IDictionaryEnumerator {
         IList<IDictionaryEnumerator> enums;
         int current;
-
+#if DEBUG
+        bool isReady;
+#endif
         public DictionaryUnionEnumerator(IList<IDictionaryEnumerator> enums) {
             this.enums = enums;
         }
@@ -164,15 +170,15 @@ namespace IronPython.Runtime {
         #region IDictionaryEnumerator Members
 
         public DictionaryEntry Entry {
-            get { return enums[current].Entry; }
+            get { Debug.Assert(isReady); return enums[current].Entry; }
         }
 
         public object Key {
-            get { return enums[current].Key; }
+            get { Debug.Assert(isReady); return enums[current].Key; }
         }
 
         public object Value {
-            get { return enums[current].Value; }
+            get { Debug.Assert(isReady); return enums[current].Value; }
         }
 
         #endregion
@@ -180,17 +186,31 @@ namespace IronPython.Runtime {
         #region IEnumerator Members
 
         public object Current {
-            get { return enums[current].Current; }
+            get { Debug.Assert(isReady); return enums[current].Current; }
+        }
+
+        bool DoMoveNext() {
+            // Have we already walked over all the enumerators in the list?
+            if (current == enums.Count)
+                return false;
+
+            // Are there any more entries in the current enumerator?
+            if (enums[current].MoveNext())
+                return true;
+
+            // Move to the next enumerator in the list
+            current++;
+
+            // Make sure that the next enumerator is ready to be used
+            return DoMoveNext();
         }
 
         public bool MoveNext() {
-            if (current == enums.Count) return false;
-
-            if (!enums[current].MoveNext()) {
-                current++;
-                if (current == enums.Count) return false;
-            }
-            return true;
+            bool result = DoMoveNext();
+#if DEBUG
+            isReady = result;
+#endif
+            return result;
         }
 
         public void Reset() {
@@ -198,13 +218,23 @@ namespace IronPython.Runtime {
             for (int i = 0; i < enums.Count; i++) {
                 enums[i].Reset();
             }
+#if DEBUG
+            isReady = false;
+#endif
         }
 
         #endregion
     }
 
+    /// <summary>
+    /// Exposes a IDictionary<SymbolId, object> as a IDictionary<string, object>
+    /// </summary>
     class TransformDictEnum : IDictionaryEnumerator {
         IEnumerator<KeyValuePair<SymbolId, object>> backing;
+#if DEBUG
+        bool isReady;
+#endif
+
         public TransformDictEnum(IDictionary<SymbolId, object> backing) {
             this.backing = backing.GetEnumerator();
         }
@@ -212,15 +242,15 @@ namespace IronPython.Runtime {
         #region IDictionaryEnumerator Members
 
         public DictionaryEntry Entry {
-            get { return new DictionaryEntry(SymbolTable.IdToString(backing.Current.Key), backing.Current.Value); }
+            get { Debug.Assert(isReady); return new DictionaryEntry(SymbolTable.IdToString(backing.Current.Key), backing.Current.Value); }
         }
 
         public object Key {
-            get { return SymbolTable.IdToString(backing.Current.Key); }
+            get { Debug.Assert(isReady);  return SymbolTable.IdToString(backing.Current.Key); }
         }
 
         public object Value {
-            get { return backing.Current.Key; }
+            get { Debug.Assert(isReady); return backing.Current.Key; }
         }
 
         #endregion
@@ -228,7 +258,7 @@ namespace IronPython.Runtime {
         #region IEnumerator Members
 
         public object Current {
-            get { return Entry; }
+            get { Debug.Assert(isReady); return Entry; }
         }
 
         public bool MoveNext() {
@@ -236,11 +266,17 @@ namespace IronPython.Runtime {
             if (result && backing.Current.Key == SymbolTable.ObjectKeys) {
                 result = MoveNext();
             }
+#if DEBUG
+            isReady = result;
+#endif
             return result;
         }
 
         public void Reset() {
             backing.Reset();
+#if DEBUG
+            isReady = false;
+#endif
         }
 
         #endregion

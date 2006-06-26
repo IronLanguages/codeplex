@@ -114,12 +114,16 @@ namespace IronPython.Compiler.Generation {
         }
 
         public CodeGen(TypeGen typeGen, MethodBase mi, ILGenerator ilg, Type[] paramTypes)
-            : this(typeGen.myAssembly, typeGen.moduleSlot, mi, ilg, paramTypes) {
-            this.typeGen = typeGen;
-            this.debugSymbolWriter = typeGen.myAssembly.sourceFile;
+            : this(typeGen, typeGen.myAssembly, typeGen.moduleSlot, mi, ilg, paramTypes) {
         }
 
-        public CodeGen(AssemblyGen assemblyGen, Slot moduleSlot, MethodBase mi, ILGenerator ilg, Type[] paramTypes) {
+        public CodeGen(AssemblyGen assemblyGen, Slot moduleSlot, MethodBase mi, ILGenerator ilg, Type[] paramTypes)
+            : this(null, assemblyGen, moduleSlot, mi, ilg, paramTypes) {
+        }
+
+        CodeGen(TypeGen typeGen, AssemblyGen assemblyGen, Slot moduleSlot, MethodBase mi, ILGenerator ilg, Type[] paramTypes) {
+            Debug.Assert(typeGen == null || typeGen.myAssembly == assemblyGen);
+            this.typeGen = typeGen;
             this.assemblyGen = assemblyGen;
             this.moduleSlot = moduleSlot;
             this.methodInfo = mi;
@@ -130,6 +134,9 @@ namespace IronPython.Compiler.Generation {
             for (int i = 0; i < paramTypes.Length; i++) {
                 argumentSlots[i] = new ArgSlot(i + thisOffset, paramTypes[i], this);
             }
+
+            if (typeGen != null)
+                this.debugSymbolWriter = typeGen.myAssembly.sourceFile;
 
             WriteSignature(mi.Name, paramTypes);
         }
@@ -1364,6 +1371,10 @@ namespace IronPython.Compiler.Generation {
 
         [Conditional("DEBUG")]
         private void InitializeILWriter() {
+            Debug.Assert(Options.ILDebug);
+            // This ensures that it is not a DynamicMethod
+            Debug.Assert(typeGen != null);
+
             string mname = methodInfo.Name;
             foreach (char ch in System.IO.Path.GetInvalidFileNameChars()) {
                 mname = mname.Replace(ch, '_');
@@ -1371,13 +1382,11 @@ namespace IronPython.Compiler.Generation {
             string filename = Environment.GetEnvironmentVariable("TEMP") + "\\gen_" + mname + "_" + System.Threading.Interlocked.Increment(ref count) + ".il";
             ilOut = new StreamWriter(filename);
 
-            if (typeGen != null) {
-                debugSymbolWriter = typeGen.myAssembly.myModule.DefineDocument(
-                    filename,
-                    SymLanguageType.ILAssembly,
-                    SymLanguageVendor.Microsoft,
-                    SymDocumentType.Text);
-            }
+            debugSymbolWriter = typeGen.myAssembly.myModule.DefineDocument(
+                filename,
+                SymLanguageType.ILAssembly,
+                SymLanguageVendor.Microsoft,
+                SymDocumentType.Text);
         }
 
         [Conditional("DEBUG")]

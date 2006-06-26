@@ -229,7 +229,7 @@ r.floatEvent += identity
 AreEqual(r.RunFloat(1.4), 1.4)
 
 ################################################################################################
-# verify bound / unbound methods go to the write delegates...
+# verify bound / unbound methods go to the right delegates...
 # ParameterizedThreadStart vs ThreadStart is a good example of this, we have a delegate
 # that takes a parameter, and one that doesn't, and we need to correctly disambiguiate
 
@@ -575,5 +575,17 @@ for target in [myotherfunc, myclass().myotherfunc, myoldclass().myotherfunc]:
     passedarg = None
 
 
-# verify we can call a delegate that's to a static method
+# verify we can call a delegate that's bound to a static method
 IronPythonTest.DelegateTest.Simple()
+
+# Untyped delegate. System.Windows.Forms.Control.Invoke(Delegate) is an example of such an API
+AssertError(TypeError, IronPythonTest.DelegateTest.InvokeUntypedDelegate, myfunc)
+
+myfuncCalled = False
+IronPythonTest.DelegateTest.InvokeUntypedDelegate(IronPythonTest.SimpleDelegate(myfunc))
+AreEqual(myfuncCalled, True)
+
+myfuncCalled = False
+passedarg = 0
+IronPythonTest.DelegateTest.InvokeUntypedDelegate(IronPythonTest.SimpleDelegateWithOneArg(myotherfunc), 100)
+AreEqual((myfuncCalled, passedarg), (True, 100))

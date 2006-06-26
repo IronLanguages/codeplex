@@ -347,6 +347,16 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Console Support
+        /// <summary>
+        /// Execute the code in a new module.
+        /// The code is able to be optimized since it does not have to deal with any incoming ModuleScope,
+        /// and it can optimize all global variable accesses.
+        /// The caller is responsible for setting Sys.argv
+        /// </summary>
+        /// <param name="moduleName">If this is non-null, the module will be published to sys.modules</param>
+        /// <param name="moduleScope">The resulting scope can be inspected using moduleScope. 
+        /// Further code may be executed using this scope, and it will be able to access global variables that 
+        /// were set in ExecuteFileOptimized. However, any further code run in this scope will not be optimized.</param>
         public void ExecuteFileOptimized(string fileName, string moduleName, ExecutionOptions executionOptions, out ModuleScope moduleScope) {
             CompilerContext context = this.compilerContext.CopyWithNewSourceFile(fileName);
             bool skipLine = (executionOptions & ExecutionOptions.SkipFirstLine) != 0;
@@ -487,6 +497,16 @@ namespace IronPython.Hosting {
             Execute(text, null /*fileName*/, moduleScope, executionOptions);
         }
 
+        /// <summary>
+        /// Execute the Python code.
+        /// The API will throw any exceptions raised by the code. If PythonSystemExit is thrown, the host should 
+        /// interpret that in a way that is appropriate for the host.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="fileName">This is used for scenarios when a file contains embedded Python code, along with
+        /// non-Python code. The host can creating a string with just the Python code, with empty lines in place 
+        /// of the non-Python code. The fileName will then be used for debugging and traceback information</param>
+        /// <param name="moduleScope">The module context to execute the code in.</param>
         public void Execute(string text, string fileName, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             EnsureValidArguments(moduleScope, executionOptions, ExecuteStringOptions);
 
@@ -518,12 +538,7 @@ namespace IronPython.Hosting {
         public object Evaluate(string expr, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             EnsureValidArguments(moduleScope, executionOptions, EvaluateStringOptions);
 
-            return Builtin.Eval(
-                moduleScope, 
-                expr,
-                ((ICallerContext)moduleScope).Globals,
-                ((ICallerContext)moduleScope).Globals,
-                executionOptions);
+            return Builtin.Eval(moduleScope, expr, executionOptions);
         }
 
         public T Evaluate<T>(string expr) {
@@ -549,6 +564,8 @@ namespace IronPython.Hosting {
             return Compile(text, ExecutionOptions.Default);
         }
 
+        /// <returns>This can be used with the "Execute(CompiledCode compiledCode)" API.
+        /// The same CompiledCode can be used in multiple PythonEngines.</returns>
         public CompiledCode Compile(string text, ExecutionOptions executionOptions) {
             ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
 

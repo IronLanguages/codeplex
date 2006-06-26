@@ -15,6 +15,7 @@
 
 using System;
 using System.Reflection;
+using System.Diagnostics;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
@@ -198,6 +199,9 @@ namespace IronPython.Runtime.Types {
         }
     }
 
+    /// <summary>
+    /// The type representing "null" (Builtin.None)
+    /// </summary>
     [PythonType("NoneType")]
     public class NoneType : DynamicType, ICallable {
         #region Internal static members
@@ -208,14 +212,16 @@ namespace IronPython.Runtime.Types {
         #endregion
 
         #region Private static members
-        private static object strMethod, hashMethod, initMethod, newMethod;
-        private static SymbolId[] noneAttrs = new SymbolId[] { 
-            SymbolTable.Class, SymbolTable.Doc, SymbolTable.Hash, SymbolTable.Init,
-            SymbolTable.NewInst, SymbolTable.Repr, SymbolTable.String 
+        private static object strMethod, hashMethod, initMethod, newMethod,
+            delAttrMethod, getAttributeMethod, setAttrMethod,
+            reduceMethod;
 
-            // !!! these below should also be present.  
-            /* "__delattr__", "__getattribute__",  "__new__",     
-             * "__reduce__", "__reduce_ex__",  "__setattr__", */        
+        private static readonly SymbolId[] noneAttrs = new SymbolId[] { 
+            SymbolTable.Class, SymbolTable.Doc, SymbolTable.Hash, 
+            SymbolTable.Init, SymbolTable.NewInst, 
+            SymbolTable.Repr, SymbolTable.String,
+            SymbolTable.DelAttr, SymbolTable.GetAttribute, SymbolTable.SetAttr,
+            SymbolTable.Reduce, SymbolTable.ReduceEx
         };
         #endregion
 
@@ -238,6 +244,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public override List GetAttrNames(ICallerContext context, object self) {
+            Debug.Assert(self == IronPython.Modules.Builtin.None);
             List names = base.GetAttrNames(context, self);
             for (int i = 0; i < noneAttrs.Length; i++) {
                 names.AddNoLockNoDups(SymbolTable.IdToString(noneAttrs[i]));
@@ -246,8 +253,9 @@ namespace IronPython.Runtime.Types {
         }
 
         public override bool TryGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
-            switch(name.Id){
-                case SymbolTable.ClassId: ret = this;return true;
+            Debug.Assert(self == IronPython.Modules.Builtin.None);
+            switch (name.Id) {
+                case SymbolTable.ClassId: ret = this; return true;
                 case SymbolTable.DocId: ret = null; return true;
                 case SymbolTable.ReprId:
                 case SymbolTable.StringId: 
@@ -266,6 +274,23 @@ namespace IronPython.Runtime.Types {
                     if (newMethod == null) newMethod = GenerateUnboundMethod("NewMethod");
                     ret = newMethod;
                     return true;
+                case SymbolTable.DelAttrId:
+                    if (delAttrMethod == null) delAttrMethod = GenerateUnboundMethod("DelAttrMethod");
+                    ret = delAttrMethod;
+                    return true;
+                case SymbolTable.GetAttributeId:
+                    if (getAttributeMethod == null) getAttributeMethod = GenerateUnboundMethod("GetAttributeMethod");
+                    ret = getAttributeMethod;
+                    return true;
+                case SymbolTable.SetAttrId:
+                    if (setAttrMethod == null) setAttrMethod = GenerateUnboundMethod("SetAttrMethod");
+                    ret = setAttrMethod;
+                    return true;
+                case SymbolTable.ReduceId:
+                case SymbolTable.ReduceExId:
+                    if (reduceMethod == null) reduceMethod = GenerateUnboundMethod("ReduceMethod");
+                    ret = reduceMethod;
+                    return true;
             }
             ret = null;
             return false;
@@ -275,13 +300,22 @@ namespace IronPython.Runtime.Types {
         /// You can't actually set anything on NoneType, we just override this to get the correct error.
         /// </summary>
         public override void SetAttr(ICallerContext context, object self, SymbolId name, object value) {
+            Debug.Assert(self == IronPython.Modules.Builtin.None);
             for (int i = 0; i < noneAttrs.Length; i++) {
-                if (noneAttrs[i] == name) throw Ops.AttributeError("'NoneType' object attribute '{0}' is read-only", SymbolTable.IdToString(name));
+                if (noneAttrs[i] == name) throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), name);
             }
 
-            throw Ops.AttributeError("'NoneType' object has no attribute '{0}'",SymbolTable.IdToString(name));
+            throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), name);
         }
 
+        public override void DelAttr(ICallerContext context, object self, SymbolId name) {
+            Debug.Assert(self == IronPython.Modules.Builtin.None);
+            for (int i = 0; i < noneAttrs.Length; i++) {
+                if (noneAttrs[i] == name) throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), name);
+            }
+
+            throw Ops.AttributeErrorForMissingAttribute("NoneType", name);
+        }
         #endregion
 
         #region Static method implementations for None instances
@@ -305,6 +339,22 @@ namespace IronPython.Runtime.Types {
             // someone is using  None.__new__ or type(None).__new__ to create
             // a new instance.  Call the type they want to create the instance for.
             return Ops.Call(type, prms);
+        }
+
+        public static void DelAttrMethod(string name) {
+            InstanceOfNoneType.DelAttr(DefaultContext.Default, IronPython.Modules.Builtin.None, SymbolTable.StringToId(name));
+        }
+
+        public static object GetAttributeMethod(string name) {
+            return InstanceOfNoneType.GetAttr(DefaultContext.Default, IronPython.Modules.Builtin.None, SymbolTable.StringToId(name));
+        }
+
+        public static void SetAttrMethod(string name, object value) {
+            InstanceOfNoneType.SetAttr(DefaultContext.Default, IronPython.Modules.Builtin.None, SymbolTable.StringToId(name), value);
+        }
+
+        public static void ReduceMethod() {
+            throw Ops.TypeError("can't pickle None objects");
         }
 
         private static object GenerateUnboundMethod(string name) {

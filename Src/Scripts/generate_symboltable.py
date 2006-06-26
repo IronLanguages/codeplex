@@ -70,6 +70,8 @@ fieldList = [
     ('__complex__', 'ConvertToComplex'),
     ('__hex__', 'ConvertToHex'),
     ('__oct__', 'ConvertToOctal'),
+    ('__reduce__', 'Reduce'),
+    ('__reduce_ex__', 'ReduceEx'),
 
     ('__nonzero__', 'NonZero'),
     ('__pos__', 'Positive'),
@@ -129,7 +131,7 @@ fieldList = [
 def generate_values(cw):
     i = startValue
     for x in fieldList:
-        cw.writeline("public const int %sId = %d;" % (x[1],i))
+        cw.writeline('public const int %-24s = %3d; // "%s"' % (x[1] + "Id", i, x[0]))
         i = i + 1
 
 def generate_symbols(cw):
@@ -142,7 +144,7 @@ def generate_symbols(cw):
 def generate_added(cw):
     i = startValue
     for x in fieldList[:-1]:
-        cw.writeline("StringToId(\"%s\");  // %d" % (x[0], i))
+        cw.writeline("PublishWellKnownSymbol(\"%s\", %s);  // %d" % (x[0], x[1], i))
         i = i+1
  
 CodeGenerator("SymbolTable Other Values", generate_values).doit()

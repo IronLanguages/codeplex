@@ -22,6 +22,7 @@ using System.IO;
 
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Diagnostics;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
@@ -236,6 +237,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Delegate GetDelegate(object o, Type delegateType) {
+            Debug.Assert(typeof(Delegate).IsAssignableFrom(delegateType));
+
             Delegate handler = o as Delegate;
 
             if (handler != null) return handler;
@@ -249,7 +252,18 @@ namespace IronPython.Runtime.Operations {
             }
 
             MethodInfo invoke = delegateType.GetMethod("Invoke");
+
+            if (invoke == null) {
+                Debug.Assert(delegateType == typeof(Delegate) || delegateType == typeof(MulticastDelegate));
+                // We could try to convert to some implicit delegate type like CallTarget 0 (since it would
+                // have to be a subtype of System.Delegate). However, we would be guessing, and it is better
+                // to require the user to chose the explicit signature that is desired.
+                throw Ops.TypeError("cannot implicitly convert {0} to {1}; please specify precise delegate type",
+                                    Ops.GetDynamicType(o).__name__, delegateType);
+            }
+
             ParameterInfo[] pis = invoke.GetParameters();
+
             if (fo != null) {
                 if (fo is FunctionN == false) {
                     int expArgCnt = pis.Length;
@@ -2296,6 +2310,7 @@ namespace IronPython.Runtime.Operations {
                 return ValueError("too many values to unpack");
         }
 
+        // Also see AttributeErrorForReadonlyAttribute
         public static Exception TypeErrorForBuiltinAttributeChange(string typeName) {
             throw Ops.TypeError("can't set attributes of built-in/extension type '{0}'", typeName);
         }
@@ -2336,7 +2351,12 @@ namespace IronPython.Runtime.Operations {
             return TypeError("attribute name must be string");
         }
 
+        // Also see TypeErrorForBuiltinAttributeChange
         public static Exception AttributeErrorForReadonlyAttribute(string typeName, SymbolId attributeName) {
+            // CPython uses AttributeError for all attributes except "__class__"
+            if (attributeName == SymbolTable.Class)
+                return Ops.TypeError("can't delete __class__ attribute");
+
             return Ops.AttributeError("attribute '{0}' of '{1}' object is read-only", attributeName.ToString(), typeName);
         }
 

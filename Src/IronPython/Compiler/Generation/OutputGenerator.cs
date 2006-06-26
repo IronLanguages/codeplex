@@ -83,14 +83,9 @@ namespace IronPython.Compiler.Generation {
         // Ensures a unique name
         private static int debuggableSnippetTypeIndex = 0;
 
-        private static TypeGen MakeDebuggableSnippetType(string snippetName) {
-            string typeName = snippetName;
-            try {
-                typeName = Path.GetFileName(snippetName);
-            } catch (ArgumentException) { }
-
+        private static TypeGen MakeDebuggableSnippetType(string typeName, string fileName) {
             typeName = typeName.Replace(Type.Delimiter, '_'); // '.' is for separating the namespace and the type name.
-            DebuggableSnippets.SetPythonSourceFile(snippetName);
+            DebuggableSnippets.SetPythonSourceFile(fileName);
             TypeGen tg = DebuggableSnippets.DefinePublicType(typeName + "$" + debuggableSnippetTypeIndex++, typeof(object));
             tg.AddModuleField(typeof(PythonModule));
             tg.myType.DefineDefaultConstructor(MethodAttributes.Public);
@@ -114,7 +109,7 @@ namespace IronPython.Compiler.Generation {
             TypeGen tg = null;
 
             if (enableDebugging) {
-                tg = MakeDebuggableSnippetType(name);
+                tg = MakeDebuggableSnippetType(name, context.SourceFile);
                 cg = tg.DefineUserHiddenMethod(MethodAttributes.Public | MethodAttributes.Static,
                     "Initialize", typeof(object), new Type[] { typeof(ModuleScope) });
                 cg.typeGen = tg;

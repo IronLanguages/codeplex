@@ -16,6 +16,38 @@
 from lib.assert_util import *
 
 ############################################################
+def test_common_attributes():
+    builtin_type_instances = [None, object(), 1, "Hello", [0,1], {"a":0}]
+    builtin_hashable_type_instances = [None, object(), 1, "Hello"]
+
+    for i in builtin_type_instances:
+        # Read-only attribute
+        AssertError(AttributeError, i.__delattr__, "__doc__")
+        # Non-existent attribute
+        AssertError(AttributeError, i.__delattr__, "foo")
+    # Modifying __class__ causes a TypeError
+        AssertError(TypeError, i.__delattr__, "__class__")
+    
+        # Read-only attribute
+        AssertError(TypeError, i.__setattr__, "__doc__")
+        # Non-existent attribute
+        AssertError(AttributeError, i.__setattr__, "foo", "foovalue")
+        # Modifying __class__ causes a TypeError
+        AssertError(TypeError, i.__setattr__, "__class__")
+        
+        AreEqual(type(i), i.__getattribute__("__class__"))
+        # Non-existent attribute
+        AssertError(AttributeError, i.__getattribute__, "foo")
+        
+        if is_cli and i == None: # !!! Need to expose __reduce__ on all types
+            AssertError(TypeError, i.__reduce__)
+            AssertError(TypeError, i.__reduce_ex__)
+    
+    for i in builtin_hashable_type_instances:
+        if (is_cli == False or i == None): # !!! Need to expose __hash__ on all types
+            AreEqual(hash(i), i.__hash__())
+            
+############################################################
 def test_set_dict():
     class C: pass
     setdict = C.__dict__

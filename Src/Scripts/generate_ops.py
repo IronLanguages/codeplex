@@ -37,6 +37,15 @@ class Symbol:
     def simple_name(self):
         return self.name[0] + self.cap_name()[1:]
 
+    def symbol_name(self):
+        return "Op" + self.title_name()
+
+    def reverse_symbol_name(self):
+        return "OpReverse" + self.title_name()
+
+    def inplace_symbol_name(self):
+        return "OpInPlace" + self.title_name()
+
     def __repr__(self):
         return 'Symbol(%s)' % self.symbol
 
@@ -111,21 +120,21 @@ class Operator(Symbol):
         cw.write(template, clrName=self.clrName, name=self.name, rname=self.rname, symbol=self.symbol)
     
     def genSymbolTableValues(self, cw, x):
-        cw.writeline("public const int Op%sId = %d;" % (self.title_name(),x))
+        cw.writeline("public const int %-24s = %3d;" % (self.symbol_name()+"Id",x))
 
         if self.isCompare(): return 1
 
-        cw.writeline("public const int OpReverse%sId = %d;" % (self.title_name(),x+1))
-        cw.writeline("public const int OpInPlace%sId = %d;" % (self.title_name(),x+2))
+        cw.writeline("public const int %-24s = %3d;" % (self.reverse_symbol_name()+"Id",x+1))
+        cw.writeline("public const int %-24s = %3d;" % (self.inplace_symbol_name()+"Id",x+2))
         
         return 3
     
     def genSymbolTableAdd(self, cw, x):
-        cw.writeline("StringToId(\"__%s__\");  // %d " % (self.name,x))
+        cw.writeline("PublishWellKnownSymbol(\"__%s__\", %s);  // %d " % (self.name, self.symbol_name(), x))
         if self.isCompare(): return 1
         
-        cw.writeline("StringToId(\"__%s__\");  // %d " % (self.rname,x+1))
-        cw.writeline("StringToId(\"__i%s__\");  // %d " % (self.name,x+2))
+        cw.writeline("PublishWellKnownSymbol(\"__%s__\", %s);  // %d " % (self.rname, self.reverse_symbol_name(), x+1))
+        cw.writeline("PublishWellKnownSymbol(\"__i%s__\", %s);  // %d " % (self.name, self.inplace_symbol_name(), x+2))
         
         return 3
         
@@ -157,6 +166,15 @@ class DivisionOperator(Operator):
     def clrInPlaceTName(self):
         return "InPlace" + self.tclrName
 
+    def true_symbol_name(self):
+        return "Op" + self.tclrName
+
+    def reverse_true_symbol_name(self):
+        return "OpReverse" + self.tclrName
+
+    def inplace_true_symbol_name(self):
+        return "OpInPlace" + self.tclrName
+
     def __repr__(self):
         return 'DivisionOperator(%s,%s,%s)' % (self.symbol, self.name, self.rname)
 
@@ -177,24 +195,24 @@ class DivisionOperator(Operator):
         cw.write(template, clrName=self.tclrName, name=self.tname, rname=self.trname, symbol=self.symbol)
 
     def genSymbolTableValues(self, cw, x):
-        cw.writeline("public const int Op%sId = %d;" % (self.title_name(),x))
-        cw.writeline("public const int OpReverse%sId = %d;" % (self.title_name(),x+1))
-        cw.writeline("public const int OpInPlace%sId = %d;" % (self.title_name(),x+2))
+        cw.writeline("public const int %-24s = %3d;" % (self.symbol_name()+"Id", x))
+        cw.writeline("public const int %-24s = %3d;" % (self.reverse_symbol_name()+"Id", x+1))
+        cw.writeline("public const int %-24s = %3d;" % (self.inplace_symbol_name()+"Id", x+2))
 
-        cw.writeline("public const int Op%sId = %d;" % (self.tclrName,x+3))
-        cw.writeline("public const int OpReverse%sId = %d;" % (self.tclrName,x+4))
-        cw.writeline("public const int OpInPlace%sId = %d;" % (self.tclrName,x+5))
+        cw.writeline("public const int %-24s = %3d;" % (self.true_symbol_name()+"Id",x+3))
+        cw.writeline("public const int %-24s = %3d;" % (self.reverse_true_symbol_name()+"Id",x+4))
+        cw.writeline("public const int %-24s = %3d;" % (self.inplace_true_symbol_name()+"Id",x+5))
         
         return 6
     
     def genSymbolTableAdd(self, cw, x):
-        cw.writeline("StringToId(\"__%s__\");  // %d " % (self.name,x))
-        cw.writeline("StringToId(\"__%s__\");  // %d " % (self.rname,x+1))
-        cw.writeline("StringToId(\"__i%s__\");  // %d " % (self.name,x+2))
+        cw.writeline("PublishWellKnownSymbol(\"__%s__\", %s);  // %d " % (self.name, self.symbol_name(), x))
+        cw.writeline("PublishWellKnownSymbol(\"__%s__\", %s);  // %d " % (self.rname, self.reverse_symbol_name(), x+1))
+        cw.writeline("PublishWellKnownSymbol(\"__i%s__\", %s);  // %d " % (self.name, self.inplace_symbol_name(), x+2))
 
-        cw.writeline("StringToId(\"__%s__\");  // %d " % (self.tname,x+3))
-        cw.writeline("StringToId(\"__%s__\");  // %d " % (self.trname,x+4))
-        cw.writeline("StringToId(\"__i%s__\");  // %d " % (self.tname,x+5))
+        cw.writeline("PublishWellKnownSymbol(\"__%s__\", %s);  // %d " % (self.tname, self.true_symbol_name(), x+3))
+        cw.writeline("PublishWellKnownSymbol(\"__%s__\", %s);  // %d " % (self.trname, self.reverse_true_symbol_name(), x+4))
+        cw.writeline("PublishWellKnownSymbol(\"__i%s__\", %s);  // %d " % (self.tname, self.inplace_true_symbol_name(), x+5))
         return 6
     
     def genSymbolTableSymbols(self, cw, x):

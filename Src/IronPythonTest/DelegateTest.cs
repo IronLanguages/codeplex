@@ -25,6 +25,7 @@ namespace IronPythonTest {
     public delegate string OutReturnDelegate(object sender, out object res);
     public delegate int RefReturnDelegate(object sender, ref object res);
     public delegate void SimpleDelegate();
+    public delegate void SimpleDelegateWithOneArg(object arg1);
     
     public class DelegateTest {
         // custom delegates used for various event handlers...        
@@ -49,6 +50,10 @@ namespace IronPythonTest {
         public static SimpleDelegate Simple = new SimpleDelegate(SimpleMethod);
 
         public static void SimpleMethod() {
+        }
+
+        public static void InvokeUntypedDelegate(Delegate d, params object [] args) {
+            d.DynamicInvoke(args);
         }
 
         public static void FireStatic(object sender, EventArgs e) {

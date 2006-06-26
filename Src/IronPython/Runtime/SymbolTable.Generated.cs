@@ -202,6 +202,10 @@ namespace IronPython.Runtime {
         public static readonly SymbolId ConvertToHex = new SymbolId(ConvertToHexId);
         ///<summary>Symbol for '__oct__'</summary> 
         public static readonly SymbolId ConvertToOctal = new SymbolId(ConvertToOctalId);
+        ///<summary>Symbol for '__reduce__'</summary> 
+        public static readonly SymbolId Reduce = new SymbolId(ReduceId);
+        ///<summary>Symbol for '__reduce_ex__'</summary> 
+        public static readonly SymbolId ReduceEx = new SymbolId(ReduceExId);
         ///<summary>Symbol for '__nonzero__'</summary> 
         public static readonly SymbolId NonZero = new SymbolId(NonZeroId);
         ///<summary>Symbol for '__pos__'</summary> 
@@ -302,52 +306,52 @@ namespace IronPython.Runtime {
 
         // *** BEGIN GENERATED CODE ***
 
-        public const int OpAddId = 1;
-        public const int OpReverseAddId = 2;
-        public const int OpInPlaceAddId = 3;
-        public const int OpSubtractId = 4;
-        public const int OpReverseSubtractId = 5;
-        public const int OpInPlaceSubtractId = 6;
-        public const int OpPowerId = 7;
-        public const int OpReversePowerId = 8;
-        public const int OpInPlacePowerId = 9;
-        public const int OpMultiplyId = 10;
-        public const int OpReverseMultiplyId = 11;
-        public const int OpInPlaceMultiplyId = 12;
-        public const int OpFloorDivideId = 13;
-        public const int OpReverseFloorDivideId = 14;
-        public const int OpInPlaceFloorDivideId = 15;
-        public const int OpDivideId = 16;
-        public const int OpReverseDivideId = 17;
-        public const int OpInPlaceDivideId = 18;
-        public const int OpTrueDivideId = 19;
-        public const int OpReverseTrueDivideId = 20;
-        public const int OpInPlaceTrueDivideId = 21;
-        public const int OpModId = 22;
-        public const int OpReverseModId = 23;
-        public const int OpInPlaceModId = 24;
-        public const int OpLeftShiftId = 25;
-        public const int OpReverseLeftShiftId = 26;
-        public const int OpInPlaceLeftShiftId = 27;
-        public const int OpRightShiftId = 28;
-        public const int OpReverseRightShiftId = 29;
-        public const int OpInPlaceRightShiftId = 30;
-        public const int OpBitwiseAndId = 31;
-        public const int OpReverseBitwiseAndId = 32;
-        public const int OpInPlaceBitwiseAndId = 33;
-        public const int OpBitwiseOrId = 34;
-        public const int OpReverseBitwiseOrId = 35;
-        public const int OpInPlaceBitwiseOrId = 36;
-        public const int OpXorId = 37;
-        public const int OpReverseXorId = 38;
-        public const int OpInPlaceXorId = 39;
-        public const int OpLessThanId = 40;
-        public const int OpGreaterThanId = 41;
-        public const int OpLessThanOrEqualId = 42;
-        public const int OpGreaterThanOrEqualId = 43;
-        public const int OpEqualId = 44;
-        public const int OpNotEqualId = 45;
-        public const int OpLessThanGreaterThanId = 46;
+        public const int OpAddId                  =   1;
+        public const int OpReverseAddId           =   2;
+        public const int OpInPlaceAddId           =   3;
+        public const int OpSubtractId             =   4;
+        public const int OpReverseSubtractId      =   5;
+        public const int OpInPlaceSubtractId      =   6;
+        public const int OpPowerId                =   7;
+        public const int OpReversePowerId         =   8;
+        public const int OpInPlacePowerId         =   9;
+        public const int OpMultiplyId             =  10;
+        public const int OpReverseMultiplyId      =  11;
+        public const int OpInPlaceMultiplyId      =  12;
+        public const int OpFloorDivideId          =  13;
+        public const int OpReverseFloorDivideId   =  14;
+        public const int OpInPlaceFloorDivideId   =  15;
+        public const int OpDivideId               =  16;
+        public const int OpReverseDivideId        =  17;
+        public const int OpInPlaceDivideId        =  18;
+        public const int OpTrueDivideId           =  19;
+        public const int OpReverseTrueDivideId    =  20;
+        public const int OpInPlaceTrueDivideId    =  21;
+        public const int OpModId                  =  22;
+        public const int OpReverseModId           =  23;
+        public const int OpInPlaceModId           =  24;
+        public const int OpLeftShiftId            =  25;
+        public const int OpReverseLeftShiftId     =  26;
+        public const int OpInPlaceLeftShiftId     =  27;
+        public const int OpRightShiftId           =  28;
+        public const int OpReverseRightShiftId    =  29;
+        public const int OpInPlaceRightShiftId    =  30;
+        public const int OpBitwiseAndId           =  31;
+        public const int OpReverseBitwiseAndId    =  32;
+        public const int OpInPlaceBitwiseAndId    =  33;
+        public const int OpBitwiseOrId            =  34;
+        public const int OpReverseBitwiseOrId     =  35;
+        public const int OpInPlaceBitwiseOrId     =  36;
+        public const int OpXorId                  =  37;
+        public const int OpReverseXorId           =  38;
+        public const int OpInPlaceXorId           =  39;
+        public const int OpLessThanId             =  40;
+        public const int OpGreaterThanId          =  41;
+        public const int OpLessThanOrEqualId      =  42;
+        public const int OpGreaterThanOrEqualId   =  43;
+        public const int OpEqualId                =  44;
+        public const int OpNotEqualId             =  45;
+        public const int OpLessThanGreaterThanId  =  46;
 
         // *** END GENERATED CODE ***
 
@@ -357,91 +361,93 @@ namespace IronPython.Runtime {
 
         // *** BEGIN GENERATED CODE ***
 
-        public const int OpNegateId = 47;
-        public const int OpOnesComplementId = 48;
-        public const int DictId = 49;
-        public const int ModuleId = 50;
-        public const int GetAttributeId = 51;
-        public const int BasesId = 52;
-        public const int SubclassesId = 53;
-        public const int NameId = 54;
-        public const int ClassId = 55;
-        public const int BuiltinsId = 56;
-        public const int GetAttrId = 57;
-        public const int SetAttrId = 58;
-        public const int DelAttrId = 59;
-        public const int GetItemId = 60;
-        public const int SetItemId = 61;
-        public const int DelItemId = 62;
-        public const int InitId = 63;
-        public const int NewInstId = 64;
-        public const int UnassignId = 65;
-        public const int StringId = 66;
-        public const int ReprId = 67;
-        public const int ContainsId = 68;
-        public const int LengthId = 69;
-        public const int ReversedId = 70;
-        public const int IteratorId = 71;
-        public const int NextId = 72;
-        public const int WeakRefId = 73;
-        public const int FileId = 74;
-        public const int ImportId = 75;
-        public const int DocId = 76;
-        public const int CallId = 77;
-        public const int AbsoluteValueId = 78;
-        public const int CoerceId = 79;
-        public const int ConvertToIntId = 80;
-        public const int ConvertToFloatId = 81;
-        public const int ConvertToLongId = 82;
-        public const int ConvertToComplexId = 83;
-        public const int ConvertToHexId = 84;
-        public const int ConvertToOctalId = 85;
-        public const int NonZeroId = 86;
-        public const int PositiveId = 87;
-        public const int HashId = 88;
-        public const int CmpId = 89;
-        public const int PathId = 90;
-        public const int GetDescriptorId = 91;
-        public const int SetDescriptorId = 92;
-        public const int DeleteDescriptorId = 93;
-        public const int AllId = 94;
-        public const int ClrExceptionKeyId = 95;
-        public const int KeysId = 96;
-        public const int ArgumentsId = 97;
-        public const int ConsoleWriteId = 98;
-        public const int ConsoleReadLineId = 99;
-        public const int ExceptionMessageId = 100;
-        public const int ExceptionFilenameId = 101;
-        public const int ExceptionLineNumberId = 102;
-        public const int ExceptionOffsetId = 103;
-        public const int TextId = 104;
-        public const int SoftspaceId = 105;
-        public const int GeneratorNextId = 106;
-        public const int SetDefaultEncodingId = 107;
-        public const int SysExitFuncId = 108;
-        public const int NoneId = 109;
-        public const int MetaClassId = 110;
-        public const int MethodResolutionOrderId = 111;
-        public const int GetSliceId = 112;
-        public const int SetSliceId = 113;
-        public const int DeleteSliceId = 114;
-        public const int FutureId = 115;
-        public const int DivisionId = 116;
-        public const int NestedScopesId = 117;
-        public const int GeneratorsId = 118;
-        public const int AsId = 119;
-        public const int StarId = 120;
-        public const int StarStarId = 121;
-        public const int LocalsId = 122;
-        public const int VarsId = 123;
-        public const int DirId = 124;
-        public const int EvalId = 125;
-        public const int UnderscoreId = 126;
-        public const int GeneratorParmNameId = 127;
-        public const int EnvironmentParmNameId = 128;
-        public const int IterId = 129;
-        public const int SlotsId = 130;
-        public const int LastWellKnownId = 131;
+        public const int OpNegateId               =  47; // "__neg__"
+        public const int OpOnesComplementId       =  48; // "__invert__"
+        public const int DictId                   =  49; // "__dict__"
+        public const int ModuleId                 =  50; // "__module__"
+        public const int GetAttributeId           =  51; // "__getattribute__"
+        public const int BasesId                  =  52; // "__bases__"
+        public const int SubclassesId             =  53; // "__subclasses__"
+        public const int NameId                   =  54; // "__name__"
+        public const int ClassId                  =  55; // "__class__"
+        public const int BuiltinsId               =  56; // "__builtins__"
+        public const int GetAttrId                =  57; // "__getattr__"
+        public const int SetAttrId                =  58; // "__setattr__"
+        public const int DelAttrId                =  59; // "__delattr__"
+        public const int GetItemId                =  60; // "__getitem__"
+        public const int SetItemId                =  61; // "__setitem__"
+        public const int DelItemId                =  62; // "__delitem__"
+        public const int InitId                   =  63; // "__init__"
+        public const int NewInstId                =  64; // "__new__"
+        public const int UnassignId               =  65; // "__del__"
+        public const int StringId                 =  66; // "__str__"
+        public const int ReprId                   =  67; // "__repr__"
+        public const int ContainsId               =  68; // "__contains__"
+        public const int LengthId                 =  69; // "__len__"
+        public const int ReversedId               =  70; // "__reversed__"
+        public const int IteratorId               =  71; // "__iter__"
+        public const int NextId                   =  72; // "__next__"
+        public const int WeakRefId                =  73; // "__weakref__"
+        public const int FileId                   =  74; // "__file__"
+        public const int ImportId                 =  75; // "__import__"
+        public const int DocId                    =  76; // "__doc__"
+        public const int CallId                   =  77; // "__call__"
+        public const int AbsoluteValueId          =  78; // "__abs__"
+        public const int CoerceId                 =  79; // "__coerce__"
+        public const int ConvertToIntId           =  80; // "__int__"
+        public const int ConvertToFloatId         =  81; // "__float__"
+        public const int ConvertToLongId          =  82; // "__long__"
+        public const int ConvertToComplexId       =  83; // "__complex__"
+        public const int ConvertToHexId           =  84; // "__hex__"
+        public const int ConvertToOctalId         =  85; // "__oct__"
+        public const int ReduceId                 =  86; // "__reduce__"
+        public const int ReduceExId               =  87; // "__reduce_ex__"
+        public const int NonZeroId                =  88; // "__nonzero__"
+        public const int PositiveId               =  89; // "__pos__"
+        public const int HashId                   =  90; // "__hash__"
+        public const int CmpId                    =  91; // "__cmp__"
+        public const int PathId                   =  92; // "__path__"
+        public const int GetDescriptorId          =  93; // "__get__"
+        public const int SetDescriptorId          =  94; // "__set__"
+        public const int DeleteDescriptorId       =  95; // "__delete__"
+        public const int AllId                    =  96; // "__all__"
+        public const int ClrExceptionKeyId        =  97; // "clsException"
+        public const int KeysId                   =  98; // "keys"
+        public const int ArgumentsId              =  99; // "args"
+        public const int ConsoleWriteId           = 100; // "write"
+        public const int ConsoleReadLineId        = 101; // "readline"
+        public const int ExceptionMessageId       = 102; // "msg"
+        public const int ExceptionFilenameId      = 103; // "filename"
+        public const int ExceptionLineNumberId    = 104; // "lineno"
+        public const int ExceptionOffsetId        = 105; // "offset"
+        public const int TextId                   = 106; // "text"
+        public const int SoftspaceId              = 107; // "softspace"
+        public const int GeneratorNextId          = 108; // "next"
+        public const int SetDefaultEncodingId     = 109; // "setdefaultencoding"
+        public const int SysExitFuncId            = 110; // "exitfunc"
+        public const int NoneId                   = 111; // "None"
+        public const int MetaClassId              = 112; // "__metaclass__"
+        public const int MethodResolutionOrderId  = 113; // "__mro__"
+        public const int GetSliceId               = 114; // "__getslice__"
+        public const int SetSliceId               = 115; // "__setslice__"
+        public const int DeleteSliceId            = 116; // "__delslice__"
+        public const int FutureId                 = 117; // "__future__"
+        public const int DivisionId               = 118; // "division"
+        public const int NestedScopesId           = 119; // "nested_scopes"
+        public const int GeneratorsId             = 120; // "generators"
+        public const int AsId                     = 121; // "as"
+        public const int StarId                   = 122; // "*"
+        public const int StarStarId               = 123; // "**"
+        public const int LocalsId                 = 124; // "locals"
+        public const int VarsId                   = 125; // "vars"
+        public const int DirId                    = 126; // "dir"
+        public const int EvalId                   = 127; // "eval"
+        public const int UnderscoreId             = 128; // "_"
+        public const int GeneratorParmNameId      = 129; // "__gen_$_parm__"
+        public const int EnvironmentParmNameId    = 130; // "$env"
+        public const int IterId                   = 131; // "iter"
+        public const int SlotsId                  = 132; // "__slots__"
+        public const int LastWellKnownId          = 133; // "LastWellKnown"
 
         // *** END GENERATED CODE ***
 
@@ -452,52 +458,52 @@ namespace IronPython.Runtime {
 
             // *** BEGIN GENERATED CODE ***
 
-            StringToId("__add__");  // 1 
-            StringToId("__radd__");  // 2 
-            StringToId("__iadd__");  // 3 
-            StringToId("__sub__");  // 4 
-            StringToId("__rsub__");  // 5 
-            StringToId("__isub__");  // 6 
-            StringToId("__pow__");  // 7 
-            StringToId("__rpow__");  // 8 
-            StringToId("__ipow__");  // 9 
-            StringToId("__mul__");  // 10 
-            StringToId("__rmul__");  // 11 
-            StringToId("__imul__");  // 12 
-            StringToId("__floordiv__");  // 13 
-            StringToId("__rfloordiv__");  // 14 
-            StringToId("__ifloordiv__");  // 15 
-            StringToId("__div__");  // 16 
-            StringToId("__rdiv__");  // 17 
-            StringToId("__idiv__");  // 18 
-            StringToId("__truediv__");  // 19 
-            StringToId("__rtruediv__");  // 20 
-            StringToId("__itruediv__");  // 21 
-            StringToId("__mod__");  // 22 
-            StringToId("__rmod__");  // 23 
-            StringToId("__imod__");  // 24 
-            StringToId("__lshift__");  // 25 
-            StringToId("__rlshift__");  // 26 
-            StringToId("__ilshift__");  // 27 
-            StringToId("__rshift__");  // 28 
-            StringToId("__rrshift__");  // 29 
-            StringToId("__irshift__");  // 30 
-            StringToId("__and__");  // 31 
-            StringToId("__rand__");  // 32 
-            StringToId("__iand__");  // 33 
-            StringToId("__or__");  // 34 
-            StringToId("__ror__");  // 35 
-            StringToId("__ior__");  // 36 
-            StringToId("__xor__");  // 37 
-            StringToId("__rxor__");  // 38 
-            StringToId("__ixor__");  // 39 
-            StringToId("__lt__");  // 40 
-            StringToId("__gt__");  // 41 
-            StringToId("__le__");  // 42 
-            StringToId("__ge__");  // 43 
-            StringToId("__eq__");  // 44 
-            StringToId("__ne__");  // 45 
-            StringToId("__lg__");  // 46 
+            PublishWellKnownSymbol("__add__", OpAdd);  // 1 
+            PublishWellKnownSymbol("__radd__", OpReverseAdd);  // 2 
+            PublishWellKnownSymbol("__iadd__", OpInPlaceAdd);  // 3 
+            PublishWellKnownSymbol("__sub__", OpSubtract);  // 4 
+            PublishWellKnownSymbol("__rsub__", OpReverseSubtract);  // 5 
+            PublishWellKnownSymbol("__isub__", OpInPlaceSubtract);  // 6 
+            PublishWellKnownSymbol("__pow__", OpPower);  // 7 
+            PublishWellKnownSymbol("__rpow__", OpReversePower);  // 8 
+            PublishWellKnownSymbol("__ipow__", OpInPlacePower);  // 9 
+            PublishWellKnownSymbol("__mul__", OpMultiply);  // 10 
+            PublishWellKnownSymbol("__rmul__", OpReverseMultiply);  // 11 
+            PublishWellKnownSymbol("__imul__", OpInPlaceMultiply);  // 12 
+            PublishWellKnownSymbol("__floordiv__", OpFloorDivide);  // 13 
+            PublishWellKnownSymbol("__rfloordiv__", OpReverseFloorDivide);  // 14 
+            PublishWellKnownSymbol("__ifloordiv__", OpInPlaceFloorDivide);  // 15 
+            PublishWellKnownSymbol("__div__", OpDivide);  // 16 
+            PublishWellKnownSymbol("__rdiv__", OpReverseDivide);  // 17 
+            PublishWellKnownSymbol("__idiv__", OpInPlaceDivide);  // 18 
+            PublishWellKnownSymbol("__truediv__", OpTrueDivide);  // 19 
+            PublishWellKnownSymbol("__rtruediv__", OpReverseTrueDivide);  // 20 
+            PublishWellKnownSymbol("__itruediv__", OpInPlaceTrueDivide);  // 21 
+            PublishWellKnownSymbol("__mod__", OpMod);  // 22 
+            PublishWellKnownSymbol("__rmod__", OpReverseMod);  // 23 
+            PublishWellKnownSymbol("__imod__", OpInPlaceMod);  // 24 
+            PublishWellKnownSymbol("__lshift__", OpLeftShift);  // 25 
+            PublishWellKnownSymbol("__rlshift__", OpReverseLeftShift);  // 26 
+            PublishWellKnownSymbol("__ilshift__", OpInPlaceLeftShift);  // 27 
+            PublishWellKnownSymbol("__rshift__", OpRightShift);  // 28 
+            PublishWellKnownSymbol("__rrshift__", OpReverseRightShift);  // 29 
+            PublishWellKnownSymbol("__irshift__", OpInPlaceRightShift);  // 30 
+            PublishWellKnownSymbol("__and__", OpBitwiseAnd);  // 31 
+            PublishWellKnownSymbol("__rand__", OpReverseBitwiseAnd);  // 32 
+            PublishWellKnownSymbol("__iand__", OpInPlaceBitwiseAnd);  // 33 
+            PublishWellKnownSymbol("__or__", OpBitwiseOr);  // 34 
+            PublishWellKnownSymbol("__ror__", OpReverseBitwiseOr);  // 35 
+            PublishWellKnownSymbol("__ior__", OpInPlaceBitwiseOr);  // 36 
+            PublishWellKnownSymbol("__xor__", OpXor);  // 37 
+            PublishWellKnownSymbol("__rxor__", OpReverseXor);  // 38 
+            PublishWellKnownSymbol("__ixor__", OpInPlaceXor);  // 39 
+            PublishWellKnownSymbol("__lt__", OpLessThan);  // 40 
+            PublishWellKnownSymbol("__gt__", OpGreaterThan);  // 41 
+            PublishWellKnownSymbol("__le__", OpLessThanOrEqual);  // 42 
+            PublishWellKnownSymbol("__ge__", OpGreaterThanOrEqual);  // 43 
+            PublishWellKnownSymbol("__eq__", OpEqual);  // 44 
+            PublishWellKnownSymbol("__ne__", OpNotEqual);  // 45 
+            PublishWellKnownSymbol("__lg__", OpLessThanGreaterThan);  // 46 
 
             // *** END GENERATED CODE ***
 
@@ -507,90 +513,92 @@ namespace IronPython.Runtime {
 
             // *** BEGIN GENERATED CODE ***
 
-            StringToId("__neg__");  // 47
-            StringToId("__invert__");  // 48
-            StringToId("__dict__");  // 49
-            StringToId("__module__");  // 50
-            StringToId("__getattribute__");  // 51
-            StringToId("__bases__");  // 52
-            StringToId("__subclasses__");  // 53
-            StringToId("__name__");  // 54
-            StringToId("__class__");  // 55
-            StringToId("__builtins__");  // 56
-            StringToId("__getattr__");  // 57
-            StringToId("__setattr__");  // 58
-            StringToId("__delattr__");  // 59
-            StringToId("__getitem__");  // 60
-            StringToId("__setitem__");  // 61
-            StringToId("__delitem__");  // 62
-            StringToId("__init__");  // 63
-            StringToId("__new__");  // 64
-            StringToId("__del__");  // 65
-            StringToId("__str__");  // 66
-            StringToId("__repr__");  // 67
-            StringToId("__contains__");  // 68
-            StringToId("__len__");  // 69
-            StringToId("__reversed__");  // 70
-            StringToId("__iter__");  // 71
-            StringToId("__next__");  // 72
-            StringToId("__weakref__");  // 73
-            StringToId("__file__");  // 74
-            StringToId("__import__");  // 75
-            StringToId("__doc__");  // 76
-            StringToId("__call__");  // 77
-            StringToId("__abs__");  // 78
-            StringToId("__coerce__");  // 79
-            StringToId("__int__");  // 80
-            StringToId("__float__");  // 81
-            StringToId("__long__");  // 82
-            StringToId("__complex__");  // 83
-            StringToId("__hex__");  // 84
-            StringToId("__oct__");  // 85
-            StringToId("__nonzero__");  // 86
-            StringToId("__pos__");  // 87
-            StringToId("__hash__");  // 88
-            StringToId("__cmp__");  // 89
-            StringToId("__path__");  // 90
-            StringToId("__get__");  // 91
-            StringToId("__set__");  // 92
-            StringToId("__delete__");  // 93
-            StringToId("__all__");  // 94
-            StringToId("clsException");  // 95
-            StringToId("keys");  // 96
-            StringToId("args");  // 97
-            StringToId("write");  // 98
-            StringToId("readline");  // 99
-            StringToId("msg");  // 100
-            StringToId("filename");  // 101
-            StringToId("lineno");  // 102
-            StringToId("offset");  // 103
-            StringToId("text");  // 104
-            StringToId("softspace");  // 105
-            StringToId("next");  // 106
-            StringToId("setdefaultencoding");  // 107
-            StringToId("exitfunc");  // 108
-            StringToId("None");  // 109
-            StringToId("__metaclass__");  // 110
-            StringToId("__mro__");  // 111
-            StringToId("__getslice__");  // 112
-            StringToId("__setslice__");  // 113
-            StringToId("__delslice__");  // 114
-            StringToId("__future__");  // 115
-            StringToId("division");  // 116
-            StringToId("nested_scopes");  // 117
-            StringToId("generators");  // 118
-            StringToId("as");  // 119
-            StringToId("*");  // 120
-            StringToId("**");  // 121
-            StringToId("locals");  // 122
-            StringToId("vars");  // 123
-            StringToId("dir");  // 124
-            StringToId("eval");  // 125
-            StringToId("_");  // 126
-            StringToId("__gen_$_parm__");  // 127
-            StringToId("$env");  // 128
-            StringToId("iter");  // 129
-            StringToId("__slots__");  // 130
+            PublishWellKnownSymbol("__neg__", OpNegate);  // 47
+            PublishWellKnownSymbol("__invert__", OpOnesComplement);  // 48
+            PublishWellKnownSymbol("__dict__", Dict);  // 49
+            PublishWellKnownSymbol("__module__", Module);  // 50
+            PublishWellKnownSymbol("__getattribute__", GetAttribute);  // 51
+            PublishWellKnownSymbol("__bases__", Bases);  // 52
+            PublishWellKnownSymbol("__subclasses__", Subclasses);  // 53
+            PublishWellKnownSymbol("__name__", Name);  // 54
+            PublishWellKnownSymbol("__class__", Class);  // 55
+            PublishWellKnownSymbol("__builtins__", Builtins);  // 56
+            PublishWellKnownSymbol("__getattr__", GetAttr);  // 57
+            PublishWellKnownSymbol("__setattr__", SetAttr);  // 58
+            PublishWellKnownSymbol("__delattr__", DelAttr);  // 59
+            PublishWellKnownSymbol("__getitem__", GetItem);  // 60
+            PublishWellKnownSymbol("__setitem__", SetItem);  // 61
+            PublishWellKnownSymbol("__delitem__", DelItem);  // 62
+            PublishWellKnownSymbol("__init__", Init);  // 63
+            PublishWellKnownSymbol("__new__", NewInst);  // 64
+            PublishWellKnownSymbol("__del__", Unassign);  // 65
+            PublishWellKnownSymbol("__str__", String);  // 66
+            PublishWellKnownSymbol("__repr__", Repr);  // 67
+            PublishWellKnownSymbol("__contains__", Contains);  // 68
+            PublishWellKnownSymbol("__len__", Length);  // 69
+            PublishWellKnownSymbol("__reversed__", Reversed);  // 70
+            PublishWellKnownSymbol("__iter__", Iterator);  // 71
+            PublishWellKnownSymbol("__next__", Next);  // 72
+            PublishWellKnownSymbol("__weakref__", WeakRef);  // 73
+            PublishWellKnownSymbol("__file__", File);  // 74
+            PublishWellKnownSymbol("__import__", Import);  // 75
+            PublishWellKnownSymbol("__doc__", Doc);  // 76
+            PublishWellKnownSymbol("__call__", Call);  // 77
+            PublishWellKnownSymbol("__abs__", AbsoluteValue);  // 78
+            PublishWellKnownSymbol("__coerce__", Coerce);  // 79
+            PublishWellKnownSymbol("__int__", ConvertToInt);  // 80
+            PublishWellKnownSymbol("__float__", ConvertToFloat);  // 81
+            PublishWellKnownSymbol("__long__", ConvertToLong);  // 82
+            PublishWellKnownSymbol("__complex__", ConvertToComplex);  // 83
+            PublishWellKnownSymbol("__hex__", ConvertToHex);  // 84
+            PublishWellKnownSymbol("__oct__", ConvertToOctal);  // 85
+            PublishWellKnownSymbol("__reduce__", Reduce);  // 86
+            PublishWellKnownSymbol("__reduce_ex__", ReduceEx);  // 87
+            PublishWellKnownSymbol("__nonzero__", NonZero);  // 88
+            PublishWellKnownSymbol("__pos__", Positive);  // 89
+            PublishWellKnownSymbol("__hash__", Hash);  // 90
+            PublishWellKnownSymbol("__cmp__", Cmp);  // 91
+            PublishWellKnownSymbol("__path__", Path);  // 92
+            PublishWellKnownSymbol("__get__", GetDescriptor);  // 93
+            PublishWellKnownSymbol("__set__", SetDescriptor);  // 94
+            PublishWellKnownSymbol("__delete__", DeleteDescriptor);  // 95
+            PublishWellKnownSymbol("__all__", All);  // 96
+            PublishWellKnownSymbol("clsException", ClrExceptionKey);  // 97
+            PublishWellKnownSymbol("keys", Keys);  // 98
+            PublishWellKnownSymbol("args", Arguments);  // 99
+            PublishWellKnownSymbol("write", ConsoleWrite);  // 100
+            PublishWellKnownSymbol("readline", ConsoleReadLine);  // 101
+            PublishWellKnownSymbol("msg", ExceptionMessage);  // 102
+            PublishWellKnownSymbol("filename", ExceptionFilename);  // 103
+            PublishWellKnownSymbol("lineno", ExceptionLineNumber);  // 104
+            PublishWellKnownSymbol("offset", ExceptionOffset);  // 105
+            PublishWellKnownSymbol("text", Text);  // 106
+            PublishWellKnownSymbol("softspace", Softspace);  // 107
+            PublishWellKnownSymbol("next", GeneratorNext);  // 108
+            PublishWellKnownSymbol("setdefaultencoding", SetDefaultEncoding);  // 109
+            PublishWellKnownSymbol("exitfunc", SysExitFunc);  // 110
+            PublishWellKnownSymbol("None", None);  // 111
+            PublishWellKnownSymbol("__metaclass__", MetaClass);  // 112
+            PublishWellKnownSymbol("__mro__", MethodResolutionOrder);  // 113
+            PublishWellKnownSymbol("__getslice__", GetSlice);  // 114
+            PublishWellKnownSymbol("__setslice__", SetSlice);  // 115
+            PublishWellKnownSymbol("__delslice__", DeleteSlice);  // 116
+            PublishWellKnownSymbol("__future__", Future);  // 117
+            PublishWellKnownSymbol("division", Division);  // 118
+            PublishWellKnownSymbol("nested_scopes", NestedScopes);  // 119
+            PublishWellKnownSymbol("generators", Generators);  // 120
+            PublishWellKnownSymbol("as", As);  // 121
+            PublishWellKnownSymbol("*", Star);  // 122
+            PublishWellKnownSymbol("**", StarStar);  // 123
+            PublishWellKnownSymbol("locals", Locals);  // 124
+            PublishWellKnownSymbol("vars", Vars);  // 125
+            PublishWellKnownSymbol("dir", Dir);  // 126
+            PublishWellKnownSymbol("eval", Eval);  // 127
+            PublishWellKnownSymbol("_", Underscore);  // 128
+            PublishWellKnownSymbol("__gen_$_parm__", GeneratorParmName);  // 129
+            PublishWellKnownSymbol("$env", EnvironmentParmName);  // 130
+            PublishWellKnownSymbol("iter", Iter);  // 131
+            PublishWellKnownSymbol("__slots__", Slots);  // 132
 
             // *** END GENERATED CODE ***
 

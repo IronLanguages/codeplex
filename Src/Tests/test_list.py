@@ -160,7 +160,12 @@ def test_equal():
             yield 'b'
             
     AreEqual(['a', 'b'] == MyIterable(), False)
-            
+
+def test_self_init():
+    a = [1, 2, 3]
+    list.__init__(a, a)
+    AreEqual(a, [])
+
 ######################################################################
 # Verify behavior of index when the list changes...
 
