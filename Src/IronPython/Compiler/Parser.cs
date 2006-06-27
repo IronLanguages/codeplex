@@ -387,11 +387,12 @@ namespace IronPython.Compiler {
         /// Parse one or more lines of interactive input
         /// </summary>
         /// <returns>null if input is not yet valid but could be with more lines</returns>
-        public Stmt ParseInteractiveInput(bool allowIncompleteStatement) {
+        public Stmt ParseInteractiveInput(bool allowIncompleteStatement, out bool isEmptyStmt) {
             bool parsingMultiLineCmpdStmt;
+            isEmptyStmt = false;
             try {
-                Stmt ret = InternalParseInteractiveInput(out parsingMultiLineCmpdStmt);
-                if (parsingMultiLineCmpdStmt && allowIncompleteStatement) return null;
+                Stmt ret = InternalParseInteractiveInput(out parsingMultiLineCmpdStmt, out isEmptyStmt);
+                if ((parsingMultiLineCmpdStmt && allowIncompleteStatement) || isEmptyStmt) return null;
                 else return ret;
             } catch (PythonSyntaxError se) {
                 // Check if it's a real syntax error, or if its just an incomplete multi-line statement
@@ -409,12 +410,17 @@ namespace IronPython.Compiler {
             }
         }
 
-        private Stmt InternalParseInteractiveInput(out bool parsingMultiLineCmpdStmt) {
+        private Stmt InternalParseInteractiveInput(out bool parsingMultiLineCmpdStmt, out bool isEmptyStmt) {
             Stmt s;
+            isEmptyStmt = false;
             parsingMultiLineCmpdStmt = false;
-            EatInitialNewlines();
             Token t = PeekToken();
             switch (t.kind) {
+                case TokenKind.Newline:
+                    EatOptionalNewlines();
+                    Eat(TokenKind.EndOfFile);
+                    isEmptyStmt = true;
+                    return null;
                 case TokenKind.KeywordIf:
                 case TokenKind.KeywordWhile:
                 case TokenKind.KeywordFor:
@@ -429,6 +435,8 @@ namespace IronPython.Compiler {
                 default:
                     //  parseSimpleStmt takes care of one or more simple_stmts and the Newline
                     s = ParseSimpleStmt();
+                    EatOptionalNewlines();
+                    Eat(TokenKind.EndOfFile);
                     break;
             }
             return s;
@@ -437,7 +445,7 @@ namespace IronPython.Compiler {
 
 
         public Stmt ParseSingleStatement() {
-            EatInitialNewlines();
+            EatOptionalNewlines();
             Stmt statement = ParseStmt();
             EatEndOfInput();
             return statement;
@@ -449,7 +457,7 @@ namespace IronPython.Compiler {
             return expression;
         }
 
-        private void EatInitialNewlines() {
+        private void EatOptionalNewlines() {
             while (MaybeEat(TokenKind.Newline)) ;
         }
 

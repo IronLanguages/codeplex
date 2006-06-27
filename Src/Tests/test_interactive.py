@@ -18,6 +18,7 @@ from lib.assert_util import *
 from sys import executable
 from System import Environment
 from sys import exec_prefix
+import IronPython
 
 extraArgs = ""
 if "-X:GenerateAsSnippets" in Environment.GetCommandLineArgs():
@@ -30,6 +31,7 @@ AreEqual(ipi.Start(), True)
 response = ipi.ExecuteLine("raise 'foo'")
 Assert(response.find("Traceback (most recent call last):") > -1)
 Assert(response.find("foo") > -1)
+
 
 # Multi-line string literal
 ipi.ExecutePartialLine("\"\"\"Hello")
@@ -165,20 +167,20 @@ ipi.End()
 # Some whitespace wackiness
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
 AreEqual(ipi.Start(), True)
-ipi.ExecutePartialLine("  ")
+ipi.ExecuteLine("  ")
 response = ipi.ExecuteLine("")
 ipi.End()
 
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
 AreEqual(ipi.Start(), True)
-ipi.ExecutePartialLine("  ")
+ipi.ExecuteLine("  ")
 response = ipi.ExecuteLine("2")
 Assert("2" in response)
 ipi.End()
 
 ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
 AreEqual(ipi.Start(), True)
-ipi.ExecutePartialLine("  ")
+ipi.ExecuteLine("  ")
 response = ipi.ExecuteLine("  2")
 Assert("SyntaxError:" in response)
 ipi.End()
@@ -195,3 +197,71 @@ ipi.ExecutePartialLine("class D(C):")
 response = ipi.ExecuteLine("")
 Assert("IndentationError:" in response)
 ipi.End()
+
+
+###########################################################
+# test for comments  in interactive input
+ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+AreEqual(ipi.Start(), True)
+
+response = ipi.ExecuteLine("# this is some comment line")
+AreEqual(response, "")
+response = ipi.ExecuteLine("    # this is some comment line")
+AreEqual(response, "")
+response = ipi.ExecuteLine("# this is some more comment line")
+AreEqual(response, "")
+ipi.ExecutePartialLine("if 100:")
+ipi.ExecutePartialLine("    print 100")
+ipi.ExecutePartialLine("# this is some more comment line inside if")
+ipi.ExecutePartialLine("#     this is some indented comment line inside if")
+ipi.ExecutePartialLine("    print 200")
+response = ipi.ExecuteLine("")
+AreEqual(response, "100\r\n200")
+ipi.End()
+
+
+
+
+input_output = [
+("x=100",""),
+("x=200\n",""),
+("\nx=300",""),
+("\nx=400\n",""),
+("500","500"),
+("600\n\n\n\n\n\n\n\n\n\n\n","600"),
+("valid=3;more_valid=4;valid","3"),
+("valid=5;more_valid=6;more_valid\n\n\n\n\n","6"),
+("valid=7;more_valid=8;#valid",""),
+("valid=9;valid;# more_valid\n","9"),
+("valid=11;more_valid=12;more_valid# should be valid input\n\n\n\n","12"),
+]
+
+
+for x in input_output:
+    AreEqual(ipi.Start(), True)
+    AreEqual(ipi.ExecuteLine(x[0]),x[1])
+    ipi.End()
+
+pe = IronPython.Hosting.PythonEngine()
+
+input_output = [
+"\n\n\n\n\n\ninvalid=3;more_invalid=4;more_invalid",
+"\n\n\n\n\n\ninvalid=3;more_invalid=4;more_invalid\n\n\n\n",
+"\n\n\n\n\n\n\n\nvalid=3;more_valid=4;more_valid#print should be valid input\n\n\n\n",
+"\n\n\n\n\n\n700",
+"\n\n\n\n\n\n800\n\n\n\n\n\n",
+"x=1\ninvalid",
+"x=1\nmore_invalid",
+"\ncomplete_invalid",
+"valid=3\n;#more_valid=4;more_valid\n\n\n\n\n",
+"valid=3\n;#more_valid=4;more_valid\n\n\n\n\n"
+]
+
+for x in input_output:
+    try:
+        pe.ExecuteToConsole(x)
+        Assert(False,"Invalid Input "+x+"accepted")
+    except SyntaxError, e:
+        pass
+    except :
+        Assert(False,"Exception raised on input"+x)

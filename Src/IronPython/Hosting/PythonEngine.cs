@@ -41,18 +41,18 @@ namespace IronPython.Hosting {
     /// </summary>
     [Flags]
     public enum ExecutionOptions {
-        Default             = 0x00,
+        Default = 0x00,
 
         // Enable CLI debugging. This allows debugging the script with a CLI debugger. Also, CLI exceptions
         // will have line numbers in the stack-trace.
         // Note that this is independent of the "traceback" Python module.
         // Also, the generated code will not be reclaimed, and so this should only be used for bounded number 
         // of executions.
-        EnableDebugging     = 0x02,
+        EnableDebugging = 0x02,
 
         // Skip the first line of the code to execute. This is useful for Unix scripts which
         // have the command to execute specified in the first line.
-        SkipFirstLine       = 0x08
+        SkipFirstLine = 0x08
     }
 
     public class PythonEngine {
@@ -90,7 +90,7 @@ namespace IronPython.Hosting {
         private SystemState systemState;
 
         private ModuleScope defaultScope;
-        
+
         private CompilerContext compilerContext = new CompilerContext("<stdin>");
         #endregion
 
@@ -106,10 +106,10 @@ namespace IronPython.Hosting {
 
         public PythonEngine(Options opts)
             : this() {
-            if (opts == null) 
+            if (opts == null)
                 throw new ArgumentNullException("No options specified for PythonEngine");
             // Save the options. Clone it first to prevent the client from unexpectedly mutating it
-            options = opts.Clone();            
+            options = opts.Clone();
         }
 
         public void Shutdown() {
@@ -388,7 +388,8 @@ namespace IronPython.Hosting {
             defaultScope.EnsureInitialized(Sys);
 
             Parser p = Parser.FromString(((ICallerContext)defaultScope).SystemState, compilerContext, text);
-            Stmt s = p.ParseInteractiveInput(false);
+            bool isEmptyStmt = false;
+            Stmt s = p.ParseInteractiveInput(false, out isEmptyStmt);
 
             //  's' is null when we parse a line composed only of a NEWLINE (interactive_input grammar);
             //  we don't generate anything when 's' is null
@@ -415,7 +416,17 @@ namespace IronPython.Hosting {
 
         public bool ParseInteractiveInput(string text, bool allowIncompleteStatement) {
             Parser p = Parser.FromString(Sys, compilerContext, text);
-            return p.ParseInteractiveInput(allowIncompleteStatement) != null;
+            return VerifyInteractiveInput(p, allowIncompleteStatement);
+        }
+
+        public bool VerifyInteractiveInput(Parser p, bool allowIncompleteStatement) {
+            bool isEmptyStmt;
+            Stmt s = p.ParseInteractiveInput(allowIncompleteStatement, out isEmptyStmt);
+
+            if (s == null)
+                return isEmptyStmt;
+
+            return true;
         }
         #endregion
 
