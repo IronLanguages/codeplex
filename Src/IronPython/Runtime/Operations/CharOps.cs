@@ -42,7 +42,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        public static vsobject Compare(char self, object other) {
+        public static object Compare(char self, object other) {
             string strOther;
             
             if (other is char) {
