@@ -157,39 +157,26 @@ namespace IronPython.Runtime {
         }
     }
 
-    class DictionaryUnionEnumerator : IDictionaryEnumerator {
+    /// <summary>
+    /// Presents a flat enumerable view of multiple dictionaries
+    /// </summary>
+    class DictionaryUnionEnumerator : CheckedDictionaryEnumerator {
         IList<IDictionaryEnumerator> enums;
-        int current;
-#if DEBUG
-        bool isReady;
-#endif
+        int current = 0;
+
         public DictionaryUnionEnumerator(IList<IDictionaryEnumerator> enums) {
             this.enums = enums;
         }
 
-        #region IDictionaryEnumerator Members
-
-        public DictionaryEntry Entry {
-            get { Debug.Assert(isReady); return enums[current].Entry; }
+        protected override object GetKey() {
+            return enums[current].Key;
         }
 
-        public object Key {
-            get { Debug.Assert(isReady); return enums[current].Key; }
+        protected override object GetValue() {
+            return enums[current].Value;
         }
 
-        public object Value {
-            get { Debug.Assert(isReady); return enums[current].Value; }
-        }
-
-        #endregion
-
-        #region IEnumerator Members
-
-        public object Current {
-            get { Debug.Assert(isReady); return enums[current].Current; }
-        }
-
-        bool DoMoveNext() {
+        protected override bool DoMoveNext() {
             // Have we already walked over all the enumerators in the list?
             if (current == enums.Count)
                 return false;
@@ -205,81 +192,44 @@ namespace IronPython.Runtime {
             return DoMoveNext();
         }
 
-        public bool MoveNext() {
-            bool result = DoMoveNext();
-#if DEBUG
-            isReady = result;
-#endif
-            return result;
-        }
-
-        public void Reset() {
-            current = 0;
+        protected override void DoReset() {
             for (int i = 0; i < enums.Count; i++) {
                 enums[i].Reset();
             }
-#if DEBUG
-            isReady = false;
-#endif
+            current = 0;
         }
 
-        #endregion
     }
 
     /// <summary>
     /// Exposes a IDictionary<SymbolId, object> as a IDictionary<string, object>
     /// </summary>
-    class TransformDictEnum : IDictionaryEnumerator {
+    class TransformDictEnum : CheckedDictionaryEnumerator {
         IEnumerator<KeyValuePair<SymbolId, object>> backing;
-#if DEBUG
-        bool isReady;
-#endif
 
         public TransformDictEnum(IDictionary<SymbolId, object> backing) {
             this.backing = backing.GetEnumerator();
         }
 
-        #region IDictionaryEnumerator Members
-
-        public DictionaryEntry Entry {
-            get { Debug.Assert(isReady); return new DictionaryEntry(SymbolTable.IdToString(backing.Current.Key), backing.Current.Value); }
+        protected override object GetKey() {
+            return SymbolTable.IdToString(backing.Current.Key);
         }
 
-        public object Key {
-            get { Debug.Assert(isReady);  return SymbolTable.IdToString(backing.Current.Key); }
+        protected override object GetValue() {
+            return backing.Current.Key;
         }
 
-        public object Value {
-            get { Debug.Assert(isReady); return backing.Current.Key; }
-        }
-
-        #endregion
-
-        #region IEnumerator Members
-
-        public object Current {
-            get { Debug.Assert(isReady); return Entry; }
-        }
-
-        public bool MoveNext() {
+        protected override bool DoMoveNext() {
             bool result = backing.MoveNext();
             if (result && backing.Current.Key == SymbolTable.ObjectKeys) {
                 result = MoveNext();
             }
-#if DEBUG
-            isReady = result;
-#endif
             return result;
         }
 
-        public void Reset() {
+        protected override void DoReset() {
             backing.Reset();
-#if DEBUG
-            isReady = false;
-#endif
         }
-
-        #endregion
     }
 
 }

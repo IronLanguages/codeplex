@@ -620,4 +620,60 @@ try:
     AreEqual(True, False)
 except TypeError: pass
 
+#####################################################################
 
+def test_DictionaryUnionEnumerator():
+    if is_cli == False:
+        return
+
+    class C(object): pass
+    c = C()
+    d = c.__dict__
+    import System
+
+    # Check empty enumerator
+    e = System.Collections.IDictionary.GetEnumerator(d)
+    AssertError(SystemError, getattr, e, "Key")
+    AreEqual(e.MoveNext(), False)
+    AssertError(SystemError, getattr, e, "Key")
+    
+    # Add non-string attribute
+    d[1] = 100
+    e = System.Collections.IDictionary.GetEnumerator(d)
+    # This returns an instance of DictionaryUnionEnumerator
+    AreEqual(e.GetType().Name.__contains__("DictionaryUnionEnumerator"), True)
+    AssertError(SystemError, getattr, e, "Key")
+    AreEqual(e.MoveNext(), True)
+    AreEqual(e.Key, 1)
+    AreEqual(e.MoveNext(), False)
+    AssertError(SystemError, getattr, e, "Key")
+    
+    # Add string attribute
+    c.attr = 100
+    e = System.Collections.IDictionary.GetEnumerator(d)
+    AssertError(SystemError, getattr, e, "Key")
+    AreEqual(e.MoveNext(), True)
+    key1 = e.Key
+    AreEqual(e.MoveNext(), True)
+    key2 = e.Key
+    AreEqual((key1, key2) == (1, "attr") or (key1, key2) == ("attr", 1), True)
+    AreEqual(e.MoveNext(), False)
+    AssertError(SystemError, getattr, e, "Key")
+    
+    # Remove non-string attribute
+    del d[1]
+    e = System.Collections.IDictionary.GetEnumerator(d)
+    AssertError(SystemError, getattr, e, "Key")
+    AreEqual(e.MoveNext(), True)
+    AreEqual(e.Key, "attr")
+    AreEqual(e.MoveNext(), False)
+    AssertError(SystemError, getattr, e, "Key")
+    
+    # Remove string attribute and check empty enumerator
+    del c.attr
+    e = System.Collections.IDictionary.GetEnumerator(d)
+    AssertError(SystemError, getattr, e, "Key")
+    AreEqual(e.MoveNext(), False)
+    AssertError(SystemError, getattr, e, "Key")
+    
+run_test(__name__)

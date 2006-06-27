@@ -396,12 +396,10 @@ namespace IronPython.Runtime {
             if (objData == null) return new TransformDictEnum(data);
 
             List<IDictionaryEnumerator> enums = new List<IDictionaryEnumerator>();
-
             enums.Add(new TransformDictEnum(data));
 
             Dictionary<object, object>.Enumerator objDataEnumerator = objData.GetEnumerator();
-            if (objDataEnumerator.MoveNext())
-                enums.Add(objDataEnumerator);
+            enums.Add(objDataEnumerator);
 
             return new DictionaryUnionEnumerator(enums);
         }

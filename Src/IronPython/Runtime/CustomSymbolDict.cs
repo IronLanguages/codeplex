@@ -715,7 +715,79 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    class ExtraKeyEnumerator : IDictionaryEnumerator {
+    /// <summary>
+    /// Not all .NET enumerators throw exceptions if accessed in an invalid state. This type
+    /// can be used to throw exceptions from enumerators implemented in IronPython.
+    /// </summary>
+    internal abstract class CheckedDictionaryEnumerator : IDictionaryEnumerator {
+        enum EnumeratorState {
+            NotStarted,
+            Started,
+            Ended
+        }
+
+        EnumeratorState enumeratorState = EnumeratorState.NotStarted;
+
+        void CheckEnumeratorState() {
+            if (enumeratorState == EnumeratorState.NotStarted)
+                throw new InvalidOperationException("Enumeration has not started. Call MoveNext.");
+            else if (enumeratorState == EnumeratorState.Ended)
+                throw new InvalidOperationException("Enumeration already finished.");
+        }
+
+        #region IDictionaryEnumerator Members
+        public DictionaryEntry Entry {
+            get {
+                CheckEnumeratorState(); 
+                return new DictionaryEntry(Key, Value); 
+            }
+        }
+
+        public object Key {
+            get {
+                CheckEnumeratorState();
+                return GetKey();
+            }
+        }
+
+        public object Value {
+            get {
+                CheckEnumeratorState();
+                return GetValue();
+            }
+        }
+        #endregion
+
+        #region IEnumerator Members
+        public bool MoveNext() {
+            if (enumeratorState == EnumeratorState.Ended)
+                throw new InvalidOperationException("Enumeration already finished.");
+
+            bool result = DoMoveNext();
+            if (result)
+                enumeratorState = EnumeratorState.Started;
+            else
+                enumeratorState = EnumeratorState.Ended;
+            return result;
+        }
+
+        public object Current { get { return Entry; } }
+
+        public void Reset() {
+            DoReset();
+            enumeratorState = EnumeratorState.NotStarted;
+        }
+        #endregion
+
+        #region Methods that a sub-type needs to implement
+        protected abstract object GetKey();
+        protected abstract object GetValue();
+        protected abstract bool DoMoveNext();
+        protected abstract void DoReset();
+        #endregion
+    }
+
+    class ExtraKeyEnumerator : CheckedDictionaryEnumerator {
         CustomSymbolDict idDict;
         int curIndex = -1;
 
@@ -723,35 +795,18 @@ namespace IronPython.Runtime {
             this.idDict = idDict;
         }
 
-        #region IDictionaryEnumerator Members
-
-        public DictionaryEntry Entry {
-            get { return new DictionaryEntry(Key, Value); }
+        protected override object GetKey() {
+            return SymbolTable.IdToString(idDict.GetExtraKeys()[curIndex]);
         }
 
-        public object Key {
-            get { return SymbolTable.IdToString(idDict.GetExtraKeys()[curIndex]); }
+        protected override object GetValue() {
+            object val;
+            bool hasExtraValue = idDict.TryGetExtraValue(idDict.GetExtraKeys()[curIndex], out val);
+            Debug.Assert(hasExtraValue);
+            return val;
         }
 
-        public object Value {
-            get {
-                object val;
-                idDict.TryGetExtraValue(idDict.GetExtraKeys()[curIndex], out val);
-                return val;
-            }
-        }
-
-        #endregion
-
-        #region IEnumerator Members
-
-        public object Current {
-            get {
-                return Entry;
-            }
-        }
-
-        public bool MoveNext() {
+        protected override bool DoMoveNext() {
             object val;
             while (curIndex < (idDict.GetExtraKeys().Length - 1)) {
                 curIndex++;
@@ -764,10 +819,8 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        public void Reset() {
+        protected override void DoReset() {
             curIndex = -1;
         }
-
-        #endregion
     }
 }
