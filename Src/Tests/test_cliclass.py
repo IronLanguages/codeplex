@@ -304,5 +304,32 @@ def test_type_descs():
     x = test.GetProperties(a)
     Assert(x.Count > 0)
 
+def test_char():
+    import System
+    for x in range(256):
+        c = System.Char.Parse(chr(x))
+        AreEqual(c, chr(x))
+        AreEqual(chr(x), c)
+        
+        if c == chr(x): pass
+        else: Assert(False)
+        
+        if not c == chr(x): Assert(False)
+        
+        if chr(x) == c: pass
+        else: Assert(False)
+        
+        if not chr(x) == c: Assert(False)
+
+def test_repr():
+    import clr
+    clr.AddReference('System.Drawing')
+    
+    from System.Drawing import Point
+    
+    AreEqual(repr(Point(1,2)).startswith('<System.Drawing.Point object'), True)
+    AreEqual(repr(Point(1,2)).endswith('[{X=1,Y=2}]>'),True)
+    
+
 if is_cli: 
     run_test(__name__)

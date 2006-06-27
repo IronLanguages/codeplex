@@ -146,7 +146,47 @@ namespace IronPython.Runtime.Operations {
             throw Ops.StopIteration();
         }
 
+        [PythonName("__repr__")]
+        public static string SimpleRepr(object self) {
+            return String.Format("<{0} object at {1}>",
+                Ops.GetDynamicType(self).__name__,
+                Ops.HexId(self));
+        }
+
+        [PythonName("__repr__")]
+        public static string FancyRepr(object self) {
+            PythonType pt = (PythonType)Ops.GetDynamicType(self);
+            // we can't call ToString on a UserType because we'll stack overflow, so
+            // only do FancyRepr for reflected types.
+            if (pt is ReflectedType) {                
+                string toStr = self.ToString();
+
+                // get the type name to display (CLI name or Python name)
+                Type type = pt.type;
+                string typeName = type.FullName;
+
+                // Get the underlying .ToString() representation.  Truncate multiple
+                // lines, and don't display it if it's object's default representation (type name)
+
+                string[] strForm = toStr.Split(new char[] { '\n' });
+
+                if (strForm.Length > 1) toStr = strForm[0] + "...";
+                else toStr = strForm[0];
+
+                return String.Format("<{0} object at {1} [{2}]>",
+                    typeName,
+                    Ops.HexId(self),
+                    toStr);
+            } 
+            return SimpleRepr(self);
+        }
+
+        [PythonName("__repr__")]
         public static object ReprMethod(object self) {
+            return ((ICodeFormattable)self).ToCodeString();
+        }
+
+        public static object ToStringMethod(object self) {
             return self.ToString();
         }
 

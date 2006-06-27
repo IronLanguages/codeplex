@@ -190,9 +190,9 @@ class OverrideParamTesting(MoreOverridding):
         yr.Value += x
         return "Test4"
     def Test5(self, sc):
-        return "xx" + repr(sc)
+        return "xx" + str(sc)
     def Test6(self, x, sc):
-        return "xx" + x + repr(sc)
+        return "xx" + x + str(sc)
 
 a = OverrideParamTesting()
 x = a.CallTest1()

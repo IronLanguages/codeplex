@@ -29,6 +29,7 @@ using IronPython.Modules;
 using IronMath;
 
 namespace IronPython.Runtime.Types {  
+    [PythonType("field#")]
     public class ReflectedField : IDataDescriptor, IContextAwareMember {
         public readonly FieldInfo info;
         private NameType nameType;
@@ -100,6 +101,7 @@ namespace IronPython.Runtime.Types {
     /// provide access to the base type value.  This value will be updated if the user
     /// sets the value, or wants to get a field from the value.
     /// </summary>
+    [PythonType("field#")]
     class OpsReflectedField<BaseType, ExtensibleType> : ReflectedField 
         where ExtensibleType : IExtensible<BaseType> {
         
@@ -152,6 +154,7 @@ namespace IronPython.Runtime.Types {
         }
     }
 
+    [PythonType("property#")]
     public class ReflectedProperty : IDataDescriptor, IContextAwareMember {
         private readonly MethodInfo getter, setter;
         private readonly PropertyInfo info;
@@ -430,7 +433,6 @@ namespace IronPython.Runtime.Types {
                 }
             }
         }
-
     }
 
     public enum NameType {

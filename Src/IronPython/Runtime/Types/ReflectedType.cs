@@ -356,7 +356,27 @@ namespace IronPython.Runtime.Types {
             MethodInfo toStringMethod = type.GetMethod("ToString", Type.EmptyTypes);
 
             if (toStringMethod != null && toStringMethod.DeclaringType != typeof(object)) {
-                AddProtocolMethod("__repr__", "ReprMethod", NameType.PythonMethod);
+                AddProtocolMethod("__str__", "ToStringMethod", NameType.PythonMethod);
+            }
+
+            if (typeof(ICodeFormattable).IsAssignableFrom(type)) {
+                // type is specifically implementing __repr__
+                if (!dict.ContainsKey(SymbolTable.Repr)) {
+                    // add __repr__ automatically if it's not already there.
+                    AddProtocolMethod("__repr__", "ReprMethod", NameType.PythonMethod);
+                }
+            } else if (toStringMethod == null || toStringMethod.DeclaringType != typeof(object)) {
+                // type overrides ToString...  for PythonType's call ToString, for
+                // everyone else call FancyRepr
+                if (IsPythonType) {
+                    AddProtocolMethod("__repr__", "ToStringMethod", NameType.PythonMethod);
+                } else {
+                    AddProtocolMethod("__repr__", "FancyRepr", NameType.PythonMethod);
+                }
+            } else {
+                // doesn't override ToString, just do a simple repr displaying the
+                // type name & id.
+                AddProtocolMethod("__repr__", "SimpleRepr", NameType.PythonMethod);
             }
 
             if (typeof(IDescriptor).IsAssignableFrom(type)) {

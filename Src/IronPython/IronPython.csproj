@@ -131,6 +131,7 @@
     <Compile Include="Compiler\MethodBinder.cs" />
     <Compile Include="Modules\Builtin.cs" />
     <Compile Include="Modules\Builtin.Generated.cs" />
+    <Compile Include="Modules\locale.cs" />
     <Compile Include="Modules\socket.cs" />
     <Compile Include="Runtime\Calls\FastCallable.cs" />
     <Compile Include="Runtime\Calls\FastCallable.Generated.cs" />
@@ -139,6 +140,7 @@
     <Compile Include="Runtime\FieldIdDict.cs" />
     <Compile Include="Runtime\Operations\ByteOps.cs" />
     <Compile Include="Runtime\Operations\ByteOps.Generated.cs" />
+    <Compile Include="Runtime\Operations\CharOps.cs" />
     <Compile Include="Runtime\ReflectedPackage.cs" />
     <Compile Include="Runtime\Types\DelegateType.cs" />
     <Compile Include="Runtime\Types\Mro.cs" />

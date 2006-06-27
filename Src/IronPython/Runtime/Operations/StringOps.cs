@@ -998,6 +998,8 @@ namespace IronPython.Runtime.Operations {
                 return String.Equals(x, other as string);
             } else if (other is ExtensibleString) {
                 return String.Equals(x, ((ExtensibleString)other).Value);
+            } else if (other is char && x.Length == 1) {
+                return (char)other == x[0];
             }
             return Ops.NotImplemented;
         }
@@ -1007,6 +1009,8 @@ namespace IronPython.Runtime.Operations {
                 return string.Equals(x, other as string);
             } else if (other is ExtensibleString) {
                 return string.Equals(x, ((ExtensibleString)other).Value);
+            } else if (other is char && x.Length == 1) {
+                return (char)other == x[0];
             }
             return Ops.DynamicEqualRetBool(x, other);
         }
@@ -1017,6 +1021,8 @@ namespace IronPython.Runtime.Operations {
                 return !String.Equals(x, other as string);
             } else if (other is ExtensibleString) {
                 return !String.Equals(x, ((ExtensibleString)other).Value);
+            } else if (other is char && x.Length == 1) {
+                return (char)other != x[0];
             }
             return Ops.NotImplemented;
         }
@@ -1031,6 +1037,8 @@ namespace IronPython.Runtime.Operations {
                 otherStr = (string)obj;
             } else if (obj is ExtensibleString) {
                 otherStr = ((ExtensibleString)obj).Value;
+            } else if (obj is char && self.Length == 1) {
+                return (int)(self[0] - (char)obj);
             } else {
                 return Ops.NotImplemented;
             }

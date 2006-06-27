@@ -21,7 +21,7 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     [PythonType("buffer")]
-    public class PythonBuffer {
+    public class PythonBuffer : ICodeFormattable{
         private object @object;
         private int offset;
         private int size;
@@ -114,12 +114,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        [PythonName("__repr__")]
-        public string Repr() {
-            return string.Format("<read-only buffer for 0x{0:X16}, size {1}, offset {2} at 0x{3:X16}>",
-                Ops.Id(@object), size, offset, Ops.Id(this));
-        }
-
         public static object operator +(PythonBuffer a, PythonBuffer b) {
             return Ops.Add(Ops.GetIndex(a.@object, a.GetSlice()), Ops.GetIndex(b.@object, b.GetSlice()));
         }
@@ -142,5 +136,15 @@ namespace IronPython.Runtime {
                 return size;
             }
         }
+
+        #region ICodeFormattable Members
+
+        [PythonName("__repr__")]
+        public string ToCodeString() {
+            return string.Format("<read-only buffer for 0x{0:X16}, size {1}, offset {2} at 0x{3:X16}>",
+                Ops.Id(@object), size, offset, Ops.Id(this));
+        }
+
+        #endregion
     }
 }

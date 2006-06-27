@@ -381,6 +381,7 @@ RegressionTests = {
                 test.test_htmllib
                 test.test_imp
                 test.test_list
+                test.test_locale
                 test.test_macpath
                 test.test_math
                 test.test_ntpath

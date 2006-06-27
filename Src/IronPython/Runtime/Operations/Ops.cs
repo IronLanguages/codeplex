@@ -650,6 +650,8 @@ namespace IronPython.Runtime.Operations {
                 ret = LongOps.Equals(BigInteger.Create((ulong)x), y);
             } else if (x is decimal) {
                 ret = FloatOps.Equals((double)(decimal)x, y);
+            } else if (x is char) {
+                ret = CharOps.Equals((char)x, y);
             }
 
             if (ret != Ops.NotImplemented) return ret;
@@ -720,6 +722,8 @@ namespace IronPython.Runtime.Operations {
                 return LongOps.EqualsRetBool(BigInteger.Create((ulong)x), y);
             } else if (x is decimal) {
                 return FloatOps.EqualsRetBool((double)(decimal)x, y);
+            } else if (x is char) {
+                return CharOps.EqualsRetBool((char)x, y);
             }
 
             return DynamicEqualRetBool(x, y);
@@ -793,6 +797,8 @@ namespace IronPython.Runtime.Operations {
                 ret = LongOps.Equals(BigInteger.Create((ulong)x), y);
             } else if (x is decimal) {
                 ret = FloatOps.Equals((double)(decimal)x, y);
+            } else if (x is char) {
+                ret = CharOps.Equals((char)x, y);
             }
 
             if (ret != Ops.NotImplemented) return Not(ret);
@@ -863,6 +869,8 @@ namespace IronPython.Runtime.Operations {
                 return !LongOps.EqualsRetBool(BigInteger.Create((ulong)x), y);
             } else if (x is decimal) {
                 return !FloatOps.EqualsRetBool((double)(decimal)x, y);
+            } else if (x is char) {
+                return !CharOps.EqualsRetBool((char)x, y);
             }
 
             return DynamicNotEqualRetBool(x, y);
@@ -953,6 +961,8 @@ namespace IronPython.Runtime.Operations {
                 }
             } else if (x is ExtensibleComplex || y is ExtensibleComplex) {
                 ret = ExtensibleComplex.TrueCompare(x, y);
+            } else if (x is char) {
+                ret = CharOps.Compare((char)x, y);
             }
 
             if (ret != Ops.NotImplemented) return ConvertToCompareInt(ret);
