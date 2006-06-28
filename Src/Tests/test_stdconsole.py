@@ -54,16 +54,25 @@ def TestCommandLine(args, expected_output, expected_exitcode = 0):
         else:
             output = f.readlines()
         f.close()
+        
+        # normalize \r\n to \n
+        if type(output) == list:
+            for i in range(len(output)):
+                output[i] = output[i].replace('\r\n', '\n')
+        else:
+            output = output.replace('\r\n', '\n')
+        
+        # then check the output
         if isinstance(expected_output, str):
             Assert(output == expected_output, "'" + cmdline + "' generated unexpected output:\n" + output)
         elif isinstance(expected_output, tuple):
             if expected_output[0] == "firstline":
-                Assert(output[0] == expected_output[1], "'" + cmdline + "' generated unexpected first line of output:\n" + output[0])
+                Assert(output[0] == expected_output[1], "'" + cmdline + "' generated unexpected first line of output:\n" + repr(output[0]))
             elif expected_output[0] == "lastline":
-                Assert(output[-1] == expected_output[1], "'" + cmdline + "' generated unexpected last line of output:\n" + output[-1])
+                Assert(output[-1] == expected_output[1], "'" + cmdline + "' generated unexpected last line of output:\n" + repr(output[-1]))
             elif expected_output[0] == "regexp":
                 output = ''.join(output)
-                Assert(re.match(expected_output[1], output, re.M | re.S), "'" + cmdline + "' generated unexpected output:\n" + output)
+                Assert(re.match(expected_output[1], output, re.M | re.S), "'" + cmdline + "' generated unexpected output:\n" + repr(output))
             else:
                 Assert(False, "Invalid type for expected_output")
         else:

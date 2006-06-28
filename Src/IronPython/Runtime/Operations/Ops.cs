@@ -1217,7 +1217,18 @@ namespace IronPython.Runtime.Operations {
             return string.Format("0x{0:X16}", Id(o));
         }
 
+        public static int SimpleHash(object o) {
+            // must stay in sync w/ Ops.Hash!  This is just the version w/o RichEquality checks
+            if (o is int) return (int)o;
+            if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
+            if (o is double) return (int)(double)o;
+            if (o == null) return NoneType.NoneHashCode;
+
+            return o.GetHashCode();
+        }
+
         public static int Hash(object o) {
+            // must stay in sync w/ Ops.SimpleHash!  This is just the version w/ RichEquality checks
             if (o is int) return (int)o;
             if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
             if (o is double) return (int)(double)o;

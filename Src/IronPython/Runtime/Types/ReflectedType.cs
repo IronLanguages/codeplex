@@ -595,7 +595,11 @@ namespace IronPython.Runtime.Types {
             switch (nt) {
                 case NameType.None: break;
                 case NameType.PythonMethod:
-                case NameType.Method: StoreReflectedMethod(name, mi, nt); break;
+                    StoreReflectedMethod(name, mi, nt); 
+                    break;
+                case NameType.Method: 
+                    StoreReflectedMethod(name, mi, nt); 
+                    break;
                 case NameType.ClassMethod: StoreClassMethod(name, mi); break;
                 default: Debug.Assert(false, "Unexpected name type for reflected method"); break;
             }
@@ -666,17 +670,6 @@ namespace IronPython.Runtime.Types {
             if (nt == NameType.None) return;
             else if (nt == NameType.Type) dict[SymbolTable.StringToId(name)] = Ops.GetDynamicTypeFromClsOnlyType(type);
             else dict[SymbolTable.StringToId(name)] = Ops.GetDynamicTypeFromType(type);
-        }
-
-        private static bool IsOptimizedMethod(ParameterInfo[] pis) {
-            if (!Options.OptimizeReflectCalls)
-                return false;
-
-            foreach (ParameterInfo pi in pis) {
-                if (pi.ParameterType != typeof(object)) return false;
-            }
-
-            return true;
         }
 
         //		//??? don't like this design
@@ -755,6 +748,12 @@ namespace IronPython.Runtime.Types {
                 isPythonType = type.IsDefined(typeof(PythonTypeAttribute), false);
                 isPythonTypeChecked = true;
                 return isPythonType;
+            }
+        }
+
+        public bool IsClsType {
+            get {
+                return clsOnly;
             }
         }
 

@@ -28,11 +28,11 @@ namespace IronPython.Compiler {
     /// Contains helper methods for converting C# names into Python names.
     /// </summary>
     static class NameConverter {
-        public static NameType TryGetName(DynamicType dt, MethodInfo mi, out string name) {
+        public static NameType TryGetName(ReflectedType dt, MethodInfo mi, out string name) {
             Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(mi)));
 
             string namePrefix = null;
-            NameType res = NameType.Method;
+            NameType res = dt.IsClsType ? NameType.PythonMethod : NameType.Method;
             name = mi.Name;
 
             if (mi.IsPrivate || (mi.IsAssembly && !mi.IsFamilyOrAssembly)) {
@@ -73,7 +73,7 @@ namespace IronPython.Compiler {
             return res;
         }
 
-        public static NameType TryGetName(DynamicType dt, FieldInfo fi, out string name) {
+        public static NameType TryGetName(ReflectedType dt, FieldInfo fi, out string name) {
             Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(fi)));
 
             NameType nt = NameType.PythonField;
@@ -96,12 +96,12 @@ namespace IronPython.Compiler {
             return nt;
         }
 
-        public static NameType TryGetName(DynamicType dt, PropertyInfo pi, MethodInfo prop, out string name) {
+        public static NameType TryGetName(ReflectedType dt, PropertyInfo pi, MethodInfo prop, out string name) {
             Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(pi)));
 
             name = pi.Name;
             string namePrefix = null;
-            NameType res = NameType.Property; 
+            NameType res = dt.IsClsType ? NameType.PythonProperty : NameType.Property; 
 
             if (prop.IsPrivate || (prop.IsAssembly && !prop.IsFamilyOrAssembly)) {
                 // allow explicitly implemented interface

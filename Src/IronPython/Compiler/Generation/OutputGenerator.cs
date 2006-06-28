@@ -309,7 +309,7 @@ namespace IronPython.Compiler.Generation {
             if (customInit != null) customInit(ncg);
 
             if (staticTypes) {
-                TypeGen finished = UserTypeGenerator.DoStaticCompilation(gs, ncg);
+                UserTypeGenerator.DoStaticCompilation(gs, ncg);
             } else {
                 gs.Emit(ncg);
             }

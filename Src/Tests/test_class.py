@@ -1268,6 +1268,12 @@ def test_default_new_init():
     AssertError(TypeError, object.__new__, object, 1,2,3)
     AreEqual(type(object.__new__(foo, 1, 2, 3)), foo)
     
+def test_hash():
+    for x in [tuple, str, unicode, object, frozenset]:
+        inst = x()
+        AreEqual(inst.__hash__(), hash(inst))
+        
+
 
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals

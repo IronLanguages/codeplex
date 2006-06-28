@@ -1208,8 +1208,7 @@ namespace IronPython.Runtime.Operations {
         private static string RawDecode(SystemState state, string s, string encoding, string errors) {
             if (encoding != null && encoding.Replace('_', '-') == "raw-unicode-escape") {
                 return LiteralParser.ParseString(s, true, true);
-            }
-
+            } 
 
             Encoding e = state.DefaultEncoding;
 
@@ -1472,25 +1471,8 @@ namespace IronPython.Runtime.Operations {
 
                 // call the user function...
                 object res = Ops.Call(function, exObj);
-                Tuple tres = res as Tuple;
-                string replacement = null;
-                int bytesSkipped;
-                Conversion conv;
-                bool ok = true;
 
-                // verify the result is sane...
-                if (tres != null && tres.Count == 2) {
-                    replacement = Converter.TryConvertToString(tres[0], out conv);
-                    if (conv == Conversion.None) ok = false;
-                    if (ok) {
-                        bytesSkipped = Converter.TryConvertToInt32(tres[1], out conv);
-                        if (conv == Conversion.None) ok = false;
-                    }
-                } else {
-                    ok = false;
-                }
-
-                if (!ok) throw Ops.TypeError("encoding error handler must return tuple containing (str, int), got {0}", Ops.GetDynamicType(res).__name__);
+                string replacement = PythonDecoderFallbackBuffer.CheckReplacementTuple(res, "encoding");
 
                 // finally process the user's request.
                 buffer = replacement;
@@ -1570,30 +1552,35 @@ namespace IronPython.Runtime.Operations {
 
                 // call the user function...
                 object res = Ops.Call(function, exObj);
-                Tuple tres = res as Tuple;
-                string replacement = null;
-                int bytesSkipped;
-                Conversion conv;
+                
+                string replacement = CheckReplacementTuple(res, "decoding");
+
+                // finally process the user's request.
+                buffer = replacement;
+                bufferIndex = 0;
+                return true;
+            }
+
+            internal static string CheckReplacementTuple(object res, string encodeOrDecode) {
                 bool ok = true;
+                Conversion conv;
+                string replacement = null;
+                Tuple tres = res as Tuple;
 
                 // verify the result is sane...
                 if (tres != null && tres.Count == 2) {
                     replacement = Converter.TryConvertToString(tres[0], out conv);
                     if (conv == Conversion.None) ok = false;
                     if (ok) {
-                        bytesSkipped = Converter.TryConvertToInt32(tres[1], out conv);
+                        Converter.TryConvertToInt32(tres[1], out conv);
                         if (conv == Conversion.None) ok = false;
                     }
                 } else {
                     ok = false;
                 }
 
-                if (!ok) throw Ops.TypeError("decoding error handler must return tuple containing (str, int), got {0}", Ops.GetDynamicType(res).__name__);
-
-                // finally process the user's request.
-                buffer = replacement;
-                bufferIndex = 0;
-                return true;
+                if (!ok) throw Ops.TypeError("{1} error handler must return tuple containing (str, int), got {0}", Ops.GetDynamicType(res).__name__, encodeOrDecode);
+                return replacement;
             }
         }
 

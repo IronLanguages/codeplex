@@ -570,18 +570,6 @@ namespace IronPython.Compiler.Generation {
             cg.Finish();
         }
 
-        private static void EmitNoDict(CodeGen cg) {
-            // can't set __dict__ on class w/ __slots__
-            cg.EmitString("{0} object has no attribute '__dict__'");
-            cg.EmitObjectArray(1, delegate(int index) {
-                cg.EmitThis();
-                cg.EmitCall(typeof(Ops), "GetDynamicType");
-                cg.EmitCall(typeof(Ops), "StringRepr");
-            });
-            cg.EmitCall(typeof(Ops), "AttributeError");
-            cg.Emit(OpCodes.Throw);
-        }
-
         /// <summary>
         /// Defines an interface on the type that forwards all calls
         /// to a helper method in UserType.  The method names all will
@@ -774,11 +762,11 @@ namespace IronPython.Compiler.Generation {
                         break;
                     }
                 }else  if (mi == pi.GetGetMethod(true)) {
-                    if (NameConverter.TryGetName(Ops.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
+                    if (NameConverter.TryGetName((ReflectedType)Ops.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                     CreateVTableGetterOverride(tg, mi, GetOrMakeVTableEntry(name));
                     break;
                 } else if (mi == pi.GetSetMethod(true)) {
-                    if (NameConverter.TryGetName(Ops.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
+                    if (NameConverter.TryGetName((ReflectedType)Ops.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                     CreateVTableSetterOverride(tg, mi, GetOrMakeVTableEntry(name));
                     break;
                 } 
@@ -809,13 +797,13 @@ namespace IronPython.Compiler.Generation {
                 return;
             }
 
-            DynamicType baseDynamicType;
+            ReflectedType baseDynamicType;
             if (baseType == mi.DeclaringType || baseType.IsSubclassOf(mi.DeclaringType)) {
-                baseDynamicType = Ops.GetDynamicTypeFromType(baseType);
+                baseDynamicType = (ReflectedType)Ops.GetDynamicTypeFromType(baseType);
             } else {
                 // We must be inherting from an interface
                 Debug.Assert(mi.DeclaringType.IsInterface);
-                baseDynamicType = Ops.GetDynamicTypeFromType(mi.DeclaringType);
+                baseDynamicType = (ReflectedType)Ops.GetDynamicTypeFromType(mi.DeclaringType);
             }
 
             string name = null;

@@ -26,6 +26,7 @@ using SystemThread = System.Threading.Thread;
 using IronPython.Hosting;
 using IronPython.Compiler;
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
 using System.Diagnostics;
 
@@ -405,14 +406,6 @@ namespace IronPythonConsole {
             }
         }
 
-        // The advanced console functions are in a special non-inlined function so that 
-        // dependencies are pulled in only if necessary.
-        [MethodImplAttribute(MethodImplOptions.NoInlining)]
-        private static void WaitForAnyKey() {
-            Console.WriteLine("type any key to continue");
-            Console.ReadKey();
-        }
-
         private static int RunFile(PythonEngine engine, string fileName) {
             if (fileName == "-") {
                 fileName = "<stdin>";
@@ -542,7 +535,7 @@ namespace IronPythonConsole {
 
             ModuleScope scopeResult = null;
             bool continueInteraction;
-            int result = TryInteractiveAction(
+            TryInteractiveAction(
                 delegate(out bool continueInteractionArgument) {
                     engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scopeResult);
                     continueInteractionArgument = true;
@@ -754,10 +747,10 @@ namespace IronPythonConsole {
         private AutoResetEvent ctrlCEvent;
         private Thread MainEngineThread = Thread.CurrentThread;
 
-        public BasicConsole(SystemState _sys, bool colorful) {
+        public BasicConsole(SystemState systemState, bool colorful) {
             if (colorful)
                 SetupColors();
-            sys = _sys;
+            sys = systemState;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
             ctrlCEvent = new AutoResetEvent(false);
         }
@@ -774,6 +767,7 @@ namespace IronPythonConsole {
 
         public string ReadLine(int autoIndentSize) {
             Write("".PadLeft(autoIndentSize), Style.Prompt);
+
             string res = Console.In.ReadLine();
             if (res == null) {
                 // we have a race - the Ctrl-C event is delivered
@@ -804,8 +798,10 @@ namespace IronPythonConsole {
         private void WriteColor(string s, Style style, ConsoleColor c) {
             ConsoleColor origColor = Console.ForegroundColor;
             Console.ForegroundColor = c;
-            Console.Out.Write(s);
-            Console.Out.Flush();
+            
+            Ops.PrintWithDestNoNewline(sys, sys.stdout, s);
+            Ops.Invoke(sys.stdout, SymbolTable.StringToId("flush"));
+            
             Console.ForegroundColor = origColor;
         }
 

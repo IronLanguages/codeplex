@@ -102,7 +102,7 @@ namespace IronPython.Runtime {
 
             // removed from dictionary after the first call to set it.
             MethodInfo mi = typeof(SystemState).GetMethod("setdefaultencodingImpl", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 
             BuiltinMethodDescriptor descr = (BuiltinMethodDescriptor)BuiltinFunction.MakeMethod(
                 "setdefaultencoding", mi, FunctionType.PythonVisible | FunctionType.Method).GetDescriptor();
@@ -292,7 +292,7 @@ namespace IronPython.Runtime {
         [PythonName("ps2")]
         public object ps2;
 
-        private object setdefaultencodingImpl(object name) {
+        public object setdefaultencodingImpl(object name) {
             if(name == null) throw Ops.TypeError("name cannot be None");
             string strName = name as string;
             if (strName == null) throw Ops.TypeError("name must be a string");

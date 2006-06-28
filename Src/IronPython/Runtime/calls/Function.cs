@@ -54,6 +54,13 @@ namespace IronPython.Runtime.Calls {
         }
         #endregion
 
+        internal FunctionCode(CompiledCode code, IronPython.Modules.Builtin.CompileFlags compilerFlags)
+            : this(code) {
+            
+            if ((compilerFlags & IronPython.Modules.Builtin.CompileFlags.CO_FUTURE_DIVISION) != 0)
+                flags |= FuncCodeFlags.FutureDivision;            
+        }
+
         #region Public constructors
         public FunctionCode(CompiledCode code) {
             this.compiledCode = code;

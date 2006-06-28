@@ -189,7 +189,7 @@ namespace IronPython.Modules {
         }
 
         [Flags]
-        private enum CompileFlags {
+        internal enum CompileFlags {
             CO_NESTED = 0x0010,              //  nested_scopes
             CO_GENERATOR_ALLOWED = 0x1000,   //  generators
             CO_FUTURE_DIVISION = 0x2000,   //  division
@@ -231,7 +231,7 @@ namespace IronPython.Modules {
             } else {
                 throw Ops.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
             }
-            return new FunctionCode(compiledCode);
+            return new FunctionCode(compiledCode, cflags);
         }
 
         [PythonName("compile")]

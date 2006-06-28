@@ -617,6 +617,7 @@ namespace IronPython.Hosting {
         }
         #endregion
 
+#if COM_GAC_CRAWLER
         #region COM Support
         private void AssociateComInterface(object o, object i) {
             ComObject co = ComObject.ObjectToComObject(o);
@@ -645,6 +646,8 @@ namespace IronPython.Hosting {
             }
         }
         #endregion
+#endif
     }
+
 }
 

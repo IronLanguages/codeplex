@@ -88,6 +88,7 @@ IronPythonTests = {
                 test_assembly
                 test_callback
                 test_clrload
+                test_clrload2
                 test_cominterop
                 test_delegate
                 test_enum

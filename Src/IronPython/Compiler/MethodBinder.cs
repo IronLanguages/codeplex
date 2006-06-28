@@ -887,13 +887,6 @@ namespace IronPython.Compiler {
                 }
                 return max;
             }
-            private static int CountPriority(List<ArgBuilder> abs, int priority) {
-                int cnt = 0;
-                foreach (ArgBuilder ab in abs) {
-                    if (ab.Priority == priority) cnt++;
-                }
-                return cnt;
-            }
 
             public int CompareEqualParameters(MethodTarget other) {
                 // Prefer normal methods over explicit interface implementations

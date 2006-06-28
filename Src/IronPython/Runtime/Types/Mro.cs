@@ -198,7 +198,6 @@ namespace IronPython.Runtime.Types {
 
         private void PropagateDownWorker(DynamicType parent, DynamicType propagating) {
             MroRatingInfo curInfosInfo = classes[propagating];
-            MroRatingInfo parentInfo = classes[parent];
 
             foreach (DynamicType baseType in parent.BaseClasses) {
                 MroRatingInfo childsInfo;

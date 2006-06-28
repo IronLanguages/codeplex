@@ -1409,10 +1409,7 @@ namespace IronPython.Compiler.Generation {
         private void WriteIL(string format, object arg0, object arg1, object arg2) {
             WriteIL(String.Format(format, arg0, arg1, arg2));
         }
-        [Conditional("DEBUG")]
-        private void WriteIL(string format, object arg0, object arg1, object arg2, object arg3) {
-            WriteIL(String.Format(format, arg0, arg1, arg2, arg3));
-        }
+
         [Conditional("DEBUG")]
         private void WriteIL(string format, object arg0, object arg1, object arg2, object arg3, object arg4) {
             WriteIL(String.Format(format, arg0, arg1, arg2, arg3, arg4));

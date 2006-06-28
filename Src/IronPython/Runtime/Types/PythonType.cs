@@ -58,6 +58,7 @@ namespace IronPython.Runtime.Types {
         public MethodWrapper __getattr__F;
         public MethodWrapper __setattr__F;
         public MethodWrapper __delattr__F;
+        public MethodWrapper __hash__F;
 
         private static object DefaultNewInst;   
 
@@ -175,6 +176,7 @@ namespace IronPython.Runtime.Types {
             __cmp__F = MethodWrapper.Make(this, SymbolTable.Cmp);
             __repr__F = MethodWrapper.Make(this, SymbolTable.Repr);
             __str__F = MethodWrapper.Make(this, SymbolTable.String);
+            __hash__F = MethodWrapper.Make(this, SymbolTable.Hash);
         }
 
         protected void AddModule() {
@@ -197,6 +199,11 @@ namespace IronPython.Runtime.Types {
             __cmp__F = MethodWrapper.MakeUndefined(this, SymbolTable.Cmp);
             __str__F = MethodWrapper.MakeForObject(this, SymbolTable.String, new CallTarget1(StrMethod));
             __repr__F = MethodWrapper.MakeForObject(this, SymbolTable.Repr, new CallTarget1(ReprMethod));
+            __hash__F = MethodWrapper.MakeForObject(this, SymbolTable.Hash, new CallTarget1(HashMethod));
+        }
+
+        public static object HashMethod(object self) {
+            return Ops.SimpleHash(self);
         }
 
         public static object ReprMethod(object self) {
@@ -333,6 +340,7 @@ namespace IronPython.Runtime.Types {
             __cmp__F.UpdateFromBases(MethodResolutionOrder);
             __repr__F.UpdateFromBases(MethodResolutionOrder);
             __str__F.UpdateFromBases(MethodResolutionOrder);
+            __hash__F.UpdateFromBases(MethodResolutionOrder);
         }
 
         public void UpdateSubclasses() {
@@ -427,6 +435,7 @@ namespace IronPython.Runtime.Types {
                 case SymbolTable.ReprId: ret = __repr__F; return true;
                 case SymbolTable.StringId: ret = __str__F; return true;
                 case SymbolTable.WeakRefId: ret = new WeakRefWrapper(this); return true;
+                case SymbolTable.HashId: ret = __hash__F; return true;
                 case SymbolTable.CmpId:
                     if (!__cmp__F.IsSuperTypeMethod()) {
                         ret = __cmp__F;

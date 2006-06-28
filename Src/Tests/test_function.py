@@ -679,3 +679,9 @@ if is_cli:
 
 #TestCase(bool, True, True),                    # not an acceptable base type
 
+def test_compile():
+    x = compile("print 2/3", "<string>", "exec", 8192)
+    Assert((x.co_flags & 8192) == 8192)
+ 
+ 
+test_compile()

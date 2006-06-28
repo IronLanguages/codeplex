@@ -347,36 +347,19 @@ namespace IronPython.Runtime {
     }
 
     public partial class NewConverter {
-        private static readonly Type Int16Type = typeof(System.Int16);
-        private static readonly Type SByteType = typeof(System.SByte);
         private static readonly Type StringType = typeof(System.String);
-        private static readonly Type UInt64Type = typeof(System.UInt64);
         private static readonly Type Int32Type = typeof(System.Int32);
         private static readonly Type DoubleType = typeof(System.Double);
-        private static readonly Type DecimalType = typeof(System.Decimal);
-        private static readonly Type ObjectType = typeof(System.Object);
-        private static readonly Type Int64Type = typeof(System.Int64);
         private static readonly Type CharType = typeof(System.Char);
-        private static readonly Type SingleType = typeof(System.Single);
         private static readonly Type BooleanType = typeof(System.Boolean);
-        private static readonly Type UInt16Type = typeof(System.UInt16);
-        private static readonly Type UInt32Type = typeof(System.UInt32);
-        private static readonly Type ByteType = typeof(System.Byte);
-        private static readonly Type BigIntegerType = typeof(IronMath.BigInteger);
-        private static readonly Type Complex64Type = typeof(IronMath.Complex64);
         private static readonly Type DelegateType = typeof(Delegate);
         private static readonly Type IEnumeratorType = typeof(IEnumerator);
         private static readonly Type ValueTypeType = typeof(ValueType);
         private static readonly Type TypeType = typeof(Type);
-        private static readonly Type ArrayListType = typeof(ArrayList);
         private static readonly Type IListOfTType = typeof(System.Collections.Generic.IList<int>).GetGenericTypeDefinition();
-        private static readonly Type ListOfTType = typeof(System.Collections.Generic.List<int>).GetGenericTypeDefinition();
         private static readonly Type IDictOfTType = typeof(System.Collections.Generic.IDictionary<int, int>).GetGenericTypeDefinition();
-        private static readonly Type HashtableType = typeof(Hashtable);
-        private static readonly Type ListWrapperForIListType = typeof(ListWrapperForIList<int>).GetGenericTypeDefinition();
         private static readonly Type IEnumeratorOfT = typeof(System.Collections.Generic.IEnumerator<int>).GetGenericTypeDefinition();
         private static readonly Type IEnumeratorOfTWrapper = typeof(IEnumeratorOfTWrapper<int>).GetGenericTypeDefinition();
-        private static readonly Type DictWrapperForIDictType = typeof(DictWrapperForIDict<int, int>).GetGenericTypeDefinition();
 
         private static readonly Type ListGenericWrapperType = typeof(ListGenericWrapper<object>).GetGenericTypeDefinition();
         private static readonly Type DictionaryGenericWrapperType = typeof(DictionaryGenericWrapper<object, object>).GetGenericTypeDefinition();
