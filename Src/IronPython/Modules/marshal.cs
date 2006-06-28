@@ -36,7 +36,7 @@ namespace IronPython.Modules {
         [PythonName("dump")]
         public static void Dump(object value, object file, object version) {
             PythonFile pf = file as PythonFile;
-            if (pf == null) throw Ops.TypeError("expected file, found '{0}'", Ops.GetDynamicType(file).__name__);
+            if (pf == null) throw Ops.TypeErrorForBadInstance("expected file, found '{0}'", file);
 
             pf.Write(DumpString(value, version));
         }
@@ -44,7 +44,7 @@ namespace IronPython.Modules {
         [PythonName("load")]
         public static object Load(object file) {
             PythonFile pf = file as PythonFile;
-            if (pf == null) throw Ops.TypeError("expected file, found '{0}'", Ops.GetDynamicType(file).__name__);
+            if (pf == null) throw Ops.TypeErrorForBadInstance("expected file, found '{0}'", file);
 
             return LoadString(pf.Read());
         }

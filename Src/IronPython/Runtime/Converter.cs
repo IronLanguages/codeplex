@@ -274,7 +274,7 @@ namespace IronPython.Runtime {
             object res = TryConvertToDelegate(value, to, out conv);
             if (conv != Conversion.None) return res;
 
-            throw Ops.TypeError("expected compatible function, found {0}", Ops.GetDynamicType(value).__name__);
+            throw Ops.TypeErrorForBadInstance("expected compatible function, found {0}", value);
         }
 
         public static object TryConvertToDelegate(object value, Type to, out Conversion conversion) {

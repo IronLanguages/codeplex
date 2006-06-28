@@ -745,10 +745,10 @@ namespace IronPython.Modules {
 
         #region Fields
 
-        public static DynamicType error = ExceptionConverter.CreatePythonException("error", "socket");
-        public static DynamicType herror = ExceptionConverter.CreatePythonException("herror", "socket", error);
-        public static DynamicType gaierror = ExceptionConverter.CreatePythonException("gaierror", "socket", error);
-        public static DynamicType timeout = ExceptionConverter.CreatePythonException("timeout", "socket", error);
+        public static IPythonType error = ExceptionConverter.CreatePythonException("error", "socket");
+        public static IPythonType herror = ExceptionConverter.CreatePythonException("herror", "socket", error);
+        public static IPythonType gaierror = ExceptionConverter.CreatePythonException("gaierror", "socket", error);
+        public static IPythonType timeout = ExceptionConverter.CreatePythonException("timeout", "socket", error);
 
         private static int? DefaultTimeout = null; // in milliseconds
 
@@ -1367,7 +1367,7 @@ namespace IronPython.Modules {
         /// <summary>
         /// Return an exception of a specified type with a specified message
         /// </summary>
-        private static Exception MakeException(DynamicType type, params object[] args) {
+        private static Exception MakeException(IPythonType type, params object[] args) {
             if (args.Length == 1) {
                 return ExceptionConverter.ToClr(Ops.Call(type, args[0]));
             } else {

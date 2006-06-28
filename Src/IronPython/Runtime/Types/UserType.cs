@@ -164,7 +164,7 @@ namespace IronPython.Runtime.Types {
             for (int i = 0; i < newBases.Count; i++) {
                 for (int j = 0; j < newBases.Count; j++) {
                     if (i != j && newBases[i] == newBases[j]) {
-                        throw Ops.TypeError("duplicate base class {0}", ((DynamicType)newBases[i]).__name__);
+                        throw Ops.TypeError("duplicate base class {0}", ((IPythonType)newBases[i]).Name);
                     }
                 }
             }
@@ -250,7 +250,7 @@ namespace IronPython.Runtime.Types {
         private void EnsureNewStyleBase(Tuple bases) {
             bool newBasesIncludeNewStyleClass = false;
 
-            foreach (DynamicType baseType in bases) {
+            foreach (object baseType in bases) {
                 if (!(baseType is OldClass))
                     newBasesIncludeNewStyleClass = true;
             }
@@ -328,7 +328,7 @@ namespace IronPython.Runtime.Types {
 
             if (this.Equals(other)) return true;
 
-            foreach (DynamicType baseType in BaseClasses) {
+            foreach (IPythonType baseType in BaseClasses) {
                 if (baseType.IsSubclassOf(other)) return true;
             }
             return false;

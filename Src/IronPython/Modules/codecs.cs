@@ -72,7 +72,7 @@ namespace IronPython.Modules {
                 Tuple tuple = Tuple.MakeTuple(decoded, bytes.Length - badByteCount);
                 return tuple;
             } else {
-                throw Ops.TypeError("argument 1 must be string, got {0}", Ops.GetDynamicType(input).__name__);
+                throw Ops.TypeErrorForBadInstance("argument 1 must be string, got {0}", input);
             }
         }
 
@@ -121,7 +121,7 @@ namespace IronPython.Modules {
                 }
                 return Tuple.MakeTuple(sb.ToString(), res.Length);
             }
-            throw Ops.TypeError("cannot decode {0}", Ops.GetDynamicType(input).__name__);
+            throw Ops.TypeErrorForBadInstance("cannot decode {0}", input);
         }
 
         #region ASCII Encoding

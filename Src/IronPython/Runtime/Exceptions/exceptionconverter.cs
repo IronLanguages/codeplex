@@ -34,9 +34,9 @@ namespace IronPython.Runtime.Exceptions {
     /// Converts CLR exceptions to Python exceptions and vice-versa.
     /// </summary>
     public static class ExceptionConverter {
-        static Dictionary<Type, DynamicType> clrToPython = new Dictionary<Type, DynamicType>();
-        static Dictionary<DynamicType, Type> pythonToClr = new Dictionary<DynamicType, Type>();
-        static Dictionary<QualifiedExceptionName, DynamicType> nameToPython = new Dictionary<QualifiedExceptionName, DynamicType>();
+        static Dictionary<Type, IPythonType> clrToPython = new Dictionary<Type, IPythonType>();
+        static Dictionary<IPythonType, Type> pythonToClr = new Dictionary<IPythonType, Type>();
+        static Dictionary<QualifiedExceptionName, IPythonType> nameToPython = new Dictionary<QualifiedExceptionName, IPythonType>();
 
         // common methods on exception class
         static PythonFunction exceptionInitMethod;
@@ -46,12 +46,12 @@ namespace IronPython.Runtime.Exceptions {
         static PythonFunction unicodeErrorInit;
         static PythonFunction systemExitInitMethod;
 
-        public delegate OldClass ExceptionClassCreator(string name, string module, DynamicType baseType);
+        public delegate OldClass ExceptionClassCreator(string name, string module, IPythonType baseType);
 
         const string pythonExceptionKey = "PythonExceptionInfo";
         const string prevStackTraces = "PreviousStackTraces";
         internal const string defaultExceptionModule = "exceptions";
-        static readonly DynamicType defaultExceptionBaseType; // assigned in static constructor
+        static readonly IPythonType defaultExceptionBaseType; // assigned in static constructor
 
         /*********************************************************
          * Exception mapping hierarchy - this defines how we
@@ -318,19 +318,19 @@ namespace IronPython.Runtime.Exceptions {
         }
 
         /// <summary>
-        /// Returns the DynamicType for a given PythonException in the default exception module
+        /// Returns the IPythonType for a given PythonException in the default exception module
         /// Throws KeyNotFoundException it doesn't exist.
         /// </summary>
-        public static DynamicType GetPythonException(string name) {
+        public static IPythonType GetPythonException(string name) {
             return GetPythonException(name, defaultExceptionModule);
         }
 
         /// <summary>
-        /// Returns the DynamicType for a given PythonException in a specified module.
+        /// Returns the IPythonType for a given PythonException in a specified module.
         /// Throws KeyNotFoundException it doesn't exist.
         /// </summary>
-        public static DynamicType GetPythonException(string name, string module) {
-            DynamicType type;
+        public static IPythonType GetPythonException(string name, string module) {
+            IPythonType type;
             QualifiedExceptionName key = new QualifiedExceptionName(name, module);
             if (nameToPython.TryGetValue(key, out type)) {
                 return type;
@@ -339,47 +339,47 @@ namespace IronPython.Runtime.Exceptions {
         }
 
         /// <summary>
-        /// Creates and returns the DynamicType for a given PythonException in the default exception module with the default base type.
+        /// Creates and returns the IPythonType for a given PythonException in the default exception module with the default base type.
         /// Throws InvalidOperationException if it already exists and and doesn't have the default base type.
         /// </summary>
-        public static DynamicType CreatePythonException(string name) {
+        public static IPythonType CreatePythonException(string name) {
             return CreatePythonException(name, defaultExceptionModule);
         }
 
         /// <summary>
-        /// Creates and returns the DynamicType for a given PythonException in a given module with the default base type.
+        /// Creates and returns the IPythonType for a given PythonException in a given module with the default base type.
         /// Throws InvalidOperationException if it already exists and and doesn't have the default base type.
         /// 
         /// Note that specifying the module doesn't actually place the created type in that module.
         /// The type knows about the module, but the module doesn't know about the type. It's the caller's
         /// responsibility to put the returned type in the appropriate module.
         /// </summary>
-        public static DynamicType CreatePythonException(string name, string module) {
+        public static IPythonType CreatePythonException(string name, string module) {
             return CreatePythonException(name, module, defaultExceptionBaseType);
         }
 
         /// <summary>
-        /// Creates and returns the DynamicType for a given PythonException in a given module with a given base type.
+        /// Creates and returns the IPythonType for a given PythonException in a given module with a given base type.
         /// Throws InvalidOperationException if it already exists and has a different base type.
         /// 
         /// Note that specifying the module doesn't actually place the created type in that module.
         /// The type knows about the module, but the module doesn't know about the type. It's the caller's
         /// responsibility to put the returned type in the appropriate module.
         /// </summary>
-        public static DynamicType CreatePythonException(string name, string module, DynamicType baseType) {
+        public static IPythonType CreatePythonException(string name, string module, IPythonType baseType) {
             return CreatePythonException(name, module, baseType, DefaultExceptionCreator);
         }
 
         /// <summary>
-        /// Creates and returns the DynamicType for a given PythonException in a given module with a given base type using a given exception creator.
+        /// Creates and returns the IPythonType for a given PythonException in a given module with a given base type using a given exception creator.
         /// Throws InvalidOperationException if it already exists and has a different base type.
         /// 
         /// Note that specifying the module doesn't actually place the created type in that module.
         /// The type knows about the module, but the module doesn't know about the type. It's the caller's
         /// responsibility to put the returned type in the appropriate module.
         /// </summary>
-        public static DynamicType CreatePythonException(string name, string module, DynamicType baseType, ExceptionClassCreator creator) {
-            DynamicType type;
+        public static IPythonType CreatePythonException(string name, string module, IPythonType baseType, ExceptionClassCreator creator) {
+            IPythonType type;
             QualifiedExceptionName key = new QualifiedExceptionName(name, module);
             if (nameToPython.TryGetValue(key, out type)) {
                 if (Ops.Equals(type.BaseClasses, ObjectToTuple(baseType))) {
@@ -389,7 +389,7 @@ namespace IronPython.Runtime.Exceptions {
                 }
             }
 
-            DynamicType res = creator(name, module, baseType);
+            IPythonType res = creator(name, module, baseType);
             nameToPython[key] = res;
             return res;
         }
@@ -427,9 +427,9 @@ namespace IronPython.Runtime.Exceptions {
 
             // default exception message is the exception type (from Python)
             string msg = "";
-            DynamicType dt = Ops.GetAttr(DefaultContext.Default, pythonException, SymbolTable.Class) as DynamicType;
+            IPythonType dt = Ops.GetAttr(DefaultContext.Default, pythonException, SymbolTable.Class) as IPythonType;
             if (dt != null) {
-                msg = dt.__name__.ToString();
+                msg = dt.Name;
             }
 
             Exception res = ci.Invoke(new object[] { msg }) as Exception;
@@ -465,7 +465,7 @@ namespace IronPython.Runtime.Exceptions {
                 // this is an exception raised from CLR space crossing
                 // into Python space.  We need to create a new Python
                 // exception.
-                DynamicType pythonType = GetPythonTypeFromCLR(clrException.GetType());
+                IPythonType pythonType = GetPythonTypeFromCLR(clrException.GetType());
 
                 // create new instance of Python type and save it (we do this directly
                 // as we're calling during low-stack situations and don't want to invoke
@@ -527,8 +527,8 @@ namespace IronPython.Runtime.Exceptions {
             return ExceptionConverter.ToClr(pyEx);
         }
 
-        public static void CreateExceptionMapping(DynamicType baseType, ExceptionMapping em) {
-            DynamicType type = CreatePythonException(em.PythonException, em.PythonModule, baseType, em.Creator);
+        public static void CreateExceptionMapping(IPythonType baseType, ExceptionMapping em) {
+            IPythonType type = CreatePythonException(em.PythonException, em.PythonModule, baseType, em.Creator);
 
             pythonToClr[type] = em.CLRException;
             clrToPython[em.CLRException] = type;
@@ -606,8 +606,8 @@ namespace IronPython.Runtime.Exceptions {
             Ops.SetAttr(DefaultContext.Default, pyEx, SymbolTable.ClrExceptionKey, ex);
         }
 
-        private static DynamicType GetPythonTypeFromCLR(Type type) {
-            DynamicType pythonType;
+        private static IPythonType GetPythonTypeFromCLR(Type type) {
+            IPythonType pythonType;
             if (clrToPython.TryGetValue(type, out pythonType)) {
                 // direct mapping
                 return pythonType;
@@ -625,7 +625,7 @@ namespace IronPython.Runtime.Exceptions {
             return GetPythonException("Exception");
         }
 
-        private static Type GetCLRTypeFromPython(DynamicType type) {
+        private static Type GetCLRTypeFromPython(IPythonType type) {
             Type clrType;
             if (pythonToClr.TryGetValue(type, out clrType)) {
                 return clrType;
@@ -635,7 +635,7 @@ namespace IronPython.Runtime.Exceptions {
             Tuple curType = Ops.GetAttr(DefaultContext.Default, type, SymbolTable.Bases) as Tuple;
             if (curType != null) {
                 for (int i = 0; i < curType.Count; i++) {
-                    clrType = GetCLRTypeFromPython(curType[i] as DynamicType);
+                    clrType = GetCLRTypeFromPython(curType[i] as IPythonType);
                     if (clrType != null) return clrType;
                 }
             }

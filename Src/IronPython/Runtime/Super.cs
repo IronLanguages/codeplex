@@ -111,7 +111,7 @@ namespace IronPython.Runtime {
                     }
                 } else {
                     // old-style class, lookup attribute
-                    DynamicType dt = mro[lookupType] as DynamicType;
+                    OldClass dt = mro[lookupType] as OldClass;
                     System.Diagnostics.Debug.Assert(dt != null);
 
                     if (Ops.TryGetAttr(context, dt, name, out value)) {

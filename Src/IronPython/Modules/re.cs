@@ -1009,7 +1009,7 @@ namespace IronPython.Modules {
             ExtensibleString es = str as ExtensibleString;
             if (es != null) return es.Value;
 
-            throw Ops.TypeError("expected string for parameter '{0}' but got '{1}'", param, Ops.GetDynamicType(str).__name__);
+            throw Ops.TypeError("expected string for parameter '{0}' but got '{1}'", param, Ops.GetPythonTypeName(str));
         }
 
         #endregion

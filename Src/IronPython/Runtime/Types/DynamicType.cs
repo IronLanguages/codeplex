@@ -27,8 +27,12 @@ namespace IronPython.Runtime.Types {
     // 2. PythonType
 
     [PythonType("type")]
-    public abstract partial class DynamicType {
+    public abstract partial class DynamicType : IPythonType {
         public object __name__;
+
+        public string Name {
+            get { return __name__.ToString(); }
+        }
 
         public virtual object Negate(object self) {
             return Ops.NotImplemented;

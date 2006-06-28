@@ -935,18 +935,18 @@ namespace IronPython.Runtime.Calls {
         }
 
         private Exception BadSelf(object got) {
-            DynamicType dt = DeclaringClass as DynamicType;
+            IPythonType dt = DeclaringClass as IPythonType;
 
             string firstArg;
             if (got == null) {
                 firstArg = "nothing";
             } else {
-                firstArg = Ops.GetClassName(got) + " instance";
+                firstArg = Ops.GetPythonTypeName(got) + " instance";
             }
 
             return Ops.TypeError("unbound method {0}() must be called with {1} instance as first argument (got {2} instead)",
                 Name,
-                (dt != null) ? dt.__name__ : DeclaringClass,
+                (dt != null) ? dt.Name : DeclaringClass,
                 firstArg);
         }
 
@@ -999,8 +999,8 @@ namespace IronPython.Runtime.Calls {
         #region Object Overrides
         private string DeclaringClassAsString() {
             if (DeclaringClass == null) return "?";
-            DynamicType dt = DeclaringClass as DynamicType;
-            if (dt != null) return dt.__name__.ToString();
+            IPythonType dt = DeclaringClass as IPythonType;
+            if (dt != null) return dt.Name;
             return DeclaringClass.ToString();
         }
 
@@ -1039,7 +1039,7 @@ namespace IronPython.Runtime.Calls {
         [PythonName("__get__")]
         public object GetAttribute(object instance, object context) {
             if (this.Self == null) {
-                if (context == DeclaringClass || Modules.Builtin.IsSubClass((DynamicType)context, DeclaringClass)) {
+                if (context == DeclaringClass || Modules.Builtin.IsSubClass((IPythonType)context, DeclaringClass)) {
                     return new Method(func, instance, context);
                 }
             }

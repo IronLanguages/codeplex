@@ -258,4 +258,15 @@ namespace IronPython.Runtime {
     public interface ICustomExceptionConversion {
         object ToPythonException();
     }
+
+    /// <summary>
+    /// A common interface for either a DynamicType or OldClass.  Represents the two kinds of
+    /// type-like objects in Python and supports only the minimal interfaces needed where
+    /// either one is acceptable.
+    /// </summary>
+    public interface IPythonType {
+        Tuple BaseClasses { get; }
+        string Name { get; }
+        bool IsSubclassOf(object other);
+    }
 }

@@ -50,7 +50,7 @@ namespace IronPython.Runtime.Operations {
             int iRes = Converter.TryConvertToInt32(res, out conv);
             if (conv != Conversion.None) return iRes;
 
-            throw Ops.TypeError("cannot compare {0} to int", Ops.GetDynamicType(obj).__name__);
+            throw Ops.TypeErrorForBadInstance("cannot compare {0} to int", obj);
         }
 
         #endregion

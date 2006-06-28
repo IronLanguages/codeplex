@@ -36,10 +36,11 @@ namespace IronPython.Runtime.Types {
     // from built-in types).
 
     [PythonType("classobj")]
-    public sealed class OldClass : DynamicType, ICallable, IFancyCallable, IDynamicObject, ICustomTypeDescriptor, ICodeFormattable, ICustomAttributes {
+    public sealed class OldClass : IPythonType, ICallable, IFancyCallable, IDynamicObject, ICustomTypeDescriptor, ICodeFormattable, ICustomAttributes {
         public Tuple __bases__;
-        public IAttributesDictionary __dict__;
+        public IAttributesDictionary __dict__; 
         bool hasFinalizer;
+        public object __name__;
 
         public OldClass(string name, Tuple bases, IDictionary<object, object> dict) {
             __bases__ = bases; //!!! validate, maybe even sort
@@ -56,6 +57,10 @@ namespace IronPython.Runtime.Types {
             }
 
             PromoteFunctionsToMethods();
+        }
+
+        public string Name {
+            get { return __name__.ToString(); }
         }
 
         private void PromoteFunctionsToMethods() {
@@ -90,7 +95,7 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        public override Tuple BaseClasses {
+        public Tuple BaseClasses {
             get {
                 return __bases__;
             }
@@ -244,13 +249,13 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        public override bool IsSubclassOf(object other) {
+        public bool IsSubclassOf(object other) {
             if (this == other) return true;
 
-            DynamicType dt = other as DynamicType;
+            IPythonType dt = other as IPythonType;
             if (dt == null) return false;
 
-            Tuple bases = BaseClasses;
+            Tuple bases = __bases__;
             foreach (object b in bases) {
                 OldClass bc = b as OldClass;
                 if (bc != null && bc.IsSubclassOf(other)) {

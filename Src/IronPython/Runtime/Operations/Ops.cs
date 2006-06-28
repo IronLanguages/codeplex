@@ -118,9 +118,20 @@ namespace IronPython.Runtime.Operations {
             return InfiniteCmp;
         }
 
-        internal static object GetClassName(object obj) {
-            return (obj is OldInstance) ? ((OldInstance)obj).__class__.__name__ : Ops.GetDynamicType(obj).__name__;
+        //!!! Temporarily left in so this checkin won't collide with Converter changes
+        internal static string GetClassName(object obj) {
+            return GetPythonTypeName(obj);
         }
+
+        internal static string GetPythonTypeName(object obj) {
+            OldInstance oi = obj as OldInstance;
+            if (oi != null) return oi.__class__.__name__.ToString();
+            else return Ops.GetDynamicType(obj).__name__.ToString();
+        }
+
+        //internal static string GetPythonTypeNameFromType(Type t) {
+        //    return Ops.GetDynamicTypeFromType(t).__name__.ToString();
+        //}
 
         public static string StringRepr(object o) {
             if (o == null) return "None";
@@ -904,7 +915,7 @@ namespace IronPython.Runtime.Operations {
             int res = Converter.TryConvertToInt32(x, out conv);
             if(conv == Conversion.None){
                 BigInteger bi = Converter.TryConvertToBigInteger(x, out conv);
-                if (conv == Conversion.None) throw Ops.TypeError("Bad return type from comparison: {0}", Ops.GetDynamicType(x).__name__);
+                if (conv == Conversion.None) throw Ops.TypeErrorForBadInstance("Bad return type from comparison: {0}", x);
                 
                 if (bi > 0) return 1;
                 else if (bi < 0) return -1;
@@ -1020,9 +1031,9 @@ namespace IronPython.Runtime.Operations {
 
             if (Ops.GetDynamicType(x) != Ops.GetDynamicType(y)) {
                 if (x.GetType() == typeof(OldInstance)) {
-                    name1 = (string)((OldInstance)x).__class__.__name__;
+                    name1 = ((OldInstance)x).__class__.Name;
                     if (y.GetType() == typeof(OldInstance)) {
-                        name2 = (string)((OldInstance)y).__class__.__name__;
+                        name2 = ((OldInstance)y).__class__.Name;
                     } else {
                         // old instances are always less than new-style classes
                         return -1;
@@ -1031,8 +1042,8 @@ namespace IronPython.Runtime.Operations {
                     // old instances are always less than new-style classes
                     return 1;
                 } else {
-                    name1 = (string)Ops.GetDynamicType(x).__name__;
-                    name2 = (string)Ops.GetDynamicType(y).__name__;
+                    name1 = Ops.GetDynamicType(x).Name;
+                    name2 = Ops.GetDynamicType(y).Name;
                 }
                 diff = String.CompareOrdinal(name1, name2);
             } else {
@@ -1097,7 +1108,7 @@ namespace IronPython.Runtime.Operations {
             Conversion conversion;
             double val = Converter.TryConvertToDouble(value, out conversion);
             if (conversion == Conversion.None) {
-                throw Ops.TypeError("unable to compare type {0} with 0 ", Ops.GetDynamicType(value).__name__);
+                throw Ops.TypeErrorForBadInstance("unable to compare type {0} with 0 ", value);
             }
             if (val > 0) return 1;
             if (val < 0) return -1;
@@ -1135,8 +1146,7 @@ namespace IronPython.Runtime.Operations {
             //            if (ret != NotImplemented) return ret;
             //            ret = GetDynamicType(y).ReversePower(y, x);
             //            if (ret != NotImplemented) return ret;
-            throw Ops.TypeError("unsupported operand type(s) for power with modulus: '{0}' and '{1}'",
-                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            throw Ops.TypeErrorForBinaryOp("power with modulus", x, y);
         }
 
         public static ICollection GetCollection(object o) {
@@ -1576,9 +1586,9 @@ namespace IronPython.Runtime.Operations {
                     // properties as well, which ICustomAttrs didn't do.
                     // we'll fall through to GetAttr (we should probably
                     // do special overrides in NewTypeMaker instead)
-                } else if (o is DynamicType) {
+                } else if (o is IPythonType) {
                     throw Ops.AttributeError("type object '{0}' has no attribute '{1}'",
-                        ((DynamicType)o).__name__, SymbolTable.IdToString(name));
+                        ((IPythonType)o).Name, SymbolTable.IdToString(name));
                 } else {
                     throw Ops.AttributeError("'{0}' object has no attribute '{1}'", GetDynamicType(o).__name__, SymbolTable.IdToString(name));
                 }
@@ -1709,19 +1719,6 @@ namespace IronPython.Runtime.Operations {
             if (TryToInvoke(o, SymbolTable.DeleteDescriptor, out ret, instance)) return true;
 
             return false;
-        }
-
-        public static Exception MissingInvokeMethodException(object self, string name) {
-            return Ops.MakeAttributeError(self, name);
-        }
-
-        static Exception MakeAttributeError(object o, string name) {
-            if (o is DynamicType) {
-                throw Ops.AttributeError("type object '{0}' has no attribute '{1}'",
-                    ((DynamicType)o).__name__, name);
-            } else {
-                throw Ops.AttributeError("'{0}' object has no attribute '{1}'", GetDynamicType(o).__name__, name);
-            }
         }
 
         public static object Invoke(object target, SymbolId name, params object[] args) {
@@ -2129,11 +2126,11 @@ namespace IronPython.Runtime.Operations {
                     return strex.Value;
                 }
                 return null;
-            } else if (test is DynamicType) {
+            } else if (test is IPythonType) {
                 if (Builtin.IsInstance(exc, test)) {
                     // catching a Python type.
                     return exc;
-                } else if (Builtin.IsSubClass(test as DynamicType, Ops.GetDynamicTypeFromType(typeof(Exception)))) {
+                } else if (Builtin.IsSubClass(test as IPythonType, Ops.GetDynamicTypeFromType(typeof(Exception)))) {
                     // catching a CLR exception type explicitly.
                     Exception clrEx = ExceptionConverter.ToClr(exc);
                     if (Builtin.IsInstance(clrEx, test)) return clrEx;
@@ -2372,6 +2369,15 @@ namespace IronPython.Runtime.Operations {
             return TypeError("attribute name must be string");
         }
 
+        internal static Exception TypeErrorForBadInstance(string template, object instance) {
+            return TypeError(template, Ops.GetPythonTypeName(instance));
+        }
+
+        internal static Exception TypeErrorForBinaryOp(string opSymbol, object x, object y) {
+            throw Ops.TypeError("unsupported operand type(s) for {0}: '{1}' and '{2}'",
+                                opSymbol, GetPythonTypeName(x), GetPythonTypeName(y));
+        }
+
         // Also see TypeErrorForBuiltinAttributeChange
         public static Exception AttributeErrorForReadonlyAttribute(string typeName, SymbolId attributeName) {
             // CPython uses AttributeError for all attributes except "__class__"
@@ -2379,6 +2385,15 @@ namespace IronPython.Runtime.Operations {
                 return Ops.TypeError("can't delete __class__ attribute");
 
             return Ops.AttributeError("attribute '{0}' of '{1}' object is read-only", attributeName.ToString(), typeName);
+        }
+
+        public static Exception MissingInvokeMethodException(object o, string name) {
+            if (o is IPythonType) {
+                throw Ops.AttributeError("type object '{0}' has no attribute '{1}'",
+                    ((IPythonType)o).Name, name);
+            } else {
+                throw Ops.AttributeError("'{0}' object has no attribute '{1}'", GetPythonTypeName(o), name);
+            }
         }
 
         public static Exception AttributeErrorForMissingAttribute(string typeName, SymbolId attributeName) {

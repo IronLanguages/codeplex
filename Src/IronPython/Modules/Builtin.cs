@@ -553,7 +553,7 @@ namespace IronPython.Modules {
             } else if ((dt = o as DynamicType) != null) {
                 // find all the functions, and display their 
                 // documentation
-                if (indent == 0) doc.AppendFormat("Help on {0} in module {1}\n\n", dt.__name__, Ops.GetAttr(context, dt, SymbolTable.Module));
+                if (indent == 0) doc.AppendFormat("Help on {0} in module {1}\n\n", dt.Name, Ops.GetAttr(context, dt, SymbolTable.Module));
                 List names = dt.GetAttrNames(context, null);
                 names.Sort();
                 foreach (string name in names) {
@@ -651,22 +651,21 @@ namespace IronPython.Modules {
         }
 
         [PythonName("issubclass")]
-        public static bool IsSubClass(DynamicType c, object typeinfo) {
+        public static bool IsSubClass(IPythonType c, object typeinfo) {
             if (c == null) {
                 throw Ops.TypeError("issubclass: arg 1 must be a class");
             }
 
             Tuple pt = typeinfo as Tuple;
             if (pt == null) {
-                if (!(typeinfo is DynamicType)) {
-                    throw Ops.TypeError("issubclass(): {0} is not a class nor a tuple of classes",
-                        typeinfo == null ? "None" : typeinfo);
+                if (!(typeinfo is IPythonType)) {
+                    throw Ops.TypeErrorForBadInstance("issubclass(): {0} is not a class nor a tuple of classes", typeinfo);
                 }
                 return c.IsSubclassOf(typeinfo);
             } else {
                 foreach (object o in pt) {
-                    if (!(o is DynamicType)) {
-                        throw Ops.TypeError("issubclass(): tuple contains object that is not a class: {0}", o);
+                    if (!(o is IPythonType)) {
+                        throw Ops.TypeErrorForBadInstance("issubclass(): tuple contains object that is not a class: {0}", o);
                     }
 
                     if (c.IsSubclassOf(o)) return true;
@@ -1061,7 +1060,7 @@ namespace IronPython.Modules {
             object res = Ops.StringRepr(o);
 
             if (!(res is String) && !(res is ExtensibleString)) {
-                throw Ops.TypeError("__repr__ returned non-string (type {0})", Ops.GetDynamicType(res).__name__);
+                throw Ops.TypeError("__repr__ returned non-string (type {0})", Ops.GetPythonTypeName(o));
             }
 
             return res;  

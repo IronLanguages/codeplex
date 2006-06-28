@@ -227,7 +227,7 @@ namespace IronPython.Modules {
                 return;
             }
 
-            throw Ops.TypeError("invalid assembly type.  expected string or Assembly, got {0}", Ops.GetDynamicType(reference).__name__);
+            throw Ops.TypeError("invalid assembly type.  expected string or Assembly, got {0}", Ops.GetPythonTypeName(reference));
         }
 
         private void AddReference(Assembly assembly) {
@@ -507,7 +507,9 @@ namespace IronPython.Modules {
         [PythonName("__add__")]
         public override object AddSequence(object other) {
             Tuple o = other as Tuple;
-            if (o == null) throw Ops.TypeError("can only concatenate tuple (not \"{0}\") to tuple", Ops.GetDynamicType(other).__name__);
+            if (o == null) {
+                throw Ops.TypeErrorForBadInstance("can only concatenate tuple (not \"{0}\") to tuple", other);
+            }
 
             List newData = new List(this);
             foreach (object item in o) {

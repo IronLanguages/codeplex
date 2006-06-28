@@ -28,6 +28,13 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Modules {
     [PythonType("weakref")]
     public static class PythonWeakRef {
+        internal static IWeakReferenceable ConvertToWeakReferenceable(object obj) {
+            IWeakReferenceable iwr = obj as IWeakReferenceable;
+            if (iwr != null) return iwr;
+
+            throw Ops.TypeError("cannot create weak reference to '{0}' object", Ops.GetPythonTypeName(obj));
+        }
+
         [PythonName("getweakrefcount")]
         public static int GetWeakRefCount(object @object) {
             return PythonWeakReference.GetWeakRefCount(@object);
@@ -69,8 +76,7 @@ namespace IronPython.Modules {
             #region Python Constructors
             [PythonName("__new__")]
             public static object MakeNew(PythonType cls, object @object) {
-                IWeakReferenceable iwr = @object as IWeakReferenceable;
-                if (iwr == null) throw Ops.TypeError("cannot create weak reference to '{0}' object", Ops.GetDynamicType(@object).__name__);
+                IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
                 if (cls == Ops.GetDynamicTypeFromType(typeof(PythonWeakReference))) {
                     WeakRefTracker wrt = iwr.GetWeakRef();
@@ -239,8 +245,7 @@ namespace IronPython.Modules {
 
             #region Python Constructors
             internal static object MakeNew(object @object, object callback) {
-                IWeakReferenceable iwr = @object as IWeakReferenceable;
-                if (iwr == null) throw Ops.TypeError("cannot create weak reference to '{0}' object", Ops.GetDynamicType(@object).__name__);
+                IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
                 if (callback == null) {
                     WeakRefTracker wrt = iwr.GetWeakRef();
@@ -335,8 +340,7 @@ namespace IronPython.Modules {
             string ICodeFormattable.ToCodeString() {
                 object obj = target.Target;
                 GC.KeepAlive(this);
-                object typ = (obj != null) ? Ops.GetDynamicType(obj).__name__ : NoneType.InstanceOfNoneType.__name__;
-                return String.Format("<weakproxy object to {0}>", typ);
+                return String.Format("<weakproxy object to {0}>", Ops.GetPythonTypeName(obj));
             }
 
             #endregion
@@ -405,8 +409,7 @@ namespace IronPython.Modules {
 
             #region Python Constructors
             internal static object MakeNew(object @object, object callback) {
-                IWeakReferenceable iwr = @object as IWeakReferenceable;
-                if (iwr == null) throw Ops.TypeError("cannot create weak reference to '{0}' object", Ops.GetDynamicType(@object).__name__);
+                IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
                 if (callback == null) {
                     WeakRefTracker wrt = iwr.GetWeakRef();
@@ -496,8 +499,7 @@ namespace IronPython.Modules {
             string ICodeFormattable.ToCodeString() {
                 object obj = target.Target;
                 GC.KeepAlive(this);
-                object typ = (obj == null) ? Ops.GetDynamicType(obj).__name__ : NoneType.InstanceOfNoneType.__name__;
-                return String.Format("<weakcallableproxy object to {0}>", typ);
+                return String.Format("<weakcallableproxy object to {0}>", Ops.GetPythonTypeName(obj));
             }
 
             #endregion
@@ -581,8 +583,7 @@ namespace IronPython.Modules {
 
         static class WeakRefHelpers {
             public static void InitializeWeakRef(object self, object target, object callback) {
-                IWeakReferenceable iwr = target as IWeakReferenceable;
-                if (iwr == null) throw Ops.TypeError("cannot create weak reference to '{0}' object", Ops.GetDynamicType(target).__name__);
+                IWeakReferenceable iwr = ConvertToWeakReferenceable(target);
 
                 WeakRefTracker wrt = iwr.GetWeakRef();
                 if (wrt == null) {

@@ -137,7 +137,7 @@ namespace IronPython.Runtime.Exceptions {
         #region ICustomExceptionConversion Members
 
         public object ToPythonException() {
-            DynamicType exType = ExceptionConverter.GetPythonException(PythonExceptionName);
+            IPythonType exType = ExceptionConverter.GetPythonException(PythonExceptionName);
             object inst = Ops.Call(exType);
 
             Ops.SetAttr(DefaultContext.Default, inst, SymbolTable.ExceptionMessage, base.Message);

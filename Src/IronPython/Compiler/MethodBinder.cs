@@ -398,6 +398,10 @@ namespace IronPython.Compiler {
             public virtual object ConvertFrom(object arg) {
                 return NewConverter.Convert(arg, Type);
             }
+
+            public string ToSignatureString() {
+                return Ops.GetDynamicTypeFromType(Type).Name;
+            }
         }
 
 
@@ -867,8 +871,11 @@ namespace IronPython.Compiler {
                 }
             }
 
-            public int? CompareTo(MethodTarget other, CallType callType) {
-                int? ret = CompareParameters(this.parameters, other.parameters);
+            public int CompareTo(MethodTarget other, CallType callType) {
+                int? cmpParams = CompareParameters(this.parameters, other.parameters);
+                if (cmpParams == +1 || cmpParams == -1) return (int)cmpParams;
+
+                int ret = CompareEqualParameters(other);
                 if (ret != 0) return ret;
 
                 if (method.IsStatic && !other.method.IsStatic) {
@@ -877,7 +884,7 @@ namespace IronPython.Compiler {
                     return callType == CallType.ImplicitInstance ? +1 : -1;
                 }
 
-                throw new InvalidOperationException(string.Format("identical sigs {0} and {1}", this, other));
+                return 0;
             }
 
             private static int FindMaxPriority(List<ArgBuilder> abs) {
@@ -890,28 +897,28 @@ namespace IronPython.Compiler {
 
             public int CompareEqualParameters(MethodTarget other) {
                 // Prefer normal methods over explicit interface implementations
-                if (other.method.Method.IsPrivate && !this.method.Method.IsPrivate) return -1;
-                if (this.method.Method.IsPrivate && !other.method.Method.IsPrivate) return +1;
+                if (other.method.Method.IsPrivate && !this.method.Method.IsPrivate) return +1;
+                if (this.method.Method.IsPrivate && !other.method.Method.IsPrivate) return -1;
 
                 int maxPriorityThis = FindMaxPriority(this.argBuilders);
                 int maxPriorityOther = FindMaxPriority(other.argBuilders);
 
-                if (maxPriorityThis < maxPriorityOther) return -1;
-                if (maxPriorityOther < maxPriorityThis) return +1;
+                if (maxPriorityThis < maxPriorityOther) return +1;
+                if (maxPriorityOther < maxPriorityThis) return -1;
 
                 // Prefer non-generic methods over generic methods
                 if (method.Method.IsGenericMethod) {
                     if (!other.method.Method.IsGenericMethod) {
-                        return +1;
+                        return -1;
                     } else {
                         //!!! Need to support selecting least generic method here
                         return 0;
                     }
                 } else if (other.method.Method.IsGenericMethod) {
-                    return -1;
+                    return +1;
                 }
 
-                return Compare(returnBuilder.CountOutParams, other.returnBuilder.CountOutParams);
+                return -Compare(returnBuilder.CountOutParams, other.returnBuilder.CountOutParams);
             }
 
             protected static int Compare(int x, int y) {
@@ -922,6 +929,21 @@ namespace IronPython.Compiler {
 
             public override string ToString() {
                 return string.Format("MethodTarget({0} on {1}, optimized={2})", method.Method, method.DeclaringType.FullName, fastCallable != null);
+            }
+
+            public string ToSignatureString(string name, CallType callType) {
+                StringBuilder buf = new StringBuilder(name);
+                buf.Append("(");
+                bool isFirstArg = true;
+                int i=0;
+                if (callType == CallType.ImplicitInstance) i = 1;
+                for (; i < parameters.Count; i++) {
+                    if (isFirstArg) isFirstArg = false;
+                    else buf.Append(", ");
+                    buf.Append(parameters[i].ToSignatureString());
+                }
+                buf.Append(")");
+                return buf.ToString(); //@todo add helper info for more interesting signatures
             }
         }
 
@@ -1003,7 +1025,6 @@ namespace IronPython.Compiler {
                     PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
                 }
 
-
                 List<MethodTarget> applicableTargets = new List<MethodTarget>();
                 foreach (MethodTarget target in targets) {
                     if (target.IsApplicable(args, NarrowingLevel.None)) {
@@ -1069,25 +1090,45 @@ namespace IronPython.Compiler {
                 //!!! better error messages is the key point here
                 return Ops.TypeError("no applicable overload");
             }
+
+            private string GetArgTypeNames(object[] args) {
+                StringBuilder buf = new StringBuilder();
+                buf.Append("(");
+                bool isFirstArg = true;
+                foreach (object arg in args) {
+                    if (isFirstArg) isFirstArg = false;
+                    else buf.Append(", ");
+                    buf.Append(Ops.GetPythonTypeName(arg));
+                }
+                buf.Append(")");
+                return buf.ToString();
+            }
+
             private Exception MultipleTargets(List<MethodTarget> applicableTargets, ICallerContext context, CallType callType, object[] args) {
-                //!!! better error messages is the key point here
-                return Ops.TypeError("multiple overloads match");
+                StringBuilder buf = new StringBuilder();
+                buf.AppendFormat("multiple overloads of {0} could match {1}", binder.name, GetArgTypeNames(args));
+                buf.AppendLine();
+                foreach (MethodTarget target in applicableTargets) {
+                    buf.Append("  ");
+                    buf.AppendLine(target.ToSignatureString(binder.name, callType));
+                }
+                return Ops.TypeError(buf.ToString());                
             }
 
             public void Add(MethodTarget target) {
                 for (int i=0; i < targets.Count; i++) {
                     if (CompareParameters(targets[i].parameters, target.parameters) == 0) {
                         switch (targets[i].CompareEqualParameters(target)) {
-                            case +1:
-                                // the new method is strictly better than the existing one so replace it
-                                targets[i] = target;
-                                return;
                             case -1:
+                                // the new method is strictly better than the existing one so remove the existing one
+                                targets.RemoveAt(i);
+                                i -= 1; // modify the index since we removed a target from the list
+                                break;
+                            case +1:
                                 // the new method is strictly worse than the existing one so skip it
                                 return;
                             case 0:
                                 // the two methods are identical ignoring CallType so list a conflict
-                                //!!! this should do better for cases where they're still equal even with CallType
                                 hasConflict = true;
                                 break;
                         }

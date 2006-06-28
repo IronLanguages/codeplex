@@ -65,7 +65,7 @@ namespace IronPython.Runtime.Operations {
             } else {
                 object lenFunc;
                 if (!Ops.TryGetAttr(items, SymbolTable.Length, out lenFunc))
-                    throw Ops.TypeError("expected object with __len__ function, got {0}", Ops.GetDynamicType(items).__name__);
+                    throw Ops.TypeErrorForBadInstance("expected object with __len__ function, got {0}", items);
 
                 int len = Converter.ConvertToInt32(Ops.Call(lenFunc));
 
@@ -251,7 +251,7 @@ namespace IronPython.Runtime.Operations {
                 return GetSlice(a, a.Length, slice);
             }
 
-            throw Ops.TypeError("bad array index: {0}", Ops.GetDynamicType(index).__name__);
+            throw Ops.TypeErrorForBadInstance("bad array index: {0}", index);
         }
 
         internal static void SetIndex(Array a, object index, object value) {
@@ -290,7 +290,7 @@ namespace IronPython.Runtime.Operations {
                 return;
             }
 
-            throw Ops.TypeError("bad type for array index: {0}", Ops.GetDynamicType(value).__name__);
+            throw Ops.TypeErrorForBadInstance("bad type for array index: {0}", value);
         }
 
         #endregion

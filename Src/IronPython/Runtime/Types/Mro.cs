@@ -70,13 +70,13 @@ namespace IronPython.Runtime.Types {
     /// independently from new-style classes.  
     /// </summary>
     class Mro {
-        Dictionary<DynamicType, MroRatingInfo> classes;
+        Dictionary<IPythonType, MroRatingInfo> classes;
 
         public Mro() {
-            classes = new Dictionary<DynamicType, MroRatingInfo>();
+            classes = new Dictionary<IPythonType, MroRatingInfo>();
         }
 
-        public Tuple Calculate(DynamicType startingType, Tuple bases) {
+        public Tuple Calculate(IPythonType startingType, Tuple bases) {
             // start w/ the provided bases, and build the graph that merges inheritance
             // and linear order as defined by the base classes
             int count = 1;
@@ -85,15 +85,15 @@ namespace IronPython.Runtime.Types {
 
             // then propagate all the classes reachable from one node into that node
             // so we get the overall weight of each node
-            foreach (DynamicType dt in classes.Keys) {
+            foreach (IPythonType dt in classes.Keys) {
                 PropagateBases(dt);
             }
 
             PropagateDown(startingType);
 
             // get the sorted keys, based upon weight, ties decided by order
-            KeyValuePair<DynamicType, MroRatingInfo>[] kvps = GetSortedRatings();
-            DynamicType[] mro = new DynamicType[classes.Count];
+            KeyValuePair<IPythonType, MroRatingInfo>[] kvps = GetSortedRatings();
+            IPythonType[] mro = new IPythonType[classes.Count];
 
             // and then we have our mro...
             for (int i = 0; i < mro.Length; i++) {
@@ -109,14 +109,14 @@ namespace IronPython.Runtime.Types {
         /// <param name="classes"></param>
         /// <param name="parent"></param>
         /// <param name="baseType"></param>
-        private void PropagateDown(DynamicType parent) {
+        private void PropagateDown(IPythonType parent) {
             MroRatingInfo curInfo;
             if (!classes.TryGetValue(parent, out curInfo)) return;
 
             Tuple bases = parent.BaseClasses;
             bool foundOldClass = false;
             for (int i = 0; i < bases.Count; i++) {
-                DynamicType baseType = (DynamicType)bases[i];
+                IPythonType baseType = (IPythonType)bases[i];
 
                 if (bases.Count > 1 && baseType is OldClass) {
                     if (!foundOldClass) {
@@ -150,7 +150,7 @@ namespace IronPython.Runtime.Types {
         /// than the parents level.  This allows us to use the Order property
         /// to order the old classes
         /// </summary>
-        private void EnsureOldClassLevel(DynamicType parent, Tuple bases, int oldClassIndex) {
+        private void EnsureOldClassLevel(IPythonType parent, Tuple bases, int oldClassIndex) {
             MroRatingInfo tempInfo = new MroRatingInfo();
 
             // first get all the sibling classes to the right of us, and
@@ -159,9 +159,9 @@ namespace IronPython.Runtime.Types {
                 if (bases[i] is OldClass) continue;
 
                 MroRatingInfo appending;
-                if (!classes.TryGetValue((DynamicType)bases[i], out appending)) continue;
+                if (!classes.TryGetValue((IPythonType)bases[i], out appending)) continue;
 
-                if (!tempInfo.Contains((DynamicType)bases[i])) tempInfo.Add((DynamicType)bases[i]);
+                if (!tempInfo.Contains((IPythonType)bases[i])) tempInfo.Add((IPythonType)bases[i]);
 
                 for (int j = 0; j < appending.Count; j++) {
                     if (!tempInfo.Contains(appending[j]) && !(appending[j] is OldClass)) {
@@ -170,7 +170,7 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            foreach (DynamicType innerBaseType in parent.BaseClasses) {
+            foreach (IPythonType innerBaseType in parent.BaseClasses) {
                 if (!(innerBaseType is OldClass)) continue;
 
                 PropageteOldClass(innerBaseType, tempInfo);
@@ -181,25 +181,25 @@ namespace IronPython.Runtime.Types {
         /// Propagates list of types to old-classes that are ordered using the order
         /// property.
         /// </summary>
-        private void PropageteOldClass(DynamicType curType, MroRatingInfo propagating) {
+        private void PropageteOldClass(IPythonType curType, MroRatingInfo propagating) {
             MroRatingInfo curInfo;
             if (!classes.TryGetValue(curType, out curInfo)) return;
 
             Debug.Assert(curInfo.OldClassOrdered);
 
-            foreach (DynamicType dt in propagating) {
+            foreach (IPythonType dt in propagating) {
                 if (dt != curType && !curInfo.Contains(dt)) curInfo.Add(dt);
             }
 
-            foreach (DynamicType dt in curType.BaseClasses) {
+            foreach (IPythonType dt in curType.BaseClasses) {
                 PropageteOldClass(dt, propagating);
             }
         }
 
-        private void PropagateDownWorker(DynamicType parent, DynamicType propagating) {
+        private void PropagateDownWorker(IPythonType parent, IPythonType propagating) {
             MroRatingInfo curInfosInfo = classes[propagating];
 
-            foreach (DynamicType baseType in parent.BaseClasses) {
+            foreach (IPythonType baseType in parent.BaseClasses) {
                 MroRatingInfo childsInfo;
 
                 if (propagating == baseType ||
@@ -211,7 +211,7 @@ namespace IronPython.Runtime.Types {
                 if (!childsInfo.Contains(propagating)) childsInfo.Add(propagating);
 
                 // and then propagate anything that it references down as well.
-                foreach (DynamicType dt in curInfosInfo) {
+                foreach (IPythonType dt in curInfosInfo) {
                     if (dt == baseType || ChildHasType(dt, baseType) || ChildHasType(parent, dt)) continue;
 
                     if (!childsInfo.Contains(dt)) childsInfo.Add(dt);
@@ -220,8 +220,8 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private bool ChildHasType(DynamicType parent, DynamicType child) {
-            foreach (DynamicType baseType in parent.BaseClasses) {
+        private bool ChildHasType(IPythonType parent, IPythonType child) {
+            foreach (IPythonType baseType in parent.BaseClasses) {
                 if (baseType == child) return true;
 
                 if (!classes.ContainsKey(baseType)) continue;
@@ -239,13 +239,13 @@ namespace IronPython.Runtime.Types {
         /// Gets the keys sorted by their weight & ties settled by the order in which
         /// classes appear in the class hierarchy given the calculated graph
         /// </summary>
-        private KeyValuePair<DynamicType, MroRatingInfo>[] GetSortedRatings() {
-            KeyValuePair<DynamicType, MroRatingInfo>[] kvps = new KeyValuePair<DynamicType, MroRatingInfo>[classes.Count];
-            ((ICollection<KeyValuePair<DynamicType, MroRatingInfo>>)classes).CopyTo(kvps, 0);
+        private KeyValuePair<IPythonType, MroRatingInfo>[] GetSortedRatings() {
+            KeyValuePair<IPythonType, MroRatingInfo>[] kvps = new KeyValuePair<IPythonType, MroRatingInfo>[classes.Count];
+            ((ICollection<KeyValuePair<IPythonType, MroRatingInfo>>)classes).CopyTo(kvps, 0);
 
             // sort the array, so the largest lists are on top
-            Array.Sort<KeyValuePair<DynamicType, MroRatingInfo>>(kvps,
-                delegate(KeyValuePair<DynamicType, MroRatingInfo> x, KeyValuePair<DynamicType, MroRatingInfo> y) {
+            Array.Sort<KeyValuePair<IPythonType, MroRatingInfo>>(kvps,
+                delegate(KeyValuePair<IPythonType, MroRatingInfo> x, KeyValuePair<IPythonType, MroRatingInfo> y) {
                     if (x.Key == y.Key) return 0;
 
                     int res = y.Value.Count - x.Value.Count;
@@ -259,7 +259,7 @@ namespace IronPython.Runtime.Types {
             return kvps;
         }
 
-        private void EnsureOldClassEntries(DynamicType parent, ref int count) {
+        private void EnsureOldClassEntries(IPythonType parent, ref int count) {
             Debug.Assert(parent is OldClass);
 
             MroRatingInfo parentList;
@@ -272,7 +272,7 @@ namespace IronPython.Runtime.Types {
             // the earliest one is the most important.
             if (parentList.Order == 0) parentList.Order = count++;
 
-            foreach (DynamicType baseType in parent.BaseClasses) {
+            foreach (IPythonType baseType in parent.BaseClasses) {
                 EnsureOldClassEntries(baseType, ref count);
             }
         }
@@ -280,7 +280,7 @@ namespace IronPython.Runtime.Types {
         /// Updates our classes dictionary from a type's base classes, updating for both
         /// the inheritance hierachy as well as the order the types appear as bases.
         /// </summary>
-        private void GenerateMroGraph(DynamicType parent, Tuple bases, ref int count) {
+        private void GenerateMroGraph(IPythonType parent, Tuple bases, ref int count) {
             MroRatingInfo parentList, innerList;
             if (!classes.TryGetValue(parent, out parentList))
                 parentList = classes[parent] = new MroRatingInfo();
@@ -289,10 +289,10 @@ namespace IronPython.Runtime.Types {
             // the earliest one is the most important.
             if (parentList.Order == 0) parentList.Order = count++;
 
-            DynamicType prevType = null;
+            IPythonType prevType = null;
             bool foundOldClass = false;
             for (int i = 0; i < bases.Count; i++) {
-                DynamicType baseType = (DynamicType)bases[i];
+                IPythonType baseType = (IPythonType)bases[i];
 
                 if (bases.Count > 1 && baseType is OldClass) {
                     if (!foundOldClass) {
@@ -327,15 +327,15 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private void PropagateBases(DynamicType dt) {
+        private void PropagateBases(IPythonType dt) {
             MroRatingInfo innerInfo, mroInfo = classes[dt];
             mroInfo.Processing = true;
 
             // recurse down to the bottom of the tree
-            foreach (DynamicType lesser in mroInfo) {
-                DynamicType lesserType = lesser;
+            foreach (IPythonType lesser in mroInfo) {
+                IPythonType lesserType = lesser;
 
-                if (classes[lesserType].Processing) throw Ops.TypeError("invalid order for base classes: {0} and {1}", dt.__name__, lesserType.__name__);
+                if (classes[lesserType].Processing) throw Ops.TypeError("invalid order for base classes: {0} and {1}", dt.Name, lesserType.Name);
 
                 PropagateBases(lesserType);
             }
@@ -343,11 +343,11 @@ namespace IronPython.Runtime.Types {
             // then propagate the bases up the tree as we go.
             int startingCount = mroInfo.Count;
             for (int i = 0; i < startingCount; i++) {
-                DynamicType lesser = mroInfo[i];
+                IPythonType lesser = mroInfo[i];
 
                 if (!classes.TryGetValue(lesser, out innerInfo)) continue;
 
-                foreach (DynamicType newList in innerInfo) {
+                foreach (IPythonType newList in innerInfo) {
                     if (!mroInfo.Contains(newList)) mroInfo.Add(newList);
                 }
             }
@@ -355,7 +355,7 @@ namespace IronPython.Runtime.Types {
             mroInfo.Processing = false;
         }
 
-        private class MroRatingInfo : List<DynamicType> {
+        private class MroRatingInfo : List<IPythonType> {
             public int Order;
             public bool Processing;
             public bool OldClassOrdered;

@@ -83,7 +83,7 @@ namespace IronPython.Runtime.Types {
             }
 
             DynamicType meta = cls as PythonType;
-            foreach (DynamicType dt in bases) {
+            foreach (IPythonType dt in bases) {
                 DynamicType metaCls = Ops.GetDynamicType(dt);
 
                 if (metaCls == OldInstanceType.Instance) continue;
@@ -609,7 +609,7 @@ namespace IronPython.Runtime.Types {
                 names.AddRange(dict.Keys);
             }
 
-            foreach (DynamicType dt in BaseClasses) {
+            foreach (IPythonType dt in BaseClasses) {
                 if (dt != TypeCache.Object) {
                     foreach (string name in Ops.GetAttrNames(context, dt)) {
                         if (name[0] == '_' && name[1] != '_') continue;
@@ -883,7 +883,7 @@ namespace IronPython.Runtime.Types {
 
                 PythonType baseType = baseTypeObj as PythonType;
                 if (baseType == null) {
-                    System.Diagnostics.Debug.Assert(baseTypeObj is DynamicType);
+                    System.Diagnostics.Debug.Assert(baseTypeObj is IPythonType);
                     continue;
                 }
                 baseType.Initialize();

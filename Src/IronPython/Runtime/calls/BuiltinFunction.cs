@@ -97,7 +97,7 @@ namespace IronPython.Runtime.Calls {
 
         public string FriendlyName {
             get {
-                if (Name == "__init__") return (string)DeclaringType.__name__;
+                if (Name == "__init__") return DeclaringType.Name;
                 return Name;
             }
         }
@@ -646,7 +646,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             DynamicType dt = DeclaringType;
 
             if (dt != null) {
-                return String.Format("<method {0} of {1} objects>", Ops.Repr(Name), Ops.Repr(dt.__name__));
+                return String.Format("<method {0} of {1} objects>", Ops.Repr(Name), Ops.Repr(dt.Name));
             } else {
                 return String.Format("<method {0} of {1} objects>", Ops.Repr(Name), Ops.Repr("<unknown>"));
             }
@@ -673,13 +673,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         /// </summary>
         [PythonName("__call__")]
         public object Call(params object[] args) {
-            if (args.Length == 0)
-                throw Ops.TypeError("descriptor {0} of {1} needs an argument",
-                    Ops.Repr(Name),
-                    Ops.Repr(DeclaringType.__name__));
-
-            CheckSelf(args[0]);
-
+            CheckSelfInArgs(args);
             return template.Call(args);
         }
 
@@ -689,13 +683,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         [PythonName("__call__")]
         public object Call(ICallerContext context, object[] args, string[] names) {
-            if (args.Length == 0)
-                throw Ops.TypeError("descriptor {0} of {1} needs an argument",
-                    Ops.Repr(Name),
-                    Ops.Repr(DeclaringType.__name__));
-
-            CheckSelf(args[0]);
-
+            CheckSelfInArgs(args);
             return template.Call(context, args, names);
         }
 
@@ -705,17 +693,20 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         [PythonName("__call__")]
         public object Call(ICallerContext context, object[] args) {
-            if (args.Length == 0)
-                throw Ops.TypeError("descriptor {0} of {1} needs an argument",
-                    Ops.Repr(Name),
-                    Ops.Repr(DeclaringType.__name__));
-
-            CheckSelf(args[0]);
-
+            CheckSelfInArgs(args);
             return template.Call(context, args);
         }
 
         #endregion
+
+        private void CheckSelfInArgs(object[] args) {
+            if (args.Length == 0)
+                throw Ops.TypeError("descriptor {0} of {1} needs an argument",
+                    Ops.Repr(Name),
+                    Ops.Repr(DeclaringType.Name));
+
+            CheckSelf(args[0]);
+        }
 
         private void CheckSelf(object self) {
             // if the type has been re-optimized (we also have base type info in here) 
@@ -738,8 +729,8 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                     if (Converter.TryConvert(self, declType.type, out conv) == null) {
                         throw Ops.TypeError("descriptor {0} requires a {1} object but received a {2}",
                             Ops.Repr(Name),
-                            Ops.Repr(DeclaringType.__name__),
-                            Ops.Repr(Ops.GetDynamicType(self).__name__));
+                            Ops.Repr(DeclaringType.Name),
+                            Ops.Repr(Ops.GetPythonTypeName(self)));
                     }
                 }
             }
@@ -846,7 +837,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         public override string ToString() {
             return string.Format("<built-in method {0} of {1} object at {2}>",
                     Name,
-                    Ops.GetDynamicType(instance).__name__,
+                    Ops.GetPythonTypeName(instance),
                     Ops.HexId(instance));
         }
     }

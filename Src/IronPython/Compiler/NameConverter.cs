@@ -42,7 +42,7 @@ namespace IronPython.Compiler {
                         return NameType.None;
                     } else {
                         // mangle protectes to private
-                        namePrefix = "_" + dt.__name__ + "__";
+                        namePrefix = "_" + dt.Name + "__";
                     }
                 } else {
                     // explicitly implemented interface
@@ -87,7 +87,7 @@ namespace IronPython.Compiler {
                     return NameType.None;
                 } else {
                     // mangle protectes to private
-                    namePrefix = "_" + dt.__name__ + "__";
+                    namePrefix = "_" + dt.Name + "__";
                     nt = NameType.Field;
                 }
             } 
@@ -110,7 +110,7 @@ namespace IronPython.Compiler {
                         return NameType.None;
                     } else {
                         // mangle protectes to private
-                        namePrefix = "_" + dt.__name__ + "__";
+                        namePrefix = "_" + dt.Name + "__";
                     }
                 } else {
                     // explicitly implemented interface
@@ -152,7 +152,7 @@ namespace IronPython.Compiler {
                 if (!Options.PrivateBinding) {
                     return NameType.None;
                 } else {
-                    namePrefix = "_" + Ops.GetDynamicTypeFromType(t.DeclaringType).__name__ + "__";
+                    namePrefix = "_" + Ops.GetDynamicTypeFromType(t.DeclaringType).Name + "__";
                 }
             }
 

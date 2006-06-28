@@ -127,7 +127,7 @@ namespace IronPython.Modules {
 
             #region Object overrides
             public override string ToString() {
-                return String.Format("{0}({1})", Ops.GetDynamicType(this).__name__, cur + 1);
+                return String.Format("{0}({1})", Ops.GetPythonTypeName(this), cur + 1);
             }
             #endregion
         }
@@ -415,9 +415,9 @@ namespace IronPython.Modules {
             #region Object overrides
             public override string ToString() {
                 if (fInfinite) {
-                    return String.Format("{0}({1})", Ops.GetDynamicType(this).__name__, Ops.Repr(obj));
+                    return String.Format("{0}({1})", Ops.GetPythonTypeName(this), Ops.Repr(obj));
                 }
-                return String.Format("{0}({1}, {2})", Ops.GetDynamicType(this).__name__, Ops.Repr(obj), remaining);
+                return String.Format("{0}({1}, {2})", Ops.GetPythonTypeName(this), Ops.Repr(obj), remaining);
 
             }
             #endregion

@@ -50,7 +50,7 @@ namespace IronPython.Runtime.Operations {
 
         int IComparable.CompareTo(object obj) {
             object res = Compare(obj);
-            if (res == Ops.NotImplemented) throw Ops.TypeError("cannot compare {0} to float", Ops.GetDynamicType(obj).__name__);
+            if (res == Ops.NotImplemented) throw Ops.TypeErrorForBadInstance("cannot compare {0} to float", obj);
             return (int)res;
         }
 

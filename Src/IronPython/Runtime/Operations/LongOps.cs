@@ -208,7 +208,7 @@ namespace IronPython.Runtime.Operations {
             if (x is Complex64) throw Ops.TypeError("can't convert complex to long; use long(abs(z))");
 
             throw Ops.ValueError("long argument must be convertible to long (string, number, or type that defines __long__, got {0})",
-                Ops.StringRepr(Ops.GetDynamicType(x).__name__));
+                Ops.StringRepr(Ops.GetPythonTypeName(x)));
         }
 
         [PythonName("__new__")]

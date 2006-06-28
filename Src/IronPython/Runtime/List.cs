@@ -173,7 +173,7 @@ namespace IronPython.Runtime {
         [PythonName("__add__")]
         public virtual object AddSequence(object other) {
             List l = other as List;
-            if (l == null) throw Ops.TypeError("can only concatenate list (not \"{0}\") to list", Ops.GetDynamicType(other).__name__);
+            if (l == null) throw Ops.TypeErrorForBadInstance("can only concatenate list (not \"{0}\") to list", other);
 
             return AddList(l);
         }
