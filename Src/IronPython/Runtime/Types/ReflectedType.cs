@@ -363,7 +363,7 @@ namespace IronPython.Runtime.Types {
                 // type is specifically implementing __repr__
                 if (!dict.ContainsKey(SymbolTable.Repr)) {
                     // add __repr__ automatically if it's not already there.
-                    AddProtocolMethod("__repr__", "ReprMethod", NameType.PythonMethod);
+                    AddProtocolMethod("__repr__", "ReprHelper", NameType.PythonMethod);
                 }
             } else if (toStringMethod == null || toStringMethod.DeclaringType != typeof(object)) {
                 // type overrides ToString...  for PythonType's call ToString, for

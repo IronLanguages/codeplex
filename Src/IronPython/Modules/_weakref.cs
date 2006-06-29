@@ -384,7 +384,7 @@ namespace IronPython.Modules {
 
             #region IRichEquality Members
             public object RichGetHashCode() {
-                throw Ops.TypeErrorForUnhashableType();
+                throw Ops.TypeErrorForUnhashableType("weakproxy");
             }
 
             public object RichEquals(object other) {
@@ -561,7 +561,7 @@ namespace IronPython.Modules {
 
             [PythonName("__hash__")]
             public object RichGetHashCode() {
-                throw Ops.TypeErrorForUnhashableType();
+                throw Ops.TypeErrorForUnhashableType("weakcallableproxy");
             }
 
             [PythonName("__eq__")]

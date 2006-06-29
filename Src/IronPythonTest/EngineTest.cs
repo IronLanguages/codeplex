@@ -261,6 +261,46 @@ del customSymbol", customScope, ExecutionOptions.Default);
 
         }
 
+        static long GetTotalMemory() {
+            // Critical objects can take upto 3 GCs to be collected
+            for (int i = 0; i < 3; i++) {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+            return GC.GetTotalMemory(true);
+        }
+
+        const string scenarioGCModuleName = "scenario_gc";
+
+        void CreateScopes(PythonEngine engine) {
+            for (int scopeCount = 0; scopeCount < 100; scopeCount++) {
+                ModuleScope scope = new ModuleScope(scenarioGCModuleName);
+                scope.SetGlobal((SymbolId)"x", "Hello");
+                engine.ExecuteFile(Common.InputTestDirectory + "\\simpleCommand.py", scope, ExecutionOptions.Default);
+                AreEqual(engine.Evaluate<int>("x", scope, ExecutionOptions.Default), 1);
+            }
+        }
+
+        public void ScenarioGC() {
+            long initialMemory = GetTotalMemory();
+
+            // Create multiple engines and scopes
+            for (int engineCount = 0; engineCount < 100; engineCount++) {
+                PythonEngine engine = new PythonEngine();
+                CreateScopes(engine);
+            }
+
+            // Create multiple scopes in an engine that is not collected
+            CreateScopes(standardEngine);
+            standardEngine.Sys.modules.Remove(scenarioGCModuleName);
+
+            long finalMemory = GetTotalMemory();
+            long memoryUsed = finalMemory - initialMemory;
+            const long memoryThreshold = 100000;
+            if (memoryUsed > memoryThreshold)
+                throw new Exception(String.Format("ScenarioGC used {0} bytes of memory. The threshold is {1} bytes", memoryUsed, memoryThreshold));
+        }
+
         // Evaluate
         public void ScenarioEvaluate() {
             PythonEngine pe = new PythonEngine();
@@ -279,6 +319,11 @@ del customSymbol", customScope, ExecutionOptions.Default);
             pe.Execute("clsPart.Field = 100");
             AreEqual(100, (int)pe.Evaluate("clsPart.Field"));
             AreEqual(100, pe.Evaluate<int>("clsPart.Field"));
+
+            // Ensure that we can get back a delegate to a Python method
+            pe.Execute("def IntIntMethod(a): return a * 100");
+            IntIntDelegate d = pe.Evaluate<IntIntDelegate>("IntIntMethod");
+            AreEqual(d(2), 2 * 100);
         }
 
         // ExecuteFile

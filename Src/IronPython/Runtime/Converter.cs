@@ -551,8 +551,8 @@ namespace IronPython.Runtime {
             return MakeTypeError(Ops.GetDynamicTypeFromType(expectedType).__name__.ToString(), o);
         }
 
-        public static Exception MakeTypeError(string expected, object o) {
-            return Ops.TypeError("expected {0}, found {1}", expected, Ops.GetDynamicType(o).__name__);
+        public static Exception MakeTypeError(string expectedType, object o) {
+            return Ops.TypeErrorForTypeMismatch(expectedType, o);
         }
 
         public static object Convert(object value, Type toType) {

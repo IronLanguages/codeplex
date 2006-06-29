@@ -19,6 +19,7 @@ from lib.assert_util import *
 def test_common_attributes():
     builtin_type_instances = [None, object(), 1, "Hello", [0,1], {"a":0}]
     builtin_hashable_type_instances = [None, object(), 1, "Hello"]
+    builtin_types = [type(None), object, int, str, list, dict]
 
     for i in builtin_type_instances:
         # Read-only attribute
@@ -46,6 +47,14 @@ def test_common_attributes():
     for i in builtin_hashable_type_instances:
         if (is_cli == False or i == None): # !!! Need to expose __hash__ on all types
             AreEqual(hash(i), i.__hash__())
+            
+    for i in builtin_types:
+          if is_cli and i == type(None):
+              continue
+          # __init__ and __new__ are implemented by IronPython.Runtime.Operations.InstanceOps
+          # We do repr to ensure that we can map back the functions properly
+          repr(getattr(i, "__init__"))
+          repr(getattr(i, "__new__"))
             
 ############################################################
 def test_set_dict():

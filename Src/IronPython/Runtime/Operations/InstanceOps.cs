@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Collections;
 using System.Reflection;
+using System.Diagnostics;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -26,7 +27,10 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Operations {
     /// <summary>
     /// InstanceOps contains methods that get added to CLS types depending on what
-    /// methods and constructors they define.  Possibilities include:
+    /// methods and constructors they define. These have not been added directly to
+    /// PythonType since they need to be added conditionally.
+    /// 
+    /// Possibilities include:
     /// 
     ///     __new__, one of 3 __new__ sets can be added:
     ///         DefaultNew - This is the __new__ used for a PythonType (list, dict, object, etc...) that
@@ -57,10 +61,18 @@ namespace IronPython.Runtime.Operations {
     /// 
     ///     get: added for types that implement IDescriptor
     /// </summary>
-    public class InstanceOps {
+    public class InstanceOps : OpsReflectedType {
         internal static BuiltinFunction New = CreateFunction("__new__", "DefaultNew", "DefaultNewKW");
         internal static BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNewCls", "DefaultNewClsKW");
         internal static object Init = CreateInitMethod();
+
+        InstanceOps() : base("object", typeof(PythonType), typeof(InstanceOps), null) { }
+
+        static InstanceOps() {
+            // We create an OpsReflectedType so that the runtime can map back from the function to typeof(PythonType). 
+            new InstanceOps();
+            Debug.Assert(OpsReflectedType.OpsTypeToType.ContainsKey(typeof(InstanceOps)));
+        }
         
         internal static BuiltinFunction CreateNonDefaultNew() {
             return CreateFunction("__new__", "NonDefaultNew", "NonDefaultNewKW", "NonDefaultNewKWNoParams");
@@ -182,7 +194,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__repr__")]
-        public static object ReprMethod(object self) {
+        public static object ReprHelper(object self) {
             return ((ICodeFormattable)self).ToCodeString();
         }
 

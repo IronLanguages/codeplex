@@ -37,6 +37,9 @@ if is_cli:
 
     AssertError(AttributeError, setCount)
     
+    # System.String.Empty is a read-only static field
+    AssertError(AttributeError, setattr, System.String, "Empty", "foo")
+    
 # getting a property from a class should return the property,
 # getting it from an instance should do the descriptor check
 
@@ -75,7 +78,7 @@ if is_cli:
     def tryDelReflectedProp():
 	    del ArrayList.Count
 
-    AssertError(TypeError, tryDelReflectedProp)
+    AssertError(AttributeError, tryDelReflectedProp)
 
 # define a property w/ only the doc
 

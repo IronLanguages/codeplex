@@ -114,7 +114,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__hash__")]
         public object RichGetHashCode() {
-            throw Ops.TypeErrorForUnhashableType();
+            throw Ops.TypeErrorForUnhashableType("slice");
         }
 
         public object RichEquals(object other) {

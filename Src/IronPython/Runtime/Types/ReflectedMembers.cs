@@ -57,6 +57,9 @@ namespace IronPython.Runtime.Types {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, this);
             if (instance != null && instance.GetType().IsValueType)
                 throw Ops.ValueError("Attempt to update field '{0}' on value type '{1}'; value type fields cannot be directly modified", info.Name, info.DeclaringType.Name);
+            if (info.IsInitOnly)
+                throw Ops.AttributeErrorForReadonlyAttribute(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
+
             info.SetValue(instance, Ops.ConvertTo(val, info.FieldType)); //val.toObject(info.FieldType, "set "));
         }
 
@@ -76,7 +79,7 @@ namespace IronPython.Runtime.Types {
 
         [PythonName("__delete__")]
         public bool DeleteAttribute(object instance) {
-            throw Ops.TypeError("can't delete field on built-in object");
+            throw Ops.AttributeErrorForBuiltinAttributeDeletion(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
         }
 
         [PythonName("__str__")]
@@ -114,10 +117,8 @@ namespace IronPython.Runtime.Types {
                 return base.GetAttribute(instance, context);
             if(instance is ExtensibleType) 
                 return base.GetAttribute(((ExtensibleType)instance).Value, context);
-            
-            throw Ops.TypeError("expected {0}, got {1}",
-                Ops.GetDynamicTypeFromType(typeof(BaseType)).__name__, 
-                Ops.GetDynamicType(instance));
+
+            throw Ops.TypeErrorForTypeMismatch(Ops.GetDynamicTypeFromType(typeof(BaseType)).__name__.ToString(), instance);
         }
 
         public override bool SetAttribute(object instance, object value) {
@@ -128,9 +129,7 @@ namespace IronPython.Runtime.Types {
             if (instance == null)
                 return false;
 
-            throw Ops.TypeError("expected {0}, got {1}",
-                Ops.GetDynamicTypeFromType(typeof(BaseType)).__name__,
-                Ops.GetDynamicType(instance));
+            throw Ops.TypeErrorForTypeMismatch(Ops.GetDynamicTypeFromType(typeof(BaseType)).__name__.ToString(), instance);
         }
     }
 
@@ -199,7 +198,8 @@ namespace IronPython.Runtime.Types {
         [PythonName("__get__")]
         public object GetAttribute(object instance, object context) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
-            if (getter == null) throw Ops.TypeError("writeonly attribute");
+            if (getter == null) 
+                throw Ops.AttributeError("attribute '{0}' of '{1}' object is write-only", info.Name, info.DeclaringType.Name);
 
             OptimizePropertyMethod(ref optGetter, getter);
 
@@ -237,7 +237,10 @@ namespace IronPython.Runtime.Types {
 
         [PythonName("__delete__")]
         public virtual bool DeleteAttribute(object instance) {
-            throw Ops.TypeError("can't delete property on built-in object");
+            if (setter != null)
+                throw Ops.AttributeErrorForReadonlyAttribute(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
+            else
+                throw Ops.AttributeErrorForBuiltinAttributeDeletion(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
         }
 
         [PythonName("__str__")]
@@ -255,7 +258,7 @@ namespace IronPython.Runtime.Types {
 
         private void DoSet(object instance, object val) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
-            if (setter == null) throw Ops.TypeError("readonly attribute");
+            if (setter == null) throw Ops.AttributeErrorForReadonlyAttribute(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
             try {
                 setter.Invoke(instance, new object[] { Ops.ConvertTo(val, info.PropertyType) });
             } catch (TargetInvocationException tie) {
@@ -327,7 +330,8 @@ namespace IronPython.Runtime.Types {
         [PythonName("__set__")]
         public bool SetAttribute(object instance, object value) {
             ReflectedEvent other = value as ReflectedEvent;
-            if (other == null || other.dispatcher.Info != this.dispatcher.Info) throw Ops.TypeError("read-only attribute");
+            if (other == null || other.dispatcher.Info != this.dispatcher.Info) 
+                throw Ops.AttributeErrorForReadonlyAttribute(dispatcher.Info.DeclaringType.Name, SymbolTable.StringToId(dispatcher.Info.Name));
             return true;
         }
 

@@ -58,13 +58,13 @@ except AttributeError:
 try:
     a.InstanceTest = 'abc'
     AreEqual(True, False)
-except TypeError:
+except AttributeError:
     pass
     
 try:
     IronPythonTest.Events.StaticTest = 'abc'
     AreEqual(True, False)
-except TypeError:
+except AttributeError:
     pass
     
 

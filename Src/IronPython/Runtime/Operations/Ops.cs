@@ -2328,11 +2328,6 @@ namespace IronPython.Runtime.Operations {
                 return ValueError("too many values to unpack");
         }
 
-        // Also see AttributeErrorForReadonlyAttribute
-        public static Exception TypeErrorForBuiltinAttributeChange(string typeName) {
-            throw Ops.TypeError("can't set attributes of built-in/extension type '{0}'", typeName);
-        }
-
         // If an unbound method is called without a "self" argument, or a "self" argument of a bad type
         public static Exception TypeErrorForUnboundMethodCall(string methodName, Type methodType, object instance) {
             return TypeErrorForUnboundMethodCall(methodName, GetDynamicTypeFromType(methodType), instance);
@@ -2351,14 +2346,13 @@ namespace IronPython.Runtime.Operations {
                              methodName, expectedArgCount, expectedArgCount == 1 ? "" : "s", actualArgCount);
         }
 
-        // If hash is called on an instance of an unhashable type
-        // We have 2 versions to maintain compatibility with the 2 messages that CPython uses.
-        public static Exception TypeErrorForUnhashableType(string typeName) {
-            return TypeError(typeName + " objects are unhashable");
+        public static Exception TypeErrorForTypeMismatch(string expectedTypeName, object instance) {
+            return TypeError("expected {0}, got {1}", expectedTypeName, Ops.GetDynamicType(instance).__name__);
         }
 
-        public static Exception TypeErrorForUnhashableType() {
-            return TypeError("unhashable type");
+        // If hash is called on an instance of an unhashable type
+        public static Exception TypeErrorForUnhashableType(string typeName) {
+            return TypeError(typeName + " objects are unhashable");
         }
 
         internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, PythonType type, Type newType) {
@@ -2378,13 +2372,16 @@ namespace IronPython.Runtime.Operations {
                                 opSymbol, GetPythonTypeName(x), GetPythonTypeName(y));
         }
 
-        // Also see TypeErrorForBuiltinAttributeChange
         public static Exception AttributeErrorForReadonlyAttribute(string typeName, SymbolId attributeName) {
             // CPython uses AttributeError for all attributes except "__class__"
             if (attributeName == SymbolTable.Class)
                 return Ops.TypeError("can't delete __class__ attribute");
 
             return Ops.AttributeError("attribute '{0}' of '{1}' object is read-only", attributeName.ToString(), typeName);
+        }
+
+        public static Exception AttributeErrorForBuiltinAttributeDeletion(string typeName, SymbolId attributeName) {
+            return Ops.AttributeError("cannot delete attribute '{0}' of builtin type '{1}'", attributeName.ToString(), typeName);
         }
 
         public static Exception MissingInvokeMethodException(object o, string name) {

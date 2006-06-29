@@ -404,10 +404,14 @@ namespace IronPython.Runtime.Types {
                     d.Remove(name);
                     return;
                 } else {
-                    throw Ops.AttributeError("no slot named {0} on {1}", SymbolTable.IdToString(name), this.__name__);
+                    if (name == SymbolTable.Class)
+                        throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), name);
+                    throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), name);
                 }
             }
-            Ops.DelDescriptor(slot, self);
+
+            if (!Ops.DelDescriptor(slot, self))
+                throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), name);
         }
 
         public override List GetAttrNames(ICallerContext context, object self) {
