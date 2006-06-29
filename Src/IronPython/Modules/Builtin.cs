@@ -639,15 +639,60 @@ namespace IronPython.Modules {
 
         [PythonName("isinstance")]
         public static bool IsInstance(object o, object typeinfo) {
+            Tuple tt = typeinfo as Tuple;
+            if (tt != null) {
+                foreach (object type in tt) {
+                    if (IsInstance(o, type)) return true;
+                }
+                return false;
+            }
+
             if (typeinfo is OldClass) {
                 // old instances are strange - they all share a common type
                 // of instance but they can "be subclasses" of other
                 // OldClass's.  To check their types we need the actual
                 // instance.
                 OldInstance oi = o as OldInstance;
-                if (oi != null)  return oi.__class__.IsSubclassOf(typeinfo);
+                if (oi != null) return oi.__class__.IsSubclassOf(typeinfo);
             }
-            return IsSubClass(Ops.GetDynamicType(o), typeinfo);
+
+            DynamicType odt = Ops.GetDynamicType(o);
+            if (IsSubClass(odt, typeinfo)) {
+                return true;
+            }
+
+            object cls;
+            if (Ops.TryGetAttr(o, SymbolTable.Class, out cls) &&
+                (!object.ReferenceEquals(odt, cls))) {
+                    return IsSubclassSlow(cls, typeinfo);
+            }
+            return false;
+        }
+
+        private static bool IsSubclassSlow(object cls, object typeinfo) {
+            Debug.Assert(cls != null);
+            Debug.Assert(typeinfo != null);
+
+            // Same type
+            if (cls.Equals(typeinfo)) {
+                return true;
+            }
+
+            // Get bases
+            object bases;
+            if (!Ops.TryGetAttr(cls, SymbolTable.Bases, out bases)) {
+                return false;   // no bases, cannot be subclass
+            }
+            Tuple tbases = bases as Tuple;
+            if (tbases == null) {
+                return false;   // not a tuple, cannot be subclass
+            }
+
+            foreach (object baseclass in tbases) {
+                if (IsSubclassSlow(baseclass, typeinfo)) return true;
+            }
+
+            return false;
         }
 
         [PythonName("issubclass")]
@@ -657,21 +702,20 @@ namespace IronPython.Modules {
             }
 
             Tuple pt = typeinfo as Tuple;
-            if (pt == null) {
-                if (!(typeinfo is IPythonType)) {
-                    throw Ops.TypeErrorForBadInstance("issubclass(): {0} is not a class nor a tuple of classes", typeinfo);
-                }
-                return c.IsSubclassOf(typeinfo);
-            } else {
+            if (pt != null) {
+                // Recursively inspect nested tuple(s)
                 foreach (object o in pt) {
-                    if (!(o is IPythonType)) {
-                        throw Ops.TypeErrorForBadInstance("issubclass(): tuple contains object that is not a class: {0}", o);
-                    }
-
-                    if (c.IsSubclassOf(o)) return true;
+                    if (IsSubClass(c, o)) return true;
                 }
                 return false;
             }
+
+            object bases;
+            if (!(typeinfo is DynamicType) &&
+                !Ops.TryGetAttr(typeinfo, SymbolTable.Bases, out bases)) {
+                throw Ops.TypeErrorForBadInstance("issubclass(): {0} is not a class nor a tuple of classes", typeinfo);
+            }
+            return c.IsSubclassOf(typeinfo);
         }
 
         [PythonName("iter")]

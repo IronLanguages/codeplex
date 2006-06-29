@@ -331,6 +331,7 @@ namespace IronPython.Runtime.Types {
             foreach (IPythonType baseType in BaseClasses) {
                 if (baseType.IsSubclassOf(other)) return true;
             }
+
             return false;
         }
 

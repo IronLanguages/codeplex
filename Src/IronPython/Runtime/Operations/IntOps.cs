@@ -493,7 +493,8 @@ namespace IronPython.Runtime.Operations {
                 uint val = (uint)other;
                 if (val < Int32.MaxValue)
                     res = x == (int)val;
-                res = false;
+                else
+                    res = false;
                 return true;
             } else if (other == null) {
                 res = false;

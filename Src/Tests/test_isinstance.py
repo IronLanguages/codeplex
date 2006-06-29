@@ -955,3 +955,86 @@ AreEqual(metaCalled, [BaseMeta, DerivedMeta])
 AreEqual(type(C).__name__, 'DerivedMeta')
 
 
+class E(object):
+    def getbases(self):
+        raise RuntimeError
+    __bases__ = property(getbases)
+
+class I(object):
+    def getclass(self):
+        return E()
+    __class__ = property(getclass)
+
+class C(object):
+    def getbases(self):
+        return ()
+    __bases__ = property(getbases)
+
+AssertError(RuntimeError, isinstance, I(), C())
+
+class C1(object): pass
+class C2(object): pass
+
+
+AreEqual(isinstance(C1(), C2), False)
+AreEqual(isinstance(C1(), (C2, C2)), False)
+AreEqual(isinstance(C1(), (C2, C2, (C2, C2), C2)), False)
+AreEqual(isinstance(C1(), (C2, C2, (C2, (C2, C1), C2), C2)), True)
+
+class C1: pass
+class C2: pass
+
+
+AreEqual(isinstance(C1(), C2), False)
+AreEqual(isinstance(C1(), (C2, C2)), False)
+AreEqual(isinstance(C1(), (C2, C2, (C2, C2), C2)), False)
+AreEqual(isinstance(C1(), (C2, C2, (C2, (C2, C1), C2), C2)), True)
+
+class MyInt(int): pass
+
+Assert(isinstance(MyInt(), int))
+
+# __class__ accesses
+
+call_tracker = []
+class C(object):
+    def getclass(self):
+        call_tracker.append("C.getclass")
+        return C
+    __class__ = property(getclass)
+
+AreEqual(isinstance(C(), object), True)
+AreEqual(call_tracker, [])
+
+AreEqual(isinstance(C(), str), False)
+AreEqual(call_tracker, ["C.getclass"])
+
+call_tracker = []
+AreEqual(isinstance(C(), (str, (type, str, float))), False)
+AreEqual(call_tracker, ['C.getclass', 'C.getclass', 'C.getclass', 'C.getclass'])
+
+
+# __bases__ access
+
+call_tracker = []
+
+class C(object):
+    def getbases(self):
+        call_tracker.append("C.getbases")
+        return (E,)
+    __bases__ = property(getbases)
+
+class E(object):
+    def getbases(self):
+        call_tracker.append("E.getbases")
+        return ()
+    __bases__ = property(getbases)
+
+class D(object):
+    def getclass(self):
+        call_tracker.append("D.getclass")
+        return C()
+    __class__ = property(getclass)
+
+AreEqual(isinstance(D(), E()), False)
+AreEqual(call_tracker, ['E.getbases', 'D.getclass', 'C.getbases'])
