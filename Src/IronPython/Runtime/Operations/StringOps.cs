@@ -28,6 +28,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Types;
+using IronPython.Compiler;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -52,7 +53,7 @@ namespace IronPython.Runtime.Operations {
         public override int GetHashCode() {
             return self.GetHashCode();
         }
-        
+
         #region ICodeFormattable Members
 
         public virtual string ToCodeString() {
@@ -209,7 +210,7 @@ namespace IronPython.Runtime.Operations {
         [PythonName("__new__")]
         public static object Make(ICallerContext context, DynamicType cls, 
             string @string,
-            [DefaultParameterValue(null)] string encoding, 
+            [DefaultParameterValue(null)] string encoding,
             [DefaultParameterValue("strict")]string errors) {
 
             if (cls == TypeCache.String) {
@@ -369,52 +370,30 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("endswith")]
-        public static object EndsWith(string self, string suffix) {
-            if (suffix == null) throw Ops.TypeError("expected string, got NoneType");
-            return Ops.Bool2Object(self.EndsWith(suffix));
+        public static object EndsWith(string self, object suffix) {
+            TryStringOrTuple(suffix);
+            if (suffix is string)
+                return EndsWith(self, suffix as string);
+            else
+                return EndsWith(self, suffix as Tuple);
         }
 
-        //  Indexing is 0-based. Need to deal with negative indices
-        //  (which mean count backwards from end of sequence)
-        //  +---+---+---+---+---+ 
-        //  | a | b | c | d | e |
-        //  +---+---+---+---+---+ 
-        //    0   1   2   3   4    
-        //   -5  -4  -3  -2  -1
-
         [PythonName("endswith")]
-        public static object EndsWith(string self, string suffix, int start) {
-            if (suffix == null) throw Ops.TypeError("expected string, got NoneType");
-            int len = self.Length;
-            if (start > len) return Ops.FALSE;
-            // map the negative indice to its positive counterpart
-            if (start < 0) {
-                start += len;
-                if (start < 0) start = 0;
-            }
-            return Ops.Bool2Object(self.Substring(start).EndsWith(suffix));
+        public static object EndsWith(string self, object suffix, int start) {
+            TryStringOrTuple(suffix);
+            if (suffix is string)
+                return EndsWith(self, suffix as string, start);
+            else
+                return EndsWith(self, suffix as Tuple, start);
         }
 
-        //  With optional start, test beginning at that position (the char at that index is
-        //  included in the test). With optional end, stop comparing at that position (the 
-        //  char at that index is not included in the test)
         [PythonName("endswith")]
-        public static object EndsWith(string self, string suffix, int start, int end) {
-            if (suffix == null) throw Ops.TypeError("expected string, got NoneType");
-            int len = self.Length;
-            if (start > len) return Ops.FALSE;
-            // map the negative indices to their positive counterparts
-            else if (start < 0) {
-                start += len;
-                if (start < 0) start = 0;
-            }
-            if (end >= len) return Ops.Bool2Object(self.Substring(start).EndsWith(suffix));
-            else if (end < 0) {
-                end += len;
-                if (end < 0) return Ops.FALSE;
-            }
-            if (end < start) return Ops.FALSE;
-            return Ops.Bool2Object(self.Substring(start, end - start).EndsWith(suffix));
+        public static object EndsWith(string self, object suffix, int start, int end) {
+            TryStringOrTuple(suffix);
+            if (suffix is string)
+                return EndsWith(self, suffix as string, start, end);
+            else
+                return EndsWith(self, suffix as Tuple, start, end);
         }
 
         [PythonName("expandtabs")]
@@ -663,6 +642,29 @@ namespace IronPython.Runtime.Operations {
             return self.TrimStart(chars.ToCharArray());
         }
 
+        [PythonVersion(2, 5)]
+        [PythonName("partition")]
+        public static Tuple Partition(string self, string sep) {
+            if (sep == null)
+                throw Ops.TypeError("expected string, got NoneType");
+            if (sep.Length == 0)
+                throw Ops.ValueError("empty separator");
+
+            object[] obj = new object[3] { "", "", "" };
+
+            if (self.Length != 0) {
+                int index = Find(self, sep);
+                if (index == -1) {
+                    obj[0] = self;
+                } else {
+                    obj[0] = self.Substring(0, index);
+                    obj[1] = sep;
+                    obj[2] = self.Substring(index + sep.Length, self.Length - index - sep.Length);
+                }
+            }
+            return new Tuple(obj);
+        }
+
         [PythonName("replace")]
         public static string Replace(string self, string old, string new_) {
             if (old == null) throw Ops.TypeError("expected string for 'old' argument, got NoneType");
@@ -748,6 +750,29 @@ namespace IronPython.Runtime.Operations {
             ret.Append(self);
             return ret.ToString();
         }
+
+        [PythonVersion(2, 5)]
+        [PythonName("rpartition")]
+        public static Tuple Rpartition(string self, string sep) {
+            if (sep == null)
+                throw Ops.TypeError("expected string, got NoneType");
+            if (sep.Length == 0)
+                throw Ops.ValueError("empty separator");
+
+            object[] obj = new object[3] { "", "", "" };
+            if (self.Length != 0) {
+                int index = RFind(self, sep);
+                if (index == -1) {
+                    obj[0] = self;
+                } else {
+                    obj[0] = self.Substring(0, index);
+                    obj[1] = sep;
+                    obj[2] = self.Substring(index + sep.Length, self.Length - index - sep.Length);
+                }
+            }
+            return new Tuple(obj);
+        }
+
 
         //  when no maxsplit arg is given then just use split
         [PythonName("rsplit")]
@@ -846,42 +871,36 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
+
         [PythonName("startswith")]
-        public static object StartsWith(string self, string prefix) {
-            if (prefix == null) throw Ops.TypeError("expected string, got NoneType");
-            return Ops.Bool2Object(self.StartsWith(prefix));
+        public static object StartsWith(string self, object prefix) {
+            TryStringOrTuple(prefix);
+            if (prefix is string)
+                return StartsWith(self, prefix as string);
+            else
+                return StartsWith(self, prefix as Tuple);
+
         }
 
         [PythonName("startswith")]
-        public static object StartsWith(string self, string prefix, int start) {
-            if (prefix == null) throw Ops.TypeError("expected string, got NoneType");
-            int len = self.Length;
-            if (start > len) return Ops.FALSE;
-            if (start < 0) {
-                start += len;
-                if (start < 0) start = 0;
-            }
-            return Ops.Bool2Object(self.Substring(start).StartsWith(prefix));
+        public static object StartsWith(string self, object prefix, int start) {
+            TryStringOrTuple(prefix);
+            if (prefix is string)
+                return StartsWith(self, prefix as string, start);
+            else
+                return StartsWith(self, prefix as Tuple, start);
         }
 
+
         [PythonName("startswith")]
-        public static object StartsWith(string self, string prefix, int start, int end) {
-            if (prefix == null) throw Ops.TypeError("expected string, got NoneType");
-            int len = self.Length;
-            if (start > len) return Ops.FALSE;
-            // map the negative indices to their positive counterparts
-            else if (start < 0) {
-                start += len;
-                if (start < 0) start = 0;
-            }
-            if (end >= len) return Ops.Bool2Object(self.Substring(start).StartsWith(prefix));
-            else if (end < 0) {
-                end += len;
-                if (end < 0) return Ops.FALSE;
-            }
-            if (end < start) return Ops.FALSE;
-            return Ops.Bool2Object(self.Substring(start, end - start).StartsWith(prefix));
+        public static object StartsWith(string self, object prefix, int start, int end) {
+            TryStringOrTuple(prefix);
+            if (prefix is string)
+                return StartsWith(self, prefix as string, start, end);
+            else
+                return StartsWith(self, prefix as Tuple, start, end);
         }
+
 
         [PythonName("strip")]
         public static string Strip(string self) {
@@ -1217,9 +1236,9 @@ namespace IronPython.Runtime.Operations {
                 // so we just clone the encoding & set the fallback to throw in strict mode.
                 e = (Encoding)e.Clone();
 
-                switch(errors){
+                switch (errors) {
                     case "strict": e.DecoderFallback = DecoderFallback.ExceptionFallback; break;
-                    case "replace": e.DecoderFallback = DecoderFallback.ReplacementFallback;  break;
+                    case "replace": e.DecoderFallback = DecoderFallback.ReplacementFallback; break;
                     default:
                         e.DecoderFallback = new PythonDecoderFallback(encoding,
                             s,
@@ -1251,12 +1270,12 @@ namespace IronPython.Runtime.Operations {
                 // so we just clone the encoding & set the fallback to throw in strict mode
                 e = (Encoding)e.Clone();
 
-                switch(errors){
+                switch (errors) {
                     case "strict": e.EncoderFallback = EncoderFallback.ExceptionFallback; break;
                     case "replace": e.EncoderFallback = EncoderFallback.ReplacementFallback; break;
                     default:
-                        e.EncoderFallback = new PythonEncoderFallback(encoding, 
-                            s, 
+                        e.EncoderFallback = new PythonEncoderFallback(encoding,
+                            s,
                             Modules.PythonCodecs.LookupError(errors));
                         break;
                 }
@@ -1363,6 +1382,208 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
+        private static void TryStringOrTuple(object prefix) {
+            if (Options.Python25 == true) {
+                if (prefix == null) throw Ops.TypeError("expected string or Tuple, got NoneType");
+                if (!(prefix is string) && !(prefix is Tuple))
+                    throw Ops.TypeError("expected string or Tuple, got {0} Type", prefix.GetType());
+            } else {
+                if (prefix == null) throw Ops.TypeError("expected string, got NoneType");
+                if (!(prefix is string))
+                    throw Ops.TypeError("expected string, got {0} Type", prefix.GetType());
+            }
+        }
+
+        private static Boolean TryString(object obj) {
+            if (obj == null)
+                throw Ops.TypeError("expected string , got NoneType");
+            if ((obj as string) == null)
+                throw Ops.TypeError("expected string , got {0} Type", obj.GetType());
+            return true;
+        }
+
+        private static object EndsWith(string self, string suffix) {
+            return Ops.Bool2Object(self.EndsWith(suffix));
+        }
+
+        //  Indexing is 0-based. Need to deal with negative indices
+        //  (which mean count backwards from end of sequence)
+        //  +---+---+---+---+---+ 
+        //  | a | b | c | d | e |
+        //  +---+---+---+---+---+ 
+        //    0   1   2   3   4    
+        //   -5  -4  -3  -2  -1
+
+        private static object EndsWith(string self, string suffix, int start) {
+            int len = self.Length;
+            if (start > len) return Ops.FALSE;
+            // map the negative indice to its positive counterpart
+            if (start < 0) {
+                start += len;
+                if (start < 0) start = 0;
+            }
+            return Ops.Bool2Object(self.Substring(start).EndsWith(suffix));
+        }
+
+        //  With optional start, test beginning at that position (the char at that index is
+        //  included in the test). With optional end, stop comparing at that position (the 
+        //  char at that index is not included in the test)
+        private static object EndsWith(string self, string suffix, int start, int end) {
+            int len = self.Length;
+            if (start > len) return Ops.FALSE;
+            // map the negative indices to their positive counterparts
+            else if (start < 0) {
+                start += len;
+                if (start < 0) start = 0;
+            }
+            if (end >= len) return Ops.Bool2Object(self.Substring(start).EndsWith(suffix));
+            else if (end < 0) {
+                end += len;
+                if (end < 0) return Ops.FALSE;
+            }
+            if (end < start) return Ops.FALSE;
+            return Ops.Bool2Object(self.Substring(start, end - start).EndsWith(suffix));
+        }
+
+
+        private static object EndsWith(string self, Tuple suffix) {
+            foreach (object obj in suffix) {
+                if (TryString(obj)) {
+                    if (self.EndsWith(obj as string) == true) {
+                        return Ops.Bool2Object(true);
+                    }
+                }
+            }
+            return Ops.Bool2Object(false);
+        }
+
+        private static object EndsWith(string self, Tuple suffix, int start) {
+            int len = self.Length;
+            if (start > len) return Ops.FALSE;
+            // map the negative indice to its positive counterpart
+            if (start < 0) {
+                start += len;
+                if (start < 0) start = 0;
+            }
+            foreach (object obj in suffix) {
+                if (TryString(obj)) {
+                    if (self.Substring(start).EndsWith(obj as string) == true) {
+                        return Ops.Bool2Object(true);
+                    }
+                }
+            }
+            return Ops.Bool2Object(false);
+        }
+
+        private static object EndsWith(string self, Tuple suffix, int start, int end) {
+            int len = self.Length;
+            if (start > len) return Ops.FALSE;
+            // map the negative indices to their positive counterparts
+            else if (start < 0) {
+                start += len;
+                if (start < 0) start = 0;
+            }
+            if (end >= len) end = len;
+            else if (end < 0) {
+                end += len;
+                if (end < 0) return Ops.FALSE;
+            }
+            if (end < start) return Ops.FALSE;
+
+            foreach (object obj in suffix) {
+                if (TryString(obj)) {
+                    if (self.Substring(start, end - start).EndsWith(obj as string) == true) {
+                        return Ops.Bool2Object(true);
+                    }
+                }
+            }
+            return Ops.Bool2Object(false);
+        }
+
+        private static object StartsWith(string self, string prefix) {
+            return Ops.Bool2Object(self.StartsWith(prefix));
+        }
+
+        private static object StartsWith(string self, string prefix, int start) {
+            int len = self.Length;
+            if (start > len) return Ops.FALSE;
+            if (start < 0) {
+                start += len;
+                if (start < 0) start = 0;
+            }
+            return Ops.Bool2Object(self.Substring(start).StartsWith(prefix));
+        }
+
+        private static object StartsWith(string self, string prefix, int start, int end) {
+            int len = self.Length;
+            if (start > len) return Ops.FALSE;
+            // map the negative indices to their positive counterparts
+            else if (start < 0) {
+                start += len;
+                if (start < 0) start = 0;
+            }
+            if (end >= len) return Ops.Bool2Object(self.Substring(start).StartsWith(prefix));
+            else if (end < 0) {
+                end += len;
+                if (end < 0) return Ops.FALSE;
+            }
+            if (end < start) return Ops.FALSE;
+            return Ops.Bool2Object(self.Substring(start, end - start).StartsWith(prefix));
+        }
+
+        private static object StartsWith(string self, Tuple prefix) {
+            foreach (object obj in prefix) {
+                if (TryString(obj)) {
+                    if (self.StartsWith(obj as string) == true) {
+                        return Ops.Bool2Object(true);
+                    }
+                }
+            }
+            return Ops.Bool2Object(false);
+        }
+
+        private static object StartsWith(string self, Tuple prefix, int start) {
+            int len = self.Length;
+            if (start > len) return Ops.FALSE;
+            if (start < 0) {
+                start += len;
+                if (start < 0) start = 0;
+            }
+            foreach (object obj in prefix) {
+                if (TryString(obj)) {
+                    if (self.Substring(start).StartsWith(obj as string) == true) {
+                        return Ops.Bool2Object(true);
+                    }
+                }
+            }
+            return Ops.Bool2Object(false);
+        }
+
+        private static object StartsWith(string self, Tuple prefix, int start, int end) {
+            int len = self.Length;
+            if (start > len) return Ops.FALSE;
+            // map the negative indices to their positive counterparts
+            else if (start < 0) {
+                start += len;
+                if (start < 0) start = 0;
+            }
+            if (end >= len) end = len;
+            else if (end < 0) {
+                end += len;
+                if (end < 0) return Ops.FALSE;
+            }
+            if (end < start) return Ops.FALSE;
+
+            foreach (object obj in prefix) {
+                if (TryString(obj)) {
+                    if (self.Substring(start, end - start).StartsWith(obj as string) == true) {
+                        return Ops.Bool2Object(true);
+                    }
+                }
+            }
+            return Ops.Bool2Object(false);
+        }
+
         private class PythonStringEnumerator : IEnumerator {
             private string s;
             private int i;
@@ -1450,7 +1671,7 @@ namespace IronPython.Runtime.Operations {
             public override int Remaining {
                 get {
                     if (buffer == null) return 0;
-                    return buffer.Length - bufferIndex; 
+                    return buffer.Length - bufferIndex;
                 }
             }
 

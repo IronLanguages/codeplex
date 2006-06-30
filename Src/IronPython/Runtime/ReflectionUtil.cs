@@ -28,33 +28,35 @@ namespace IronPython.Runtime {
         // generic types to exist as long as they have different arities.
         internal const char GenericArityDelimiter = '`';
 
+        internal static Version pythonVersion25 = new Version(2, 5);
+
         internal static string GetDefaultDocumentation(string methodName) {
             switch (methodName) {
-                case "__abs__":     return "x.__abs__() <==> abs(x)";
-                case "__add__":     return "x.__add__(y) <==> x+y";
-                case "__call__":    return "x.__call__(...) <==> x(...)";
-                case "__cmp__":     return "x.__cmp__(y) <==> cmp(x,y)";
+                case "__abs__": return "x.__abs__() <==> abs(x)";
+                case "__add__": return "x.__add__(y) <==> x+y";
+                case "__call__": return "x.__call__(...) <==> x(...)";
+                case "__cmp__": return "x.__cmp__(y) <==> cmp(x,y)";
                 case "__delitem__": return "x.__delitem__(y) <==> del x[y]";
-                case "__div__":     return "x.__div__(y) <==> x/y";
-                case "__eq__":      return "x.__eq__(y) <==> x==y";
-                case "__floordiv__":return "x.__floordiv__(y) <==> x//y";
+                case "__div__": return "x.__div__(y) <==> x/y";
+                case "__eq__": return "x.__eq__(y) <==> x==y";
+                case "__floordiv__": return "x.__floordiv__(y) <==> x//y";
                 case "__getitem__": return "x.__getitem__(y) <==> x[y]";
-                case "__gt__":      return "x.__gt__(y) <==> x>y";
-                case "__hash__":    return "x.__hash__() <==> hash(x)";
-                case "__init__":    return "x.__init__(...) initializes x; see x.__class__.__doc__ for signature";
-                case "__len__":     return "x.__len__() <==> len(x)";
-                case "__lshift__":  return "x.__rshift__(y) <==> x<<y";
-                case "__lt__":      return "x.__lt__(y) <==> x<y";
-                case "__mod__":     return "x.__mod__(y) <==> x%y";
-                case "__mul__":     return "x.__mul__(y) <==> x*y";
-                case "__neg__":     return "x.__neg__() <==> -x";
-                case "__new__":     return "T.__new__(S, ...) -> a new object with type S, a subtype of T";
-                case "__pow__":     return "x.__pow__(y[, z]) <==> pow(x, y[, z])";
-                case "__reduce__":  return "helper for pickle";
-                case "__rshift__":  return "x.__rshift__(y) <==> x>>y";
+                case "__gt__": return "x.__gt__(y) <==> x>y";
+                case "__hash__": return "x.__hash__() <==> hash(x)";
+                case "__init__": return "x.__init__(...) initializes x; see x.__class__.__doc__ for signature";
+                case "__len__": return "x.__len__() <==> len(x)";
+                case "__lshift__": return "x.__rshift__(y) <==> x<<y";
+                case "__lt__": return "x.__lt__(y) <==> x<y";
+                case "__mod__": return "x.__mod__(y) <==> x%y";
+                case "__mul__": return "x.__mul__(y) <==> x*y";
+                case "__neg__": return "x.__neg__() <==> -x";
+                case "__new__": return "T.__new__(S, ...) -> a new object with type S, a subtype of T";
+                case "__pow__": return "x.__pow__(y[, z]) <==> pow(x, y[, z])";
+                case "__reduce__": return "helper for pickle";
+                case "__rshift__": return "x.__rshift__(y) <==> x>>y";
                 case "__setitem__": return "x.__setitem__(i, y) <==> x[i]=";
-                case "__str__":     return "x.__str__() <==> str(x)";
-                case "__sub__":     return "x.__sub__(y) <==> x-y";
+                case "__str__": return "x.__str__() <==> str(x)";
+                case "__sub__": return "x.__sub__(y) <==> x-y";
                 case "__truediv__": return "x.__truediv__(y) <==> x/y";
             }
 
@@ -86,7 +88,7 @@ namespace IronPython.Runtime {
         public static string CreateAutoDoc(MethodBase info) {
             StringBuilder retType = new StringBuilder();
             StringBuilder ret = new StringBuilder();
-            
+
             int returnCount = 0;
             MethodInfo mi = info as MethodInfo;
             if (mi != null) {
@@ -100,7 +102,7 @@ namespace IronPython.Runtime {
             } else {
                 ret.Append("__new__");
             }
-            
+
             // For generic methods display either type parameters (for unbound methods) or
             // type arguments (for bound ones).
             if (mi != null && mi.IsGenericMethod) {
@@ -135,7 +137,7 @@ namespace IronPython.Runtime {
                         retType.Insert(0, '(');
                     }
 
-                    if(returnCount != 0) retType.Append(", ");
+                    if (returnCount != 0) retType.Append(", ");
 
                     returnCount++;
 
@@ -156,10 +158,10 @@ namespace IronPython.Runtime {
                 retType.Append(')');
             }
 
-            if (mi != null && mi.IsStatic) 
+            if (mi != null && mi.IsStatic)
                 retType.Insert(0, "static ");
 
-            if(retType.Length != 0) retType.Append(' ');
+            if (retType.Length != 0) retType.Append(' ');
 
             retType.Append(ret.ToString());
 

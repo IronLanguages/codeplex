@@ -110,6 +110,14 @@ namespace IronPython.Runtime.Types {
         private void AddReflectedUnboundMethod(MethodInfo mi) {
             if (!mi.IsStatic) return;
 
+            if (Options.Python25 == false) {
+                object[] attribute = mi.GetCustomAttributes(typeof(PythonVersionAttribute), false);
+                if (attribute.Length > 0) {
+                    PythonVersionAttribute attr = attribute[0] as PythonVersionAttribute;
+                    if (attr != null && attr.version == ReflectionUtil.pythonVersion25) return;
+                }
+            }
+
             string name;
             NameType nt = NameConverter.TryGetName(this, mi, out name);
             if (nt == NameType.None) return;
@@ -118,7 +126,7 @@ namespace IronPython.Runtime.Types {
             if (name == "__new__" || mi.IsDefined(typeof(StaticOpsMethodAttribute), false)) funcType = FunctionType.Function;
             if (mi.DeclaringType == typeof(ArrayOps)) funcType |= FunctionType.SkipThisCheck;
             if (nt == NameType.PythonMethod) funcType |= FunctionType.PythonVisible;
-            
+
 
             RemoveNonOps(SymbolTable.StringToId(name));
 
@@ -132,7 +140,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private bool ContainsNonOps(SymbolId name){
+        private bool ContainsNonOps(SymbolId name) {
             object value;
             if (dict.TryGetValue(name, out value)) {
                 BuiltinFunction rum = value as BuiltinFunction;
@@ -152,7 +160,7 @@ namespace IronPython.Runtime.Types {
         /// non-ops version if both exist before inserting the new Ops method.
         /// </summary>
         private void RemoveNonOps(SymbolId name) {
-            if(ContainsNonOps(name)) {
+            if (ContainsNonOps(name)) {
                 dict.Remove(name);
             }
         }
@@ -170,7 +178,7 @@ namespace IronPython.Runtime.Types {
 
     public class ReflectedArrayType : OpsReflectedType {
         public ReflectedArrayType(string name, Type arrayType)
-            : base(name, arrayType, typeof(ArrayOps), arrayType) {
+            : base(name, arrayType, typeof(ArrayOps) , arrayType) {
         }
 
         public override object this[object index] {

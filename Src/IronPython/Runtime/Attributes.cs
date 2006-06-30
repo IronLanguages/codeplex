@@ -34,6 +34,19 @@ namespace IronPython.Runtime {
     }
 
     /// <summary>
+    /// PythonVersionAttribute is used to decorate methods in the engine with the
+    /// Python version starting with which they are present
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    public class PythonVersionAttribute : Attribute {
+        public readonly Version version;
+        public PythonVersionAttribute(int major, int minor) {
+            this.version = new Version(major, minor);
+        }
+    }
+
+
+    /// <summary>
     /// PythonTypeAttribute is used for two purposes:
     /// 1. It can be used to specify the Python name of types in the engine which
     ///    implement built-in types. For eg. The type IronPython.Runtime.Set in the engine
