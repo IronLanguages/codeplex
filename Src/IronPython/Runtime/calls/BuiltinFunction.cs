@@ -721,7 +721,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                 // calls like set.add(None) 
                 if (self != null && self.GetType() == template.ClrDeclaringType) return;
 
-                DynamicType selfType = self == null ? NoneType.InstanceOfNoneType : Ops.GetDynamicTypeFromType(self.GetType());
+                DynamicType selfType = self == null ? NoneTypeOps.InstanceOfNoneType : Ops.GetDynamicTypeFromType(self.GetType());
                 Debug.Assert(selfType != null);
 
                 ReflectedType declType = DeclaringType;
