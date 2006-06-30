@@ -120,6 +120,10 @@ def test_none():
     AreEqual(x - y, set('d'))
     AreEqual(y - x, set('abc'))
     
+    a = set()
+    a.add(None)
+    AreEqual(repr(a), 'set([None])')
+    
 run_test(__name__)
 
 

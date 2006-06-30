@@ -432,24 +432,25 @@ namespace IronPython.Runtime.Types {
             AddEnumOperator("op_Inequality", "NotEqual");
         }
 
-        private static bool IsPropertyMethod(MethodInfo mi, MemberInfo[] defaultMembers) {
+        private static PropertyInfo GetPropertyFromMethod(MethodInfo mi, MemberInfo[] defaultMembers) {
             Type type = mi.DeclaringType;
             foreach (MemberInfo member in defaultMembers) {
                 if (member.MemberType == MemberTypes.Property) {
                     PropertyInfo property = member as PropertyInfo;
                     if (mi == property.GetGetMethod() ||
                         mi == property.GetSetMethod()) {
-                        return property.GetIndexParameters().Length == 1;
+
+                        return property.GetIndexParameters().Length == 1 ? property : null;
                     }
                 }
             }
             foreach (PropertyInfo prop in type.GetProperties(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)) {
                 if (mi == prop.GetGetMethod(true) ||
                     mi == prop.GetSetMethod(true)) {
-                    return prop.GetIndexParameters().Length == 0;
+                    return prop.GetIndexParameters().Length == 0 ? prop : null;
                 }
             }
-            return false;
+            return null;
         }
 
         private class OperatorMethod {
@@ -553,16 +554,40 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
-        private void AddExplicitInterfaceMethod(MethodInfo mi, MemberInfo[] defaultMembers) {
+        private void AddExplicitInterfaceMethod(Type interfaceType, MethodInfo mi, MemberInfo[] defaultMembers) {
             string name;
+            NameType nt;
+
+            // we only add explicit interface methods if there are no collisions.  If there
+            // are collisions the user needs to call via the interface type and pass the
+            // instance in explicitly.  For properties this becomes:
+            //      IFoo.x.GetValue(somefoo)
+            //      IFoo.x.SetValue(somefoo, value)
+            //
+            // For methods this becomes:
+            //      IFoo.x(somefoo)
 
             if (mi.IsSpecialName) {
-                if (IsPropertyMethod(mi, defaultMembers)) {
-                    return;
+                // property
+                PropertyInfo pi = GetPropertyFromMethod(mi, defaultMembers);
+                if (pi != null) {
+                    nt = NameConverter.TryGetName(this, pi, mi, out name);
+                    switch(nt){
+                        case NameType.None: break;
+                        case NameType.PythonProperty:
+                        case NameType.Property:
+                            if (!dict.ContainsKey(SymbolTable.StringToId(name))) {
+                                dict[SymbolTable.StringToId(name)] = new ReflectedProperty(pi, pi.GetGetMethod(true), pi.GetSetMethod(true), nt);
+                            } 
+                            break;
+                        default: Debug.Assert(false, "Unexpected name type for explicitly implemented reflected property"); break;
+                    }                    
                 }
+                return;
             }
 
-            NameType nt = NameConverter.TryGetName(this, mi, out name);
+            // method
+            nt = NameConverter.TryGetName(this, mi, out name);
             switch (nt) {
                 case NameType.None: break;
                 case NameType.PythonMethod:
@@ -570,7 +595,7 @@ namespace IronPython.Runtime.Types {
                     if (!dict.ContainsKey(SymbolTable.StringToId(name))) {
                         // no collision, store the interface method.
                         StoreReflectedMethod(name, mi, nt);
-                    }
+                    } 
                     break;
                 default: Debug.Assert(false, "Unexpected name type for reflected method"); break;
             }
@@ -579,10 +604,15 @@ namespace IronPython.Runtime.Types {
         private void AddReflectedMethod(MethodInfo mi, MemberInfo[] defaultMembers) {
             string name;
 
+            if (IsExplicitInterfaceImpl(mi)) {
+                // explicit interface methods will be added independently.
+                return;
+            }
+
             if (mi.IsSpecialName) {
                 if (AddOperator(mi)) {
                     return;
-                } else if (IsPropertyMethod(mi, defaultMembers)) {
+                } else if (GetPropertyFromMethod(mi, defaultMembers) != null) {
                     return;
                 }
             }
@@ -626,6 +656,10 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        internal static bool IsExplicitInterfaceImpl(MethodInfo mi) {
+            return mi.IsFinal && mi.IsHideBySig && mi.IsPrivate && mi.IsVirtual;
+        }
+
         private void AddReflectedProperty(PropertyInfo info, MemberInfo[] defaultMembers) {
             if (info.GetIndexParameters().Length > 0) {
                 foreach (MemberInfo member in defaultMembers) {
@@ -639,6 +673,18 @@ namespace IronPython.Runtime.Types {
                 // accessors as necessary.
                 string getName = null, setName = null;
                 MethodInfo getter = info.GetGetMethod(true), setter = info.GetSetMethod(true);
+
+                // don't add it if we only have explicit interfaces, we'll add
+                // those later.
+                if (getter != null) {
+                    if (IsExplicitInterfaceImpl(getter) &&
+                        (setter == null || IsExplicitInterfaceImpl(setter))) {
+                        return;
+                    }
+                } else if (setter != null && IsExplicitInterfaceImpl(setter)) {
+                    return;
+                }
+                
                 NameType getterNt = NameType.None, setterNt = NameType.None;
 
                 if (getter != null) getterNt = NameConverter.TryGetName(this, info, getter, out getName);
@@ -847,10 +893,10 @@ namespace IronPython.Runtime.Types {
                             continue;
                         }
 
-                        if (mi.IsFinal && mi.IsHideBySig && mi.IsPrivate && mi.IsVirtual) {
+                        if (IsExplicitInterfaceImpl(mi)) {
                             // explicitly implemented, add it now (otherwise it should
                             // have already been added).
-                            AddExplicitInterfaceMethod(mi, defaultMembers);
+                            AddExplicitInterfaceMethod(ty, mi, defaultMembers);
                         }
                     }
                 }

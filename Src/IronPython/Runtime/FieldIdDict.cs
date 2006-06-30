@@ -28,7 +28,7 @@ namespace IronPython.Runtime {
     /// </summary>
     [PythonType(typeof(Dict))]
     class FieldIdDict : IDictionary, IDictionary<object, object>, IAttributesDictionary,
-                        IMapping, ICloneable, IRichEquality, IRichComparable {
+                        IMapping, ICloneable, IRichEquality, IRichComparable, ICodeFormattable {
         Dictionary<SymbolId, object> data = new Dictionary<SymbolId, object>();
 
         public FieldIdDict() {
@@ -684,6 +684,14 @@ namespace IronPython.Runtime {
             if (res == Ops.NotImplemented) return res;
 
             return ((int)res) <= 0;
+        }
+
+        #endregion
+
+        #region ICodeFormattable Members
+
+        public string ToCodeString() {
+            return ToString();
         }
 
         #endregion

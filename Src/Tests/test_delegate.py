@@ -285,7 +285,7 @@ AreEqual(globalArg, 'hello')
 
 try:
     t = Thread(ParameterizedThreadStart(foo.baz))
-    AreEqual(True, False)
+    AssertUnreachable()
 except TypeError: pass
 
 

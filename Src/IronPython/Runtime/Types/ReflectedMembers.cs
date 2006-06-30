@@ -195,6 +195,14 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        public object GetValue(object instance) {
+            return GetAttribute(instance, null);
+        }
+
+        public void SetValue(object instance, object value) {
+            SetAttribute(instance, value);
+        }
+
         [PythonName("__get__")]
         public object GetAttribute(object instance, object context) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);

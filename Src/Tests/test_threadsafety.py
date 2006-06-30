@@ -69,7 +69,7 @@ def reader():
             for i in xrange(loopCnt): readerWorker(i)
         except Exception, e:
             print 'Test failed, unexpected exception from reader ', e
-            AreEqual(True, False)
+            AssertUnreachable()
     finally:
         global readerAlive
         readerAlive = False
@@ -85,7 +85,7 @@ class writer:
                 for i in xrange(loopCnt): self.writer(i, self.index)
             except Exception, e:
                 print 'Test failed (writer through exception)', e          
-                AreEqual(True, False)
+                AssertUnreachable()
         finally:
             global writerAlive
             writerAlive = False

@@ -1384,7 +1384,6 @@ namespace IronPython.CodeDom {
         }
 
         private CodeObject ProcessSuite(ClassDef node, CodeTypeDeclaration ctd) {
-            //!!! resolve class defs the 2nd time through
             int docIndex = -1;
             bool fFirst = true;
             CodeNamespace cn = null;

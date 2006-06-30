@@ -39,7 +39,7 @@ namespace IronPython.Runtime {
     /// Summary description for module.
     /// </summary>
     [PythonType("module")]
-    public class PythonModule : ICustomAttributes, IModuleEnvironment {
+    public class PythonModule : ICustomAttributes, IModuleEnvironment, ICodeFormattable {
         internal IAttributesDictionary __dict__;
 
         private ICustomAttributes innerMod;
@@ -294,6 +294,14 @@ namespace IronPython.Runtime {
         internal void SetImportedAttr(ICallerContext context, SymbolId name, object value) {
             __dict__[name] = value;
         }
+
+        #region ICodeFormattable Members
+
+        public string ToCodeString() {
+            return ToString();
+        }
+
+        #endregion
     }
 
     [Flags]

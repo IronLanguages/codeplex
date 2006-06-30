@@ -91,7 +91,7 @@ namespace IronPython.Runtime {
         }
 
         public ICollection<object> Keys {
-            get { lock (this) return data.Keys; }
+            get { lock (this) return new DictKeyCollection(this, data.Keys); }
         }
 
         public bool Remove(object key) {
@@ -871,6 +871,67 @@ namespace IronPython.Runtime {
         }
     }
 
+    public class DictKeyCollection : ICollection<object> {
+        private ICollection<object> items;
+        private Dict dict;
+
+        public DictKeyCollection(Dict dictionary, ICollection<object> collection) {
+            items = collection;
+            dict = dictionary;
+        }
+
+        #region ICollection<object> Members
+
+        public void Add(object item) {
+            items.Add(DictOps.NullToObj(item));
+        }
+
+        public void Clear() {
+            items.Clear();
+        }
+
+        public bool Contains(object item) {
+            return items.Contains(DictOps.NullToObj(item));
+        }
+
+        public void CopyTo(object[] array, int arrayIndex) {
+            int i = 0;
+            foreach(object o in items) {
+                array[i + arrayIndex] = DictOps.ObjToNull(o);
+                i++;
+            }
+        }
+
+        public int Count {
+            get { return items.Count; }
+        }
+
+        public bool IsReadOnly {
+            get { return items.IsReadOnly; }
+        }
+
+        public bool Remove(object item) {
+            return items.Remove(DictOps.NullToObj(item));
+        }
+
+        #endregion
+
+        #region IEnumerable<object> Members
+
+        public IEnumerator<object> GetEnumerator() {
+            return new DictKeyEnumerator(dict.data);
+        }
+
+        #endregion
+
+        #region IEnumerable Members
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            return new DictKeyEnumerator(dict.data);
+        }
+
+        #endregion
+    }
     /// <summary>
     /// Note: 
     ///   IEnumerator innerEnum = Dictionary<K,V>.KeysCollections.GetEnumerator();

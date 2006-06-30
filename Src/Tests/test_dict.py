@@ -197,6 +197,13 @@ def repeat_on_class(C):
 
     contains(d, '__doc__', 'x1', 'f1')
 
+    ## recursive entries & repr
+    d['abc'] = d
+    x = repr(d) # shouldn't stack overflow
+    Assert(x.find("'abc'") != -1)
+    Assert(x.find("{...}") != -1)
+    del d['abc']
+    
     keys, values = d.keys(), d.values()
     AreEqual(len(keys), len(values))
     contains(keys, '__doc__', 'x1', 'f1')
@@ -235,6 +242,7 @@ def repeat_on_class(C):
     AreEqual(d.get('x3', 30), 30)
     AreEqual(d.get('f3'), None)
     AreEqual(d.get('f3', f3)(c), 33)
+    
 
     ## setdefault
     AreEqual(d.setdefault('x1'), 10)
@@ -617,7 +625,7 @@ AreEqual(a, {'a':3, 'b':2, 'c':5})
 
 try:
     dict({'a':3}, {'b':2}, c=5)
-    AreEqual(True, False)
+    AssertUnreachable()
 except TypeError: pass
 
 #####################################################################
@@ -676,4 +684,11 @@ def test_DictionaryUnionEnumerator():
     AreEqual(e.MoveNext(), False)
     AssertError(SystemError, getattr, e, "Key")
     
+def test_same_but_different():
+    """Test case checks that when two values who are logically different but share hash code & equality
+    result in only a single entry"""
+    
+    AreEqual({-10:0, -10L:1}, {-10:1})
+
+
 run_test(__name__)

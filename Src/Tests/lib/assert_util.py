@@ -106,6 +106,10 @@ def Fail(m):  raise AssertionError(m)
 def Assert(c, m = "Assertion failed"):
     if not c: raise AssertionError(m)
 
+def AssertUnreachable(m = None):
+    if m: Assert(False, "Unreachable code reached: "+m)
+    else: Assert(False, "Unreachable code reached")
+
 def AreEqual(a, b):
     Assert(a == b, "expected %r, but found %r" % (b, a))
 

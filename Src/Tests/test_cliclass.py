@@ -139,7 +139,7 @@ def test_symbol_dict():
         else:
             try:
                 C.__dict__ = {}
-                AreEqual(True, False)
+                AssertUnreachable()
             except TypeError:
                 pass
         
@@ -329,6 +329,26 @@ def test_repr():
     
     AreEqual(repr(Point(1,2)).startswith('<System.Drawing.Point object'), True)
     AreEqual(repr(Point(1,2)).endswith('[{X=1,Y=2}]>'),True)
+    
+
+def test_explicit_interfaces():
+    otdc = OverrideTestDerivedClass()
+    AreEqual(otdc.MethodOverridden(), "OverrideTestDerivedClass.MethodOverridden() invoked")
+    AreEqual(IOverrideTestInterface.MethodOverridden(otdc), 'IOverrideTestInterface.MethodOverridden() invoked')
+
+    AreEqual(otdc.x, 'IOverrideTestInterface.x invoked')
+    AreEqual(IOverrideTestInterface.y.GetValue(otdc), 'IOverrideTestInterface.y invoked')
+    
+    AreEqual(otdc.y, 'OverrideTestDerivedClass.y invoked')
+
+    AreEqual(otdc.Method(), "IOverrideTestInterface.method() invoked")
+    
+    AreEqual(hasattr(otdc, 'IronPythonTest_IOverrideTestInterface_x'), False)
+    
+    # we can also do this the ugly way:
+    
+    AreEqual(IOverrideTestInterface.x.__get__(otdc, OverrideTestDerivedClass), 'IOverrideTestInterface.x invoked')
+    AreEqual(IOverrideTestInterface.y.__get__(otdc, OverrideTestDerivedClass), 'IOverrideTestInterface.y invoked')
     
 
 if is_cli: 

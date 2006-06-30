@@ -181,7 +181,7 @@ namespace IronPython.Modules {
             return res;
         }
 
-        private static string FormatTime(string format, DateTime dt) {
+        internal static string FormatTime(string format, DateTime dt) {
             bool postProc;
             List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, out postProc);
             StringBuilder res = new StringBuilder();
@@ -307,7 +307,7 @@ namespace IronPython.Modules {
         }
 
 
-        private static Tuple GetDateTimeTuple(DateTime dt) {
+        internal static Tuple GetDateTimeTuple(DateTime dt) {
             int doy;
 
             // Python DOY is off-by-one from ours

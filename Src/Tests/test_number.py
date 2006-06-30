@@ -218,7 +218,7 @@ AreEqual(True == None, False)
 AreEqual(None == False, False)
 AreEqual(None == True, False)
 
-if None: AreEqual(False, True)
+if None: AssertUnreachable("none shouldn't be true")
 
 a = None
 if a: AreEqual(False, True)

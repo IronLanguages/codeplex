@@ -19,6 +19,23 @@ using System.Text;
 using System.Runtime.CompilerServices;
 
 namespace IronPythonTest {
+
+    public interface IOverrideTestInterface {
+        object x { get;}
+        string Method();
+        string y { get;}
+        string MethodOverridden();
+    }
+
+    public class OverrideTestDerivedClass : IOverrideTestInterface {
+        object IOverrideTestInterface.x { get { return "IOverrideTestInterface.x invoked"; } }
+        string IOverrideTestInterface.Method() { return "IOverrideTestInterface.method() invoked"; }
+        string IOverrideTestInterface.y { get { return "IOverrideTestInterface.y invoked"; } }
+        public string y { get { return "OverrideTestDerivedClass.y invoked"; } }
+        string IOverrideTestInterface.MethodOverridden() { return "IOverrideTestInterface.MethodOverridden() invoked"; }
+        public string MethodOverridden() { return "OverrideTestDerivedClass.MethodOverridden() invoked"; }
+    }
+
     public struct MySize {
         public int width;
         public int height;

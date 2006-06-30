@@ -894,7 +894,7 @@ class D(B,A): pass
 
 try:
     class E(C,D): pass
-    AreEqual(True, False)
+    AssertUnreachable()
 except TypeError:
     pass
     
@@ -907,7 +907,7 @@ AreEqual(complex(real=2), (2+0j))
 #######################################################
 try:
     2.0 + "2.0"
-    AreEqual(True, False)
+    AssertUnreachable()
 except TypeError: pass
 
 #### (sometype).__class__ should be defined and correct

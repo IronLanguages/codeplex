@@ -404,7 +404,7 @@ def test_check_dictionary():
         else:
             try:
                 C.__dict__ = {}
-                AreEqual(True, False)
+                AssertUnreachable()
             except TypeError:
                 pass
         
@@ -532,13 +532,13 @@ def test_mro():
     
     try:
         class N(A, B,C): pass
-        AreEqual(True, False) #failure, shouldn't be possible
+        AssertUnreachable("impossible MRO created") 
     except TypeError:
         pass
     
     try:
         class N(A, A): pass
-        AreEqual(True, False) # can't derive from same base type
+        AssertUnreachable("can't dervie from the same base type twice") 
     except TypeError:
         pass
 
@@ -611,7 +611,7 @@ def test_mixed_inheritance_mro():
     
     try:
         class H(A,B,E): pass
-        AreEqual(True, False)
+        AssertUnreachable()
     except TypeError: 
         pass
     
@@ -741,7 +741,7 @@ def test_newstyle_lookup():
             
             try:
                 eval(testCase)    
-                AreEqual(True, False)
+                AssertUnreachable()
             except TypeError, e:
                 pass
             
@@ -779,7 +779,7 @@ def test_newstyle_lookup():
             
             try:
                 exec testCase in globals(), locals()
-                AreEqual(True, False)
+                AssertUnreachable()
             except TypeError:
                 pass
             
@@ -812,7 +812,7 @@ def test_newstyle_lookup():
         
             try:
                 eval(testCase)
-                AreEqual(True, False)
+                AssertUnreachable()
             except TypeError:
                 pass
             
@@ -841,7 +841,7 @@ def test_newstyle_lookup():
         
             try:
                 eval(testCase)
-                AreEqual(True, False)
+                AssertUnreachable()
             except TypeError:
                 pass
             
@@ -869,7 +869,7 @@ def test_newstyle_lookup():
         
             try:
                 eval(testCase)
-                AreEqual(True, False)
+                AssertUnreachable()
             except (TypeError, ValueError), e:
                 AreEqual(e.args[0].find('returned') == -1, True)    # shouldn't have returned '__complex__ returned ...'
 
@@ -1003,7 +1003,7 @@ def test_slots():
         a = slotType()
         try:
             x = a.abc
-            AreEqual(True, False)
+            AssertUnreachable()
         except AttributeError: pass
         
         AreEqual(hasattr(a, 'abc'), False)
@@ -1018,7 +1018,7 @@ def test_slots():
         # slot classes don't have __dict__
         try:
             x = a.abc
-            AreEqual(True, False)
+            AssertUnreachable()
         except AttributeError: pass
         
         AreEqual(hasattr(a, '__dict__'), False)
@@ -1094,7 +1094,7 @@ def test_slots():
         try:
             class C(object):
                 __slots__ = x
-            AreEqual(True,False)
+            AssertUnreachable()
         except TypeError:
             pass
     
@@ -1180,13 +1180,13 @@ def test_inheritance_cycle():
     
     try:
       CycleA.__bases__ = (CycleA,)
-      AreEqual(True, False)
+      AssertUnreachable()
     except TypeError: pass
     
     try:
       CycleA.__bases__ = (CycleB,)
       CycleB.__bases__ = (CycleA,)
-      AreEqual(True, False)
+      AssertUnreachable()
     except TypeError: pass
 
 ############################################################
@@ -1224,7 +1224,7 @@ def test_outer_scope():
         a = foo()
         try:
             a.__dict__ = x
-            AreEqual(True, False)
+            AssertUnreachable()
         except TypeError: pass
 
 def test_default_new_init():
@@ -1282,6 +1282,13 @@ def test_hash():
         inst = x()
         AreEqual(inst.__hash__(), hash(inst))
         
+
+def test_NoneSelf():
+    try:
+        set.add(None)
+        AssertUnreachable()
+    except TypeError:
+        pass
 
 
 # tests w/ special requirements that can't be run in methods..

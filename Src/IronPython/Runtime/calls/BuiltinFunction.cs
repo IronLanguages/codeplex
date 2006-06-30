@@ -717,10 +717,11 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
             if ((template.FunctionType & FunctionType.FunctionMethodMask) == FunctionType.Method) {
                 // to a fast check on the CLR types, if they match we can avoid the slower
-                // check that involves looking up dynamic types.
-                if (self.GetType() == template.ClrDeclaringType) return;
+                // check that involves looking up dynamic types. (self can be null on
+                // calls like set.add(None) 
+                if (self != null && self.GetType() == template.ClrDeclaringType) return;
 
-                DynamicType selfType = Ops.GetDynamicTypeFromType(self.GetType());
+                DynamicType selfType = self == null ? NoneType.InstanceOfNoneType : Ops.GetDynamicTypeFromType(self.GetType());
                 Debug.Assert(selfType != null);
 
                 ReflectedType declType = DeclaringType;

@@ -1099,6 +1099,9 @@ namespace IronMath {
         public override int GetHashCode() {
             if (data.Length == 0) return 0;
             // HashCode must be same as int for values in the range of a single int
+            if (IsNegative())
+                return -(int)data[0];
+
             return (int)data[0];
         }
 

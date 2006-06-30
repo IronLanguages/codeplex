@@ -367,8 +367,6 @@ namespace IronPython.Runtime {
 
         [PythonName("add")]
         public void Add(object o) {
-            if (o == null) o = NoneTypeOps.InstanceOfNoneType;
-
             Ops.Hash(o);// make sure we're hashable
             if (!items.ContainsKey(o)) {
                 items.Add(o, o);
@@ -757,8 +755,6 @@ namespace IronPython.Runtime {
         }
 
         void ISet.PrivAdd(object o) {
-            if (o == null) o = NoneTypeOps.InstanceOfNoneType;
-
             Ops.Hash(o);// make sure we're hashable
             if (!items.ContainsKey(o)) {
                 items.Add(o, o);
@@ -766,8 +762,6 @@ namespace IronPython.Runtime {
         }
 
         void ISet.PrivRemove(object o) {
-            if (o == null) o = NoneTypeOps.InstanceOfNoneType;
-
             Ops.Hash(o);// make sure we're hashable
             items.Remove(o);
         }

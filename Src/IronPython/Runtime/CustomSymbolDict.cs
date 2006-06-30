@@ -29,7 +29,7 @@ namespace IronPython.Runtime {
     /// </summary>
     [PythonType(typeof(Dict))]
     public abstract class CustomSymbolDict : IDictionary, IDictionary<object, object>, IAttributesDictionary,
-                                              IMapping, ICloneable, IRichEquality, IRichComparable {
+                                              IMapping, ICloneable, IRichEquality, IRichComparable, ICodeFormattable {
         Dictionary<SymbolId, object> data;
 
         protected CustomSymbolDict() {
@@ -710,6 +710,14 @@ namespace IronPython.Runtime {
             if (res == Ops.NotImplemented) return res;
 
             return ((int)res) <= 0;
+        }
+
+        #endregion
+
+        #region ICodeFormattable Members
+
+        public string ToCodeString() {
+            return ToString();
         }
 
         #endregion

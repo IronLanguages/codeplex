@@ -51,19 +51,19 @@ AreEqual(called, True)
 
 try:
     del(a.InstanceTest)
-    AreEqual(True, False)
+    AssertUnreachable()
 except AttributeError:
     pass
     
 try:
     a.InstanceTest = 'abc'
-    AreEqual(True, False)
+    AssertUnreachable()
 except AttributeError:
     pass
     
 try:
     IronPythonTest.Events.StaticTest = 'abc'
-    AreEqual(True, False)
+    AssertUnreachable()
 except AttributeError:
     pass
     

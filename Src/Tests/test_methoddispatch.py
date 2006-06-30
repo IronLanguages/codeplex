@@ -1206,7 +1206,7 @@ import System
 x = System.Array.CreateInstance(System.Byte, 1024)
 try:
     System.Array.Resize(x, 2048)
-    AreEqual(True, False)
+    AssertUnreachable()
 except TypeError:
     pass
 

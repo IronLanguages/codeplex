@@ -545,13 +545,13 @@ AreEqual(x.__self__, B)
 # invalid super cases
 try:
     x = super(B, 'abc')
-    AreEqual(True, False)
+    AssertUnreachable()
 except TypeError:
     pass
     
 try:
     super(B,A)
-    AreEqual(True, False)
+    AssertUnreachable()
 except TypeError:
     pass
     
