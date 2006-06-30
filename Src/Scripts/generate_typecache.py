@@ -55,7 +55,7 @@ data = [
 	TypeData('PythonCodecs', 'codecs', entryName='Codecs'),
 	TypeData('Builtin'),
 	TypeData('Generator'),
-	TypeData('Object', 'obj', 'PythonType'),
+	TypeData('Object', 'obj'),
 	TypeData('SetCollection', entryName='Set'),
 	TypeData('ReflectedType'),
 	TypeData('String', 'str'),
@@ -68,7 +68,7 @@ data = [
 	TypeData('PythonModule', entryName="Module"),
 	TypeData('Method'),
 	TypeData('Enumerate'),
-	TypeData('Int32', 'intType', typeType='PythonType')
+	TypeData('Int32', 'intType')
 ]
 
 # groups all of our type data by type, and outputs

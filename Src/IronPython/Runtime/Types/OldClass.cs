@@ -870,6 +870,19 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
+        protected override object CallBinaryOperator(SymbolId op, object self, object other) {
+            object func;
+            OldInstance.DoCoerce(ref self, ref other);
+
+            if (Ops.TryGetAttr(self, op, out func)) return Ops.Call(func, other);
+            return Ops.NotImplemented;
+        }
+
+        protected override object CallUnaryOperator(SymbolId op, object self) {
+            object func;
+            if (Ops.TryGetAttr(self, op, out func)) return Ops.Call(func);
+            return Ops.NotImplemented;
+        }
 
         public override object CompareTo(object self, object other) {
             Debug.Assert(self is OldInstance);
@@ -882,24 +895,6 @@ namespace IronPython.Runtime.Types {
             if (Ops.TryGetAttr(DefaultContext.Default, self, SymbolTable.Coerce, out meth)) {
                 return Ops.Call(meth, other);
             }
-            return Ops.NotImplemented;
-        }
-
-        public override object Negate(object self) {
-            object func;
-            if (Ops.TryGetAttr(self, SymbolTable.OpNegate, out func)) return Ops.Call(func);
-            return Ops.NotImplemented;
-        }
-
-        public override object Positive(object self) {
-            object func;
-            if (Ops.TryGetAttr(self, SymbolTable.Positive, out func)) return Ops.Call(func);
-            return Ops.NotImplemented;
-        }
-
-        public override object OnesComplement(object self) {
-            object func;
-            if (Ops.TryGetAttr(self, SymbolTable.OpOnesComplement, out func)) return Ops.Call(func);
             return Ops.NotImplemented;
         }
     }

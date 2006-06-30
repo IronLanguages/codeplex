@@ -151,7 +151,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(PythonType cls, string s, int radix) {
+        public static object Make(DynamicType cls, string s, int radix) {
             if (cls == LongType) {
                 return ParseBigIntegerSign(s, radix);
             } else {
@@ -169,7 +169,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(PythonType cls, object x) {
+        public static object Make(DynamicType cls, object x) {
             ExtensibleLong el;
 
             if (cls == LongType) {
@@ -212,7 +212,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(PythonType cls) {
+        public static object Make(DynamicType cls) {
             if (cls == LongType) {
                 return BigInteger.Zero;
             } else {

@@ -28,7 +28,8 @@ def test_main(level='full'):
         'generate_exceptions', 
         'generate_math', 
         'generate_ops',
-        'generate_walker'
+        'generate_walker',
+        'generate_typecache',
         ]
 
     for gen in generators:

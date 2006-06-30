@@ -147,7 +147,8 @@ namespace IronPython.Runtime.Calls {
             try {
                 ret = Call(null, arg0, arg1);
                 return true;
-            } catch (ArgumentTypeException) {
+            } catch (ArgumentTypeException e) {
+                if (e.Message == "complex is not an ordered type") throw;
                 ret = null;
                 return false;
             }
@@ -719,7 +720,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                 // check that involves looking up dynamic types.
                 if (self.GetType() == template.ClrDeclaringType) return;
 
-                PythonType selfType = Ops.GetDynamicTypeFromType(self.GetType()) as PythonType;
+                DynamicType selfType = Ops.GetDynamicTypeFromType(self.GetType());
                 Debug.Assert(selfType != null);
 
                 ReflectedType declType = DeclaringType;

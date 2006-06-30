@@ -180,7 +180,7 @@ namespace IronPython.Runtime.Operations {
         #region Python Constructors
 
         [PythonName("__new__")]
-        public static object Make(ICallerContext context, PythonType cls) {
+        public static object Make(ICallerContext context, DynamicType cls) {
             if (cls == TypeCache.String) {
                 return "";
             } else {
@@ -189,7 +189,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(ICallerContext context, PythonType cls, object @object) {
+        public static object Make(ICallerContext context, DynamicType cls, object @object) {
             if (cls == TypeCache.String) {
                 return StringDynamicType.FastNew(context, @object);
             } else {
@@ -198,7 +198,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(ICallerContext context, PythonType cls, string @string) {
+        public static object Make(ICallerContext context, DynamicType cls, string @string) {
             if (cls == TypeCache.String) {
                 return Decode(context, @string);
             } else {
@@ -207,7 +207,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(ICallerContext context, PythonType cls, 
+        public static object Make(ICallerContext context, DynamicType cls, 
             string @string,
             [DefaultParameterValue(null)] string encoding, 
             [DefaultParameterValue("strict")]string errors) {

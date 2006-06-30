@@ -483,7 +483,7 @@ namespace IronPython.Runtime {
                 conversion = Conversion.Identity;
                 return TypeVal;
             }
-            PythonType PythonTypeVal = value as PythonType;
+            DynamicType PythonTypeVal = value as DynamicType;
             if (PythonTypeVal != null) {
                 conversion = Conversion.Implicit;
                 return PythonTypeVal.type;

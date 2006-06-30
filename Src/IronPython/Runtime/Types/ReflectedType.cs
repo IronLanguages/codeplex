@@ -36,8 +36,8 @@ namespace IronPython.Runtime.Types {
     // ReflectedType's are read-only once they are created as the user is not allowed to assign 
     // properties to them.
 
-    [PythonType(typeof(PythonType))]
-    public partial class ReflectedType : PythonType, IFancyCallable, IMapping, IContextAwareMember, ICallableWithCallerContext {
+    [PythonType(typeof(DynamicType))]
+    public partial class ReflectedType : DynamicType, IFancyCallable, IContextAwareMember, ICallableWithCallerContext {
         #region Member variables
 
         /* A reflected type can be setup to behave in several different ways.
@@ -52,7 +52,7 @@ namespace IronPython.Runtime.Types {
          * Ops.GetDynamicTypeFromType(IronPython.Runtime.Function0).effectivePythonType ==
          * Ops.GetDynamicTypeFromType(IronPython.Runtime.Function)
          * 
-         * All other state is inherited from PythonType and DynamicType.
+         * All other state is inherited from DynamicType and DynamicType.
          */
 
         private bool isPythonType, clsOnly, isPythonTypeChecked;
@@ -62,12 +62,8 @@ namespace IronPython.Runtime.Types {
 
         private static Hashtable operatorTable;
 
-        //internal const string MakeNewName = "MakeNew$$";
-
         private IAttributesInjector prependedAttrs;
         private IAttributesInjector appendedAttrs;
-
-        private Tuple bases;
 
         #endregion
 
@@ -117,27 +113,6 @@ namespace IronPython.Runtime.Types {
         }
         #endregion
 
-        #region Public API Surface
-
-        public string Documentation {
-            [PythonName("__doc__")]
-            get {
-                object[] docAttr = type.GetCustomAttributes(typeof(DocumentationAttribute), false);
-                if (docAttr != null && docAttr.Length > 0) {
-                    return ((DocumentationAttribute)docAttr[0]).Value;
-                }
-                
-                BuiltinFunction newMeth = ctor as BuiltinFunction;
-                if (newMeth == null) {
-                    if (type.IsEnum) return ReflectionUtil.CreateEnumDoc(type);
-
-                    return "no documentation available";
-                }
-                return newMeth.Documentation;
-            }
-        }
-
-        #endregion
 
         #region Protected API Surface
 
@@ -287,7 +262,7 @@ namespace IronPython.Runtime.Types {
             // __new__
             object newFunc;
             if (dict.TryGetValue(SymbolTable.NewInst, out newFunc)) {
-                // user provided a __new__ method, first argument should be PythonType
+                // user provided a __new__ method, first argument should be DynamicType
                 // We will set our allocator to be a bound-method that passes our type
                 // through, and we'll leave __new__ unchanged, other than making sure
                 // it's a function, not a method.
@@ -366,7 +341,7 @@ namespace IronPython.Runtime.Types {
                     AddProtocolMethod("__repr__", "ReprHelper", NameType.PythonMethod);
                 }
             } else if (toStringMethod == null || toStringMethod.DeclaringType != typeof(object)) {
-                // type overrides ToString...  for PythonType's call ToString, for
+                // type overrides ToString...  for DynamicType's call ToString, for
                 // everyone else call FancyRepr
                 if (IsPythonType) {
                     AddProtocolMethod("__repr__", "ToStringMethod", NameType.PythonMethod);
@@ -385,6 +360,27 @@ namespace IronPython.Runtime.Types {
             if (typeof(ICallable).IsAssignableFrom(type) && !dict.ContainsKey(SymbolTable.Call)) {
                 AddProtocolMethod("__call__", "CallMethod", NameType.PythonMethod);
             }
+        }
+
+        private void AddDocumentation() {
+            if (!dict.ContainsKey(SymbolTable.Doc)) {
+                dict[SymbolTable.Doc] = GetDocumentation();
+            }
+        }
+
+        private string GetDocumentation() {
+            object[] docAttr = type.GetCustomAttributes(typeof(DocumentationAttribute), false);
+            if (docAttr != null && docAttr.Length > 0) {
+                return ((DocumentationAttribute)docAttr[0]).Value;
+            }
+
+            BuiltinFunction newMeth = ctor as BuiltinFunction;
+            if (newMeth == null) {
+                if (type.IsEnum) return ReflectionUtil.CreateEnumDoc(type);
+
+                return null;
+            }
+            return newMeth.Documentation;
         }
 
         private string GetName(Type type) {
@@ -706,7 +702,7 @@ namespace IronPython.Runtime.Types {
         }
         #endregion
 
-        #region PythonType overrides
+        #region DynamicType overrides
 
         protected override Tuple CalculateMro(Tuple baseClasses) {
             // should always be the same for ReflectedTypes
@@ -817,6 +813,8 @@ namespace IronPython.Runtime.Types {
 
                     AddProtocolWrappers();
 
+                    AddDocumentation();
+
                     initialized = true;
 
                     AddModule();
@@ -886,14 +884,14 @@ namespace IronPython.Runtime.Types {
         }
 
         // This is either the CLI type or interface represented by this ReflectedType
-        // It can also return null if Python does not allow extending the given PythonType.
+        // It can also return null if Python does not allow extending the given DynamicType.
         public virtual Type GetTypeToExtend() {
             Type typeToExtend = type;
 
-            if (typeToExtend == typeof(PythonType) || typeToExtend == typeof(ReflectedType)) {
+            if (typeToExtend == typeof(DynamicType) || typeToExtend == typeof(ReflectedType)) {
                 // This is for code like:
                 //     class MyMetaType(type): pass
-                Debug.Assert(this == Ops.GetDynamicTypeFromType(typeof(PythonType)) ||
+                Debug.Assert(this == Ops.GetDynamicTypeFromType(typeof(DynamicType)) ||
                     this == Ops.GetDynamicTypeFromType(typeof(ReflectedType)));
                 typeToExtend = typeof(UserType);
             }
@@ -914,7 +912,7 @@ namespace IronPython.Runtime.Types {
                 interfacesToExtend.Add(typeToExtend);
                 return typeof(object);
             } else {
-                interfacesToExtend = PythonType.EmptyListOfInterfaces;
+                interfacesToExtend = DynamicType.EmptyListOfInterfaces;
                 return typeToExtend;
             }
         }
@@ -993,25 +991,6 @@ namespace IronPython.Runtime.Types {
             ThrowAttributeError(slotExists, name);
         }
 
-        public override object GetIndex(object self, object index) {
-            Tuple ituple = index as Tuple;
-            if (ituple != null && ituple.IsExpandable) {
-                object[] idx = ituple.Expand(null);
-                return Ops.Invoke(self, SymbolTable.GetItem, idx);
-            } else {
-                return base.GetIndex(self, index);
-            }
-        }
-
-        public override void SetIndex(object self, object index, object value) {
-            Tuple ituple = index as Tuple;
-            if (ituple != null && ituple.IsExpandable) {
-                object[] idx = ituple.Expand(value);
-                Ops.Invoke(self, SymbolTable.SetItem, idx);
-            } else {
-                base.SetIndex(self, index, value);
-            }
-        }
         #endregion
 
         #region ICustomAttributes helpers
@@ -1130,16 +1109,6 @@ namespace IronPython.Runtime.Types {
                 return true;
             }
 
-            if (name == SymbolTable.Class) {
-                ret = GetDynamicType();
-                return true;
-            }
-
-            if (name == SymbolTable.Doc) {
-                ret = Documentation;
-                return true;
-            }
-
             if (name == SymbolTable.Call) {
                 MethodWrapper mw =  new MethodWrapper(this, SymbolTable.Call);
                 mw.SetDeclaredMethod(this);
@@ -1155,12 +1124,6 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         public override Dict GetAttrDict(ICallerContext context, object self) {
             throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), SymbolTable.Dict);
-        }
-
-        public override List GetAttrNames(ICallerContext context) {
-            List res = base.GetAttrNames(context);
-            res.AddNoLockNoDups("__class__");
-            return res;
         }
 
         #endregion
@@ -1181,6 +1144,7 @@ namespace IronPython.Runtime.Types {
 
             if (args.Length == 0 && type.IsValueType) {
                 if (type == typeof(bool)) return Ops.FALSE;
+                if (type == typeof(void)) throw Ops.TypeError("can not create instances of NoneType");
                 return Activator.CreateInstance(type);
             }
 
@@ -1238,21 +1202,6 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region IMapping Members
-
-        [PythonName("get")]
-        public object GetValue(object key) {
-            throw new NotImplementedException();
-        }
-
-        [PythonName("get")]
-        public object GetValue(object key, object defaultValue) {
-            throw new NotImplementedException();
-        }
-
-        public bool TryGetValue(object key, out object value) {
-            throw new NotImplementedException();
-        }
 
         public virtual object this[object index] {
             get {
@@ -1281,24 +1230,6 @@ namespace IronPython.Runtime.Types {
 
             return types;
         }
-
-        [PythonName("__delitem__")]
-        public void DeleteItem(object key) {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
-        #region IPythonContainer Members
-
-        public int GetLength() {
-            return 1;
-        }
-
-        public bool ContainsValue(object value) {
-            throw new NotImplementedException();
-        }
-        #endregion
 
         #region IContextAwareMember Members
 
@@ -1338,7 +1269,7 @@ namespace IronPython.Runtime.Types {
     /// non-generic versions.  Therefore users must always provide additional
     /// information to get the generic version.
     /// </summary>
-    [PythonType(typeof(PythonType))]
+    [PythonType(typeof(DynamicType))]
     public class TypeCollision : ReflectedType {
         List<ReflectedType> types;
 

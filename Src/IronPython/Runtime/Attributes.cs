@@ -80,13 +80,21 @@ namespace IronPython.Runtime {
             this.type = type;
         }
     }
-   
+
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
     internal sealed class PythonClassMethodAttribute : PythonNameAttribute {
         public PythonClassMethodAttribute(string name)
             : base(name) {
         }
     }
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
+    internal sealed class StaticOpsMethodAttribute : PythonNameAttribute {
+        public StaticOpsMethodAttribute(string name)
+            : base(name) {
+        }
+    }
+
+
 
     /// <summary>
     /// This attribute is used to mark the parameter which is dictionary indexed by the names

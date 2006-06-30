@@ -141,7 +141,9 @@
     <Compile Include="Runtime\Operations\ByteOps.cs" />
     <Compile Include="Runtime\Operations\ByteOps.Generated.cs" />
     <Compile Include="Runtime\Operations\CharOps.cs" />
+    <Compile Include="Runtime\Operations\NoneTypeOps.cs" />
     <Compile Include="Runtime\ReflectedPackage.cs" />
+    <Compile Include="Runtime\Types\MethodWrapper.cs" />
     <Compile Include="Runtime\Types\DelegateType.cs" />
     <Compile Include="Runtime\Types\Mro.cs" />
     <Compile Include="Compiler\Parser.cs" />
@@ -238,7 +240,6 @@
     <Compile Include="Runtime\Operations\LongOps.Generated.cs" />
     <Compile Include="Runtime\ModuleScope.cs" />
     <Compile Include="Runtime\Types\OldClass.cs" />
-    <Compile Include="Runtime\Types\OldClass.Generated.cs" />
     <Compile Include="Runtime\Operations\Ops.cs" />
     <Compile Include="Runtime\Operations\Ops.Generated.cs" />
     <Compile Include="Runtime\Types\OpsReflectedType.cs" />
@@ -248,11 +249,9 @@
     <Compile Include="Runtime\Exceptions\PythonException.Generated.cs" />
     <Compile Include="Runtime\PythonFile.cs" />
     <Compile Include="Runtime\PythonModule.cs" />
-    <Compile Include="Runtime\Types\PythonType.cs" />
     <Compile Include="Runtime\Types\ReflectedAssembly.cs" />
     <Compile Include="Runtime\Types\ReflectedMembers.cs" />
     <Compile Include="Runtime\Types\ReflectedType.cs" />
-    <Compile Include="Runtime\Types\ReflectedType.Generated.cs" />
     <Compile Include="Runtime\ReflectionUtil.cs" />
     <Compile Include="Runtime\Set.cs" />
     <Compile Include="Runtime\Slice.cs" />
@@ -272,7 +271,6 @@
     <Compile Include="Runtime\Operations\UInt64Ops.cs" />
     <Compile Include="Runtime\Uninitialized.cs" />
     <Compile Include="Runtime\Types\UserType.cs" />
-    <Compile Include="Runtime\Types\UserType.Generated.cs" />
     <Compile Include="Runtime\Operations\UInt16Ops.cs" />
     <Compile Include="Runtime\Operations\UInt16Ops.Generated.cs" />
     <Compile Include="Runtime\WeakHash.cs" />

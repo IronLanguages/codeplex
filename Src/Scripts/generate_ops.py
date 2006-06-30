@@ -709,16 +709,13 @@ public static object %(inname)s(object x, object y) {
     DynamicType dt = GetDynamicType(x);
     ret = dt.%(inname)s(x, y);
     if (ret != NotImplemented) return ret;
-    ret = dt.%(name)s(x, y);
-    if (ret != NotImplemented) return ret;
 
     IProxyObject po = x as IProxyObject;
     if (po != null) return %(inname)s(po.Target, y);
     po = y as IProxyObject;
     if (po != null) return %(inname)s(x, po.Target);
 
-    throw Ops.TypeError("unsupported operand type(s) for %(symbol)s: '{0}' and '{1}'",
-                        GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+    return %(name)s(x, y);
 }
 """
 IINPLACE_OP = """
@@ -746,8 +743,7 @@ public static object %(inname)s(object x, object y) {
     po = y as IProxyObject;
     if (po != null) return %(inname)s(x, po.Target);
 
-    throw Ops.TypeError("unsupported operand type(s) for %(symbol)s: '{0}' and '{1}'",
-                        GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+    return %(name)s(x, y);
 }
 """
 
@@ -798,33 +794,6 @@ def ops_generator(cw):
 CodeGenerator("Binary Ops", ops_generator).doit()
 
 
-VIRTS = """
-public virtual object %(clrName)s(object self, object other) {
-    return Ops.NotImplemented;
-}
-public virtual object Reverse%(clrName)s(object self, object other) {
-    return Ops.NotImplemented;
-}
-public virtual object InPlace%(clrName)s(object self, object other) {
-    return Ops.%(clrName)s(self, other);
-}"""
-
-VIRT_CMP = """
-public virtual object %(clrName)s(object self, object other) {
-    return Ops.NotImplemented;
-}"""
-
-def ops_generator(cw, basicTemplate, cmpTemplate):
-    for op in ops:
-        if not isinstance(op, Operator): continue
-        if op.name == "lg": continue
-        op.genDynamicTypeOp(cw, basicTemplate, cmpTemplate)
-
-def dyn_ops(cw):
-    return ops_generator(cw, VIRTS, VIRT_CMP)
-
-CodeGenerator("DynamicType Binary Ops", dyn_ops).doit()
-
 def gen_SymbolTable_ops_values(cw):
     x = 1
     for op in ops:
@@ -850,87 +819,6 @@ CodeGenerator("SymbolTable Ops Values", gen_SymbolTable_ops_values).doit()
 CodeGenerator("SymbolTable Ops Added", gen_SymbolTable_ops_added).doit()
 CodeGenerator("SymbolTable Ops Symbols", gen_SymbolTable_ops_symbols).doit()
 
-OLDS = """
-public override object %(clrName)s(object self, object other) {
-    object func;
-    OldInstance.DoCoerce(ref self, ref other);
-    
-    if (Ops.TryGetAttr(self, SymbolTable.Op%(clrName)s, out func)) return Ops.Call(func, other);
-    return Ops.NotImplemented;
-}
-public override object Reverse%(clrName)s(object self, object other) {
-    object func;
-    OldInstance.DoCoerce(ref self, ref other);
-    
-    if (Ops.TryGetAttr(self, SymbolTable.OpReverse%(clrName)s, out func)) return Ops.Call(func, other);
-    return Ops.NotImplemented;
-
-}
-public override object InPlace%(clrName)s(object self, object other) {
-    object func;
-    OldInstance.DoCoerce(ref self, ref other);
-    
-    if (Ops.TryGetAttr(self, SymbolTable.OpInPlace%(clrName)s, out func)) return Ops.Call(func, other);
-    return Ops.NotImplemented;
-}"""
-
-OLD_CMP = """
-public override object %(clrName)s(object self, object other) {
-    object func;
-
-    if (Ops.TryGetAttr(self, SymbolTable.Op%(clrName)s, out func)) return Ops.Call(func, other);
-    return Ops.NotImplemented;
-}"""
-
-def old_ops(cw):
-    return ops_generator(cw, OLDS, OLD_CMP)
-
-CodeGenerator("OldClass Binary Ops", old_ops).doit()
-
-
-REFLECTED = """
-public override object %(clrName)s(object self, object other) {
-    object func, res;
-    if (Ops.TryGetAttr(self, SymbolTable.Op%(clrName)s, out func) && Ops.TryCall(func, other, out res)) return res;
-    return Ops.NotImplemented;
-}
-public override object Reverse%(clrName)s(object self, object other) {
-    object func, res;
-    if (Ops.TryGetAttr(self, SymbolTable.OpReverse%(clrName)s, out func) && Ops.TryCall(func, other, out res)) return res;
-    return Ops.NotImplemented;
-
-}
-public override object InPlace%(clrName)s(object self, object other) {
-    object func, res;
-    if (Ops.TryGetAttr(self, SymbolTable.OpInPlace%(clrName)s, out func) && Ops.TryCall(func, other, out res)) return res;
-    return base.InPlace%(clrName)s(self, other);
-}"""
-
-REFLECTED_CMP = """
-public override object %(clrName)s(object self, object other) {
-    object func;
-    if (Ops.TryGetAttr(self, SymbolTable.Op%(clrName)s, out func)) return Ops.Call(func, other);
-    return base.%(clrName)s(self, other);
-}"""
-
-REFLECTED_UNARY = """
-public override object %(clrName)s(object self) {
-    object func;
-    if (Ops.TryGetAttr(self, SymbolTable.Op%(clrName)s, out func)) return Ops.Call(func);
-    return Ops.NotImplemented;
-}"""
-
-def reflected_ops(cw):
-    for op in ops:
-        if not isinstance(op, Operator): continue
-        if op.symbol in ['==', '!=', "<>"]: continue
-        op.genDynamicTypeOp(cw, REFLECTED, REFLECTED_CMP)
-
-    cw.write(REFLECTED_UNARY % ({'clrName' : 'Negate'}))
-    cw.write(REFLECTED_UNARY % ({'clrName' : 'OnesComplement'}))
-
-
-CodeGenerator("ReflectedType Binary Operators", reflected_ops).doit()
 
 def ops_generator_usertype(cw, basicTemplate, cmpTemplate):
     for op in ops:
@@ -941,43 +829,23 @@ def ops_generator_usertype(cw, basicTemplate, cmpTemplate):
 
 
 USERTYPE = """
-public override object %(clrName)s(object self, object other) {
-    object func;
-    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Op%(clrName)s, out func)) {
-        object ret;
-        if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
-    }
-    return Ops.NotImplemented;
+public virtual object %(clrName)s(object self, object other) {
+    return CallBinaryOperator(SymbolTable.Op%(clrName)s, self, other);
 }
-public override object Reverse%(clrName)s(object self, object other) {
-    object func;
-    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpReverse%(clrName)s, out func)) {
-        object ret;
-        if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
-    }
-    return Ops.NotImplemented;
-
+public virtual object Reverse%(clrName)s(object self, object other) {
+    return CallBinaryOperator(SymbolTable.OpReverse%(clrName)s, self, other);
 }
-public override object InPlace%(clrName)s(object self, object other) {
-    object func;
-    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpInPlace%(clrName)s, out func)) {
-        object ret;
-        if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
-    }
-    return base.InPlace%(clrName)s(self, other);
-}"""
+public virtual object InPlace%(clrName)s(object self, object other) {
+    return CallBinaryOperator(SymbolTable.OpInPlace%(clrName)s, self, other);
+}
+"""
 
 USERTYPE_CMP = """
-public override object %(clrName)s(object self, object other) {
-    object func;
-    if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Op%(clrName)s, out func)) {
-        object ret;
-        if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
-    }
-    return Ops.NotImplemented;
+public object %(clrName)s(object self, object other) {
+    return CallBinaryOperator(SymbolTable.Op%(clrName)s, self, other);
 }"""
 
 def usertype_ops(cw):
     return ops_generator_usertype(cw, USERTYPE, USERTYPE_CMP)
 
-CodeGenerator("UserType Binary Operators", usertype_ops).doit()
+CodeGenerator("DynamicType Binary Ops", usertype_ops).doit()

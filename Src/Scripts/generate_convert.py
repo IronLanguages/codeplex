@@ -185,7 +185,7 @@ class ToType(To):
         cw.writeline("conversion = Conversion.Identity;")
         cw.writeline("return TypeVal;")
         cw.exit_block()
-        cw.writeline("PythonType PythonTypeVal = value as PythonType;")
+        cw.writeline("DynamicType PythonTypeVal = value as DynamicType;")
         cw.enter_block("if (PythonTypeVal != null)")
         cw.writeline("conversion = Conversion.Implicit;")
         cw.writeline("return PythonTypeVal.type;")

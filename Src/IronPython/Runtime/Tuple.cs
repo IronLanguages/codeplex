@@ -33,7 +33,7 @@ namespace IronPython.Runtime {
         // appropriate caching.  
 
         [PythonName("__new__")]
-        public static Tuple PythonNew(PythonType cls) {
+        public static Tuple PythonNew(DynamicType cls) {
             if (cls == TypeCache.Tuple) {
                 return EMPTY;
             } else {
@@ -44,7 +44,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__new__")]
-        public static Tuple PythonNew(PythonType cls, object sequence) {
+        public static Tuple PythonNew(DynamicType cls, object sequence) {
             if (cls == TypeCache.Tuple) {
                 if(sequence.GetType() == typeof(Tuple)) return (Tuple)sequence;
                 return new Tuple(MakeItems(sequence));

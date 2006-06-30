@@ -54,7 +54,7 @@ namespace IronPython.Runtime.Types {
                     if (s[i] > '\x80')
                         return StringOps.Make(
                             (ICallerContext)context,
-                            (PythonType)Ops.GetDynamicTypeFromType(typeof(String)),
+                            (DynamicType)Ops.GetDynamicTypeFromType(typeof(String)),
                             s,
                             null,
                             "strict"

@@ -26,12 +26,12 @@ namespace IronPython.Runtime {
     public class Super : IDynamicObject, ICustomAttributes, IDescriptor {
         private static DynamicType SuperType = Ops.GetDynamicTypeFromType(typeof(Super));
 
-        private readonly PythonType __thisclass__;
+        private readonly DynamicType __thisclass__;
         private readonly object __self__;
         private readonly object __self_class__;
 
-        public Super(PythonType type) : this(type, null) { }
-        public Super(PythonType type, object obj) {
+        public Super(DynamicType type) : this(type, null) { }
+        public Super(DynamicType type, object obj) {
             if (obj != null) {
                 DynamicType dt = obj as DynamicType;
                 if (Modules.Builtin.IsInstance(obj, type)) {
@@ -50,7 +50,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public PythonType ThisClass {
+        public DynamicType ThisClass {
             [PythonName("__thisclass__")]
             get { return __thisclass__; }
         }
@@ -85,7 +85,7 @@ namespace IronPython.Runtime {
             }
 
             // first find where we are in the mro...
-            PythonType mroType = __self_class__ as PythonType;
+            DynamicType mroType = __self_class__ as DynamicType;
             if (mroType == null) mroType = __thisclass__;
             Tuple mro = mroType.MethodResolutionOrder;
 
@@ -99,7 +99,7 @@ namespace IronPython.Runtime {
             // above us until we get a hit.
             lookupType++;   
             while (lookupType < mro.Count) {
-                PythonType pt = mro[lookupType] as PythonType;
+                DynamicType pt = mro[lookupType] as DynamicType;
                 if (pt != null) {
                     // new-style class, or reflected type, lookup slot
                     if (pt.TryGetSlot(context, name, out value)) {

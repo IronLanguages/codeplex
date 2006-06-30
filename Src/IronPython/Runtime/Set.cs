@@ -367,7 +367,7 @@ namespace IronPython.Runtime {
 
         [PythonName("add")]
         public void Add(object o) {
-            if (o == null) o = NoneType.InstanceOfNoneType;
+            if (o == null) o = NoneTypeOps.InstanceOfNoneType;
 
             Ops.Hash(o);// make sure we're hashable
             if (!items.ContainsKey(o)) {
@@ -651,7 +651,7 @@ namespace IronPython.Runtime {
                 FrozenSetCollection fs = new FrozenSetCollection();
                 return fs;
             } else {
-                object res = ((PythonType)cls).ctor.Call(cls);
+                object res = ((DynamicType)cls).ctor.Call(cls);
                 FrozenSetCollection fs = res as FrozenSetCollection;
                 if (fs == null) throw Ops.TypeError("{0} is not a subclass of frozenset", res);
                 return fs;
@@ -670,7 +670,7 @@ namespace IronPython.Runtime {
                 fs = new FrozenSetCollection(Ops.GetEnumerator(setData));
                 return fs;
             } else {
-                object res = ((PythonType)cls).ctor.Call(cls, setData);
+                object res = ((DynamicType)cls).ctor.Call(cls, setData);
                 FrozenSetCollection fs = res as FrozenSetCollection;
                 if (fs == null) throw Ops.TypeError("{0} is not a subclass of frozenset", res);
 
@@ -757,7 +757,7 @@ namespace IronPython.Runtime {
         }
 
         void ISet.PrivAdd(object o) {
-            if (o == null) o = NoneType.InstanceOfNoneType;
+            if (o == null) o = NoneTypeOps.InstanceOfNoneType;
 
             Ops.Hash(o);// make sure we're hashable
             if (!items.ContainsKey(o)) {
@@ -766,7 +766,7 @@ namespace IronPython.Runtime {
         }
 
         void ISet.PrivRemove(object o) {
-            if (o == null) o = NoneType.InstanceOfNoneType;
+            if (o == null) o = NoneTypeOps.InstanceOfNoneType;
 
             Ops.Hash(o);// make sure we're hashable
             items.Remove(o);

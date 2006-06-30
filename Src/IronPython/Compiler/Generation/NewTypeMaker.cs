@@ -177,10 +177,10 @@ namespace IronPython.Compiler.Generation {
         private static NewTypeInfo GetTypeInfo(string typeName, Tuple bases, List<string> slots) {
             List<Type> interfaceTypes = new List<Type>();
             Type baseCLIType = typeof(object); // Pure Python object instances inherit from System.Object
-            PythonType basePythonType = null;
+            DynamicType basePythonType = null;
 
             foreach (object curBaseType in bases) {
-                PythonType curBasePythonType = curBaseType as PythonType;
+                DynamicType curBasePythonType = curBaseType as DynamicType;
 
                 if (curBasePythonType == null) {
                     if (curBaseType is OldClass)
@@ -830,7 +830,7 @@ namespace IronPython.Compiler.Generation {
 
         public Slot GetExistingField(string name) {
             name = NormalizeName(name);
-            FieldInfo fi = typeof(PythonType).GetField(name + "F");
+            FieldInfo fi = typeof(DynamicType).GetField(name + "F");
             if (fi != null) return new FieldSlot(typeField, fi);
             else return null;
         }

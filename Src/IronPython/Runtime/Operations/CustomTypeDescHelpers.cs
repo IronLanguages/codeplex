@@ -95,7 +95,7 @@ namespace IronPython.Runtime.Operations {
                     string s = o as string;
                     if (s == null) continue;
                     object attrVal = Ops.GetAttr(DefaultContext.DefaultCLS, self, SymbolTable.StringToId(s));
-                    Type attrType = (attrVal == null) ? typeof(NoneType) : attrVal.GetType();
+                    Type attrType = (attrVal == null) ? typeof(NoneTypeOps) : attrVal.GetType();
                     yield return new SuperDynamicObjectPropertyDescriptor(
                         s,
                         attrType,

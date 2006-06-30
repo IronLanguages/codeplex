@@ -75,7 +75,7 @@ namespace IronPython.Modules {
 
             #region Python Constructors
             [PythonName("__new__")]
-            public static object MakeNew(PythonType cls, object @object) {
+            public static object MakeNew(DynamicType cls, object @object) {
                 IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
                 if (cls == Ops.GetDynamicTypeFromType(typeof(PythonWeakReference))) {
@@ -95,7 +95,7 @@ namespace IronPython.Modules {
             }
 
             [PythonName("__new__")]
-            public static object MakeNew(PythonType cls, object @object, object callback) {
+            public static object MakeNew(DynamicType cls, object @object, object callback) {
                 if (callback == null) return MakeNew(cls, @object);
                 if (cls == Ops.GetDynamicTypeFromType(typeof(PythonWeakReference))) {
                     return new PythonWeakReference(@object, callback);

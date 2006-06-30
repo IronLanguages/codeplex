@@ -33,7 +33,7 @@ namespace IronPython.Runtime {
 
         internal Dictionary<object, object> data;
 
-        internal static object MakeDict(PythonType cls) {            
+        internal static object MakeDict(DynamicType cls) {            
             if(cls == TypeCache.Dict) return new Dict();            
             return cls.Call();
         }
@@ -290,7 +290,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("fromkeysany")]
-        private static object fromkeysAny(PythonType cls, object o, object value) {
+        private static object fromkeysAny(DynamicType cls, object o, object value) {
             object ret = MakeDict(cls);
             if (ret.GetType() == typeof(Dict)) {
                 Dict dr = ret as Dict;
@@ -309,12 +309,12 @@ namespace IronPython.Runtime {
         }
 
         [PythonClassMethod("fromkeys")]
-        public static object FromKeys(PythonType cls, object seq) {
+        public static object FromKeys(DynamicType cls, object seq) {
             return FromKeys(cls, seq, null);
         }
 
         [PythonClassMethod("fromkeys")]
-        public static object FromKeys(PythonType cls, object seq, object value) {
+        public static object FromKeys(DynamicType cls, object seq, object value) {
             XRange xr = seq as XRange;
             if (xr != null) {
                 int n = xr.GetLength();

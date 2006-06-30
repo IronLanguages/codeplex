@@ -33,6 +33,7 @@ namespace IronPython.Runtime.Types {
     /// view of types, including features not supported by the CLI like
     /// inheriting from a valuetype.
     /// </summary>
+    [PythonType(typeof(DynamicType))]
     public class OpsReflectedType : ReflectedType {
         // Maps the OpsType back to the corresponding ReflectedType.
         internal static Dictionary<Type, ReflectedType> OpsTypeToType = new Dictionary<Type, ReflectedType>(10);
@@ -114,7 +115,7 @@ namespace IronPython.Runtime.Types {
             if (nt == NameType.None) return;
 
             FunctionType funcType = FunctionType.Method;
-            if (name == "__new__") funcType = FunctionType.Function;
+            if (name == "__new__" || mi.IsDefined(typeof(StaticOpsMethodAttribute), false)) funcType = FunctionType.Function;
             if (mi.DeclaringType == typeof(ArrayOps)) funcType |= FunctionType.SkipThisCheck;
             if (nt == NameType.PythonMethod) funcType |= FunctionType.PythonVisible;
             
@@ -127,7 +128,7 @@ namespace IronPython.Runtime.Types {
             // store CLR version, if different and we don't have a clash (if we do
             // have a clash our version is still available under the python name)
             if (name != mi.Name && !ContainsNonOps(SymbolTable.StringToId(mi.Name))) {
-                StoreMethod(mi.Name, mi, FunctionType.Method | FunctionType.OpsFunction);
+                StoreMethod(mi.Name, mi, funcType | FunctionType.OpsFunction);
             }
         }
 
@@ -167,7 +168,7 @@ namespace IronPython.Runtime.Types {
         }
     }
 
-    public class ReflectedArrayType : OpsReflectedType, IMapping {
+    public class ReflectedArrayType : OpsReflectedType {
         public ReflectedArrayType(string name, Type arrayType)
             : base(name, arrayType, typeof(ArrayOps), arrayType) {
         }

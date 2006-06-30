@@ -40,7 +40,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(PythonType cls, object value) {
+        public static object Make(DynamicType cls, object value) {
             if (cls != UInt16Type) {
                 throw Ops.TypeError("UInt16.__new__: first argument must be UInt16 type.");
             }
@@ -199,7 +199,7 @@ namespace IronPython.Runtime.Operations {
             if (right is BigInteger) {
                 return LongOps.Divide(leftUInt16, (BigInteger)right);
             } else if (right is Complex64) {
-                return FloatOps.Divide(leftUInt16, (Complex64)right);
+                return ComplexOps.Divide(leftUInt16, (Complex64)right);
             } else if (right is ExtensibleInt) {
                 return IntOps.Divide((Int32)leftUInt16, (Int32)((ExtensibleInt)right).value);
             } else if (right is ExtensibleLong) {
@@ -207,7 +207,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleFloat) {
                 return FloatOps.Divide((Double)leftUInt16, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
-                return FloatOps.Divide(leftUInt16, ((ExtensibleComplex)right).value);
+                return ComplexOps.Divide(leftUInt16, ((ExtensibleComplex)right).value);
             }
             return Ops.NotImplemented;
         }
@@ -256,7 +256,7 @@ namespace IronPython.Runtime.Operations {
             if (right is BigInteger) {
                 return LongOps.FloorDivide(leftUInt16, (BigInteger)right);
             } else if (right is Complex64) {
-                return FloatOps.FloorDivide(leftUInt16, (Complex64)right);
+                return ComplexOps.FloorDivide(leftUInt16, (Complex64)right);
             } else if (right is ExtensibleInt) {
                 return IntOps.FloorDivide((Int32)leftUInt16, (Int32)((ExtensibleInt)right).value);
             } else if (right is ExtensibleLong) {
@@ -264,7 +264,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleFloat) {
                 return FloatOps.FloorDivide((Double)leftUInt16, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
-                return FloatOps.FloorDivide(leftUInt16, ((ExtensibleComplex)right).value);
+                return ComplexOps.FloorDivide(leftUInt16, ((ExtensibleComplex)right).value);
             }
             return Ops.NotImplemented;
         }
@@ -313,7 +313,7 @@ namespace IronPython.Runtime.Operations {
             if (right is BigInteger) {
                 return LongOps.Mod(leftUInt16, (BigInteger)right);
             } else if (right is Complex64) {
-                return FloatOps.Mod(leftUInt16, (Complex64)right);
+                return ComplexOps.Mod(leftUInt16, (Complex64)right);
             } else if (right is ExtensibleInt) {
                 return IntOps.Mod((Int32)leftUInt16, (Int32)((ExtensibleInt)right).value);
             } else if (right is ExtensibleLong) {
@@ -321,7 +321,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleFloat) {
                 return FloatOps.Mod((Double)leftUInt16, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
-                return FloatOps.Mod(leftUInt16, ((ExtensibleComplex)right).value);
+                return ComplexOps.Mod(leftUInt16, ((ExtensibleComplex)right).value);
             }
             return Ops.NotImplemented;
         }
@@ -613,7 +613,7 @@ namespace IronPython.Runtime.Operations {
             if (right is BigInteger) {
                 return LongOps.ReverseDivide(leftUInt16, (BigInteger)right);
             } else if (right is Complex64) {
-                return FloatOps.ReverseDivide(leftUInt16, (Complex64)right);
+                return ComplexOps.ReverseDivide(leftUInt16, (Complex64)right);
             } else if (right is ExtensibleInt) {
                 return IntOps.ReverseDivide((Int32)leftUInt16, (Int32)((ExtensibleInt)right).value);
             } else if (right is ExtensibleLong) {
@@ -621,7 +621,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleFloat) {
                 return FloatOps.ReverseDivide((Double)leftUInt16, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
-                return FloatOps.ReverseDivide(leftUInt16, ((ExtensibleComplex)right).value);
+                return ComplexOps.ReverseDivide(leftUInt16, ((ExtensibleComplex)right).value);
             }
             return Ops.NotImplemented;
         }
@@ -670,7 +670,7 @@ namespace IronPython.Runtime.Operations {
             if (right is BigInteger) {
                 return LongOps.ReverseFloorDivide(leftUInt16, (BigInteger)right);
             } else if (right is Complex64) {
-                return FloatOps.ReverseFloorDivide(leftUInt16, (Complex64)right);
+                return ComplexOps.ReverseFloorDivide(leftUInt16, (Complex64)right);
             } else if (right is ExtensibleInt) {
                 return IntOps.ReverseFloorDivide((Int32)leftUInt16, (Int32)((ExtensibleInt)right).value);
             } else if (right is ExtensibleLong) {
@@ -678,7 +678,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleFloat) {
                 return FloatOps.ReverseFloorDivide((Double)leftUInt16, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
-                return FloatOps.ReverseFloorDivide(leftUInt16, ((ExtensibleComplex)right).value);
+                return ComplexOps.ReverseFloorDivide(leftUInt16, ((ExtensibleComplex)right).value);
             }
             return Ops.NotImplemented;
         }
@@ -727,7 +727,7 @@ namespace IronPython.Runtime.Operations {
             if (right is BigInteger) {
                 return LongOps.ReverseMod(leftUInt16, (BigInteger)right);
             } else if (right is Complex64) {
-                return FloatOps.ReverseMod(leftUInt16, (Complex64)right);
+                return ComplexOps.ReverseMod(leftUInt16, (Complex64)right);
             } else if (right is ExtensibleInt) {
                 return IntOps.ReverseMod((Int32)leftUInt16, (Int32)((ExtensibleInt)right).value);
             } else if (right is ExtensibleLong) {
@@ -735,7 +735,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleFloat) {
                 return FloatOps.ReverseMod((Double)leftUInt16, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
-                return FloatOps.ReverseMod(leftUInt16, ((ExtensibleComplex)right).value);
+                return ComplexOps.ReverseMod(leftUInt16, ((ExtensibleComplex)right).value);
             }
             return Ops.NotImplemented;
         }

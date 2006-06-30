@@ -30,6 +30,10 @@ class TypeInfo:
         self.size = max - min
 
     def __le__(self, other):
+        if type(self.min) == complex:
+            return type(other.min) == complex
+        elif type(other.min) == complex:
+            return True
         return self.min >= other.min and self.max <= other.max
 
 
@@ -195,7 +199,7 @@ unary = [
 
 def get_common_type(l, r, op):
     if l.name == "Complex64": return l, op.altcode
-    if l.name == "Complex64": return r, op.altcode
+    if r.name == "Complex64": return r, op.altcode
 
     if l <= r: return r, op.intcode
     if r <= l: return l, op.intcode
@@ -639,7 +643,7 @@ def gen_make_dynamic_type(cw, t):
 
 def gen_constructor(cw, t):
     cw.write('[PythonName("__new__")]')
-    cw.enter_block("public static object Make(PythonType cls, object value)")
+    cw.enter_block("public static object Make(DynamicType cls, object value)")
     cw.enter_block("if (cls != %(type_name)sType)", type_name = t.name)
     cw.write("throw Ops.TypeError(\"%(type_name)s.__new__: first argument must be %(type_name)s type.\");", type_name = t.name)
     cw.exit_block()

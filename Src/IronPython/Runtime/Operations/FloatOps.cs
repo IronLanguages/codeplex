@@ -161,14 +161,14 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(PythonType cls) {
+        public static object Make(DynamicType cls) {
             if (cls == FloatType) return 0.0;
 
             return cls.ctor.Call(cls);
         }
 
         [PythonName("__new__")]
-        public static object Make(PythonType cls, object x) {
+        public static object Make(DynamicType cls, object x) {
             if (cls == FloatType) {
                 if (x is string) {
                     try {

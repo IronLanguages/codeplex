@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(PythonType cls, object value) {
+        public static object Make(DynamicType cls, object value) {
             if (cls != Int64Type) {
                 throw Ops.TypeError("Int64.__new__: first argument must be Int64 type.");
             }

@@ -180,13 +180,13 @@ namespace IronPython.Runtime.Operations {
             return Make(TypeCache.Int32, o);
         }
 
-        private static void ValidateType(PythonType cls) {
+        private static void ValidateType(DynamicType cls) {
             if (cls == BoolOps.BoolType)
                 throw Ops.TypeError("int.__new__(bool) is not safe, use bool.__new__()");
         }
 
         [PythonName("__new__")]
-        public static object Make(PythonType cls, string s, int radix) {
+        public static object Make(DynamicType cls, string s, int radix) {
             ValidateType(cls);
 
             try {
@@ -197,7 +197,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(PythonType cls, object x) {
+        public static object Make(DynamicType cls, object x) {
             if (cls == IntType) {
                 return FastNew(x);
             } else {
@@ -211,7 +211,7 @@ namespace IronPython.Runtime.Operations {
         // "int()" calls ReflectedType.Call(), which calls "Activator.CreateInstance" and return directly.
         // this is for derived int creation or direct calls to __new__...
         [PythonName("__new__")]
-        public static object Make(PythonType cls) {
+        public static object Make(DynamicType cls) {
             if (cls == TypeCache.Int32) return 0;
 
             return cls.ctor.Call(cls);

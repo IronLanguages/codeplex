@@ -26,10 +26,6 @@ using IronPython.Modules;
 using IronMath;
 
 namespace IronPython.Runtime.Types {
-    //public enum VTableSource {
-    //    Declared, Inherited, InheritedFromObject
-    //}
-
     /// <summary>
     /// UserType represents the type of new-style Python classes (which can inherit from built-in types). 
     /// 
@@ -49,11 +45,10 @@ namespace IronPython.Runtime.Types {
     }
 
     [DebuggerDisplay("UserType: {ToString()}")]
-    [PythonType(typeof(PythonType))]
-    public partial class UserType : PythonType, IFancyCallable, IWeakReferenceable, ICallableWithCallerContext {
+    [PythonType(typeof(DynamicType))]
+    public partial class UserType : DynamicType, IFancyCallable, IWeakReferenceable, ICallableWithCallerContext {
         // This is typed as "object" instead of "string" as the user is allowed to set it to an arbitrary object
         public object __module__;
-        private Tuple bases;
         UserTypeFlags flags;
 
         #region Public API Surface
@@ -119,7 +114,7 @@ namespace IronPython.Runtime.Types {
 
             if (type.GetInterface("ICustomAttributes") == typeof(ICustomAttributes)) {
                 // ICustomAttributes is a well-known type. Ops.GetAttr etc first check for it, and dispatch to the
-                // ICustomAttributes implementation. At the same time, built-in types like PythonModule, PythonType, 
+                // ICustomAttributes implementation. At the same time, built-in types like PythonModule, DynamicType, 
                 // Super, SystemState, etc implement ICustomAttributes. If a user type inherits from these,
                 // then Ops.GetAttr still dispatches to the ICustomAttributes implementation of the built-in types
                 // instead of checking the user-type.
@@ -177,7 +172,7 @@ namespace IronPython.Runtime.Types {
 
                 foreach (object baseTypeObj in BaseClasses) {
                     if (baseTypeObj is OldClass) continue;
-                    PythonType baseType = baseTypeObj as PythonType;
+                    DynamicType baseType = baseTypeObj as DynamicType;
                     baseType.RemoveSubclass(this);
                 }
             }
@@ -190,7 +185,7 @@ namespace IronPython.Runtime.Types {
 
             foreach (object baseTypeObj in BaseClasses) {
                 if (baseTypeObj is OldClass) continue;
-                PythonType baseType = baseTypeObj as PythonType;
+                DynamicType baseType = baseTypeObj as DynamicType;
                 baseType.AddSubclass(this);
 
                 UserType ut = baseType as UserType;
@@ -207,7 +202,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region PythonType overrides
+        #region DynamicType overrides
 
         public override object AllocateObject(params object[] args) {
             return base.AllocateObject(PrependThis(args));
@@ -222,7 +217,7 @@ namespace IronPython.Runtime.Types {
             foreach (object b in bases) {
                 if (b is OldClass) continue;
 
-                PythonType baseType = b as PythonType;
+                DynamicType baseType = b as DynamicType;
                 IList<Type> baseTypeInterfaces;
                 baseType.GetTypesToExtend(out baseTypeInterfaces);
                 foreach (Type baseTypeInterface in baseTypeInterfaces)
@@ -641,7 +636,7 @@ namespace IronPython.Runtime.Types {
 
             if (Ops.GetDynamicType(newObject).IsSubclassOf(this)) {
                 object init;
-                if (PythonType.TryLookupSpecialMethod(DefaultContext.Default, newObject, SymbolTable.Init, out init)) {
+                if (DynamicType.TryLookupSpecialMethod(DefaultContext.Default, newObject, SymbolTable.Init, out init)) {
                     switch (args.Length) {
                         case 0: Ops.CallWithContext(context, init); break;
                         case 1: Ops.CallWithContext(context, init, args[0]); break;
@@ -704,7 +699,7 @@ namespace IronPython.Runtime.Types {
             // new-style classes only lookup in slots, not in instance
             // members
             object func;
-            if (PythonType.TryLookupSpecialMethod(self, SymbolTable.Hash, out func)) {
+            if (DynamicType.TryLookupSpecialMethod(self, SymbolTable.Hash, out func)) {
                 return Converter.ConvertToInt32(Ops.Call(func));
             }
             return Ops.NotImplemented;
@@ -798,7 +793,7 @@ namespace IronPython.Runtime.Types {
 
         private static object InternalCompare(SymbolId cmp, object self, object other) {
             object meth;
-            if (PythonType.TryLookupSpecialMethod(self, cmp, out meth)) {
+            if (DynamicType.TryLookupSpecialMethod(self, cmp, out meth)) {
                 object ret;
                 if (Ops.TryCall(meth, other, out ret)) {
                     return ret;
@@ -828,7 +823,7 @@ namespace IronPython.Runtime.Types {
                 return strRet;
             }
 
-            return PythonType.ReprMethod(o).ToString();
+            return DynamicType.ReprMethod(o).ToString();
         }
 
         public static string ToStringReturnHelper(object o) {
@@ -840,85 +835,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region Overloaded Unary/Binary operators
-
-        public override object Negate(object self) {
-            object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpNegate, out func)) 
-                return Ops.Call(func);
-
-            return Ops.NotImplemented;
-        }
-
-        public override object Positive(object self) {
-            object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Positive, out func))
-                return Ops.Call(func);
-
-            return Ops.NotImplemented;
-        }
-
-        public override object OnesComplement(object self) {
-            object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpOnesComplement, out func)) 
-                return Ops.Call(func);
-            return Ops.NotImplemented;
-        }
-
-        public override object CompareTo(object self, object other) {
-            object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Cmp, out func)) {
-                return Ops.Call(func, other);
-            }
-
-            return Ops.NotImplemented;
-        }
-
-        public override object Equal(object self, object other) {
-            object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpEqual, out func)) {
-                object ret;
-                if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
-            }
-
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Cmp, out func) && func != __cmp__F) {
-                object ret = Ops.Call(func, other);
-                if (ret != Ops.NotImplemented) return Ops.CompareToZero(ret) == 0;
-
-                //if (ret is int) {
-                //    return ((int)ret) == 0;
-                //} else if (ret is ExtensibleInt) {
-                //    return ((ExtensibleInt)ret)._value == 0;
-                //}
-                //throw Ops.TypeError("comparison did not return an int");
-            }
-
-            return Ops.NotImplemented;
-        }
-
-        public override object NotEqual(object self, object other) {
-            object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpNotEqual, out func)) {
-                object ret;
-                if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
-            }
-
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Cmp, out func) && func != __cmp__F) {
-                object ret = Ops.Call(func, other);
-                if (ret != Ops.NotImplemented) return Ops.CompareToZero(ret) != 0;
-
-                //if (ret is int) {
-                //    return ((int)ret) != 0;
-                //} else if (ret is ExtensibleInt) {
-                //    return ((ExtensibleInt)ret)._value != 0;
-                //}
-                //throw Ops.TypeError("comparison did not return an int");
-            }
-
-            return Ops.NotImplemented;
-        }
-
-        #endregion
+        
 
         #region IWeakReferenceable Members
 

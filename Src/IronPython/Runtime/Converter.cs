@@ -451,7 +451,7 @@ namespace IronPython.Runtime {
             if (o == null) return null;
             Type r = o as Type;
             if (r != null) return r;
-            PythonType pt = o as PythonType;
+            DynamicType pt = o as DynamicType;
             if (pt != null) return pt.type;
 
             throw MakeTypeError("type", o);
@@ -636,7 +636,7 @@ namespace IronPython.Runtime {
             if (HasImplicitNumericConversion(fromType, toType)) return true;
 
             // Handling the hole that Type is the only object that we 'box'
-            if (toType == typeof(Type) && typeof(PythonType).IsAssignableFrom(fromType)) return true;
+            if (toType == typeof(Type) && typeof(DynamicType).IsAssignableFrom(fromType)) return true;
 
             // Support extensible types with simple implicit conversions to their base types
             if (typeof(ExtensibleInt).IsAssignableFrom(fromType) && CanConvertFrom(typeof(int), toType, allowNarrowing)) {

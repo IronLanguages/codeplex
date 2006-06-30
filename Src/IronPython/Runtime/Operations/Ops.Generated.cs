@@ -214,16 +214,13 @@ namespace IronPython.Runtime.Operations {
             DynamicType dt = GetDynamicType(x);
             ret = dt.InPlaceAdd(x, y);
             if (ret != NotImplemented) return ret;
-            ret = dt.Add(x, y);
-            if (ret != NotImplemented) return ret;
 
             IProxyObject po = x as IProxyObject;
             if (po != null) return InPlaceAdd(po.Target, y);
             po = y as IProxyObject;
             if (po != null) return InPlaceAdd(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for +: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return Add(x, y);
         }
 
 
@@ -301,16 +298,13 @@ namespace IronPython.Runtime.Operations {
             DynamicType dt = GetDynamicType(x);
             ret = dt.InPlaceSubtract(x, y);
             if (ret != NotImplemented) return ret;
-            ret = dt.Subtract(x, y);
-            if (ret != NotImplemented) return ret;
 
             IProxyObject po = x as IProxyObject;
             if (po != null) return InPlaceSubtract(po.Target, y);
             po = y as IProxyObject;
             if (po != null) return InPlaceSubtract(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for -: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return Subtract(x, y);
         }
 
 
@@ -388,16 +382,13 @@ namespace IronPython.Runtime.Operations {
             DynamicType dt = GetDynamicType(x);
             ret = dt.InPlacePower(x, y);
             if (ret != NotImplemented) return ret;
-            ret = dt.Power(x, y);
-            if (ret != NotImplemented) return ret;
 
             IProxyObject po = x as IProxyObject;
             if (po != null) return InPlacePower(po.Target, y);
             po = y as IProxyObject;
             if (po != null) return InPlacePower(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for **: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return Power(x, y);
         }
 
 
@@ -481,16 +472,13 @@ namespace IronPython.Runtime.Operations {
             DynamicType dt = GetDynamicType(x);
             ret = dt.InPlaceMultiply(x, y);
             if (ret != NotImplemented) return ret;
-            ret = dt.Multiply(x, y);
-            if (ret != NotImplemented) return ret;
 
             IProxyObject po = x as IProxyObject;
             if (po != null) return InPlaceMultiply(po.Target, y);
             po = y as IProxyObject;
             if (po != null) return InPlaceMultiply(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for *: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return Multiply(x, y);
         }
 
 
@@ -568,16 +556,13 @@ namespace IronPython.Runtime.Operations {
             DynamicType dt = GetDynamicType(x);
             ret = dt.InPlaceFloorDivide(x, y);
             if (ret != NotImplemented) return ret;
-            ret = dt.FloorDivide(x, y);
-            if (ret != NotImplemented) return ret;
 
             IProxyObject po = x as IProxyObject;
             if (po != null) return InPlaceFloorDivide(po.Target, y);
             po = y as IProxyObject;
             if (po != null) return InPlaceFloorDivide(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for //: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return FloorDivide(x, y);
         }
 
 
@@ -655,16 +640,13 @@ namespace IronPython.Runtime.Operations {
             DynamicType dt = GetDynamicType(x);
             ret = dt.InPlaceDivide(x, y);
             if (ret != NotImplemented) return ret;
-            ret = dt.Divide(x, y);
-            if (ret != NotImplemented) return ret;
 
             IProxyObject po = x as IProxyObject;
             if (po != null) return InPlaceDivide(po.Target, y);
             po = y as IProxyObject;
             if (po != null) return InPlaceDivide(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for /: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return Divide(x, y);
         }
 
 
@@ -742,16 +724,13 @@ namespace IronPython.Runtime.Operations {
             DynamicType dt = GetDynamicType(x);
             ret = dt.InPlaceTrueDivide(x, y);
             if (ret != NotImplemented) return ret;
-            ret = dt.TrueDivide(x, y);
-            if (ret != NotImplemented) return ret;
 
             IProxyObject po = x as IProxyObject;
             if (po != null) return InPlaceTrueDivide(po.Target, y);
             po = y as IProxyObject;
             if (po != null) return InPlaceTrueDivide(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for /: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return TrueDivide(x, y);
         }
 
 
@@ -829,16 +808,13 @@ namespace IronPython.Runtime.Operations {
             DynamicType dt = GetDynamicType(x);
             ret = dt.InPlaceMod(x, y);
             if (ret != NotImplemented) return ret;
-            ret = dt.Mod(x, y);
-            if (ret != NotImplemented) return ret;
 
             IProxyObject po = x as IProxyObject;
             if (po != null) return InPlaceMod(po.Target, y);
             po = y as IProxyObject;
             if (po != null) return InPlaceMod(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for %: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return Mod(x, y);
         }
 
 
@@ -895,8 +871,7 @@ namespace IronPython.Runtime.Operations {
             po = y as IProxyObject;
             if (po != null) return InPlaceLeftShift(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for <<: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return LeftShift(x, y);
         }
 
 
@@ -953,8 +928,7 @@ namespace IronPython.Runtime.Operations {
             po = y as IProxyObject;
             if (po != null) return InPlaceRightShift(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for >>: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return RightShift(x, y);
         }
 
 
@@ -1011,8 +985,7 @@ namespace IronPython.Runtime.Operations {
             po = y as IProxyObject;
             if (po != null) return InPlaceBitwiseAnd(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for &: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return BitwiseAnd(x, y);
         }
 
 
@@ -1069,8 +1042,7 @@ namespace IronPython.Runtime.Operations {
             po = y as IProxyObject;
             if (po != null) return InPlaceBitwiseOr(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for |: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return BitwiseOr(x, y);
         }
 
 
@@ -1127,8 +1099,7 @@ namespace IronPython.Runtime.Operations {
             po = y as IProxyObject;
             if (po != null) return InPlaceXor(x, po.Target);
 
-            throw Ops.TypeError("unsupported operand type(s) for ^: '{0}' and '{1}'",
-                                GetDynamicType(x).__name__, GetDynamicType(y).__name__);
+            return Xor(x, y);
         }
 
 

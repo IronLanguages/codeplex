@@ -1218,7 +1218,7 @@ namespace IronPython.Modules {
 
         public static object tuple = Ops.GetDynamicTypeFromType(typeof(Tuple));
 
-        public static object type = Ops.GetDynamicTypeFromType(typeof(PythonType));
+        public static object type = Ops.GetDynamicTypeFromType(typeof(DynamicType));
 
         [PythonName("unichr")]
         public static string Unichr(int i) {
@@ -1266,7 +1266,7 @@ namespace IronPython.Modules {
         //??? should we fastpath the 1,2,3 item cases???
         [PythonName("zip")]
         public static List Zip(params object[] seqs) {
-            if (seqs == null) throw Ops.TypeError("zip argument must support iteration, got {0}", NoneType.InstanceOfNoneType);
+            if (seqs == null) throw Ops.TypeError("zip argument must support iteration, got {0}", NoneTypeOps.InstanceOfNoneType);
 
             int N = seqs.Length;
             if (N == 2) return Zip(seqs[0], seqs[1]);

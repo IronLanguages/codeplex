@@ -31,7 +31,7 @@ namespace IronPython.Runtime.Types {
     public class ReflectedDelegateType : ReflectedType {
         private static BuiltinFunction DelegateNew = BuiltinFunction.MakeMethod("__new__", typeof(ReflectedDelegateType).GetMethod("MakeNew"), FunctionType.Function | FunctionType.PythonVisible);
         
-        public static Delegate MakeNew(PythonType type, object from) {
+        public static Delegate MakeNew(DynamicType type, object from) {
             return Ops.GetDelegate(from, ((ReflectedType)type).type);
         }
 

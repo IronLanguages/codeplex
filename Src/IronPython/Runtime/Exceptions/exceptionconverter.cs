@@ -167,7 +167,7 @@ namespace IronPython.Runtime.Exceptions {
             if (e == null) return false;
             if (e is Exception) return true;
 
-            // It could be a PythonType created by CreateExceptionMapping
+            // It could be a DynamicType created by CreateExceptionMapping
             if (e is OldInstance) {
                 OldClass oldClass = ((OldInstance)e).__class__;
                 return oldClass.IsSubclassOf(clrToPython[typeof(Exception)]);
@@ -251,7 +251,7 @@ namespace IronPython.Runtime.Exceptions {
                 return Ops.ToString(objArgs);
             }
 
-            // It could be a PythonType created by CreateExceptionMapping
+            // It could be a DynamicType created by CreateExceptionMapping
             object cex;
             if (Ops.TryGetAttr(self, SymbolTable.ClrExceptionKey, out cex)) {
                 Exception clrEx = cex as Exception;

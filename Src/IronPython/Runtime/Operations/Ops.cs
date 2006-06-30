@@ -518,6 +518,8 @@ namespace IronPython.Runtime.Operations {
             ret[typeof(ushort)] = UInt16Ops.MakeDynamicType();
             ret[typeof(uint)] = UInt32Ops.MakeDynamicType();
             ret[typeof(ulong)] = UInt64Ops.MakeDynamicType();
+
+            ret[typeof(void)] = NoneTypeOps.MakeDynamicType();
             
 
             return ret;
@@ -561,7 +563,7 @@ namespace IronPython.Runtime.Operations {
             IDynamicObject dt = o as IDynamicObject;
             if (dt != null) return dt.GetDynamicType();
 
-            if (o == null) return NoneType.InstanceOfNoneType;
+            if (o == null) return NoneTypeOps.InstanceOfNoneType;
 
             if (o is String) return StringType;
 
@@ -1232,7 +1234,7 @@ namespace IronPython.Runtime.Operations {
             if (o is int) return (int)o;
             if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
             if (o is double) return (int)(double)o;
-            if (o == null) return NoneType.NoneHashCode;
+            if (o == null) return NoneTypeOps.NoneHashCode;
 
             return o.GetHashCode();
         }
@@ -1242,7 +1244,7 @@ namespace IronPython.Runtime.Operations {
             if (o is int) return (int)o;
             if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
             if (o is double) return (int)(double)o;
-            if (o == null) return NoneType.NoneHashCode;
+            if (o == null) return NoneTypeOps.NoneHashCode;
 
             IRichEquality ipe = o as IRichEquality;
             if (ipe != null) {
@@ -1459,6 +1461,11 @@ namespace IronPython.Runtime.Operations {
                 if (conv != Conversion.None) {
                     return list[val];
                 }
+            }
+
+            ReflectedType dynType = o as ReflectedType;
+            if (dynType != null) {
+                return dynType[index];
             }
 
             return GetDynamicType(o).GetIndex(o, index);
@@ -2355,7 +2362,7 @@ namespace IronPython.Runtime.Operations {
             return TypeError(typeName + " objects are unhashable");
         }
 
-        internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, PythonType type, Type newType) {
+        internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, DynamicType type, Type newType) {
             return TypeError("{0}: '{1}' object layout differs from '{2}'", prefix, type.__name__, newType);
         }
 

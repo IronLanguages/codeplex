@@ -443,7 +443,6 @@ Assert(issubclass(int, (str, int)))
 Assert(str(None) == "None")
 Assert(issubclass(type(None),type(None)))
 Assert(str(type(None)) == "<type 'NoneType'>")
-Assert(str(type(None)) == type(None).ToString())
 Assert(str(1) == "1")
 Assert('__str__' in dir(None))
 

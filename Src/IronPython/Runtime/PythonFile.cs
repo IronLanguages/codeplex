@@ -785,17 +785,17 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__new__")]
-        public static PythonFile Make(ICallerContext context, PythonType cls, string name) {
+        public static PythonFile Make(ICallerContext context, DynamicType cls, string name) {
             return Make(context, cls, name, "r", -1);
         }
 
         [PythonName("__new__")]
-        public static PythonFile Make(ICallerContext context, PythonType cls, string name, string mode) {
+        public static PythonFile Make(ICallerContext context, DynamicType cls, string name, string mode) {
             return Make(context, cls, name, mode, -1);
         }
 
         [PythonName("__new__")]
-        public static PythonFile Make(ICallerContext context, PythonType cls, string name, string mode, int bufsize) {
+        public static PythonFile Make(ICallerContext context, DynamicType cls, string name, string mode, int bufsize) {
             FileShare fshare = FileShare.None;
             FileMode fmode;
             FileAccess faccess;
@@ -842,7 +842,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__new__")]
-        public static PythonFile Make(ICallerContext context, PythonType cls, Stream stream) {
+        public static PythonFile Make(ICallerContext context, DynamicType cls, Stream stream) {
             string mode;
             if (stream.CanRead && stream.CanWrite) mode = "w+";
             else if (stream.CanWrite) mode = "w";
@@ -854,7 +854,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__new__")]
-        public static PythonFile Make(ICallerContext context, PythonType cls, Stream stream, string mode) {
+        public static PythonFile Make(ICallerContext context, DynamicType cls, Stream stream, string mode) {
             if (cls == TypeCache.PythonFile) return new PythonFile(stream, context.SystemState.DefaultEncoding, mode);
 
             return cls.ctor.Call(cls, stream, context.SystemState.DefaultEncoding, mode) as PythonFile;
