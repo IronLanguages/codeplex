@@ -549,12 +549,19 @@ namespace IronPython.Modules {
 
             [PythonName("start")]
             public int Start(int group) {
-                return m.Groups[group].Index;
+                int grpIndex = GetGroupIndex(group);
+                if (!m.Groups[grpIndex].Success) {
+                    return -1;
+                }
+                return m.Groups[grpIndex].Index;
             }
 
             [PythonName("end")]
             public int End(object group) {
                 int grpIndex = GetGroupIndex(group);
+                if (!m.Groups[grpIndex].Success) {
+                    return -1;
+                }
                 return m.Groups[grpIndex].Index + m.Groups[grpIndex].Length;
             }
 
@@ -574,12 +581,9 @@ namespace IronPython.Modules {
             [PythonName("group")]
             public object Group(object index) {
                 int pos = GetGroupIndex(index);
-                if (pos >= m.Groups.Count) 
-                    throw Ops.IndexError("no such group");
-                else {
-                    Group g = m.Groups[pos];
-                    return g.Success ? g.Value : null;
-                }
+                Group g = m.Groups[pos];
+                return g.Success ? g.Value : null;
+
             }
 
             [PythonName("group")]
@@ -620,14 +624,14 @@ namespace IronPython.Modules {
                         AppendGroup(res, (int)(strTmp[i] - '0'));
                     } else if (strTmp[i] == 'g') {
                         if (++i == strTmp.Length) { res.Append("\\g"); return res.ToString(); }
-                        if (strTmp[i] != '<') { res.Append("\\g<"); continue; }
-
-                        if (Char.IsDigit(strTmp[i])) {
-                            AppendGroup(res, (int)(res[i] - '0'));
-                        } else {
+                        if (strTmp[i] != '<') {
+                            res.Append("\\g<"); continue;
+                        } else { // '<'
                             StringBuilder name = new StringBuilder();
-                            while (strTmp[i] != '>' && i < strTmp.Length) name.Append(strTmp[i++]);
-
+                            i++;
+                            while (strTmp[i] != '>' && i < strTmp.Length) {
+                                name.Append(strTmp[i++]);
+                            }
                             AppendGroup(res, pattern.re.GroupNumberFromName(name.ToString()));
                         }
                     } else {
@@ -723,6 +727,9 @@ namespace IronPython.Modules {
                 grpIndex = Converter.TryConvertToInt32(group, out conv);
                 if (conv == Conversion.None) {
                     grpIndex = pattern.re.GroupNumberFromName(ValidateString(group, "group"));
+                }
+                if (grpIndex < 0 || grpIndex >= m.Groups.Count) {
+                    throw Ops.IndexError("no such group");
                 }
                 return grpIndex;
             }
@@ -887,11 +894,13 @@ namespace IronPython.Modules {
                             case System.Globalization.UnicodeCategory.UppercaseLetter:
                             case System.Globalization.UnicodeCategory.TitlecaseLetter:
                             case System.Globalization.UnicodeCategory.OtherLetter:
-                            case System.Globalization.UnicodeCategory.DecimalDigitNumber:
                             case System.Globalization.UnicodeCategory.LetterNumber:
                             case System.Globalization.UnicodeCategory.OtherNumber:
                             case System.Globalization.UnicodeCategory.ConnectorPunctuation:
                                 pattern = pattern.Remove(nameIndex - 1, 1);
+                                break;
+                            case System.Globalization.UnicodeCategory.DecimalDigitNumber:
+                                //  actually don't want to unescape '\1', '\2' etc. which are references to groups
                                 break;
                         }
                         break;

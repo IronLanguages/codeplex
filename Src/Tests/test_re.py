@@ -64,6 +64,9 @@ def test_back_match():
     p = re.compile('(?P<grp>.+?)(?P=grp)')
     AreEqual(p.match('abcabc').groupdict(), {'grp':'abc'})
 
+def test_expand():
+	AreEqual(re.match("(a)(b)", "ab").expand("blah\g<1>\g<2>"), "blahab")
+
 def test_sub():    
     x = '\n   #region Generated Foo\nblah\nblah#end region'
     a = re.compile("^([ \t]+)#region Generated Foo.*?#end region", re.MULTILINE|re.DOTALL)
@@ -115,6 +118,29 @@ def test_x():
 def test_match():
     p = re.compile('.')
     AreEqual(p.match('foobar', 1,2).span(), (1,2))
+ 
+def test_startandend():
+    m = re.match(r'(a)|(b)', 'b')
+    AreEqual(m.groups(), (None, 'b'))
+    AreEqual(m.group(0), "b")
+    AreEqual(m.start(0), 0)
+    AreEqual(m.end(0), 1)
+    AreEqual(m.start(1), -1)
+    AreEqual(m.end(1), -1)
+    m = re.match(".*", '')
+    AreEqual(m.groups(), ())
+    AreEqual(m.start(0), 0)
+    AreEqual(m.end(0), 0)
+    AssertError(IndexError, m.group, "112")
+    AssertError(IndexError, m.group, 112)
+    AssertError(IndexError, m.group, "-1")
+    AssertError(IndexError, m.group, -1)
+    AssertError(IndexError, m.start, 112)
+    AssertError(IndexError, m.start, -1)
+    AssertError(IndexError, m.end, "112")
+    AssertError(IndexError, m.end, 112)
+    AssertError(IndexError, m.end, "-1")
+    AssertError(IndexError, m.end, -1)
 
 def test_start_of_str():
     startOfStr = re.compile('^')
