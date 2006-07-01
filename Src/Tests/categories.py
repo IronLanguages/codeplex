@@ -84,25 +84,27 @@ IronPythonTests = {
             'netinterop':
                 '''
                 test_array
-                test_weakref
                 test_assembly
                 test_callback
+                test_clrexception
                 test_clrload
                 test_clrload2
                 test_cominterop
                 test_delegate
                 test_enum
                 test_event
+                test_exceptionconverter
                 test_genericmeth
                 test_generictype
                 test_inheritance
+                test_methodbinder1
+                test_methodbinder2
                 test_methoddispatch
                 test_namespace
+                test_privateBinding
                 test_protected
                 test_specialcontext
-                test_clrexception
-                test_exceptionconverter
-                test_privateBinding
+                test_weakref
                 ''',
             'standard':
                 '''

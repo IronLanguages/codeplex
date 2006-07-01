@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="AttrInjectorTest.cs" />
+    <Compile Include="BinderTest.cs" />
     <Compile Include="BindTest.cs" />
     <Compile Include="Cmplx.cs" />
     <Compile Include="Conversions.cs" />
@@ -74,6 +75,10 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\IronMath\IronMath.csproj">
+      <Project>{23392B2F-6141-418B-A442-E4D7ABE15774}</Project>
+      <Name>IronMath</Name>
+    </ProjectReference>
     <ProjectReference Include="..\IronPython\IronPython.csproj">
       <Project>{16ED1884-8B08-4787-B598-7C9D60519075}</Project>
       <Package>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</Package>

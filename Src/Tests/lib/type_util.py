@@ -32,7 +32,6 @@ class myfrozenset(frozenset): pass
 
 class myfile(file): pass
 
-
 # to define type constant
 
 def _func(): pass
@@ -44,7 +43,35 @@ class types:
     instancemethodType  = type(_class().method)
     classType           = type(_class)
 
+import sys
+if sys.platform == "cli":
+    import System
     
+    # CLR array shortcut
+    array_cli       = System.Array
+    array_int       = System.Array[int]
+    array_long      = System.Array[long]
+    array_object    = System.Array[object]
+    array_byte      = System.Array[System.Byte]
+    
+    # sample numberes?
+    clr_signed_types = (System.SByte, System.Int16, System.Int32, System.Int64, System.Decimal, System.Single, System.Double)
+    clr_unsigned_types = (System.Byte, System.UInt16, System.UInt32, System.UInt64)
+    clr_all_types = clr_signed_types + clr_unsigned_types
+    
+    clr_all_plus1  = [t.Parse("1") for t in clr_all_types]
+    clr_all_minus1 = [t.Parse("-1") for t in clr_signed_types]
+    clr_all_max    = [t.MaxValue for t in clr_all_types]
+    clr_all_min    = [t.MinValue for t in clr_all_types]
+    
+    clr_numbers = {}
+    for t in clr_all_types:
+        clr_numbers[t.__name__ + "Max"] = t.MaxValue
+        clr_numbers[t.__name__ + "Min"] = t.MinValue
+        clr_numbers[t.__name__ + "PlusOne"] = t.Parse("1")
+        try: clr_numbers[t.__name__ + "MinusOne"] = t.Parse("-1")
+        except:  pass
+        
 if __name__ == '__main__':
     # for eye check
     for x in dir(types):
