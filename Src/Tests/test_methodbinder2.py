@@ -83,7 +83,7 @@ def _my_call(func, arg):
     else:
         func(arg)
     
-def _try_arg(target, arg, mapping, funcOverflowError, funcValueError):
+def _try_arg(target, arg, mapping, funcTypeError, funcOverflowError):
     '''try the pass-in argument 'arg' on all methods 'target' has.
        mapping specifies (method-name, flag-value)
        funcOverflowError contains method-name, which will cause OverflowError when passing in 'arg'
@@ -99,8 +99,9 @@ def _try_arg(target, arg, mapping, funcOverflowError, funcValueError):
             _my_call(func, arg)
         except Exception, e:
             if funcname in funcOverflowError: expectError = OverflowError
-            elif funcname in funcValueError:  expectError = ValueError
-            else: expectError = TypeError
+            elif funcname in funcTypeError:  expectError = TypeError
+            else: 
+                Fail("unexpected exception %s when func %s with arg %s (%s)\n%s" % (e, Flag.Value, funcname, arg, type(arg), func.__doc__))
 
             if funcname in mapping.keys():  # No exception expected:
                 Fail("unexpected exception %s when func %s with arg %s (%s)\n%s" % (e, Flag.Value, funcname, arg, type(arg), func.__doc__))
@@ -115,7 +116,6 @@ def _try_arg(target, arg, mapping, funcOverflowError, funcValueError):
             if left != right: 
                 Fail("left %s != right %s when func %s on arg %s (%s)\n%s" % (left, right, funcname, arg, type(arg), func.__doc__))
             Flag.Value = -99           # reset 
-
     print 
     
 def test_other_concerns():
@@ -160,254 +160,254 @@ def test_other_concerns():
 
 def test_arg_NoArgNecessary():
     target = COverloads_NoArgNecessary()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), _merge(_first('M100 M101 M102 M103 M104 M105 '), _second('M106 ')), [], [], ),
-(         100, _merge(_first('M105 M106 '), _second('M101 M102 M103 M104 ')), [], [], ),
-(  (100, 200), _second('M102 M104 M105 M106 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), _merge(_first('M100 M101 M102 M103 M104 M105 '), _second('M106 ')), '', '', ),
+(         100, _merge(_first('M105 M106 '), _second('M101 M102 M103 M104 ')), 'M100 ', '', ),
+(  (100, 200), _second('M102 M104 M105 M106 '), 'M100 M101 M103 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_OneArg_NormalArg():
     target = COverloads_OneArg_NormalArg()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), dict(), [], [], ),
-(         100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 '), [], [], ),
-(  (100, 200), _second('M102 M107 M108 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), dict(), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 ', '', ),
+(         100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 '), '', '', ),
+(  (100, 200), _second('M102 M107 M108 '), 'M100 M101 M103 M104 M105 M106 M109 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_OneArg_RefArg():
     target = COverloads_OneArg_RefArg()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), dict(), [], [], ),
-(         100, _first('M100 M101 M103 M105 M106 M107 M108 '), [], [], ),
-(  (100, 200), _second('M101 M106 M107 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), dict(), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 ', '', ),
+(         100, _first('M100 M101 M103 M105 M106 M107 M108 '), 'M102 M104 ', '', ),
+(  (100, 200), _second('M101 M106 M107 '), 'M100 M102 M103 M104 M105 M108 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_OneArg_NullableArg():
     target = COverloads_OneArg_NullableArg()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), dict(), [], [], ),
-(         100, _merge(_first('M100 M107 '), _second('M101 M102 M103 M104 M105 M106 ')), [], [], ),
-(  (100, 200), _second('M100 M105 M106 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), dict(), 'M100 M101 M102 M103 M104 M105 M106 M107 ', '', ),
+(         100, _merge(_first('M100 M107 '), _second('M101 M102 M103 M104 M105 M106 ')), '', '', ),
+(  (100, 200), _second('M100 M105 M106 '), 'M101 M102 M103 M104 M107 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_OneArg_TwoArgs():
     target = COverloads_OneArg_TwoArgs()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), dict(), [], [], ),
-(         100, _second('M100 M101 M102 M103 M104 '), [], [], ),
-(  (100, 200), _first('M100 M101 M102 M103 M104 M105 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), dict(), 'M100 M101 M102 M103 M104 M105 ', '', ),
+(         100, _second('M100 M101 M102 M103 M104 '), 'M105 ', '', ),
+(  (100, 200), _first('M100 M101 M102 M103 M104 M105 '), '', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_OneArg_NormalOut():
     target = COverloads_OneArg_NormalOut()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), dict(), [], [], ),
-(         100, _first('M100 M102 M103 M104 M105 '), [], [], ),
-(  (100, 200), _second('M103 M104 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), dict(), 'M100 M101 M102 M103 M104 M105 ', '', ),
+(         100, _first('M100 M102 M103 M104 M105 '), 'M101 ', '', ),
+(  (100, 200), _second('M103 M104 '), 'M100 M101 M102 M105 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_OneArg_RefOut():
     target = COverloads_OneArg_RefOut()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), dict(), [], [], ),
-(         100, _merge(_first('M101 M102 M103 '), _second('M100 ')), [], [], ),
-(  (100, 200), _second('M101 M102 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), dict(), 'M100 M101 M102 M103 ', '', ),
+(         100, _merge(_first('M101 M102 M103 '), _second('M100 ')), '', '', ),
+(  (100, 200), _second('M101 M102 '), 'M100 M103 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_OneArg_OutNormal():
     target = COverloads_OneArg_OutNormal()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), dict(), [], [], ),
-(         100, _first('M100 M101 M102 M103 '), [], [], ),
-(  (100, 200), _second('M101 M102 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), dict(), 'M100 M101 M102 M103 ', '', ),
+(         100, _first('M100 M101 M102 M103 '), '', '', ),
+(  (100, 200), _second('M101 M102 '), 'M100 M103 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_OneArg_OutRef():
     target = COverloads_OneArg_OutRef()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), dict(), [], [], ),
-(         100, _first('M100 M101 M102 '), [], [], ),
-(  (100, 200), _second('M100 M101 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), dict(), 'M100 M101 M102 ', '', ),
+(         100, _first('M100 M101 M102 '), '', '', ),
+(  (100, 200), _second('M100 M101 '), 'M102 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_OneArg_NormalDefault():
     target = COverloads_OneArg_NormalDefault()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(     tuple(), dict(), [], [], ),
-(         100, _first('M100 M101 '), [], [], ),
-(  (100, 200), _first('M100 M101 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(     tuple(), dict(), 'M100 M101 ', '', ),
+(         100, _first('M100 M101 '), '', '', ),
+(  (100, 200), _first('M100 M101 '), '', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_String():
     target = COverloads_String()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(         'a', _merge(_first('M100 M101 '), _second('M102 ')), [], [], ),
-(       'abc', _merge(_first('M100 M101 '), _second('M102 ')), [], [], ),
-(  mystr('a'), _merge(_first('M100 M101 '), _second('M102 ')), [], [], ),
-(mystr('abc'), _merge(_first('M100 M101 '), _second('M102 ')), [], [], ),
-(           1, _first('M101 M102 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(         'a', _merge(_first('M100 M101 '), _second('M102 ')), '', '', ),
+(       'abc', _merge(_first('M100 M101 '), _second('M102 ')), '', '', ),
+(  mystr('a'), _merge(_first('M100 M101 '), _second('M102 ')), '', '', ),
+(mystr('abc'), _merge(_first('M100 M101 '), _second('M102 ')), '', '', ),
+(           1, _first('M101 M102 '), 'M100 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_Enum():
     target = COverloads_Enum()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(        E1.A, _first('M100 '), [], [], ),
-(        E2.A, _first('M101 '), [], [], ),
-(           1, _second('M100 M101 '), [], [], ),
-(     UInt163, _second('M101 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(        E1.A, _first('M100 '), 'M101 ', '', ),
+(        E2.A, _first('M101 '), 'M100 ', '', ),
+(           1, _second('M100 M101 '), '', '', ),
+(     UInt163, _second('M101 '), 'M100 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_UserDefined():
     target = COverloads_UserDefined()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(        C1(), _merge(_first('M101 M102 M103 M104 '), _second('M100 ')), [], [], ),
-(        C2(), _merge(_first('M102 M103 '), _second('M100 M101 M104 ')), [], [], ),
-(        C3(), _second('M103 '), [], [], ),
-(        S1(), _first('M100 M101 M102 M103 '), [], [], ),
-(        C6(), _second('M103 M105 '), [], [], ),
-(        pt_i, _first('M100 M101 M102 M103 '), [], [], ),
-(       pt_c1, _merge(_first('M101 M102 M103 M104 '), _second('M100 ')), [], [], ),
-(    pt_i_int, _first('M100 M101 M102 M103 '), [], [], ),
-(  pt_int_old, _second('M102 M103 '), [], [], ),
-(  pt_int_new, _second('M102 M103 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(        C1(), _merge(_first('M101 M102 M103 M104 '), _second('M100 ')), 'M105 ', '', ),
+(        C2(), _merge(_first('M102 M103 '), _second('M100 M101 M104 ')), 'M105 ', '', ),
+(        C3(), _second('M103 '), 'M100 M101 M102 M104 M105 ', '', ),
+(        S1(), _first('M100 M101 M102 M103 '), 'M104 M105 ', '', ),
+(        C6(), _second('M103 M105 '), 'M100 M101 M102 M104 ', '', ),
+(        pt_i, _first('M100 M101 M102 M103 '), 'M104 M105 ', '', ),
+(       pt_c1, _merge(_first('M101 M102 M103 M104 '), _second('M100 ')), 'M105 ', '', ),
+(    pt_i_int, _first('M100 M101 M102 M103 '), 'M104 M105 ', '', ),
+(  pt_int_old, _second('M102 M103 '), 'M100 M101 M104 M105 ', '', ),
+(  pt_int_new, _second('M102 M103 '), 'M100 M101 M104 M105 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_Derived_Number():
     target = COverloads_Derived_Number()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(        None, _merge(_first('M106 '), _second('M102 M103 ')), [], [], ),
-(        True, _merge(_first('M100 M101 M103 M106 '), _second('M102 M104 M105 ')), [], [], ),
-(        -100, _merge(_first('M100 '), _second('M104 M105 M106 ')), [], [], ),
-(        200L, _merge(_first('M103 M106 '), _second('M102 ')), [], [], ),
-(      Byte10, _merge(_first('M103 '), _second('M100 M105 M106 ')), [], [], ),
-(       12.34, _merge(_first('M103 M105 M106 '), _second('M101 M102 ')), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(        None, _merge(_first('M106 '), _second('M102 M103 ')), 'M100 M101 M104 M105 ', '', ),
+(        True, _merge(_first('M100 M101 M103 M106 '), _second('M102 M104 M105 ')), '', '', ),
+(        -100, _merge(_first('M100 '), _second('M104 M105 M106 ')), 'M101 M102 M103 ', '', ),
+(        200L, _merge(_first('M103 M106 '), _second('M102 ')), 'M100 M101 M104 M105 ', '', ),
+(      Byte10, _merge(_first('M103 '), _second('M100 M105 M106 ')), 'M101 M102 M104 ', '', ),
+(       12.34, _merge(_first('M103 M105 M106 '), _second('M101 M102 ')), 'M100 M104 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_Collections():
     target = COverloads_Collections()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(    arrayInt, _merge(_first('M100 '), _second('M101 M102 M103 M104 ')), [], [], ),
-(    tupleInt, _merge(_first('M102 '), _second('M100 M101 M103 M104 ')), [], [], ),
-(     listInt, _merge(_first('M102 '), _second('M100 M103 ')), [], [], ),
-(  tupleLong1, _merge(_first('M102 '), _second('M100 M103 ')), [], [], ),
-(  tupleLong2, _merge(_first('M102 '), _second('M100 M103 ')), ['M101', 'M104', ], [], ),
-(   arrayByte, _first('M101 '), [], [], ),
-(    arrayObj, _merge(_first('M101 M102 '), _second('M100 M103 ')), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(    arrayInt, _merge(_first('M100 '), _second('M101 M102 M103 M104 ')), '', '', ),
+(    tupleInt, _merge(_first('M102 '), _second('M100 M101 M103 M104 ')), '', '', ),
+(     listInt, _merge(_first('M102 '), _second('M100 M103 ')), 'M101 M104 ', '', ),
+(  tupleLong1, _merge(_first('M102 '), _second('M100 M103 ')), 'M101 M104 ', '', ),
+(  tupleLong2, _merge(_first('M102 '), _second('M100 M103 ')), '', 'M101 M104 ', ),
+(   arrayByte, _first('M101 '), 'M100 M102 M103 M104 ', '', ),
+(    arrayObj, _merge(_first('M101 M102 '), _second('M100 M103 ')), 'M104 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_Boolean():
     target = COverloads_Boolean()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(        None, _second('M112 '), [], [], ),
-(        True, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(       False, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(         100, _second('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(  myint(100), _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(        -100, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), ['M101', 'M103', 'M105', 'M107'], [], ),
-(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), ['M101', 'M102', 'M103', 'M104', 'M106', ], [], ),
-(        200L, _second('M101 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), ['M102', ], [], ),
-(       -200L, _second('M104 M106 M108 M109 M110 M111 M112 '), ['M101', 'M102', 'M103', 'M105', 'M107', ], [], ),
-(      Byte10, _second('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(    SBytem10, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), ['M101', 'M102', 'M103', 'M105', 'M107', ], [], ),
-(     Int1610, _second('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(    Int16m20, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), ['M101', 'M102', 'M103', 'M105', 'M107', ], [], ),
-(       12.34, _second('M106 M109 M110 M111 M112 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        True, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(       False, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(         100, _second('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), 'M100 ', '', ),
+(  myint(100), _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
+(        -100, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), 'M100 ', 'M101 M103 M105 M107 ', ),
+(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), 'M100 ', 'M101 M102 M103 M104 M106 ', ),
+(        200L, _second('M101 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), 'M100 ', 'M102 ', ),
+(       -200L, _second('M104 M106 M108 M109 M110 M111 M112 '), 'M100 ', 'M101 M102 M103 M105 M107 ', ),
+(      Byte10, _second('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), 'M100 ', '', ),
+(    SBytem10, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), 'M100 ', 'M101 M103 M105 M107 ', ),
+(     Int1610, _second('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), 'M100 ', '', ),
+(    Int16m20, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), 'M100 ', 'M101 M103 M105 M107 ', ),
+(       12.34, _second('M106 M109 M110 M111 M112 '), 'M100 M101 M102 M103 M104 M105 M107 M108 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_Byte():
     target = COverloads_Byte()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(        None, _second('M112 '), [], [], ),
-(        True, _second('M100 M106 M112 '), [], [], ),
-(       False, _second('M100 M106 M112 '), [], [], ),
-(         100, _merge(_first('M100 M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(  myint(100), _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(        -100, _second('M106 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
-(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
-(        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), ['M100', ], [], ),
-(       -200L, _second('M108 M112 '), ['M100', 'M101', ], [], ),
-(      Byte10, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(    SBytem10, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
-(     Int1610, _merge(_first('M100 M101 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(    Int16m20, _second('M104 M106 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
-(       12.34, _second('M111 M112 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        True, _second('M100 M106 M112 '), 'M101 M102 M103 M104 M105 M107 M108 M109 M110 M111 ', '', ),
+(       False, _second('M100 M106 M112 '), 'M101 M102 M103 M104 M105 M107 M108 M109 M110 M111 ', '', ),
+(         100, _merge(_first('M100 M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M102 M103 M104 M105 M107 ', '', ),
+(  myint(100), _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 M102 M103 M104 M105 M107 ', '', ),
+(        -100, _second('M106 M108 M109 M110 M111 M112 '), 'M102 M103 M104 M105 M107 ', 'M100 M101 ', ),
+(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), 'M102 M103 M104 M106 ', 'M100 M101 ', ),
+(        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), 'M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
+(       -200L, _second('M108 M112 '), 'M102 M103 M104 M105 M106 M107 M109 M110 M111 ', 'M100 M101 ', ),
+(      Byte10, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(    SBytem10, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), 'M103 M105 M107 ', 'M100 M101 ', ),
+(     Int1610, _merge(_first('M100 M101 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M102 M103 M105 M107 ', '', ),
+(    Int16m20, _second('M104 M106 M108 M109 M110 M111 M112 '), 'M102 M103 M105 M107 ', 'M100 M101 ', ),
+(       12.34, _second('M111 M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_Int16():
     target = COverloads_Int16()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(        None, _second('M112 '), [], [], ),
-(        True, _second('M100 M106 M112 '), [], [], ),
-(       False, _second('M100 M106 M112 '), [], [], ),
-(         100, _merge(_first('M100 M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(  myint(100), _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(        -100, _merge(_first('M100 M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
-(        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), [], [], ),
-(       -200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), [], [], ),
-(      Byte10, _merge(_first('M100 M101 M103 M106 M108 M109 M110 M111 M112 '), _second('M102 ')), [], [], ),
-(    SBytem10, _merge(_first('M100 M101 M102 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('M103 ')), [], [], ),
-(     Int1610, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(    Int16m20, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(       12.34, _second('M111 M112 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        True, _second('M100 M106 M112 '), 'M101 M102 M103 M104 M105 M107 M108 M109 M110 M111 ', '', ),
+(       False, _second('M100 M106 M112 '), 'M101 M102 M103 M104 M105 M107 M108 M109 M110 M111 ', '', ),
+(         100, _merge(_first('M100 M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M102 M103 M104 M105 M107 ', '', ),
+(  myint(100), _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 M102 M103 M104 M105 M107 ', '', ),
+(        -100, _merge(_first('M100 M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M102 M103 M104 M105 M107 ', '', ),
+(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), 'M102 M103 M104 M106 ', 'M100 M101 ', ),
+(        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), 'M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
+(       -200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), 'M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
+(      Byte10, _merge(_first('M100 M101 M103 M106 M108 M109 M110 M111 M112 '), _second('M102 ')), 'M104 M105 M107 ', '', ),
+(    SBytem10, _merge(_first('M100 M101 M102 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('M103 ')), '', '', ),
+(     Int1610, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(    Int16m20, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(       12.34, _second('M111 M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_Int32():
     target = COverloads_Int32()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(        None, _second('M112 '), [], [], ),
-(        True, _merge(_first('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 '), _second('M100 M112 ')), [], [], ),
-(       False, _merge(_first('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 '), _second('M100 M112 ')), [], [], ),
-(         100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(  myint(100), _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(        -100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(   UInt32Max, _second('M106 M107 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
-(        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), [], [], ),
-(       -200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), [], [], ),
-(      Byte10, _merge(_first('M100 M101 M103 M108 M109 M110 M111 M112 '), _second('M102 M104 M105 ')), [], [], ),
-(    SBytem10, _merge(_first('M100 M101 M102 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M103 M105 ')), [], [], ),
-(     Int1610, _merge(_first('M100 M101 M102 M103 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M105 ')), [], [], ),
-(    Int16m20, _merge(_first('M100 M101 M102 M103 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M105 ')), [], [], ),
-(       12.34, _merge(_first('M100 M101 '), _second('M111 M112 ')), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        True, _merge(_first('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 '), _second('M100 M112 ')), '', '', ),
+(       False, _merge(_first('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 '), _second('M100 M112 ')), '', '', ),
+(         100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(  myint(100), _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(        -100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
+(   UInt32Max, _second('M106 M107 M108 M109 M110 M111 M112 '), 'M102 M103 M104 M105 ', 'M100 M101 ', ),
+(        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), 'M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
+(       -200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), 'M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
+(      Byte10, _merge(_first('M100 M101 M103 M108 M109 M110 M111 M112 '), _second('M102 M104 M105 ')), 'M106 M107 ', '', ),
+(    SBytem10, _merge(_first('M100 M101 M102 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M103 M105 ')), '', '', ),
+(     Int1610, _merge(_first('M100 M101 M102 M103 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M105 ')), '', '', ),
+(    Int16m20, _merge(_first('M100 M101 M102 M103 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M105 ')), '', '', ),
+(       12.34, _merge(_first('M100 M101 '), _second('M111 M112 ')), 'M102 M103 M104 M105 M106 M107 M108 M109 M110 ', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_Double():
     target = COverloads_Double()
-    for (arg, mapping, funcOverflowError, funcValueError) in [
-(        None, _second('M112 '), [], [], ),
-(        True, _second('M100 M107 M112 '), [], [], ),
-(       False, _second('M100 M107 M112 '), [], [], ),
-(         100, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), [], [], ),
-(  myint(100), _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), [], [], ),
-(        -100, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), [], [], ),
-(   UInt32Max, _merge(_first('M100 M101 M102 M103 M104 M105 M107 M112 '), _second('M106 M108 M109 M111 ')), [], [], ),
-(        200L, _merge(_first('M100 M101 '), _second('M109 M112 ')), [], [], ),
-(       -200L, _merge(_first('M100 M101 '), _second('M109 M112 ')), [], [], ),
-(      Byte10, _merge(_first('M100 M101 M103 M112 '), _second('M102 M104 M105 M106 M107 M108 M109 M111 ')), [], [], ),
-(    SBytem10, _merge(_first('M100 M101 M102 M104 M106 M108 M112 '), _second('M103 M105 M107 M109 M111 ')), [], [], ),
-(     Int1610, _merge(_first('M100 M101 M102 M103 M104 M106 M108 M112 '), _second('M105 M107 M109 M111 ')), [], [], ),
-(    Int16m20, _merge(_first('M100 M101 M102 M103 M104 M106 M108 M112 '), _second('M105 M107 M109 M111 ')), [], [], ),
-(       12.34, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        True, _second('M100 M107 M112 '), 'M101 M102 M103 M104 M105 M106 M108 M109 M110 M111 ', '', ),
+(       False, _second('M100 M107 M112 '), 'M101 M102 M103 M104 M105 M106 M108 M109 M110 M111 ', '', ),
+(         100, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), 'M110 ', '', ),
+(  myint(100), _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), 'M110 ', '', ),
+(        -100, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), 'M110 ', '', ),
+(   UInt32Max, _merge(_first('M100 M101 M102 M103 M104 M105 M107 M112 '), _second('M106 M108 M109 M111 ')), 'M110 ', '', ),
+(        200L, _merge(_first('M100 M101 '), _second('M109 M112 ')), 'M102 M103 M104 M105 M106 M107 M108 M110 M111 ', '', ),
+(       -200L, _merge(_first('M100 M101 '), _second('M109 M112 ')), 'M102 M103 M104 M105 M106 M107 M108 M110 M111 ', '', ),
+(      Byte10, _merge(_first('M100 M101 M103 M112 '), _second('M102 M104 M105 M106 M107 M108 M109 M111 ')), 'M110 ', '', ),
+(    SBytem10, _merge(_first('M100 M101 M102 M104 M106 M108 M112 '), _second('M103 M105 M107 M109 M111 ')), 'M110 ', '', ),
+(     Int1610, _merge(_first('M100 M101 M102 M103 M104 M106 M108 M112 '), _second('M105 M107 M109 M111 ')), 'M110 ', '', ),
+(    Int16m20, _merge(_first('M100 M101 M102 M103 M104 M106 M108 M112 '), _second('M105 M107 M109 M111 ')), 'M110 ', '', ),
+(       12.34, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
     ]:
-        _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 run_test(__name__)
