@@ -458,7 +458,71 @@ if isPython25:
 			# end == start
 		AreEqual(s.endswith(("here","nomatch"),-6, -6), False)
 		AreEqual(s.endswith(("",None),-6, -6), True)
-    
+		
+	def test_any():
+	    class A: pass
+	    a = A()
+	    
+	    class enum:
+	        def __iter__(self):
+	            return [1,2,3].__iter__()
+            
+	    AreEqual(any(enum()),True) # enumerable class
+	    AssertError(TypeError,any,a)# non - enumerable class
+	    AssertError(TypeError,any,0.000000) # non - enumerable object
+	    AreEqual(any([0.0000000,0,False]),False)# all False
+	    AreEqual(any((0,False,a)),True) # True class
+	    AreEqual(any((0,False,None,"")),False) # None and ""
+	    AreEqual(any([]),False) # no items in array
+	    AreEqual(any([None]),False) # only None in array
+	    AreEqual(any([None,a]),True) # only None and an Object in array
+	    AreEqual(any({0:0,False:"hi"}),False) # Dict with All False
+	    AreEqual(any({True:0,False:"hi"}),True) # Dict with onely 1 True
+	    AreEqual(any({a:"hello",False:"bye"}),True) # Dict with Class
+
+        class raiser:
+            def __nonzero__(self):
+                raise RuntimeError
+
+        AreEqual(any([None,False,0,1,raiser()]),True) # True before the raiser()
+        AssertError(RuntimeError,any,[None,False,0,0,raiser(),1,2]) # True after the raiser()
+        AssertError(RuntimeError,any,{None:"",0:1000,raiser():True}) # raiser in dict 
+        AssertError(TypeError,any) # any without any params
+        AssertError(TypeError,any,(20,30,40),(50,60,70))# any with more params
+
+
+	def test_all():
+	    class A: pass
+	    a = A()
+	    
+	    class enum:
+	        def __iter__(self):
+	            return [1,2,3].__iter__()
+            
+	    AreEqual(all(enum()),True) # enumerable class
+	    AssertError(TypeError,all,a) # non - enumerable class
+	    AssertError(TypeError,all,0.000000) # non - enumerable object
+	    AreEqual(all([0.0000000,0,False]),False) # all False
+	    AreEqual(all([True,1.89,"hello",a]),True) # all true array ( bool, double, str, class)
+	    AreEqual(all((True,1.89,"hello",a)),True) # all true tuple ( bool, double, str, class)
+	    AreEqual(all((True,"hello",a,None)),False) # one None in Tuple
+	    AreEqual(all((0,False,None,"")),False) # Tuple with None and ""
+	    AreEqual(all([]),True) # with empty array
+	    AreEqual(all([None]),False) # arry with onle None
+	    AreEqual(all([a,None]),False) # array with None and Class
+	    AreEqual(all({"hello":"hi",True:0,False:"hi",0:0}),False) # dict with some True, False
+	    AreEqual(all({True:0,100:"hi","hello":200,a:100}),True) # dict with all True
+        class raiser:
+            def __nonzero__(self):
+                raise RuntimeError
+
+        AreEqual(all([None,False,0,1,raiser()]),False) # array With raiser() after false
+        AreEqual(all({None:"",0:1000,raiser():True}),False) # Dict with raiser after falls
+        AssertError(RuntimeError,all,[raiser(),200,None,False,0,1,2])# Array  with raiser before False
+        AssertError(RuntimeError,all,{raiser():True,200:"",300:1000})# Dict  with raiser before False
+        AssertError(TypeError,all) # no params
+        AssertError(TypeError,all,(20,30,40),(50,60,70)) # extra params
+	    
 run_test(__name__)
 
 if not isPython25: 

@@ -104,6 +104,26 @@ namespace IronPython.Modules {
             }
         }
 
+        [PythonVersion(2, 5)]
+        [PythonName("all")]
+        public static object All(object x) {
+            IEnumerator i = Ops.GetEnumerator(x);
+            while (i.MoveNext()) {
+                if (!Ops.IsTrue(i.Current)) return Ops.FALSE;
+            }
+            return Ops.TRUE;
+        }
+
+        [PythonVersion(2, 5)]
+        [PythonName("any")]
+        public static object Any(object x) {
+            IEnumerator i = Ops.GetEnumerator(x);
+            while (i.MoveNext()) {
+                if (Ops.IsTrue(i.Current)) return Ops.TRUE;
+            }
+            return Ops.FALSE;
+        }
+
         [PythonName("apply")]
         [Documentation("apply(object[, args[, kwargs]]) -> value\n\nDeprecated.\nInstead, use:\n    function(*args, **keywords).")]
         public static object Apply(ICallerContext context, object func, object args) {
@@ -197,7 +217,7 @@ namespace IronPython.Modules {
             CompilerContext cc;
             CompileFlags cflags = 0;
             bool inheritContext = (dontInherit == null || Converter.ConvertToInt32(dontInherit) == 0);
-            
+
             if (inheritContext) {
                 cc = context.CreateCompilerContext().CopyWithNewSourceFile(filename);
             } else {
@@ -519,7 +539,7 @@ namespace IronPython.Modules {
                     foreach (string s in attrs) {
                         if (s == strVal) {
                             object modVal;
-                            if(!Ops.TryGetAttr(context, pm, SymbolTable.StringToId(strVal), out modVal))
+                            if (!Ops.TryGetAttr(context, pm, SymbolTable.StringToId(strVal), out modVal))
                                 continue;
 
                             candidates.Add(modVal);
@@ -661,7 +681,7 @@ namespace IronPython.Modules {
             object cls;
             if (Ops.TryGetAttr(o, SymbolTable.Class, out cls) &&
                 (!object.ReferenceEquals(odt, cls))) {
-                    return IsSubclassSlow(cls, typeinfo);
+                return IsSubclassSlow(cls, typeinfo);
             }
             return false;
         }
@@ -1104,7 +1124,7 @@ namespace IronPython.Modules {
                 throw Ops.TypeError("__repr__ returned non-string (type {0})", Ops.GetPythonTypeName(o));
             }
 
-            return res;  
+            return res;
         }
 
         [PythonName("reversed")]
@@ -1143,7 +1163,7 @@ namespace IronPython.Modules {
         public static double Round(double x, int n) {
             // values are rounded to 10 ^ n.  For negative values
             // we need to handle this ourselves.
-            if (n < 0) { 
+            if (n < 0) {
                 double factor = Math.Pow(10.0, -n);
                 return factor * Math.Round(x / factor, MidpointRounding.AwayFromZero);
             }
@@ -1277,7 +1297,7 @@ namespace IronPython.Modules {
                 for (int i = 0; i < N; i++) {
                     // first iterator which is no longer iterable ends the 
                     // loop.
-                    if (!iters[i].MoveNext()) return ret;  
+                    if (!iters[i].MoveNext()) return ret;
                     items[i] = iters[i].Current;
                 }
                 ret.AddNoLock(Tuple.Make(items));

@@ -617,6 +617,14 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
+            if (Options.Python25 == false) {
+                object[] attribute = mi.GetCustomAttributes(typeof(PythonVersionAttribute), false);
+                if (attribute.Length > 0) {
+                    PythonVersionAttribute attr = attribute[0] as PythonVersionAttribute;
+                    if (attr != null && attr.version == ReflectionUtil.pythonVersion25) return;
+                }
+            }
+
             NameType nt = NameConverter.TryGetName(this, mi, out name);
             switch (nt) {
                 case NameType.None: break;
