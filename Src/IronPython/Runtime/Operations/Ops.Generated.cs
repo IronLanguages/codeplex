@@ -1111,10 +1111,6 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Bool2Object(((int)x) < ((double)y));
                 } else if (y == null) {
                     return Ops.Bool2Object(1 < 0);
-                } else {
-                    Conversion conv;
-                    double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if (conv < Conversion.None) return Ops.Bool2Object(((int)x) < dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
@@ -1141,25 +1137,12 @@ namespace IronPython.Runtime.Operations {
 
                         return Ops.Bool2Object(self < bi);
                     }
-
-                    Conversion conv;
-                    int val = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) return Ops.Bool2Object(((double)x) < val);
                 }
             } else if (x is bool) {
                 if (y is bool) {
                     return Ops.Bool2Object((((bool)x) ? 1 : 0) < (((bool)y) ? 1 : 0));
                 } else if (y == null) {
                     return Ops.Bool2Object(1 < 0);
-                } else {
-                    Conversion conv;
-                    int other = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) {
-                        if ((bool)x)
-                            return Ops.Bool2Object(1 < (other));
-                        else
-                            return Ops.Bool2Object(0 < (other));
-                    }
                 }
             } else if (x is BigInteger) {
                 if (y is BigInteger) {
@@ -1223,35 +1206,12 @@ namespace IronPython.Runtime.Operations {
             Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
 
             IComparable c = x as IComparable;
-            if (c != null) {
-                if (xType != null && xType != yType) {
-                    object z;
-                    try {
-                        Conversion conversion;
-                        z = Converter.TryConvert(y, xType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return Ops.Bool2Object(c.CompareTo(z) < 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return Ops.Bool2Object(c.CompareTo(y) < 0);
-                }
+            if (c != null && xType == yType) {
+                return Ops.Bool2Object(c.CompareTo(y) < 0);
             }
             c = y as IComparable;
-            if (c != null) {
-                if (yType != null && xType != yType) {
-                    try {
-                        Conversion conversion;
-                        object z = Converter.TryConvert(x, yType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return Ops.Bool2Object(-1 * c.CompareTo(z) < 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return Ops.Bool2Object(-1 * c.CompareTo(x) < 0);
-                }
+            if (c != null && xType == yType) {
+                return Ops.Bool2Object(-1 * c.CompareTo(x) < 0);
             }
 
             DynamicType dt1 = GetDynamicType(x);
@@ -1278,10 +1238,6 @@ namespace IronPython.Runtime.Operations {
                     return (((int)x) < ((double)y));
                 } else if (y == null) {
                     return (1 < 0);
-                } else {
-                    Conversion conv;
-                    double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if (conv < Conversion.None) return (((int)x) < dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
@@ -1308,25 +1264,12 @@ namespace IronPython.Runtime.Operations {
 
                         return (self < bi);
                     }
-
-                    Conversion conv;
-                    int val = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) return (((double)x) < val);
                 }
             } else if (x is bool) {
                 if (y is bool) {
                     return ((((bool)x) ? 1 : 0) < (((bool)y) ? 1 : 0));
                 } else if (y == null) {
                     return (1 < 0);
-                } else {
-                    Conversion conv;
-                    int other = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) {
-                        if ((bool)x)
-                            return (1 < (other));
-                        else
-                            return (0 < (other));
-                    }
                 }
             } else if (x is BigInteger) {
                 if (y is BigInteger) {
@@ -1390,35 +1333,12 @@ namespace IronPython.Runtime.Operations {
             Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
 
             IComparable c = x as IComparable;
-            if (c != null) {
-                if (xType != null && xType != yType) {
-                    object z;
-                    try {
-                        Conversion conversion;
-                        z = Converter.TryConvert(y, xType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return (c.CompareTo(z) < 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return (c.CompareTo(y) < 0);
-                }
+            if (c != null && xType == yType) {
+                return (c.CompareTo(y) < 0);
             }
             c = y as IComparable;
-            if (c != null) {
-                if (yType != null && xType != yType) {
-                    try {
-                        Conversion conversion;
-                        object z = Converter.TryConvert(x, yType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return (-1 * c.CompareTo(z) < 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return (-1 * c.CompareTo(x) < 0);
-                }
+            if (c != null && xType == yType) {
+                return (-1 * c.CompareTo(x) < 0);
             }
 
             DynamicType dt1 = GetDynamicType(x);
@@ -1445,10 +1365,6 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Bool2Object(((int)x) > ((double)y));
                 } else if (y == null) {
                     return Ops.Bool2Object(1 > 0);
-                } else {
-                    Conversion conv;
-                    double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if (conv < Conversion.None) return Ops.Bool2Object(((int)x) > dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
@@ -1475,25 +1391,12 @@ namespace IronPython.Runtime.Operations {
 
                         return Ops.Bool2Object(self > bi);
                     }
-
-                    Conversion conv;
-                    int val = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) return Ops.Bool2Object(((double)x) > val);
                 }
             } else if (x is bool) {
                 if (y is bool) {
                     return Ops.Bool2Object((((bool)x) ? 1 : 0) > (((bool)y) ? 1 : 0));
                 } else if (y == null) {
                     return Ops.Bool2Object(1 > 0);
-                } else {
-                    Conversion conv;
-                    int other = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) {
-                        if ((bool)x)
-                            return Ops.Bool2Object(1 > (other));
-                        else
-                            return Ops.Bool2Object(0 > (other));
-                    }
                 }
             } else if (x is BigInteger) {
                 if (y is BigInteger) {
@@ -1557,35 +1460,12 @@ namespace IronPython.Runtime.Operations {
             Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
 
             IComparable c = x as IComparable;
-            if (c != null) {
-                if (xType != null && xType != yType) {
-                    object z;
-                    try {
-                        Conversion conversion;
-                        z = Converter.TryConvert(y, xType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return Ops.Bool2Object(c.CompareTo(z) > 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return Ops.Bool2Object(c.CompareTo(y) > 0);
-                }
+            if (c != null && xType == yType) {
+                return Ops.Bool2Object(c.CompareTo(y) > 0);
             }
             c = y as IComparable;
-            if (c != null) {
-                if (yType != null && xType != yType) {
-                    try {
-                        Conversion conversion;
-                        object z = Converter.TryConvert(x, yType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return Ops.Bool2Object(-1 * c.CompareTo(z) > 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return Ops.Bool2Object(-1 * c.CompareTo(x) > 0);
-                }
+            if (c != null && xType == yType) {
+                return Ops.Bool2Object(-1 * c.CompareTo(x) > 0);
             }
 
             DynamicType dt1 = GetDynamicType(x);
@@ -1612,10 +1492,6 @@ namespace IronPython.Runtime.Operations {
                     return (((int)x) > ((double)y));
                 } else if (y == null) {
                     return (1 > 0);
-                } else {
-                    Conversion conv;
-                    double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if (conv < Conversion.None) return (((int)x) > dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
@@ -1642,25 +1518,12 @@ namespace IronPython.Runtime.Operations {
 
                         return (self > bi);
                     }
-
-                    Conversion conv;
-                    int val = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) return (((double)x) > val);
                 }
             } else if (x is bool) {
                 if (y is bool) {
                     return ((((bool)x) ? 1 : 0) > (((bool)y) ? 1 : 0));
                 } else if (y == null) {
                     return (1 > 0);
-                } else {
-                    Conversion conv;
-                    int other = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) {
-                        if ((bool)x)
-                            return (1 > (other));
-                        else
-                            return (0 > (other));
-                    }
                 }
             } else if (x is BigInteger) {
                 if (y is BigInteger) {
@@ -1724,35 +1587,12 @@ namespace IronPython.Runtime.Operations {
             Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
 
             IComparable c = x as IComparable;
-            if (c != null) {
-                if (xType != null && xType != yType) {
-                    object z;
-                    try {
-                        Conversion conversion;
-                        z = Converter.TryConvert(y, xType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return (c.CompareTo(z) > 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return (c.CompareTo(y) > 0);
-                }
+            if (c != null && xType == yType) {
+                return (c.CompareTo(y) > 0);
             }
             c = y as IComparable;
-            if (c != null) {
-                if (yType != null && xType != yType) {
-                    try {
-                        Conversion conversion;
-                        object z = Converter.TryConvert(x, yType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return (-1 * c.CompareTo(z) > 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return (-1 * c.CompareTo(x) > 0);
-                }
+            if (c != null && xType == yType) {
+                return (-1 * c.CompareTo(x) > 0);
             }
 
             DynamicType dt1 = GetDynamicType(x);
@@ -1779,10 +1619,6 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Bool2Object(((int)x) <= ((double)y));
                 } else if (y == null) {
                     return Ops.Bool2Object(1 <= 0);
-                } else {
-                    Conversion conv;
-                    double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if (conv < Conversion.None) return Ops.Bool2Object(((int)x) <= dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
@@ -1809,25 +1645,12 @@ namespace IronPython.Runtime.Operations {
 
                         return Ops.Bool2Object(self <= bi);
                     }
-
-                    Conversion conv;
-                    int val = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) return Ops.Bool2Object(((double)x) <= val);
                 }
             } else if (x is bool) {
                 if (y is bool) {
                     return Ops.Bool2Object((((bool)x) ? 1 : 0) <= (((bool)y) ? 1 : 0));
                 } else if (y == null) {
                     return Ops.Bool2Object(1 <= 0);
-                } else {
-                    Conversion conv;
-                    int other = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) {
-                        if ((bool)x)
-                            return Ops.Bool2Object(1 <= (other));
-                        else
-                            return Ops.Bool2Object(0 <= (other));
-                    }
                 }
             } else if (x is BigInteger) {
                 if (y is BigInteger) {
@@ -1891,35 +1714,12 @@ namespace IronPython.Runtime.Operations {
             Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
 
             IComparable c = x as IComparable;
-            if (c != null) {
-                if (xType != null && xType != yType) {
-                    object z;
-                    try {
-                        Conversion conversion;
-                        z = Converter.TryConvert(y, xType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return Ops.Bool2Object(c.CompareTo(z) <= 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return Ops.Bool2Object(c.CompareTo(y) <= 0);
-                }
+            if (c != null && xType == yType) {
+                return Ops.Bool2Object(c.CompareTo(y) <= 0);
             }
             c = y as IComparable;
-            if (c != null) {
-                if (yType != null && xType != yType) {
-                    try {
-                        Conversion conversion;
-                        object z = Converter.TryConvert(x, yType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return Ops.Bool2Object(-1 * c.CompareTo(z) <= 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return Ops.Bool2Object(-1 * c.CompareTo(x) <= 0);
-                }
+            if (c != null && xType == yType) {
+                return Ops.Bool2Object(-1 * c.CompareTo(x) <= 0);
             }
 
             DynamicType dt1 = GetDynamicType(x);
@@ -1946,10 +1746,6 @@ namespace IronPython.Runtime.Operations {
                     return (((int)x) <= ((double)y));
                 } else if (y == null) {
                     return (1 <= 0);
-                } else {
-                    Conversion conv;
-                    double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if (conv < Conversion.None) return (((int)x) <= dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
@@ -1976,25 +1772,12 @@ namespace IronPython.Runtime.Operations {
 
                         return (self <= bi);
                     }
-
-                    Conversion conv;
-                    int val = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) return (((double)x) <= val);
                 }
             } else if (x is bool) {
                 if (y is bool) {
                     return ((((bool)x) ? 1 : 0) <= (((bool)y) ? 1 : 0));
                 } else if (y == null) {
                     return (1 <= 0);
-                } else {
-                    Conversion conv;
-                    int other = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) {
-                        if ((bool)x)
-                            return (1 <= (other));
-                        else
-                            return (0 <= (other));
-                    }
                 }
             } else if (x is BigInteger) {
                 if (y is BigInteger) {
@@ -2058,35 +1841,12 @@ namespace IronPython.Runtime.Operations {
             Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
 
             IComparable c = x as IComparable;
-            if (c != null) {
-                if (xType != null && xType != yType) {
-                    object z;
-                    try {
-                        Conversion conversion;
-                        z = Converter.TryConvert(y, xType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return (c.CompareTo(z) <= 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return (c.CompareTo(y) <= 0);
-                }
+            if (c != null && xType == yType) {
+                return (c.CompareTo(y) <= 0);
             }
             c = y as IComparable;
-            if (c != null) {
-                if (yType != null && xType != yType) {
-                    try {
-                        Conversion conversion;
-                        object z = Converter.TryConvert(x, yType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return (-1 * c.CompareTo(z) <= 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return (-1 * c.CompareTo(x) <= 0);
-                }
+            if (c != null && xType == yType) {
+                return (-1 * c.CompareTo(x) <= 0);
             }
 
             DynamicType dt1 = GetDynamicType(x);
@@ -2113,10 +1873,6 @@ namespace IronPython.Runtime.Operations {
                     return Ops.Bool2Object(((int)x) >= ((double)y));
                 } else if (y == null) {
                     return Ops.Bool2Object(1 >= 0);
-                } else {
-                    Conversion conv;
-                    double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if (conv < Conversion.None) return Ops.Bool2Object(((int)x) >= dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
@@ -2143,25 +1899,12 @@ namespace IronPython.Runtime.Operations {
 
                         return Ops.Bool2Object(self >= bi);
                     }
-
-                    Conversion conv;
-                    int val = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) return Ops.Bool2Object(((double)x) >= val);
                 }
             } else if (x is bool) {
                 if (y is bool) {
                     return Ops.Bool2Object((((bool)x) ? 1 : 0) >= (((bool)y) ? 1 : 0));
                 } else if (y == null) {
                     return Ops.Bool2Object(1 >= 0);
-                } else {
-                    Conversion conv;
-                    int other = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) {
-                        if ((bool)x)
-                            return Ops.Bool2Object(1 >= (other));
-                        else
-                            return Ops.Bool2Object(0 >= (other));
-                    }
                 }
             } else if (x is BigInteger) {
                 if (y is BigInteger) {
@@ -2225,35 +1968,12 @@ namespace IronPython.Runtime.Operations {
             Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
 
             IComparable c = x as IComparable;
-            if (c != null) {
-                if (xType != null && xType != yType) {
-                    object z;
-                    try {
-                        Conversion conversion;
-                        z = Converter.TryConvert(y, xType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return Ops.Bool2Object(c.CompareTo(z) >= 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return Ops.Bool2Object(c.CompareTo(y) >= 0);
-                }
+            if (c != null && xType == yType) {
+                return Ops.Bool2Object(c.CompareTo(y) >= 0);
             }
             c = y as IComparable;
-            if (c != null) {
-                if (yType != null && xType != yType) {
-                    try {
-                        Conversion conversion;
-                        object z = Converter.TryConvert(x, yType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return Ops.Bool2Object(-1 * c.CompareTo(z) >= 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return Ops.Bool2Object(-1 * c.CompareTo(x) >= 0);
-                }
+            if (c != null && xType == yType) {
+                return Ops.Bool2Object(-1 * c.CompareTo(x) >= 0);
             }
 
             DynamicType dt1 = GetDynamicType(x);
@@ -2280,10 +2000,6 @@ namespace IronPython.Runtime.Operations {
                     return (((int)x) >= ((double)y));
                 } else if (y == null) {
                     return (1 >= 0);
-                } else {
-                    Conversion conv;
-                    double dbl = Converter.TryConvertToDouble(y, out conv);
-                    if (conv < Conversion.None) return (((int)x) >= dbl);
                 }
             } else if (x is double) {
                 if (y is int) {
@@ -2310,25 +2026,12 @@ namespace IronPython.Runtime.Operations {
 
                         return (self >= bi);
                     }
-
-                    Conversion conv;
-                    int val = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) return (((double)x) >= val);
                 }
             } else if (x is bool) {
                 if (y is bool) {
                     return ((((bool)x) ? 1 : 0) >= (((bool)y) ? 1 : 0));
                 } else if (y == null) {
                     return (1 >= 0);
-                } else {
-                    Conversion conv;
-                    int other = Converter.TryConvertToInt32(y, out conv);
-                    if (conv < Conversion.None) {
-                        if ((bool)x)
-                            return (1 >= (other));
-                        else
-                            return (0 >= (other));
-                    }
                 }
             } else if (x is BigInteger) {
                 if (y is BigInteger) {
@@ -2392,35 +2095,12 @@ namespace IronPython.Runtime.Operations {
             Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
 
             IComparable c = x as IComparable;
-            if (c != null) {
-                if (xType != null && xType != yType) {
-                    object z;
-                    try {
-                        Conversion conversion;
-                        z = Converter.TryConvert(y, xType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return (c.CompareTo(z) >= 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return (c.CompareTo(y) >= 0);
-                }
+            if (c != null && xType == yType) {
+                return (c.CompareTo(y) >= 0);
             }
             c = y as IComparable;
-            if (c != null) {
-                if (yType != null && xType != yType) {
-                    try {
-                        Conversion conversion;
-                        object z = Converter.TryConvert(x, yType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
-                            return (-1 * c.CompareTo(z) >= 0);
-                        }
-                    } catch {
-                    }
-                } else {
-                    return (-1 * c.CompareTo(x) >= 0);
-                }
+            if (c != null && xType == yType) {
+                return (-1 * c.CompareTo(x) >= 0);
             }
 
             DynamicType dt1 = GetDynamicType(x);

@@ -456,12 +456,9 @@ namespace IronPython.Modules {
         }
 
         private static int SliceToInt(object o) {
-            Conversion c;
-            int i = Converter.TryConvertToInt32(o, out c);
-            if (c == Conversion.None) {
-                throw Ops.TypeError("integer expected");
-            }
-            return i;
+            int i;
+            if (Converter.TryConvertToInt32(o, out i)) return i;
+            throw Ops.TypeError("integer expected");
         }
 
         private static object MakeSlice(object a, object b) {

@@ -80,7 +80,7 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Static Non-Public Members
-        internal static Options options;
+        internal static Options options = new Options();
         private static CommandDispatcher consoleCommandDispatcher;
         #endregion
 
@@ -100,7 +100,6 @@ namespace IronPython.Hosting {
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(OutputGenerator).TypeHandle);
 
             defaultScope = new ModuleScope("__main__");
-            options = new Options();
             systemState = new SystemState();
         }
 

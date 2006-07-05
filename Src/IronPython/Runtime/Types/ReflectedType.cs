@@ -124,39 +124,39 @@ namespace IronPython.Runtime.Types {
 
         #region Internal API Surface
 
-        internal object TryConvertTo(object value, ReflectedType to, out Conversion conv) {
+        internal bool TryConvertTo(object value, ReflectedType to, out object result) {
             if (conversions != null && conversions.Count > 0) {
                 for (int i = 0; i < conversions.Count; i++) {
                     if (conversions[i].ReturnType == to.type) {
                         try {
-                            conv = Conversion.Implicit;
-                            return conversions[i].Invoke(null, new object[] { value });
+                            result = conversions[i].Invoke(null, new object[] { value });
+                            return true;
                         } catch (TargetInvocationException tie) {
                             throw ExceptionConverter.UpdateForRethrow(tie);
                         }
                     }
                 }
             }
-            conv = Conversion.None;
-            return null;
+            result = null;
+            return false;
         }
 
-        internal object TryConvertFrom(object value, out Conversion conv) {
+        internal bool TryConvertFrom(object value, out object result) {
             if (conversions != null && conversions.Count > 0) {
                 for (int i = 0; i < conversions.Count; i++) {
                     if (conversions[i].ReturnType == this.type &&
                         conversions[i].GetParameters()[0].ParameterType.IsAssignableFrom(value.GetType())) {
                         try {
-                            conv = Conversion.Implicit;
-                            return conversions[i].Invoke(null, new object[] { value });
+                            result = conversions[i].Invoke(null, new object[] { value });
+                            return true;
                         } catch (TargetInvocationException tie) {
                             throw ExceptionConverter.UpdateForRethrow(tie);
                         }
                     }
                 }
             }
-            conv = Conversion.None;
-            return null;
+            result = null;
+            return false;
         }
 
         /// <summary> Generic helper for doing the different types of method stores. </summary>

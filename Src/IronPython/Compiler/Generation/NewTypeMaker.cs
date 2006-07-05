@@ -136,9 +136,9 @@ namespace IronPython.Compiler.Generation {
 
 
         private static string GetSlotName(object o) {
-            Conversion conv;
-            string value = Converter.TryConvertToString(o, out conv);
-            if (String.IsNullOrEmpty(value) || conv == Conversion.None) throw Ops.TypeError("slots must be one string or a list of strings");
+            string value;
+            if (!Converter.TryConvertToString(o, out value) || String.IsNullOrEmpty(value))
+                throw Ops.TypeError("slots must be one string or a list of strings");
 
             for (int i = 0; i < value.Length; i++) {
                 if ((value[i] >= 'a' && value[i] <= 'z') ||

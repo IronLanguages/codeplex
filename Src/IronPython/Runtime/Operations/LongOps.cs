@@ -180,10 +180,8 @@ namespace IronPython.Runtime.Operations {
                 else if (x is double) return IronMath.BigInteger.Create((double)x);
                 else if (x is long) return IronMath.BigInteger.Create((long)x);
                 else {
-                    Conversion conv;
                     BigInteger intVal;
-                    intVal = Converter.TryConvertToBigInteger(x, out conv);
-                    if (conv < Conversion.Truncation) return intVal;
+                    if (Converter.TryConvertToBigInteger(x, out intVal)) return intVal;
                 }
             } else {
                 BigInteger intVal = null;
@@ -195,9 +193,7 @@ namespace IronPython.Runtime.Operations {
                 else if (x is double) intVal = IronMath.BigInteger.Create((double)x);
                 else if (x is long) intVal = (long)x;
                 else {
-                    Conversion conv;
-                    intVal = Converter.TryConvertToBigInteger(x, out conv);
-                    if (conv >= Conversion.Truncation) intVal = null;
+                    if (Converter.TryConvertToBigInteger(x, out intVal)) return intVal;
                 }
 
                 if (!Object.Equals(intVal, null)) {
@@ -401,9 +397,8 @@ namespace IronPython.Runtime.Operations {
                 return FloatOps.Compare(dbl, y);
             }
 
-            Conversion conv;
-            BigInteger bi = Converter.TryConvertToBigInteger(y, out conv);
-            if (conv == Conversion.None) {
+            BigInteger bi;
+            if (!Converter.TryConvertToBigInteger(y, out bi)) {
                 object res = Ops.GetDynamicType(y).Coerce(y, x);
                 if (res != Ops.NotImplemented && !(res is OldInstance)) {
                     return Ops.Compare(((Tuple)res)[1], ((Tuple)res)[0]);
@@ -421,40 +416,36 @@ namespace IronPython.Runtime.Operations {
         public static object __gt__(BigInteger x, object y) {
             if (y == null) return true;
 
-            Conversion conv;
-            BigInteger bi = Converter.TryConvertToBigInteger(y, out conv);
-            if (conv == Conversion.None) return Ops.NotImplemented;
-            return x - bi > 0;
+            BigInteger bi;
+            if (Converter.TryConvertToBigInteger(y, out bi)) return x - bi > 0;
+            return Ops.NotImplemented;
         }
 
         [PythonName("__lt__")]
         public static object __lt__(BigInteger x, object y) {
             if (y == null) return false;
 
-            Conversion conv;
-            BigInteger bi = Converter.TryConvertToBigInteger(y, out conv);
-            if (conv == Conversion.None) return Ops.NotImplemented;
-            return x - bi < 0;
+            BigInteger bi;
+            if (Converter.TryConvertToBigInteger(y, out bi)) return x - bi < 0;
+            return Ops.NotImplemented;
         }
 
         [PythonName("__ge__")]
         public static object __ge__(BigInteger x, object y) {
             if (y == null) return true;
 
-            Conversion conv;
-            BigInteger bi = Converter.TryConvertToBigInteger(y, out conv);
-            if (conv == Conversion.None) return Ops.NotImplemented;
-            return x - bi >= 0;
+            BigInteger bi;
+            if (Converter.TryConvertToBigInteger(y, out bi)) return x - bi >= 0;
+            return Ops.NotImplemented;
         }
 
         [PythonName("__le__")]
         public static object __le__(BigInteger x, object y) {
             if (y == null) return false;
 
-            Conversion conv;
-            BigInteger bi = Converter.TryConvertToBigInteger(y, out conv);
-            if (conv == Conversion.None) return Ops.NotImplemented;
-            return x - bi <= 0;
+            BigInteger bi;
+            if (Converter.TryConvertToBigInteger(y, out bi)) return x - bi <= 0;
+            return Ops.NotImplemented;
         }
 
 
@@ -584,9 +575,8 @@ namespace IronPython.Runtime.Operations {
             else if (other is decimal) return Ops.Bool2Object(x == (double)(decimal)other);
             else if (other == null) return Ops.FALSE;
 
-            Conversion conversion;
-            BigInteger y = Converter.TryConvertToBigInteger(other, out conversion);
-            if (conversion != Conversion.None) return Ops.Bool2Object(x == y);
+            BigInteger y;
+            if (Converter.TryConvertToBigInteger(other, out y)) return Ops.Bool2Object(x == y);
 
             object res = Ops.GetDynamicType(other).Coerce(other, x);
             if (res != Ops.NotImplemented && !(res is OldInstance)) {
@@ -607,9 +597,8 @@ namespace IronPython.Runtime.Operations {
             else if (other is decimal) return x == (double)(decimal)other;
             else if (other == null) return false;
 
-            Conversion conversion;
-            BigInteger y = Converter.TryConvertToBigInteger(other, out conversion);
-            if (conversion != Conversion.None) return x == y;
+            BigInteger y;
+            if (Converter.TryConvertToBigInteger(other, out y)) return x == y;
 
             object res = Ops.GetDynamicType(other).Coerce(other, x);
             if (res != Ops.NotImplemented && !(res is OldInstance)) {

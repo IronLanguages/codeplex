@@ -84,6 +84,15 @@ namespace IronMath {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to big integer won&apos;t fit into decimal.
+        /// </summary>
+        internal static string BigIntWontFitDecimal {
+            get {
+                return ResourceManager.GetString("BigIntWontFitDecimal", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to big integer won&apos;t fit into int.
         /// </summary>
         internal static string BigIntWontFitInt {

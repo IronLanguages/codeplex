@@ -107,9 +107,8 @@ namespace IronPython.Modules {
             // check all files in the path...
             IEnumerator ie = Ops.GetEnumerator(state.path);
             while (ie.MoveNext()) {
-                Conversion conv;
-                string str = Converter.TryConvertToString(ie.Current, out conv);
-                if (conv != Conversion.None) {
+                string str;
+                if (Converter.TryConvertToString(ie.Current, out str)) {
                     string fullName = System.IO.Path.Combine(str, file);
                     Assembly res;
 

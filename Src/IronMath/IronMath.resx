@@ -123,6 +123,9 @@
   <data name="BigIntWontFitChar" xml:space="preserve">
     <value>big integer won't fit into char</value>
   </data>
+  <data name="BigIntWontFitDecimal" xml:space="preserve">
+    <value>big integer won't fit into decimal</value>
+  </data>
   <data name="BigIntWontFitInt" xml:space="preserve">
     <value>big integer won't fit into int</value>
   </data>

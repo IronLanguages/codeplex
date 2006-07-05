@@ -45,11 +45,8 @@ namespace IronPython.Runtime.Operations {
 
         public int CompareTo(object obj) {
             object res = CompareToWorker(obj);
-            Conversion conv;
-
-            int iRes = Converter.TryConvertToInt32(res, out conv);
-            if (conv != Conversion.None) return iRes;
-
+            int iRes;
+            if (Converter.TryConvertToInt32(res, out iRes)) return iRes;
             throw Ops.TypeErrorForBadInstance("cannot compare {0} to int", obj);
         }
 
@@ -173,6 +170,10 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
+            if (o is Enum) {
+                return Converter.CastEnumToInt32(o);
+            }
+
             return Converter.ConvertToInt32(o);
         }
 
@@ -238,9 +239,7 @@ namespace IronPython.Runtime.Operations {
             } else if (obj is Decimal) {
                 return FloatOps.Compare((double)self, (double)(decimal)obj);
             } else {
-                Conversion conv;
-                otherInt = Converter.TryConvertToInt32(obj, out conv);
-                if (conv == Conversion.None) {
+                if (!Converter.TryConvertToInt32(obj, out otherInt)) {
                     object res = Ops.GetDynamicType(obj).Coerce(obj, self);
                     if (res != Ops.NotImplemented && !(res is OldInstance)) {
                         return Ops.Compare(((Tuple)res)[1], ((Tuple)res)[0]);
@@ -501,9 +500,8 @@ namespace IronPython.Runtime.Operations {
                 return true;
             }
 
-            Conversion conversion;
-            int y = Converter.TryConvertToInt32(other, out conversion);
-            if (conversion != Conversion.None) {
+            int y;
+            if (Converter.TryConvertToInt32(other, out y)) {
                 res = x == y;
                 return true;
             }

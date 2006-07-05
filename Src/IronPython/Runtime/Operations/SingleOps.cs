@@ -43,6 +43,36 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
+        internal static object AddImpl(Single left, Single right) {
+            Single result = left + right;
+            if (!Single.IsInfinity(result)) return result;
+            return (Double)left + (Double)right;
+        }
+
+        internal static object ReverseAddImpl(Single left, Single right) {
+            return AddImpl(right, left);
+        }
+
+        internal static object SubtractImpl(Single left, Single right) {
+            Single result = left - right;
+            if (!Single.IsInfinity(result)) return result;
+            return (Double)left + (Double)right;
+        }
+
+        internal static object ReverseSubtractImpl(Single left, Single right) {
+            return SubtractImpl(right, left);
+        }
+
+        internal static object MultiplyImpl(Single left, Single right) {
+            Single result = left * right;
+            if (!Single.IsInfinity(result)) return result;
+            return (Double)left * (Double)right;
+        }
+
+        internal static object ReverseMultiplyImpl(Single left, Single right) {
+            return MultiplyImpl(right, left);
+        }
+
         internal static object DivideImpl(Single left, Single right) {
             if (right == 0.0) throw Ops.ZeroDivisionError();
             return left / right;

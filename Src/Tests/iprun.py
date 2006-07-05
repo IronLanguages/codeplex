@@ -305,8 +305,6 @@ class TestConfig:
     def __init__(self):
         self.notRunList = [ 
             'test_cominterop', 
-            'test_methodbinder1',
-            'test_methodbinder2',
         ]        
         self.name       = 'IronPythonTests'
         self.shortcut   = 'ip iron ironpython'

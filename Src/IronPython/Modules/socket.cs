@@ -542,17 +542,15 @@ namespace IronPython.Modules {
                     throw MakeException(new SocketException((int)SocketError.ProtocolOption));
                 }
 
-                Conversion conversion;
-
                 try {
-                    int intValue = Converter.TryConvertToInt32(value, out conversion);
-                    if (Conversion.None != conversion) {
+                    int intValue;
+                    if (Converter.TryConvertToInt32(value, out intValue)) {
                         socket.SetSocketOption(level, name, intValue);
                         return;
                     }
 
-                    string strValue = Converter.TryConvertToString(value, out conversion);
-                    if (Conversion.None != conversion) {
+                    string strValue;
+                    if (Converter.TryConvertToString(value, out strValue)) {
                         socket.SetSocketOption(level, name, StringOps.ToByteArray(strValue));
                         return;
                     }

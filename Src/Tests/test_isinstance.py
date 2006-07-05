@@ -518,9 +518,8 @@ Assert(issubclass(userClass, System.Boolean) == False)
 #####################################################################################
 
 import System
-arrayMapping = {'u': System.Char, 'c': System.Char, 'b': System.SByte, 'h': System.Int16, 'H': System.UInt16, 
-                'i': System.Int32, 'I': System.UInt32, 'l': System.Int64, 'L': System.UInt64, 'f': System.Single,
-                'd': System.Double }
+arrayMapping = {'b': System.SByte, 'h': System.Int16, 'H': System.UInt16, 'i': System.Int32,
+                'I': System.UInt32, 'l': System.Int64, 'L': System.UInt64, 'f': System.Single, 'd': System.Double }
                 
 def tryConstructValues(validate, *args):
     for x in arrayMapping.keys():

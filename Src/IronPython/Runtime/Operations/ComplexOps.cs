@@ -158,7 +158,6 @@ namespace IronPython.Runtime.Operations {
             [DefaultParameterValueAttribute(null)]object real,
             [DefaultParameterValueAttribute(null)]object imag
            ) {
-            Conversion conv;
             Complex64 real2, imag2;
             real2 = imag2 = new Complex64();
 
@@ -167,13 +166,7 @@ namespace IronPython.Runtime.Operations {
             if (imag != null) {
                 if (real is string) throw Ops.TypeError("complex() can't take second arg if first is a string");
                 if (imag is string) throw Ops.TypeError("complex() second arg can't be a string");
-                imag2 = Converter.TryConvertToComplex64(imag, out conv);
-                if (conv == Conversion.None) {
-                    if (imag is BigInteger || imag is ExtensibleLong)
-                        throw Ops.OverflowError("long too large to convert to float");
-
-                    throw Ops.TypeError("complex() argument must be a string or a number");
-                }
+                imag2 = Converter.ConvertToComplex64(imag);
             }
 
             if (real != null) {
@@ -183,13 +176,7 @@ namespace IronPython.Runtime.Operations {
                     if (imag == null && cls == ComplexType) return real;
                     else real2 = (Complex64)real;                
                 } else {
-                    real2 = Converter.TryConvertToComplex64(real, out conv);
-                    if (conv == Conversion.None) {
-                        if (real is BigInteger || real is ExtensibleLong)
-                            throw Ops.OverflowError("long too large to convert to float");
-
-                        throw Ops.TypeError("complex() argument must be a string or a number");
-                    }
+                    real2 = Converter.ConvertToComplex64(real);
                 }
             }
 
@@ -343,9 +330,8 @@ namespace IronPython.Runtime.Operations {
         [PythonName("__coerce__")]
         public static object Coerce(object x, object y) {
             if (!(x is Complex64)) throw Ops.TypeError("__coerce__ requires a complex object, but got {0}", Ops.StringRepr(Ops.GetDynamicType(x)));
-            Conversion conv;
-            Complex64 right = Converter.TryConvertToComplex64(y, out conv);
-            if(conv != Conversion.None) return Tuple.MakeTuple(x, right);
+            Complex64 right;
+            if(Converter.TryConvertToComplex64(y, out right)) return Tuple.MakeTuple(x, right);
 
             if (y is BigInteger || y is ExtensibleLong) throw Ops.OverflowError("long too large to convert");
 
@@ -385,9 +371,8 @@ namespace IronPython.Runtime.Operations {
                 return true;
             }
 
-            Conversion conversion;
-            Complex64 y = Converter.TryConvertToComplex64(other, out conversion);
-            if (conversion != Conversion.None) {
+            Complex64 y;
+            if (Converter.TryConvertToComplex64(other, out y)) {
                 res = x == y;
                 return true;
             }

@@ -519,10 +519,6 @@ public static %(rettype)s %(name)s%(suffix)s(object x, object y) {
             return %(boolTransform)s(((int)x) %(symbol)s ((double)y));
         } else if (y == null) {
             return %(boolTransform)s(1 %(symbol)s 0);
-        } else {
-            Conversion conv;
-            double dbl = Converter.TryConvertToDouble(y, out conv);
-            if (conv < Conversion.None) return %(boolTransform)s(((int)x) %(symbol)s dbl);
         }
     } else if (x is double) {
         if (y is int) {
@@ -549,25 +545,12 @@ public static %(rettype)s %(name)s%(suffix)s(object x, object y) {
                 
                 return %(boolTransform)s(self %(symbol)s bi);
             }
-            
-            Conversion conv;
-            int val = Converter.TryConvertToInt32(y, out conv);
-            if (conv < Conversion.None) return %(boolTransform)s(((double)x) %(symbol)s val);
         }
     } else if (x is bool) {
         if (y is bool) {
             return %(boolTransform)s((((bool)x) ? 1 : 0) %(symbol)s (((bool)y) ? 1 : 0));
         } else if (y == null) {
             return %(boolTransform)s(1 %(symbol)s 0);
-        } else {
-            Conversion conv;
-            int other = Converter.TryConvertToInt32(y, out conv);
-            if (conv < Conversion.None) {
-                if ((bool)x)
-                    return %(boolTransform)s(1 %(symbol)s (other));
-                else
-                    return %(boolTransform)s(0 %(symbol)s (other));
-            }
         }
     } else if (x is BigInteger) {
         if (y is BigInteger) {
@@ -631,35 +614,12 @@ public static %(rettype)s %(name)s%(suffix)s(object x, object y) {
     Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
 
     IComparable c = x as IComparable;
-    if (c != null) {
-        if (xType != null && xType != yType) {
-            object z;
-            try {
-                Conversion conversion;
-                z = Converter.TryConvert(y, xType, out conversion);
-                if (conversion < Conversion.NonStandard) {
-                    return %(boolTransform)s(c.CompareTo(z) %(symbol)s 0);
-                }
-            } catch {
-            }
-        } else {
-            return %(boolTransform)s(c.CompareTo(y) %(symbol)s 0);
-        }
+    if (c != null && xType == yType) {
+        return %(boolTransform)s(c.CompareTo(y) %(symbol)s 0);
     }
     c = y as IComparable;
-    if (c != null) {
-        if (yType != null && xType != yType) {
-            try {
-                Conversion conversion;
-                object z = Converter.TryConvert(x, yType, out conversion);
-                if (conversion < Conversion.NonStandard) {
-                    return %(boolTransform)s(-1 * c.CompareTo(z) %(symbol)s 0);
-                }
-            } catch {
-            }
-        } else {
-            return %(boolTransform)s(-1 * c.CompareTo(x) %(symbol)s 0);
-        }
+    if (c != null && xType == yType) {
+        return %(boolTransform)s(-1 * c.CompareTo(x) %(symbol)s 0);
     }
     
     DynamicType dt1 = GetDynamicType(x);

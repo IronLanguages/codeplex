@@ -490,96 +490,88 @@ namespace IronPython.Modules {
         #region Data getter helpers
         private static char GetCharValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            char res = Converter.TryConvertToChar(val, out conv);
-            if (conv == Conversion.None) throw Error("expected character value");
-            return res;
+            char res;
+            if (Converter.TryConvertToChar(val, out res)) {
+                return res;
+            }
+            throw Error("expected character value");
         }
 
         private static sbyte GetSByteValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            sbyte res = Converter.TryConvertToSByte(val, out conv);
-            if (conv == Conversion.None) throw Error("expected sbyte value got " + val.ToString());
-            return res;
+            sbyte res;
+            if (Converter.TryConvertToSByte(val, out res)) {
+                return res;
+            }
+            throw Error("expected sbyte value got " + val.ToString());
         }
 
         private static byte GetByteValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            byte res = Converter.TryConvertToByte(val, out conv);
-            if (conv == Conversion.None) {
-                char cres = Converter.TryConvertToChar(val, out conv);
 
-                if(conv == Conversion.None) throw Error("expected byte value got " + val.ToString());
+            byte res;
+            if (Converter.TryConvertToByte(val, out res)) return res;
 
-                return (byte)cres;
-            }
-            return res;
+            char cres;
+            if (Converter.TryConvertToChar(val, out cres)) return (byte)cres;
+
+            throw Error("expected byte value got " + val.ToString());
         }
 
         private static short GetShortValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            short res = Converter.TryConvertToInt16(val, out conv);
-            if (conv == Conversion.None) throw Error("expected short value");
-            return res;
+            short res;
+            if (Converter.TryConvertToInt16(val, out res)) return res; 
+            throw Error("expected short value");
         }
 
         private static ushort GetUShortValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            ushort res = Converter.TryConvertToUInt16(val, out conv);
-            if (conv == Conversion.None) throw Error("expected ushort value");
-            return res;
+            ushort res;
+            if (Converter.TryConvertToUInt16(val, out res)) return res;
+            throw Error("expected ushort value");
         }
 
         private static int GetIntValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            int res = Converter.TryConvertToInt32(val, out conv);
-            if (conv == Conversion.None) throw Error("expected int value");
-            return res;
+            int res;
+            if (Converter.TryConvertToInt32(val, out res)) return res;
+            throw Error("expected int value");
         }
 
         private static uint GetUIntValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            uint res = Converter.TryConvertToUInt32(val, out conv);
-            if (conv == Conversion.None) throw Error("expected uint value");
-            return res;
+            uint res;
+            if (Converter.TryConvertToUInt32(val, out res)) return res;
+            throw Error("expected uint value");
         }
 
         private static long GetLongValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            long res = Converter.TryConvertToInt64(val, out conv);
-            if (conv == Conversion.None) throw Error("expected long value");
-            return res;
+            long res;
+            if (Converter.TryConvertToInt64(val, out res)) return res; 
+            throw Error("expected long value");
         }
 
         private static ulong GetULongValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            ulong res = Converter.TryConvertToUInt64(val, out conv);
-            if (conv == Conversion.None) throw Error("expected ulong value");
-            return res;
+            ulong res;
+            if (Converter.TryConvertToUInt64(val, out res)) return res;
+            throw Error("expected ulong value");
         }
 
         private static double GetDoubleValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            double res = Converter.TryConvertToDouble(val, out conv);
-            if (conv == Conversion.None) throw Error("expected double value");
-            return res;
+            double res;
+            if (Converter.TryConvertToDouble(val, out res)) return res;
+            throw Error("expected double value");
         }
 
         private static string GetStringValue(int index, object[] args) {
             object val = GetValue(index, args);
-            Conversion conv;
-            string res = Converter.TryConvertToString(val, out conv);
-            if (conv == Conversion.None) throw Error("expected string value");
-            return res;            
+            string res;
+            if (Converter.TryConvertToString(val, out res)) return res;
+            throw Error("expected string value");
         }
 
         private static object GetValue(int index, object[] args) {

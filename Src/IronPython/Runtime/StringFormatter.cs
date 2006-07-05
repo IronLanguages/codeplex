@@ -265,26 +265,25 @@ namespace IronPython.Runtime {
 
         private object GetIntegerValue(out bool fPos) {
             object val;
-            Conversion conv;
+            int intVal;
 
-            int intVal = Converter.TryConvertToInt32(opts.Value, out conv);
-
-            if (conv > Conversion.Implicit) {
-                BigInteger bigInt = Converter.TryConvertToBigInteger(opts.Value, out conv);
-                if (conv == Conversion.None) throw Ops.TypeError("int argument required");
-
-                val = bigInt;
-                fPos = bigInt >= 0;
-            } else {
+            if (Converter.TryConvertToInt32(opts.Value, out intVal)) {
                 val = intVal;
                 fPos = intVal >= 0;
+            } else {
+                BigInteger bigInt;
+                if (Converter.TryConvertToBigInteger(opts.Value, out bigInt)) {
+                    val = bigInt;
+                    fPos = bigInt >= BigInteger.Zero;
+                } else {
+                    throw Ops.TypeError("int argument required");
+                }
             }
-
             return val;
         }
 
         private void AppendChar() {
-            char val = Converter.ConvertToChar(opts.Value);
+            char val = Converter.ExplicitConvertToChar(opts.Value);
             if (opts.FieldWidth > 1) {
                 if (!opts.LeftAdj) {
                     buf.Append(' ', opts.FieldWidth - 1);
@@ -369,9 +368,9 @@ namespace IronPython.Runtime {
         }
 
         private void AppendFloat(char type) {
-            Conversion conv;
-            double v = Converter.TryConvertToDouble(opts.Value, out conv);
-            if (conv == Conversion.None) throw Ops.TypeError("float argument required");
+            double v;
+            if (!Converter.TryConvertToDouble(opts.Value, out v))
+                throw Ops.TypeError("float argument required");
 
             // scientific exponential format 
             Debug.Assert(type == 'E' || type == 'e' ||

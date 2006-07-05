@@ -166,9 +166,8 @@ namespace IronPython.Runtime.Operations {
 
             #region TypeConverter overrides
             public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType) {
-                Conversion conv;
-                Converter.TryConvert(convObj, destinationType, out conv);
-                return conv != Conversion.None;
+                object result;
+                return Converter.TryConvert(convObj, destinationType, out result);
             }
 
             public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) {
@@ -176,9 +175,8 @@ namespace IronPython.Runtime.Operations {
                 ConstructorInfo ci = sourceType.GetConstructor(Type.EmptyTypes);
                 if (ci != null) {
                     object value = ci.Invoke(new object[0]);
-                    Conversion conv;
-                    Converter.TryConvert(value, convObj.GetType(), out conv);
-                    return conv != Conversion.None;
+                    object result;
+                    return Converter.TryConvert(value, convObj.GetType(), out result);
                 } else {
                     throw new NotImplementedException("cannot determine conversion without instance");
                 }
@@ -205,9 +203,8 @@ namespace IronPython.Runtime.Operations {
             }
 
             public override bool IsValid(ITypeDescriptorContext context, object value) {
-                Conversion conv;
-                Converter.TryConvert(value, convObj.GetType(), out conv);
-                return conv != Conversion.None;
+                object result;
+                return Converter.TryConvert(value, convObj.GetType(), out result);
             }
             #endregion
         }

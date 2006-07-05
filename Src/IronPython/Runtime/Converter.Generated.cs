@@ -15,8 +15,8 @@
 
 using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Collections.Generic;
-using System.Text;
 
 using IronMath;
 using IronPython.Runtime.Operations;
@@ -24,1786 +24,242 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
     public static partial class Converter {
-
-
-
-        #region Generated conversion routines
+        #region Generated conversion helpers
 
         // *** BEGIN GENERATED CODE ***
 
-        //
-        // "Try" conversion methods
-        //
-        public static int TryConvertToInt32(object value, out Conversion conversion) {
-            ExtensibleInt ei;
-            BigInteger bi;
-            Enum e;
-            ExtensibleFloat ef;
-            ExtensibleLong el;
-            if (value is int) {
-                conversion = Conversion.Identity;
-                return (int)value;
-            } else if (!Object.Equals((ei = value as ExtensibleInt), null)) {
-                conversion = Conversion.Implicit;
-                return ei.value;
-            } else if (value is double) {
-                double DoubleVal = (double)value;
-                if (DoubleVal >= Int32.MinValue && DoubleVal <= Int32.MaxValue) {
-                    conversion = Conversion.Truncation;
-                    return (int)DoubleVal;
-                }
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                int res;
-                if (bi.AsInt32(out res)) {
-                    conversion = Conversion.Implicit;
-                    return res;
-                }
-            } else if (value is bool) {
-                conversion = Conversion.NonStandard;
-                return ((bool)value) ? 1 : 0;
-            } else if (value is char) {
-                conversion = Conversion.Implicit;
-                return (int)(char)value;
-            } else if (value is byte) {
-                conversion = Conversion.Implicit;
-                return (int)(byte)value;
-            } else if (value is sbyte) {
-                conversion = Conversion.Implicit;
-                return (int)(sbyte)value;
-            } else if (value is short) {
-                conversion = Conversion.Implicit;
-                return (int)(short)value;
-            } else if (value is uint) {
-                uint UInt32Val = (uint)value;
-                if (UInt32Val <= Int32.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (int)UInt32Val;
-                }
-            } else if (value is ulong) {
-                ulong UInt64Val = (ulong)value;
-                if (UInt64Val <= Int32.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (int)UInt64Val;
-                }
-            } else if (value is ushort) {
-                conversion = Conversion.Implicit;
-                return (int)(ushort)value;
-            } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToInt32(e, out conversion);
-            } else if (!Object.Equals((ef = value as ExtensibleFloat), null)) {
-                if (/*ExtensibleFloatVal*/ ef.value >= Int32.MinValue &&
-                    /*ExtensibleFloatVal*/ef.value <= Int32.MaxValue) {
-                    conversion = Conversion.Truncation;
-                    return (int)ef.value;
-                }
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                int res;
-                if (el.Value.AsInt32(out res)) {
-                    conversion = Conversion.Implicit;
-                    return res;
-                }
-            } else if (value is decimal) {
-                decimal DecimalVal = (decimal)value;
-                if (DecimalVal <= Int32.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (int)DecimalVal;
-                }
-            } else if (value is long) {
-                long Int64Val = (long)value;
-                if (Int64Val >= Int32.MinValue && Int64Val <= Int32.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (int)Int64Val;
-                }
-            } else {
-                object ObjectVal;
-                if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out ObjectVal)) {
-                    conversion = Conversion.Eval;
-                    if (ObjectVal is int)
-                        return (int)ObjectVal;
-                    if (ObjectVal is double)
-                        return (int)(double)ObjectVal;
-                    if (ObjectVal is long)
-                        return (int)(long)ObjectVal;
-                    if (ObjectVal is BigInteger)
-                        return (int)(BigInteger)ObjectVal;
-                    throw Ops.TypeError("__int__ returned non-int");
-                }
-            }
-            conversion = Conversion.None;
-            return (int)0;
-        }
 
-        public static string TryConvertToString(object value, out Conversion conversion) {
-            string str;
-            ExtensibleString es;
-            if (!Object.Equals((str = value as string), null)) {
-                conversion = Conversion.Identity;
-                return str;
-            } else if (value == null) {
-                conversion = Conversion.Identity;
-                return null;
-            } else if (value is char) {
-                conversion = Conversion.Identity;
-                return Ops.Char2String((char)value);
-            } else if (!Object.Equals((es = value as ExtensibleString), null)) {
-                conversion = Conversion.Implicit;
-                return es.Value;
-            }
-            conversion = Conversion.None;
-            return (string)String.Empty;
-        }
-
-        public static double TryConvertToDouble(object value, out Conversion conversion) {
-            ExtensibleInt ei;
-            BigInteger bi;
-            ExtensibleFloat ef;
-            ExtensibleLong el;
-            if (value is double) {
-                conversion = Conversion.Identity;
-                return (double)value;
-            } else if (value is int) {
-                conversion = Conversion.Implicit;
-                return (double)(int)value;
-            } else if (!Object.Equals((ei = value as ExtensibleInt), null)) {
-                conversion = Conversion.Implicit;
-                return (double)ei.value;
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                conversion = Conversion.Implicit;
-                double res;
-                if (bi.TryToFloat64(out res)) return res;
-            } else if (value is bool) {
-                conversion = Conversion.NonStandard;
-                return ((bool)value) ? 1.0 : 0.0;
-            } else if (value is char) {
-                conversion = Conversion.Implicit;
-                return (double)(char)value;
-            } else if (value is byte) {
-                conversion = Conversion.Implicit;
-                return (double)(byte)value;
-            } else if (value is sbyte) {
-                conversion = Conversion.Implicit;
-                return (double)(sbyte)value;
-            } else if (value is short) {
-                conversion = Conversion.Implicit;
-                return (double)(short)value;
-            } else if (value is uint) {
-                conversion = Conversion.Implicit;
-                return (double)(uint)value;
-            } else if (value is ulong) {
-                conversion = Conversion.Implicit;
-                return (double)(ulong)value;
-            } else if (value is ushort) {
-                conversion = Conversion.Implicit;
-                return (double)(ushort)value;
-            } else if (value is float) {
-                conversion = Conversion.Implicit;
-                return (double)(float)value;
-            } else if (!Object.Equals((ef = value as ExtensibleFloat), null)) {
-                conversion = Conversion.Implicit;
-                return (double)ef.value;
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                double res;
-                if (el.Value.TryToFloat64(out res)) {
-                    conversion = Conversion.Implicit;
-                    return res;
-                }
-            } else if (value is long) {
-                conversion = Conversion.Implicit;
-                return (double)(long)value;
-            } else if (value is decimal) {
-                conversion = Conversion.Truncation;
-                return (double)(decimal)value;
-            } else {
-                object ObjectVal;
-                if (Ops.TryToInvoke(value, SymbolTable.ConvertToFloat, out ObjectVal)) {
-                    conversion = Conversion.Eval;
-                    if (ObjectVal is double)
-                        return (double)ObjectVal;
-                    if (ObjectVal is int)
-                        return (double)(int)ObjectVal;
-                    if (ObjectVal is long)
-                        return (double)(long)ObjectVal;
-                    if (ObjectVal is BigInteger)
-                        return (double)(BigInteger)ObjectVal;
-                    throw Ops.TypeError("__float__ returned non-float");
-                }
-            }
-            conversion = Conversion.None;
-            return (double)0.0;
-        }
-
-        public static BigInteger TryConvertToBigInteger(object value, out Conversion conversion) {
-            BigInteger bi;
-            ExtensibleLong el;
-            if (!Object.Equals((bi = value as BigInteger), null)) {
-                conversion = Conversion.Identity;
-                return bi;
-            } else if (value is int) {
-                conversion = Conversion.Identity;
-                return (BigInteger)(int)value;
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                conversion = Conversion.Implicit;
-                return el.Value;
-            } else if (value is long) {
-                conversion = Conversion.Identity;
-                return (BigInteger)(long)value;
-            } else {
-                object ObjectVal;
-                if (Ops.TryToInvoke(value, SymbolTable.ConvertToLong, out ObjectVal)) {
-                    conversion = Conversion.Eval;
-                    if (ObjectVal is BigInteger)
-                        return (BigInteger)ObjectVal;
-                    if (ObjectVal is int)
-                        return BigInteger.Create((int)ObjectVal);
-                    if (ObjectVal is double)
-                        return BigInteger.Create((double)ObjectVal);
-                    if (ObjectVal is long)
-                        return BigInteger.Create((long)ObjectVal);
-                    throw Ops.TypeError("__long__ returned non-long");
-                }
-            }
-            int Int32Val = TryConvertToInt32(value, out conversion);
-            if (conversion != Conversion.None) {
-                return BigInteger.Create(Int32Val);
-            }
-            conversion = Conversion.None;
-            return (BigInteger)BigInteger.Zero;
-        }
-
-        public static bool TryConvertToBoolean(object value, out Conversion conversion) {
-            BigInteger bi;
-            Enum e;
-            string str;
-            ExtensibleInt ei;
-            ExtensibleLong el;
-
-            if (value == null) {
-                conversion = Conversion.None;
+        ///<summary>
+        ///Conversion routine TryConvertToByte - converts object to Byte
+        ///</summary>
+        public static bool TryConvertToByte(object value, out Byte result) {
+            try {
+                result = ConvertToByte(value);
+                return true;
+            } catch {
+                result = default(Byte);
                 return false;
-            } else if (value is bool) {
-                conversion = Conversion.Identity;
-                return (bool)value;
-            } else if (value is int) {
-                conversion = Conversion.NonStandard;
-                return (int)value != 0;
-            } else if (!Object.Equals((str = value as string), null)) {
-                conversion = Conversion.NonStandard;
-                return str.Length != 0;
-            } else if (value is double) {
-                conversion = Conversion.NonStandard;
-                return (double)value != 0.0;
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                conversion = Conversion.Implicit;
-                return bi != BigInteger.Zero;
-            } else if (value is Complex64) {
-                conversion = Conversion.NonStandard;
-                return !((Complex64)value).IsZero;
-            } else if (value is char) {
-                conversion = Conversion.NonStandard;
-                return (char)value != 0;
-            } else if (value is byte) {
-                conversion = Conversion.NonStandard;
-                return (byte)value != 0;
-            } else if (value is sbyte) {
-                conversion = Conversion.NonStandard;
-                return (sbyte)value != 0;
-            } else if (value is short) {
-                conversion = Conversion.NonStandard;
-                return (short)value != 0;
-            } else if (value is uint) {
-                conversion = Conversion.NonStandard;
-                return (uint)value != 0;
-            } else if (value is ulong) {
-                conversion = Conversion.NonStandard;
-                return (ulong)value != 0;
-            } else if (value is ushort) {
-                conversion = Conversion.NonStandard;
-                return (ushort)value != 0;
-            } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToBoolean(e, out conversion);
-            } else if (value is float) {
-                conversion = Conversion.NonStandard;
-                return (float)value != 0.0;
-            } else if (value is decimal) {
-                conversion = Conversion.NonStandard;
-                return (decimal)value != 0;
-            } else if (value is long) {
-                conversion = Conversion.NonStandard;
-                return (long)value != 0;
-            } else if (value is IPythonContainer) {
-                conversion = Conversion.Eval;
-                return ((IPythonContainer)value).GetLength() != 0;
-            } else if (value is ICollection) {
-                conversion = Conversion.Eval;
-                return ((ICollection)value).Count != 0;
             }
-            object ret;
-            // try __nonzero__ first before __len__
-            if (Ops.TryToInvoke(value, SymbolTable.NonZero, out ret)) {
-                conversion = Conversion.Eval;
-                Type retType = ret.GetType();
-                if (retType == typeof(bool) || retType == typeof(int)) {
-                    Conversion dummy;
-                    return TryConvertToBoolean(ret, out dummy);
-                } else {
-                    throw Ops.TypeError("__nonzero__ should return bool or int, returned {0}", Ops.GetClassName(ret));
-                }
-            } else if (Ops.TryToInvoke(value, SymbolTable.Length, out ret)) {
-                conversion = Conversion.Eval;
-                Type retType = ret.GetType();
-                if (retType == typeof(bool) || retType == typeof(int)) {
-                    Conversion dummy;
-                    return TryConvertToBoolean(ret, out dummy);
-                } else {
-                    throw Ops.TypeError("an integer is required");
-                }
-            } else if (!Object.Equals((ei = value as ExtensibleInt), null)) {
-                conversion = Conversion.NonStandard;
-                return ei.value != 0;
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                conversion = Conversion.NonStandard;
-                return el.Value != 0;
-            }
-            conversion = Conversion.NonStandard;
-            return (bool)true;
         }
 
-        public static Complex64 TryConvertToComplex64(object value, out Conversion conversion) {
-            ExtensibleComplex ec;
-            if (value is Complex64) {
-                conversion = Conversion.Identity;
-                return (Complex64)value;
-            } else if (value is double) {
-                conversion = Conversion.Implicit;
-                return (Complex64)Complex64.MakeReal((double)value);
-            } else if (!Object.Equals((ec = value as ExtensibleComplex), null)) {
-                conversion = Conversion.Implicit;
-                return ec.value;
-            } else {
-                object ObjectVal;
-                if (Ops.TryToInvoke(value, SymbolTable.ConvertToComplex, out ObjectVal)) {
-                    conversion = Conversion.Eval;
-                    if (ObjectVal is Complex64)
-                        return (Complex64)ObjectVal;
-                    if (ObjectVal is int)
-                        return (Complex64)(int)ObjectVal;
-                    if (ObjectVal is double)
-                        return (Complex64)(double)ObjectVal;
-                    if (ObjectVal is long)
-                        return (Complex64)(long)ObjectVal;
-                    if (ObjectVal is BigInteger)
-                        return (Complex64)(BigInteger)ObjectVal;
-                    throw Ops.TypeError("__complex__ returned non-complex");
-                }
+        ///<summary>
+        ///Conversion routine TryConvertToSByte - converts object to SByte
+        ///</summary>
+        public static bool TryConvertToSByte(object value, out SByte result) {
+            try {
+                result = ConvertToSByte(value);
+                return true;
+            } catch {
+                result = default(SByte);
+                return false;
             }
-            double DoubleVal = TryConvertToDouble(value, out conversion);
-            if (conversion != Conversion.None) {
-                return Complex64.MakeReal(DoubleVal);
-            }
-            conversion = Conversion.None;
-            return (Complex64)new Complex64(0.0);
         }
 
-        public static char TryConvertToChar(object value, out Conversion conversion) {
-            string str;
-            if (value is char) {
-                conversion = Conversion.Identity;
-                return (char)value;
-            } else if (value is int) {
-                int Int32Val = (int)value;
-                if (Int32Val >= 0 && Int32Val <= 0xFFFF) {
-                    conversion = Conversion.Implicit;
-                    return (char)Int32Val;
-                }
-            } else if (!Object.Equals((str = value as string), null)) {
-                if (/*StringVal*/str.Length == 1) {
-                    conversion = Conversion.Implicit;
-                    return (char)str[0];
-                }
-            } else if (value is sbyte) {
-                sbyte SByteVal = (sbyte)value;
-                if (SByteVal >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (char)SByteVal;
-                }
-            } else if (value is short) {
-                short Int16Val = (short)value;
-                if (Int16Val >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (char)Int16Val;
-                }
-            } else if (value is uint) {
-                uint UInt32Val = (uint)value;
-                if (UInt32Val <= 0xFFFF) {
-                    conversion = Conversion.Implicit;
-                    return (char)UInt32Val;
-                }
-            } else if (value is ulong) {
-                ulong UInt64Val = (ulong)value;
-                if (UInt64Val <= 0xFFFF) {
-                    conversion = Conversion.Implicit;
-                    return (char)UInt64Val;
-                }
-            } else if (value is decimal) {
-                decimal DecimalVal = (decimal)value;
-                if (DecimalVal >= 0 && DecimalVal <= 0xFFFF) {
-                    conversion = Conversion.Implicit;
-                    return (char)DecimalVal;
-                }
-            } else if (value is long) {
-                long Int64Val = (long)value;
-                if (Int64Val >= 0 && Int64Val <= 0xFFFF) {
-                    conversion = Conversion.Implicit;
-                    return (char)Int64Val;
-                }
-            } else if (value is byte) {
-                conversion = Conversion.Truncation;
-                return (char)(byte)value;
-            } else if (value is ushort) {
-                conversion = Conversion.Truncation;
-                return (char)(ushort)value;
+        ///<summary>
+        ///Conversion routine TryConvertToInt16 - converts object to Int16
+        ///</summary>
+        public static bool TryConvertToInt16(object value, out Int16 result) {
+            try {
+                result = ConvertToInt16(value);
+                return true;
+            } catch {
+                result = default(Int16);
+                return false;
             }
-            conversion = Conversion.None;
-            return (char)'\0';
         }
 
-        public static IEnumerator TryConvertToIEnumerator(object value, out Conversion conversion) {
-            IEnumerator ie = value as IEnumerator;
-            if (ie != null || value == null) {
-                conversion = Conversion.Identity;
-                return ie;
+        ///<summary>
+        ///Conversion routine TryConvertToInt32 - converts object to Int32
+        ///</summary>
+        public static bool TryConvertToInt32(object value, out Int32 result) {
+            try {
+                result = ConvertToInt32(value);
+                return true;
+            } catch {
+                result = default(Int32);
+                return false;
             }
-            conversion = Conversion.Eval;
-            return Ops.GetEnumerator(value);
         }
 
-        public static Type TryConvertToType(object value, out Conversion conversion) {
-            Type TypeVal = value as Type;
-            if (TypeVal != null || value == null) {
-                conversion = Conversion.Identity;
-                return TypeVal;
+        ///<summary>
+        ///Conversion routine TryConvertToInt64 - converts object to Int64
+        ///</summary>
+        public static bool TryConvertToInt64(object value, out Int64 result) {
+            try {
+                result = ConvertToInt64(value);
+                return true;
+            } catch {
+                result = default(Int64);
+                return false;
             }
-            DynamicType PythonTypeVal = value as DynamicType;
-            if (PythonTypeVal != null) {
-                conversion = Conversion.Implicit;
-                return PythonTypeVal.type;
-            }
-            conversion = Conversion.None;
-            return (Type)null;
         }
 
-        public static byte TryConvertToByte(object value, out Conversion conversion) {
-            BigInteger bi;
-            Enum e;
-            ExtensibleLong el;
-            if (value is byte) {
-                conversion = Conversion.Identity;
-                return (byte)value;
-            } else if (value is int) {
-                int Int32Val = (int)value;
-                if (Int32Val >= Byte.MinValue &&
-                    Int32Val <= Byte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (byte)Int32Val;
-                }
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                if (bi >= BigInteger.Create(Byte.MinValue) &&
-                    bi <= BigInteger.Create(Byte.MaxValue)) {
-                    conversion = Conversion.Implicit;
-                    return (byte)(int)bi;
-                }
-            } else if (value is char) {
-                char CharVal = (char)value;
-                if (CharVal >= Byte.MinValue) {
-                    conversion = Conversion.Implicit;
-                    return (byte)CharVal;
-                }
-            } else if (value is sbyte) {
-                sbyte SByteVal = (sbyte)value;
-                if (SByteVal >= Byte.MinValue) {
-                    conversion = Conversion.Implicit;
-                    return (byte)SByteVal;
-                }
-            } else if (value is short) {
-                short Int16Val = (short)value;
-                if (Int16Val >= Byte.MinValue && Int16Val <= Byte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (byte)Int16Val;
-                }
-            } else if (value is uint) {
-                uint UInt32Val = (uint)value;
-                if (UInt32Val <= Byte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (byte)UInt32Val;
-                }
-            } else if (value is ulong) {
-                ulong UInt64Val = (ulong)value;
-                if (UInt64Val <= Byte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (byte)UInt64Val;
-                }
-            } else if (value is ushort) {
-                ushort UInt16Val = (ushort)value;
-                if (UInt16Val <= Byte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (byte)UInt16Val;
-                }
-            } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToByte(e, out conversion);
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                if (el.Value >= BigInteger.Create(Byte.MinValue) &&
-                    el.Value <= BigInteger.Create(Byte.MaxValue)) {
-                    conversion = Conversion.Implicit;
-                    return (byte)(int)el.Value;
-                }
-            } else if (value is decimal) {
-                decimal DecimalVal = (decimal)value;
-                if (DecimalVal >= Byte.MinValue && DecimalVal <= Byte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (byte)DecimalVal;
-                }
-            } else if (value is long) {
-                long Int64Val = (long)value;
-                if (Int64Val >= Byte.MinValue && Int64Val <= Byte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (byte)Int64Val;
-                }
-            } else if (value is bool) {
-                conversion = Conversion.Truncation;
-                return ((bool)value) ? (byte)1 : (byte)0;
+        ///<summary>
+        ///Conversion routine TryConvertToUInt16 - converts object to UInt16
+        ///</summary>
+        public static bool TryConvertToUInt16(object value, out UInt16 result) {
+            try {
+                result = ConvertToUInt16(value);
+                return true;
+            } catch {
+                result = default(UInt16);
+                return false;
             }
-            conversion = Conversion.None;
-            return (byte)0;
         }
 
-        public static sbyte TryConvertToSByte(object value, out Conversion conversion) {
-            BigInteger bi;
-            Enum e;
-            ExtensibleLong el;
-            if (value is sbyte) {
-                conversion = Conversion.Identity;
-                return (sbyte)value;
-            } else if (value is int) {
-                int Int32Val = (int)value;
-                if (Int32Val >= SByte.MinValue &&
-                    Int32Val <= SByte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)Int32Val;
-                }
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                if (bi >= BigInteger.Create(SByte.MinValue) &&
-                    bi <= BigInteger.Create(SByte.MaxValue)) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)(int)bi;
-                }
-            } else if (value is char) {
-                char CharVal = (char)value;
-                if (CharVal <= '\xFF') {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)CharVal;
-                }
-            } else if (value is byte) {
-                byte ByteVal = (byte)value;
-                if (ByteVal <= SByte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)ByteVal;
-                }
-            } else if (value is short) {
-                short Int16Val = (short)value;
-                if (Int16Val >= SByte.MinValue && Int16Val <= SByte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)Int16Val;
-                }
-            } else if (value is uint) {
-                uint UInt32Val = (uint)value;
-                if (UInt32Val <= SByte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)UInt32Val;
-                }
-            } else if (value is ulong) {
-                ulong UInt64Val = (ulong)value;
-                if (UInt64Val <= (ulong)SByte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)UInt64Val;
-                }
-            } else if (value is ushort) {
-                ushort UInt16Val = (ushort)value;
-                if (UInt16Val <= SByte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)UInt16Val;
-                }
-            } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToSByte(e, out conversion);
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                if (el.Value >= BigInteger.Create(SByte.MinValue) &&
-                    el.Value <= BigInteger.Create(SByte.MaxValue)) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)(int)el.Value;
-                }
-            } else if (value is decimal) {
-                decimal DecimalVal = (decimal)value;
-                if (DecimalVal >= SByte.MinValue && DecimalVal <= SByte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)DecimalVal;
-                }
-            } else if (value is long) {
-                long Int64Val = (long)value;
-                if (Int64Val >= SByte.MinValue && Int64Val <= SByte.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (sbyte)Int64Val;
-                }
-            } else if (value is bool) {
-                conversion = Conversion.Truncation;
-                return ((bool)value) ? (sbyte)1 : (sbyte)0;
+        ///<summary>
+        ///Conversion routine TryConvertToUInt32 - converts object to UInt32
+        ///</summary>
+        public static bool TryConvertToUInt32(object value, out UInt32 result) {
+            try {
+                result = ConvertToUInt32(value);
+                return true;
+            } catch {
+                result = default(UInt32);
+                return false;
             }
-            conversion = Conversion.None;
-            return (sbyte)0;
         }
 
-        public static short TryConvertToInt16(object value, out Conversion conversion) {
-            BigInteger bi;
-            Enum e;
-            ExtensibleLong el;
-            if (value is short) {
-                conversion = Conversion.Identity;
-                return (short)value;
-            } else if (value is int) {
-                int Int32Val = (int)value;
-                if (Int32Val >= Int16.MinValue && Int32Val <= Int16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (short)Int32Val;
-                }
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                if (bi >= BigInteger.Create(Int16.MinValue) &&
-                    bi <= BigInteger.Create(Int16.MaxValue)) {
-                    conversion = Conversion.Implicit;
-                    return (short)(int)bi;
-                }
-            } else if (value is bool) {
-                conversion = Conversion.NonStandard;
-                return ((bool)value) ? (short)1 : (short)0;
-            } else if (value is char) {
-                char CharVal = (char)value;
-                if (CharVal <= '\x7FFF') {
-                    conversion = Conversion.Implicit;
-                    return (short)CharVal;
-                }
-            } else if (value is byte) {
-                conversion = Conversion.Implicit;
-                return (short)(byte)value;
-            } else if (value is sbyte) {
-                conversion = Conversion.Implicit;
-                return (short)(sbyte)value;
-            } else if (value is uint) {
-                uint UInt32Val = (uint)value;
-                if (UInt32Val <= Int16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (short)UInt32Val;
-                }
-            } else if (value is ulong) {
-                ulong UInt64Val = (ulong)value;
-                if (UInt64Val <= (ulong)Int16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (short)UInt64Val;
-                }
-            } else if (value is ushort) {
-                ushort UInt16Val = (ushort)value;
-                if (UInt16Val <= Int16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (short)UInt16Val;
-                }
-            } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToInt16(e, out conversion);
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                if (el.Value >= BigInteger.Create(Int16.MinValue) &&
-                    el.Value <= BigInteger.Create(Int16.MaxValue)) {
-                    conversion = Conversion.Implicit;
-                    return (short)(int)el.Value;
-                }
-            } else if (value is decimal) {
-                decimal DecimalVal = (decimal)value;
-                if (DecimalVal >= Int16.MinValue && DecimalVal <= Int16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (short)DecimalVal;
-                }
-            } else if (value is long) {
-                long Int64Val = (long)value;
-                if (Int64Val >= Int16.MinValue && Int64Val <= Int16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (short)Int64Val;
-                }
+        ///<summary>
+        ///Conversion routine TryConvertToUInt64 - converts object to UInt64
+        ///</summary>
+        public static bool TryConvertToUInt64(object value, out UInt64 result) {
+            try {
+                result = ConvertToUInt64(value);
+                return true;
+            } catch {
+                result = default(UInt64);
+                return false;
             }
-            conversion = Conversion.None;
-            return (short)0;
         }
 
-        public static uint TryConvertToUInt32(object value, out Conversion conversion) {
-            ExtensibleInt ei;
-            BigInteger bi;
-            Enum e;
-            ExtensibleLong el;
-            if (value is uint) {
-                conversion = Conversion.Identity;
-                return (uint)value;
-            } else if (value is int) {
-                int Int32Val = (int)value;
-                if (Int32Val >= UInt32.MinValue) {
-                    conversion = Conversion.Implicit;
-                    return (uint)Int32Val;
-                }
-            } else if (!Object.Equals((ei = value as ExtensibleInt), null)) {
-                conversion = Conversion.Implicit;
-                return (uint)ei.value;
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                uint res;
-                if (bi.AsUInt32(out res)) {
-                    conversion = Conversion.Implicit;
-                    return res;
-                }
-            } else if (value is bool) {
-                conversion = Conversion.NonStandard;
-                return ((bool)value) ? 1u : 0u;
-            } else if (value is char) {
-                conversion = Conversion.Implicit;
-                return (uint)(char)value;
-            } else if (value is byte) {
-                conversion = Conversion.Implicit;
-                return (uint)(byte)value;
-            } else if (value is sbyte) {
-                sbyte SByteVal = (sbyte)value;
-                if (SByteVal >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (uint)SByteVal;
-                }
-            } else if (value is short) {
-                short Int16Val = (short)value;
-                if (Int16Val >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (uint)Int16Val;
-                }
-            } else if (value is ulong) {
-                ulong UInt64Val = (ulong)value;
-                if (UInt64Val <= UInt32.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (uint)UInt64Val;
-                }
-            } else if (value is ushort) {
-                conversion = Conversion.Implicit;
-                return (uint)(ushort)value;
-            } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToUInt32(e, out conversion);
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                uint res;
-                if (el.Value.AsUInt32(out res)) {
-                    conversion = Conversion.Implicit;
-                    return res;
-                }
-            } else if (value is decimal) {
-                decimal DecimalVal = (decimal)value;
-                if (DecimalVal >= UInt32.MinValue && DecimalVal <= UInt32.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (uint)DecimalVal;
-                }
-            } else if (value is long) {
-                long Int64Val = (long)value;
-                if (Int64Val >= UInt32.MinValue && Int64Val <= UInt32.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (uint)Int64Val;
-                }
+        ///<summary>
+        ///Conversion routine TryConvertToSingle - converts object to Single
+        ///</summary>
+        public static bool TryConvertToSingle(object value, out Single result) {
+            try {
+                result = ConvertToSingle(value);
+                return true;
+            } catch {
+                result = default(Single);
+                return false;
             }
-            conversion = Conversion.None;
-            return (uint)0;
         }
 
-        public static ulong TryConvertToUInt64(object value, out Conversion conversion) {
-            ExtensibleInt ei;
-            BigInteger bi;
-            Enum e;
-            ExtensibleLong el;
-            if (value is ulong) {
-                conversion = Conversion.Identity;
-                return (ulong)value;
-            } else if (value is int) {
-                int Int32Val = (int)value;
-                if (Int32Val >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (ulong)Int32Val;
-                }
-            } else if (!Object.Equals((ei = value as ExtensibleInt), null)) {
-                if (ei.value >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (ulong)ei.value;
-                }
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                ulong res;
-                if (bi.AsUInt64(out res)) {
-                    conversion = Conversion.Implicit;
-                    return res;
-                }
-            } else if (value is bool) {
-                conversion = Conversion.NonStandard;
-                return ((bool)value) ? 1ul : 0ul;
-            } else if (value is char) {
-                conversion = Conversion.Implicit;
-                return (ulong)(char)value;
-            } else if (value is byte) {
-                conversion = Conversion.Implicit;
-                return (ulong)(byte)value;
-            } else if (value is sbyte) {
-                sbyte SByteVal = (sbyte)value;
-                if (SByteVal >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (ulong)SByteVal;
-                }
-            } else if (value is short) {
-                short Int16Val = (short)value;
-                if (Int16Val >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (ulong)Int16Val;
-                }
-            } else if (value is uint) {
-                conversion = Conversion.Implicit;
-                return (ulong)(uint)value;
-            } else if (value is ushort) {
-                conversion = Conversion.Implicit;
-                return (ulong)(ushort)value;
-            } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToUInt64(e, out conversion);
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                ulong res;
-                if (el.Value.AsUInt64(out res)) {
-                    conversion = Conversion.Implicit;
-                    return res;
-                }
-            } else if (value is decimal) {
-                decimal DecimalVal = (decimal)value;
-                if (DecimalVal >= UInt64.MinValue && DecimalVal <= UInt64.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (ulong)DecimalVal;
-                }
-            } else if (value is long) {
-                long Int64Val = (long)value;
-                if (Int64Val >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (ulong)Int64Val;
-                }
+        ///<summary>
+        ///Conversion routine TryConvertToDouble - converts object to Double
+        ///</summary>
+        public static bool TryConvertToDouble(object value, out Double result) {
+            try {
+                result = ConvertToDouble(value);
+                return true;
+            } catch {
+                result = default(Double);
+                return false;
             }
-            conversion = Conversion.None;
-            return (ulong)0;
         }
 
-        public static ushort TryConvertToUInt16(object value, out Conversion conversion) {
-            BigInteger bi;
-            Enum e;
-            ExtensibleLong el;
-            if (value is ushort) {
-                conversion = Conversion.Identity;
-                return (ushort)value;
-            } else if (value is int) {
-                int Int32Val = (int)value;
-                if (Int32Val >= UInt16.MinValue && Int32Val <= UInt16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (ushort)Int32Val;
-                }
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                if (bi >= BigInteger.Create(UInt16.MinValue) &&
-                    bi <= BigInteger.Create(UInt16.MaxValue)) {
-                    conversion = Conversion.Implicit;
-                    return (ushort)(int)bi;
-                }
-            } else if (value is bool) {
-                conversion = Conversion.NonStandard;
-                return ((bool)value) ? (ushort)1 : (ushort)0;
-            } else if (value is char) {
-                conversion = Conversion.Implicit;
-                return (ushort)(char)value;
-            } else if (value is byte) {
-                conversion = Conversion.Implicit;
-                return (ushort)(byte)value;
-            } else if (value is sbyte) {
-                sbyte SByteVal = (sbyte)value;
-                if (SByteVal >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (ushort)SByteVal;
-                }
-            } else if (value is short) {
-                short Int16Val = (short)value;
-                if (Int16Val >= 0) {
-                    conversion = Conversion.Implicit;
-                    return (ushort)Int16Val;
-                }
-            } else if (value is uint) {
-                uint UInt32Val = (uint)value;
-                if (UInt32Val <= UInt16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (ushort)UInt32Val;
-                }
-            } else if (value is ulong) {
-                ulong UInt64Val = (ulong)value;
-                if (UInt64Val <= UInt16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (ushort)UInt64Val;
-                }
-            } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToUInt16(e, out conversion);
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                if (el.Value >= BigInteger.Create(UInt16.MinValue) &&
-                    el.Value <= BigInteger.Create(UInt16.MaxValue)) {
-                    conversion = Conversion.Implicit;
-                    return (ushort)(int)bi;
-                }
-            } else if (value is decimal) {
-                decimal DecimalVal = (decimal)value;
-                if (DecimalVal >= UInt16.MinValue && DecimalVal <= UInt16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (ushort)DecimalVal;
-                }
-            } else if (value is long) {
-                long Int64Val = (long)value;
-                if (Int64Val >= UInt16.MinValue && Int64Val <= UInt16.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (ushort)Int64Val;
-                }
+        ///<summary>
+        ///Conversion routine TryConvertToDecimal - converts object to Decimal
+        ///</summary>
+        public static bool TryConvertToDecimal(object value, out Decimal result) {
+            try {
+                result = ConvertToDecimal(value);
+                return true;
+            } catch {
+                result = default(Decimal);
+                return false;
             }
-            conversion = Conversion.None;
-            return (ushort)0;
         }
 
-        public static float TryConvertToSingle(object value, out Conversion conversion) {
-            ExtensibleInt ei;
-            BigInteger bi;
-            ExtensibleFloat ef;
-            ExtensibleLong el;
-            if (value is float) {
-                conversion = Conversion.Identity;
-                return (float)value;
-            } else if (value is int) {
-                conversion = Conversion.Implicit;
-                return (float)(int)value;
-            } else if (!Object.Equals((ei = value as ExtensibleInt), null)) {
-                conversion = Conversion.Implicit;
-                return (float)ei.value;
-            } else if (value is double) {
-                double DoubleVal = (double)value;
-                if (DoubleVal >= Single.MinValue && DoubleVal <= Single.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (float)DoubleVal;
-                }
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                conversion = Conversion.Implicit;
-                double res;
-                if (bi.TryToFloat64(out res)) return (float)res;
-            } else if (value is bool) {
-                conversion = Conversion.NonStandard;
-                return ((bool)value) ? (float)1.0 : (float)0.0;
-            } else if (value is char) {
-                conversion = Conversion.Implicit;
-                return (float)(char)value;
-            } else if (value is byte) {
-                conversion = Conversion.Implicit;
-                return (float)(byte)value;
-            } else if (value is sbyte) {
-                conversion = Conversion.Implicit;
-                return (float)(sbyte)value;
-            } else if (value is short) {
-                conversion = Conversion.Implicit;
-                return (float)(short)value;
-            } else if (value is uint) {
-                conversion = Conversion.Implicit;
-                return (float)(uint)value;
-            } else if (value is ulong) {
-                conversion = Conversion.Implicit;
-                return (float)(ulong)value;
-            } else if (value is ushort) {
-                conversion = Conversion.Implicit;
-                return (float)(ushort)value;
-            } else if (!Object.Equals((ef = value as ExtensibleFloat), null)) {
-                conversion = Conversion.Implicit;
-                return (float)ef.value;
-            } else if (!Object.Equals((el = value as ExtensibleLong), null)) {
-                conversion = Conversion.Implicit;
-                double res;
-                if (el.Value.TryToFloat64(out res)) return (float)res;
-            } else if (value is long) {
-                conversion = Conversion.Implicit;
-                return (float)(long)value;
-            } else if (value is decimal) {
-                conversion = Conversion.Truncation;
-                return (float)(decimal)value;
+        ///<summary>
+        ///Conversion routine TryConvertToBigInteger - converts object to BigInteger
+        ///</summary>
+        public static bool TryConvertToBigInteger(object value, out BigInteger result) {
+            try {
+                result = ConvertToBigInteger(value);
+                return true;
+            } catch {
+                result = default(BigInteger);
+                return false;
             }
-            conversion = Conversion.None;
-            return (float)0.0;
         }
 
-        public static decimal TryConvertToDecimal(object value, out Conversion conversion) {
-            if (value is decimal) {
-                conversion = Conversion.Identity;
-                return (decimal)value;
-            } else if (value is int) {
-                conversion = Conversion.Implicit;
-                return (decimal)(int)value;
-            } else if (value is bool) {
-                conversion = Conversion.NonStandard;
-                return ((bool)value) ? (decimal)1 : (decimal)0;
-            } else if (value is char) {
-                conversion = Conversion.Implicit;
-                return (decimal)(char)value;
-            } else if (value is byte) {
-                conversion = Conversion.Implicit;
-                return (decimal)(byte)value;
-            } else if (value is sbyte) {
-                conversion = Conversion.Implicit;
-                return (decimal)(sbyte)value;
-            } else if (value is short) {
-                conversion = Conversion.Implicit;
-                return (decimal)(short)value;
-            } else if (value is uint) {
-                conversion = Conversion.Implicit;
-                return (decimal)(uint)value;
-            } else if (value is ulong) {
-                conversion = Conversion.Implicit;
-                return (decimal)(ulong)value;
-            } else if (value is ushort) {
-                conversion = Conversion.Implicit;
-                return (decimal)(ushort)value;
-            } else if (value is long) {
-                conversion = Conversion.Implicit;
-                return (decimal)(long)value;
+        ///<summary>
+        ///Conversion routine TryConvertToComplex64 - converts object to Complex64
+        ///</summary>
+        public static bool TryConvertToComplex64(object value, out Complex64 result) {
+            try {
+                result = ConvertToComplex64(value);
+                return true;
+            } catch {
+                result = default(Complex64);
+                return false;
             }
-            conversion = Conversion.None;
-            return (decimal)0;
         }
 
-        public static long TryConvertToInt64(object value, out Conversion conversion) {
-            ExtensibleInt ei;
-            BigInteger bi;
-            Enum e;
-            if (value is long) {
-                conversion = Conversion.Identity;
-                return (long)value;
-            } else if (value is int) {
-                conversion = Conversion.Implicit;
-                return (long)(int)value;
-            } else if (!Object.Equals((ei = value as ExtensibleInt), null)) {
-                conversion = Conversion.Implicit;
-                return (long)ei.value;
-            } else if (!Object.Equals((bi = value as BigInteger), null)) {
-                long res;
-                if (bi.AsInt64(out res)) {
-                    conversion = Conversion.Implicit;
-                    return res;
-                }
-            } else if (value is bool) {
-                conversion = Conversion.NonStandard;
-                return ((bool)value) ? 1 : 0;
-            } else if (value is char) {
-                conversion = Conversion.Implicit;
-                return (long)(char)value;
-            } else if (value is byte) {
-                conversion = Conversion.Implicit;
-                return (long)(byte)value;
-            } else if (value is sbyte) {
-                conversion = Conversion.Implicit;
-                return (long)(sbyte)value;
-            } else if (value is short) {
-                conversion = Conversion.Implicit;
-                return (long)(short)value;
-            } else if (value is uint) {
-                conversion = Conversion.Implicit;
-                return (long)(uint)value;
-            } else if (value is ulong) {
-                ulong UInt64Val = (ulong)value;
-                if (UInt64Val <= Int64.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (long)UInt64Val;
-                }
-            } else if (value is ushort) {
-                conversion = Conversion.Implicit;
-                return (long)(ushort)value;
-            } else if (!Object.Equals((e = value as Enum), null)) {
-                return TryConvertEnumToInt64(e, out conversion);
-            } else if (value is decimal) {
-                decimal DecimalVal = (decimal)value;
-                if (DecimalVal <= Int64.MaxValue) {
-                    conversion = Conversion.Implicit;
-                    return (long)DecimalVal;
-                }
+        ///<summary>
+        ///Conversion routine TryConvertToString - converts object to String
+        ///</summary>
+        public static bool TryConvertToString(object value, out String result) {
+            try {
+                result = ConvertToString(value);
+                return true;
+            } catch {
+                result = default(String);
+                return false;
             }
-            conversion = Conversion.None;
-            return (long)0;
         }
 
-        //
-        // Entry point into "Try" conversions
-        //
-        public static object TryConvertWorker(object value, Type to, out Conversion conversion) {
-
-            Type from = value.GetType();
-            if (from == to) {
-                conversion = Conversion.Identity;
-                return value;
+        ///<summary>
+        ///Conversion routine TryConvertToChar - converts object to Char
+        ///</summary>
+        public static bool TryConvertToChar(object value, out Char result) {
+            try {
+                result = ConvertToChar(value);
+                return true;
+            } catch {
+                result = default(Char);
+                return false;
             }
-            if (to == ObjectType) {
-                conversion = Conversion.Implicit;
-                return value;
-            }
-            if (to == Int32Type) {
-                return TryConvertToInt32(value, out conversion);
-            } else if (to == StringType) {
-                return TryConvertToString(value, out conversion);
-            } else if (to == DoubleType) {
-                return TryConvertToDouble(value, out conversion);
-            } else if (to == BigIntegerType) {
-                return TryConvertToBigInteger(value, out conversion);
-            } else if (to == BooleanType) {
-                return TryConvertToBoolean(value, out conversion);
-            } else if (to == Complex64Type) {
-                return TryConvertToComplex64(value, out conversion);
-            } else if (to == CharType) {
-                return TryConvertToChar(value, out conversion);
-            } else if (DelegateType.IsAssignableFrom(to)) {
-                return TryConvertToDelegate(value, to, out conversion);
-            } else if (to == IEnumeratorType) {
-                return TryConvertToIEnumerator(value, out conversion);
-            } else if (to == TypeType) {
-                return TryConvertToType(value, out conversion);
-            } else if (to == ByteType) {
-                return TryConvertToByte(value, out conversion);
-            } else if (to == SByteType) {
-                return TryConvertToSByte(value, out conversion);
-            } else if (to == Int16Type) {
-                return TryConvertToInt16(value, out conversion);
-            } else if (to == UInt32Type) {
-                return TryConvertToUInt32(value, out conversion);
-            } else if (to == UInt64Type) {
-                return TryConvertToUInt64(value, out conversion);
-            } else if (to == UInt16Type) {
-                return TryConvertToUInt16(value, out conversion);
-            } else if (to == SingleType) {
-                return TryConvertToSingle(value, out conversion);
-            } else if (to == DecimalType) {
-                return TryConvertToDecimal(value, out conversion);
-            } else if (to == Int64Type) {
-                return TryConvertToInt64(value, out conversion);
-            } else if (to == ArrayListType) {
-                return TryConvertToArrayList(value, out conversion);
-            } else if (to == HashtableType) {
-                return TryConvertToHashtable(value, out conversion);
-            } else if (to.IsArray) {
-                return TryConvertToArray(value, to, out conversion);
-            } else if (to.IsGenericType) {
-                Type genTo = to.GetGenericTypeDefinition();
-                if (genTo == IListOfTType) {
-                    object res = TryConvertToIListT(value, to.GetGenericArguments(), out conversion);
-                    if (conversion != Conversion.None) return res;
-                } else if (genTo == ListOfTType) {
-                    return TryConvertToListOfT(value, to.GetGenericArguments(), out conversion);
-                } else if (genTo == IEnumeratorOfT) {
-                    object res = TryConvertToIEnumeratorOfT(value, to.GetGenericArguments(), out conversion);
-                    if (conversion != Conversion.None) return res;
-                } else if (genTo == IDictOfTType) {
-                    object res = TryConvertToIDictOfT(value, to.GetGenericArguments(), out conversion);
-                    if (conversion != Conversion.None) return res;
-                }
-            }
-            if (from.IsValueType) {
-                if (to.IsEnum) {
-                    if (value is int) {
-                        int IntValue = (int)value;
-                        if (IntValue == 0) {
-                            conversion = Conversion.Implicit;
-                            return 0;
-                        }
-                    }
-                }
-                if (to == ValueTypeType) {
-                    conversion = Conversion.Implicit;
-                    return (System.ValueType)value;
-                }
-            }
-            if (to.IsInstanceOfType(value)) {
-                conversion = Conversion.Identity;
-                return value;
-            }
-
-            // check for implicit conversions 
-            ReflectedType toType = Ops.GetDynamicTypeFromType(to) as ReflectedType;
-            ReflectedType dt = Ops.GetDynamicType(value) as ReflectedType;
-
-            if (toType != null && dt != null) {
-                object res = dt.TryConvertTo(value, toType, out conversion);
-                if (conversion != Conversion.None) {
-                    return res;
-                }
-
-                res = toType.TryConvertFrom(value, out conversion);
-                if (conversion != Conversion.None) {
-                    return res;
-                }
-            }
-
-            conversion = Conversion.None;
-            return null;
         }
 
-        //
-        // "throw" conversion methods
-        //
-        public static int ConvertToInt32(object value) {
-            Conversion conversion;
-            int val = TryConvertToInt32(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected int, found {0}", Ops.GetDynamicType(value).__name__);
+        ///<summary>
+        ///Conversion routine TryConvertToBoolean - converts object to Boolean
+        ///</summary>
+        public static bool TryConvertToBoolean(object value, out Boolean result) {
+            try {
+                result = ConvertToBoolean(value);
+                return true;
+            } catch {
+                result = default(Boolean);
+                return false;
             }
-            return val;
         }
 
-        public static string ConvertToString(object value) {
-            Conversion conversion;
-            string val = TryConvertToString(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected string, found {0}", Ops.GetDynamicType(value).__name__);
+        ///<summary>
+        ///Conversion routine TryConvertToType - converts object to Type
+        ///</summary>
+        public static bool TryConvertToType(object value, out Type result) {
+            try {
+                result = ConvertToType(value);
+                return true;
+            } catch {
+                result = default(Type);
+                return false;
             }
-            return val;
         }
 
-        public static double ConvertToDouble(object value) {
-            Conversion conversion;
-            double val = TryConvertToDouble(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected double, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static BigInteger ConvertToBigInteger(object value) {
-            Conversion conversion;
-            BigInteger val = TryConvertToBigInteger(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected BigInteger, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static bool ConvertToBoolean(object value) {
-            Conversion conversion;
-            bool val = TryConvertToBoolean(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected bool, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static Complex64 ConvertToComplex64(object value) {
-            Conversion conversion;
-            Complex64 val = TryConvertToComplex64(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected Complex64, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static char ConvertToChar(object value) {
-            Conversion conversion;
-            char val = TryConvertToChar(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected char, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static IEnumerator ConvertToIEnumerator(object value) {
-            Conversion conversion;
-            IEnumerator val = TryConvertToIEnumerator(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected IEnumerator, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static Type ConvertToType(object value) {
-            Conversion conversion;
-            Type val = TryConvertToType(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected Type, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static byte ConvertToByte(object value) {
-            Conversion conversion;
-            byte val = TryConvertToByte(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected byte, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static sbyte ConvertToSByte(object value) {
-            Conversion conversion;
-            sbyte val = TryConvertToSByte(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected sbyte, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static short ConvertToInt16(object value) {
-            Conversion conversion;
-            short val = TryConvertToInt16(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected short, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static uint ConvertToUInt32(object value) {
-            Conversion conversion;
-            uint val = TryConvertToUInt32(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected uint, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static ulong ConvertToUInt64(object value) {
-            Conversion conversion;
-            ulong val = TryConvertToUInt64(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected ulong, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static ushort ConvertToUInt16(object value) {
-            Conversion conversion;
-            ushort val = TryConvertToUInt16(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected ushort, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static float ConvertToSingle(object value) {
-            Conversion conversion;
-            float val = TryConvertToSingle(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected float, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static decimal ConvertToDecimal(object value) {
-            Conversion conversion;
-            decimal val = TryConvertToDecimal(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected decimal, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        public static long ConvertToInt64(object value) {
-            Conversion conversion;
-            long val = TryConvertToInt64(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("expected long, found {0}", Ops.GetDynamicType(value).__name__);
-            }
-            return val;
-        }
-
-        //
-        // Entry point into "throw" conversion
-        //
-        public static object Convert(object value, Type to) {
-            Conversion conversion;
-            object val = TryConvert(value, to, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeError("No conversion from {0} to {1}", value, to);
-            }
-            return val;
-        }
-
-        // *** END GENERATED CODE ***
-
-        #endregion
-
-        #region Generated enum conversions
-
-        // *** BEGIN GENERATED CODE ***
-
-        private static short TryConvertEnumToInt16(object value, out Conversion conversion) {
-            conversion = Conversion.NonStandard;
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.Int16:
-                    return (short)(value);
-                case TypeCode.Int32:
-                    int Int32Val = (int)value;
-                    if (Int32Val >= Int16.MinValue && Int32Val <= Int16.MaxValue) {
-                        return (short)Int32Val;
-                    }
-                    break;
-                case TypeCode.Int64:
-                    long Int64Val = (long)value;
-                    if (Int64Val >= Int16.MinValue && Int64Val <= Int16.MaxValue) {
-                        return (short)Int64Val;
-                    }
-                    break;
-                case TypeCode.UInt32:
-                    uint UInt32Val = (uint)value;
-                    if (UInt32Val <= Int16.MaxValue) {
-                        return (short)UInt32Val;
-                    }
-                    break;
-                case TypeCode.UInt64:
-                    ulong UInt64Val = (ulong)value;
-                    if (UInt64Val <= (ulong)Int16.MaxValue) {
-                        return (short)UInt64Val;
-                    }
-                    break;
-                case TypeCode.SByte:
-                    return (short)(sbyte)(value);
-                case TypeCode.UInt16:
-                    ushort UInt16Val = (ushort)value;
-                    if (UInt16Val <= Int16.MaxValue) {
-                        return (short)UInt16Val;
-                    }
-                    break;
-                case TypeCode.Byte:
-                    return (short)(byte)(value);
-            }
-            conversion = Conversion.None;
-            return 0;
-        }
-
-        private static sbyte TryConvertEnumToSByte(object value, out Conversion conversion) {
-            conversion = Conversion.NonStandard;
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.SByte:
-                    return (sbyte)(value);
-                case TypeCode.Int32:
-                    int Int32Val = (int)value;
-                    if (Int32Val >= SByte.MinValue && Int32Val <= SByte.MaxValue) {
-                        return (sbyte)Int32Val;
-                    }
-                    break;
-                case TypeCode.Int64:
-                    long Int64Val = (long)value;
-                    if (Int64Val >= SByte.MinValue && Int64Val <= SByte.MaxValue) {
-                        return (sbyte)Int64Val;
-                    }
-                    break;
-                case TypeCode.Int16:
-                    short Int16Val = (short)value;
-                    if (Int16Val >= SByte.MinValue && Int16Val <= SByte.MaxValue) {
-                        return (sbyte)Int16Val;
-                    }
-                    break;
-                case TypeCode.UInt32:
-                    uint UInt32Val = (uint)value;
-                    if (UInt32Val <= SByte.MaxValue) {
-                        return (sbyte)UInt32Val;
-                    }
-                    break;
-                case TypeCode.UInt64:
-                    ulong UInt64Val = (ulong)value;
-                    if (UInt64Val <= (ulong)SByte.MaxValue) {
-                        return (sbyte)UInt64Val;
-                    }
-                    break;
-                case TypeCode.UInt16:
-                    ushort UInt16Val = (ushort)value;
-                    if (UInt16Val <= SByte.MaxValue) {
-                        return (sbyte)UInt16Val;
-                    }
-                    break;
-                case TypeCode.Byte:
-                    byte ByteVal = (byte)value;
-                    if (ByteVal <= SByte.MaxValue) {
-                        return (sbyte)ByteVal;
-                    }
-                    break;
-            }
-            conversion = Conversion.None;
-            return 0;
-        }
-
-        private static ulong TryConvertEnumToUInt64(object value, out Conversion conversion) {
-            conversion = Conversion.NonStandard;
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.UInt64:
-                    return (ulong)(value);
-                case TypeCode.Int32:
-                    int Int32Val = (int)value;
-                    if (Int32Val >= 0) {
-                        return (ulong)Int32Val;
-                    }
-                    break;
-                case TypeCode.Int64:
-                    long Int64Val = (long)value;
-                    if (Int64Val >= 0) {
-                        return (ulong)Int64Val;
-                    }
-                    break;
-                case TypeCode.Int16:
-                    short Int16Val = (short)value;
-                    if (Int16Val >= 0) {
-                        return (ulong)Int16Val;
-                    }
-                    break;
-                case TypeCode.UInt32:
-                    return (ulong)(uint)(value);
-                case TypeCode.SByte:
-                    sbyte SByteVal = (sbyte)value;
-                    if (SByteVal >= 0) {
-                        return (ulong)SByteVal;
-                    }
-                    break;
-                case TypeCode.UInt16:
-                    return (ulong)(ushort)(value);
-                case TypeCode.Byte:
-                    return (ulong)(byte)(value);
-            }
-            conversion = Conversion.None;
-            return 0;
-        }
-
-        private static int TryConvertEnumToInt32(object value, out Conversion conversion) {
-            conversion = Conversion.NonStandard;
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.Int32:
-                    return (int)(value);
-                case TypeCode.Int64:
-                    long Int64Val = (long)value;
-                    if (Int64Val >= Int32.MinValue && Int64Val <= Int32.MaxValue) {
-                        return (int)Int64Val;
-                    }
-                    break;
-                case TypeCode.Int16:
-                    return (int)(short)(value);
-                case TypeCode.UInt32:
-                    uint UInt32Val = (uint)value;
-                    if (UInt32Val <= Int32.MaxValue) {
-                        return (int)UInt32Val;
-                    }
-                    break;
-                case TypeCode.UInt64:
-                    ulong UInt64Val = (ulong)value;
-                    if (UInt64Val <= Int32.MaxValue) {
-                        return (int)UInt64Val;
-                    }
-                    break;
-                case TypeCode.SByte:
-                    return (int)(sbyte)(value);
-                case TypeCode.UInt16:
-                    return (int)(ushort)(value);
-                case TypeCode.Byte:
-                    return (int)(byte)(value);
-            }
-            conversion = Conversion.None;
-            return 0;
-        }
-
-        private static ushort TryConvertEnumToUInt16(object value, out Conversion conversion) {
-            conversion = Conversion.NonStandard;
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.UInt16:
-                    return (ushort)(value);
-                case TypeCode.Int32:
-                    int Int32Val = (int)value;
-                    if (Int32Val >= 0 && Int32Val <= UInt16.MaxValue) {
-                        return (ushort)Int32Val;
-                    }
-                    break;
-                case TypeCode.Int64:
-                    long Int64Val = (long)value;
-                    if (Int64Val >= 0 && Int64Val <= UInt16.MaxValue) {
-                        return (ushort)Int64Val;
-                    }
-                    break;
-                case TypeCode.Int16:
-                    short Int16Val = (short)value;
-                    if (Int16Val >= 0) {
-                        return (ushort)Int16Val;
-                    }
-                    break;
-                case TypeCode.UInt32:
-                    uint UInt32Val = (uint)value;
-                    if (UInt32Val <= UInt16.MaxValue) {
-                        return (ushort)UInt32Val;
-                    }
-                    break;
-                case TypeCode.UInt64:
-                    ulong UInt64Val = (ulong)value;
-                    if (UInt64Val <= UInt16.MaxValue) {
-                        return (ushort)UInt64Val;
-                    }
-                    break;
-                case TypeCode.SByte:
-                    sbyte SByteVal = (sbyte)value;
-                    if (SByteVal >= 0) {
-                        return (ushort)SByteVal;
-                    }
-                    break;
-                case TypeCode.Byte:
-                    return (ushort)(byte)(value);
-            }
-            conversion = Conversion.None;
-            return 0;
-        }
-
-        private static long TryConvertEnumToInt64(object value, out Conversion conversion) {
-            conversion = Conversion.NonStandard;
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.Int64:
-                    return (long)(value);
-                case TypeCode.Int32:
-                    return (long)(int)(value);
-                case TypeCode.Int16:
-                    return (long)(short)(value);
-                case TypeCode.UInt32:
-                    return (long)(uint)(value);
-                case TypeCode.UInt64:
-                    ulong UInt64Val = (ulong)value;
-                    if (UInt64Val <= Int64.MaxValue) {
-                        return (long)UInt64Val;
-                    }
-                    break;
-                case TypeCode.SByte:
-                    return (long)(sbyte)(value);
-                case TypeCode.UInt16:
-                    return (long)(ushort)(value);
-                case TypeCode.Byte:
-                    return (long)(byte)(value);
-            }
-            conversion = Conversion.None;
-            return 0;
-        }
-
-        private static uint TryConvertEnumToUInt32(object value, out Conversion conversion) {
-            conversion = Conversion.NonStandard;
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.UInt32:
-                    return (uint)(value);
-                case TypeCode.Int32:
-                    int Int32Val = (int)value;
-                    if (Int32Val >= 0) {
-                        return (uint)Int32Val;
-                    }
-                    break;
-                case TypeCode.Int64:
-                    long Int64Val = (long)value;
-                    if (Int64Val >= 0 && Int64Val <= UInt32.MaxValue) {
-                        return (uint)Int64Val;
-                    }
-                    break;
-                case TypeCode.Int16:
-                    short Int16Val = (short)value;
-                    if (Int16Val >= 0) {
-                        return (uint)Int16Val;
-                    }
-                    break;
-                case TypeCode.UInt64:
-                    ulong UInt64Val = (ulong)value;
-                    if (UInt64Val <= UInt32.MaxValue) {
-                        return (uint)UInt64Val;
-                    }
-                    break;
-                case TypeCode.SByte:
-                    sbyte SByteVal = (sbyte)value;
-                    if (SByteVal >= 0) {
-                        return (uint)SByteVal;
-                    }
-                    break;
-                case TypeCode.UInt16:
-                    return (uint)(ushort)(value);
-                case TypeCode.Byte:
-                    return (uint)(byte)(value);
-            }
-            conversion = Conversion.None;
-            return 0;
-        }
-
-        private static byte TryConvertEnumToByte(object value, out Conversion conversion) {
-            conversion = Conversion.NonStandard;
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.Byte:
-                    return (byte)(value);
-                case TypeCode.Int32:
-                    int Int32Val = (int)value;
-                    if (Int32Val >= 0 && Int32Val <= Byte.MaxValue) {
-                        return (byte)Int32Val;
-                    }
-                    break;
-                case TypeCode.Int64:
-                    long Int64Val = (long)value;
-                    if (Int64Val >= 0 && Int64Val <= Byte.MaxValue) {
-                        return (byte)Int64Val;
-                    }
-                    break;
-                case TypeCode.Int16:
-                    short Int16Val = (short)value;
-                    if (Int16Val >= 0 && Int16Val <= Byte.MaxValue) {
-                        return (byte)Int16Val;
-                    }
-                    break;
-                case TypeCode.UInt32:
-                    uint UInt32Val = (uint)value;
-                    if (UInt32Val <= Byte.MaxValue) {
-                        return (byte)UInt32Val;
-                    }
-                    break;
-                case TypeCode.UInt64:
-                    ulong UInt64Val = (ulong)value;
-                    if (UInt64Val <= Byte.MaxValue) {
-                        return (byte)UInt64Val;
-                    }
-                    break;
-                case TypeCode.SByte:
-                    sbyte SByteVal = (sbyte)value;
-                    if (SByteVal >= 0) {
-                        return (byte)SByteVal;
-                    }
-                    break;
-                case TypeCode.UInt16:
-                    ushort UInt16Val = (ushort)value;
-                    if (UInt16Val <= Byte.MaxValue) {
-                        return (byte)UInt16Val;
-                    }
-                    break;
-            }
-            conversion = Conversion.None;
-            return 0;
-        }
-
-        private static bool TryConvertEnumToBoolean(object value, out Conversion conversion) {
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.Int32:
-                    conversion = Conversion.NonStandard;
-                    return (int)value != 0;
-                case TypeCode.Int64:
-                    conversion = Conversion.NonStandard;
-                    return (long)value != 0;
-                case TypeCode.Int16:
-                    conversion = Conversion.NonStandard;
-                    return (short)value != 0;
-                case TypeCode.UInt32:
-                    conversion = Conversion.NonStandard;
-                    return (uint)value != 0;
-                case TypeCode.UInt64:
-                    conversion = Conversion.NonStandard;
-                    return (ulong)value != 0;
-                case TypeCode.SByte:
-                    conversion = Conversion.NonStandard;
-                    return (sbyte)value != 0;
-                case TypeCode.UInt16:
-                    conversion = Conversion.NonStandard;
-                    return (ushort)value != 0;
-                case TypeCode.Byte:
-                    conversion = Conversion.NonStandard;
-                    return (byte)value != 0;
-                default:
-                    conversion = Conversion.None;
-                    return false;
+        ///<summary>
+        ///Conversion routine TryConvertToIEnumerator - converts object to IEnumerator
+        ///</summary>
+        public static bool TryConvertToIEnumerator(object value, out IEnumerator result) {
+            try {
+                result = ConvertToIEnumerator(value);
+                return true;
+            } catch {
+                result = default(IEnumerator);
+                return false;
             }
         }
 
@@ -1811,40 +267,669 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region Generated Conversion Helpers
+        #region Generated explicit enum conversion
 
         // *** BEGIN GENERATED CODE ***
 
-        public static bool HasConversion(Type t) {
-            if (t.IsArray) return true;
-            if (t == typeof(ArrayList) || t == typeof(Hashtable) || t.IsGenericType) return true;
-            if (t == typeof(bool)) return true;
-            if (t == typeof(char)) return true;
-            if (t == typeof(sbyte)) return true;
-            if (t == typeof(byte)) return true;
-            if (t == typeof(short)) return true;
-            if (t == typeof(ushort)) return true;
-            if (t == typeof(int)) return true;
-            if (t == typeof(uint)) return true;
-            if (t == typeof(long)) return true;
-            if (t == typeof(ulong)) return true;
-            if (t == typeof(float)) return true;
-            if (t == typeof(double)) return true;
-            if (t == typeof(string)) return true;
-            if (t == typeof(decimal)) return true;
-            if (t == typeof(BigInteger) || t.IsSubclassOf(typeof(BigInteger))) return true;
-            if (t == typeof(ExtensibleInt) || t.IsSubclassOf(typeof(ExtensibleInt))) return true;
-            if (t == typeof(ExtensibleComplex) || t.IsSubclassOf(typeof(ExtensibleComplex))) return true;
-            if (t == typeof(ExtensibleString) || t.IsSubclassOf(typeof(ExtensibleString))) return true;
-            if (t == typeof(ExtensibleFloat) || t.IsSubclassOf(typeof(ExtensibleFloat))) return true;
-            if (t == typeof(ExtensibleLong) || t.IsSubclassOf(typeof(ExtensibleLong))) return true;
-            if (t == typeof(Complex64) || t.IsSubclassOf(typeof(Complex64))) return true;
-            if (t == typeof(Delegate) || t.IsSubclassOf(typeof(Delegate))) return true;
-            if (t == typeof(IEnumerator) || t.IsSubclassOf(typeof(IEnumerator))) return true;
-            if (t == typeof(Type) || t.IsSubclassOf(typeof(Type))) return true;
-            if (t == typeof(Tuple) || t.IsSubclassOf(typeof(Tuple))) return true;
-            if (t == typeof(Enum) || t.IsSubclassOf(typeof(Enum))) return true;
-            if (t.IsSubclassOf(typeof(ArrayList)) || t.IsSubclassOf(typeof(Hashtable))) return true;
+        ///<summary>
+        /// Explicit conversion of Enum to Int32
+        ///</summary>
+        internal static Int32 CastEnumToInt32(object value) {
+            Debug.Assert(value is Enum);
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    return (Int32)(Int32)value;
+                case TypeCode.Byte:
+                    return (Int32)(Byte)value;
+                case TypeCode.SByte:
+                    return (Int32)(SByte)value;
+                case TypeCode.Int16:
+                    return (Int32)(Int16)value;
+                case TypeCode.Int64:
+                    return (Int32)(Int64)value;
+                case TypeCode.UInt16:
+                    return (Int32)(UInt16)value;
+                case TypeCode.UInt32:
+                    return (Int32)(UInt32)value;
+                case TypeCode.UInt64:
+                    return (Int32)(UInt64)value;
+            }
+            // Should never get here
+            Debug.Fail("Invalid enum detected");
+            return default(Int32);
+        }
+        ///<summary>
+        /// Explicit conversion of Enum to Byte
+        ///</summary>
+        internal static Byte CastEnumToByte(object value) {
+            Debug.Assert(value is Enum);
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    return (Byte)(Int32)value;
+                case TypeCode.Byte:
+                    return (Byte)(Byte)value;
+                case TypeCode.SByte:
+                    return (Byte)(SByte)value;
+                case TypeCode.Int16:
+                    return (Byte)(Int16)value;
+                case TypeCode.Int64:
+                    return (Byte)(Int64)value;
+                case TypeCode.UInt16:
+                    return (Byte)(UInt16)value;
+                case TypeCode.UInt32:
+                    return (Byte)(UInt32)value;
+                case TypeCode.UInt64:
+                    return (Byte)(UInt64)value;
+            }
+            // Should never get here
+            Debug.Fail("Invalid enum detected");
+            return default(Byte);
+        }
+        ///<summary>
+        /// Explicit conversion of Enum to SByte
+        ///</summary>
+        internal static SByte CastEnumToSByte(object value) {
+            Debug.Assert(value is Enum);
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    return (SByte)(Int32)value;
+                case TypeCode.Byte:
+                    return (SByte)(Byte)value;
+                case TypeCode.SByte:
+                    return (SByte)(SByte)value;
+                case TypeCode.Int16:
+                    return (SByte)(Int16)value;
+                case TypeCode.Int64:
+                    return (SByte)(Int64)value;
+                case TypeCode.UInt16:
+                    return (SByte)(UInt16)value;
+                case TypeCode.UInt32:
+                    return (SByte)(UInt32)value;
+                case TypeCode.UInt64:
+                    return (SByte)(UInt64)value;
+            }
+            // Should never get here
+            Debug.Fail("Invalid enum detected");
+            return default(SByte);
+        }
+        ///<summary>
+        /// Explicit conversion of Enum to Int16
+        ///</summary>
+        internal static Int16 CastEnumToInt16(object value) {
+            Debug.Assert(value is Enum);
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    return (Int16)(Int32)value;
+                case TypeCode.Byte:
+                    return (Int16)(Byte)value;
+                case TypeCode.SByte:
+                    return (Int16)(SByte)value;
+                case TypeCode.Int16:
+                    return (Int16)(Int16)value;
+                case TypeCode.Int64:
+                    return (Int16)(Int64)value;
+                case TypeCode.UInt16:
+                    return (Int16)(UInt16)value;
+                case TypeCode.UInt32:
+                    return (Int16)(UInt32)value;
+                case TypeCode.UInt64:
+                    return (Int16)(UInt64)value;
+            }
+            // Should never get here
+            Debug.Fail("Invalid enum detected");
+            return default(Int16);
+        }
+        ///<summary>
+        /// Explicit conversion of Enum to Int64
+        ///</summary>
+        internal static Int64 CastEnumToInt64(object value) {
+            Debug.Assert(value is Enum);
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    return (Int64)(Int32)value;
+                case TypeCode.Byte:
+                    return (Int64)(Byte)value;
+                case TypeCode.SByte:
+                    return (Int64)(SByte)value;
+                case TypeCode.Int16:
+                    return (Int64)(Int16)value;
+                case TypeCode.Int64:
+                    return (Int64)(Int64)value;
+                case TypeCode.UInt16:
+                    return (Int64)(UInt16)value;
+                case TypeCode.UInt32:
+                    return (Int64)(UInt32)value;
+                case TypeCode.UInt64:
+                    return (Int64)(UInt64)value;
+            }
+            // Should never get here
+            Debug.Fail("Invalid enum detected");
+            return default(Int64);
+        }
+        ///<summary>
+        /// Explicit conversion of Enum to UInt16
+        ///</summary>
+        internal static UInt16 CastEnumToUInt16(object value) {
+            Debug.Assert(value is Enum);
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    return (UInt16)(Int32)value;
+                case TypeCode.Byte:
+                    return (UInt16)(Byte)value;
+                case TypeCode.SByte:
+                    return (UInt16)(SByte)value;
+                case TypeCode.Int16:
+                    return (UInt16)(Int16)value;
+                case TypeCode.Int64:
+                    return (UInt16)(Int64)value;
+                case TypeCode.UInt16:
+                    return (UInt16)(UInt16)value;
+                case TypeCode.UInt32:
+                    return (UInt16)(UInt32)value;
+                case TypeCode.UInt64:
+                    return (UInt16)(UInt64)value;
+            }
+            // Should never get here
+            Debug.Fail("Invalid enum detected");
+            return default(UInt16);
+        }
+        ///<summary>
+        /// Explicit conversion of Enum to UInt32
+        ///</summary>
+        internal static UInt32 CastEnumToUInt32(object value) {
+            Debug.Assert(value is Enum);
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    return (UInt32)(Int32)value;
+                case TypeCode.Byte:
+                    return (UInt32)(Byte)value;
+                case TypeCode.SByte:
+                    return (UInt32)(SByte)value;
+                case TypeCode.Int16:
+                    return (UInt32)(Int16)value;
+                case TypeCode.Int64:
+                    return (UInt32)(Int64)value;
+                case TypeCode.UInt16:
+                    return (UInt32)(UInt16)value;
+                case TypeCode.UInt32:
+                    return (UInt32)(UInt32)value;
+                case TypeCode.UInt64:
+                    return (UInt32)(UInt64)value;
+            }
+            // Should never get here
+            Debug.Fail("Invalid enum detected");
+            return default(UInt32);
+        }
+        ///<summary>
+        /// Explicit conversion of Enum to UInt64
+        ///</summary>
+        internal static UInt64 CastEnumToUInt64(object value) {
+            Debug.Assert(value is Enum);
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    return (UInt64)(Int32)value;
+                case TypeCode.Byte:
+                    return (UInt64)(Byte)value;
+                case TypeCode.SByte:
+                    return (UInt64)(SByte)value;
+                case TypeCode.Int16:
+                    return (UInt64)(Int16)value;
+                case TypeCode.Int64:
+                    return (UInt64)(Int64)value;
+                case TypeCode.UInt16:
+                    return (UInt64)(UInt16)value;
+                case TypeCode.UInt32:
+                    return (UInt64)(UInt32)value;
+                case TypeCode.UInt64:
+                    return (UInt64)(UInt64)value;
+            }
+            // Should never get here
+            Debug.Fail("Invalid enum detected");
+            return default(UInt64);
+        }
+        internal static Boolean CastEnumToBoolean(object value) {
+            Debug.Assert(value is Enum);
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    return (Int32)value != 0;
+                case TypeCode.Byte:
+                    return (Byte)value != 0;
+                case TypeCode.SByte:
+                    return (SByte)value != 0;
+                case TypeCode.Int16:
+                    return (Int16)value != 0;
+                case TypeCode.Int64:
+                    return (Int64)value != 0;
+                case TypeCode.UInt16:
+                    return (UInt16)value != 0;
+                case TypeCode.UInt32:
+                    return (UInt32)value != 0;
+                case TypeCode.UInt64:
+                    return (UInt64)value != 0;
+            }
+            // Should never get here
+            Debug.Fail("Invalid enum detected");
+            return default(Boolean);
+        }
+
+        // *** END GENERATED CODE ***
+
+        #endregion
+
+        #region Generated conversion implementations
+
+        // *** BEGIN GENERATED CODE ***
+
+        ///<summary>
+        /// ConvertToByte Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToByteImpl(object value, out Byte result) {
+            if (value is Int32) {
+                result = checked((Byte)(Int32)value); return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (Byte)1 : (Byte)0; return true;
+            } else if (value is BigInteger) {
+                UInt32 UInt32Value = ((BigInteger)value).ToUInt32();
+                result = checked((Byte)UInt32Value); return true;
+            } else if (value is ExtensibleInt) {
+                result = checked((Byte)(Int32)((ExtensibleInt)value).value); return true;
+            } else if (value is ExtensibleLong) {
+                UInt32 UInt32Value = ((BigInteger)((ExtensibleLong)value).Value).ToUInt32();
+                result = checked((Byte)UInt32Value); return true;
+            } else if (value is Int64) {
+                result = checked((Byte)(Int64)value); return true;
+            } else if (value is Byte) {
+                result = (Byte)value; return true;
+            } else if (value is SByte) {
+                result = checked((Byte)(SByte)value); return true;
+            } else if (value is Int16) {
+                result = checked((Byte)(Int16)value); return true;
+            } else if (value is UInt16) {
+                result = checked((Byte)(UInt16)value); return true;
+            } else if (value is UInt32) {
+                result = checked((Byte)(UInt32)value); return true;
+            } else if (value is UInt64) {
+                result = checked((Byte)(UInt64)value); return true;
+            } else if (value is Decimal) {
+                result = checked((Byte)(Decimal)value); return true;
+            }
+            result = default(Byte);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToSByte Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToSByteImpl(object value, out SByte result) {
+            if (value is Int32) {
+                result = checked((SByte)(Int32)value); return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (SByte)1 : (SByte)0; return true;
+            } else if (value is BigInteger) {
+                Int32 Int32Value = ((BigInteger)value).ToInt32();
+                result = checked((SByte)Int32Value); return true;
+            } else if (value is ExtensibleInt) {
+                result = checked((SByte)(Int32)((ExtensibleInt)value).value); return true;
+            } else if (value is ExtensibleLong) {
+                Int32 Int32Value = ((BigInteger)((ExtensibleLong)value).Value).ToInt32();
+                result = checked((SByte)Int32Value); return true;
+            } else if (value is Int64) {
+                result = checked((SByte)(Int64)value); return true;
+            } else if (value is Byte) {
+                result = checked((SByte)(Byte)value); return true;
+            } else if (value is SByte) {
+                result = (SByte)value; return true;
+            } else if (value is Int16) {
+                result = checked((SByte)(Int16)value); return true;
+            } else if (value is UInt16) {
+                result = checked((SByte)(UInt16)value); return true;
+            } else if (value is UInt32) {
+                result = checked((SByte)(UInt32)value); return true;
+            } else if (value is UInt64) {
+                result = checked((SByte)(UInt64)value); return true;
+            } else if (value is Decimal) {
+                result = checked((SByte)(Decimal)value); return true;
+            }
+            result = default(SByte);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToInt16 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToInt16Impl(object value, out Int16 result) {
+            if (value is Int32) {
+                result = checked((Int16)(Int32)value); return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (Int16)1 : (Int16)0; return true;
+            } else if (value is BigInteger) {
+                Int32 Int32Value = ((BigInteger)value).ToInt32();
+                result = checked((Int16)Int32Value); return true;
+            } else if (value is ExtensibleInt) {
+                result = checked((Int16)(Int32)((ExtensibleInt)value).value); return true;
+            } else if (value is ExtensibleLong) {
+                Int32 Int32Value = ((BigInteger)((ExtensibleLong)value).Value).ToInt32();
+                result = checked((Int16)Int32Value); return true;
+            } else if (value is Int64) {
+                result = checked((Int16)(Int64)value); return true;
+            } else if (value is Byte) {
+                result = (Int16)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = (Int16)(SByte)value; return true;
+            } else if (value is Int16) {
+                result = (Int16)value; return true;
+            } else if (value is UInt16) {
+                result = checked((Int16)(UInt16)value); return true;
+            } else if (value is UInt32) {
+                result = checked((Int16)(UInt32)value); return true;
+            } else if (value is UInt64) {
+                result = checked((Int16)(UInt64)value); return true;
+            } else if (value is Decimal) {
+                result = checked((Int16)(Decimal)value); return true;
+            }
+            result = default(Int16);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToUInt16 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToUInt16Impl(object value, out UInt16 result) {
+            if (value is Int32) {
+                result = checked((UInt16)(Int32)value); return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (UInt16)1 : (UInt16)0; return true;
+            } else if (value is BigInteger) {
+                UInt32 UInt32Value = ((BigInteger)value).ToUInt32();
+                result = checked((UInt16)UInt32Value); return true;
+            } else if (value is ExtensibleInt) {
+                result = checked((UInt16)(Int32)((ExtensibleInt)value).value); return true;
+            } else if (value is ExtensibleLong) {
+                UInt32 UInt32Value = ((BigInteger)((ExtensibleLong)value).Value).ToUInt32();
+                result = checked((UInt16)UInt32Value); return true;
+            } else if (value is Int64) {
+                result = checked((UInt16)(Int64)value); return true;
+            } else if (value is Byte) {
+                result = (UInt16)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = checked((UInt16)(SByte)value); return true;
+            } else if (value is Int16) {
+                result = checked((UInt16)(Int16)value); return true;
+            } else if (value is UInt16) {
+                result = (UInt16)value; return true;
+            } else if (value is UInt32) {
+                result = checked((UInt16)(UInt32)value); return true;
+            } else if (value is UInt64) {
+                result = checked((UInt16)(UInt64)value); return true;
+            } else if (value is Decimal) {
+                result = checked((UInt16)(Decimal)value); return true;
+            }
+            result = default(UInt16);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToInt32 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToInt32Impl(object value, out Int32 result) {
+            if (value is Int32) {
+                result = (Int32)value; return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (Int32)1 : (Int32)0; return true;
+            } else if (value is BigInteger) {
+                result = ((BigInteger)value).ToInt32(); return true;
+            } else if (value is Double) {
+                // DEPRECATED IMPLICIT CONVERSION FROM FLOAT TO INT
+                result = checked((Int32)(Double)value); return true;
+            } else if (value is ExtensibleInt) {
+                result = (Int32)(Int32)((ExtensibleInt)value).value; return true;
+            } else if (value is ExtensibleLong) {
+                result = ((BigInteger)((ExtensibleLong)value).Value).ToInt32(); return true;
+            } else if (value is ExtensibleFloat) {
+                // DEPRECATED IMPLICIT CONVERSION FROM FLOAT TO INT
+                result = checked((Int32)(Double)((ExtensibleFloat)value).value); return true;
+            } else if (value is Int64) {
+                result = checked((Int32)(Int64)value); return true;
+            } else if (value is Byte) {
+                result = (Int32)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = (Int32)(SByte)value; return true;
+            } else if (value is Int16) {
+                result = (Int32)(Int16)value; return true;
+            } else if (value is UInt16) {
+                result = (Int32)(UInt16)value; return true;
+            } else if (value is UInt32) {
+                result = checked((Int32)(UInt32)value); return true;
+            } else if (value is UInt64) {
+                result = checked((Int32)(UInt64)value); return true;
+            } else if (value is Decimal) {
+                result = checked((Int32)(Decimal)value); return true;
+            }
+            result = default(Int32);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToUInt32 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToUInt32Impl(object value, out UInt32 result) {
+            if (value is Int32) {
+                result = checked((UInt32)(Int32)value); return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (UInt32)1 : (UInt32)0; return true;
+            } else if (value is BigInteger) {
+                result = ((BigInteger)value).ToUInt32(); return true;
+            } else if (value is ExtensibleInt) {
+                result = checked((UInt32)(Int32)((ExtensibleInt)value).value); return true;
+            } else if (value is ExtensibleLong) {
+                result = ((BigInteger)((ExtensibleLong)value).Value).ToUInt32(); return true;
+            } else if (value is Int64) {
+                result = checked((UInt32)(Int64)value); return true;
+            } else if (value is Byte) {
+                result = (UInt32)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = checked((UInt32)(SByte)value); return true;
+            } else if (value is Int16) {
+                result = checked((UInt32)(Int16)value); return true;
+            } else if (value is UInt16) {
+                result = (UInt32)(UInt16)value; return true;
+            } else if (value is UInt32) {
+                result = (UInt32)value; return true;
+            } else if (value is UInt64) {
+                result = checked((UInt32)(UInt64)value); return true;
+            } else if (value is Decimal) {
+                result = checked((UInt32)(Decimal)value); return true;
+            }
+            result = default(UInt32);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToInt64 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToInt64Impl(object value, out Int64 result) {
+            if (value is Int32) {
+                result = (Int64)(Int32)value; return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (Int64)1 : (Int64)0; return true;
+            } else if (value is BigInteger) {
+                result = ((BigInteger)value).ToInt64(); return true;
+            } else if (value is ExtensibleInt) {
+                result = (Int64)(Int32)((ExtensibleInt)value).value; return true;
+            } else if (value is ExtensibleLong) {
+                result = ((BigInteger)((ExtensibleLong)value).Value).ToInt64(); return true;
+            } else if (value is Int64) {
+                result = (Int64)value; return true;
+            } else if (value is Byte) {
+                result = (Int64)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = (Int64)(SByte)value; return true;
+            } else if (value is Int16) {
+                result = (Int64)(Int16)value; return true;
+            } else if (value is UInt16) {
+                result = (Int64)(UInt16)value; return true;
+            } else if (value is UInt32) {
+                result = (Int64)(UInt32)value; return true;
+            } else if (value is UInt64) {
+                result = checked((Int64)(UInt64)value); return true;
+            } else if (value is Decimal) {
+                result = checked((Int64)(Decimal)value); return true;
+            }
+            result = default(Int64);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToUInt64 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToUInt64Impl(object value, out UInt64 result) {
+            if (value is Int32) {
+                result = checked((UInt64)(Int32)value); return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (UInt64)1 : (UInt64)0; return true;
+            } else if (value is BigInteger) {
+                result = ((BigInteger)value).ToUInt64(); return true;
+            } else if (value is ExtensibleInt) {
+                result = checked((UInt64)(Int32)((ExtensibleInt)value).value); return true;
+            } else if (value is ExtensibleLong) {
+                result = ((BigInteger)((ExtensibleLong)value).Value).ToUInt64(); return true;
+            } else if (value is Int64) {
+                result = checked((UInt64)(Int64)value); return true;
+            } else if (value is Byte) {
+                result = (UInt64)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = checked((UInt64)(SByte)value); return true;
+            } else if (value is Int16) {
+                result = checked((UInt64)(Int16)value); return true;
+            } else if (value is UInt16) {
+                result = (UInt64)(UInt16)value; return true;
+            } else if (value is UInt32) {
+                result = (UInt64)(UInt32)value; return true;
+            } else if (value is UInt64) {
+                result = (UInt64)value; return true;
+            } else if (value is Decimal) {
+                result = checked((UInt64)(Decimal)value); return true;
+            }
+            result = default(UInt64);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToSingle Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToSingleImpl(object value, out Single result) {
+            if (value is Int32) {
+                result = (Single)(Int32)value; return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (Single)1 : (Single)0; return true;
+            } else if (value is BigInteger) {
+                Double DoubleValue = ((BigInteger)value).ToFloat64();
+                result = checked((Single)DoubleValue); return true;
+            } else if (value is Double) {
+                result = checked((Single)(Double)value);
+                if (Single.IsInfinity(result)) throw Ops.OverflowError("{0} won't fit into Single", value);
+                return true;
+            } else if (value is ExtensibleInt) {
+                result = (Single)(Int32)((ExtensibleInt)value).value; return true;
+            } else if (value is ExtensibleLong) {
+                Double DoubleValue = ((BigInteger)((ExtensibleLong)value).Value).ToFloat64();
+                result = checked((Single)DoubleValue); return true;
+            } else if (value is ExtensibleFloat) {
+                result = checked((Single)(Double)((ExtensibleFloat)value).value);
+                if (Single.IsInfinity(result)) throw Ops.OverflowError("{0} won't fit into Single", ((ExtensibleFloat)value).value);
+                return true;
+            } else if (value is Int64) {
+                result = (Single)(Int64)value; return true;
+            } else if (value is Byte) {
+                result = (Single)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = (Single)(SByte)value; return true;
+            } else if (value is Int16) {
+                result = (Single)(Int16)value; return true;
+            } else if (value is UInt16) {
+                result = (Single)(UInt16)value; return true;
+            } else if (value is UInt32) {
+                result = (Single)(UInt32)value; return true;
+            } else if (value is UInt64) {
+                result = (Single)(UInt64)value; return true;
+            } else if (value is Single) {
+                result = (Single)value; return true;
+            } else if (value is Decimal) {
+                result = (Single)(Decimal)value; return true;
+            }
+            result = default(Single);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToDouble Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToDoubleImpl(object value, out Double result) {
+            if (value is Int32) {
+                result = (Double)(Int32)value; return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (Double)1 : (Double)0; return true;
+            } else if (value is BigInteger) {
+                result = ((BigInteger)value).ToFloat64(); return true;
+            } else if (value is Double) {
+                result = (Double)value; return true;
+            } else if (value is ExtensibleInt) {
+                result = (Double)(Int32)((ExtensibleInt)value).value; return true;
+            } else if (value is ExtensibleLong) {
+                result = ((BigInteger)((ExtensibleLong)value).Value).ToFloat64(); return true;
+            } else if (value is ExtensibleFloat) {
+                result = (Double)(Double)((ExtensibleFloat)value).value; return true;
+            } else if (value is Int64) {
+                result = (Double)(Int64)value; return true;
+            } else if (value is Byte) {
+                result = (Double)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = (Double)(SByte)value; return true;
+            } else if (value is Int16) {
+                result = (Double)(Int16)value; return true;
+            } else if (value is UInt16) {
+                result = (Double)(UInt16)value; return true;
+            } else if (value is UInt32) {
+                result = (Double)(UInt32)value; return true;
+            } else if (value is UInt64) {
+                result = (Double)(UInt64)value; return true;
+            } else if (value is Single) {
+                result = (Double)(Single)value; return true;
+            } else if (value is Decimal) {
+                result = (Double)(Decimal)value; return true;
+            }
+            result = default(Double);
+            return false;
+        }
+        ///<summary>
+        /// ConvertToDecimal Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        ///</summary>
+        private static bool ConvertToDecimalImpl(object value, out Decimal result) {
+            if (value is Int32) {
+                result = (Decimal)(Int32)value; return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? (Decimal)1 : (Decimal)0; return true;
+            } else if (value is BigInteger) {
+                result = ((BigInteger)value).ToDecimal(); return true;
+            } else if (value is Double) {
+                result = checked((Decimal)(Double)value); return true;
+            } else if (value is ExtensibleInt) {
+                result = (Decimal)(Int32)((ExtensibleInt)value).value; return true;
+            } else if (value is ExtensibleLong) {
+                result = ((BigInteger)((ExtensibleLong)value).Value).ToDecimal(); return true;
+            } else if (value is ExtensibleFloat) {
+                result = checked((Decimal)(Double)((ExtensibleFloat)value).value); return true;
+            } else if (value is Int64) {
+                result = (Decimal)(Int64)value; return true;
+            } else if (value is Byte) {
+                result = (Decimal)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = (Decimal)(SByte)value; return true;
+            } else if (value is Int16) {
+                result = (Decimal)(Int16)value; return true;
+            } else if (value is UInt16) {
+                result = (Decimal)(UInt16)value; return true;
+            } else if (value is UInt32) {
+                result = (Decimal)(UInt32)value; return true;
+            } else if (value is UInt64) {
+                result = (Decimal)(UInt64)value; return true;
+            } else if (value is Single) {
+                result = checked((Decimal)(Single)value); return true;
+            } else if (value is Decimal) {
+                result = (Decimal)value; return true;
+            }
+            result = default(Decimal);
             return false;
         }
 

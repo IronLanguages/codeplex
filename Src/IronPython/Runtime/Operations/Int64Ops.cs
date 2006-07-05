@@ -247,9 +247,8 @@ namespace IronPython.Runtime.Operations {
             else if (other is decimal) return CompareWorker(x, (decimal)other);
             else if (other is ulong) return CompareWorker(x, (ulong)other);
 
-            Conversion conversion;
-            double y = Converter.TryConvertToUInt64(other, out conversion);
-            if (conversion != Conversion.None) CompareWorker(x, y);
+            UInt64 y;
+            if (Converter.TryConvertToUInt64(other, out y)) return CompareWorker(x, y);
 
             return Ops.NotImplemented;
         }
@@ -266,9 +265,8 @@ namespace IronPython.Runtime.Operations {
             else if (other is decimal) return CompareWorker(x, (decimal)other);
             else if (other is ulong) return CompareWorker(x, (ulong)other);
 
-            Conversion conversion;
-            double y = Converter.TryConvertToInt64(other, out conversion);
-            if (conversion != Conversion.None) CompareWorker(x, y);
+            long y;
+            if (Converter.TryConvertToInt64(other, out y)) return CompareWorker(x, y);
 
             return Ops.NotImplemented;
         }

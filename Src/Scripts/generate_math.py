@@ -17,29 +17,6 @@ import generate
 reload(generate)
 from generate import CodeGenerator, CodeWriter
 
-BigIntFunc_One = """
-[PythonName("%(name)s")]
-public static double %(tname)s(BigInteger v0) {
-    double v0d;
-    if (v0.TryToFloat64(out v0d)) {
-        return %(tname)s(v0d);
-    }
-
-    throw Ops.OverflowError("long too large to convert to float");
-}
-"""
-BigIntFunc_Two =  """
-[PythonName("%(name)s")]
-public static double %(tname)s(BigInteger v0, BigInteger v1) {
-    double v0d, v1d;
-    if (v0.TryToFloat64(out v0d) && v1.TryToFloat64(out v1d)) {
-        return %(tname)s(v0d, v1d);
-    }
-
-    throw Ops.OverflowError("long too large to convert to float");
-}
-"""
-
 class Func:
     def __init__(self, name, args=1, cname=None):
         self.name = name
@@ -58,10 +35,6 @@ class Func:
                  (self.cname, ", ".join(args)))
         cw.exit_block()
         
-        if self.args == 2:   cw.write(BigIntFunc_Two % {'name' : self.name, 'tname': self.name.title()})
-        elif self.args == 1: cw.write(BigIntFunc_One % {'name' : self.name, 'tname': self.name.title()})
-        else:                raise Exception, "no template for %d args" % self.args
-
 #Func('fmod', 2), Func('modf'),
 #Func('frexp'),Func('hypot', 2), Func('ldexp', 2),
 

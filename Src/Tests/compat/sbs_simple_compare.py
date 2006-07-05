@@ -45,7 +45,7 @@ collection = testdata.merge_lists(
                                 testdata.list_myint,
                                 testdata.list_myfloat,
                                 testdata.list_mylong,
-#                                testdata.get_clrnumbers(),
+                                testdata.get_clrnumbers(),
                             )
                             
 collection_oldstyle = [oldstyle(x) for x in collection]

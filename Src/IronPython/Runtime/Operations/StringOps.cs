@@ -1141,12 +1141,10 @@ namespace IronPython.Runtime.Operations {
 
         private static void AppendJoin(object value, int index, StringBuilder sb) {
             string strVal;
-            Conversion conv;
 
             if ((strVal = value as string) != null) {
                 sb.Append(strVal.ToString());
-            } else if ((strVal = Converter.TryConvertToString(value, out conv)) != null &&
-                conv != Conversion.None) {
+            } else if (Converter.TryConvertToString(value, out strVal) && strVal != null) {
                 sb.Append(strVal);
             } else {
                 throw Ops.TypeError("sequence item {0}: expected string, {1} found", index.ToString(), Ops.GetDynamicType(value).__name__);
@@ -1784,17 +1782,15 @@ namespace IronPython.Runtime.Operations {
 
             internal static string CheckReplacementTuple(object res, string encodeOrDecode) {
                 bool ok = true;
-                Conversion conv;
                 string replacement = null;
                 Tuple tres = res as Tuple;
 
                 // verify the result is sane...
                 if (tres != null && tres.Count == 2) {
-                    replacement = Converter.TryConvertToString(tres[0], out conv);
-                    if (conv == Conversion.None) ok = false;
+                    if (!Converter.TryConvertToString(tres[0], out replacement)) ok = false;
                     if (ok) {
-                        Converter.TryConvertToInt32(tres[1], out conv);
-                        if (conv == Conversion.None) ok = false;
+                        int bytesSkipped;
+                        if (!Converter.TryConvertToInt32(tres[1], out bytesSkipped)) ok = false;
                     }
                 } else {
                     ok = false;

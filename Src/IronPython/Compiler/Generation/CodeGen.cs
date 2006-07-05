@@ -848,23 +848,23 @@ namespace IronPython.Compiler.Generation {
             if (paramType == typeof(void)) {
                 Emit(OpCodes.Pop);
             } else if (paramType == typeof(char)) {
-                EmitCall(typeof(NewConverter), "ConvertToChar");
+                EmitCall(typeof(Converter), "ConvertToChar");
             } else if (paramType == typeof(int)) {
-                EmitCall(typeof(NewConverter), "ConvertToInt32");
+                EmitCall(typeof(Converter), "ConvertToInt32");
             } else if (paramType == typeof(string)) {
-                EmitCall(typeof(NewConverter), "ConvertToString");
+                EmitCall(typeof(Converter), "ConvertToString");
             //} else if (paramType == typeof(long)) {
             //    EmitCall(typeof(Converter), "ConvertToInt64");
             } else if (paramType == typeof(double)) {
-                EmitCall(typeof(NewConverter), "ConvertToDouble");
+                EmitCall(typeof(Converter), "ConvertToDouble");
             } else if (paramType == typeof(bool)) {
-                EmitCall(typeof(NewConverter), "ConvertToBoolean");
+                EmitCall(typeof(Converter), "ConvertToBoolean");
             //} else if (paramType == typeof(BigInteger)) {
             //    EmitCall(typeof(Converter), "ConvertToBigInteger");
             //} else if (paramType == typeof(Complex64)) {
             //    EmitCall(typeof(Converter), "ConvertToComplex64");
             } else if (paramType == typeof(IEnumerator)) {
-                EmitCall(typeof(NewConverter), "ConvertToIEnumerator");
+                EmitCall(typeof(Converter), "ConvertToIEnumerator");
             //} else if (paramType == typeof(float)) {
             //    EmitCall(typeof(Converter), "ConvertToSingle");
             //} else if (paramType == typeof(byte)) {
@@ -880,10 +880,10 @@ namespace IronPython.Compiler.Generation {
             //} else if (paramType == typeof(ushort)) {
             //    EmitCall(typeof(Converter), "ConvertToUInt16");
             } else if (paramType == typeof(Type)) {
-                EmitCall(typeof(NewConverter), "ConvertToType");
+                EmitCall(typeof(Converter), "ConvertToType");
             } else if (typeof(Delegate).IsAssignableFrom(paramType)) {
                 EmitType(paramType);
-                EmitCall(typeof(NewConverter), "ConvertToDelegate");
+                EmitCall(typeof(Converter), "ConvertToDelegate");
                 Emit(OpCodes.Castclass, paramType);                
             } else {
                 Label end = DefineLabel();
@@ -894,12 +894,12 @@ namespace IronPython.Compiler.Generation {
                 Emit(OpCodes.Ldtoken, paramType);
                 if (paramType.IsValueType) {
                     if (paramType.IsGenericType && paramType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
-                        EmitCall(typeof(NewConverter), "ConvertToNullableType");
+                        EmitCall(typeof(Converter), "ConvertToNullableType");
                     } else {
-                        EmitCall(typeof(NewConverter), "ConvertToValueType");
+                        EmitCall(typeof(Converter), "ConvertToValueType");
                     }
                 } else {
-                    EmitCall(typeof(NewConverter), "ConvertToReferenceType");
+                    EmitCall(typeof(Converter), "ConvertToReferenceType");
                 }
                 MarkLabel(end);
 

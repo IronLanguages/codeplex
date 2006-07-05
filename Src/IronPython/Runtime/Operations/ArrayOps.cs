@@ -232,9 +232,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static object GetIndex(Array a, object index) {
-            Conversion conv;
-            int iindex = Converter.TryConvertToInt32(index, out conv);
-            if (conv != Conversion.None) {
+            int iindex;;
+            if (Converter.TryConvertToInt32(index, out iindex)) {
                 return a.GetValue(Ops.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
             }
 
@@ -260,9 +259,8 @@ namespace IronPython.Runtime.Operations {
 
             Type elm = t.GetElementType();
 
-            Conversion conv;
-            int iindex = Converter.TryConvertToInt32(index, out conv);
-            if (conv != Conversion.None) {
+            int iindex;
+            if (Converter.TryConvertToInt32(index, out iindex)) {
                 a.SetValue(Ops.ConvertTo(value, elm), Ops.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
                 return;
             }

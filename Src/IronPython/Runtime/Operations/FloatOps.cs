@@ -38,12 +38,13 @@ namespace IronPython.Runtime.Operations {
 
         [PythonName("__cmp__")]
         public virtual object Compare(object other) {
-            Conversion conv;
-            double val = Converter.TryConvertToDouble(other, out conv);
-            if (conv == Conversion.None) return Ops.NotImplemented;
-            if (val == value) return 0;
-            if (value < val) return -1;
-            return 1;
+            double val;
+            if (Converter.TryConvertToDouble(other, out val)) {
+                if (val == value) return 0;
+                if (value < val) return -1;
+                return 1;
+            }
+            return Ops.NotImplemented;
         }
 
         #region IComparable Members
@@ -61,9 +62,6 @@ namespace IronPython.Runtime.Operations {
         public object CompareTo(object other) {
             if (other == null) return 1;
 
-            double otherDbl;
-            Conversion conv;
-
             if (other is float) {
                 return FloatOps.Compare(value, (int)other);
             } else if (other is ExtensibleFloat) {
@@ -75,8 +73,8 @@ namespace IronPython.Runtime.Operations {
             } else if (other is ExtensibleInt) {
                 return FloatOps.Compare(value, (double)((ExtensibleInt)other).value);
             } else {
-                otherDbl = Converter.TryConvertToDouble(other, out conv);
-                if (conv != Conversion.None) return FloatOps.Compare(value, otherDbl);
+                double otherDbl;
+                if (Converter.TryConvertToDouble(other, out otherDbl)) return FloatOps.Compare(value, otherDbl);
             }
 
             return Ops.NotImplemented;
@@ -171,23 +169,30 @@ namespace IronPython.Runtime.Operations {
         public static object Make(DynamicType cls, object x) {
             if (cls == FloatType) {
                 if (x is string) {
-                    try {
-                        return LiteralParser.ParseFloat((string)x);
-                    } catch (FormatException) {
-                        throw Ops.ValueError("invalid literal for float()");
-                    }
+                    return ParseFloat((string)x);
                 }
-                Conversion conv;
-                object d = Converter.TryConvertToDouble(x, out conv);
-                if (conv != Conversion.None) return d;
+                if (x is char) {
+                    return ParseFloat(Ops.Char2String((char)x));
+                }
+
+                double doubleVal;
+                if (Converter.TryConvertToDouble(x, out doubleVal)) return doubleVal;
 
                 if (x is Complex64) throw Ops.TypeError("can't convert complex to float; use abs(z)");
 
-                d = Ops.Call(Ops.GetAttr(DefaultContext.Default, x, SymbolTable.ConvertToFloat));
+                object d = Ops.Call(Ops.GetAttr(DefaultContext.Default, x, SymbolTable.ConvertToFloat));
                 if (d is double) return d;
                 throw Ops.TypeError("__float__ returned non-float (type %s)", Ops.GetDynamicType(d));
             } else {
                 return cls.ctor.Call(cls, x);
+            }
+        }
+
+        private static object ParseFloat(string x) {
+            try {
+                return LiteralParser.ParseFloat(x);
+            } catch (FormatException) {
+                throw Ops.ValueError("invalid literal for float(): {0}", x);
             }
         }
 
@@ -252,9 +257,8 @@ namespace IronPython.Runtime.Operations {
             else if (other is bool) return Ops.Bool2Object((bool)other ? x == 1 : x == 0);
             else if (other is decimal) return Ops.Bool2Object(x == (double)(decimal)other);
 
-            Conversion conversion;
-            double y = Converter.TryConvertToInt64(other, out conversion);
-            if (conversion != Conversion.None) return Ops.Bool2Object(x == y);
+            double y;
+            if (Converter.TryConvertToDouble(other, out y)) return Ops.Bool2Object(x == y);
 
             object res = Ops.GetDynamicType(other).Coerce(other, x);
             if (res != Ops.NotImplemented && !(res is OldInstance)) {
@@ -288,9 +292,8 @@ namespace IronPython.Runtime.Operations {
             else if (other is bool) return (bool)other ? x == 1 : x == 0;
             else if (other is decimal) return x == (double)(decimal)other;
 
-            Conversion conversion;
-            double y = Converter.TryConvertToInt64(other, out conversion);
-            if (conversion != Conversion.None) return x == y;
+            double y;
+            if (Converter.TryConvertToDouble(other, out y)) return x == y;
 
             object res = Ops.GetDynamicType(other).Coerce(other, x);
             if (res != Ops.NotImplemented && !(res is OldInstance)) {
@@ -632,7 +635,7 @@ namespace IronPython.Runtime.Operations {
                 BigInteger bigself = BigInteger.Create(self);
                 if (bigself == bi) {
                     double mod = self % 1;
-                    if (mod == 0) return 0;                    
+                    if (mod == 0) return 0;
                     if (mod > 0) return 1;
                     return -1;
                 }
@@ -641,25 +644,24 @@ namespace IronPython.Runtime.Operations {
             }
 
             // everything else can be held by a double.
-            Conversion conv;
-            double val = Converter.TryConvertToDouble(other, out conv);
-            if (conv == Conversion.None) {
+            double val;
+            if (Converter.TryConvertToDouble(other, out val)) {
+                if (val == self) return 0;
+                if (self < val) return -1;
+                return 1;
+            } else {
                 object res = Ops.GetDynamicType(other).Coerce(other, self);
                 if (res != Ops.NotImplemented && !(res is OldInstance)) {
                     return Ops.Compare(((Tuple)res)[1], ((Tuple)res)[0]);
                 }
 
-                Complex64 c64 = Converter.TryConvertToComplex64(other, out conv);
-                if (conv != Conversion.None) {
+                Complex64 c64;
+                if (Converter.TryConvertToComplex64(other, out c64)) {
                     return ComplexOps.TrueCompare(c64, new Complex64(self)) * -1;
                 }
 
                 return Ops.NotImplemented;
             }
-            
-            if (val == self) return 0;
-            if (self < val) return -1;
-            return 1;
         }
 
         internal static object DivMod(double x, double y) {

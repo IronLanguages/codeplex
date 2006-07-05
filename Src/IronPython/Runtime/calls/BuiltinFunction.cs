@@ -568,8 +568,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             public MethodBase method;
             public object[] arguments;
             public object instance;
-            public Conversion[] conversions;
-            public Conversion instConversion;
         }
 
         #endregion
@@ -727,8 +725,8 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                 ReflectedType declType = DeclaringType;
                 if (!selfType.IsSubclassOf(declType)) {
                     // if a conversion exists to the type allow the call.
-                    Conversion conv;
-                    if (Converter.TryConvert(self, declType.type, out conv) == null) {
+                    object converted;
+                    if (!Converter.TryConvert(self, declType.type, out converted) || converted == null) {
                         throw Ops.TypeError("descriptor {0} requires a {1} object but received a {2}",
                             Ops.Repr(Name),
                             Ops.Repr(DeclaringType.Name),

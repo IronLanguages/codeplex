@@ -223,19 +223,17 @@ namespace IronPython.Modules {
         }
 
         private static long GetDateTimeFromObject(object seconds) {
-            Conversion conv;
-            long intSeconds = Converter.TryConvertToInt32(seconds, out conv);
-            if (conv == Conversion.None) {
-                double dblVal = Converter.TryConvertToDouble(seconds, out conv);
-
-                if (conv != Conversion.None) {
+            int intSeconds;
+            if (Converter.TryConvertToInt32(seconds, out intSeconds)) {
+                return intSeconds;
+            } else {
+                double dblVal;
+                if (Converter.TryConvertToDouble(seconds, out dblVal)) {
                     if (dblVal > Int64.MaxValue || dblVal < Int64.MinValue) throw Ops.ValueError("unreasonable date/time");
-
-                    intSeconds = (long)dblVal;
-                } else
-                    throw Ops.TypeError("expected int, got {0}", Ops.GetDynamicType(seconds));
+                    return (long)dblVal;
+                }
+                throw Ops.TypeError("expected int, got {0}", Ops.GetDynamicType(seconds));
             }
-            return intSeconds;
         }
 
         enum FormatInfoType {

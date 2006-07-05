@@ -41,9 +41,8 @@ namespace IronPython.Modules {
 
         private static Tuple DoDecode(Encoding encoding, object input, string errors, bool fAlwaysThrow) {
             // input should be character buffer of some form...
-            Conversion conv;
-            string res = Converter.TryConvertToString(input, out conv);
-            if (conv != Conversion.None) {
+            string res;
+            if (Converter.TryConvertToString(input, out res)) {
                 int preOffset = CheckPreamble(encoding, res);
 
                 byte[] bytes = new byte[res.Length - preOffset];
@@ -100,9 +99,8 @@ namespace IronPython.Modules {
 
         private static Tuple DoEncode(Encoding encoding, object input, string errors, bool includePreamble) {
             // input should be some Unicode object
-            Conversion conv;
-            string res = Converter.TryConvertToString(input, out conv);
-            if (conv != Conversion.None) {
+            string res;
+            if (Converter.TryConvertToString(input, out res)) {
                 StringBuilder sb = new StringBuilder();
 
                 encoding = (Encoding)encoding.Clone();

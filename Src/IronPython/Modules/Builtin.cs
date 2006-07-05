@@ -156,7 +156,6 @@ namespace IronPython.Modules {
         [PythonName("coerce")]
         [Documentation("coerce(x, y) -> (x1, y1)\n\nReturn a tuple consisting of the two numeric arguments converted to\na common type. If coercion is not possible, raise TypeError.")]
         public static object Coerce(object x, object y) {
-            Conversion conversion;
             object converted;
 
             if (x == null && y == null) {
@@ -164,14 +163,12 @@ namespace IronPython.Modules {
             }
 
             if (x != null) {
-                converted = Converter.TryConvert(y, x.GetType(), out conversion);
-                if (conversion < Conversion.Truncation) {
+                if (Converter.TryConvert(y, x.GetType(), out converted)) {
                     return Tuple.MakeTuple(x, converted);
                 }
             }
             if (y != null) {
-                converted = Converter.TryConvert(x, y.GetType(), out conversion);
-                if (conversion < Conversion.Truncation) {
+                if (Converter.TryConvert(x, y.GetType(), out converted)) {
                     return Tuple.MakeTuple(converted, y);
                 }
             }

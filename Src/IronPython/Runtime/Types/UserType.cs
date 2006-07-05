@@ -38,10 +38,10 @@ namespace IronPython.Runtime.Types {
 
     [Flags]
     enum UserTypeFlags {
-        None         = 0x0000,
-        HasSlots     = 0x0001,
+        None = 0x0000,
+        HasSlots = 0x0001,
         HasFinalizer = 0x0002,
-        HasWeakRef   = 0x0004,
+        HasWeakRef = 0x0004,
     }
 
     [DebuggerDisplay("UserType: {ToString()}")]
@@ -79,7 +79,7 @@ namespace IronPython.Runtime.Types {
         public static object GetPropertyHelper(object prop, object instance, SymbolId name) {
             IDescriptor desc = prop as IDescriptor;
             if (desc == null) {
-                throw Ops.TypeError("Expected property for {0}, but found {1}", 
+                throw Ops.TypeError("Expected property for {0}, but found {1}",
                     name.GetString(), Ops.GetDynamicType(prop).__name__);
             }
             return desc.GetAttribute(instance, null);
@@ -88,7 +88,7 @@ namespace IronPython.Runtime.Types {
         public static void SetPropertyHelper(object prop, object instance, object newValue, SymbolId name) {
             IDataDescriptor desc = prop as IDataDescriptor;
             if (desc == null) {
-                throw Ops.TypeError("Expected settable property for {0}, but found {1}", 
+                throw Ops.TypeError("Expected settable property for {0}, but found {1}",
                     name.GetString(), Ops.GetDynamicType(prop).__name__);
             }
             desc.SetAttribute(instance, newValue);
@@ -100,7 +100,7 @@ namespace IronPython.Runtime.Types {
         #region Constructors
 
         protected UserType(string name, Tuple bases, IDictionary<object, object> dict)
-            : base(NewTypeMaker.GetNewType(name, bases, dict))  {
+            : base(NewTypeMaker.GetNewType(name, bases, dict)) {
             ctor = BuiltinFunction.MakeMethod(name, type.GetConstructors(), FunctionType.Function);
 
             //List<MethodInfo> ctors = new List<MethodInfo>();
@@ -238,7 +238,7 @@ namespace IronPython.Runtime.Types {
 
             Debug.Assert(NewTypeMaker.IsInstanceType(type));
 
-            if (HasSlots) return type;            
+            if (HasSlots) return type;
             return type.BaseType;
         }
 
@@ -292,12 +292,10 @@ namespace IronPython.Runtime.Types {
             if (__repr__F.IsObjectMethod()) {
                 return self.ToString();
             } else {
-                Conversion conv;
                 object ret = __repr__F.Invoke(self);
-                string strRet = Converter.TryConvertToString(ret, out conv);
-                if (ret == null || conv == Conversion.None) throw Ops.TypeError("__repr__ returned non-string type ({0})", Ops.GetDynamicType(ret).__name__);
-
-                return strRet;
+                string strRet;
+                if (ret != null && Converter.TryConvertToString(ret, out strRet)) return strRet;
+                throw Ops.TypeError("__repr__ returned non-string type ({0})", Ops.GetDynamicType(ret).__name__);
             }
         }
 
@@ -495,8 +493,8 @@ namespace IronPython.Runtime.Types {
             }
 
             if (name == SymbolTable.Class) { ret = this; return true; }
-            if (name == SymbolTable.WeakRef && !HasSlots) {                 
-                ret = null; return true; 
+            if (name == SymbolTable.WeakRef && !HasSlots) {
+                ret = null; return true;
             }
 
             if (!__getattr__F.IsObjectMethod()) {
@@ -571,7 +569,7 @@ namespace IronPython.Runtime.Types {
             NamespaceDictionary ret = NamespaceDictionary.Make(symNames, bases);
 
             foreach (KeyValuePair<object, object> kv in dict) {
-                PythonFunction func = kv.Value as PythonFunction;                
+                PythonFunction func = kv.Value as PythonFunction;
                 if (func != null) {
                     if (func.Name != "__new__") {
                         ret.AsObjectKeyedDictionary()[kv.Key] = new Method(func, null, this);
@@ -816,11 +814,9 @@ namespace IronPython.Runtime.Types {
             object ret;
             UserType ut = o.GetDynamicType() as UserType;
             if (ut.TryLookupBoundSlot(DefaultContext.Default, o, SymbolTable.Repr, out ret)) {
-                Conversion conv;
-                string strRet = Converter.TryConvertToString(Ops.Call(Ops.GetDescriptor(ret, o, ut)), out conv);
-                if (ret == null || conv == Conversion.None) throw Ops.TypeError("__repr__ returned non-string type ({0})", Ops.GetDynamicType(ret).__name__);
-
-                return strRet;
+                string strRet;
+                if (ret != null && Converter.TryConvertToString(Ops.Call(Ops.GetDescriptor(ret, o, ut)), out strRet)) return strRet;
+                throw Ops.TypeError("__repr__ returned non-string type ({0})", Ops.GetDynamicType(ret).__name__);
             }
 
             return DynamicType.ReprMethod(o).ToString();
@@ -835,7 +831,6 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        
 
         #region IWeakReferenceable Members
 
@@ -856,7 +851,7 @@ namespace IronPython.Runtime.Types {
             ((IWeakReferenceable)this).SetWeakRef(value);
         }
 
-        #endregion        
+        #endregion
     }
 
     public class BigNamespaceDictionary : NamespaceDictionary {

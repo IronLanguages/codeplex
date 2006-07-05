@@ -722,10 +722,8 @@ namespace IronPython.Modules {
             }
 
             private int GetGroupIndex(object group) {
-                Conversion conv;
                 int grpIndex;
-                grpIndex = Converter.TryConvertToInt32(group, out conv);
-                if (conv == Conversion.None) {
+                if (!Converter.TryConvertToInt32(group, out grpIndex)) {
                     grpIndex = pattern.re.GroupNumberFromName(ValidateString(group, "group"));
                 }
                 if (grpIndex < 0 || grpIndex >= m.Groups.Count) {

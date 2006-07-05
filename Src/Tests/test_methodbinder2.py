@@ -33,7 +33,7 @@ class PT_int_old:
 class PT_int_new(object): 
     def __int__(self): return 300
     
-UInt32Min = System.UInt32.MaxValue
+UInt32Max = System.UInt32.MaxValue
 Byte10   = System.Byte.Parse('10')
 SBytem10 = System.SByte.Parse('-10')
 Int1610  = System.Int16.Parse('10')
@@ -95,20 +95,27 @@ def _try_arg(target, arg, mapping, funcOverflowError, funcValueError):
         print funcname, 
         func = getattr(target, funcname)
 
-        if funcname in mapping.keys():
+        try:
             _my_call(func, arg)
-            left, right = Flag.Value, mapping[funcname]
-            if left != right: 
-                Fail("left %s != right %s when func %s on arg %s" % (left, right, funcname, arg))
-            Flag.Value = -99           # reset 
-        else:
+        except Exception, e:
             if funcname in funcOverflowError: expectError = OverflowError
             elif funcname in funcValueError:  expectError = ValueError
             else: expectError = TypeError
+
+            if funcname in mapping.keys():  # No exception expected:
+                Fail("unexpected exception %s when func %s with arg %s (%s)\n%s" % (e, Flag.Value, funcname, arg, type(arg), func.__doc__))
+
+            if not isinstance(e, expectError):
+                Fail("expect '%s', but got '%s' (flag %s) when func %s with arg %s (%s)\n%s" % (expectError, e, Flag.Value, funcname, arg, type(arg), func.__doc__))
+        else:            
+            if not funcname in mapping.keys(): # Expecting exception
+                Fail("expect %s, but got no exception (flag %s) when func %s with arg %s (%s)\n%s" % (expectError, Flag.Value, funcname, arg, type(arg), func.__doc__))
             
-            try: _my_call(func, arg)
-            except expectError: pass
-            else: Fail("expect %s, but got no exception (flag %s) when func %s with arg %s" % (expectError, Flag.Value, funcname, arg))
+            left, right = Flag.Value, mapping[funcname]
+            if left != right: 
+                Fail("left %s != right %s when func %s on arg %s (%s)\n%s" % (left, right, funcname, arg, type(arg), func.__doc__))
+            Flag.Value = -99           # reset 
+
     print 
     
 def test_other_concerns():
@@ -297,7 +304,7 @@ def test_arg_Collections():
 (    tupleInt, _merge(_first('M102 '), _second('M100 M101 M103 M104 ')), [], [], ),
 (     listInt, _merge(_first('M102 '), _second('M100 M103 ')), [], [], ),
 (  tupleLong1, _merge(_first('M102 '), _second('M100 M103 ')), [], [], ),
-(  tupleLong2, _merge(_first('M102 '), _second('M100 M103 ')), [], [], ),
+(  tupleLong2, _merge(_first('M102 '), _second('M100 M103 ')), ['M101', 'M104', ], [], ),
 (   arrayByte, _first('M101 '), [], [], ),
 (    arrayObj, _merge(_first('M101 M102 '), _second('M100 M103 ')), [], [], ),
     ]:
@@ -310,16 +317,16 @@ def test_arg_Boolean():
 (        True, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
 (       False, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
 (         100, _second('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(  myint(100), _merge(_first('M100 '), _second('M106 M108 M110 M111 M112 ')), [], [], ),
-(        -100, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), [], [], ),
-(   UInt32Min, _second('M105 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(        200L, _second('M101 M103 M104 M105 M106 M107 M108 M110 M111 M112 '), [], [], ),
-(       -200L, _second('M104 M106 M108 M110 M111 M112 '), [], [], ),
+(  myint(100), _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
+(        -100, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), ['M101', 'M103', 'M105', 'M107'], [], ),
+(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), ['M101', 'M102', 'M103', 'M104', 'M106', ], [], ),
+(        200L, _second('M101 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), ['M102', ], [], ),
+(       -200L, _second('M104 M106 M108 M109 M110 M111 M112 '), ['M101', 'M102', 'M103', 'M105', 'M107', ], [], ),
 (      Byte10, _second('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(    SBytem10, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), [], [], ),
+(    SBytem10, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), ['M101', 'M102', 'M103', 'M105', 'M107', ], [], ),
 (     Int1610, _second('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(    Int16m20, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), [], [], ),
-(       12.34, _second('M106 M110 M111 M112 '), [], [], ),
+(    Int16m20, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), ['M101', 'M102', 'M103', 'M105', 'M107', ], [], ),
+(       12.34, _second('M106 M109 M110 M111 M112 '), [], [], ),
     ]:
         _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
 
@@ -330,15 +337,15 @@ def test_arg_Byte():
 (        True, _second('M100 M106 M112 '), [], [], ),
 (       False, _second('M100 M106 M112 '), [], [], ),
 (         100, _merge(_first('M100 M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(  myint(100), _second('M106 M108 M110 M111 M112 '), [], [], ),
-(        -100, _second('M106 M108 M109 M110 M111 M112 '), [], [], ),
-(   UInt32Min, _second('M105 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), [], [], ),
-(       -200L, _second('M108 M112 '), [], [], ),
+(  myint(100), _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
+(        -100, _second('M106 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
+(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
+(        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), ['M100', ], [], ),
+(       -200L, _second('M108 M112 '), ['M100', 'M101', ], [], ),
 (      Byte10, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(    SBytem10, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), [], [], ),
+(    SBytem10, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
 (     Int1610, _merge(_first('M100 M101 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(    Int16m20, _second('M104 M106 M108 M109 M110 M111 M112 '), [], [], ),
+(    Int16m20, _second('M104 M106 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
 (       12.34, _second('M111 M112 '), [], [], ),
     ]:
         _try_arg(target, arg, mapping, funcOverflowError, funcValueError)
@@ -350,9 +357,9 @@ def test_arg_Int16():
 (        True, _second('M100 M106 M112 '), [], [], ),
 (       False, _second('M100 M106 M112 '), [], [], ),
 (         100, _merge(_first('M100 M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(  myint(100), _second('M106 M108 M110 M111 M112 '), [], [], ),
+(  myint(100), _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
 (        -100, _merge(_first('M100 M101 '), _second('M106 M108 M109 M110 M111 M112 ')), [], [], ),
-(   UInt32Min, _second('M105 M107 M108 M109 M110 M111 M112 '), [], [], ),
+(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
 (        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), [], [], ),
 (       -200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), [], [], ),
 (      Byte10, _merge(_first('M100 M101 M103 M106 M108 M109 M110 M111 M112 '), _second('M102 ')), [], [], ),
@@ -372,7 +379,7 @@ def test_arg_Int32():
 (         100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
 (  myint(100), _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
 (        -100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
-(   UInt32Min, _second('M106 M107 M108 M109 M110 M111 M112 '), [], [], ),
+(   UInt32Max, _second('M106 M107 M108 M109 M110 M111 M112 '), ['M100', 'M101', ], [], ),
 (        200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), [], [], ),
 (       -200L, _merge(_first('M100 M101 '), _second('M108 M112 ')), [], [], ),
 (      Byte10, _merge(_first('M100 M101 M103 M108 M109 M110 M111 M112 '), _second('M102 M104 M105 ')), [], [], ),
@@ -392,7 +399,7 @@ def test_arg_Double():
 (         100, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), [], [], ),
 (  myint(100), _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), [], [], ),
 (        -100, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), [], [], ),
-(   UInt32Min, _merge(_first('M100 M101 M102 M103 M104 M105 M107 M112 '), _second('M106 M108 M109 M111 ')), [], [], ),
+(   UInt32Max, _merge(_first('M100 M101 M102 M103 M104 M105 M107 M112 '), _second('M106 M108 M109 M111 ')), [], [], ),
 (        200L, _merge(_first('M100 M101 '), _second('M109 M112 ')), [], [], ),
 (       -200L, _merge(_first('M100 M101 '), _second('M109 M112 ')), [], [], ),
 (      Byte10, _merge(_first('M100 M101 M103 M112 '), _second('M102 M104 M105 M106 M107 M108 M109 M111 ')), [], [], ),

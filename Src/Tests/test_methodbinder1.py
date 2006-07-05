@@ -23,7 +23,10 @@ from lib.type_util import *
 load_iron_python_test()
 from IronPythonTest.BinderTest import *
 
-myint1, myint2, mylong1, mylong2, myfloat1, myfloat2, mycomplex1 = myint(20), myint(-20), mylong(3), mylong(-4), myfloat(4.5), myfloat(-4.5), mycomplex(3)
+myint1,     myint2      = myint(20),    myint(-20)
+mylong1,    mylong2     = mylong(3),    mylong(-4)
+myfloat1,   myfloat2    = myfloat(4.5), myfloat(-4.5)
+mycomplex1              = mycomplex(3)
 
 funcs = '''
 M100   M201   M202   M203   M204   M205   M301   M302   M303   M304
@@ -50,7 +53,6 @@ func2arg = dict(zip(funcs, args))
 
 TypeE = TypeError
 OverF = OverflowError
-ValuE = ValueError
 
 def _get_funcs(args): return [arg2func[x] for x in args.split()]
 def _self_defined_method(name): return len(name) == 4 and name[0] == "M"
@@ -71,86 +73,99 @@ def _my_call(func, arg):
         func(arg)
     
 def _helper(func, positiveArgs, flagValue, negativeArgs, exceptType):
-    print func
     for arg in positiveArgs:
-        _my_call(func, arg)
-                    
-        AreEqual(Flag.Value, flagValue)
-        Flag.Value = -188
+        try:
+            _my_call(func, arg)
+        except Exception, e:
+            Fail("unexpected exception %s when calling %s with %s\n%s" % (func, arg, func.__doc__))
+        else:
+            AreEqual(Flag.Value, flagValue)
+            Flag.Value = -188
     
     for arg in negativeArgs:
-        try:   _my_call(func, arg)
-        except exceptType: pass
-        else:  Fail("func %s on args %s" % (func, args))
+        try:
+            _my_call(func, arg)
+        except Exception, e:
+            if not isinstance(e, exceptType):
+                Fail("expected '%s', but got '%s' when calling %s with %s\n%s" % (exceptType, e, func, arg, func.__doc__))
+        else:
+            Fail("expected exception (but didn't get one) when calling func %s on args %s\n%s" % (func, arg, func.__doc__))
 
 def test_this_matrix():
+    '''
+    This will test the full matrix.
+    To print the matrix, enable the following flag
+    '''
+    print_the_matrix = False
+
+
     funcnames =     "M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400".split()
     matrix = (   
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-(        "SByteMax", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(         "ByteMax", True,  TypeE, True,  True,  True,  TypeE, TypeE, True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(        "Int16Max", True,  TypeE, True,  True,  True,  TypeE, TypeE, True,  True,  True,  TypeE, True,  True,  True,  TypeE, True,  True,  ),
-(       "UInt16Max", True,  TypeE, True,  True,  True,  TypeE, TypeE, TypeE, True,  True,  TypeE, True,  True,  True,  TypeE, True,  True,  ),
-(          "intMax", True,  True,  True,  True,  True,  TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, True,  True,  TypeE, True,  True,  ),
-(       "UInt32Max", TypeE, TypeE, True,  True,  True,  TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, True,  True,  TypeE, True,  True,  ),
-(        "Int64Max", TypeE, TypeE, True,  True,  True,  TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, True,  TypeE, True,  True,  ),
-(       "UInt64Max", TypeE, TypeE, True,  True,  True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, True,  TypeE, True,  True,  ),
-(      "decimalMax", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(       "SingleMax", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(        "floatMax", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
+(        "SByteMax", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(         "ByteMax", True,  True,  True,  True,  True,  TypeE, OverF, True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(        "Int16Max", True,  True,  True,  True,  True,  TypeE, OverF, True,  True,  True,  OverF, True,  True,  True,  TypeE, True,  True,  ),
+(       "UInt16Max", True,  True,  True,  True,  True,  TypeE, OverF, OverF, True,  True,  OverF, True,  True,  True,  TypeE, True,  True,  ),
+(          "intMax", True,  True,  True,  True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, True,  True,  TypeE, True,  True,  ),
+(       "UInt32Max", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, True,  True,  TypeE, True,  True,  ),
+(        "Int64Max", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, OverF, True,  TypeE, True,  True,  ),
+(       "UInt64Max", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, True,  TypeE, True,  True,  ),
+(      "decimalMax", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(       "SingleMax", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, OverF, True,  ),
+(        "floatMax", OverF, OverF, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, OverF, TypeE, TypeE, TypeE, TypeE, TypeE, OverF, True,  ),
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-(        "SByteMin", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(         "ByteMin", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(        "Int16Min", True,  TypeE, True,  True,  True,  TypeE, TypeE, True,  True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(       "UInt16Min", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(          "intMin", True,  True,  True,  True,  True,  TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(       "UInt32Min", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(        "Int64Min", TypeE, TypeE, True,  True,  True,  TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(       "UInt64Min", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(      "decimalMin", OverF, TypeE, True , OverF, True,  TypeE, TypeE, TypeE, OverF, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True , True,  ), 
-(       "SingleMin", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(        "floatMin", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
+(        "SByteMin", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(         "ByteMin", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(        "Int16Min", True,  True,  True,  True,  True,  TypeE, OverF, True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(       "UInt16Min", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(          "intMin", True,  True,  True,  True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(       "UInt32Min", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(        "Int64Min", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(       "UInt64Min", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(      "decimalMin", OverF, OverF, True , True,  True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, True , True,  ), 
+(       "SingleMin", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, OverF, True,  ),
+(        "floatMin", OverF, OverF, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, OverF, TypeE, TypeE, TypeE, TypeE, TypeE, OverF, True,  ),
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-(    "SBytePlusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(     "BytePlusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(    "Int16PlusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(   "UInt16PlusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(    "SBytePlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(     "BytePlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(    "Int16PlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(   "UInt16PlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (      "intPlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(            myint1, True,  TypeE, True,  True,  True,  TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, True,  True,  TypeE, TypeE, True,  ),
-(   "UInt32PlusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(    "Int64PlusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(   "UInt64PlusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(  "decimalPlusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(   "SinglePlusOne", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(    "floatPlusOne", True,  TypeE, True,  True,  True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(          myfloat1, True,  TypeE, True,  True,  True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
+(            myint1, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(   "UInt32PlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(    "Int64PlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(   "UInt64PlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(  "decimalPlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(   "SinglePlusOne", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
+(    "floatPlusOne", True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
+(          myfloat1, True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-(   "SByteMinusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(   "Int16MinusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(     "intMinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(            myint2, True,  TypeE, True,  True,  True,  TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, True,  TypeE, TypeE, TypeE, True,  ),
-(   "Int64MinusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-( "decimalMinusOne", True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(  "SingleMinusOne", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(   "floatMinusOne", True,  TypeE, True,  True,  True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(          myfloat2, True,  TypeE, True,  True,  True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
+(   "SByteMinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(   "Int16MinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(     "intMinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(            myint2, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(   "Int64MinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+( "decimalMinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(  "SingleMinusOne", TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
+(   "floatMinusOne", True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
+(          myfloat2, True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
 ##################################################   pass in bool   #########################################################
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-(              True, True,  TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(             False, True,  TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
+(              True, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(             False, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 ##################################################  pass in BigInt #########################################################
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
-(               10L, True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, TypeE, True,  ),
-(              -10L, True,  TypeE, True,  True,  True,  TypeE, True,  True,  True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-( 1234567890123456L, OverF, TypeE, True , True,  True,  TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, True,  TypeE, TypeE, True,  ),        
-(           mylong1, True,  TypeE, True,  True,  True,  TypeE, True,  True,  TypeE, True,  True,  ValuE, True,  True,  TypeE, TypeE, True,  ),
-(           mylong2, True,  TypeE, True,  True,  True,  TypeE, True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
+(               10L, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(              -10L, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+( 1234567890123456L, OverF, OverF, True , True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, OverF, True,  TypeE, True,  True,  ),        
+(           mylong1, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(           mylong2, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 ##################################################  pass in Complex #########################################################
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
@@ -160,54 +175,54 @@ def test_this_matrix():
 ##################################################  pass in char    #########################################################
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                          int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-(     System.Char.Parse('A'), True,  TypeE, True,  True,  True,  True,  TypeE, TypeE, True,  True,  TypeE, True,  True,  True,  True,  True,  True,  ),
+(     System.Char.Parse('A'), TypeE, TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  True,  ),
 ##################################################  pass in float   #########################################################
 ####   single/double becomes Int32, but this does not apply to other primitive types
 ####                          int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-(System.Single.Parse("8.01"), TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(System.Single.Parse("-8.1"), TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(System.Double.Parse("10.2"), True,  TypeE, True,  True,  True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-(System.Double.Parse("-1.8"), True,  TypeE, True,  True,  True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
+(System.Single.Parse("8.01"), TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
+(System.Single.Parse("-8.1"), TypeE, TypeE, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
+(System.Double.Parse("10.2"), True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
+(System.Double.Parse("-1.8"), True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
     )
     
     for scenario in matrix: 
         if isinstance(scenario[0], str):    
             value = clr_numbers[scenario[0]]
-            #print '(%18s,' % ('"'+ scenario[0] +'"'),
+            if print_the_matrix: print '(%18s,' % ('"'+ scenario[0] +'"'),
         else:                               
             value = scenario[0]
-            #print '(%18s,' % value ,
+            if print_the_matrix: print '(%18s,' % value ,
         
         for i in range(len(funcnames)):
             funcname = funcnames[i]
             func = getattr(target, funcname)
             
-            # to help generate the matrix: 
-            # uncomment those print statements, un-quote the following 7 lines, 
-            # and quote the next 10 or so lines
-            # 
-            '''
-            try:
-                func(value)
-                print "True, ",
-            except TypeError:
-                print "TypeE,",
-            except ValueError:
-                print "ValuE,",
-            '''    
-            
-            if scenario[i+1] not in [TypeE, OverF, ValuE]:
-                func(value)
-                left = Flag.Value
-                right = int(funcname[1:])
-                if left != right: 
-                    Fail("left %s != right %s when func %s on arg %s" % (left, right, funcname, scenario[0]))
-                Flag.Value = -99           # reset 
-            else: 
-                try:   func(value)
-                except scenario[i+1]: pass
-                else:  Fail("expect %s, but got none when func %s on arg %s" % (scenario[i+1], funcname, scenario[0]))
-        #print "),"
+            if print_the_matrix:
+                try:
+                    func(value)
+                    print "True, ",
+                except TypeError:
+                    print "TypeE,",
+                except OverflowError:
+                    print "OverF,",
+                print "),"
+            else:
+                try:
+                    func(value)
+                except Exception,e:
+                    if scenario[i+1] not in [TypeE, OverF]:
+                        Fail("unexpected exception %s, when func %s on arg %s (%s)\n%s" % (e, funcname, scenario[0], type(value), func.__doc__))
+                    if isinstance(e, scenario[i+1]): pass
+                    else: Fail("expect %s, but got %s when func %s on arg %s (%s)\n%s" % (scenario[i+1], e, funcname, scenario[0], type(value), func.__doc__))
+                else:
+                    if scenario[i+1] in [TypeE, OverF]:
+                        Fail("expect %s, but got none when func %s on arg %s (%s)\n%s" % (scenario[i+1], funcname, scenario[0], type(value), func.__doc__))
+
+                    left = Flag.Value ; Flag.Value = -99           # reset
+
+                    right = int(funcname[1:])
+                    if left != right: 
+                        Fail("left %s != right %s when func %s on arg %s (%s)\n%s" % (left, right, funcname, scenario[0], type(value), func.__doc__))
 
     # these funcs should behavior same as M201(Int32)  
     # should have NullableInt too ?
@@ -215,9 +230,9 @@ def test_this_matrix():
         for scenario in matrix: 
             if isinstance(scenario[0], str): value = clr_numbers[scenario[0]]
             else: value = scenario[0]
-            
+
             func = getattr(target, funcname)
-            if scenario[1] not in [TypeE, OverF, ValuE]:
+            if scenario[1] not in [TypeE, OverF]:
                 func(value)
                 left = Flag.Value
                 right = int(funcname[1:])
@@ -263,8 +278,8 @@ def test_user_defined_conversion():
 
     ### 1. not work for Nullable<Int32> required (?)
     ### 2. (out int): should pass in nothing
-    ###      int  long  params int           ref int   defVal  int+defVal
-    works = 'M201 M203  M600          M620   M700      M710    M715'
+    ###      int  params int int?          ref int   defVal  int+defVal
+    works = 'M201 M600       M680     M620   M700      M710    M715'
     for fn in works.split():
         _helper(getattr(target, fn), [cp1, cp2, ], int(fn[1:]), [cp3, ], TypeError)
     
@@ -295,7 +310,7 @@ def test_pass_in_derived_python_types():
     _helper(target.M411, [C6(), cp2, cp4, ], 411, [C3(), object(), C1(), cp1, cp3,], TypeError)
     
 def test_nullable_int():
-    _helper(target.M680, [None, 100, ], 680, [(), 100L, 3+1j, System.Byte.MaxValue, System.UInt32.MinValue, myint1, mylong2, 3.6], TypeError)
+    _helper(target.M680, [None, 100, 100L, System.Byte.MaxValue, System.UInt32.MinValue, myint1, mylong2, 3.6, ], 680, [(), 3+1j], TypeError)
     
 def test_out_int():
     _helper(target.M701, [], 701, [1, 10L, None, System.Byte.Parse('3')], TypeError)    # not allow to pass in anything
@@ -322,9 +337,11 @@ def test_collections():
     _helper(target.M653, [arrayInt, arrayObj, arrayByte, listInt, tupleInt, tupleLong1, tupleLong2, ], 653, [], TypeError)
     
     # Int32[]
-    _helper(target.M500, [arrayInt, tupleInt, ], 500, [listInt, arrayByte, arrayObj, tupleLong1, tupleLong2, ], TypeError)
+    _helper(target.M500, [arrayInt, tupleInt, ], 500, [listInt, arrayByte, arrayObj, tupleLong1, ], TypeError)
+    _helper(target.M500, [], 500, [tupleLong2, ], OverflowError)
     # params Int32[]
-    _helper(target.M600, [arrayInt, tupleInt, ], 600, [listInt, arrayByte, arrayObj, tupleLong1, tupleLong2, ], TypeError)
+    _helper(target.M600, [arrayInt, tupleInt, ], 600, [listInt, arrayByte, arrayObj, tupleLong1, ], TypeError)
+    _helper(target.M600, [], 600, [tupleLong2, ], OverflowError)
     
     # Int32, params Int32[]
     _helper(target.M620, [(10, 10), (10L, 10), (10L, 10L), (10, 10L), (10, arrayInt), (10, (10, 20)), ], 620, [(10, [10, 20]), ], TypeError)
@@ -424,7 +441,7 @@ def test_other_concern():
     AreEqual(Flag.Value, 200); Flag.Value = 99
     target.M200[long](100)
     AreEqual(Flag.Value, 200); Flag.Value = 99
-    AssertError(TypeError, target.M200[System.Byte], 300)
+    AssertError(OverflowError, target.M200[System.Byte], 300)
     AssertError(OverflowError, target.M200[int], 12345678901234)
     
     # what does means when passing in None 

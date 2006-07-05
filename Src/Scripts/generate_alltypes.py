@@ -15,82 +15,84 @@
 
 from generate import CodeGenerator
 import operator
+import clr
 
-class TypeInfo:
-    def __init__(self, name, ops, min, max, gen, fp, next):
+from System import Boolean, SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Double, Decimal
+
+class ClrType:
+    def __init__(self, type, ops, cast, **kw):
+        self.name = clr.GetClrType(type).Name
+        self.ops  = ops
+        self.min  = cast(type.MinValue)
+        self.max  = cast(type.MaxValue)
+        self.size = self.max - self.min
+        self.signed = self.min < 0
+        self.fp = cast == float
+        self.__dict__.update(kw)
+        self.rvalue = "(%s)right" % self.name
+
+class XType:
+    def __init__(self, name, ct, **kw):
         self.name = name
-        self.ops = ops
-        self.min = min
-        self.max = max
-        self.gen = gen
-        self.fp  = fp
-        self.next = next            # use this type as next order operation type
+        self.ops = ct.ops
+        self.min = ct.min
+        self.max = ct.max
+        self.size = ct.size
+        self.fp = ct.fp
+        self.__dict__.update(kw)
 
-        self.signed = min < 0
-        self.size = max - min
+class CustomType:
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
 
-    def __le__(self, other):
-        if type(self.min) == complex:
-            return type(other.min) == complex
-        elif type(other.min) == complex:
-            return True
-        return self.min >= other.min and self.max <= other.max
-
-
-# these are not actual limits, they just need to be bigger than any other integer type and bigger than single
-min_bigint = -40000000000000000000000000000000000000000
-max_bigint =  40000000000000000000000000000000000000000
+def smaller(t1, t2):
+    "True iff t1 <= t2"
+    if t1 in complex_types:
+        return t2 in complex_types
+    elif t2 in complex_types:
+        return True
+    return t1.min >= t2.min and t1.max <= t2.max
 
 # types
-#                      name         ops,        min                               max                             gen     float  next
-bool_type   = TypeInfo('Boolean',    "Bool",     0,                               1,                              False,  False, True)
-byte_type   = TypeInfo('Byte' ,      "Byte",     0,                               255,                            True,   False, True)
-sbyte_type  = TypeInfo('SByte',      "SByte",   -128,                             127,                            True,   False, True)
-int16_type  = TypeInfo('Int16',      "Int16",   -32768,                           32767,                          True,   False, True)
-uint16_type = TypeInfo('UInt16',     "UInt16",   0,                               65535,                          True,   False, True)
-int32_type  = TypeInfo('Int32',      "Int",     -2147483648,                      2147483647,                     False,  False, True)
-uint32_type = TypeInfo('UInt32',     "UInt32",   0 ,                              4294967295,                     True,   False, True)
-int64_type  = TypeInfo('Int64',      "Int64",   -9223372036854775808,             9223372036854775807,            False,  False, True)
-uint64_type = TypeInfo('UInt64',     "UInt64",   0,                               18446744073709551615,           True,   False, True)
+bool_type   = CustomType(name="Boolean", ops="Bool", min=0, max=1, size=1, signed=False, fp=False, next=True, rvalue="((Boolean)right ? (%(left_type)s)1 : (%(left_type)s)0)")
 
-single_type = TypeInfo('Single',     "Single",    -3.40282e+038,                   3.40282e+038,                   True,   True, False)
-double_type = TypeInfo('Double',     "Float",     -1.79769313486e+308,             1.79769313486e+308,             False,  True, False)
-deciml_type = TypeInfo('Decimal',    "Decimal",   -79228162514264337593543950335,  79228162514264337593543950335,  False,  True, False)
+byte_type   = ClrType(Byte, "Byte", int, fp=False, next=True)
+sbyte_type  = ClrType(SByte, "SByte", int, fp=False, next=True)
+int16_type  = ClrType(Int16, "Int16", int, fp=False, next=True)
+uint16_type = ClrType(UInt16, "UInt16", int, fp=False, next=True)
+int32_type  = ClrType(Int32, "Int", int, fp=False, next=True)
+uint32_type = ClrType(UInt32, "UInt32", int, fp=False, next=True)
+int64_type  = ClrType(Int64, "Int64",  int, fp=False, next=True)
+uint64_type = ClrType(UInt64, "UInt64", int, fp=False, next=True)
 
-bigint_type = TypeInfo('BigInteger', "Long",     min_bigint,                       max_bigint,                     False,  False, False)
+single_type = ClrType(Single, "Single", float, fp=True, next=False)
+double_type = ClrType(Double, "Float", float, fp=True, next=False)
+deciml_type = ClrType(Decimal, "Decimal", float, fp=True, next=False)
 
-cmplx_type = TypeInfo("Complex64",   "Complex", -1.79769313486e+308-1.79769313486e+308j, 1.79769313486e+308+1.79769313486e+308j, False, True, False)
+bigint_type = CustomType(name='BigInteger', ops="Long", min=-(2**200), max=2**200, size=2**201, fp=False, next=False, rvalue="(BigInteger)right")
 
 # Extensible types
-x_int_type  = TypeInfo('ExtensibleInt',      "Int",         -2147483648,                     2147483647,                     False,  False, True)
-x_bigint_type = TypeInfo('ExtensibleLong',   "Long",        min_bigint,                      max_bigint,                     False,  False, False)
-x_float_type = TypeInfo('ExtensibleFloat',   "Float",       -1.79769313486e+308,             1.79769313486e+308,             False,  True, False)
-x_cmplx_type = TypeInfo("ExtensibleComplex", "Complex",   -1.79769313486e+308-1.79769313486e+308j, 1.79769313486e+308+1.79769313486e+308j, False, True, False)
+x_int_type  = XType('ExtensibleInt', int32_type, fp=False, next=True, rvalue="((ExtensibleInt)right).value")
+x_bigint_type = XType('ExtensibleLong', bigint_type, fp=False, next=False, rvalue="((ExtensibleLong)right).Value")
+x_float_type = XType('ExtensibleFloat', double_type, fp=True, next=False, rvalue="((ExtensibleFloat)right).value")
 
+complex_type = CustomType(name="Complex64", ops="Complex", fp=True, next=False,rvalue="(Complex64)right")
+x_complex_type = CustomType(name="ExtensibleComplex", ops="Complex", fp=True, next=False,rvalue="((ExtensibleComplex)right).value")
 
 int_types = [ bool_type, byte_type, sbyte_type, int16_type, uint16_type, int32_type, uint32_type, int64_type, uint64_type]
-
 fp_types = [ single_type, double_type ]
+complex_types = [ complex_type, x_complex_type ]
 
-complex_types = [ cmplx_type ]
+generate_types = [ byte_type, sbyte_type, int16_type, uint16_type, uint32_type, uint64_type, single_type ]
 
 types = int_types + fp_types
 
 def radd(a,b): return b + a
-def rand(a,b): return b & a
 def rdiv(a,b): return b / a
-def rdivmod(a,b): return divmod(b,a)
 def rfloordiv(a,b): return b // a
-def rlshift(a,b): return b << a
 def rmod(a,b): return b % a
 def rmul(a,b): return b * a
-def ror(a,b): return b | a
-def rpow(a,b): return b ** a
-def rrshift(a,b): return b >> a
 def rsub(a,b): return b - a
-def rtruediv(a,b): return operator.__truediv__(b,a)
-def rxor(a,b): return b ^ a
-
 
 # Binary operator which can use symbol directly for its implementation and overflows to the next order
 binary_s_o = """%(oper_type)s result = (%(oper_type)s)(((%(oper_type)s)%(left_value)s) %(symbol)s ((%(oper_type)s)%(right_value)s));
@@ -98,26 +100,17 @@ if (%(result_type)s.MinValue <= result && result <= %(result_type)s.MaxValue) {
     return (%(result_type)s)result;
 } else return result;"""
 
-# Binary code with float point argument (same as above, except doesn't try to back-fit the result and leaves it as float point)
-binary_f = "return (%(oper_type)s)(((%(oper_type)s)%(left_value)s) %(symbol)s ((%(oper_type)s)%(right_value)s));"
-
 # Binary operator which cannot use symbol ('//') and must call method to implement the operation
 binary_m = "return %(oper_ops)sOps.%(method_impl)s((%(oper_type)s)%(left_value)s, (%(oper_type)s)%(right_value)s);"
 
 # Call to custom code for binary operator
 binary_c = """return %(oper_ops)sOps.%(method_impl)s(%(left_value)s, %(right_value)s);"""
 
-# Call to custom code for binary operator
-binary_c_v = "return %(oper_ops)sOps.%(method_impl)s(%(left_value)s, %(right_value)s);"
-
 # Binary operator which can use symbol directly for its implementation and overflows to the next order
 r_binary_s_o = """%(oper_type)s result = (%(oper_type)s)(((%(oper_type)s)%(right_value)s) %(symbol)s ((%(oper_type)s)%(left_value)s));
 if (%(result_type)s.MinValue <= result && result <= %(result_type)s.MaxValue) {
     return (%(result_type)s)result;
 } else return result;"""
-
-# Binary code with float point argument (same as above, except doesn't try to back-fit the result and leaves it as float point)
-r_binary_f = "return (%(oper_type)s)(((%(oper_type)s)%(right_value)s) %(symbol)s ((%(oper_type)s)%(left_value)s));"
 
 class BinaryOp:
     def __init__(self, symbol, name, method, rmethod, operation, overflow, intcode, altcode, fpcode):
@@ -131,23 +124,22 @@ class BinaryOp:
         self.altcode = altcode
         self.fpcode  = fpcode
 
-
 binaries = [
-    #        sym  name               Method                RevMethod            operation               overflow,   code           largest type   float
+    #        sym  name               Method                RevMethod            operation               overflow,   integer_code    largest type  float
                                                                               
-    BinaryOp('+', '__add__',        'Add',                'ReverseAdd',         operator.__add__,       True,       binary_s_o,     binary_c,     binary_f),
+    BinaryOp('+', '__add__',        'Add',                'ReverseAdd',         operator.__add__,       True,       binary_s_o,     binary_c,     binary_m),
     BinaryOp('/', '__div__',        'Divide',             'ReverseDivide',      operator.__div__,       False,      binary_m,       binary_c,     binary_m),
     BinaryOp('//', '__floordiv__',  'FloorDivide',        'ReverseFloorDivide', operator.__floordiv__,  False,      binary_m,       binary_c,     binary_m),
     BinaryOp('%', '__mod__',        'Mod',                'ReverseMod',         operator.__mod__,       False,      binary_m,       binary_c,     binary_m),
-    BinaryOp('*', '__mul__',        'Multiply',           'ReverseMultiply',    operator.__mul__,       True,       binary_s_o,     binary_c,     binary_f),
-    BinaryOp('-', '__sub__',        'Subtract',           'ReverseSubtract',    operator.__sub__,       True,       binary_s_o,     binary_c,     binary_f),
+    BinaryOp('*', '__mul__',        'Multiply',           'ReverseMultiply',    operator.__mul__,       True,       binary_s_o,     binary_c,     binary_m),
+    BinaryOp('-', '__sub__',        'Subtract',           'ReverseSubtract',    operator.__sub__,       True,       binary_s_o,     binary_c,     binary_m),
                                                           
-    BinaryOp('+', '__radd__',       'ReverseAdd',         'Add',                radd,                   True,       r_binary_s_o,   binary_c,     r_binary_f),
+    BinaryOp('+', '__radd__',       'ReverseAdd',         'Add',                radd,                   True,       r_binary_s_o,   binary_c,     binary_m),
     BinaryOp('/', '__rdiv__',       'ReverseDivide',      'Divide',             rdiv,                   False,      binary_m,       binary_c,     binary_m),
     BinaryOp('//', '__rfloordiv__', 'ReverseFloorDivide', 'FloorDivide',        rfloordiv,              False,      binary_m,       binary_c,     binary_m),
     BinaryOp('%', '__rmod__',       'ReverseMod',         'Mod',                rmod,                   False,      binary_m,       binary_c,     binary_m),
-    BinaryOp('*', '__rmul__',       'ReverseMultiply',    'Multiply',           rmul,                   True,       r_binary_s_o,   binary_c,     r_binary_f),
-    BinaryOp('-', '__rsub__',       'ReverseSubtract',    'Subtract',           rsub,                   True,       r_binary_s_o,   binary_c,     r_binary_f),
+    BinaryOp('*', '__rmul__',       'ReverseMultiply',    'Multiply',           rmul,                   True,       r_binary_s_o,   binary_c,     binary_m),
+    BinaryOp('-', '__rsub__',       'ReverseSubtract',    'Subtract',           rsub,                   True,       r_binary_s_o,   binary_c,     binary_m),
 ]
 
 class BitwiseOp:
@@ -201,11 +193,11 @@ def get_common_type(l, r, op):
     if l.name == "Complex64": return l, op.altcode
     if r.name == "Complex64": return r, op.altcode
 
-    if l <= r: return r, op.intcode
-    if r <= l: return l, op.intcode
+    if smaller(l, r): return r, op.intcode
+    if smaller(r, l): return l, op.intcode
     
     for c in types:
-        if r <= c and l <= c:
+        if smaller(r, c) and smaller(l, c):
             if c.next or l.fp or r.fp:
                 return c, op.intcode
 
@@ -241,8 +233,8 @@ def get_overflow_type(l, r, op):
     return t, op.altcode
 
 def get_preferred_result_type(l, r):
-    if l <= r: return r
-    return l
+    if smaller(l, r): return r
+    else: return l
 
 def get_binop_type(l, r, op):
     if op.overflow:
@@ -259,11 +251,11 @@ def get_binop_bigint_type(r, op):
         return bigint_type, op.altcode
 
 def get_bitwise_type(l, r):
-    if l <= r: return r
-    if r <= l: return l
+    if smaller(l, r): return r
+    if smaller(r, l): return l
 
     for c in types:
-        if not c.fp and r <= c and l <= c:
+        if not c.fp and smaller(r, c) and smaller(l, c):
             return c
 
     if (l.signed or r.signed):
@@ -294,48 +286,31 @@ def find_type_include(*l):
         else:
             return t
 
-def fixup_normal(kw):
-    lval = "left%(left_type)s" % kw
-    if kw["right_type"] == "Boolean":
-        rval = "((%(right_type)s)right ? (%(left_type)s)1 : (%(left_type)s)0)" % kw
-    else:
-        rval = "(%(right_type)s)right" % kw
-    kw["left_value"]  = lval
-    kw["right_value"] = rval
+def get_rvalue(l, r):
+    return r.rvalue % { 'left_type' : l.name }
 
-def fixup_normal_brace(kw):
-    lval = "left%(left_type)s" % kw
-    if kw["right_type"] == "Boolean":
-        rval = "((%(right_type)s)right ? (%(left_type)s)1 : (%(left_type)s)0)" % kw
-    else:
-        rval = "((%(right_type)s)right)" % kw
-    kw["left_value"]  = lval
-    kw["right_value"] = rval
-    
-def fixup_extensible(kw):
-    lval = "left%(left_type)s" % kw
-    rval = "((%(right_type)s)right).value" % kw
-    kw["left_value"]  = lval
-    kw["right_value"] = rval
+def get_method_name(ot, method):
+    # For existing OpsXXX, call the method with the same name,
+    # For new ops, call with Impl suffix to prevent stack overflows
+    if ot in generate_types:
+        return method + "Impl"
+    return method
 
-def fixup_extensible_long(kw):
-    lval = "left%(left_type)s" % kw
-    rval = "((%(right_type)s)right).Value" % kw
-    kw["left_value"]  = lval
-    kw["right_value"] = rval
+binary_operator_prologue = """[PythonName(\"%(python_name)s\")]
+public static object %(method_name)s(object left, object right) {
+    if (!(left is %(left_type)s)) {
+        throw Ops.TypeError("'%(python_name)s' requires %(left_type)s, but received {0}", Ops.GetDynamicType(left).__name__);
+    }
+    %(left_type)s left%(left_type)s = (%(left_type)s)left;
+    IConvertible rightConvertible;
+    if ((rightConvertible = right as IConvertible) != null) {
+        switch (rightConvertible.GetTypeCode()) {"""
 
 def gen_binary_prologue(cw, bin, left):
-    cw.write("[PythonName(\"%(python_name)s\")]", python_name=bin.name)
-    cw.enter_block("public static object %(method_name)s(object left, object right)", method_name=bin.method)
-    cw.write(
-        "Debug.Assert(left is %(left_type)s);\n" +
-        "%(left_type)s left%(left_type)s = (%(left_type)s)left;",
-        left_type = left.name)
-    cw.write("IConvertible rightConvertible;")
-    cw.enter_block("if ((rightConvertible = right as IConvertible) != null)")
-    cw.enter_block("switch (rightConvertible.GetTypeCode())")
+    cw.write(binary_operator_prologue, python_name=bin.name, method_name=bin.method, left_type=left.name)
+    cw.indent(); cw.indent(); cw.indent()
 
-def gen_binary_body(cw, left, right, alt_right, bin, fixup):
+def gen_binary_body(cw, left, right, alt_right, bin):
     ot, code = get_binop_type(left, alt_right, bin)
     # get the type of the two that is the optimal result (unless overflow happens)
     # e.g. Byte + Int  ==> preferably Int, but ban overflow to Long
@@ -350,19 +325,15 @@ def gen_binary_body(cw, left, right, alt_right, bin, fixup):
         'right_ops'     : right.ops,
         'oper_type'     : ot.name,
         'oper_ops'      : ot.ops,
-        'result_type'   : rt.name
+        'result_type'   : rt.name,
+        'left_value'    : "left%s" % left.name,
+        'right_value'   : get_rvalue(left, right),
+        'method_impl'   : get_method_name(ot, bin.method)
     }
-
-    fixup(kw)
-
-    # For existing OpsXXX, call the method with the same name,
-    # For new ops, call with Impl suffix to prevent stack overflows
-    if ot.gen: kw['method_impl'] = bin.method + "Impl"
-    else: kw['method_impl'] = bin.method
 
     cw.write(code % kw)
 
-def generate_binop_bigint(cw, left, right, bin, fixup):
+def generate_binop_bigint(cw, left, right, bin):
     ot, code = get_binop_bigint_type(left, bin)
     kw = {
         'left_type'     : left.name,
@@ -373,11 +344,10 @@ def generate_binop_bigint(cw, left, right, bin, fixup):
         'right_ops'     : bigint_type.ops,
         'oper_type'     : ot.name,
         'oper_ops'      : ot.ops,
+        'left_value'    : "left%s" % left.name,
+        'right_value'   : get_rvalue(left, right),
+        'method_impl'   : get_method_name(ot, bin.method)
     }
-    fixup(kw)
-
-    if ot.gen: kw['method_impl'] = bin.method + "Impl"
-    else: kw['method_impl'] = bin.method
 
     cw.write(code % kw)
 
@@ -386,23 +356,23 @@ def gen_binaries(cw, left):
         gen_binary_prologue(cw, bin, left)
         for right in types:
             cw.case_block("case TypeCode.%(right_type)s:", right_type = right.name)
-            gen_binary_body(cw, left, right, right, bin, fixup_normal_brace)
+            gen_binary_body(cw, left, right, right, bin)
             cw.exit_case_block()
 
         cw.exit_block()
         cw.exit_block()
         cw.enter_block("if (right is BigInteger)")
-        generate_binop_bigint(cw, left, bigint_type, bin, fixup_normal)
+        generate_binop_bigint(cw, left, bigint_type, bin)
         cw.else_block("if (right is Complex64)")
-        gen_binary_body(cw, left, cmplx_type, cmplx_type, bin, fixup_normal)
+        gen_binary_body(cw, left, complex_type, complex_type, bin)
         cw.else_block("if (right is ExtensibleInt)")
-        gen_binary_body(cw, left, x_int_type, int32_type, bin, fixup_extensible)
+        gen_binary_body(cw, left, x_int_type, int32_type, bin)
         cw.else_block("if (right is ExtensibleLong)")
-        generate_binop_bigint(cw, left, x_bigint_type, bin, fixup_extensible_long)
+        generate_binop_bigint(cw, left, x_bigint_type, bin)
         cw.else_block("if (right is ExtensibleFloat)")
-        gen_binary_body(cw, left, x_float_type, double_type, bin, fixup_extensible)
+        gen_binary_body(cw, left, x_float_type, double_type, bin)
         cw.else_block("if (right is ExtensibleComplex)")
-        gen_binary_body(cw, left, x_cmplx_type, cmplx_type, bin, fixup_extensible)
+        gen_binary_body(cw, left, x_complex_type, complex_type, bin)
         cw.exit_block()
         cw.write("return Ops.NotImplemented;")
         cw.exit_block()
@@ -414,7 +384,7 @@ def get_cast(f, t):
     
     return cast
 
-def gen_bitwise_body(cw, left, right, alt_right, bin, fixup):
+def gen_bitwise_body(cw, left, right, alt_right, bin):
     ot = get_bitwise_type(left, alt_right)
 
     kw = {
@@ -422,13 +392,13 @@ def gen_bitwise_body(cw, left, right, alt_right, bin, fixup):
         'right_type'        : right.name,
         'oper_type'         : ot.name,
         'symbol'            : bin.symbol,
-        'method'            : bin.method
+        'method'            : bin.method,
+        'left_value'        : "left%s" % left.name,
+        'right_value'       : get_rvalue(left, right)
     }
 
     ltype = left
     rtype = right
-
-    fixup(kw)
 
     if ltype.size < ot.size:
         cw.write("%(oper_type)s left%(oper_type)s = (%(oper_type)s)%(left_value)s;" % kw)
@@ -457,38 +427,37 @@ def gen_bitwise(cw, left):
         for right in types:
             if right.fp: continue
             cw.case_block("case TypeCode.%(right_type)s:", right_type = right.name)
-            gen_bitwise_body(cw, left, right, right, bin, fixup_normal)
+            gen_bitwise_body(cw, left, right, right, bin)
             cw.exit_case_block()
 
         cw.exit_block()
         cw.exit_block()
         cw.enter_block("if (right is BigInteger)")
-        gen_bitwise_body(cw, left, bigint_type, bigint_type, bin, fixup_normal)
+        gen_bitwise_body(cw, left, bigint_type, bigint_type, bin)
         cw.else_block("if (right is ExtensibleInt)")
-        gen_bitwise_body(cw, left, x_int_type, int32_type, bin, fixup_extensible)
+        gen_bitwise_body(cw, left, x_int_type, int32_type, bin)
         cw.else_block("if (right is ExtensibleLong)")
-        gen_bitwise_body(cw, left, x_bigint_type, bigint_type, bin, fixup_extensible_long)
+        gen_bitwise_body(cw, left, x_bigint_type, bigint_type, bin)
         cw.exit_block()
         cw.write("return Ops.NotImplemented;")
         cw.exit_block()
-
 
 def get_manual_common_type(l, r, op):
     if op.only_double:
         return double_type
 
-    if l.fp == r.fp and l <= r: return r
-    if l.fp == r.fp and r <= l: return l
+    if l.fp == r.fp and smaller(l, r): return r
+    if l.fp == r.fp and smaller(r, l): return l
 
     if not l.fp and not r.fp:
         # common larger integer type
         for c in types:
-            if not c.fp and r <= c and l <= c:
+            if not c.fp and smaller(r, c) and smaller(l, c):
                 return c
     else:
         # any common larger type
         for c in types:
-            if r <= c and l <= c:
+            if smaller(r, c) and smaller(l, c):
                 return c
 
     if l.name == "Complex64": return l
@@ -497,22 +466,20 @@ def get_manual_common_type(l, r, op):
     if l.size < r.size: return r
     return l
 
-def gen_manual_ones_body(cw, left, right, alt_right, bin, fixup):
+def gen_manual_ones_body(cw, left, right, alt_right, bin):
     # use the alt_type to determine the type of the operation
     ot = get_manual_common_type(left, alt_right, bin)
     kw = {
         "oper_ops"      : ot.ops,
         "left_type"     : left.name,
-        "right_type"    : right.name
+        "right_type"    : right.name,
+        "left_value"    : "left%s" % left.name,
+        "right_value"   : get_rvalue(left, right),
+        "method_impl"   : get_method_name(ot, bin.method),
     }
-    
-    fixup(kw)
-    
-    if ot.gen: kw['method_impl'] = bin.method + "Impl"
-    else: kw['method_impl'] = bin.method
 
     # use binary custom code
-    cw.write(binary_c_v % kw)
+    cw.write(binary_c % kw)
 
 def gen_manual_ones(cw, left):
     for bin in manual_ones:
@@ -523,24 +490,24 @@ def gen_manual_ones(cw, left):
             # skip if not defined for float point types
             if right.fp and not bin.gen_fp: continue
             cw.case_label("case TypeCode.%(right_type)s:", right_type = right.name)
-            gen_manual_ones_body(cw, left, right, right, bin, fixup_normal)
+            gen_manual_ones_body(cw, left, right, right, bin)
             cw.dedent()
 
         cw.exit_block()
         cw.exit_block()
         cw.enter_block("if (right is BigInteger)")
-        gen_manual_ones_body(cw, left, bigint_type, bigint_type, bin, fixup_normal)
+        gen_manual_ones_body(cw, left, bigint_type, bigint_type, bin)
         cw.else_block("if (right is ExtensibleInt)")
-        gen_manual_ones_body(cw, left, x_int_type, int32_type, bin, fixup_extensible)
+        gen_manual_ones_body(cw, left, x_int_type, int32_type, bin)
         cw.else_block("if (right is ExtensibleLong)")
-        gen_manual_ones_body(cw, left, x_bigint_type, bigint_type, bin, fixup_extensible_long)
+        gen_manual_ones_body(cw, left, x_bigint_type, bigint_type, bin)
         if bin.gen_fp:
             cw.else_block("if (right is Complex64)")
-            gen_manual_ones_body(cw, left, cmplx_type, cmplx_type, bin, fixup_normal)
+            gen_manual_ones_body(cw, left, complex_type, complex_type, bin)
             cw.else_block("if (right is ExtensibleFloat)")
-            gen_manual_ones_body(cw, left, x_float_type, double_type, bin, fixup_extensible)
+            gen_manual_ones_body(cw, left, x_float_type, double_type, bin)
             cw.else_block("if (right is ExtensibleComplex)")
-            gen_manual_ones_body(cw, left, x_cmplx_type, cmplx_type, bin, fixup_extensible)
+            gen_manual_ones_body(cw, left, x_complex_type, complex_type, bin)
         cw.exit_block()
         cw.write("return Ops.NotImplemented;")
         cw.exit_block()
@@ -628,48 +595,62 @@ def gen_implementations(cw, t):
         cw.write(div_impl_code_unsigned, type_name = t.name)
     cw.write(implementation_code, type_name = t.name)
 
+make_dynamic_type = """private static ReflectedType %(type_name)sType;
+public static DynamicType MakeDynamicType() {
+    if (%(type_name)sType == null) {
+        OpsReflectedType ort = new OpsReflectedType(\"%(type_name)s\", typeof(%(type_name)s), typeof(%(type_name)sOps), null);
+        if (Interlocked.CompareExchange<ReflectedType>(ref %(type_name)sType, ort, null) == null) {
+            return ort;
+        }
+    }
+    return %(type_name)sType;
+}
+"""
+
 def gen_make_dynamic_type(cw, t):
-    cw.write("private static ReflectedType %(type_name)sType;", type_name = t.name)
-    cw.enter_block("public static DynamicType MakeDynamicType()")
-    cw.enter_block("if (%(type_name)sType == null)", type_name = t.name)
-    cw.write("OpsReflectedType ort = new OpsReflectedType(\"%(type_name)s\", typeof(%(type_name)s), typeof(%(type_name)sOps), null);", type_name = t.name)
-    cw.enter_block("if (Interlocked.CompareExchange<ReflectedType>(ref %(type_name)sType, ort, null) == null)", type_name = t.name)
-    cw.write("return ort;")
-    cw.exit_block()
-    cw.exit_block()
-    cw.write("return %(type_name)sType;", type_name = t.name)
-    cw.exit_block()
-    cw.write("")
+    cw.write(make_dynamic_type, type_name = t.name)
+
+constructor_prologue = """[PythonName("__new__")]
+public static object Make(DynamicType cls, object value) {
+    if (cls != %(type_name)sType) {
+        throw Ops.TypeError(\"%(type_name)s.__new__: first argument must be %(type_name)s type.\");
+    }
+    IConvertible valueConvertible;
+    if ((valueConvertible = value as IConvertible) != null) {
+        switch (valueConvertible.GetTypeCode()) {"""
+
+constructor_epilogue = """        }
+    }
+    if (value is String) {
+        return %(type_name)s.Parse((String)value);
+    } else if (value is BigInteger) {
+        return (%(type_name)s)(BigInteger)value;
+    } else if (value is ExtensibleInt) {
+        return (%(type_name)s)((ExtensibleInt)value).value;
+    } else if (value is ExtensibleLong) {
+        return (%(type_name)s)((ExtensibleLong)value).Value;
+    } else if (value is ExtensibleFloat) {
+        return (%(type_name)s)((ExtensibleFloat)value).value;"""
+
+constructor_integer_addition = """    } else if (value is Enum) {
+        return Converter.CastEnumTo%(type_name)s(value);"""
+constructor_end = """    }
+    throw Ops.ValueError("invalid value for %(type_name)s.__new__");
+}
+"""
 
 def gen_constructor(cw, t):
-    cw.write('[PythonName("__new__")]')
-    cw.enter_block("public static object Make(DynamicType cls, object value)")
-    cw.enter_block("if (cls != %(type_name)sType)", type_name = t.name)
-    cw.write("throw Ops.TypeError(\"%(type_name)s.__new__: first argument must be %(type_name)s type.\");", type_name = t.name)
-    cw.exit_block()
-    cw.write("IConvertible valueConvertible;")
-    cw.enter_block("if ((valueConvertible = value as IConvertible) != null)")
-    cw.enter_block("switch (valueConvertible.GetTypeCode())")
+    cw.write(constructor_prologue, type_name = t.name)
+    cw.indent(); cw.indent(); cw.indent()
     for right in types:
         if right.name == "Boolean": continue    # not from Boolean
         cw.case_label("case TypeCode.%(right_type)s: return (%(type_name)s)(%(right_type)s)value;", right_type = right.name, type_name = t.name)
         cw.dedent()
-    cw.exit_block()
-    cw.exit_block()
-    cw.enter_block("if (value is String)")
-    cw.write("return %(type_name)s.Parse((String)value);", type_name = t.name)
-    cw.else_block("if (value is BigInteger)")
-    cw.write("return (%(type_name)s)(BigInteger)value;", type_name = t.name)
-    cw.else_block("if (value is ExtensibleInt)")
-    cw.write("return (%(type_name)s)((ExtensibleInt)value).value;", type_name = t.name)
-    cw.else_block("if (value is ExtensibleLong)")
-    cw.write("return (%(type_name)s)((ExtensibleLong)value).Value;", type_name = t.name)
-    cw.else_block("if (value is ExtensibleFloat)")
-    cw.write("return (%(type_name)s)((ExtensibleFloat)value).value;", type_name = t.name)
-    cw.exit_block()
-    cw.write('throw Ops.ValueError("invalid value for %(type_name)s.__new__");', type_name = t.name)
-    cw.exit_block()
-    cw.write("")
+    cw.dedent(); cw.dedent(); cw.dedent()
+    cw.write(constructor_epilogue, type_name = t.name)
+    if not t.fp:
+        cw.write(constructor_integer_addition, type_name = t.name)
+    cw.write(constructor_end, type_name = t.name)
 
 class TypeGenerator:
     def __init__(self, t):
@@ -683,7 +664,5 @@ class TypeGenerator:
         gen_manual_ones(cw, t)
         gen_implementations(cw, t)
 
-
-for t in types:
-    if t.gen:
-        CodeGenerator(t.name + "Ops", TypeGenerator(t)).doit()
+for t in generate_types:
+    CodeGenerator(t.name + "Ops", TypeGenerator(t)).doit()

@@ -169,10 +169,9 @@ namespace IronPython.Runtime.Operations {
             int res;
             if (y is bool) res = ((x) ? 1 : 0) - (((bool)y) ? 1 : 0);
             else {
-                Conversion conv;
-                int iVal = Converter.TryConvertToInt32(y, out conv);
-                if (conv == Conversion.None) return Ops.NotImplemented;
-                res = ((x) ? 1 : 0) - iVal;
+                int iVal;
+                if (Converter.TryConvertToInt32(y, out iVal)) res = ((x) ? 1 : 0) - iVal;
+                else return Ops.NotImplemented;
             }
 
             return res >= 1 ? 1 : res <= -1 ? -1 : 0;
@@ -183,12 +182,11 @@ namespace IronPython.Runtime.Operations {
             if (other is bool)  return Ops.Bool2Object(x == (bool)other);
 
             // otherwise convert other to a bool, and compare
-            Conversion conv;
-            int otherInt = Converter.TryConvertToInt32(other, out conv);
-            if (conv < Conversion.Truncation) {
+            int otherInt;
+            if (Converter.TryConvertToInt32(other, out otherInt)) {
                 int myint = x ? 1 : 0;
                 return Ops.Bool2Object(myint == otherInt);
-            } else if (conv == Conversion.Truncation) {
+            } else {
                 // if we truncated the value (eg 1.5) we wouldn't be equal
                 // to True, but if we had something like 1.0 we didn't lose
                 // any precision and we're equal
@@ -202,12 +200,11 @@ namespace IronPython.Runtime.Operations {
             if (other is bool) return x == (bool)other;
 
             // otherwise convert other to a bool, and compare
-            Conversion conv;
-            int otherInt = Converter.TryConvertToInt32(other, out conv);
-            if (conv < Conversion.Truncation) {
+            int otherInt;
+            if (Converter.TryConvertToInt32(other, out otherInt)) {
                 int myint = x ? 1 : 0;
                 return myint == otherInt;
-            } else if (conv == Conversion.Truncation) {
+            } else {
                 // if we truncated the value (eg 1.5) we wouldn't be equal
                 // to True, but if we had something like 1.0 we didn't lose
                 // any precision and we're equal

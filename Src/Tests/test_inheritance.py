@@ -853,11 +853,14 @@ def check_behavior(expected_obj):
     AreEqual(used.Use_Single(), System.Single.Parse("10"))
     AreEqual(used.Use_UInt32(), System.UInt32.Parse("10"))
     AreEqual(used.Use_UInt64(), System.UInt64.Parse("10"))
+    AreEqual(used.Use_Byte(), System.Byte.Parse("10"))
+    AreEqual(used.Use_SByte(), System.SByte.Parse("10"))
+    AreEqual(used.Use_Int16(), System.Int16.Parse("10"))
+    AreEqual(used.Use_UInt16(), System.UInt16.Parse("10"))
 
-    for f in [used.Use_Char, used.Use_String, used.Use_Byte, used.Use_SByte, 
-        used.Use_Int16, used.Use_UInt16, used.Use_Type, 
-        used.Use_RtEnum, used.Use_RtStruct, used.Use_RtClass, used.Use_IEnumerator
-        # used.Use_RtDelegate,
+    for f in [used.Use_Char, used.Use_String, used.Use_Type, used.Use_RtEnum,
+              used.Use_RtStruct, used.Use_RtClass, used.Use_IEnumerator
+            # used.Use_RtDelegate,
         ]:
         AssertError(TypeError, f)
         
@@ -879,11 +882,11 @@ def check_behavior(expected_obj):
     AreEqual(used.Use_Boolean(), True)
     AreEqual(used.Use_Int32(), System.Int32.Parse("100"))
     AreEqual(used.Use_Double(), System.Double.Parse("12345.6"))
+    AreEqual(used.Use_Single(), System.Single.Parse("12345.6"))
 
-    for f in [used.Use_Char, used.Use_String, used.Use_Int64, 
-        used.Use_Single, used.Use_Byte, used.Use_SByte, 
-        used.Use_Int16, used.Use_UInt32, used.Use_UInt64, used.Use_UInt16, used.Use_Type, 
-        used.Use_RtEnum, used.Use_RtStruct, used.Use_RtClass, used.Use_IEnumerator
+    for f in [used.Use_Int16, used.Use_UInt32, used.Use_UInt64, used.Use_UInt16, 
+              used.Use_Byte, used.Use_SByte, used.Use_Int64, used.Use_Char, used.Use_String,
+              used.Use_Type, used.Use_RtEnum, used.Use_RtStruct, used.Use_RtClass, used.Use_IEnumerator
         #used.Use_RtDelegate,
         ]:
         AssertError(TypeError, f)
@@ -928,7 +931,7 @@ AssertError(TypeError, used.Use_String)
 
 ## Int32
 DReturnTypes.M_Int32 = lambda self: System.Char.Parse('z')
-AssertError(TypeError, used.Use_Int32())
+AssertError(TypeError, used.Use_Int32)
 
 DReturnTypes.M_Int32 = lambda self: System.SByte.Parse('-123')
 AreEqual(used.Use_Int32(), -123)

@@ -369,7 +369,7 @@ namespace IronPython.Compiler {
                     }
                     return !Type.IsValueType;
                 } else {
-                    return NewConverter.CanConvertFrom(o.GetType(), Type, allowNarrowing);
+                    return Converter.CanConvertFrom(o.GetType(), Type, allowNarrowing);
                 }
             }
 
@@ -377,26 +377,26 @@ namespace IronPython.Compiler {
                 Type t1 = Type;
                 Type t2 = other.Type;
                 if (t1 == t2) return 0;
-                if (NewConverter.CanConvertFrom(t2, t1, NarrowingLevel.None)) {
-                    if (NewConverter.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
+                if (Converter.CanConvertFrom(t2, t1, NarrowingLevel.None)) {
+                    if (Converter.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
                         return null;
                     } else {
                         return -1;
                     }
                 }
-                if (NewConverter.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
+                if (Converter.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
                     return +1;
                 }
 
                 // Special additional rules to order numeric value types
-                if (NewConverter.PreferConvert(t1, t2)) return -1;
-                else if (NewConverter.PreferConvert(t2, t2)) return +1;
+                if (Converter.PreferConvert(t1, t2)) return -1;
+                else if (Converter.PreferConvert(t2, t2)) return +1;
 
                 return null;
             }
 
             public virtual object ConvertFrom(object arg) {
-                return NewConverter.Convert(arg, Type);
+                return Converter.Convert(arg, Type);
             }
 
             public string ToSignatureString() {
@@ -424,7 +424,7 @@ namespace IronPython.Compiler {
 
             public override object ConvertFrom(object arg) {
                 ClrModule.Reference r = (ClrModule.Reference)arg;
-                return NewConverter.Convert(r.Value, elementType);
+                return Converter.Convert(r.Value, elementType);
             }
 
             public override bool HasConversionFrom(object o, NarrowingLevel allowNarrowing) {

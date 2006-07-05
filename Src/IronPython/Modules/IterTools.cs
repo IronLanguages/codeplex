@@ -312,16 +312,13 @@ namespace IronPython.Modules {
 
             public IteratorSlice(object iterable, object start, object stop, int step) {
                 int startInt, stopInt = -1;
-                Conversion conv;
 
-                object res = Converter.TryConvertToInt32(start, out conv);
-                if (conv == Conversion.None || ((int)res) < 0) throw Ops.ValueError("start argument must be non-negative integer");
-                startInt = (int)res;
+                if (!Converter.TryConvertToInt32(start, out startInt) || startInt < 0)
+                    throw Ops.ValueError("start argument must be non-negative integer, ({0})", start);
 
                 if (stop != null) {
-                    res = Converter.TryConvertToInt32(stop, out conv);
-                    if (conv == Conversion.None || ((int)res) < 0) throw Ops.ValueError("stop argument must be non-negative integer ({0})", stop);
-                    stopInt = (int)res;
+                    if (!Converter.TryConvertToInt32(stop, out stopInt) || stopInt < 0)
+                        throw Ops.ValueError("stop argument must be non-negative integer ({0})", stop);
                 }
 
                 if (step <= 0) throw Ops.ValueError("step must be 1 or greater for islice");

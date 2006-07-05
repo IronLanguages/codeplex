@@ -63,6 +63,30 @@ namespace IronMath {
             else return new BigInteger(+1, (uint)v);
         }
 
+        private const Int32 DecimalScaleFactorMask = 0x00FF0000;
+        private const Int32 DecimalSignMask = unchecked((Int32)0x80000000);
+
+        public static BigInteger Create(decimal v) {
+            // First truncate to get scale to 0 and extract bits
+            int[] bits = Decimal.GetBits(Decimal.Truncate(v));
+
+            Debug.Assert(bits.Length == 4 && (bits[3] & DecimalScaleFactorMask) == 0);
+
+            int size = 3;
+            while (size > 0 && bits[size - 1] == 0) size--;
+
+            if (size == 0) {
+                return BigInteger.Zero;
+            }
+
+            UInt32[] array = new UInt32[size];
+            array[0] = (UInt32)bits[0];
+            if (size > 1) array[1] = (UInt32)bits[1];
+            if (size > 2) array[2] = (UInt32)bits[2];
+
+            return new BigInteger(((bits[3] & DecimalSignMask) != 0) ? -1 : +1, array);
+        }
+
         private static bool Negative(byte[] v) {
             return ((v[7] & 0x80) != 0);
         }
@@ -182,6 +206,27 @@ namespace IronMath {
             return true;
         }
 
+        public bool AsDecimal(out Decimal ret) {
+            if (sign == 0) {
+                ret = Decimal.Zero;
+                return true;
+            }
+
+            int length = Length;
+            if (length > 3) {
+                ret = default(Decimal);
+                return false;
+            }
+
+            int lo = 0, mi = 0, hi = 0;
+            if (length > 2) hi = (Int32)data[2];
+            if (length > 1) mi = (Int32)data[1];
+            if (length > 0) lo = (Int32)data[0];
+
+            ret = new Decimal(lo, mi, hi, sign < 0, 0);
+            return true;
+        }
+
 
         public uint ToUInt32() {
             uint ret;
@@ -195,6 +240,11 @@ namespace IronMath {
             throw new OverflowException(IronMath.BigIntWontFitInt);
         }
 
+        public decimal ToDecimal() {
+            decimal ret;
+            if (AsDecimal(out ret)) return ret;
+            throw new OverflowException(IronMath.BigIntWontFitDecimal);
+        }
 
         public ulong ToUInt64() {
             ulong ret;
@@ -742,19 +792,6 @@ namespace IronMath {
             return (uint)rem;
         }
 
-        //		private uint getTwosComplement(int index) {
-        //			if (index >= data.Length) {
-        //				return getSignExtension();
-        //			} else {
-        //				uint ret = data[index];
-        //				if (sign == -1) {
-        //					-ret vs. ~ret
-        //				} else {
-        //					return ret;
-        //				}
-        //			}
-        //		}
-
         private static uint extend(uint v, ref bool seenNonZero) {
             if (seenNonZero) {
                 return ~v;
@@ -1158,7 +1195,9 @@ namespace IronMath {
         }
 
         public decimal ToDecimal(IFormatProvider provider) {
-            throw new NotImplementedException();
+            decimal ret;
+            if (AsDecimal(out ret)) return ret;
+            throw new OverflowException(IronMath.BigIntWontFitDecimal);
         }
 
         public double ToDouble(IFormatProvider provider) {

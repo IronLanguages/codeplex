@@ -100,10 +100,6 @@ namespace IronPython.Runtime.Operations {
             return Converter.ConvertToBoolean(o);
         }
 
-        //        public static IList GetList(object o) {
-        //            return (IList)o;
-        //        }
-
         public static ArrayList GetReprInfinite() {
             if (InfiniteRepr == null) {
                 InfiniteRepr = new ArrayList();
@@ -586,17 +582,19 @@ namespace IronPython.Runtime.Operations {
         /// right semantics for multiplying by negative numbers and 1 (w/ and w/o subclasses).
         /// </summary>
         internal static object MultiplySequence<T>(MultiplySequenceWorker<T> multiplier, T sequence, object count) {
-            Conversion conv;
-            int value = Converter.TryConvertToInt32(count, out conv);
-            if(conv == Conversion.None) {
+            int value;
+
+            if (Converter.TryConvertToInt32(count, out value)) {
+                if (value < 0) value = 0;
+                if (value == 1 && sequence.GetType() == typeof(T)) return sequence;
+                return multiplier(sequence, value);
+            } else {
                 // check __coerce__...
                 Tuple coerced = Ops.GetDynamicType(count).Coerce(count, 1) as Tuple;
                 if (coerced != null) {
-                    value = Converter.TryConvertToInt32(coerced[0], out conv);
-                    if (conv <= Conversion.Implicit) {
+                    if (Converter.TryConvertToInt32(coerced[0], out value)) {
                         if (value < 0) value = 0;
                         if (value == 1 && sequence.GetType() == typeof(T)) return sequence;
-
                         return multiplier(sequence, value);
                     }
                 }
@@ -608,11 +606,6 @@ namespace IronPython.Runtime.Operations {
                         return ret;
                     }
                 }
-            } else if (conv <= Conversion.Implicit) {
-                if (value < 0) value = 0;
-                if (value == 1 && sequence.GetType() == typeof(T)) return sequence;
-
-                return multiplier(sequence, value);
             }
 
             throw Ops.TypeError("can't multiply sequence by non-int");
@@ -913,17 +906,19 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static int ConvertToCompareInt(object x) {
-            Conversion conv;
-            int res = Converter.TryConvertToInt32(x, out conv);
-            if(conv == Conversion.None){
-                BigInteger bi = Converter.TryConvertToBigInteger(x, out conv);
-                if (conv == Conversion.None) throw Ops.TypeErrorForBadInstance("Bad return type from comparison: {0}", x);
-                
-                if (bi > 0) return 1;
-                else if (bi < 0) return -1;
-                return 0;                                
+            int res;
+            if (Converter.TryConvertToInt32(x, out res)) {
+                return res;
             }
-            return res;
+
+            BigInteger bi;
+            if (Converter.TryConvertToBigInteger(x, out bi)) {
+                if (bi > BigInteger.Zero) return 1;
+                else if (bi < BigInteger.Zero) return -1;
+                return 0;
+            }
+
+            throw Ops.TypeErrorForBadInstance("Bad return type from comparison: {0}", x);
         }
         public static int Compare(object x, object y) {
             if (x == y) return 0;
@@ -990,9 +985,7 @@ namespace IronPython.Runtime.Operations {
                 if (xType != null && xType != yType) {
                     object z;
                     try {
-                        Conversion conversion;
-                        z = Converter.TryConvert(y, xType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
+                        if (Converter.TryConvert(y, xType, out z)) {
                             int res = c.CompareTo(z);
                             return res < 0 ? -1 : res > 0 ? 1 : 0;
                         }
@@ -1007,9 +1000,8 @@ namespace IronPython.Runtime.Operations {
             if (c != null) {
                 if (yType != null && xType != yType) {
                     try {
-                        Conversion conversion;
-                        object z = Converter.TryConvert(x, yType, out conversion);
-                        if (conversion < Conversion.NonStandard) {
+                        object z;
+                        if (Converter.TryConvert(x, yType, out z)) {
                             int res = c.CompareTo(z);
                             return res < 0 ? 1 : res > 0 ? -1 : 0;
                         }
@@ -1107,14 +1099,13 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static int CompareToZero(object value) {
-            Conversion conversion;
-            double val = Converter.TryConvertToDouble(value, out conversion);
-            if (conversion == Conversion.None) {
-                throw Ops.TypeErrorForBadInstance("unable to compare type {0} with 0 ", value);
+            double val;
+            if (Converter.TryConvertToDouble(value, out val)) {
+                if (val > 0) return 1;
+                if (val < 0) return -1;
+                return 0;
             }
-            if (val > 0) return 1;
-            if (val < 0) return -1;
-            return 0;
+            throw Ops.TypeErrorForBadInstance("unable to compare type {0} with 0 ", value);
         }
 
         public static int CompareArrays(object[] data0, int size0, object[] data1, int size1) {
@@ -1456,9 +1447,8 @@ namespace IronPython.Runtime.Operations {
 
             IList list = o as IList;
             if (list != null) {
-                Conversion conv;
-                int val = Converter.TryConvertToInt32(index, out conv);
-                if (conv != Conversion.None) {
+                int val;
+                if (Converter.TryConvertToInt32(index, out val)) {
                     return list[val];
                 }
             }

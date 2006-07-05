@@ -68,13 +68,17 @@ namespace IronPython.Runtime.Operations {
                 return (UInt64)((ExtensibleLong)value).Value;
             } else if (value is ExtensibleFloat) {
                 return (UInt64)((ExtensibleFloat)value).value;
+            } else if (value is Enum) {
+                return Converter.CastEnumToUInt64(value);
             }
             throw Ops.ValueError("invalid value for UInt64.__new__");
         }
 
         [PythonName("__add__")]
         public static object Add(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__add__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -83,34 +87,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.AddImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.AddImpl(leftUInt64, ((Byte)right));
+                            return UInt64Ops.AddImpl(leftUInt64, (Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.AddImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.AddImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.AddImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.AddImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.AddImpl(leftUInt64, ((UInt16)right));
+                            return UInt64Ops.AddImpl(leftUInt64, (UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.AddImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.AddImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.AddImpl(leftUInt64, ((UInt32)right));
+                            return UInt64Ops.AddImpl(leftUInt64, (UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.AddImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.AddImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.AddImpl(leftUInt64, ((UInt64)right));
+                            return UInt64Ops.AddImpl(leftUInt64, (UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return (Single)(((Single)leftUInt64) + ((Single)((Single)right)));
+                            return SingleOps.AddImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return (Double)(((Double)leftUInt64) + ((Double)((Double)right)));
+                            return FloatOps.Add((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -123,7 +127,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleLong) {
                 return LongOps.Add(leftUInt64, ((ExtensibleLong)right).Value);
             } else if (right is ExtensibleFloat) {
-                return (Double)(((Double)leftUInt64) + ((Double)((ExtensibleFloat)right).value));
+                return FloatOps.Add((Double)leftUInt64, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
                 return ComplexOps.Add(leftUInt64, ((ExtensibleComplex)right).value);
             }
@@ -131,7 +135,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__div__")]
         public static object Divide(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__div__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -140,34 +146,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
+                            return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)(Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.DivideImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.DivideImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.DivideImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.DivideImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)((UInt16)right));
+                            return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)(UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.DivideImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.DivideImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)((UInt32)right));
+                            return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)(UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.DivideImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.DivideImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)((UInt64)right));
+                            return UInt64Ops.DivideImpl((UInt64)leftUInt64, (UInt64)(UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return SingleOps.DivideImpl((Single)leftUInt64, (Single)((Single)right));
+                            return SingleOps.DivideImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return FloatOps.Divide((Double)leftUInt64, (Double)((Double)right));
+                            return FloatOps.Divide((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -188,7 +194,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__floordiv__")]
         public static object FloorDivide(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__floordiv__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -197,34 +205,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
+                            return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)(Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.FloorDivideImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.FloorDivideImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.FloorDivideImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.FloorDivideImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)((UInt16)right));
+                            return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)(UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.FloorDivideImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.FloorDivideImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)((UInt32)right));
+                            return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)(UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.FloorDivideImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.FloorDivideImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)((UInt64)right));
+                            return UInt64Ops.FloorDivideImpl((UInt64)leftUInt64, (UInt64)(UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return SingleOps.FloorDivideImpl((Single)leftUInt64, (Single)((Single)right));
+                            return SingleOps.FloorDivideImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return FloatOps.FloorDivide((Double)leftUInt64, (Double)((Double)right));
+                            return FloatOps.FloorDivide((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -245,7 +253,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__mod__")]
         public static object Mod(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__mod__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -254,34 +264,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
+                            return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)(Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.ModImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.ModImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.ModImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.ModImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)((UInt16)right));
+                            return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)(UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.ModImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.ModImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)((UInt32)right));
+                            return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)(UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.ModImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.ModImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)((UInt64)right));
+                            return UInt64Ops.ModImpl((UInt64)leftUInt64, (UInt64)(UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return SingleOps.ModImpl((Single)leftUInt64, (Single)((Single)right));
+                            return SingleOps.ModImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return FloatOps.Mod((Double)leftUInt64, (Double)((Double)right));
+                            return FloatOps.Mod((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -302,7 +312,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__mul__")]
         public static object Multiply(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__mul__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -314,34 +326,34 @@ namespace IronPython.Runtime.Operations {
                             } else return result;
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.MultiplyImpl(leftUInt64, ((Byte)right));
+                            return UInt64Ops.MultiplyImpl(leftUInt64, (Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.MultiplyImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.MultiplyImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.MultiplyImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.MultiplyImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.MultiplyImpl(leftUInt64, ((UInt16)right));
+                            return UInt64Ops.MultiplyImpl(leftUInt64, (UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.MultiplyImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.MultiplyImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.MultiplyImpl(leftUInt64, ((UInt32)right));
+                            return UInt64Ops.MultiplyImpl(leftUInt64, (UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.MultiplyImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.MultiplyImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.MultiplyImpl(leftUInt64, ((UInt64)right));
+                            return UInt64Ops.MultiplyImpl(leftUInt64, (UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return (Double)(((Double)leftUInt64) * ((Double)((Single)right)));
+                            return FloatOps.Multiply((Double)leftUInt64, (Double)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return FloatOps.Multiply(leftUInt64, ((Double)right));
+                            return FloatOps.Multiply(leftUInt64, (Double)right);
                         }
                 }
             }
@@ -362,7 +374,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__sub__")]
         public static object Subtract(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__sub__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -371,34 +385,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.SubtractImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.SubtractImpl(leftUInt64, ((Byte)right));
+                            return UInt64Ops.SubtractImpl(leftUInt64, (Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.SubtractImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.SubtractImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.SubtractImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.SubtractImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.SubtractImpl(leftUInt64, ((UInt16)right));
+                            return UInt64Ops.SubtractImpl(leftUInt64, (UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.SubtractImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.SubtractImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.SubtractImpl(leftUInt64, ((UInt32)right));
+                            return UInt64Ops.SubtractImpl(leftUInt64, (UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.SubtractImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.SubtractImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.SubtractImpl(leftUInt64, ((UInt64)right));
+                            return UInt64Ops.SubtractImpl(leftUInt64, (UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return (Single)(((Single)leftUInt64) - ((Single)((Single)right)));
+                            return SingleOps.SubtractImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return (Double)(((Double)leftUInt64) - ((Double)((Double)right)));
+                            return FloatOps.Subtract((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -411,7 +425,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleLong) {
                 return LongOps.Subtract(leftUInt64, ((ExtensibleLong)right).Value);
             } else if (right is ExtensibleFloat) {
-                return (Double)(((Double)leftUInt64) - ((Double)((ExtensibleFloat)right).value));
+                return FloatOps.Subtract((Double)leftUInt64, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
                 return ComplexOps.Subtract(leftUInt64, ((ExtensibleComplex)right).value);
             }
@@ -419,7 +433,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__radd__")]
         public static object ReverseAdd(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__radd__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -428,34 +444,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.ReverseAddImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.ReverseAddImpl(leftUInt64, ((Byte)right));
+                            return UInt64Ops.ReverseAddImpl(leftUInt64, (Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.ReverseAddImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.ReverseAddImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.ReverseAddImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.ReverseAddImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.ReverseAddImpl(leftUInt64, ((UInt16)right));
+                            return UInt64Ops.ReverseAddImpl(leftUInt64, (UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.ReverseAddImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.ReverseAddImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.ReverseAddImpl(leftUInt64, ((UInt32)right));
+                            return UInt64Ops.ReverseAddImpl(leftUInt64, (UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.ReverseAddImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.ReverseAddImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.ReverseAddImpl(leftUInt64, ((UInt64)right));
+                            return UInt64Ops.ReverseAddImpl(leftUInt64, (UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return (Single)(((Single)((Single)right)) + ((Single)leftUInt64));
+                            return SingleOps.ReverseAddImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return (Double)(((Double)((Double)right)) + ((Double)leftUInt64));
+                            return FloatOps.ReverseAdd((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -468,7 +484,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleLong) {
                 return LongOps.ReverseAdd(leftUInt64, ((ExtensibleLong)right).Value);
             } else if (right is ExtensibleFloat) {
-                return (Double)(((Double)((ExtensibleFloat)right).value) + ((Double)leftUInt64));
+                return FloatOps.ReverseAdd((Double)leftUInt64, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
                 return ComplexOps.ReverseAdd(leftUInt64, ((ExtensibleComplex)right).value);
             }
@@ -476,7 +492,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rdiv__")]
         public static object ReverseDivide(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rdiv__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -485,34 +503,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
+                            return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)(Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.ReverseDivideImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.ReverseDivideImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.ReverseDivideImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.ReverseDivideImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)((UInt16)right));
+                            return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)(UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.ReverseDivideImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.ReverseDivideImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)((UInt32)right));
+                            return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)(UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.ReverseDivideImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.ReverseDivideImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)((UInt64)right));
+                            return UInt64Ops.ReverseDivideImpl((UInt64)leftUInt64, (UInt64)(UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return SingleOps.ReverseDivideImpl((Single)leftUInt64, (Single)((Single)right));
+                            return SingleOps.ReverseDivideImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return FloatOps.ReverseDivide((Double)leftUInt64, (Double)((Double)right));
+                            return FloatOps.ReverseDivide((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -533,7 +551,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rfloordiv__")]
         public static object ReverseFloorDivide(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rfloordiv__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -542,34 +562,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
+                            return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)(Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.ReverseFloorDivideImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.ReverseFloorDivideImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.ReverseFloorDivideImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.ReverseFloorDivideImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)((UInt16)right));
+                            return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)(UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.ReverseFloorDivideImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.ReverseFloorDivideImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)((UInt32)right));
+                            return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)(UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.ReverseFloorDivideImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.ReverseFloorDivideImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)((UInt64)right));
+                            return UInt64Ops.ReverseFloorDivideImpl((UInt64)leftUInt64, (UInt64)(UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return SingleOps.ReverseFloorDivideImpl((Single)leftUInt64, (Single)((Single)right));
+                            return SingleOps.ReverseFloorDivideImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return FloatOps.ReverseFloorDivide((Double)leftUInt64, (Double)((Double)right));
+                            return FloatOps.ReverseFloorDivide((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -590,7 +610,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rmod__")]
         public static object ReverseMod(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rmod__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -599,34 +621,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)((Byte)right));
+                            return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)(Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.ReverseModImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.ReverseModImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.ReverseModImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.ReverseModImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)((UInt16)right));
+                            return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)(UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.ReverseModImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.ReverseModImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)((UInt32)right));
+                            return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)(UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.ReverseModImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.ReverseModImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)((UInt64)right));
+                            return UInt64Ops.ReverseModImpl((UInt64)leftUInt64, (UInt64)(UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return SingleOps.ReverseModImpl((Single)leftUInt64, (Single)((Single)right));
+                            return SingleOps.ReverseModImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return FloatOps.ReverseMod((Double)leftUInt64, (Double)((Double)right));
+                            return FloatOps.ReverseMod((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -647,7 +669,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rmul__")]
         public static object ReverseMultiply(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rmul__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -659,34 +683,34 @@ namespace IronPython.Runtime.Operations {
                             } else return result;
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, ((Byte)right));
+                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, (Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, ((UInt16)right));
+                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, (UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, ((UInt32)right));
+                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, (UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, ((UInt64)right));
+                            return UInt64Ops.ReverseMultiplyImpl(leftUInt64, (UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return (Double)(((Double)((Single)right)) * ((Double)leftUInt64));
+                            return FloatOps.ReverseMultiply((Double)leftUInt64, (Double)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return FloatOps.ReverseMultiply(leftUInt64, ((Double)right));
+                            return FloatOps.ReverseMultiply(leftUInt64, (Double)right);
                         }
                 }
             }
@@ -707,7 +731,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rsub__")]
         public static object ReverseSubtract(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rsub__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -716,34 +742,34 @@ namespace IronPython.Runtime.Operations {
                             return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((Boolean)right ? (UInt64)1 : (UInt64)0));
                         }
                     case TypeCode.Byte: {
-                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((Byte)right));
+                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, (Byte)right);
                         }
                     case TypeCode.SByte: {
-                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((SByte)right));
+                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, (SByte)right);
                         }
                     case TypeCode.Int16: {
-                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((Int16)right));
+                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, (Int16)right);
                         }
                     case TypeCode.UInt16: {
-                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((UInt16)right));
+                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, (UInt16)right);
                         }
                     case TypeCode.Int32: {
-                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((Int32)right));
+                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, (Int32)right);
                         }
                     case TypeCode.UInt32: {
-                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((UInt32)right));
+                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, (UInt32)right);
                         }
                     case TypeCode.Int64: {
-                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((Int64)right));
+                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, (Int64)right);
                         }
                     case TypeCode.UInt64: {
-                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, ((UInt64)right));
+                            return UInt64Ops.ReverseSubtractImpl(leftUInt64, (UInt64)right);
                         }
                     case TypeCode.Single: {
-                            return (Single)(((Single)((Single)right)) - ((Single)leftUInt64));
+                            return SingleOps.ReverseSubtractImpl((Single)leftUInt64, (Single)(Single)right);
                         }
                     case TypeCode.Double: {
-                            return (Double)(((Double)((Double)right)) - ((Double)leftUInt64));
+                            return FloatOps.ReverseSubtract((Double)leftUInt64, (Double)(Double)right);
                         }
                 }
             }
@@ -756,7 +782,7 @@ namespace IronPython.Runtime.Operations {
             } else if (right is ExtensibleLong) {
                 return LongOps.ReverseSubtract(leftUInt64, ((ExtensibleLong)right).Value);
             } else if (right is ExtensibleFloat) {
-                return (Double)(((Double)((ExtensibleFloat)right).value) - ((Double)leftUInt64));
+                return FloatOps.ReverseSubtract((Double)leftUInt64, (Double)((ExtensibleFloat)right).value);
             } else if (right is ExtensibleComplex) {
                 return ComplexOps.ReverseSubtract(leftUInt64, ((ExtensibleComplex)right).value);
             }
@@ -764,7 +790,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__and__")]
         public static object BitwiseAnd(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__and__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -819,7 +847,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rand__")]
         public static object ReverseBitwiseAnd(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rand__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -874,7 +904,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__or__")]
         public static object BitwiseOr(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__or__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -929,7 +961,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__ror__")]
         public static object ReverseBitwiseOr(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__ror__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -984,7 +1018,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rxor__")]
         public static object BitwiseXor(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rxor__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1039,7 +1075,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__xor__")]
         public static object ReverseBitwiseXor(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__xor__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1094,7 +1132,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__divmod__")]
         public static object DivMod(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__divmod__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1140,7 +1180,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rdivmod__")]
         public static object ReverseDivMod(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rdivmod__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1186,7 +1228,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__lshift__")]
         public static object LeftShift(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__lshift__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1222,7 +1266,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rlshift__")]
         public static object ReverseLeftShift(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rlshift__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1258,7 +1304,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__pow__")]
         public static object Power(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__pow__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1304,7 +1352,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rpow__")]
         public static object ReversePower(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rpow__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1350,7 +1400,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rshift__")]
         public static object RightShift(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rshift__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1386,7 +1438,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rrshift__")]
         public static object ReverseRightShift(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rrshift__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1422,7 +1476,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__truediv__")]
         public static object TrueDivide(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__truediv__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
@@ -1468,7 +1524,9 @@ namespace IronPython.Runtime.Operations {
         }
         [PythonName("__rtruediv__")]
         public static object ReverseTrueDivide(object left, object right) {
-            Debug.Assert(left is UInt64);
+            if (!(left is UInt64)) {
+                throw Ops.TypeError("'__rtruediv__' requires UInt64, but received {0}", Ops.GetDynamicType(left).__name__);
+            }
             UInt64 leftUInt64 = (UInt64)left;
             IConvertible rightConvertible;
             if ((rightConvertible = right as IConvertible) != null) {
