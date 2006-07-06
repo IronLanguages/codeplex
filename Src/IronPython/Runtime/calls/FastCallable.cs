@@ -130,7 +130,7 @@ namespace IronPython.Runtime.Calls {
                 return Call(context, args[0]);
             }
             if (args.Length == 2) {
-                return Call(context, args[1], args[0]);
+                return Call(context, args[0], args[1]);
             }
 
             object[] newArgs = new object[args.Length];
