@@ -218,10 +218,7 @@ namespace IronPython.Modules {
                     res.Extend(this.GetEnumerator());
                     return res;
                 } else {
-                    UserType ut = Ops.GetDynamicType(this) as UserType;
-                    System.Diagnostics.Debug.Assert(ut != null);
-
-                    return ut.Call(new object[] { GetEnumerator() });
+                    return Ops.Call(Ops.GetDynamicType(this), GetEnumerator());
                 }
             }
 

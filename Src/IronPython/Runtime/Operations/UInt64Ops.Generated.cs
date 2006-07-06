@@ -39,6 +39,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
+        public static object Make(DynamicType cls) {
+            return Make(cls, default(UInt64));
+        }
+
+        [PythonName("__new__")]
         public static object Make(DynamicType cls, object value) {
             if (cls != UInt64Type) {
                 throw Ops.TypeError("UInt64.__new__: first argument must be UInt64 type.");

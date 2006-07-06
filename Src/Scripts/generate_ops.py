@@ -805,20 +805,20 @@ def ops_generator_usertype(cw, basicTemplate, cmpTemplate):
 
 
 USERTYPE = """
-public virtual object %(clrName)s(object self, object other) {
-    return CallBinaryOperator(SymbolTable.Op%(clrName)s, self, other);
+public object %(clrName)s(object self, object other) {
+    return InvokeBinaryOperator(SymbolTable.Op%(clrName)s, self, other);
 }
-public virtual object Reverse%(clrName)s(object self, object other) {
-    return CallBinaryOperator(SymbolTable.OpReverse%(clrName)s, self, other);
+public object Reverse%(clrName)s(object self, object other) {
+    return InvokeBinaryOperator(SymbolTable.OpReverse%(clrName)s, self, other);
 }
-public virtual object InPlace%(clrName)s(object self, object other) {
-    return CallBinaryOperator(SymbolTable.OpInPlace%(clrName)s, self, other);
+public object InPlace%(clrName)s(object self, object other) {
+    return InvokeBinaryOperator(SymbolTable.OpInPlace%(clrName)s, self, other);
 }
 """
 
 USERTYPE_CMP = """
 public object %(clrName)s(object self, object other) {
-    return CallBinaryOperator(SymbolTable.Op%(clrName)s, self, other);
+    return InvokeBinaryOperator(SymbolTable.Op%(clrName)s, self, other);
 }"""
 
 def usertype_ops(cw):

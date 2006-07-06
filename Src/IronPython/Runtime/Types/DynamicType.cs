@@ -24,11 +24,9 @@ using IronPython.Runtime.Calls;
 namespace IronPython.Runtime.Types {
     // DynamicType is the base of the hierarchy of new-style types in the Python world, and builtins.
     // 
-    // It is extended by:
-    //   ReflectedType
-    //   UserType
+    // It is extended by ReflectedType and UserType
     [PythonType("type")]
-    public abstract partial class DynamicType : IPythonType, IDynamicObject, ICallable, ICustomAttributes, IRichEquality, IPythonContainer {
+    public abstract partial class DynamicType : IPythonType, IDynamicObject, IFancyCallable, ICallableWithCallerContext, ICustomAttributes, IRichEquality, IPythonContainer {
         public object __name__;
         protected Tuple bases;
 
@@ -149,11 +147,6 @@ namespace IronPython.Runtime.Types {
             this.type = type;
         }
 
-        internal static int GetMaxArgs(ICallable c) {
-            if (c is BuiltinFunction) return ((BuiltinFunction)c).GetMaximumArguments();
-            else return 10;
-        }
-
         public virtual void Initialize() {
             if (methodResolutionOrder == null) methodResolutionOrder = CalculateMro(BaseClasses);
         }
@@ -213,18 +206,17 @@ namespace IronPython.Runtime.Types {
             return Ops.Repr(self);
         }
 
-        // These are the default base implementations of attribute-access.
-        abstract internal bool TryBaseGetAttr(ICallerContext context, object self, SymbolId name, out object ret);
-        abstract internal void BaseSetAttr(ICallerContext context, object self, SymbolId name, object value);
-        abstract internal void BaseDelAttr(ICallerContext context, object self, SymbolId name);
-
         public static object GetAttributeMethod(object self, object name) {
             string strName = name as string;
             if (strName == null) throw Ops.TypeError("attribute name must be a string");
 
-            DynamicType pythonType = Ops.GetDynamicType(self);
             object ret;
-            if (pythonType.TryBaseGetAttr(DefaultContext.Default, self, SymbolTable.StringToId(strName), out ret)) return ret;
+            SymbolId symbol = SymbolTable.StringToId(strName);
+            ICustomAttributes ica = self as ICustomAttributes;
+            if (ica != null) if (ica.TryGetAttr(DefaultContext.Default, symbol, out ret)) return ret;
+
+            DynamicType pythonType = Ops.GetDynamicType(self);
+            if (pythonType.TryBaseGetAttr(DefaultContext.Default, self, symbol, out ret)) return ret;
             throw Ops.AttributeError("no attribute {0}", name); //??? better message
         }
 
@@ -232,8 +224,15 @@ namespace IronPython.Runtime.Types {
             string strName = name as string;
             if (strName == null) throw Ops.TypeError("attribute name must be a string");
 
+            SymbolId symbol = SymbolTable.StringToId(strName);
+            ICustomAttributes ica = self as ICustomAttributes;
+            if (ica != null) {
+                ica.SetAttr(DefaultContext.Default, symbol, value);
+                return null;
+            }
+
             DynamicType pythonType = Ops.GetDynamicType(self);
-            pythonType.BaseSetAttr(DefaultContext.Default, self, SymbolTable.StringToId(strName), value);
+            pythonType.BaseSetAttr(DefaultContext.Default, self, symbol, value);
             return null;
         }
 
@@ -241,40 +240,20 @@ namespace IronPython.Runtime.Types {
             string strName = name as string;
             if (strName == null) throw Ops.TypeError("attribute name must be a string");
 
+            SymbolId symbol = SymbolTable.StringToId(strName);
+            ICustomAttributes ica = self as ICustomAttributes;
+            if (ica != null) {
+                ica.DeleteAttr(DefaultContext.Default, symbol);
+                return null;
+            }
+
             DynamicType pythonType = Ops.GetDynamicType(self);
-            pythonType.BaseDelAttr(DefaultContext.Default, self, SymbolTable.StringToId(strName));
+            pythonType.BaseDelAttr(DefaultContext.Default, self, symbol);
             return null;
         }
 
-        /// <summary>
-        /// Looks up a __xyz__ method in slots only (because we should never lookup
-        /// in instance members for these)
-        /// </summary>
-        internal static bool TryLookupSpecialMethod(object self, SymbolId symbol, out object ret) {
-            return TryLookupSpecialMethod(DefaultContext.Default, self, symbol, out ret);
-        }
-
-        /// <summary>
-        /// Looks up a __xyz__ method in slots only (because we should never lookup
-        /// in instance members for these)
-        /// </summary>
-        internal static bool TryLookupSpecialMethod(ICallerContext context, object self, SymbolId symbol, out object ret) {
-            IDynamicObject ido = self as IDynamicObject;
-            if (ido != null) {
-                DynamicType pt = ido.GetDynamicType();
-
-                if (pt.TryLookupSlot(context, symbol, out ret)) {
-                    ret = Ops.GetDescriptor(ret, self, pt);
-                    return true;
-                }
-            }
-            ret = null;
-            return false;
-        }
-
-
-
-        public List __subclasses__() {
+        [PythonName("__subclasses__")]
+        public List LookupSubclasses() {
             List l = new List();
             int i = 0;
 
@@ -374,12 +353,12 @@ namespace IronPython.Runtime.Types {
 
             UpdateFromBases();
 
-            foreach (UserType subUserType in __subclasses__()) {
+            foreach (UserType subUserType in LookupSubclasses()) {
                 subUserType.ReinitializeHierarchy();
             }
         }
 
-        internal bool TryLookupBoundSlot(ICallerContext context, object inst, SymbolId name, out object ret) {
+        internal virtual bool TryLookupBoundSlot(ICallerContext context, object inst, SymbolId name, out object ret) {
             if (TryLookupSlot(context, name, out ret)) {
                 ret = Ops.GetDescriptor(ret, inst, this);
                 return true;
@@ -484,8 +463,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public virtual object Call(params object[] args) { throw new NotImplementedException(); }
-        public virtual DynamicType GetDynamicType() { throw new NotImplementedException(); }
+        public abstract DynamicType GetDynamicType();
 
         public virtual string Repr(object self) {
             Initialize();
@@ -497,37 +475,6 @@ namespace IronPython.Runtime.Types {
             Array.Copy(args, 0, newArgs, 1, args.Length);
             newArgs[0] = this;
             return (newArgs);
-        }
-
-        public void InvokeInit(object inst, object[] args) {
-            object initFunc;
-
-            if (Ops.GetDynamicType(inst).IsSubclassOf(this)) {
-                if (TryLookupBoundSlot(DefaultContext.Default, inst, SymbolTable.Init, out initFunc)) {
-                    switch (args.Length) {
-                        case 0: Ops.Call(initFunc); break;
-                        case 1: Ops.Call(initFunc, args[0]); break;
-                        case 2: Ops.Call(initFunc, args[0], args[1]); break;
-                        default:
-                            Ops.Call(initFunc, args);
-                            break;
-                    }
-                }
-            }
-        }
-
-        public void InvokeInit(ICallerContext context, object inst, object[] args, string[] names) {
-            if (Ops.GetDynamicType(inst).IsSubclassOf(this)) {
-                object initFunc;
-                if (TryLookupBoundSlot(context, inst, SymbolTable.Init, out initFunc)) {
-                    IFancyCallable ifc = initFunc as IFancyCallable;
-                    if (ifc != null) {
-                        ifc.Call(context, args, names);
-                    } else {
-                        throw Ops.TypeError("__init__ cannot be called with keyword arguments");
-                    }
-                }
-            }
         }
 
         public virtual bool IsPythonType {
@@ -546,7 +493,52 @@ namespace IronPython.Runtime.Types {
             get;
         }
 
-        protected virtual object CallUnaryOperator(SymbolId op, object self) {
+        #region ICallableWithCallerContext Members
+
+        [PythonName("__call__")]
+        public virtual object Call(ICallerContext context, params object[] args) {
+            return Call(context, args, null);
+        }
+        #endregion
+
+        #region IFancyCallable Members
+
+        public object Call(ICallerContext context, object[] args, string[] names) {
+            Initialize();
+
+            object newFunc, newObject;
+
+            // object always has __new__, so we'll always find at least one            
+            TryLookupBoundSlot(context, this, SymbolTable.NewInst, out newFunc);
+            Debug.Assert(newFunc != null);
+
+            if (names != null) newObject = Ops.CallWithContext(context, newFunc, PrependThis(args), names);
+            else newObject = Ops.CallWithContext(context, newFunc, PrependThis(args));
+            if (newObject == null) return newObject;
+
+            DynamicType newObjectType = Ops.GetDynamicType(newObject);
+            if (newObjectType.IsSubclassOf(this)) {
+                object init;
+                if (newObjectType.TryLookupBoundSlot(context, newObject, SymbolTable.Init, out init)) {
+                    if (names != null) Ops.CallWithContext(context, init, args, names);
+                    else Ops.CallWithContext(context, init, args);
+                }
+
+                if (HasFinalizer) {
+                    IWeakReferenceable iwr = newObject as IWeakReferenceable;
+                    Debug.Assert(iwr != null);
+
+                    InstanceFinalizer nif = new InstanceFinalizer(newObject);
+                    iwr.SetFinalizer(new WeakRefTracker(nif, nif));
+                }
+            }
+
+            return newObject;
+        }
+
+        #endregion
+
+        protected virtual object InvokeSpecialMethod(SymbolId op, object self) {
             object func;
             if (TryLookupBoundSlot(DefaultContext.Default, self, op, out func)) {
                 return Ops.Call(func);
@@ -554,25 +546,46 @@ namespace IronPython.Runtime.Types {
             return Ops.NotImplemented;
         }
 
-        protected virtual object CallBinaryOperator(SymbolId op, object self, object other) {
+        internal virtual object InvokeSpecialMethod(SymbolId op, object self, object arg0) {
             object func;
             if (TryLookupBoundSlot(DefaultContext.Default, self, op, out func)) {
-                object ret;
-                if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
+                return Ops.Call(func, arg0);
             }
             return Ops.NotImplemented;
         }
 
+
+        internal bool TryInvokeSpecialMethod(object target, SymbolId name, out object ret, params object[] args) {
+            object meth;
+            if (TryLookupBoundSlot(DefaultContext.Default, target, name, out meth)) {
+                ret = Ops.Call(meth, args);
+                return true;
+            } else {
+                ret = null;
+                return false;
+            }
+        }
+
+        internal virtual object InvokeBinaryOperator(SymbolId op, object self, object arg0) {
+            return InvokeSpecialMethod(op, self, arg0);
+        }
+
         #region ICustomAttributes Members
 
-        public virtual bool TryGetAttr(ICallerContext context, SymbolId name, out object value) {
+        public bool TryGetAttr(ICallerContext context, SymbolId name, out object value) {
             switch (name.Id) {
                 case SymbolTable.NameId: value = __name__; return true;
                 case SymbolTable.BasesId: value = BaseClasses; return true;
                 case SymbolTable.ClassId: value = ((IDynamicObject)this).GetDynamicType(); return true;
                 case SymbolTable.SubclassesId:
-                    BuiltinFunction rm = BuiltinFunction.MakeMethod("__subclasses__", typeof(ReflectedType).GetMethod("__subclasses__"), FunctionType.PythonVisible | FunctionType.Method); ;
+                    BuiltinFunction rm = BuiltinFunction.MakeMethod("__subclasses__", typeof(DynamicType).GetMethod("LookupSubclasses"), FunctionType.PythonVisible | FunctionType.Method); ;
                     value = new BoundBuiltinFunction(rm, this);
+                    return true;
+                case SymbolTable.CallId:
+                    Initialize();
+                    MethodWrapper mw = new MethodWrapper(this, SymbolTable.Call);
+                    mw.SetDeclaredMethod(this);
+                    value = mw;
                     return true;
                 default:
                     if (TryLookupSlot(context, name, out value)) {
@@ -607,7 +620,7 @@ namespace IronPython.Runtime.Types {
             RawDeleteSlot(name);
         }
 
-        public virtual List GetAttrNames(ICallerContext context) {
+        public List GetAttrNames(ICallerContext context) {
             Initialize();
 
             List names = new List();
@@ -712,31 +725,48 @@ namespace IronPython.Runtime.Types {
             get { return __name__.ToString(); }
         }
 
+        protected virtual bool HasFinalizer {
+            get {
+                return false;
+            }
+            set {
+                throw new InvalidOperationException("only UserTypes can have a finalizer");
+            }
+        }
+
         #region Overloaded Unary/Binary operators
 
-        public virtual object Negate(object self) {
-            return CallUnaryOperator(SymbolTable.OpNegate, self);
+        public object Negate(object self) {
+            return InvokeSpecialMethod(SymbolTable.OpNegate, self);
         }
 
-        public virtual object Positive(object self) {
-            return CallUnaryOperator(SymbolTable.Positive, self);
+        public object Positive(object self) {
+            return InvokeSpecialMethod(SymbolTable.Positive, self);
         }
 
-        public virtual object OnesComplement(object self) {
-            return CallUnaryOperator(SymbolTable.OpOnesComplement, self);
+        public object OnesComplement(object self) {
+            return InvokeSpecialMethod(SymbolTable.OpOnesComplement, self);
         }
 
         public virtual object CompareTo(object self, object other) {
-            return CallBinaryOperator(SymbolTable.Cmp, self, other);
+            return InvokeSpecialMethod(SymbolTable.Cmp, self, other);
         }
 
         #endregion
 
-        public virtual object Call(object func, params object[] args) {
-            object call;
-            if (Ops.TryGetAttr(func, SymbolTable.Call, out call)) return Ops.Call(call, args);
+        public virtual object CallOnInstance(object func, object[] args) {
+            object ret;
+            if (TryInvokeSpecialMethod(func, SymbolTable.Call, out ret, args)) return ret;
+            throw Ops.TypeErrorForBadInstance("{0} object is not callable", func);
+        }
 
-            throw Ops.TypeError("{0} object is not callable", Ops.GetDynamicType(func).__name__);
+        public object CallOnInstance(object func, object[] args, string[] names) {
+            object meth;
+            if (TryLookupBoundSlot(DefaultContext.Default, func, SymbolTable.Call, out meth)) {
+                return Ops.Call(DefaultContext.Default, meth, args, names);
+            } else {
+                throw Ops.TypeErrorForBadInstance("{0} object is not callable with keyword arguments", func);
+            }
         }
 
         public abstract Tuple BaseClasses {
@@ -745,7 +775,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [PythonName("__getitem__")]
-        public virtual object GetIndex(object self, object index) {
+        public object GetIndex(object self, object index) {
             Tuple ituple = index as Tuple;
             if (ituple != null && ituple.IsExpandable) {
                 object[] idx = ituple.Expand(null);
@@ -766,7 +796,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [PythonName("__setitem__")]
-        public virtual void SetIndex(object self, object index, object value) {
+        public void SetIndex(object self, object index, object value) {
             Tuple ituple = index as Tuple;
             if (ituple != null && ituple.IsExpandable) {
                 object[] idx = ituple.Expand(value);
@@ -789,7 +819,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [PythonName("__delitem__")]
-        public virtual void DelIndex(object self, object index) {
+        public void DelIndex(object self, object index) {
             Slice slice = index as Slice;
             if (slice != null && slice.step == null) {
                 object delSlice;
@@ -806,22 +836,71 @@ namespace IronPython.Runtime.Types {
         }
 
         public virtual bool TryGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
-            ret = null;
-            return false;            
+            return TryBaseGetAttr(context, self, name, out ret);
         }
 
         public virtual object GetAttr(ICallerContext context, object self, SymbolId name) {
             object ret;
             if (TryGetAttr(context, self, name, out ret)) return ret;
-            throw Ops.AttributeError("'{0}' object has no attribute '{1}'", this.__name__, SymbolTable.IdToString(name));
+            throw Ops.AttributeErrorForMissingAttribute(this.Name, name);
         }
 
         public virtual void SetAttr(ICallerContext context, object self, SymbolId name, object value) {
-            throw Ops.AttributeError("'{0}' object has no attribute '{1}'", this.__name__, SymbolTable.IdToString(name));
+            BaseSetAttr(context, self, name, value);
         }
 
         public virtual void DelAttr(ICallerContext context, object self, SymbolId name) {
-            throw new NotImplementedException();
+            BaseDelAttr(context, self, name);
+        }
+
+        // These are the default base implementations of attribute-access.
+        internal virtual bool TryBaseGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
+            if (name == SymbolTable.Dict) {
+                // Instances of builtin types do not have "__dict__"
+                throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), name);
+            }
+
+            if (TryLookupSlot(context, name, out ret)) {
+                ret = Ops.GetDescriptor(ret, self, this);
+                return true;
+            }
+
+            if (name == SymbolTable.Class) { ret = this; return true; }
+
+            return false;
+        }
+
+        protected void ThrowAttributeError(bool slotExists, SymbolId attributeName) {
+            if (slotExists) {
+                throw Ops.AttributeErrorForReadonlyAttribute(Name, attributeName);
+            } else {
+                throw Ops.AttributeErrorForMissingAttribute(Name, attributeName);
+            }
+        }
+
+        internal virtual void BaseSetAttr(ICallerContext context, object self, SymbolId name, object value) {
+            if (name == SymbolTable.Class) throw Ops.AttributeErrorForReadonlyAttribute(Name, name);
+
+            object slot;
+            if (TryGetSlot(context, name, out slot)) {
+                if (!Ops.SetDescriptor(slot, self, value)) {
+                    throw Ops.AttributeErrorForReadonlyAttribute(Name, name);
+                }
+            } else {
+                throw Ops.AttributeErrorForMissingAttribute(Name, name);
+            }
+        }
+        internal virtual void BaseDelAttr(ICallerContext context, object self, SymbolId name) {
+            if (name == SymbolTable.Class) throw Ops.AttributeErrorForReadonlyAttribute(Name, name);
+
+            object slot;
+            if (TryGetSlot(context, name, out slot)) {
+                if (!Ops.DelDescriptor(slot, self)) {
+                    throw Ops.AttributeErrorForReadonlyAttribute(Name, name);
+                }
+            } else {
+                throw Ops.AttributeErrorForMissingAttribute(Name, name);
+            }
         }
 
         /// <summary>
@@ -847,32 +926,22 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public virtual object Equal(object self, object other) {
-            object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpEqual, out func)) {
-                object ret;
-                if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
-            }
+        public object Equal(object self, object other) {
+            object ret = InvokeBinaryOperator(SymbolTable.OpEqual, self, other);
+            if (ret != Ops.NotImplemented) return ret;
 
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Cmp, out func) && func != __cmp__F) {
-                object ret = Ops.Call(func, other);
-                if (ret != Ops.NotImplemented) return Ops.CompareToZero(ret) == 0;
-            }
+            ret = InvokeBinaryOperator(SymbolTable.Cmp, self, other);
+            if (ret != Ops.NotImplemented) return Ops.Bool2Object(Ops.CompareToZero(ret) == 0);
 
             return Ops.NotImplemented;
         }
 
-        public virtual object NotEqual(object self, object other) {
-            object func;
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.OpNotEqual, out func)) {
-                object ret;
-                if (Ops.TryCall(func, other, out ret) && ret != Ops.NotImplemented) return ret;
-            }
+        public object NotEqual(object self, object other) {
+            object ret = InvokeBinaryOperator(SymbolTable.OpNotEqual, self, other);
+            if (ret != Ops.NotImplemented) return ret;
 
-            if (TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Cmp, out func) && func != __cmp__F) {
-                object ret = Ops.Call(func, other);
-                if (ret != Ops.NotImplemented) return Ops.CompareToZero(ret) != 0;
-            }
+            ret = InvokeBinaryOperator(SymbolTable.Cmp, self, other);
+            if (ret != Ops.NotImplemented) return Ops.Bool2Object(Ops.CompareToZero(ret) != 0);
 
             return Ops.NotImplemented;
         }
@@ -881,36 +950,17 @@ namespace IronPython.Runtime.Types {
             return Ops.NotImplemented;
         }
 
-        public virtual object Invoke(object target, SymbolId name, params object[] args) {
+        public object Invoke(object target, SymbolId name, params object[] args) {
             return Ops.Call(Ops.GetAttr(DefaultContext.Default, target, name), args);
         }
 
-        public virtual bool TryInvoke(object target, SymbolId name, out object ret, params object []args) {
-            object meth;
-            if (Ops.TryGetAttr(target, name, out meth)) {
-                ret = Ops.Call(meth, args);
-                return true;
-            } else {
-                ret = null;
-                return false;
-            }
-        }
+        public object InvokeSpecialMethod(object target, SymbolId name, params object[] args) {
+            object ret;
+            if (TryInvokeSpecialMethod(target, name, out ret, args)) return ret;
 
-        public virtual bool TryFancyInvoke(object target, SymbolId name, object[] args, string[] names, out object ret) {
-            object meth;
-            if (Ops.TryGetAttr(target, name, out meth)) {
-                IFancyCallable ifc = meth as IFancyCallable;
-                if (ifc != null) {
-                    ret = ifc.Call(DefaultContext.Default, args, names);
-                    return true;
-                }
-
-                ret = Ops.Call(meth, args, names);
-                return true;
-            } else {
-                ret = null;
-                return false;
-            }
+            throw Ops.TypeError("{0} object has no attribute '{1}'",
+                Ops.StringRepr(Ops.GetDynamicType(target)),
+                name.ToString());
         }
 
         #region IRichEquality Members

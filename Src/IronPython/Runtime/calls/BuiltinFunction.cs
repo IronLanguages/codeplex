@@ -35,12 +35,12 @@ namespace IronPython.Runtime.Calls {
     /// All calls are made through the optimizedTarget which is created lazily.
     /// </summary>
     [PythonType("builtin_function_or_method")]
-    public partial class BuiltinFunction : 
+    public sealed partial class BuiltinFunction : 
         FastCallable, IFancyCallable, IContextAwareMember, IDynamicObject {
-        protected string name;
-        internal MethodBase[] targets;
+        private string name;
+        private MethodBase[] targets;
         private FunctionType funcType;
-        protected FastCallable optimizedTarget;
+        private FastCallable optimizedTarget;
 
         [PythonName("__new__")]
         public static object Make(object cls, PythonFunction newFunction, object inst) {
@@ -56,12 +56,21 @@ namespace IronPython.Runtime.Calls {
         public static BuiltinFunction MakeMethod(string name, MethodBase[] infos, FunctionType ft) {
             return new BuiltinFunction(name, infos, ft);
         }
+
+        public static BuiltinFunction MakeOrAdd(BuiltinFunction existing, string name, MethodBase mi, FunctionType funcType) {
+            if (existing != null) {
+                existing.AddMethod(mi);
+                return existing;
+            } else {
+                return MakeMethod(name, mi, funcType);
+            }
+        }
         #endregion
 
-        #region Protected Constructors
-        public BuiltinFunction() { }
+        #region Private Constructors
+        internal BuiltinFunction() { }
 
-        protected BuiltinFunction(string name, MethodBase[] originalTargets, FunctionType functionType) {
+        private BuiltinFunction(string name, MethodBase[] originalTargets, FunctionType functionType) {
             Debug.Assert(originalTargets!= null, "originalTargets array is null");
             
             MethodBase target=originalTargets[0];
@@ -77,7 +86,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        protected BuiltinFunction(string name, MethodBase target, FunctionType functionType)
+        private BuiltinFunction(string name, MethodBase target, FunctionType functionType)
             : this(name, new MethodBase[] { target }, functionType) {
         }
 
@@ -112,7 +121,7 @@ namespace IronPython.Runtime.Calls {
             get {
                 if (optimizedTarget == null) {
                     if (targets.Length == 0) throw Ops.TypeError("cannot call generic method w/o specifying type");
-                    optimizedTarget = MethodBinder.MakeFastCallable(Name, targets);
+                    optimizedTarget = MethodBinder.MakeFastCallable(Name, targets, IsBinaryOperator);
                     if (IsReversedOperator) optimizedTarget = new ReversedFastCallableWrapper(optimizedTarget);
                 }
                 return optimizedTarget;
@@ -132,28 +141,6 @@ namespace IronPython.Runtime.Calls {
             UpdateFunctionInfo(info);
         }
 
-        public virtual bool TryCall(object arg, out object ret) {
-            //!!! This too is bad
-            try {
-                ret = Call(null, arg);
-                return true;
-            } catch (ArgumentTypeException) {
-                ret = null;
-                return false;
-            }
-        }
-        internal virtual bool TryCall(object arg0, object arg1, out object ret) {
-            //!!! This too is bad
-            try {
-                ret = Call(null, arg0, arg1);
-                return true;
-            } catch (ArgumentTypeException e) {
-                if (e.Message == "complex is not an ordered type") throw;
-                ret = null;
-                return false;
-            }
-        }
-
         [PythonName("__call__")]
         public override object Call(ICallerContext context, params object[] args) {
             return OptimizedTarget.Call(context, args);
@@ -164,7 +151,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         [PythonName("__call__")]
-        public virtual object Call(ICallerContext context, object[] args, string[] names) {
+        public object Call(ICallerContext context, object[] args, string[] names) {
             return CallHelper(context, args, names, null);
         }
 
@@ -371,18 +358,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             return this;
         }
 
-        /// <summary>
-        /// Gets the maximum number of arguments the function can handle
-        /// </summary>
-        /// <returns></returns>
-        public virtual int GetMaximumArguments() {
-            int maxArgs = 0;
-            foreach (MethodBase mi in targets) {
-                maxArgs = Math.Max(maxArgs, mi.GetParameters().Length);
-            }
-            return maxArgs;
-        }
-
 
         /// <summary>
         /// True if the method should be visible to non-CLS opt-in callers
@@ -403,9 +378,11 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             get {
                 return (FunctionType & FunctionType.ReversedOperator) != 0;
             }
-            set {
-                if (value) FunctionType |= FunctionType.ReversedOperator;
-                else FunctionType &= ~FunctionType.ReversedOperator;
+        }
+
+        public bool IsBinaryOperator {
+            get {
+                return (FunctionType & FunctionType.BinaryOperator) != 0;
             }
         }
 
@@ -467,15 +444,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             }
         }
 
-        /// <summary>
-        /// Gets the optimized functions that are used for calling the 
-        /// target methods.
-        /// </summary>
-        protected virtual Delegate[] OptimizedTargets {
-            get {
-                return new Delegate[0];
-            }
-        }
 
         #endregion
 
@@ -531,40 +499,14 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         #region Protected APIs
 
-        protected void UpdateFunctionInfo(MethodBase info) {
+        private void UpdateFunctionInfo(MethodBase info) {
             ParameterInfo[] parameters = info.GetParameters();
             if (parameters.Length > 0 && parameters[0].ParameterType == typeof(ICallerContext)) {
                 FunctionType |= FunctionType.IsContextAware;
             }
         }
 
-        protected Exception BadArgumentError(int count) {
-            int min = Int32.MaxValue;
-            int max = Int32.MinValue;
-            for (int i = 0; i < targets.Length; i++) {
-                ParameterInfo[] pis = targets[i].GetParameters();
-
-                if (min > pis.Length) min = pis.Length;
-                if (max < pis.Length) max = pis.Length;
-
-                for (int j = 0; j < pis.Length; j++) {
-                    if (ReflectionUtil.IsParamArray(pis[j])) {
-                        max = Int32.MaxValue;
-                        if (min == pis.Length) min--;
-                    } else if (ReflectionUtil.IsParamDict(pis[j])) {
-                        max = Int32.MaxValue;
-                        if (min == pis.Length) min--;
-                    }
-                }
-            }
-
-            if (min == max) throw PythonFunction.TypeErrorForIncorrectArgumentCount(FriendlyName, min, 0, count);
-            else if (max == Int32.MaxValue) throw PythonFunction.TypeErrorForIncorrectArgumentCount(FriendlyName, min, 0, count, true, false);
-            else throw PythonFunction.TypeErrorForIncorrectArgumentCount(FriendlyName, max, max - min, count);
-        }
-
-
-        protected struct MethodBinding {
+        private struct MethodBinding {
             public MethodBase method;
             public object[] arguments;
             public object instance;
@@ -598,6 +540,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         OpsFunction         = 0x0040,   // True if this is a function/method declared on an Ops type (StringOps, IntOps, etc...)
         Params              = 0x0080,   // True if this is a params method, false otherwise.
         ReversedOperator    = 0x0100,   // True if this is a __r*__ method for a CLS overloaded operator method
+        BinaryOperator      = 0x0200,   // This method represents a binary operator method for a CLS overloaded operator method
     }
 
     [PythonType("method_descriptor")]
@@ -819,10 +762,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         public override object CallInstance(ICallerContext context, object instance, params object[] args) {
             throw new NotImplementedException("The method or operation is not implemented.");
-        }
-
-        public bool TryCall(object arg, out object ret) {
-            return target.TryCall(instance, arg, out ret);
         }
 
         #region IFancyCallable Members

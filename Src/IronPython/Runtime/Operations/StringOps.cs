@@ -22,6 +22,7 @@ using System.Runtime.InteropServices;
 using System.Reflection;
 
 using System.Globalization;
+using System.Threading;
 
 using IronMath;
 using IronPython.Runtime;
@@ -129,7 +130,7 @@ namespace IronPython.Runtime.Operations {
             if (other is string) return self + (string)other;
             else if (other is ExtensibleString) return self + ((ExtensibleString)other).self;
 
-            throw Ops.TypeError("cannot add string and {0}", Ops.GetDynamicType(other).__name__);
+            throw Ops.TypeErrorForBadInstance("cannot add string and {0}", other);
         }
 
         public virtual object MultiplySequence(object count) {
@@ -160,7 +161,7 @@ namespace IronPython.Runtime.Operations {
             if (value is string) return self.Contains((string)value);
             else if (value is ExtensibleString) return self.Contains(((ExtensibleString)value).self);
 
-            throw Ops.TypeError("expeceted string, got {0}", Ops.GetDynamicType(value).__name__);
+            throw Ops.TypeErrorForBadInstance("expected string, got {0}", value);
         }
 
         #endregion
@@ -168,14 +169,45 @@ namespace IronPython.Runtime.Operations {
     }
 
     /// <summary>
-    /// StringOps is the static class that is concatenated with the built-in
-    /// System.String type to present to the user the final Python type presentation.
+    /// StringOps is the static class that contains the methods defined on strings, i.e. 'abc'
     /// 
     /// Here we define all of the methods that a Python user would see when doing dir('abc').
     /// If the user is running in a CLS aware context they will also see all of the methods
     /// defined in the CLS System.String type.
     /// </summary>
     public static class StringOps {
+        static ReflectedType StringType;
+        public static ReflectedType MakeDynamicType() {
+            if (StringType == null) {
+                OpsReflectedType ret = new OpsReflectedType("str", typeof(string), typeof(StringOps), typeof(ExtensibleString), new CallTarget2(FastNew));
+                if (Interlocked.CompareExchange<ReflectedType>(ref StringType, ret, null) == null)
+                    return ret;
+            }
+            return StringType;
+        }
+
+        internal static object FastNew(object context, object x) {
+            if (x == null) {
+                return "None";
+            }
+            if (x is string) {
+                // check ascii
+                string s = (string)x;
+                for (int i = 0; i < s.Length; i++) {
+                    if (s[i] > '\x80')
+                        return StringOps.Make(
+                            (ICallerContext)context,
+                            (DynamicType)Ops.GetDynamicTypeFromType(typeof(String)),
+                            s,
+                            null,
+                            "strict"
+                            );
+                }
+                return s;
+            }
+            return Ops.ToString(x);
+        }
+
         private static Dictionary<string, EncodingInfo> codecs;
 
         #region Python Constructors
@@ -192,7 +224,7 @@ namespace IronPython.Runtime.Operations {
         [PythonName("__new__")]
         public static object Make(ICallerContext context, DynamicType cls, object @object) {
             if (cls == TypeCache.String) {
-                return StringDynamicType.FastNew(context, @object);
+                return FastNew(context, @object);
             } else {
                 return cls.ctor.Call(cls, @object);
             }
@@ -274,6 +306,11 @@ namespace IronPython.Runtime.Operations {
             return __getitem__(self, new Slice(x, y));
         }
 
+        [PythonName("__add__")]
+        public static object Add(string self, string other) {
+            return self + other;
+        }
+
         [PythonName("__mod__")]
         public static string Modulus(string self, object other) {
             return new StringFormatter(self, other).Format();
@@ -294,6 +331,11 @@ namespace IronPython.Runtime.Operations {
             // the above code is MUCH faster than the simple loop
             //for (int i=0; i < count; i++) ret.Append(s);
             return ret.ToString();
+        }
+
+        [PythonName("__rmul__")]
+        public static object ReverseMultiply(string self, int other) {
+            return Multiply(self, other);
         }
 
         #endregion
@@ -1147,7 +1189,7 @@ namespace IronPython.Runtime.Operations {
             } else if (Converter.TryConvertToString(value, out strVal) && strVal != null) {
                 sb.Append(strVal);
             } else {
-                throw Ops.TypeError("sequence item {0}: expected string, {1} found", index.ToString(), Ops.GetDynamicType(value).__name__);
+                throw Ops.TypeError("sequence item {0}: expected string, {1} found", index.ToString(), Ops.GetPythonTypeName(value));
             }
         }
 
@@ -1298,7 +1340,7 @@ namespace IronPython.Runtime.Operations {
 
             // tuple is string, bytes used, we just want the string...
             Tuple t = res as Tuple;
-            if (t == null) throw Ops.TypeError("expected tuple, but found {0}", Ops.GetDynamicType(res).__name__);
+            if (t == null) throw Ops.TypeErrorForBadInstance("expected tuple, but found {0}", res);
 
             return Converter.ConvertToString(t[0]);
         }
@@ -1796,7 +1838,7 @@ namespace IronPython.Runtime.Operations {
                     ok = false;
                 }
 
-                if (!ok) throw Ops.TypeError("{1} error handler must return tuple containing (str, int), got {0}", Ops.GetDynamicType(res).__name__, encodeOrDecode);
+                if (!ok) throw Ops.TypeError("{1} error handler must return tuple containing (str, int), got {0}", Ops.GetPythonTypeName(res), encodeOrDecode);
                 return replacement;
             }
         }

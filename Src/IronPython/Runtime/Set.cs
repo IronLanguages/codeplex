@@ -62,7 +62,7 @@ namespace IronPython.Runtime {
             } else if (setType == typeof(FrozenSetCollection)) {
                 setTypeStr = "frozenset";
             } else {
-                setTypeStr = Ops.GetDynamicType(set).__name__.ToString();
+                setTypeStr = Ops.GetDynamicType(set).Name;
             }
             StringBuilder sb = new StringBuilder();
             sb.Append(setTypeStr);
@@ -104,7 +104,7 @@ namespace IronPython.Runtime {
                 UserType ut = Ops.GetDynamicType(setObj) as UserType;
                 Debug.Assert(ut != null);
 
-                ISet set = ut.Call() as ISet;
+                ISet set = Ops.Call(ut) as ISet;
                 Debug.Assert(set != null);
 
                 return set;
@@ -121,7 +121,7 @@ namespace IronPython.Runtime {
                 // subclass                
                 UserType ut = Ops.GetDynamicType(setObj) as UserType;
                 Debug.Assert(ut != null);
-                ISet res = ut.Call(new object[] { }) as ISet;
+                ISet res = Ops.Call(ut) as ISet;
 
                 Debug.Assert(res != null);
                 res.SetData(set.GetEnumerator());

@@ -45,22 +45,20 @@ namespace IronPython.Runtime.Types {
             dict[SymbolTable.NewInst] = ctor = DelegateNew;
         }
 
-        public override object Call(object func, params object[] args) {
+        public override object CallOnInstance(object func, object[] args) {
             if (invoker == null) {
                 CreateInvoker();
             }
             
-            // put delegate's Target object into args
-            Delegate d = func as Delegate;
-            Debug.Assert(d != null);
+            Debug.Assert(func is Delegate);
 
-            return invoker.CallInstance(DefaultContext.Default, d, args);
+            return invoker.CallInstance(DefaultContext.Default, func, args);
         }
 
         private void CreateInvoker() {
             MethodInfo delegateInfo = type.GetMethod("Invoke");
             Debug.Assert(delegateInfo != null);
-            invoker = MethodBinder.MakeFastCallable("invoke", delegateInfo);
+            invoker = MethodBinder.MakeFastCallable("invoke", delegateInfo, false);
         }
     }
 

@@ -161,7 +161,7 @@ def test_other_concerns():
 def test_arg_NoArgNecessary():
     target = COverloads_NoArgNecessary()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
-(     tuple(), _merge(_first('M100 M101 M102 M103 M104 M105 '), _second('M106 ')), '', '', ),
+(     tuple(), _merge(_first('M100 M101 M102 M105 '), _second('M103 M104 M106 ')), '', '', ),
 (         100, _merge(_first('M105 M106 '), _second('M101 M102 M103 M104 ')), 'M100 ', '', ),
 (  (100, 200), _second('M102 M104 M105 M106 '), 'M100 M101 M103 ', '', ),
     ]:
@@ -180,7 +180,7 @@ def test_arg_OneArg_RefArg():
     target = COverloads_OneArg_RefArg()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (     tuple(), dict(), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 ', '', ),
-(         100, _first('M100 M101 M103 M105 M106 M107 M108 '), 'M102 M104 ', '', ),
+(         100, _merge(_first('M100 M101 M103 M105 M108 '), _second('M106 M107 ')), 'M102 M104 ', '', ),
 (  (100, 200), _second('M101 M106 M107 '), 'M100 M102 M103 M104 M105 M108 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
@@ -207,7 +207,7 @@ def test_arg_OneArg_NormalOut():
     target = COverloads_OneArg_NormalOut()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (     tuple(), dict(), 'M100 M101 M102 M103 M104 M105 ', '', ),
-(         100, _first('M100 M102 M103 M104 M105 '), 'M101 ', '', ),
+(         100, _merge(_first('M100 M102 M105 '), _second('M103 M104 ')), 'M101 ', '', ),
 (  (100, 200), _second('M103 M104 '), 'M100 M101 M102 M105 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
@@ -216,7 +216,7 @@ def test_arg_OneArg_RefOut():
     target = COverloads_OneArg_RefOut()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (     tuple(), dict(), 'M100 M101 M102 M103 ', '', ),
-(         100, _merge(_first('M101 M102 M103 '), _second('M100 ')), '', '', ),
+(         100, _merge(_first('M103 '), _second('M100 M101 M102 ')), '', '', ),
 (  (100, 200), _second('M101 M102 '), 'M100 M103 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
@@ -225,7 +225,7 @@ def test_arg_OneArg_OutNormal():
     target = COverloads_OneArg_OutNormal()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (     tuple(), dict(), 'M100 M101 M102 M103 ', '', ),
-(         100, _first('M100 M101 M102 M103 '), '', '', ),
+(         100, _merge(_first('M100 M103 '), _second('M101 M102 ')), '', '', ),
 (  (100, 200), _second('M101 M102 '), 'M100 M103 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
@@ -234,7 +234,7 @@ def test_arg_OneArg_OutRef():
     target = COverloads_OneArg_OutRef()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (     tuple(), dict(), 'M100 M101 M102 ', '', ),
-(         100, _first('M100 M101 M102 '), '', '', ),
+(         100, _merge(_first('M102 '), _second('M100 M101 ')), '', '', ),
 (  (100, 200), _second('M100 M101 '), 'M102 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)

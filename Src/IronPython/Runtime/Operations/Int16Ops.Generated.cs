@@ -38,6 +38,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
+        public static object Make(DynamicType cls) {
+            return Make(cls, default(Int16));
+        }
+
+        [PythonName("__new__")]
         public static object Make(DynamicType cls, object value) {
             if (cls != Int16Type) {
                 throw Ops.TypeError("Int16.__new__: first argument must be Int16 type.");

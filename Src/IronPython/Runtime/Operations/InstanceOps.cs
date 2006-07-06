@@ -63,7 +63,7 @@ namespace IronPython.Runtime.Operations {
     /// </summary>
     public class InstanceOps : OpsReflectedType {
         internal static BuiltinFunction New = CreateFunction("__new__", "DefaultNew", "DefaultNewKW");
-        internal static BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNewCls", "DefaultNewClsKW");
+        internal static BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNew", "DefaultNewClsKW");
         internal static object Init = CreateInitMethod();
 
         InstanceOps() : base("object", typeof(DynamicType), typeof(InstanceOps), null) { }
@@ -97,21 +97,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object DefaultNewCls(ICallerContext context, DynamicType type, params object[] args) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
-
-            CheckInitArgs(context, null, args, type);
-
-            return type.AllocateObject();
-        }
-
-        [PythonName("__new__")]
         public static object DefaultNewClsKW(ICallerContext context, DynamicType type, [ParamDict] Dict kwDict, params object[] args) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
+            object res = DefaultNew(context, type, args);
 
-            CheckInitArgs(context, null, args, type);
-
-            object res = type.AllocateObject();
             if (kwDict.Count > 0) {
                 foreach(KeyValuePair<object, object> kvp in kwDict){
                     Ops.SetAttr(context, 
@@ -161,7 +149,7 @@ namespace IronPython.Runtime.Operations {
         [PythonName("__repr__")]
         public static string SimpleRepr(object self) {
             return String.Format("<{0} object at {1}>",
-                Ops.GetDynamicType(self).__name__,
+                Ops.GetDynamicType(self).Name,
                 Ops.HexId(self));
         }
 

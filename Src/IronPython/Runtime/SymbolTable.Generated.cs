@@ -214,6 +214,8 @@ namespace IronPython.Runtime {
         public static readonly SymbolId Hash = new SymbolId(HashId);
         ///<summary>Symbol for '__cmp__'</summary> 
         public static readonly SymbolId Cmp = new SymbolId(CmpId);
+        ///<summary>Symbol for '__divmod__'</summary> 
+        public static readonly SymbolId DivMod = new SymbolId(DivModId);
         ///<summary>Symbol for '__path__'</summary> 
         public static readonly SymbolId Path = new SymbolId(PathId);
         ///<summary>Symbol for '__get__'</summary> 
@@ -406,48 +408,49 @@ namespace IronPython.Runtime {
         public const int PositiveId               =  89; // "__pos__"
         public const int HashId                   =  90; // "__hash__"
         public const int CmpId                    =  91; // "__cmp__"
-        public const int PathId                   =  92; // "__path__"
-        public const int GetDescriptorId          =  93; // "__get__"
-        public const int SetDescriptorId          =  94; // "__set__"
-        public const int DeleteDescriptorId       =  95; // "__delete__"
-        public const int AllId                    =  96; // "__all__"
-        public const int ClrExceptionKeyId        =  97; // "clsException"
-        public const int KeysId                   =  98; // "keys"
-        public const int ArgumentsId              =  99; // "args"
-        public const int ConsoleWriteId           = 100; // "write"
-        public const int ConsoleReadLineId        = 101; // "readline"
-        public const int ExceptionMessageId       = 102; // "msg"
-        public const int ExceptionFilenameId      = 103; // "filename"
-        public const int ExceptionLineNumberId    = 104; // "lineno"
-        public const int ExceptionOffsetId        = 105; // "offset"
-        public const int TextId                   = 106; // "text"
-        public const int SoftspaceId              = 107; // "softspace"
-        public const int GeneratorNextId          = 108; // "next"
-        public const int SetDefaultEncodingId     = 109; // "setdefaultencoding"
-        public const int SysExitFuncId            = 110; // "exitfunc"
-        public const int NoneId                   = 111; // "None"
-        public const int MetaClassId              = 112; // "__metaclass__"
-        public const int MethodResolutionOrderId  = 113; // "__mro__"
-        public const int GetSliceId               = 114; // "__getslice__"
-        public const int SetSliceId               = 115; // "__setslice__"
-        public const int DeleteSliceId            = 116; // "__delslice__"
-        public const int FutureId                 = 117; // "__future__"
-        public const int DivisionId               = 118; // "division"
-        public const int NestedScopesId           = 119; // "nested_scopes"
-        public const int GeneratorsId             = 120; // "generators"
-        public const int AsId                     = 121; // "as"
-        public const int StarId                   = 122; // "*"
-        public const int StarStarId               = 123; // "**"
-        public const int LocalsId                 = 124; // "locals"
-        public const int VarsId                   = 125; // "vars"
-        public const int DirId                    = 126; // "dir"
-        public const int EvalId                   = 127; // "eval"
-        public const int UnderscoreId             = 128; // "_"
-        public const int GeneratorParmNameId      = 129; // "__gen_$_parm__"
-        public const int EnvironmentParmNameId    = 130; // "$env"
-        public const int IterId                   = 131; // "iter"
-        public const int SlotsId                  = 132; // "__slots__"
-        public const int LastWellKnownId          = 133; // "LastWellKnown"
+        public const int DivModId                 =  92; // "__divmod__"
+        public const int PathId                   =  93; // "__path__"
+        public const int GetDescriptorId          =  94; // "__get__"
+        public const int SetDescriptorId          =  95; // "__set__"
+        public const int DeleteDescriptorId       =  96; // "__delete__"
+        public const int AllId                    =  97; // "__all__"
+        public const int ClrExceptionKeyId        =  98; // "clsException"
+        public const int KeysId                   =  99; // "keys"
+        public const int ArgumentsId              = 100; // "args"
+        public const int ConsoleWriteId           = 101; // "write"
+        public const int ConsoleReadLineId        = 102; // "readline"
+        public const int ExceptionMessageId       = 103; // "msg"
+        public const int ExceptionFilenameId      = 104; // "filename"
+        public const int ExceptionLineNumberId    = 105; // "lineno"
+        public const int ExceptionOffsetId        = 106; // "offset"
+        public const int TextId                   = 107; // "text"
+        public const int SoftspaceId              = 108; // "softspace"
+        public const int GeneratorNextId          = 109; // "next"
+        public const int SetDefaultEncodingId     = 110; // "setdefaultencoding"
+        public const int SysExitFuncId            = 111; // "exitfunc"
+        public const int NoneId                   = 112; // "None"
+        public const int MetaClassId              = 113; // "__metaclass__"
+        public const int MethodResolutionOrderId  = 114; // "__mro__"
+        public const int GetSliceId               = 115; // "__getslice__"
+        public const int SetSliceId               = 116; // "__setslice__"
+        public const int DeleteSliceId            = 117; // "__delslice__"
+        public const int FutureId                 = 118; // "__future__"
+        public const int DivisionId               = 119; // "division"
+        public const int NestedScopesId           = 120; // "nested_scopes"
+        public const int GeneratorsId             = 121; // "generators"
+        public const int AsId                     = 122; // "as"
+        public const int StarId                   = 123; // "*"
+        public const int StarStarId               = 124; // "**"
+        public const int LocalsId                 = 125; // "locals"
+        public const int VarsId                   = 126; // "vars"
+        public const int DirId                    = 127; // "dir"
+        public const int EvalId                   = 128; // "eval"
+        public const int UnderscoreId             = 129; // "_"
+        public const int GeneratorParmNameId      = 130; // "__gen_$_parm__"
+        public const int EnvironmentParmNameId    = 131; // "$env"
+        public const int IterId                   = 132; // "iter"
+        public const int SlotsId                  = 133; // "__slots__"
+        public const int LastWellKnownId          = 134; // "LastWellKnown"
 
         // *** END GENERATED CODE ***
 
@@ -558,47 +561,48 @@ namespace IronPython.Runtime {
             PublishWellKnownSymbol("__pos__", Positive);  // 89
             PublishWellKnownSymbol("__hash__", Hash);  // 90
             PublishWellKnownSymbol("__cmp__", Cmp);  // 91
-            PublishWellKnownSymbol("__path__", Path);  // 92
-            PublishWellKnownSymbol("__get__", GetDescriptor);  // 93
-            PublishWellKnownSymbol("__set__", SetDescriptor);  // 94
-            PublishWellKnownSymbol("__delete__", DeleteDescriptor);  // 95
-            PublishWellKnownSymbol("__all__", All);  // 96
-            PublishWellKnownSymbol("clsException", ClrExceptionKey);  // 97
-            PublishWellKnownSymbol("keys", Keys);  // 98
-            PublishWellKnownSymbol("args", Arguments);  // 99
-            PublishWellKnownSymbol("write", ConsoleWrite);  // 100
-            PublishWellKnownSymbol("readline", ConsoleReadLine);  // 101
-            PublishWellKnownSymbol("msg", ExceptionMessage);  // 102
-            PublishWellKnownSymbol("filename", ExceptionFilename);  // 103
-            PublishWellKnownSymbol("lineno", ExceptionLineNumber);  // 104
-            PublishWellKnownSymbol("offset", ExceptionOffset);  // 105
-            PublishWellKnownSymbol("text", Text);  // 106
-            PublishWellKnownSymbol("softspace", Softspace);  // 107
-            PublishWellKnownSymbol("next", GeneratorNext);  // 108
-            PublishWellKnownSymbol("setdefaultencoding", SetDefaultEncoding);  // 109
-            PublishWellKnownSymbol("exitfunc", SysExitFunc);  // 110
-            PublishWellKnownSymbol("None", None);  // 111
-            PublishWellKnownSymbol("__metaclass__", MetaClass);  // 112
-            PublishWellKnownSymbol("__mro__", MethodResolutionOrder);  // 113
-            PublishWellKnownSymbol("__getslice__", GetSlice);  // 114
-            PublishWellKnownSymbol("__setslice__", SetSlice);  // 115
-            PublishWellKnownSymbol("__delslice__", DeleteSlice);  // 116
-            PublishWellKnownSymbol("__future__", Future);  // 117
-            PublishWellKnownSymbol("division", Division);  // 118
-            PublishWellKnownSymbol("nested_scopes", NestedScopes);  // 119
-            PublishWellKnownSymbol("generators", Generators);  // 120
-            PublishWellKnownSymbol("as", As);  // 121
-            PublishWellKnownSymbol("*", Star);  // 122
-            PublishWellKnownSymbol("**", StarStar);  // 123
-            PublishWellKnownSymbol("locals", Locals);  // 124
-            PublishWellKnownSymbol("vars", Vars);  // 125
-            PublishWellKnownSymbol("dir", Dir);  // 126
-            PublishWellKnownSymbol("eval", Eval);  // 127
-            PublishWellKnownSymbol("_", Underscore);  // 128
-            PublishWellKnownSymbol("__gen_$_parm__", GeneratorParmName);  // 129
-            PublishWellKnownSymbol("$env", EnvironmentParmName);  // 130
-            PublishWellKnownSymbol("iter", Iter);  // 131
-            PublishWellKnownSymbol("__slots__", Slots);  // 132
+            PublishWellKnownSymbol("__divmod__", DivMod);  // 92
+            PublishWellKnownSymbol("__path__", Path);  // 93
+            PublishWellKnownSymbol("__get__", GetDescriptor);  // 94
+            PublishWellKnownSymbol("__set__", SetDescriptor);  // 95
+            PublishWellKnownSymbol("__delete__", DeleteDescriptor);  // 96
+            PublishWellKnownSymbol("__all__", All);  // 97
+            PublishWellKnownSymbol("clsException", ClrExceptionKey);  // 98
+            PublishWellKnownSymbol("keys", Keys);  // 99
+            PublishWellKnownSymbol("args", Arguments);  // 100
+            PublishWellKnownSymbol("write", ConsoleWrite);  // 101
+            PublishWellKnownSymbol("readline", ConsoleReadLine);  // 102
+            PublishWellKnownSymbol("msg", ExceptionMessage);  // 103
+            PublishWellKnownSymbol("filename", ExceptionFilename);  // 104
+            PublishWellKnownSymbol("lineno", ExceptionLineNumber);  // 105
+            PublishWellKnownSymbol("offset", ExceptionOffset);  // 106
+            PublishWellKnownSymbol("text", Text);  // 107
+            PublishWellKnownSymbol("softspace", Softspace);  // 108
+            PublishWellKnownSymbol("next", GeneratorNext);  // 109
+            PublishWellKnownSymbol("setdefaultencoding", SetDefaultEncoding);  // 110
+            PublishWellKnownSymbol("exitfunc", SysExitFunc);  // 111
+            PublishWellKnownSymbol("None", None);  // 112
+            PublishWellKnownSymbol("__metaclass__", MetaClass);  // 113
+            PublishWellKnownSymbol("__mro__", MethodResolutionOrder);  // 114
+            PublishWellKnownSymbol("__getslice__", GetSlice);  // 115
+            PublishWellKnownSymbol("__setslice__", SetSlice);  // 116
+            PublishWellKnownSymbol("__delslice__", DeleteSlice);  // 117
+            PublishWellKnownSymbol("__future__", Future);  // 118
+            PublishWellKnownSymbol("division", Division);  // 119
+            PublishWellKnownSymbol("nested_scopes", NestedScopes);  // 120
+            PublishWellKnownSymbol("generators", Generators);  // 121
+            PublishWellKnownSymbol("as", As);  // 122
+            PublishWellKnownSymbol("*", Star);  // 123
+            PublishWellKnownSymbol("**", StarStar);  // 124
+            PublishWellKnownSymbol("locals", Locals);  // 125
+            PublishWellKnownSymbol("vars", Vars);  // 126
+            PublishWellKnownSymbol("dir", Dir);  // 127
+            PublishWellKnownSymbol("eval", Eval);  // 128
+            PublishWellKnownSymbol("_", Underscore);  // 129
+            PublishWellKnownSymbol("__gen_$_parm__", GeneratorParmName);  // 130
+            PublishWellKnownSymbol("$env", EnvironmentParmName);  // 131
+            PublishWellKnownSymbol("iter", Iter);  // 132
+            PublishWellKnownSymbol("__slots__", Slots);  // 133
 
             // *** END GENERATED CODE ***
 

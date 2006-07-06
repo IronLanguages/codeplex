@@ -97,7 +97,7 @@ namespace IronPython.Modules {
             if (o is Complex64) return ComplexOps.Abs((Complex64)o);
 
             object ret;
-            if (Ops.TryToInvoke(o, SymbolTable.AbsoluteValue, out ret)) {
+            if (Ops.TryInvokeSpecialMethod(o, SymbolTable.AbsoluteValue, out ret)) {
                 return ret;
             } else {
                 throw Ops.TypeError("bad operand type for abs()");
@@ -145,15 +145,8 @@ namespace IronPython.Modules {
 
         [PythonName("callable")]
         [Documentation("callable(object) -> bool\n\nReturn whether the object is callable (i.e., some kind of function).")]
-        public static object Callable(object o) {
-            object dummy;
-            if (Ops.TryGetAttr(DefaultContext.Default, o, SymbolTable.Call, out dummy))
-                return Ops.TRUE;
-
-            if (o is ICallable) {
-                return Ops.TRUE;
-            }
-            return Ops.FALSE;
+        public static bool Callable(object o) {
+            return Ops.IsCallable(o);
         }
 
         [PythonName("chr")]
@@ -167,7 +160,7 @@ namespace IronPython.Modules {
 
         private static object TryCoerce(object x, object y) {
             object res;
-            if (Ops.TryToInvoke(x, SymbolTable.Coerce, out res, y)) {
+            if (Ops.TryInvokeSpecialMethod(x, SymbolTable.Coerce, out res, y)) {
                 return res;
             }
             return null;
@@ -297,12 +290,10 @@ namespace IronPython.Modules {
         // Python has lots of optimizations for this method that we may want to implement in the future
         [PythonName("divmod")]
         public static object DivMod(object x, object y) {
-            object func, res;
-            if (Ops.TryGetAttr(x, SymbolTable.StringToId("__divmod__"), out func) && Ops.TryCall(func, y, out res)) {
-                return res;
-            } else {
-                return Tuple.MakeTuple(Ops.FloorDivide(x, y), Ops.Mod(x, y));
-            }
+            object ret = Ops.GetDynamicType(x).InvokeSpecialMethod(SymbolTable.DivMod, x, y);
+            if (ret != Ops.NotImplemented) return ret;
+
+            return Tuple.MakeTuple(Ops.FloorDivide(x, y), Ops.Mod(x, y));
         }
 
         public static object enumerate = Ops.GetDynamicTypeFromType(typeof(Enumerate));
@@ -480,13 +471,8 @@ namespace IronPython.Modules {
         }
 
         [PythonName("hasattr")]
-        public static object HasAttr(ICallerContext context, object o, string name) {
-            object tmp;
-            try {
-                return Ops.Bool2Object(Ops.TryGetAttr(context, o, SymbolTable.StringToId(name), out tmp));
-            } catch {
-                return Ops.FALSE;
-            }
+        public static bool HasAttr(ICallerContext context, object o, string name) {
+            return Ops.HasAttr(context, o, SymbolTable.StringToId(name));
         }
 
         [PythonName("hash")]
@@ -742,7 +728,7 @@ namespace IronPython.Modules {
 
         [PythonName("iter")]
         public static object Iter(object func, object sentinel) {
-            if (PythonOperator.IsCallable(func) == Ops.FALSE) {
+            if (!Ops.IsCallable(func)) {
                 throw Ops.TypeError("iter(v, w): v must be callable");
             }
             return new SentinelIterator(func, sentinel);
@@ -750,16 +736,7 @@ namespace IronPython.Modules {
 
         [PythonName("len")]
         public static int Length(object o) {
-            string s = o as String;
-            if (s != null) return s.Length;
-
-            ISequence seq = o as ISequence;
-            if (seq != null) return seq.GetLength();
-
-            ICollection ic = o as ICollection;
-            if (ic != null) return ic.Count;
-
-            return Converter.ConvertToInt32(Ops.Invoke(o, SymbolTable.Length));
+            return Ops.Length(o);
         }
 
 

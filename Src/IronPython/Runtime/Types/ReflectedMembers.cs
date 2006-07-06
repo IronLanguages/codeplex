@@ -345,7 +345,7 @@ namespace IronPython.Runtime.Types {
 
         [PythonName("__delete__")]
         public bool DeleteAttribute(object instance) {
-            return true;
+            throw Ops.AttributeErrorForReadonlyAttribute(dispatcher.Info.DeclaringType.Name, SymbolTable.StringToId(dispatcher.Info.Name));
         }
 
         [PythonName("__str__")]

@@ -78,6 +78,7 @@ fieldList = [
     
     ('__hash__', 'Hash'),
     ('__cmp__', 'Cmp'),
+    ('__divmod__', 'DivMod'),
     
     ('__path__', 'Path'),
     

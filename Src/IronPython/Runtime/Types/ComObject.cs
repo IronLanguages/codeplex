@@ -252,7 +252,7 @@ namespace IronPython.Runtime.Types {
                     } catch {
                     }
                 }
-                throw Ops.AttributeErrorForMissingAttribute(ComType.MakeDynamicType().__name__.ToString(), name);
+                throw Ops.AttributeErrorForMissingAttribute(ComType.MakeDynamicType().Name, name);
             } else {
                 try {
                     Obj.GetType().InvokeMember(

@@ -94,6 +94,14 @@ namespace IronPython.Runtime.Operations {
             return new Dict(size);
         }
 
+        public static bool IsCallable(object o) {
+            if (o is ICallable || o is ICallableWithCallerContext) {
+                return true;
+            }
+
+            return Ops.HasAttr(DefaultContext.Default, o, SymbolTable.Call);
+        }
+
         public static bool IsTrue(object o) {
             if (o == null) return false;
 
@@ -122,7 +130,7 @@ namespace IronPython.Runtime.Operations {
         internal static string GetPythonTypeName(object obj) {
             OldInstance oi = obj as OldInstance;
             if (oi != null) return oi.__class__.__name__.ToString();
-            else return Ops.GetDynamicType(obj).__name__.ToString();
+            else return Ops.GetDynamicType(obj).Name;
         }
 
         //internal static string GetPythonTypeNameFromType(Type t) {
@@ -266,7 +274,7 @@ namespace IronPython.Runtime.Operations {
                 // have to be a subtype of System.Delegate). However, we would be guessing, and it is better
                 // to require the user to chose the explicit signature that is desired.
                 throw Ops.TypeError("cannot implicitly convert {0} to {1}; please specify precise delegate type",
-                                    Ops.GetDynamicType(o).__name__, delegateType);
+                                    Ops.GetPythonTypeName(o), delegateType);
             }
 
             ParameterInfo[] pis = invoke.GetParameters();
@@ -336,7 +344,7 @@ namespace IronPython.Runtime.Operations {
             else if (o is long) return o;
             else if (o is float) return o;
             else if (o is bool) return Int2Object((bool)o ? 1 : 0);
-            else if(Ops.TryToInvoke(o, SymbolTable.Positive, out ret)) return ret;
+            else if(Ops.TryInvokeSpecialMethod(o, SymbolTable.Positive, out ret)) return ret;
 
             ret = GetDynamicType(o).Positive(o);
             if (ret != Ops.NotImplemented) return ret;
@@ -410,7 +418,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             object contains;
-            if(Ops.TryToInvoke(y, SymbolTable.Contains, out contains, x)) {
+            if(Ops.TryInvokeSpecialMethod(y, SymbolTable.Contains, out contains, x)) {
                 return Ops.IsTrue(contains) ? TRUE : FALSE;
             }
 
@@ -440,7 +448,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             object contains;
-            if (Ops.TryToInvoke(y, SymbolTable.Contains, out contains, x)) {
+            if (Ops.TryInvokeSpecialMethod(y, SymbolTable.Contains, out contains, x)) {
                 return Ops.IsTrue(contains);
             }
 
@@ -486,7 +494,7 @@ namespace IronPython.Runtime.Operations {
             Dictionary<Type, DynamicType> ret = new Dictionary<Type, DynamicType>();
 
             ret[typeof(ValueType)] = ReflectedType.FromClsOnlyType(typeof(ValueType));
-            StringType = new StringDynamicType();
+            StringType = StringOps.MakeDynamicType();
             ret[typeof(string)] = StringType;
             ret[typeof(ExtensibleString)] = StringType;
 
@@ -602,7 +610,7 @@ namespace IronPython.Runtime.Operations {
                 if (count != null && !(count is Complex64 || count is ExtensibleComplex)) {
                     // try __rmul__
                     object ret;
-                    if (Ops.TryToInvoke(count, SymbolTable.OpReverseMultiply, out ret, sequence)) {
+                    if (Ops.TryInvokeSpecialMethod(count, SymbolTable.OpReverseMultiply, out ret, sequence)) {
                         return ret;
                     }
                 }
@@ -1252,7 +1260,7 @@ namespace IronPython.Runtime.Operations {
             else if (o is BigInteger) return LongOps.Hex((BigInteger)o);
 
             object hex;
-            if(TryToInvoke(o, SymbolTable.ConvertToHex, out hex)) {
+            if(TryInvokeSpecialMethod(o, SymbolTable.ConvertToHex, out hex)) {
                 if (!(hex is string) && !(hex is ExtensibleString))
                     throw Ops.TypeError("hex expected string type as return, got {0}", Ops.StringRepr(Ops.GetDynamicType(hex)));
 
@@ -1271,13 +1279,26 @@ namespace IronPython.Runtime.Operations {
             }
 
             object octal;
-            if (TryToInvoke(o, SymbolTable.ConvertToOctal, out octal)) {
+            if (TryInvokeSpecialMethod(o, SymbolTable.ConvertToOctal, out octal)) {
                 if (!(octal is string) && !(octal is ExtensibleString))
                     throw Ops.TypeError("hex expected string type as return, got {0}", Ops.StringRepr(Ops.GetDynamicType(octal)));
 
                 return octal;
             }
             throw TypeError("hex() argument cannot be converted to hex");
+        }
+
+        public static int Length(object o) {
+            string s = o as String;
+            if (s != null) return s.Length;
+
+            ISequence seq = o as ISequence;
+            if (seq != null) return seq.GetLength();
+
+            ICollection ic = o as ICollection;
+            if (ic != null) return ic.Count;
+
+            return Converter.ConvertToInt32(Ops.Invoke(o, SymbolTable.Length));
         }
 
         public static object CallWithContext(ICallerContext context, object func, params object[] args) {
@@ -1287,7 +1308,7 @@ namespace IronPython.Runtime.Operations {
             ICallable ic = func as ICallable;
             if (ic != null) return ic.Call(args);
 
-            return GetDynamicType(func).Call(func, args);
+            return GetDynamicType(func).CallOnInstance(func, args);
         }
 
         public static object CallWithContext(ICallerContext context, object func, object[] args, string[] names) {
@@ -1296,7 +1317,7 @@ namespace IronPython.Runtime.Operations {
 
             object callMeth;
 
-            if (Ops.TryToInvoke(func, SymbolTable.Call, out callMeth)) {
+            if (Ops.TryInvokeSpecialMethod(func, SymbolTable.Call, out callMeth)) {
                 ic = callMeth as IFancyCallable;
 
                 if (ic != null) return ic.Call(context, args, names);
@@ -1364,34 +1385,21 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static bool TryCall(object func, object arg0, out object ret) {
-            BuiltinFunction bf = func as BuiltinFunction;
-            if (bf != null) return bf.TryCall(arg0, out ret);
-
-            BoundBuiltinFunction bbf = func as BoundBuiltinFunction;
-            if (bbf != null) return bbf.TryCall(arg0, out ret);
-
-            ret = Call(func, arg0);
-            return true;
-        }
-
         public static object Call(object func, params object[] args) {
+            ICallableWithCallerContext icc = func as ICallableWithCallerContext;
+            if (icc != null) return icc.Call(DefaultContext.Default, args);
+
             ICallable ic = func as ICallable;
             if (ic != null) return ic.Call(args);
 
-            return GetDynamicType(func).Call(func, args);
+            return GetDynamicType(func).CallOnInstance(func, args);
         }
        
         public static object Call(ICallerContext context, object func, object[] args, string[] names) {
             IFancyCallable ic = func as IFancyCallable;
             if (ic != null) return ic.Call(context, args, names);
 
-            object ret;
-            if (TryFancyInvoke(func, SymbolTable.Call, args, names, out ret)) {
-                return ret;
-            }
-
-            throw new Exception("this object is not callable with keyword parameters");
+            return GetDynamicType(func).CallOnInstance(func, args, names);
         }
 
         public static object CallWithArgsTuple(object func, object[] args, object argsTuple) {
@@ -1571,6 +1579,15 @@ namespace IronPython.Runtime.Operations {
             return GetDynamicType(o).TryGetAttr(context, o, name, out ret);
         }
 
+        public static bool HasAttr(ICallerContext context, object o, SymbolId name) {
+            object dummy;
+            try {
+                return TryGetAttr(context, o, name, out dummy);
+            } catch {
+                return false;
+            }
+        }
+
         public static object GetAttr(ICallerContext context, object o, SymbolId name) {
             ICustomAttributes ifca = o as ICustomAttributes;
             if (ifca != null) {
@@ -1587,7 +1604,7 @@ namespace IronPython.Runtime.Operations {
                     throw Ops.AttributeError("type object '{0}' has no attribute '{1}'",
                         ((IPythonType)o).Name, SymbolTable.IdToString(name));
                 } else {
-                    throw Ops.AttributeError("'{0}' object has no attribute '{1}'", GetDynamicType(o).__name__, SymbolTable.IdToString(name));
+                    throw Ops.AttributeError("'{0}' object has no attribute '{1}'", GetDynamicType(o).Name, SymbolTable.IdToString(name));
                 }
             }
 
@@ -1681,7 +1698,7 @@ namespace IronPython.Runtime.Operations {
             // slow, but only encountred for user defined descriptors.
             PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "__delete__");
             object ret;
-            if (TryToInvoke(o, SymbolTable.GetDescriptor, out ret, instance, context)) return ret;
+            if (TryInvokeSpecialMethod(o, SymbolTable.GetDescriptor, out ret, instance, context)) return ret;
 
             return o;
         }
@@ -1697,7 +1714,7 @@ namespace IronPython.Runtime.Operations {
             // slow, but only encountred for user defined descriptors.
             PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "__delete__");
             object ret;
-            if (TryToInvoke(o, SymbolTable.SetDescriptor, out ret, instance, value)) return true;
+            if (TryInvokeSpecialMethod(o, SymbolTable.SetDescriptor, out ret, instance, value)) return true;
 
             return false;
         }
@@ -1713,7 +1730,7 @@ namespace IronPython.Runtime.Operations {
             // slow, but only encountred for user defined descriptors.
             PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "__delete__");
             object ret;
-            if (TryToInvoke(o, SymbolTable.DeleteDescriptor, out ret, instance)) return true;
+            if (TryInvokeSpecialMethod(o, SymbolTable.DeleteDescriptor, out ret, instance)) return true;
 
             return false;
         }
@@ -1722,12 +1739,8 @@ namespace IronPython.Runtime.Operations {
             return Ops.GetDynamicType(target).Invoke(target, name, args);
         }
 
-        public static bool TryToInvoke(object target, SymbolId name, out object ret, params object[] args) {
-            return Ops.GetDynamicType(target).TryInvoke(target, name, out ret, args);
-        }
-
-        public static bool TryFancyInvoke(object target, SymbolId name, object[] args, string[] names, out object ret) {
-            return Ops.GetDynamicType(target).TryFancyInvoke(target, name, args, names, out ret);
+        public static bool TryInvokeSpecialMethod(object target, SymbolId name, out object ret, params object[] args) {
+            return Ops.GetDynamicType(target).TryInvokeSpecialMethod(target, name, out ret, args);
         }
 
         private static void Write(SystemState state, object f, string text) {
@@ -2344,7 +2357,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception TypeErrorForTypeMismatch(string expectedTypeName, object instance) {
-            return TypeError("expected {0}, got {1}", expectedTypeName, Ops.GetDynamicType(instance).__name__);
+            return TypeError("expected {0}, got {1}", expectedTypeName, Ops.GetPythonTypeName(instance));
         }
 
         // If hash is called on an instance of an unhashable type
@@ -2353,7 +2366,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, DynamicType type, Type newType) {
-            return TypeError("{0}: '{1}' object layout differs from '{2}'", prefix, type.__name__, newType);
+            return TypeError("{0}: '{1}' object layout differs from '{2}'", prefix, type.Name, newType);
         }
 
         public static Exception TypeErrorForNonStringAttribute() {

@@ -39,6 +39,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
+        public static object Make(DynamicType cls) {
+            return Make(cls, default(UInt32));
+        }
+
+        [PythonName("__new__")]
         public static object Make(DynamicType cls, object value) {
             if (cls != UInt32Type) {
                 throw Ops.TypeError("UInt32.__new__: first argument must be UInt32 type.");

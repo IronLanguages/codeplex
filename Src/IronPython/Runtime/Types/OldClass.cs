@@ -36,7 +36,7 @@ namespace IronPython.Runtime.Types {
     // from built-in types).
 
     [PythonType("classobj")]
-    public sealed class OldClass : IPythonType, ICallable, IFancyCallable, IDynamicObject, ICustomTypeDescriptor, ICodeFormattable, ICustomAttributes {
+    public sealed class OldClass : IPythonType, ICallableWithCallerContext, IFancyCallable, IDynamicObject, ICustomTypeDescriptor, ICodeFormattable, ICustomAttributes {
         public Tuple __bases__;
         public IAttributesDictionary __dict__; 
         bool hasFinalizer;
@@ -113,9 +113,10 @@ namespace IronPython.Runtime.Types {
         public override string ToString() {
             return FullName;
         }
- 
-        #region ICallable Members
-        public object Call(params object[] args) {
+
+        #region ICallableWithCallerContext Members
+        [PythonName("__call__")]
+        public object Call(ICallerContext context, params object[] args) {
             OldInstance inst = new OldInstance(this);
             object value;
             // lookup the slot directly - we don't go through __getattr__
@@ -444,7 +445,7 @@ namespace IronPython.Runtime.Types {
 
         public override string ToString() {
             object ret;
-            if (Ops.TryToInvoke(this, SymbolTable.String, out ret)) {
+            if (Ops.TryInvokeSpecialMethod(this, SymbolTable.String, out ret)) {
                 string strRet;
                 if (Converter.TryConvertToString(ret, out strRet) && strRet != null) {
                     return strRet;
@@ -461,7 +462,7 @@ namespace IronPython.Runtime.Types {
 
         public string ToCodeString() {
             object ret;
-            if (Ops.TryToInvoke(this, SymbolTable.Repr, out ret)) {
+            if (Ops.TryInvokeSpecialMethod(this, SymbolTable.Repr, out ret)) {
                 string strRet;
                 if (ret != null && Converter.TryConvertToString(ret, out strRet)) {
                     return strRet;
@@ -871,18 +872,26 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
-        protected override object CallBinaryOperator(SymbolId op, object self, object other) {
-            object func;
+        internal override object InvokeBinaryOperator(SymbolId op, object self, object other) {
             OldInstance.DoCoerce(ref self, ref other);
 
+            return InvokeSpecialMethod(op, self, other);
+        }
+
+        internal override object InvokeSpecialMethod(SymbolId op, object self, object other) {
+            object func;
             if (Ops.TryGetAttr(self, op, out func)) return Ops.Call(func, other);
             return Ops.NotImplemented;
         }
 
-        protected override object CallUnaryOperator(SymbolId op, object self) {
+        protected override object InvokeSpecialMethod(SymbolId op, object self) {
             object func;
             if (Ops.TryGetAttr(self, op, out func)) return Ops.Call(func);
             return Ops.NotImplemented;
+        }
+
+        internal override bool TryLookupBoundSlot(ICallerContext context, object inst, SymbolId name, out object ret) {
+            return Ops.TryGetAttr(context, inst, name, out ret);
         }
 
         public override object CompareTo(object self, object other) {

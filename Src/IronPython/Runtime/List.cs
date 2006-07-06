@@ -56,7 +56,7 @@ namespace IronPython.Runtime {
                     data[i++] = item;
                 }
                 size = i;
-            } else if (Ops.TryToInvoke(sequence, SymbolTable.Length, out len)) {
+            } else if (Ops.TryInvokeSpecialMethod(sequence, SymbolTable.Length, out len)) {
                 int ilen = Converter.ConvertToInt32(len);
                 data = new object[ilen];
                 size = 0;
@@ -102,7 +102,7 @@ namespace IronPython.Runtime {
                     data[i++] = item;
                 }
                 size = i;
-            } else if (Ops.TryToInvoke(sequence, SymbolTable.Length, out len)) {
+            } else if (Ops.TryInvokeSpecialMethod(sequence, SymbolTable.Length, out len)) {
                 int ilen = Converter.ConvertToInt32(len);
                 data = new object[ilen];
                 Extend(sequence);

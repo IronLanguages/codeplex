@@ -53,8 +53,7 @@ namespace IronPython.Modules {
         }
         [PythonName("proxy")]
         public static object Proxy(object @object, object callback) {
-            object callable;
-            if ((@object is ICallable) || Ops.TryGetAttr(@object, SymbolTable.Call, out callable)) {
+            if (Ops.IsCallable(@object)) {
                 return PythonCallableWeakRefProxy.MakeNew(@object, callback);
             } else {
                 return PythonWeakRefProxy.MakeNew(@object, callback);
@@ -381,6 +380,11 @@ namespace IronPython.Modules {
             }
 
             #endregion
+
+            [PythonName("__len__")]
+            public object GetLength() {
+                return Ops.Length(GetObject());
+            }
 
             #region IRichEquality Members
             public object RichGetHashCode() {

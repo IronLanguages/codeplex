@@ -611,6 +611,11 @@ def gen_make_dynamic_type(cw, t):
     cw.write(make_dynamic_type, type_name = t.name)
 
 constructor_prologue = """[PythonName("__new__")]
+public static object Make(DynamicType cls) {
+    return Make(cls, default(%(type_name)s));
+}
+
+[PythonName("__new__")]
 public static object Make(DynamicType cls, object value) {
     if (cls != %(type_name)sType) {
         throw Ops.TypeError(\"%(type_name)s.__new__: first argument must be %(type_name)s type.\");

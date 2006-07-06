@@ -34,10 +34,6 @@ namespace IronPython.Runtime.Types {
             dict[name] = value;
         }
 
-        public override bool TryGetAttr(ICallerContext context, SymbolId name, out object ret) {
-            return base.TryGetAttr(context, name, out ret);
-        }
-        
         public override void SetAttr(ICallerContext context, object self, SymbolId name, object value) {
             object slot;
             bool success = TryGetSlot(context, name, out slot);

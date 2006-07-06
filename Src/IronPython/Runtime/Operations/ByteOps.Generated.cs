@@ -41,6 +41,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
+        public static object Make(DynamicType cls) {
+            return Make(cls, default(Byte));
+        }
+
+        [PythonName("__new__")]
         public static object Make(DynamicType cls, object value) {
             if (cls != ByteType) {
                 throw Ops.TypeError("Byte.__new__: first argument must be Byte type.");

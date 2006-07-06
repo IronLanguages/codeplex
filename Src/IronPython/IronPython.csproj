@@ -263,7 +263,6 @@
     <Compile Include="Runtime\SystemState.cs" />
     <Compile Include="Runtime\Exceptions\TraceBack.cs" />
     <Compile Include="Runtime\Tuple.cs" />
-    <Compile Include="Runtime\Types\StringType.cs" />
     <Compile Include="Runtime\Types\TypeCache.Generated.cs" />
     <Compile Include="Runtime\Operations\UInt32Ops.cs" />
     <Compile Include="Runtime\Operations\UInt32Ops.Generated.cs" />

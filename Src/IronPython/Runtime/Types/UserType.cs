@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Types {
 
     [DebuggerDisplay("UserType: {ToString()}")]
     [PythonType(typeof(DynamicType))]
-    public partial class UserType : DynamicType, IFancyCallable, IWeakReferenceable, ICallableWithCallerContext {
+    public class UserType : DynamicType, IWeakReferenceable {
         // This is typed as "object" instead of "string" as the user is allowed to set it to an arbitrary object
         public object __module__;
         UserTypeFlags flags;
@@ -102,15 +102,6 @@ namespace IronPython.Runtime.Types {
         protected UserType(string name, Tuple bases, IDictionary<object, object> dict)
             : base(NewTypeMaker.GetNewType(name, bases, dict)) {
             ctor = BuiltinFunction.MakeMethod(name, type.GetConstructors(), FunctionType.Function);
-
-            //List<MethodInfo> ctors = new List<MethodInfo>();
-            //foreach (MethodInfo mi in type.GetMethods()) {
-            //    if (mi.Name == ReflectedType.MakeNewName) ctors.Add(mi);
-            //}
-
-            //if (ctors.Count == 0) throw new NotImplementedException("no MakeNew found");
-
-            //ctor = ReflectedMethod.MakeMethod(name, ctors.ToArray(), FunctionType.Function); 
 
             if (type.GetInterface("ICustomAttributes") == typeof(ICustomAttributes)) {
                 // ICustomAttributes is a well-known type. Ops.GetAttr etc first check for it, and dispatch to the
@@ -331,7 +322,7 @@ namespace IronPython.Runtime.Types {
         public override object GetAttr(ICallerContext context, object self, SymbolId name) {
             if (__getattribute__F.IsObjectMethod()) {
                 object ret;
-                if (TryBaseGetAttr(context, (ISuperDynamicObject)self, name, out ret)) {
+                if (TryBaseGetAttr(context, self, name, out ret)) {
                     return ret;
                 } else {
                     throw Ops.AttributeError((string)SymbolTable.IdToString(name));
@@ -343,13 +334,7 @@ namespace IronPython.Runtime.Types {
 
         public override bool TryGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
             if (__getattribute__F.IsObjectMethod()) {
-                ISuperDynamicObject sdo = self as ISuperDynamicObject;
-                if (sdo != null) {
-                    return TryBaseGetAttr(context, sdo, name, out ret);
-                } else {
-                    ret = null;
-                    return false;
-                }
+                return TryBaseGetAttr(context, self, name, out ret);
             } else {
                 try {
                     ret = __getattribute__F.Invoke(self, SymbolTable.IdToString(name));
@@ -362,19 +347,6 @@ namespace IronPython.Runtime.Types {
         }
 
         public override void SetAttr(ICallerContext context, object self, SymbolId name, object value) {
-            if (name == SymbolTable.Class) {
-                // check that this is a legal new class
-                UserType newType = value as UserType;
-                if (newType == null) {
-                    throw Ops.TypeError("__class__ must be set to new-style class, not '{0}' object", Ops.GetDynamicType(value).__name__);
-                }
-                if (newType.type != this.type) {
-                    throw Ops.TypeErrorForIncompatibleObjectLayout("__class__ assignment", this, newType.type);
-                }
-                ((ISuperDynamicObject)self).SetDynamicType(newType);
-                return;
-            }
-
             if (__setattr__F.IsObjectMethod()) {
                 BaseSetAttr(context, (ISuperDynamicObject)self, name, value);
             } else {
@@ -424,42 +396,6 @@ namespace IronPython.Runtime.Types {
             return baseNames;
         }
 
-        public override object Invoke(object target, SymbolId name, params object[] args) {
-            object ret;
-            if (TryInvoke(target, name, out ret, args)) return ret;
-
-            throw Ops.TypeError("{0} object has no attribute '{1}'",
-                Ops.StringRepr(Ops.GetDynamicType(target)),
-                name.ToString());
-        }
-
-        public override bool TryInvoke(object target, SymbolId name, out object ret, params object[] args) {
-            object meth;
-            if (TryLookupBoundSlot(DefaultContext.Default, target, name, out meth)) {
-                ret = Ops.Call(meth, args);
-                return true;
-            } else {
-                ret = null;
-                return false;
-            }
-        }
-
-        public override bool TryFancyInvoke(object target, SymbolId name, object[] args, string[] names, out object ret) {
-            object meth;
-            if (TryLookupBoundSlot(DefaultContext.Default, target, name, out meth)) {
-                IFancyCallable ifc = target as IFancyCallable;
-                if (ifc != null) {
-                    ret = ifc.Call(DefaultContext.Default, args, names);
-                    return true;
-                }
-                ret = Ops.Call(meth, args, names);
-                return true;
-            } else {
-                ret = null;
-                return false;
-            }
-        }
-
         #endregion
 
         #region Object overrides
@@ -488,13 +424,10 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            if (TryLookupBoundSlot(context, self, name, out ret)) {
-                return true;
-            }
+            if (base.TryBaseGetAttr(context, o, name, out ret)) return true;
 
-            if (name == SymbolTable.Class) { ret = this; return true; }
-            if (name == SymbolTable.WeakRef && !HasSlots) {
-                ret = null; return true;
+            if (name == SymbolTable.WeakRef && !HasSlots) {                 
+                ret = null; return true; 
             }
 
             if (!__getattr__F.IsObjectMethod()) {
@@ -502,7 +435,6 @@ namespace IronPython.Runtime.Types {
                 return true;
             }
 
-            ret = null;
             return false;
         }
 
@@ -510,6 +442,19 @@ namespace IronPython.Runtime.Types {
             object slot;
             if (TryLookupSlot(context, name, out slot)) {
                 if (Ops.SetDescriptor(slot, self, value)) return;
+            }
+
+            if (name == SymbolTable.Class) {
+                // check that this is a legal new class
+                UserType newType = value as UserType;
+                if (newType == null) {
+                    throw Ops.TypeError("__class__ must be set to new-style class, not '{0}' object", Ops.GetDynamicType(value).__name__);
+                }
+                if (newType.type != this.type) {
+                    throw Ops.TypeErrorForIncompatibleObjectLayout("__class__ assignment", this, newType.type);
+                }
+                ((ISuperDynamicObject)self).SetDynamicType(newType);
+                return;
             }
 
             if (name == SymbolTable.WeakRef)
@@ -548,7 +493,8 @@ namespace IronPython.Runtime.Types {
                     flags &= ~(UserTypeFlags.HasWeakRef);
             }
         }
-        private bool HasFinalizer {
+
+        protected override bool HasFinalizer {
             get {
                 return (flags & UserTypeFlags.HasFinalizer) != 0;
             }
@@ -621,100 +567,24 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region ICallableWithCallerContext Members
-
-        object ICallableWithCallerContext.Call(ICallerContext context, object[] args) {
-            object newMethod, newObject;
-
-
-            newMethod = Ops.GetAttr(context, this, SymbolTable.NewInst);
-            newObject = Ops.CallWithContext(context, newMethod, PrependThis(args));
-
-            if (newObject == null) return null;
-
-            if (Ops.GetDynamicType(newObject).IsSubclassOf(this)) {
-                object init;
-                if (DynamicType.TryLookupSpecialMethod(DefaultContext.Default, newObject, SymbolTable.Init, out init)) {
-                    switch (args.Length) {
-                        case 0: Ops.CallWithContext(context, init); break;
-                        case 1: Ops.CallWithContext(context, init, args[0]); break;
-                        case 2: Ops.CallWithContext(context, init, args[0], args[1]); break;
-                        default: Ops.CallWithContext(context, init, args); break;
-                    }
-
-                }
-
-                if (HasFinalizer) {
-                    IWeakReferenceable iwr = newObject as IWeakReferenceable;
-                    Debug.Assert(iwr != null);
-
-                    InstanceFinalizer nif = new InstanceFinalizer(newObject);
-                    iwr.SetFinalizer(new WeakRefTracker(nif, nif));
-                }
-            }
-
-            return newObject;
-        }
-
-        #endregion
-
-        #region ICallable Members
-
-        public override object Call(params object[] args) {
-            return ((ICallableWithCallerContext)this).Call(DefaultContext.Default, args);
-        }
-
-        #region IFancyCallable Members
-
-        public object Call(ICallerContext context, object[] args, string[] names) {
-            object newMethod, newObject = null;
-            if (TryLookupBoundSlot(context, null, SymbolTable.NewInst, out newMethod)) {
-                IFancyCallable ifc = newMethod as IFancyCallable;
-                if (ifc != null) {
-                    newObject = ifc.Call(context, PrependThis(args), names);
-                } else {
-                    throw Ops.TypeError("{0} object is not callable", Ops.GetDynamicType(newMethod).__name__);
-                }
-            } else {
-                Debug.Assert(names.Length != 0);
-                throw Ops.TypeError("default __new__ takes no parameters");
-            }
-
-            if (newObject == null) return null;
-
-            InvokeInit(context, newObject, args, names);
-
-            return newObject;
-        }
-
-        #endregion
-
-        #endregion
-
         #region IRichEquality helpers
 
         public static object RichGetHashCodeHelper(object self) {
             // new-style classes only lookup in slots, not in instance
             // members
             object func;
-            if (DynamicType.TryLookupSpecialMethod(self, SymbolTable.Hash, out func)) {
+            if (Ops.GetDynamicType(self).TryLookupBoundSlot(DefaultContext.Default, self, SymbolTable.Hash, out func)) {
                 return Converter.ConvertToInt32(Ops.Call(func));
             }
             return Ops.NotImplemented;
         }
 
         public static object RichEqualsHelper(object self, object other) {
-            object res = InternalCompare(SymbolTable.OpEqual, self, other);
-            if (res != Ops.NotImplemented) return res;
-
-            return Ops.NotImplemented;
+            return InternalCompare(SymbolTable.OpEqual, self, other);
         }
 
         public static object RichNotEqualsHelper(object self, object other) {
-            object res = InternalCompare(SymbolTable.OpNotEqual, self, other);
-            if (res != Ops.NotImplemented) return res;
-
-            return Ops.NotImplemented;
+            return InternalCompare(SymbolTable.OpNotEqual, self, other);
         }
         #endregion
 
@@ -790,14 +660,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static object InternalCompare(SymbolId cmp, object self, object other) {
-            object meth;
-            if (DynamicType.TryLookupSpecialMethod(self, cmp, out meth)) {
-                object ret;
-                if (Ops.TryCall(meth, other, out ret)) {
-                    return ret;
-                }
-            }
-            return Ops.NotImplemented;
+            return Ops.GetDynamicType(self).InvokeSpecialMethod(cmp, self, other);
         }
 
         #endregion

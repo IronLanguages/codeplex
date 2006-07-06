@@ -120,7 +120,7 @@ namespace IronPython.Runtime {
 
             // Fall back to __xxx__ method call
             object newValue;
-            if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out newValue)) {
+            if (Ops.TryInvokeSpecialMethod(value, SymbolTable.ConvertToInt, out newValue)) {
                 // Convert resulting object to the desired type
                 if (ConvertToInt32Impl(newValue, out result)) return result;
             }
@@ -243,7 +243,7 @@ namespace IronPython.Runtime {
 
             // Fall back to __xxx__ method call
             object newValue;
-            if (Ops.TryToInvoke(value, SymbolTable.ConvertToFloat, out newValue)) {
+            if (Ops.TryInvokeSpecialMethod(value, SymbolTable.ConvertToFloat, out newValue)) {
                 // Convert resulting object to the desired type
                 if (ConvertToSingleImpl(newValue, out result)) return result;
             }
@@ -269,7 +269,7 @@ namespace IronPython.Runtime {
 
             // Fall back to __xxx__ method call
             object newValue;
-            if (Ops.TryToInvoke(value, SymbolTable.ConvertToFloat, out newValue)) {
+            if (Ops.TryInvokeSpecialMethod(value, SymbolTable.ConvertToFloat, out newValue)) {
                 // Convert resulting object to the desired type
                 if (ConvertToDoubleImpl(newValue, out result)) return result;
             }
@@ -325,7 +325,7 @@ namespace IronPython.Runtime {
 
             // Fall back to __xxx__ method call
             object newValue;
-            if (Ops.TryToInvoke(value, SymbolTable.ConvertToLong, out newValue)) {
+            if (Ops.TryInvokeSpecialMethod(value, SymbolTable.ConvertToLong, out newValue)) {
                 // Convert resulting object to the desired type
                 if (ConvertToBigIntegerImpl(newValue, out result)) return result;
             }
@@ -347,7 +347,7 @@ namespace IronPython.Runtime {
 
             // Fall back to __xxx__ method call
             object newValue;
-            if (Ops.TryToInvoke(value, SymbolTable.ConvertToComplex, out newValue)) {
+            if (Ops.TryInvokeSpecialMethod(value, SymbolTable.ConvertToComplex, out newValue)) {
                 // Convert resulting object to the desired type
                 if (ConvertToComplex64Impl(newValue, out result)) return result;
             }
@@ -409,7 +409,7 @@ namespace IronPython.Runtime {
             object newValue;
 
             // First, try __nonzero__
-            if (Ops.TryToInvoke(value, SymbolTable.NonZero, out newValue)) {
+            if (Ops.TryInvokeSpecialMethod(value, SymbolTable.NonZero, out newValue)) {
                 // Convert resulting object to the desired type
                 if (newValue is bool || newValue is Int32) {
                     if (ConvertToBooleanImpl(newValue, out result)) return result;
@@ -418,7 +418,7 @@ namespace IronPython.Runtime {
             }
 
             // Then, try __len__
-            if (Ops.TryToInvoke(value, SymbolTable.Length, out newValue)) {
+            if (Ops.TryInvokeSpecialMethod(value, SymbolTable.Length, out newValue)) {
                 // Convert resulting object to the desired type
                 if (newValue is Int32 || newValue is BigInteger) {
                     if (ConvertToBooleanImpl(newValue, out result)) return result;

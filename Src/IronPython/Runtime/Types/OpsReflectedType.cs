@@ -90,13 +90,6 @@ namespace IronPython.Runtime.Types {
             return base.Call(context, args);
         }
 
-        public override object Call(params object[] args) {
-            if (optCtor != null && args.Length == 1) return optCtor(args[0]);
-
-            PerfTrack.NoteEvent(PerfTrack.Categories.Methods, "TypeInvoke " + this.__name__ + args.Length);
-            return base.Call(args);
-        }
-
         /// <summary>
         /// Find the methods implemented by opsType, and expose them from 
         /// the current ReflectedType
@@ -188,19 +181,9 @@ namespace IronPython.Runtime.Types {
 
                 return Ops.GetDynamicTypeFromType(types[0].MakeArrayType());
             }
-            set {
-                base[index] = value;
-            }
         }
 
         public override object Call(ICallerContext context, object[] args) {
-            if (args.Length != 1) throw Ops.TypeError("array expects one and only 1 argument");
-            if (this.type == typeof(Array)) throw Ops.TypeError("general array type is not callable");
-
-            return ArrayOps.CreateArray(this.type.GetElementType(), args[0]);
-        }
-
-        public override object Call(params object[] args) {
             if (args.Length != 1) throw Ops.TypeError("array expects one and only 1 argument");
             if (this.type == typeof(Array)) throw Ops.TypeError("general array type is not callable");
 

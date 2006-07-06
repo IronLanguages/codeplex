@@ -158,6 +158,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
+        public static object Make(object cls) {
+            return Ops.Bool2Object(false);
+        }
+
+        [PythonName("__new__")]
         public static object Make(object cls, object o) {
             return Ops.Bool2Object(Ops.IsTrue(o));
         }

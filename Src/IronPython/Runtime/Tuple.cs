@@ -149,7 +149,7 @@ namespace IronPython.Runtime {
         [PythonName("__add__")]
         public virtual object AddSequence(object other) {
             Tuple o = other as Tuple;
-            if (o == null) throw Ops.TypeError("can only concatenate tuple (not \"{0}\") to tuple", Ops.GetDynamicType(other).__name__);
+            if (o == null) throw Ops.TypeErrorForBadInstance("can only concatenate tuple (not \"{0}\") to tuple", other);
 
             return MakeTuple(ArrayOps.Add(data, data.Length, o.data, o.data.Length));
         }

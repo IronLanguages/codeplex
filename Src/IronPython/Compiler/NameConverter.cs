@@ -29,7 +29,7 @@ namespace IronPython.Compiler {
     /// </summary>
     static class NameConverter {
         public static NameType TryGetName(ReflectedType dt, MethodInfo mi, out string name) {
-            //Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(mi)));
+            Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(mi)));
 
             string namePrefix = null;
             NameType res = dt.IsClsType ? NameType.PythonMethod : NameType.Method;

@@ -38,6 +38,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
+        public static object Make(DynamicType cls) {
+            return Make(cls, default(Single));
+        }
+
+        [PythonName("__new__")]
         public static object Make(DynamicType cls, object value) {
             if (cls != SingleType) {
                 throw Ops.TypeError("Single.__new__: first argument must be Single type.");

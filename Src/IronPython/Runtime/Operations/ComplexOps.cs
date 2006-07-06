@@ -118,7 +118,7 @@ namespace IronPython.Runtime.Operations {
             object res;
             if (x is ExtensibleComplex) {
                 // Was __cmp__ overriden ?
-                if (Ops.TryToInvoke(x, SymbolTable.Cmp, out res)) {
+                if (Ops.TryInvokeSpecialMethod(x, SymbolTable.Cmp, out res)) {
                     return res;
                 }
                 // if not, compare to the complex value
@@ -126,7 +126,7 @@ namespace IronPython.Runtime.Operations {
             } else {
                 Debug.Assert(y is ExtensibleComplex);
                 // Was __cmp__ overriden ?
-                if (Ops.TryToInvoke(y, SymbolTable.Cmp, out res)) {
+                if (Ops.TryInvokeSpecialMethod(y, SymbolTable.Cmp, out res)) {
                     return res;
                 }
                 // if not, compare to the complex value

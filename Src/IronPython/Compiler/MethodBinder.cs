@@ -36,6 +36,7 @@ namespace IronPython.Compiler {
 
     class MethodBinder {
         string name;
+        bool isBinaryOperator;
         private Dictionary<int, TargetSet> targetSets = new Dictionary<int, TargetSet>();
         private List<ParamsMethodMaker> paramsMakers = new List<ParamsMethodMaker>();
 
@@ -53,17 +54,18 @@ namespace IronPython.Compiler {
             return false;
         }
 
-        public static FastCallable MakeFastCallable(string name, MethodInfo mi) {
+        public static FastCallable MakeFastCallable(string name, MethodInfo mi, bool isBinaryOperator) {
             //??? In the future add optimization for simple case of nothing tricky in mi
-            return new MethodBinder(name, new MethodTracker[] { new MethodTracker(mi) }).MakeFastCallable();
+            return new MethodBinder(name, new MethodTracker[] { new MethodTracker(mi) }, isBinaryOperator).MakeFastCallable();
         }
 
-        public static FastCallable MakeFastCallable(string name, MethodBase[] mis) {
-            return new MethodBinder(name, MethodTracker.GetTrackerArray(mis)).MakeFastCallable();
+        public static FastCallable MakeFastCallable(string name, MethodBase[] mis, bool isBinaryOperator) {
+            return new MethodBinder(name, MethodTracker.GetTrackerArray(mis), isBinaryOperator).MakeFastCallable();
         }
 
-        private MethodBinder(string name, MethodTracker[] methods) {
+        private MethodBinder(string name, MethodTracker[] methods, bool isBinaryOperator) {
             this.name = name;
+            this.isBinaryOperator = isBinaryOperator;
             foreach (MethodTracker method in methods) {                
                 if (IsUnsupported(method)) continue;
                 if (methods.Length > 1 && IsKwDictMethod(method)) continue;
@@ -423,7 +425,8 @@ namespace IronPython.Compiler {
             }
 
             public override object ConvertFrom(object arg) {
-                ClrModule.Reference r = (ClrModule.Reference)arg;
+                ClrModule.Reference r = arg as ClrModule.Reference;
+                if (r == null) throw Ops.TypeErrorForTypeMismatch("clr.Reference", arg);
                 return Converter.Convert(r.Value, elementType);
             }
 
@@ -508,11 +511,6 @@ namespace IronPython.Compiler {
 
             public override int Priority {
                 get { return 5; }
-            }
-
-            public override object Build(ICallerContext context, object[] args) {
-                object val = ((ClrModule.Reference)args[index]).Value;
-                return parameter.ConvertFrom(val);
             }
 
             public override void UpdateFromReturn(object callArg, object[] args) {
@@ -900,12 +898,6 @@ namespace IronPython.Compiler {
                 if (other.method.Method.IsPrivate && !this.method.Method.IsPrivate) return +1;
                 if (this.method.Method.IsPrivate && !other.method.Method.IsPrivate) return -1;
 
-                int maxPriorityThis = FindMaxPriority(this.argBuilders);
-                int maxPriorityOther = FindMaxPriority(other.argBuilders);
-
-                if (maxPriorityThis < maxPriorityOther) return +1;
-                if (maxPriorityOther < maxPriorityThis) return -1;
-
                 // Prefer non-generic methods over generic methods
                 if (method.Method.IsGenericMethod) {
                     if (!other.method.Method.IsGenericMethod) {
@@ -918,7 +910,20 @@ namespace IronPython.Compiler {
                     return +1;
                 }
 
-                return -Compare(returnBuilder.CountOutParams, other.returnBuilder.CountOutParams);
+                //prefer methods without out params over those with them
+                switch (Compare(returnBuilder.CountOutParams, other.returnBuilder.CountOutParams)) {
+                    case 1: return -1;
+                    case -1: return 1;
+                }
+
+                //prefer methods using earlier conversions rules to later ones
+                int maxPriorityThis = FindMaxPriority(this.argBuilders);
+                int maxPriorityOther = FindMaxPriority(other.argBuilders);
+
+                if (maxPriorityThis < maxPriorityOther) return +1;
+                if (maxPriorityOther < maxPriorityThis) return -1;
+
+                return 0;
             }
 
             protected static int Compare(int x, int y) {
@@ -962,7 +967,7 @@ namespace IronPython.Compiler {
 
             
             public bool HasConflict {
-                get { return hasConflict; }
+                get { return hasConflict || binder.isBinaryOperator; }
             }
 
             public bool NeedsContext {
@@ -1021,9 +1026,7 @@ namespace IronPython.Compiler {
             }
 
             public object Call(ICallerContext context, CallType callType, object[] args) {
-                if (IronPython.Hosting.PythonEngine.options.EngineDebug) {
-                    PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
-                }
+                if (targets.Count == 1 && !binder.isBinaryOperator) return targets[0].Call(context, args);
 
                 List<MethodTarget> applicableTargets = new List<MethodTarget>();
                 foreach (MethodTarget target in targets) {
@@ -1043,6 +1046,8 @@ namespace IronPython.Compiler {
                         throw MultipleTargets(applicableTargets, context, callType, args);
                     }
                 }
+
+                if (binder.isBinaryOperator) return Ops.NotImplemented;
 
                 //no targets are applicable without narrowing conversions, so try those
 
@@ -1086,29 +1091,34 @@ namespace IronPython.Compiler {
                 return null;    
             }
 
-            private static Exception NoApplicableTarget(ICallerContext context, CallType callType, object[] args) {
-                //!!! better error messages is the key point here
-                return Ops.TypeError("no applicable overload");
+            private Exception NoApplicableTarget(ICallerContext context, CallType callType, object[] args) {
+                return TypeErrorForOverloads("no overloads of {0} could match {1}", targets, callType, args);
             }
 
-            private static string GetArgTypeNames(object[] args) {
+            private Exception MultipleTargets(List<MethodTarget> applicableTargets, ICallerContext context, CallType callType, object[] args) {
+                return TypeErrorForOverloads("multiple overloads of {0} could match {1}", applicableTargets, callType, args);
+            }
+
+            private static string GetArgTypeNames(object[] args, CallType callType) {
                 StringBuilder buf = new StringBuilder();
                 buf.Append("(");
                 bool isFirstArg = true;
-                foreach (object arg in args) {
+                int i = 0;
+                if (callType == CallType.ImplicitInstance) i = 1;
+                for (; i < args.Length; i++ ) {
                     if (isFirstArg) isFirstArg = false;
                     else buf.Append(", ");
-                    buf.Append(Ops.GetPythonTypeName(arg));
+                    buf.Append(Ops.GetPythonTypeName(args[i]));
                 }
                 buf.Append(")");
                 return buf.ToString();
             }
 
-            private Exception MultipleTargets(List<MethodTarget> applicableTargets, ICallerContext context, CallType callType, object[] args) {
+            private Exception TypeErrorForOverloads(string message, List<MethodTarget> targets, CallType callType, object[] args) {
                 StringBuilder buf = new StringBuilder();
-                buf.AppendFormat("multiple overloads of {0} could match {1}", binder.name, GetArgTypeNames(args));
+                buf.AppendFormat(message, binder.name, GetArgTypeNames(args, callType));
                 buf.AppendLine();
-                foreach (MethodTarget target in applicableTargets) {
+                foreach (MethodTarget target in targets) {
                     buf.Append("  ");
                     buf.AppendLine(target.ToSignatureString(binder.name, callType));
                 }

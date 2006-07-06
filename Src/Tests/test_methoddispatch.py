@@ -25,9 +25,6 @@ md = MixedDispatch("hi")
 AssertErrorWithMessage(TypeError, "Combine() takes exactly 2 arguments (1 given)", MixedDispatch.Combine, md)
 AssertErrorWithMessage(TypeError, "Combine() takes exactly 1 argument (0 given)", md.Combine)
 
-#mc = MultiCall()
-#mc.M0(3.0)
-
 
 x = BindingTestClass.Bind("Hello")
 Assert(x == "Hello")

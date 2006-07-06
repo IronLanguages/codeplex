@@ -34,8 +34,8 @@ namespace IronPython.Runtime {
         internal Dictionary<object, object> data;
 
         internal static object MakeDict(DynamicType cls) {            
-            if(cls == TypeCache.Dict) return new Dict();            
-            return cls.Call();
+            if(cls == TypeCache.Dict) return new Dict();
+            return Ops.Call(cls);
         }
 
         #region Constructors
@@ -318,7 +318,7 @@ namespace IronPython.Runtime {
             XRange xr = seq as XRange;
             if (xr != null) {
                 int n = xr.GetLength();
-                object ret = cls.Call();
+                object ret = Ops.Call(cls);
                 if (ret.GetType() == typeof(Dict)) {
                     Dict dr = ret as Dict;
                     for (int i = 0; i < n; i++) {

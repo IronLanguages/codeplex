@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Types {
     // properties to them.
 
     [PythonType(typeof(DynamicType))]
-    public partial class ReflectedType : DynamicType, IFancyCallable, IContextAwareMember, ICallableWithCallerContext {
+    public class ReflectedType : DynamicType, IContextAwareMember {
         #region Member variables
 
         /* A reflected type can be setup to behave in several different ways.
@@ -199,14 +199,6 @@ namespace IronPython.Runtime.Types {
             StoreMethod(name, mi, ft);
         }
 
-        internal void StoreReflectedUnboundMethod(string name, MethodInfo mi, NameType nt) {
-            StoreMethod(name, mi, nt == NameType.PythonMethod ? FunctionType.PythonVisible | FunctionType.Method : FunctionType.Method);
-        }
-
-        internal void StoreReflectedUnboundReverseOp(string name, MethodInfo mi, NameType nt) {
-            StoreMethod(name, mi, FunctionType.ReversedOperator | (nt == NameType.PythonMethod ? FunctionType.PythonVisible | FunctionType.Method : FunctionType.Method));
-        }
-
         internal void StoreClassMethod(string name, MethodInfo mi) {
             SymbolId methodId = SymbolTable.StringToId(name);
             object existingMethod;
@@ -306,18 +298,19 @@ namespace IronPython.Runtime.Types {
                 }
             }
         }
-        
+
         private BuiltinFunction GetConstructors() {
             BuiltinFunction reflectedCtors = null;
-            foreach (ConstructorInfo ci in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic |
-                                                                BindingFlags.Instance)) {
-                if (ci.IsPublic || ci.IsFamily || ci.IsFamilyOrAssembly) {
-                    if (reflectedCtors == null) {
-                        reflectedCtors = BuiltinFunction.MakeMethod((string)__name__, ci, FunctionType.Function);
-                    } else {
-                        reflectedCtors.AddMethod(ci);
-                    }
+            bool hasDefaultConstructor = false;
+            foreach (ConstructorInfo ci in type.GetConstructors(BindingFlags.Public | BindingFlags.Instance)) {
+                if (ci.IsPublic) {
+                    if (ci.GetParameters().Length == 0) hasDefaultConstructor = true;
+                    reflectedCtors = BuiltinFunction.MakeOrAdd(reflectedCtors, (string)__name__, ci, FunctionType.Function);
                 }
+            }
+            if (type.IsValueType && !hasDefaultConstructor) {
+                MethodInfo mi = typeof(Activator).GetMethod("CreateInstance", Type.EmptyTypes).MakeGenericMethod(type);
+                reflectedCtors = BuiltinFunction.MakeOrAdd(reflectedCtors, (string)__name__, mi, FunctionType.Function);
             }
             return reflectedCtors;
         }
@@ -538,11 +531,14 @@ namespace IronPython.Runtime.Types {
             bool regular = parms.Length > 0 && method.method != null && parms[0].ParameterType == type;
             bool reverse = parms.Length > 1 && method.rmethod != null && parms[1].ParameterType == type;
 
+            FunctionType funcType = FunctionType.Method | FunctionType.PythonVisible;
+            if (parms.Length == 2) funcType |= FunctionType.BinaryOperator;
+
             if (regular) {
-                StoreReflectedUnboundMethod(method.method, mi, NameType.PythonMethod);
+                StoreMethod(method.method, mi, funcType);
             }
             if (reverse) {
-                StoreReflectedUnboundReverseOp(method.rmethod, mi, NameType.PythonMethod);
+                StoreMethod(method.rmethod, mi, funcType | FunctionType.ReversedOperator);
             }
 
             return regular || reverse;
@@ -972,21 +968,11 @@ namespace IronPython.Runtime.Types {
         }
 
         public override bool TryGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
-            if (name == SymbolTable.Dict) {
-                // Instances of builtin types do not have "__dict__"
-                throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), name);
-            }
-
             if (prependedAttrs != null && prependedAttrs.TryGetAttr(self, name, out ret)) {
                 return true;
             }
 
-            if (TryGetSlot(context, name, out ret)) {
-                ret = Ops.GetDescriptor(ret, self, this);
-                return true;
-            }
-
-            if (name == SymbolTable.Class) { ret = this; return true; }
+            if (TryBaseGetAttr(context, self, name, out ret)) return true;
 
             if (appendedAttrs != null && appendedAttrs.TryGetAttr(self, name, out ret)) {
                 return true;
@@ -1013,31 +999,6 @@ namespace IronPython.Runtime.Types {
             return ret;
         }
 
-        void ThrowAttributeError(bool slotExists, SymbolId attributeName) {
-            if (slotExists)
-                throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), attributeName);
-            else
-                throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), attributeName);
-        }
-
-        public override void SetAttr(ICallerContext context, object self, SymbolId name, object value) {
-            object slot;
-            bool success = false;
-            bool slotExists = TryGetSlot(context, name, out slot);
-            if (slotExists) {
-                success = Ops.SetDescriptor(slot, self, value);
-            }
-
-            // Does the slot exist and could it be set successfully
-            if (!success)
-                ThrowAttributeError(slotExists, name);
-        }
-
-        public override void DelAttr(ICallerContext context, object self, SymbolId name) {
-            object slot;
-            bool slotExists = TryGetAttr(context, self, name, out slot);
-            ThrowAttributeError(slotExists, name);
-        }
 
         protected override void RawSetSlot(SymbolId name, object value) {
             object slot;
@@ -1127,51 +1088,8 @@ namespace IronPython.Runtime.Types {
         }
         #endregion
 
-        internal override bool TryBaseGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
-            ICustomAttributes ica = self as ICustomAttributes;
-            if (ica != null) {
-                return ica.TryGetAttr(context, name, out ret);
-            }
-
-            return TryGetAttr(context, self, name, out ret);
-        }
-
-        internal override void BaseSetAttr(ICallerContext context, object self, SymbolId name, object value) {
-            ICustomAttributes ica = self as ICustomAttributes;
-            if (ica != null) {
-                ica.SetAttr(context, name, value);
-                return;
-            }
-
-            SetAttr(context, self, name, value);
-        }
-
-        internal override void BaseDelAttr(ICallerContext context, object self, SymbolId name) {
-            ICustomAttributes ica = self as ICustomAttributes;
-            if (ica != null) {
-                ica.DeleteAttr(context, name);
-                return;
-            }
-
-            DelAttr(context, self, name);
-        }
 
         #region ICustomAttributes Overrides
-
-        public override bool TryGetAttr(ICallerContext context, SymbolId name, out object ret) {
-            if (base.TryGetAttr(context, name, out ret)) {
-                return true;
-            }
-
-            if (name == SymbolTable.Call) {
-                MethodWrapper mw =  new MethodWrapper(this, SymbolTable.Call);
-                mw.SetDeclaredMethod(this);
-                ret = mw;
-                return true;
-            }
-
-            return false;
-        }
 
         /// <summary>
         /// Instances of builtin and CLI types do not have a __dict__ attribute.
@@ -1190,81 +1108,11 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        #region ICallableWithCallerContext Members
-
-        [PythonName("__call__")]
-        public virtual object Call(ICallerContext context, object[] args) {
-            Initialize();
-
-            if (args.Length == 0 && type.IsValueType) {
-                if (type == typeof(bool)) return Ops.FALSE;
-                if (type == typeof(void)) throw Ops.TypeError("can not create instances of NoneType");
-                return Activator.CreateInstance(type);
-            }
-
-            object newFunc, newObject;
-
-            // object always has __new__, so we'll always find at least one            
-            TryLookupSlot(context, SymbolTable.NewInst, out newFunc);
-            Debug.Assert(newFunc != null);  
-
-            newObject = Ops.CallWithContext(context, newFunc, PrependThis(args));
-
-            if (newObject != null) InvokeInit(newObject, args);
-
-            return newObject;
-        }
-
-        #endregion
-
-        #region ICallable Members
-        [PythonName("__call__")]
-        public override object Call(params object[] args) {
-            return Call(DefaultContext.Default, args);
-        }
-
-        #endregion
-
-        #region IFancyCallable Members
-
-        [PythonName("__call__")]
-        object IronPython.Runtime.Calls.IFancyCallable.Call(ICallerContext context, object[] args, string[] names) {
-            Initialize();
-
-            object newFunc, newObject;
-            TryLookupSlot(context, SymbolTable.NewInst, out newFunc);
-            Debug.Assert(newFunc != null);
-
-            newObject = Ops.CallWithContext(context, newFunc, PrependThis(args), names);
-
-            if (newObject != null) {
-                // only invoke init if it's a user defined init.  This allows
-                // us to do kwargs -> property conversion when a user does an
-                // explicit call to init from their derived class.
-                object initFunc;
-                if (TryGetAttr(context, newObject, SymbolTable.Init, out initFunc)) {
-                    IFancyCallable ifc = initFunc as IFancyCallable;
-                    if (ifc != null) {
-                        ifc.Call(context, args, names);
-                    } else {
-                        throw Ops.TypeError("__init__ cannot be called with keyword arguments");
-                    }
-                }
-            }
-            return newObject;
-        }
-
-        #endregion
-
-
         public virtual object this[object index] {
             get {
                 Type[] types = GetTypesFromTuple(index);
 
                 return Ops.GetDynamicTypeFromType(type.MakeGenericType(types));
-            }
-            set {
-                throw new NotImplementedException();
             }
         }
 

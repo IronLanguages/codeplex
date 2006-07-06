@@ -407,8 +407,8 @@ namespace IronPython.Modules {
             Ops.SetIndex(a, MakeSlice(b, c), v);
         }
         [PythonName("isCallable")]
-        public static object IsCallable(object o) {
-            return Builtin.Callable(o);
+        public static bool IsCallable(object o) {
+            return Ops.IsCallable(o);
         }
 
         [PythonName("isMappingType")]

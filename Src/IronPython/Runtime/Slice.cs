@@ -60,7 +60,7 @@ namespace IronPython.Runtime {
                 newStart = Converter.ConvertToSliceIndex(start);
                 if (newStart < 0) {
                     calcedLength = true;
-                    length = Converter.ConvertToInt32(Ops.Invoke(self, SymbolTable.Length)); ;
+                    length = Ops.Length(self);
 
                     newStart += length;
                 }
@@ -71,7 +71,7 @@ namespace IronPython.Runtime {
             if (stop != null) {
                 newStop = Converter.ConvertToSliceIndex(stop);
                 if (newStop < 0) {
-                    if (!calcedLength) length = Converter.ConvertToInt32(Ops.Invoke(self, SymbolTable.Length)); ;
+                    if (!calcedLength) length = Ops.Length(self);
 
                     newStop += length;
                 }
