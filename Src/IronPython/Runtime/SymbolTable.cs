@@ -142,9 +142,9 @@ namespace IronPython.Runtime {
             return ids[id.Id];
         }
 
-        public static string[] IdsToStrings(SymbolId[] ids) {
-            string[] ret = new string[ids.Length];
-            for (int i = 0; i < ids.Length; i++) {
+        public static string[] IdsToStrings(IList<SymbolId> ids) {
+            string[] ret = new string[ids.Count];
+            for (int i = 0; i < ids.Count; i++) {
                 if (ids[i] == Empty) ret[i] = null;
                 else ret[i] = ids[i].GetString();
             }

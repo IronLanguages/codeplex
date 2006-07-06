@@ -16,145 +16,233 @@
 using System;
 using IronPython.Runtime;
 
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 
 namespace IronPython.Compiler {
     /// <summary>
     /// Summary description for Token.
     /// </summary>
     public abstract class Token {
-        public readonly TokenKind kind;
+        private readonly TokenKind kind;
+
         protected Token(TokenKind kind) {
             this.kind = kind;
         }
-        public virtual object GetValue() {
-            throw new NotSupportedException("no value for this token");
+        
+        public TokenKind Kind {
+            get { return kind; }
+        }
+
+        public virtual object Value {
+            get {
+                throw new NotSupportedException("no value for this token");
+            }
         }
 
         public override string ToString() {
             return base.ToString() + "(" + kind + ")";
         }
 
-        public abstract String GetImage();
+        public abstract String Image {
+            get;
+        }
     }
 
     public class ErrorToken : Token {
-        public readonly String message;
+        private readonly String message;
+
         public ErrorToken(String message)
             : base(TokenKind.Error) {
             this.message = message;
         }
 
-        public override String GetImage() {
-            return message;
+        public String Message {
+            get { return message; }
         }
 
-        public override object GetValue() {
-            return message;
+        public override String Image {
+            get {
+                return message;
+            }
+        }
+
+        public override object Value {
+            get {
+                return message;
+            }
         }
     }
 
     public class ConstantValueToken : Token {
-        public readonly object value;
+        private readonly object value;
 
         public ConstantValueToken(object value)
             : base(TokenKind.Constant) {
             this.value = value;
         }
 
-        public override object GetValue() {
-            return value;
+        public object Constant {
+            get { return this.value; }
         }
 
-        public override String GetImage() {
-            if (value == null) return "None";
+        public override object Value {
+            get {
+                return value;
+            }
+        }
 
-            return value.ToString();
+        public override String Image {
+            get {
+                if (value == null) return "None";
+
+                return value.ToString();
+            }
         }
     }
 
     public class IncompleteStringToken : ConstantValueToken {
-        public ConstantValueToken token;
-        public bool quote;
-        public bool isRaw;
-        public bool isUni;
-        public bool isTri;
+        private bool quote;
+        private bool isRaw;
+        private bool isUni;
+        private bool isTri;       
 
-        public IncompleteStringToken(object value, bool quote, bool isRaw, bool isUni, bool isTri)
+        public IncompleteStringToken(object value, bool quote, bool isRaw, bool isUnicode, bool isTripleQuoted)
             : base(value) {
             this.quote = quote;
             this.isRaw = isRaw;
-            this.isUni = isUni;
-            this.isTri = isTri;
+            this.isUni = isUnicode;
+            this.isTri = isTripleQuoted;
+        }
+
+        /// <summary>
+        /// True if the quotation is written using ', false if written using "
+        /// </summary>
+        public bool IsSingleTickQuote {
+            get { return quote; }
+            set { quote = value; }
+        }
+
+        /// <summary>
+        /// True if the string is a raw-string (preceeded w/ r character)
+        /// </summary>
+        public bool IsRaw {
+            get { return isRaw; }
+            set { isRaw = value; }
+        }
+
+        /// <summary>
+        /// True if the string is Unicode string (preceeded w/ a u character)
+        /// </summary>
+        public bool IsUnicode {
+            get { return isUni; }
+            set { isUni = value; }
+        }
+
+        /// <summary>
+        /// True if the string is triple quoted (''' or """)
+        /// </summary>
+        public bool IsTripleQuoted {
+            get { return isTri; }
+            set { isTri = value; }
         }
     }
 
     public class CommentToken : SymbolToken {
-        public readonly string comment;
+        private readonly string comment;
 
         public CommentToken(string value) : base(TokenKind.Comment, "<comment>") {
             comment = value;
         }
 
-        public override string GetImage() {
-            return comment;
+        public string Comment {
+            get { return comment; }
         }
 
-        public override object GetValue() {
-            return comment;
+        public override string Image {
+            get {
+                return comment;
+            }
+        }
+
+        public override object Value {
+            get {
+                return comment;
+            }
         }
     }
 
     public class NameToken : Token {
-        public readonly SymbolId value;
+        private readonly SymbolId value;
+
         public NameToken(SymbolId value)
             : base(TokenKind.Name) {
             this.value = value;
         }
 
-        public override object GetValue() {
-            return value;
+        public SymbolId Name {
+            get { return this.value; }
         }
 
-        public override String GetImage() {
-            return value.ToString();
+        public override object Value {
+            get {
+                return value;
+            }
+        }
+
+        public override String Image {
+            get {
+                return value.ToString();
+            }
         }
     }
 
     public class OperatorToken : Token {
-        private readonly Operator op;
+        private readonly PythonOperator op;
 
-        public OperatorToken(TokenKind kind, Operator op)
+        public OperatorToken(TokenKind kind, PythonOperator op)
             : base(kind) {
             this.op = op;
         }
 
-        public Operator Operator {
+        public PythonOperator Operator {
             get { return op; }
         }
 
-        public override object GetValue() {
-            return op;
+        public override object Value {
+            get {
+                return op;
+            }
         }
 
-        public override String GetImage() {
-            return op.symbol;
+        public override String Image {
+            get {
+                return op.Symbol;
+            }
         }
     }
 
     public class SymbolToken : Token {
-        public readonly String image;
+        private readonly String image;
+
         public SymbolToken(TokenKind kind, String image)
             : base(kind) {
             this.image = image;
         }
 
-        public override object GetValue() {
-            return image;
+        public String Symbol {
+            get { return image; }
         }
 
-        public override String GetImage() {
-            return image;
+        public override object Value {
+            get {
+                return image;
+            }
+        }
+
+        public override String Image {
+            get {
+                return image;
+            }
         }
     }
 }

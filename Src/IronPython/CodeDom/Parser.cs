@@ -23,7 +23,7 @@ using System.CodeDom;
 using System.CodeDom.Compiler;
 
 using IronPython.Compiler;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Runtime;
 using System.Diagnostics;
 
@@ -86,7 +86,7 @@ namespace IronPython.CodeDom {
         /// <param name="p"></param>
         private CodeCompileUnit Parse(Parser p, string filename) {
             
-            Stmt s = p.ParseFileInput();
+            Statement s = p.ParseFileInput();
             CodeCompileUnit res = new CodeCompileUnit();
             CodeNamespace defaultNamespace = new CodeNamespace();
 

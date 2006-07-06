@@ -39,7 +39,7 @@ namespace IronPython.Compiler {
         private Dictionary<int, TargetSet> targetSets = new Dictionary<int, TargetSet>();
         private List<ParamsMethodMaker> paramsMakers = new List<ParamsMethodMaker>();
 
-        private bool IsUnsupported(MethodTracker method) {
+        private static bool IsUnsupported(MethodTracker method) {
             return (method.Method.CallingConvention & CallingConventions.VarArgs) != 0
                 || method.Method.ContainsGenericParameters;
         }
@@ -53,16 +53,16 @@ namespace IronPython.Compiler {
             return false;
         }
 
-        public static FastCallable MakeFastCallable(string name, MethodInfo mi, FunctionType funcType) {
+        public static FastCallable MakeFastCallable(string name, MethodInfo mi) {
             //??? In the future add optimization for simple case of nothing tricky in mi
-            return new MethodBinder(name, new MethodTracker[] { new MethodTracker(mi) }, funcType).MakeFastCallable();
+            return new MethodBinder(name, new MethodTracker[] { new MethodTracker(mi) }).MakeFastCallable();
         }
 
-        public static FastCallable MakeFastCallable(string name, MethodBase[] mis, FunctionType funcType) {
-            return new MethodBinder(name, MethodTracker.GetTrackerArray(mis), funcType).MakeFastCallable();
+        public static FastCallable MakeFastCallable(string name, MethodBase[] mis) {
+            return new MethodBinder(name, MethodTracker.GetTrackerArray(mis)).MakeFastCallable();
         }
 
-        private MethodBinder(string name, MethodTracker[] methods, FunctionType funcType) {
+        private MethodBinder(string name, MethodTracker[] methods) {
             this.name = name;
             foreach (MethodTracker method in methods) {                
                 if (IsUnsupported(method)) continue;
@@ -277,7 +277,7 @@ namespace IronPython.Compiler {
             AddSimpleTarget(new MethodTarget(method, parameters, instanceBuilder, argBuilders, returnBuilder));
         }
 
-        private MethodTarget MakeByRefReducedMethodTarget(MethodTracker method, List<Parameter> parameters, ArgBuilder instanceBuilder, List<ArgBuilder> argBuilders) {
+        private static MethodTarget MakeByRefReducedMethodTarget(MethodTracker method, List<Parameter> parameters, ArgBuilder instanceBuilder, List<ArgBuilder> argBuilders) {
             List<Parameter> newParameters = new List<Parameter>();
             foreach (Parameter param in parameters) {
                 ByRefParameter p = param as ByRefParameter;
@@ -453,7 +453,7 @@ namespace IronPython.Compiler {
                         if (cmp != 0) ret = cmp;
                         break;
                     default:
-                        throw new Exception();
+                        throw new InvalidOperationException();
                 }
             }
 
@@ -646,7 +646,7 @@ namespace IronPython.Compiler {
                 this.returnArgs = returnArgs;
             }
 
-            protected object GetValue(object[] args, object ret, int index) {
+            protected static object GetValue(object[] args, object ret, int index) {
                 if (index == -1) return ret;
                 return args[index];
             }
@@ -1071,7 +1071,7 @@ namespace IronPython.Compiler {
                 }
             }
 
-            private bool IsBest(MethodTarget candidate, List<MethodTarget> applicableTargets, CallType callType) {
+            private static bool IsBest(MethodTarget candidate, List<MethodTarget> applicableTargets, CallType callType) {
                 foreach (MethodTarget target in applicableTargets) {
                     if (candidate == target) continue;
                     if (candidate.CompareTo(target, callType) != +1) return false;
@@ -1079,19 +1079,19 @@ namespace IronPython.Compiler {
                 return true;
             }
 
-            private MethodTarget FindBest(CallType callType, List<MethodTarget> applicableTargets) {
+            private static MethodTarget FindBest(CallType callType, List<MethodTarget> applicableTargets) {
                 foreach (MethodTarget candidate in applicableTargets) {
                     if (IsBest(candidate, applicableTargets, callType)) return candidate;
                 }
                 return null;    
             }
 
-            private Exception NoApplicableTarget(ICallerContext context, CallType callType, object[] args) {
+            private static Exception NoApplicableTarget(ICallerContext context, CallType callType, object[] args) {
                 //!!! better error messages is the key point here
                 return Ops.TypeError("no applicable overload");
             }
 
-            private string GetArgTypeNames(object[] args) {
+            private static string GetArgTypeNames(object[] args) {
                 StringBuilder buf = new StringBuilder();
                 buf.Append("(");
                 bool isFirstArg = true;

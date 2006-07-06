@@ -45,7 +45,7 @@ pythonExcs = ['ImportError', 'RuntimeError', 'UnicodeTranslateError', 'PendingDe
 
 FACTORY = """
 public static Exception %(name)s(string format, params object[] args) {
-    return new Python%(name)s(string.Format(format, args));
+    return new Python%(name)sException(string.Format(format, args));
 }"""
 
 def factory_gen(cw):
@@ -58,10 +58,10 @@ CodeGenerator("Exception Factories", factory_gen).doit()
 CLASS1 = """
 [PythonType("%(name)s")]
 [Serializable]
-public class Python%(name)s : %(supername)s {
-    public Python%(name)s() : base() { }
-    public Python%(name)s(string msg) : base(msg) { }
-    public Python%(name)s(SerializationInfo info, StreamingContext context) : base(info, context) { }
+public class Python%(name)sException : %(supername)sException {
+    public Python%(name)sException() : base() { }
+    public Python%(name)sException(string msg) : base(msg) { }
+    public Python%(name)sException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 }
 """
 
@@ -70,9 +70,9 @@ def factory_gen(cw):
     for e in pythonExcs:
         supername = getattr(exceptions, e).__bases__[0].__name__
         if not supername in pythonExcs:
-            supername = 'Exception'
+            supername = ''
         else:
-            supername = 'Python' + supername
+            supername = 'Python' + supername 
 
         cw.write(CLASS1, name=e, supername=supername)
 

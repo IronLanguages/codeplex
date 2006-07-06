@@ -21,8 +21,8 @@ using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
-namespace IronPython.Compiler.AST {
-    public abstract partial class Operator {
+namespace IronPython.Compiler.Ast {
+    public abstract partial class PythonOperator {
         #region Generated Operators
 
         // *** BEGIN GENERATED CODE ***

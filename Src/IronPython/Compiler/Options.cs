@@ -18,125 +18,309 @@ using System.Collections;
 using System.Collections.Generic;
 
 namespace IronPython.Compiler {
+    public enum DivisionOption {
+        Old,
+        New,
+        Warn,
+        WarnAll
+    };
+
     /// <summary>
     /// Summary description for Options.
     /// </summary>
-    public class Options {
+    public class Options {        
+        // per-engine options
+        private bool debugMode = true;
+        private bool engineDebug;
+        private bool exceptionDetail;
+        private bool showCLSExceptions;
+        private bool verbose;
 
-        public enum DivisionOptions {
-            Old,
-            New,
-            Warn,
-            WarnAll
-        };
+        // global options
+        private static bool introspection;
+        private static bool skipFirstLine;
+        private static bool traceBackSupport = (IntPtr.Size == 4);  // currently only enabled on 32-bit
+        private static bool checkInitialized = true;
+        private static bool optimizeReflectCalls = true;
+        private static bool trackPerformance;
+        private static bool optimizeEnvironments = true;
+        private static bool fastEval;
+        private static bool frames;
+        private static bool generateDynamicMethods = true;
+        private static string binariesDirectory;
+        private static bool privateBinding;
+        private static bool ilDebug;
+        private static bool generateSafeCasts = true;
+        private static bool doNotCacheConstants;
+        private static bool saveAndReloadBinaries;
+        private static bool generateModulesAsSnippets;
+        private static int maximumRecursion = Int32.MaxValue;
+        private static bool bufferedStdOutAndError = true;
+        private static string command;
+        private static bool printVersionAndExit = false;
+        private static bool ignoreEnvironmentVariables;
+        private static bool importSite = true;
+        private static int autoIndentSize = 4;
+        private static bool warningOnIndentationInconsistency ;
+        private static bool errorOnIndentationInconsistency;
+        private static List<string> warningFilters;
+        private static DivisionOption division = DivisionOption.Old;
+        private static bool python25;
 
         #region Static options
         // Will the command-line script be introspected after execution? Corresponds to the "-i" command-line argument
-        public static bool Introspection;
-
-        public static bool SkipFirstLine;
-
-        public static bool TracebackSupport = (IntPtr.Size == 4);  // currently only enabled on 32-bit
-
-        // Emit CheckInitialized calls
-        public static bool CheckInitialized = true;
-
-        public static bool TrackPerformance;
-
-        // Should calls be optimized using ReflectOptimizer
-        public static bool OptimizeReflectCalls = true;
-
-        // Closures, generators and environments can use the optimized
-        // generated environments FunctionEnvironment2 .. 32
-        // If false, environments are stored in FunctionEnvironmentN only
-        public static bool OptimizeEnvironments = true;
-
-        // Should we interpret the eval expression instead of compiling it?
-        // This yields a HUGE (>100x) performance boost to simple evals.
-        // Its disabled for compatibility
-        public static bool FastEval;
-
-        // Generate functions using custom frames. Allocate the locals on frames.
-        public static bool Frames;
-
-        public static bool GenerateDynamicMethods = true;
-
-        // Constants can be generated either by caching the boxed value in a static,
-        // or by boxing it every time its needed.
-        public static bool DoNotCacheConstants;
-
-        // Explicitly call Ops.InvalidType() for cast operations that will fail
-        // to give richer information of failing casts.
-        public static bool GenerateSafeCasts = true;
-
-        // Should the Reflection.Emit assembly be saved to disk and reloaded?
-        // Its enabled to ease debugging
-        public static bool SaveAndReloadBinaries;
-        public static string BinariesDirectory = null;
-
-        public static bool PrivateBinding;
-
-        // true if we are emitting IL source for debugging generated code.
-        static bool ilDebug;
-        public static bool ILDebug {
-            get { return ilDebug; }
-            set { ilDebug = value; if (ilDebug) GenerateDynamicMethods = false; }
+        public static bool Introspection {
+            get { return Options.introspection; }
+            set { Options.introspection = value; }
         }
 
-        // true to import modules as though a sequence of snippets
-        public static bool GenerateModulesAsSnippets;
+        public static bool SkipFirstLine {
+            get { return Options.skipFirstLine; }
+            set { Options.skipFirstLine = value; }
+        }
 
-        // Should the console auto-indent the start of the suite statements of a compound statement?
-        public static int AutoIndentSize = 4;
+        public static bool TraceBackSupport {
+            get { return Options.traceBackSupport; }
+            set { Options.traceBackSupport = value; }
+        }
 
-        public static int MaximumRecursion = Int32.MaxValue;
+        // Emit CheckInitialized calls
+        public static bool CheckInitialized {
+            get { return Options.checkInitialized; }
+            set { Options.checkInitialized = value; }
+        }
 
-        public static bool UnbufferedStdOutAndError;
+        public static bool TrackPerformance {
+            get { return Options.trackPerformance; }
+            set { Options.trackPerformance = value; }
+        }
 
-        // String containing python source to eval (used to implement the '-c' command
-        // line switch).
-        public static string Command;
+        /// <summary>
+        /// Should calls be optimized using ReflectOptimizer
+        /// </summary>
+        public static bool OptimizeReflectCalls {
+            get { return Options.optimizeReflectCalls; }
+            set { Options.optimizeReflectCalls = value; }
+        }
 
-        public static bool PrintVersionAndExit = false;
+        /// <summary>
+        /// Closures, generators and environments can use the optimized
+        /// generated environments FunctionEnvironment2 .. 32 
+        /// If false, environments are stored in FunctionEnvironmentN only
+        /// </summary>
+        public static bool OptimizeEnvironments {
+            get { return Options.optimizeEnvironments; }
+            set { Options.optimizeEnvironments = value; }
+        }
 
-        // Whether to imply "import Site" on initialization.
-        public static bool ImportSite = true;
+        /// <summary>
+        /// Should we interpret the eval expression instead of compiling it?
+        /// This yields a HUGE (>100x) performance boost to simple evals.
+        /// Its disabled for compatibility
+        /// </summary>
+        public static bool FastEvaluation {
+            get { return Options.fastEval; }
+            set { Options.fastEval = value; }
+        }
 
-        public static bool IgnoreEnvironmentVariables = false;
+        /// <summary>
+        /// Generate functions using custom frames. Allocate the locals on frames.
+        /// </summary>
+        public static bool Frames {
+            get { return Options.frames; }
+            set { Options.frames = value; }
+        }
 
-        // Whether to generate a warning or error if the tokenizer detects that indentation is
-        // formatted inconsistently.
-        public static bool WarningOnIndentationInconsistency = false;
-        public static bool ErrorOnIndentationInconsistency = false;
+        public static bool GenerateDynamicMethods {
+            get { return Options.generateDynamicMethods; }
+            set { Options.generateDynamicMethods = value; }
+        }
+
+        /// <summary>
+        /// Constants can be generated either by caching the boxed value in a static,
+        /// or by boxing it every time its needed.
+        /// </summary>
+        public static bool DoNotCacheConstants {
+            get { return Options.doNotCacheConstants; }
+            set { Options.doNotCacheConstants = value; }
+        }
+
+        /// <summary>
+        /// Explicitly call Ops.InvalidType() for cast operations that will fail
+        /// to give richer information of failing casts.
+        /// </summary>
+        public static bool GenerateSafeCasts {
+            get { return Options.generateSafeCasts; }
+            set { Options.generateSafeCasts = value; }
+        }
+
+        /// <summary>
+        /// Should the Reflection.Emit assembly be saved to disk and reloaded?
+        /// Its enabled to ease debugging 
+        /// </summary>
+        public static bool SaveAndReloadBinaries {
+            get { return Options.saveAndReloadBinaries; }
+            set { Options.saveAndReloadBinaries = value; }
+        }
+
+        public static string BinariesDirectory {
+            get { return Options.binariesDirectory; }
+            set { Options.binariesDirectory = value; }
+        }
+
+        public static bool PrivateBinding {
+            get { return Options.privateBinding; }
+            set { Options.privateBinding = value; }
+        }
+
+        /// <summary>
+        /// true if we are emitting IL source for debugging generated code.
+        /// </summary>
+        public static bool ILDebug {
+            get { return ilDebug; }
+            set { ilDebug = value; if (ilDebug) generateDynamicMethods = false; }
+        }
+
+        /// <summary>
+        /// true to import modules as though a sequence of snippets 
+        /// </summary>
+        public static bool GenerateModulesAsSnippets {
+            get { return Options.generateModulesAsSnippets; }
+            set { Options.generateModulesAsSnippets = value; }
+        }
+
+        /// <summary>
+        ///  Should the console auto-indent the start of the suite statements of a compound statement?
+        /// </summary>
+        public static int AutoIndentSize {
+            get { return Options.autoIndentSize; }
+            set { Options.autoIndentSize = value; }
+        }
+
+        public static int MaximumRecursion {
+            get { return Options.maximumRecursion; }
+            set { Options.maximumRecursion = value; }
+        }
+
+        public static bool BufferedStandardOutAndError {
+            get { return Options.bufferedStdOutAndError; }
+            set { Options.bufferedStdOutAndError = value; }
+        }
+
+        /// <summary>
+        /// String containing python source to eval (used to implement the '-c' command 
+        /// line switch).
+        /// </summary>
+        public static string Command {
+            get { return Options.command; }
+            set { Options.command = value; }
+        }
+
+        public static bool PrintVersionAndExit {
+            get { return Options.printVersionAndExit; }
+            set { Options.printVersionAndExit = value; }
+        }
+
+        /// <summary>
+        ///  Whether to imply "import Site" on initialization.
+        /// </summary>
+        public static bool ImportSite {
+            get { return Options.importSite; }
+            set { Options.importSite = value; }
+        }
+
+        public static bool IgnoreEnvironmentVariables {
+            get { return Options.ignoreEnvironmentVariables; }
+            set { Options.ignoreEnvironmentVariables = value; }
+        }
+
+        /// <summary> 
+        /// Whether to generate a warning if the tokenizer detects that indentation is
+        /// formatted inconsistently.
+        /// </summary>
+        public static bool WarningOnIndentationInconsistency {
+            get { return Options.warningOnIndentationInconsistency; }
+            set { Options.warningOnIndentationInconsistency = value; }
+        }
+
+        /// <summary> 
+        /// Whether to generate an error if the tokenizer detects that indentation is
+        /// formatted inconsistently.
+        /// </summary>
+        public static bool ErrorOnIndentationInconsistency {
+            get { return Options.errorOnIndentationInconsistency; }
+            set { Options.errorOnIndentationInconsistency = value; }
+        }
 
         // Should we strip out all doc strings (the -OO command line option)?
-        public static bool StripDocStrings = false;
+        private static bool stripDocStrings = false;
 
-        // List of -W (warning filter) options collected from the command line.
-        public static List<string> WarningFilters;
+        public static bool StripDocStrings {
+            get { return Options.stripDocStrings; }
+            set { Options.stripDocStrings = value; }
+        }
 
-        public static DivisionOptions Division = DivisionOptions.Old;
+        /// <summary>
+        ///  List of -W (warning filter) options collected from the command line.
+        /// </summary>
+        public static IList<string> WarningFilters {
+            get { return Options.warningFilters; }
+            set { Options.warningFilters = new List<string>(value); }
+        }
 
-        // should the Python 2.5 features be enabled (-X:Python25 commandline option) ?
-        public static bool Python25 = false;
+        public static DivisionOption Division {
+            get { return Options.division; }
+            set { Options.division = value; }
+        }
+
+        /// <summary>
+        ///  should the Python 2.5 features be enabled (-X:Python25 commandline option) ?
+        /// </summary>
+        public static bool Python25 {
+            get { return Options.python25; }
+            set { Options.python25 = value; }
+        }
 
         #endregion
 
         #region Instance options
 
-        // Is this a debug mode? "__debug__" is defined, and Asserts are active
-        public bool DebugMode = true;
+        /// <summary>
+        ///  Is this a debug mode? "__debug__" is defined, and Asserts are active
+        /// </summary>
+        public bool DebugMode {
+            get { return debugMode; }
+            set { debugMode = value; }
+        }
 
-        // Is the engine in debug mode? This is useful for debugging the engine itself
-        public bool EngineDebug;
+        /// <summary>
+        /// Is the engine in debug mode? This is useful for debugging the engine itself
+        /// </summary>
+        public bool EngineDebug {
+            get { return engineDebug; }
+            set { engineDebug = value; }
+        }
 
-        // Display exception detail (callstack) when exception gets caught
-        public bool ExceptionDetail;
+        /// <summary>
+        ///  Display exception detail (callstack) when exception gets caught
+        /// </summary>
+        public bool ExceptionDetail {
+            get { return exceptionDetail; }
+            set { exceptionDetail = value; }
+        }
 
-        public bool ShowCLSExceptions;
+        public bool ShowClsExceptions {
+            get { return showCLSExceptions; }
+            set { showCLSExceptions = value; }
+        }
 
-        // corresponds to the "-v" command line parameter
-        public bool Verbose;
+        /// <summary>
+        /// corresponds to the "-v" command line parameter
+        /// </summary>
+        public bool Verbose {
+            get { return verbose; }
+            set { verbose = value; }
+        }
 
         #endregion
 

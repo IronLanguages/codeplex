@@ -183,7 +183,7 @@ compile_tests = [
     ("None = 2", "assignment to None", 1),
     ("break", "'break' not properly in loop", 1),
     ("if 1:\n\tbreak", "'break' not properly in loop", 2),
-    ("if 1:\n\tx+y=22", "can't assign to BinaryExpr", 2),
+    ("if 1:\n\tx+y=22", "can't assign to BinaryExpression", 2),
     ("if 1:\n\tdel f()", "can't delete function call", 2),
     
 ]

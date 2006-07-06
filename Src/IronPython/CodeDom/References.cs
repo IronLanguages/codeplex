@@ -111,7 +111,7 @@ namespace IronPython.CodeDom {
             return Assembly.Load(refType.Assembly).GetType(refType.FullName);
         }
 
-        private Assembly LoadAssembly(string name) {                        
+        private static Assembly LoadAssembly(string name) {                        
             try {
                 return Assembly.Load(name);
             } catch {

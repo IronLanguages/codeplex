@@ -52,12 +52,12 @@ namespace IronPython.Runtime.Exceptions {
 
     [PythonType("SystemExit")]
     [Serializable]
-    public class PythonSystemExit : Exception {
-        public PythonSystemExit() : base() { }
-        public PythonSystemExit(string msg)
+    public class PythonSystemExitException : Exception {
+        public PythonSystemExitException() : base() { }
+        public PythonSystemExitException(string msg)
             : base(msg) {
         }
-        public PythonSystemExit(SerializationInfo info, StreamingContext context) : base(info, context) { }
+        public PythonSystemExitException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 
         public int GetExitCode(ICallerContext context) {
             object pyObj = ExceptionConverter.ToPython(this);
@@ -84,25 +84,25 @@ namespace IronPython.Runtime.Exceptions {
 
     [PythonType("SyntaxError")]
     [Serializable]
-    public class PythonSyntaxError : Exception, ICustomExceptionConversion {
+    public class PythonSyntaxErrorException : Exception, ICustomExceptionConversion {
         int lineNo, columnNo;
         string lineText, file;
         Severity sev;
         int error;
 
-        public PythonSyntaxError() : base() { }
-        public PythonSyntaxError(string msg) : base(msg) { }
-        public PythonSyntaxError(string msg, string filename, int lineNumber, int columnNumber, string badLineText, int errorCode, Severity severity)
+        public PythonSyntaxErrorException() : base() { }
+        public PythonSyntaxErrorException(string msg) : base(msg) { }
+        public PythonSyntaxErrorException(string msg, string fileName, int lineNumber, int columnNumber, string badLineText, int errorCode, Severity severity)
             : base(msg) {
             lineNo = lineNumber;
             columnNo = columnNumber;
             lineText = badLineText;
-            file = filename;
+            file = fileName;
             sev = severity;
             error = errorCode;
         }
 
-        public PythonSyntaxError(SerializationInfo info, StreamingContext context)
+        public PythonSyntaxErrorException(SerializationInfo info, StreamingContext context)
             : base(info, context) {
         }
 
@@ -114,7 +114,7 @@ namespace IronPython.Runtime.Exceptions {
             get { return columnNo; }
         }
 
-        public string Filename {
+        public string FileName {
             get { return file; }
         }
 
@@ -165,7 +165,7 @@ namespace IronPython.Runtime.Exceptions {
         #endregion
     }
 
-    class PythonIndentationError : PythonSyntaxError {
+    class PythonIndentationError : PythonSyntaxErrorException {
         public PythonIndentationError(string msg) : base(msg) { }
         public PythonIndentationError(string msg, string filename, int lineNumber, int columnNumber, string badLineText, int errorCode, Severity severity)
             : base(msg, filename, lineNumber, columnNumber, badLineText, errorCode, severity) { }

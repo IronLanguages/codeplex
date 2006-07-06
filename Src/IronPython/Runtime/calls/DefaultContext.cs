@@ -20,12 +20,12 @@ using IronPython.Compiler;
 
 namespace IronPython.Runtime.Calls {
     class DefaultContext : ICallerContext{
-        public static DefaultContext Default = new DefaultContext(CallerContextFlags.None);
-        public static DefaultContext DefaultCLS = new DefaultContext(CallerContextFlags.ShowCls);
+        public static DefaultContext Default = new DefaultContext(CallerContextAttributes.None);
+        public static DefaultContext DefaultCLS = new DefaultContext(CallerContextAttributes.ShowCls);
 
-        CallerContextFlags flags;
+        CallerContextAttributes flags;
         
-        public DefaultContext(CallerContextFlags contextFlags) {
+        public DefaultContext(CallerContextAttributes contextFlags) {
             flags = contextFlags;
         }
 
@@ -53,7 +53,7 @@ namespace IronPython.Runtime.Calls {
             return null;
         }
 
-        public CallerContextFlags ContextFlags {
+        public CallerContextAttributes ContextFlags {
             get { return flags; }
             set { }
         }

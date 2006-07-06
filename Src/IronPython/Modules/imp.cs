@@ -19,7 +19,7 @@ using System.Diagnostics;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Compiler.Generation;
 using IronPython.Compiler;
 using IronPython.Runtime.Operations;
@@ -227,7 +227,7 @@ namespace IronPython.Modules {
         private static Tuple FindModuleBuiltinOrPath(ICallerContext context, string name, List path) {
             if (name.Equals("sys")) return BuiltinModuleTuple(name);
             if (name.Equals("clr")) {
-                context.ContextFlags |= CallerContextFlags.ShowCls;
+                context.ContextFlags |= CallerContextAttributes.ShowCls;
                 return BuiltinModuleTuple(name);
             }
             Type ty;
@@ -249,7 +249,7 @@ namespace IronPython.Modules {
         }
 
         private static PythonModule GenerateAndInitializeModule(ICallerContext context, CompilerContext cc, Parser parser, string name, string filename) {
-            Stmt stmt = parser.ParseFileInput();
+            Statement stmt = parser.ParseFileInput();
 
             PythonModule module = OutputGenerator.GenerateModule(context.SystemState, cc, stmt, name);
             module.Filename = filename;
@@ -262,7 +262,7 @@ namespace IronPython.Modules {
             string init = Path.Combine(filename, "__init__.py");
             CompilerContext cc = context.CreateCompilerContext().CopyWithNewSourceFile(init);
             Parser parser = Parser.FromFile(context.SystemState, cc);
-            Stmt stmt = parser.ParseFileInput();
+            Statement stmt = parser.ParseFileInput();
 
             PythonModule module = OutputGenerator.GenerateModule(context.SystemState, cc, stmt, name);
             module.Filename = init;

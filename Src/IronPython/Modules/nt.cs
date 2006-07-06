@@ -55,7 +55,7 @@ namespace IronPython.Modules {
         public static object Environment {
             [PythonName("environ")]
             get {
-                return new EnvironmentDict();
+                return new EnvironmentDictionary();
             }
         }
 

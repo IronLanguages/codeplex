@@ -22,7 +22,7 @@ using System.Reflection.Emit;
 using System.Threading;
 using IronPython.Runtime;
 
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
@@ -92,16 +92,16 @@ namespace IronPython.Compiler.Generation {
             return tg;
         }
 
-        public static CompiledCode GenerateSnippet(CompilerContext context, Stmt body) {
+        public static CompiledCode GenerateSnippet(CompilerContext context, Statement body) {
             return GenerateSnippet(context, body, false, false);
         }
 
-        public static CompiledCode GenerateSnippet(CompilerContext context, Stmt body, bool printExprStmts, bool enableDebugging) {
+        public static CompiledCode GenerateSnippet(CompilerContext context, Statement body, bool printExprStmts, bool enableDebugging) {
             return GenerateSnippet(context, body, context.SourceFile, printExprStmts, enableDebugging);
         }
 
-        public static CompiledCode GenerateSnippet(CompilerContext context, Stmt body, string name, bool printExprStmts, bool enableDebugging) {
-            GlobalSuite gs = AST.Binder.Bind(body, context);
+        public static CompiledCode GenerateSnippet(CompilerContext context, Statement body, string name, bool printExprStmts, bool enableDebugging) {
+            GlobalSuite gs = Ast.Binder.Bind(body, context);
 
             if (name.Length == 0) name = "<empty>"; // The empty string isn't a legal method name
             CodeGen cg;
@@ -141,12 +141,12 @@ namespace IronPython.Compiler.Generation {
             }
 
             // Emit a try/catch block  for TraceBack support, except for simple return statements
-            if (!(body is ReturnStmt))
+            if (!(body is ReturnStatement))
                 cg.EmitTraceBackTryBlockStart();
 
             gs.Emit(cg);
 
-            if (!(body is ReturnStmt)) {
+            if (!(body is ReturnStatement)) {
                 cg.EmitTraceBackFaultBlock("Initialize", context.SourceFile);
                 cg.EmitPosition(Location.None, Location.None);
                 cg.EmitReturn(null);
@@ -160,12 +160,12 @@ namespace IronPython.Compiler.Generation {
             return compiledCode;
         }
 
-        public static PythonModule GenerateModule(SystemState state, CompilerContext context, Stmt body, string moduleName) {
+        public static PythonModule GenerateModule(SystemState state, CompilerContext context, Statement body, string moduleName) {
             if (Options.GenerateModulesAsSnippets) {
                 return GenerateModuleAsSnippets(state, context, body, moduleName);
             }
 
-            GlobalSuite gs = AST.Binder.Bind(body, context);
+            GlobalSuite gs = Ast.Binder.Bind(body, context);
             string suffix = "";
             int counter = 0;
 
@@ -178,12 +178,12 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        public static PythonModule GenerateModule(SystemState state, CompilerContext context, Stmt body, string moduleName, string outSuffix) {
+        public static PythonModule GenerateModule(SystemState state, CompilerContext context, Statement body, string moduleName, string outSuffix) {
             if (Options.GenerateModulesAsSnippets) {
                 return GenerateModuleAsSnippets(state, context, body, moduleName);
             }
 
-            GlobalSuite gs = AST.Binder.Bind(body, context);
+            GlobalSuite gs = Ast.Binder.Bind(body, context);
             return DoGenerateModule(state, context, gs, moduleName, context.SourceFile, outSuffix);
         }
 
@@ -222,24 +222,24 @@ namespace IronPython.Compiler.Generation {
             #endregion
         }
 
-        private static PythonModule GenerateModuleAsSnippets(SystemState state, CompilerContext context, Stmt body, string moduleName) {
-            SuiteStmt suite = body as SuiteStmt;
+        private static PythonModule GenerateModuleAsSnippets(SystemState state, CompilerContext context, Statement body, string moduleName) {
+            SuiteStatement suite = body as SuiteStatement;
             SnippetModuleRunner smr = new SnippetModuleRunner(moduleName, state);
 
             Debug.Assert(suite != null, "invalid statement");
 
             //  Convert document string into assignment
             if (suite.Statements.Count > 0) {
-                ExprStmt es = suite.Statements[0] as ExprStmt;
+                ExpressionStatement es = suite.Statements[0] as ExpressionStatement;
                 if (es != null) {
-                    ConstantExpr ce = es.Expression as ConstantExpr;
+                    ConstantExpression ce = es.Expression as ConstantExpression;
                     if (ce != null && ce.Value is string) {
-                        suite.Statements[0] = new AssignStmt(new Expr[] { new NameExpr(SymbolTable.Doc) }, ce);
+                        suite.Statements[0] = new AssignStatement(new Expression[] { new NameExpression(SymbolTable.Doc) }, ce);
                     }
                 }
             }
 
-            foreach (Stmt stmt in suite.Statements) {
+            foreach (Statement stmt in suite.Statements) {
                 // GenerateSnippet will do the binding
                 smr.AddSnippet(GenerateSnippet(context, stmt, moduleName, true, false));
             }
@@ -302,7 +302,7 @@ namespace IronPython.Compiler.Generation {
             ncg.Names.CreateGlobalSlot(SymbolTable.Doc);
             ncg.Names.CreateGlobalSlot(SymbolTable.Name);
 
-            string doc = gs.GetDocString();
+            string doc = gs.Documentation;
             ncg.EmitStringOrNull(doc);
             ncg.EmitSet(SymbolTable.Doc);
 

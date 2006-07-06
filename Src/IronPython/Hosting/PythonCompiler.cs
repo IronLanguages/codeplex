@@ -22,7 +22,7 @@ using System.IO;
 
 using IronPython.Compiler;
 using IronPython.Compiler.Generation;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Modules;
 using IronPython.Runtime;
 
@@ -72,14 +72,6 @@ namespace IronPython.Hosting {
             get { return errors; }
         }
 
-        public int Warnings {
-            get { return warnings; }
-        }
-
-        public int Messages {
-            get { return messages; }
-        }
-
         public override void AddError(string path, string message, string lineText, CodeSpan span, int errorCode, Severity severity) {
             if(severity >= Severity.Error) errors++;
             else if(severity >= Severity.Warning) warnings++;
@@ -88,8 +80,8 @@ namespace IronPython.Hosting {
             if (sink != null) {
                 sink.AddError(path, message, lineText, span, errorCode, severity);
             } else {
-                throw new Exception(string.Format("{0}:{1} at {2} {3}:{4}-{5}:{6}", severity, message, path,
-                                                  span.startLine, span.startColumn, span.endLine, span.endColumn));
+                throw new CompilerException(string.Format("{0}:{1} at {2} {3}:{4}-{5}:{6}", severity, message, path,
+                                                  span.StartLine, span.StartColumn, span.EndLine, span.EndColumn));
             }
         }
     }
@@ -118,7 +110,7 @@ namespace IronPython.Hosting {
             set { referencedAssemblies = value; }
         }
 
-        private string mainFile = null;
+        private string mainFile;
 
         public string MainFile {
             get { return mainFile; }
@@ -255,11 +247,11 @@ namespace IronPython.Hosting {
             assemblyGen.SetPythonSourceFile(fileName);
             CompilerContext context = new CompilerContext(fileName, sink);
             Parser p = Parser.FromFile(state, context);
-            Stmt body = p.ParseFileInput();
+            Statement body = p.ParseFileInput();
 
             if (sink.Errors > 0) return;
 
-            GlobalSuite gs = Compiler.AST.Binder.Bind(body, context);
+            GlobalSuite gs = Compiler.Ast.Binder.Bind(body, context);
             string moduleName = GetModuleFromFilename(fileName);
             TypeGen tg = OutputGenerator.GenerateModuleType(moduleName, assemblyGen);
             CodeGen init = CompileModuleInit(context, gs, tg, moduleName);
@@ -287,9 +279,9 @@ namespace IronPython.Hosting {
                         string otherModName = GetModuleFromFilename(sourceFiles[i]);
                         if (otherModName == moduleName) continue;
 
-                        FromImportStmt stmt = new FromImportStmt(
+                        FromImportStatement stmt = new FromImportStatement(
                             new DottedName(new SymbolId[] { SymbolTable.StringToId(otherModName) }),
-                            FromImportStmt.Star, null);
+                            FromImportStatement.Star, null);
                         stmt.Start = dummyLocation;
                         stmt.End = dummyLocation;
                         stmt.Emit(cg);
@@ -319,7 +311,7 @@ namespace IronPython.Hosting {
                         SymbolId symbolId = SymbolTable.StringToId(nsPrefix);
                         cg.Names.CreateGlobalSlot(symbolId);
                         DottedName dottedName = new DottedName(new SymbolId[] { symbolId });
-                        ImportStmt importStmt = new ImportStmt(
+                        ImportStatement importStmt = new ImportStatement(
                             new DottedName[] { dottedName },
                             new SymbolId[] { SymbolTable.Empty });
                         importStmt.Start = dummyLocation;

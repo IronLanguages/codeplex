@@ -31,7 +31,7 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Modules;
 using IronPython.Compiler;
 using IronPython.Compiler.Generation;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 
 using IronMath;
 
@@ -1907,7 +1907,7 @@ namespace IronPython.Runtime.Operations {
 
             try {
                 init();
-            } catch (PythonSystemExit x) {
+            } catch (PythonSystemExitException x) {
                 return x.GetExitCode(compiledEngine.DefaultModuleScope);
             } catch (Exception e) {
                 Ops.Write(compiledEngine.Sys, compiledEngine.Sys.stderr, compiledEngine.FormatException(e));
@@ -2014,7 +2014,7 @@ namespace IronPython.Runtime.Operations {
                 CompilerContext cc = context.CreateCompilerContext();
                 Parser p = Parser.FromString(context.SystemState, cc, (string)code);
                 //  could be multiple statements e.g. exec "\nprint "abc"\nprint "def"\n"
-                Stmt s = p.ParseFileInput();
+                Statement s = p.ParseFileInput();
                 code = new FunctionCode(OutputGenerator.GenerateSnippet(cc, s));
             }
 
@@ -2274,11 +2274,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception SystemExit(string format, params object[] args) {
-            return new PythonSystemExit(string.Format(format, args));
+            return new PythonSystemExitException(string.Format(format, args));
         }
 
         public static Exception SyntaxError(string msg, string filename, int line, int column, string lineText, int errorCode, Hosting.Severity severity) {
-            return new PythonSyntaxError(msg, filename, line, column, lineText, errorCode, severity);
+            return new PythonSyntaxErrorException(msg, filename, line, column, lineText, errorCode, severity);
         }
 
         public static Exception IndentationError(string msg, string filename, int line, int column, string lineText, int errorCode, Hosting.Severity severity) {

@@ -14,7 +14,7 @@
  * **********************************************************************************/
 
 using IronPython.Hosting;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 
 namespace IronPython.Compiler {
     public class CompilerContext {
@@ -26,7 +26,7 @@ namespace IronPython.Compiler {
         /// <summary>
         /// from __future__ import division
         /// </summary>
-        private bool trueDivision = Options.Division == Options.DivisionOptions.New;
+        private bool trueDivision = Options.Division == DivisionOption.New;
 
         /// <summary>
         /// store name of current file being compiled in the CompilerContext

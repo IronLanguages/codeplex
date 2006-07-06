@@ -22,8 +22,11 @@ using IronPython.Compiler.Generation;
 using IronPython.Runtime.Operations;
 
 
-namespace IronPython.Compiler.AST {
-    public abstract partial class Operator {
+namespace IronPython.Compiler.Ast {
+    public abstract partial class PythonOperator {
+        private readonly string symbol;
+        private readonly int precedence;
+
         private static readonly BinaryOperator binIs = new BinaryOperator("is", new CallTarget2(Ops.Is), null, -1);
         private static readonly BinaryOperator binIsNot = new BinaryOperator("is not", new CallTarget2(Ops.IsNot), null, -1);
         private static readonly BinaryOperator binIn = new BinaryOperator("in", new CallTarget2(Ops.In), null, -1);
@@ -34,7 +37,21 @@ namespace IronPython.Compiler.AST {
         private static readonly UnaryOperator unInvert = new UnaryOperator("~", new CallTarget1(Ops.OnesComplement));
         private static readonly UnaryOperator unNot = new UnaryOperator("not", new CallTarget1(Ops.Not));
 
+        protected PythonOperator(string symbol, int precedence) {
+            this.symbol = symbol;
+            this.precedence = precedence;
+        }
 
+        public string Symbol {
+            get { return symbol; }
+        }
+
+        public int Precedence {
+            get { return precedence; }
+        }
+
+        #region Static Well-Known Operators
+        
         public static BinaryOperator Is {
             get {
                 return binIs;
@@ -65,7 +82,7 @@ namespace IronPython.Compiler.AST {
             }
         }
 
-        public static UnaryOperator Neg {
+        public static UnaryOperator Negate {
             get {
                 return unNeg;
             }
@@ -83,16 +100,10 @@ namespace IronPython.Compiler.AST {
             }
         }
 
-        public readonly string symbol;
-        public readonly int precedence;
-
-        protected Operator(string symbol, int precedence) {
-            this.symbol = symbol;
-            this.precedence = precedence;
-        }
+        #endregion
     }
 
-    public class UnaryOperator : Operator {
+    public class UnaryOperator : PythonOperator {
         private readonly CallTarget1 target;
 
         public UnaryOperator(string symbol, CallTarget1 target)
@@ -100,8 +111,8 @@ namespace IronPython.Compiler.AST {
             this.target = target;
         }
 
-        public object Evaluate(object o) {
-            return target(o);
+        public object Evaluate(object value) {
+            return target(value);
         }
 
         public CallTarget1 Target {
@@ -111,7 +122,7 @@ namespace IronPython.Compiler.AST {
         }
     }
 
-    public class BinaryOperator : Operator {
+    public class BinaryOperator : PythonOperator {
         private readonly CallTarget2 target;
         private readonly CallTarget2 inPlaceTarget;
 
@@ -141,15 +152,15 @@ namespace IronPython.Compiler.AST {
             cg.EmitCall(inPlaceTarget.Method);
         }
 
-        public object Evaluate(object x, object y) {
-            return target(x, y);
+        public object Evaluate(object left, object right) {
+            return target(left, right);
         }
 
-        public object EvaluateInPlace(object x, object y) {
-            return inPlaceTarget(x, y);
+        public object EvaluateInPlace(object left, object right) {
+            return inPlaceTarget(left, right);
         }
 
-        public bool IsComparision() { return precedence == -1; }
+        public bool IsComparison { get { return Precedence == -1; } }
     }
 
     public class DivisionOperator : BinaryOperator {

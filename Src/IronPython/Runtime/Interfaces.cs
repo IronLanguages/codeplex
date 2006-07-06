@@ -163,9 +163,11 @@ namespace IronPython.Runtime {
 
     public interface IMutableSequence : ISequence {
         new object this[int index] {
+            get;
             set;
         }
         new object this[Slice slice] {
+            get;
             set;
         }
 

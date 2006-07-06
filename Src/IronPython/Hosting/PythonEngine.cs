@@ -24,7 +24,7 @@ using System.Threading;
 
 using IronPython.Compiler;
 using IronPython.Compiler.Generation;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Modules;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -41,7 +41,7 @@ namespace IronPython.Hosting {
     /// </summary>
     [Flags]
     public enum ExecutionOptions {
-        Default = 0x00,
+        None = 0x00,
 
         // Enable CLI debugging. This allows debugging the script with a CLI debugger. Also, CLI exceptions
         // will have line numbers in the stack-trace.
@@ -55,7 +55,7 @@ namespace IronPython.Hosting {
         SkipFirstLine = 0x08
     }
 
-    public class PythonEngine {
+    public class PythonEngine : IDisposable {
 
         #region Static Public Members
 
@@ -92,6 +92,8 @@ namespace IronPython.Hosting {
         private ModuleScope defaultScope;
 
         private CompilerContext compilerContext = new CompilerContext("<stdin>");
+        private PythonFile stdIn, stdOut, stdErr;
+
         #endregion
 
         #region Constructor
@@ -103,12 +105,12 @@ namespace IronPython.Hosting {
             systemState = new SystemState();
         }
 
-        public PythonEngine(Options opts)
+        public PythonEngine(Options options)
             : this() {
-            if (opts == null)
-                throw new ArgumentNullException("No options specified for PythonEngine");
+            if (options == null)
+                throw new ArgumentNullException("options", "No options specified for PythonEngine");
             // Save the options. Clone it first to prevent the client from unexpectedly mutating it
-            options = opts.Clone();
+            PythonEngine.options = options.Clone();
         }
 
         public void Shutdown() {
@@ -120,7 +122,8 @@ namespace IronPython.Hosting {
 
             DumpDebugInfo();
         }
-        public void DumpDebugInfo() {
+
+        public static void DumpDebugInfo() {
             if (PythonEngine.options.EngineDebug) {
                 PerfTrack.DumpStats();
                 try {
@@ -128,6 +131,7 @@ namespace IronPython.Hosting {
                 } catch (NotSupportedException) { } // usually not important info...
             }
         }
+
         public void InitializeModules(string prefix, string executable, string version) {
             Sys.version = version;
             Sys.prefix = prefix;
@@ -152,10 +156,10 @@ namespace IronPython.Hosting {
 
         private void EnsureValidArguments(ModuleScope moduleScope, ExecutionOptions userOptions, ExecutionOptions permissibleOptions) {
             moduleScope.EnsureInitialized(Sys);
-            ValidateExecutionOptions(userOptions, ExecuteFileOptions);
+            ValidateExecutionOptions(userOptions, permissibleOptions);
         }
 
-        private string FormatPythonException(object python) {
+        private static string FormatPythonException(object python) {
             string result = "";
 
             // dump the python exception.
@@ -186,21 +190,23 @@ namespace IronPython.Hosting {
             return result + Environment.NewLine;
         }
 
-        private string FormatCLSException(Exception e) {
-            string result = string.Empty;
-            result += "CLR Exception: " + Environment.NewLine;
-
+        private static string FormatCLSException(Exception e) {
+            StringBuilder result = new StringBuilder();
+            result.AppendLine("CLR Exception: ");
             while (e != null) {
+                result.Append("    ");
+                result.AppendLine(e.GetType().Name);
                 if (!String.IsNullOrEmpty(e.Message)) {
-                    result += "    " + e.GetType().Name + ": " + e.Message + Environment.NewLine;
+                    result.AppendLine(": ");
+                    result.AppendLine(e.Message);
                 } else {
-                    result += "    " + e.GetType().Name + Environment.NewLine;
+                    result.AppendLine();
                 }
 
                 e = e.InnerException;
             }
 
-            return result;
+            return result.ToString();
         }
 
         private string FormatStackTraces(Exception e) {
@@ -220,7 +226,7 @@ namespace IronPython.Hosting {
                     result = e.Message + Environment.NewLine;
                     printedHeader = true;
                 }
-                List<System.Diagnostics.StackTrace> traces = ExceptionConverter.GetExceptionStackTraces(e);
+                IList<System.Diagnostics.StackTrace> traces = ExceptionConverter.GetExceptionStackTraces(e);
 
                 if (traces != null) {
                     for (int i = 0; i < traces.Count; i++) {
@@ -243,7 +249,7 @@ namespace IronPython.Hosting {
                     printedHeader = true;
                 }
                 result += FormatStackTrace(new StackTrace(e, true), fsf);
-                List<StackTrace> traces = ExceptionConverter.GetExceptionStackTraces(e);
+                IList<StackTrace> traces = ExceptionConverter.GetExceptionStackTraces(e);
                 if (traces != null && traces.Count > 0) {
                     for (int i = 0; i < traces.Count; i++) {
                         result += FormatStackTrace(traces[i], fsf);
@@ -254,7 +260,7 @@ namespace IronPython.Hosting {
             return result;
         }
 
-        private string FormatStackTrace(StackTrace st, FilterStackFrame fsf) {
+        private static string FormatStackTrace(StackTrace st, FilterStackFrame fsf) {
             string result = "";
 
             StackFrame[] frames = st.GetFrames();
@@ -282,7 +288,7 @@ namespace IronPython.Hosting {
             return result;
         }
 
-        private string FrameToString(StackFrame frame) {
+        private static string FrameToString(StackFrame frame) {
             if (frame.GetMethod().DeclaringType != null &&
                 frame.GetMethod().DeclaringType.Assembly == OutputGenerator.Snippets.myAssembly) {
                 string methodName;
@@ -319,8 +325,8 @@ namespace IronPython.Hosting {
             }
         }
 
-        private void ExecuteSnippet(Parser p, ModuleScope moduleScope, ExecutionOptions executionOptions) {
-            Stmt s = p.ParseFileInput();
+        private static void ExecuteSnippet(Parser p, ModuleScope moduleScope, ExecutionOptions executionOptions) {
+            Statement s = p.ParseFileInput();
             bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
             CompiledCode compiledCode = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, enableDebugging);
             compiledCode.Run(moduleScope);
@@ -329,16 +335,16 @@ namespace IronPython.Hosting {
         public delegate bool FilterStackFrame(StackFrame frame);
 
         // TODO: Make private
-        public string FormatException(Exception e, object pythonException, FilterStackFrame fsf) {
+        public string FormatException(Exception exception, object pythonException, FilterStackFrame filter) {
             Debug.Assert(pythonException != null);
-            Debug.Assert(e != null);
+            Debug.Assert(exception != null);
 
             string result = string.Empty;
             bool printedHeader = false;
-            result += FormatStackTraces(e, fsf, ref printedHeader);
+            result += FormatStackTraces(exception, filter, ref printedHeader);
             result += FormatPythonException(pythonException);
-            if (PythonEngine.options.ShowCLSExceptions) {
-                result += FormatCLSException(e);
+            if (PythonEngine.options.ShowClsExceptions) {
+                result += FormatCLSException(exception);
             }
 
             return result;
@@ -360,7 +366,7 @@ namespace IronPython.Hosting {
             CompilerContext context = this.compilerContext.CopyWithNewSourceFile(fileName);
             bool skipLine = (executionOptions & ExecutionOptions.SkipFirstLine) != 0;
             Parser p = Parser.FromFile(Sys, context, skipLine, false);
-            Stmt s = p.ParseFileInput();
+            Statement s = p.ParseFileInput();
 
             PythonModule mod = OutputGenerator.GenerateModule(Sys, context, s, moduleName);
             moduleScope = new ModuleScope(mod);
@@ -388,7 +394,7 @@ namespace IronPython.Hosting {
 
             Parser p = Parser.FromString(((ICallerContext)defaultScope).SystemState, compilerContext, text);
             bool isEmptyStmt = false;
-            Stmt s = p.ParseInteractiveInput(false, out isEmptyStmt);
+            Statement s = p.ParseInteractiveInput(false, out isEmptyStmt);
 
             //  's' is null when we parse a line composed only of a NEWLINE (interactive_input grammar);
             //  we don't generate anything when 's' is null
@@ -418,9 +424,9 @@ namespace IronPython.Hosting {
             return VerifyInteractiveInput(p, allowIncompleteStatement);
         }
 
-        public bool VerifyInteractiveInput(Parser p, bool allowIncompleteStatement) {
+        public static bool VerifyInteractiveInput(Parser parser, bool allowIncompleteStatement) {
             bool isEmptyStmt;
-            Stmt s = p.ParseInteractiveInput(allowIncompleteStatement, out isEmptyStmt);
+            Statement s = parser.ParseInteractiveInput(allowIncompleteStatement, out isEmptyStmt);
 
             if (s == null)
                 return isEmptyStmt;
@@ -440,8 +446,8 @@ namespace IronPython.Hosting {
             Sys.path.Append(dirName);
         }
 
-        public void LoadAssembly(Assembly assem) {
-            Sys.TopPackage.LoadAssembly(Sys, assem);
+        public void LoadAssembly(Assembly assembly) {
+            Sys.TopPackage.LoadAssembly(Sys, assembly);
         }
 
         public object Import(string module) {
@@ -457,41 +463,49 @@ namespace IronPython.Hosting {
         #endregion
 
         #region IO Stream
-        public void SetStderr(Stream stream) {
-            Sys.__stderr__ = new PythonFile(stream, Sys.DefaultEncoding, "HostedStderr", "w");
+        public void SetStandardError(Stream stream) {
+            Sys.__stderr__ = stdErr = new PythonFile(stream, Sys.DefaultEncoding, "HostedStderr", "w");
             Sys.stderr = Sys.__stderr__;
         }
 
-
-        public void SetStdout(Stream stream) {
-            Sys.__stdout__ = new PythonFile(stream, Sys.DefaultEncoding, "HostedStdout", "w");
+        public void SetStandardOutput(Stream stream) {
+            Sys.__stdout__ = stdOut = new PythonFile(stream, Sys.DefaultEncoding, "HostedStdout", "w");
             Sys.stdout = Sys.__stdout__;
         }
 
-        public void SetStdin(Stream stream) {
-            Sys.__stdin__ = new PythonFile(stream, Sys.DefaultEncoding, "HostedStdin", "w");
+        public void SetStandardInput(Stream stream) {
+            Sys.__stdin__ = stdIn = new PythonFile(stream, Sys.DefaultEncoding, "HostedStdin", "w");
             Sys.stdin = Sys.__stdin__;
         }
         #endregion
 
         #region Get\Set Global
-        public void SetGlobal(SymbolId name, object val) {
-            SetGlobal(name, val, defaultScope);
+        public void SetGlobal(string name, object value) {
+            if (name == null) throw new ArgumentNullException("name");
+
+            SetGlobal(name, value, defaultScope);
         }
 
-        public void SetGlobal(SymbolId name, object val, ModuleScope moduleScope) {
+        public void SetGlobal(string name, object value, ModuleScope moduleScope) {
+            if (name == null) throw new ArgumentNullException("name");
+
             moduleScope.EnsureInitialized(Sys);
-            Ops.SetAttr(moduleScope, moduleScope.Module, name, val);
+            Ops.SetAttr(moduleScope, moduleScope.Module, SymbolTable.StringToId(name), value);
         }
 
-        public object GetGlobal(SymbolId name) {
+        public object GetGlobal(string name) {
+            if (name == null) throw new ArgumentNullException("name");
+
             return GetGlobal(name, defaultScope);
         }
 
-        public object GetGlobal(SymbolId name, ModuleScope moduleScope) {
+        public object GetGlobal(string name, ModuleScope moduleScope) {
+            if (name == null) throw new ArgumentNullException("name");
+            if (moduleScope == null) throw new ArgumentNullException("moduleScope");
+
             moduleScope.EnsureInitialized(Sys);
 
-            return Ops.GetAttr(moduleScope, moduleScope.Module, name);
+            return Ops.GetAttr(moduleScope, moduleScope.Module, SymbolTable.StringToId(name));
         }
 
         public ModuleScope DefaultModuleScope { get { return defaultScope; } set { defaultScope = value; } }
@@ -500,10 +514,15 @@ namespace IronPython.Hosting {
 
         #region Dynamic Execution\Evaluation
         public void Execute(string text) {
-            Execute(text, defaultScope, ExecutionOptions.Default);
+            if (text == null) throw new ArgumentNullException("text");
+
+            Execute(text, defaultScope, ExecutionOptions.None);
         }
 
         public void Execute(string text, ModuleScope moduleScope, ExecutionOptions executionOptions) {
+            if (text == null) throw new ArgumentNullException("text");
+            if (moduleScope == null) moduleScope = defaultScope;
+
             Execute(text, null /*fileName*/, moduleScope, executionOptions);
         }
 
@@ -531,7 +550,7 @@ namespace IronPython.Hosting {
         }
 
         public void ExecuteFile(string fileName) {
-            ExecuteFile(fileName, defaultScope, ExecutionOptions.Default);
+            ExecuteFile(fileName, defaultScope, ExecutionOptions.None);
         }
 
         public void ExecuteFile(string fileName, ModuleScope moduleScope, ExecutionOptions executionOptions) {
@@ -541,22 +560,24 @@ namespace IronPython.Hosting {
             ExecuteSnippet(p, moduleScope, executionOptions);
         }
 
-        public object Evaluate(string expr) {
-            return Evaluate(expr, defaultScope, ExecutionOptions.Default);
+        public object Evaluate(string expression) {
+            return Evaluate(expression, defaultScope, ExecutionOptions.None);
         }
 
-        public object Evaluate(string expr, ModuleScope moduleScope, ExecutionOptions executionOptions) {
+        public object Evaluate(string expression, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             EnsureValidArguments(moduleScope, executionOptions, EvaluateStringOptions);
 
-            return Builtin.Eval(moduleScope, expr, executionOptions);
+            return Builtin.Eval(moduleScope, expression, executionOptions);
         }
 
-        public T Evaluate<T>(string expr) {
-            return Converter.Convert<T>(Evaluate(expr));
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
+        public T EvaluateAs<T>(string expression) {
+            return Converter.Convert<T>(Evaluate(expression));
         }
 
-        public T Evaluate<T>(string expr, ModuleScope moduleScope, ExecutionOptions executionOptions) {
-            return Converter.Convert<T>(Evaluate(expr, moduleScope, executionOptions));
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
+        public T EvaluateAs<T>(string expression, ModuleScope moduleScope, ExecutionOptions executionOptions) {
+            return Converter.Convert<T>(Evaluate(expression, moduleScope, executionOptions));
         }
         #endregion
 
@@ -571,7 +592,7 @@ namespace IronPython.Hosting {
         }
 
         public CompiledCode Compile(string text) {
-            return Compile(text, ExecutionOptions.Default);
+            return Compile(text, ExecutionOptions.None);
         }
 
         /// <returns>This can be used with the "Execute(CompiledCode compiledCode)" API.
@@ -584,7 +605,7 @@ namespace IronPython.Hosting {
         }
 
         public CompiledCode CompileFile(string fileName) {
-            return CompileFile(fileName, ExecutionOptions.Default);
+            return CompileFile(fileName, ExecutionOptions.None);
         }
 
         public CompiledCode CompileFile(string fileName, ExecutionOptions executionOptions) {
@@ -594,8 +615,8 @@ namespace IronPython.Hosting {
             return Compile(p, executionOptions);
         }
 
-        private CompiledCode Compile(Parser p, ExecutionOptions executionOptions) {
-            Stmt s = p.ParseFileInput();
+        private static CompiledCode Compile(Parser p, ExecutionOptions executionOptions) {
+            Statement s = p.ParseFileInput();
 
             bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
             return OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, enableDebugging);
@@ -603,13 +624,13 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Dump
-        public string FormatException(Exception e) {
-            object pythonEx = ExceptionConverter.ToPython(e);
+        public string FormatException(Exception exception) {
+            object pythonEx = ExceptionConverter.ToPython(exception);
 
-            string result = FormatStackTraces(e);
+            string result = FormatStackTraces(exception);
             result += FormatPythonException(pythonEx);
-            if (PythonEngine.options.ShowCLSExceptions) {
-                result += FormatCLSException(e);
+            if (PythonEngine.options.ShowClsExceptions) {
+                result += FormatCLSException(exception);
             }
 
             return result;
@@ -646,6 +667,26 @@ namespace IronPython.Hosting {
         }
         #endregion
 #endif
+
+        #region IDisposable Members
+
+        public void Dispose() {
+            Dispose(false);
+        }
+
+        private void Dispose(bool finalizing) {
+            if (!finalizing) {
+                if (stdIn != null) stdIn.Dispose();
+                if (stdErr != null) stdErr.Dispose();
+                if (stdOut != null) stdOut.Dispose();
+            }
+        }
+
+        ~PythonEngine() {
+            Dispose(true);
+        }
+
+        #endregion
     }
 
 }

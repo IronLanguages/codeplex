@@ -16,7 +16,7 @@
 using IronPython.Compiler;
 
 
-namespace IronPython.Compiler.AST {
+namespace IronPython.Compiler.Ast {
 
     #region Generated AST Walker
 
@@ -26,140 +26,140 @@ namespace IronPython.Compiler.AST {
     /// IAstWalker interface
     /// </summary>
     public interface IAstWalker {
-        bool Walk(AndExpr node);
-        void PostWalk(AndExpr node);
+        bool Walk(AndExpression node);
+        void PostWalk(AndExpression node);
 
-        bool Walk(BackquoteExpr node);
-        void PostWalk(BackquoteExpr node);
+        bool Walk(BackQuoteExpression node);
+        void PostWalk(BackQuoteExpression node);
 
-        bool Walk(BinaryExpr node);
-        void PostWalk(BinaryExpr node);
+        bool Walk(BinaryExpression node);
+        void PostWalk(BinaryExpression node);
 
-        bool Walk(CallExpr node);
-        void PostWalk(CallExpr node);
+        bool Walk(CallExpression node);
+        void PostWalk(CallExpression node);
 
-        bool Walk(CondExpr node);
-        void PostWalk(CondExpr node);
+        bool Walk(ConditionalExpression node);
+        void PostWalk(ConditionalExpression node);
 
-        bool Walk(ConstantExpr node);
-        void PostWalk(ConstantExpr node);
+        bool Walk(ConstantExpression node);
+        void PostWalk(ConstantExpression node);
 
-        bool Walk(DictExpr node);
-        void PostWalk(DictExpr node);
+        bool Walk(DictionaryExpression node);
+        void PostWalk(DictionaryExpression node);
 
-        bool Walk(ErrorExpr node);
-        void PostWalk(ErrorExpr node);
+        bool Walk(ErrorExpression node);
+        void PostWalk(ErrorExpression node);
 
-        bool Walk(FieldExpr node);
-        void PostWalk(FieldExpr node);
+        bool Walk(FieldExpression node);
+        void PostWalk(FieldExpression node);
 
-        bool Walk(GenExpr node);
-        void PostWalk(GenExpr node);
+        bool Walk(GeneratorExpression node);
+        void PostWalk(GeneratorExpression node);
 
-        bool Walk(IndexExpr node);
-        void PostWalk(IndexExpr node);
+        bool Walk(IndexExpression node);
+        void PostWalk(IndexExpression node);
 
-        bool Walk(LambdaExpr node);
-        void PostWalk(LambdaExpr node);
+        bool Walk(LambdaExpression node);
+        void PostWalk(LambdaExpression node);
 
-        bool Walk(ListComp node);
-        void PostWalk(ListComp node);
+        bool Walk(ListComprehension node);
+        void PostWalk(ListComprehension node);
 
-        bool Walk(ListExpr node);
-        void PostWalk(ListExpr node);
+        bool Walk(ListExpression node);
+        void PostWalk(ListExpression node);
 
-        bool Walk(NameExpr node);
-        void PostWalk(NameExpr node);
+        bool Walk(NameExpression node);
+        void PostWalk(NameExpression node);
 
-        bool Walk(OrExpr node);
-        void PostWalk(OrExpr node);
+        bool Walk(OrExpression node);
+        void PostWalk(OrExpression node);
 
-        bool Walk(ParenExpr node);
-        void PostWalk(ParenExpr node);
+        bool Walk(ParenthesisExpression node);
+        void PostWalk(ParenthesisExpression node);
 
-        bool Walk(SliceExpr node);
-        void PostWalk(SliceExpr node);
+        bool Walk(SliceExpression node);
+        void PostWalk(SliceExpression node);
 
-        bool Walk(TupleExpr node);
-        void PostWalk(TupleExpr node);
+        bool Walk(TupleExpression node);
+        void PostWalk(TupleExpression node);
 
-        bool Walk(UnaryExpr node);
-        void PostWalk(UnaryExpr node);
+        bool Walk(UnaryExpression node);
+        void PostWalk(UnaryExpression node);
 
-        bool Walk(AssertStmt node);
-        void PostWalk(AssertStmt node);
+        bool Walk(AssertStatement node);
+        void PostWalk(AssertStatement node);
 
-        bool Walk(AssignStmt node);
-        void PostWalk(AssignStmt node);
+        bool Walk(AssignStatement node);
+        void PostWalk(AssignStatement node);
 
-        bool Walk(AugAssignStmt node);
-        void PostWalk(AugAssignStmt node);
+        bool Walk(AugAssignStatement node);
+        void PostWalk(AugAssignStatement node);
 
-        bool Walk(BreakStmt node);
-        void PostWalk(BreakStmt node);
+        bool Walk(BreakStatement node);
+        void PostWalk(BreakStatement node);
 
-        bool Walk(ClassDef node);
-        void PostWalk(ClassDef node);
+        bool Walk(ClassDefinition node);
+        void PostWalk(ClassDefinition node);
 
-        bool Walk(ContinueStmt node);
-        void PostWalk(ContinueStmt node);
+        bool Walk(ContinueStatement node);
+        void PostWalk(ContinueStatement node);
 
-        bool Walk(DelStmt node);
-        void PostWalk(DelStmt node);
+        bool Walk(DelStatement node);
+        void PostWalk(DelStatement node);
 
-        bool Walk(ExecStmt node);
-        void PostWalk(ExecStmt node);
+        bool Walk(ExecStatement node);
+        void PostWalk(ExecStatement node);
 
-        bool Walk(ExprStmt node);
-        void PostWalk(ExprStmt node);
+        bool Walk(ExpressionStatement node);
+        void PostWalk(ExpressionStatement node);
 
-        bool Walk(ForStmt node);
-        void PostWalk(ForStmt node);
+        bool Walk(ForStatement node);
+        void PostWalk(ForStatement node);
 
-        bool Walk(FromImportStmt node);
-        void PostWalk(FromImportStmt node);
+        bool Walk(FromImportStatement node);
+        void PostWalk(FromImportStatement node);
 
-        bool Walk(FuncDef node);
-        void PostWalk(FuncDef node);
+        bool Walk(FunctionDefinition node);
+        void PostWalk(FunctionDefinition node);
 
-        bool Walk(GlobalStmt node);
-        void PostWalk(GlobalStmt node);
+        bool Walk(GlobalStatement node);
+        void PostWalk(GlobalStatement node);
 
         bool Walk(GlobalSuite node);
         void PostWalk(GlobalSuite node);
 
-        bool Walk(IfStmt node);
-        void PostWalk(IfStmt node);
+        bool Walk(IfStatement node);
+        void PostWalk(IfStatement node);
 
-        bool Walk(ImportStmt node);
-        void PostWalk(ImportStmt node);
+        bool Walk(ImportStatement node);
+        void PostWalk(ImportStatement node);
 
-        bool Walk(PassStmt node);
-        void PostWalk(PassStmt node);
+        bool Walk(PassStatement node);
+        void PostWalk(PassStatement node);
 
-        bool Walk(PrintStmt node);
-        void PostWalk(PrintStmt node);
+        bool Walk(PrintStatement node);
+        void PostWalk(PrintStatement node);
 
-        bool Walk(RaiseStmt node);
-        void PostWalk(RaiseStmt node);
+        bool Walk(RaiseStatement node);
+        void PostWalk(RaiseStatement node);
 
-        bool Walk(ReturnStmt node);
-        void PostWalk(ReturnStmt node);
+        bool Walk(ReturnStatement node);
+        void PostWalk(ReturnStatement node);
 
-        bool Walk(SuiteStmt node);
-        void PostWalk(SuiteStmt node);
+        bool Walk(SuiteStatement node);
+        void PostWalk(SuiteStatement node);
 
-        bool Walk(TryFinallyStmt node);
-        void PostWalk(TryFinallyStmt node);
+        bool Walk(TryFinallyStatement node);
+        void PostWalk(TryFinallyStatement node);
 
-        bool Walk(TryStmt node);
-        void PostWalk(TryStmt node);
+        bool Walk(TryStatement node);
+        void PostWalk(TryStatement node);
 
-        bool Walk(WhileStmt node);
-        void PostWalk(WhileStmt node);
+        bool Walk(WhileStatement node);
+        void PostWalk(WhileStatement node);
 
-        bool Walk(YieldStmt node);
-        void PostWalk(YieldStmt node);
+        bool Walk(YieldStatement node);
+        void PostWalk(YieldStatement node);
 
         bool Walk(Arg node);
         void PostWalk(Arg node);
@@ -167,17 +167,17 @@ namespace IronPython.Compiler.AST {
         bool Walk(DottedName node);
         void PostWalk(DottedName node);
 
-        bool Walk(IfStmtTest node);
-        void PostWalk(IfStmtTest node);
+        bool Walk(IfStatementTest node);
+        void PostWalk(IfStatementTest node);
 
-        bool Walk(ListCompFor node);
-        void PostWalk(ListCompFor node);
+        bool Walk(ListComprehensionFor node);
+        void PostWalk(ListComprehensionFor node);
 
-        bool Walk(ListCompIf node);
-        void PostWalk(ListCompIf node);
+        bool Walk(ListComprehensionIf node);
+        void PostWalk(ListComprehensionIf node);
 
-        bool Walk(TryStmtHandler node);
-        void PostWalk(TryStmtHandler node);
+        bool Walk(TryStatementHandler node);
+        void PostWalk(TryStatementHandler node);
     }
 
 
@@ -185,185 +185,185 @@ namespace IronPython.Compiler.AST {
     /// AstWalker abstract class - the powerful walker (default result is true)
     /// </summary>
     public abstract class AstWalker : IAstWalker {
-        // AndExpr
-        public virtual bool Walk(AndExpr node) { return true; }
-        public virtual void PostWalk(AndExpr node) { }
+        // AndExpression
+        public virtual bool Walk(AndExpression node) { return true; }
+        public virtual void PostWalk(AndExpression node) { }
 
-        // BackquoteExpr
-        public virtual bool Walk(BackquoteExpr node) { return true; }
-        public virtual void PostWalk(BackquoteExpr node) { }
+        // BackQuoteExpression
+        public virtual bool Walk(BackQuoteExpression node) { return true; }
+        public virtual void PostWalk(BackQuoteExpression node) { }
 
-        // BinaryExpr
-        public virtual bool Walk(BinaryExpr node) { return true; }
-        public virtual void PostWalk(BinaryExpr node) { }
+        // BinaryExpression
+        public virtual bool Walk(BinaryExpression node) { return true; }
+        public virtual void PostWalk(BinaryExpression node) { }
 
-        // CallExpr
-        public virtual bool Walk(CallExpr node) { return true; }
-        public virtual void PostWalk(CallExpr node) { }
+        // CallExpression
+        public virtual bool Walk(CallExpression node) { return true; }
+        public virtual void PostWalk(CallExpression node) { }
 
-        // CondExpr
-        public virtual bool Walk(CondExpr node) { return true; }
-        public virtual void PostWalk(CondExpr node) { }
+        // ConditionalExpression
+        public virtual bool Walk(ConditionalExpression node) { return true; }
+        public virtual void PostWalk(ConditionalExpression node) { }
 
-        // ConstantExpr
-        public virtual bool Walk(ConstantExpr node) { return true; }
-        public virtual void PostWalk(ConstantExpr node) { }
+        // ConstantExpression
+        public virtual bool Walk(ConstantExpression node) { return true; }
+        public virtual void PostWalk(ConstantExpression node) { }
 
-        // DictExpr
-        public virtual bool Walk(DictExpr node) { return true; }
-        public virtual void PostWalk(DictExpr node) { }
+        // DictionaryExpression
+        public virtual bool Walk(DictionaryExpression node) { return true; }
+        public virtual void PostWalk(DictionaryExpression node) { }
 
-        // ErrorExpr
-        public virtual bool Walk(ErrorExpr node) { return true; }
-        public virtual void PostWalk(ErrorExpr node) { }
+        // ErrorExpression
+        public virtual bool Walk(ErrorExpression node) { return true; }
+        public virtual void PostWalk(ErrorExpression node) { }
 
-        // FieldExpr
-        public virtual bool Walk(FieldExpr node) { return true; }
-        public virtual void PostWalk(FieldExpr node) { }
+        // FieldExpression
+        public virtual bool Walk(FieldExpression node) { return true; }
+        public virtual void PostWalk(FieldExpression node) { }
 
-        // GenExpr
-        public virtual bool Walk(GenExpr node) { return true; }
-        public virtual void PostWalk(GenExpr node) { }
+        // GeneratorExpression
+        public virtual bool Walk(GeneratorExpression node) { return true; }
+        public virtual void PostWalk(GeneratorExpression node) { }
 
-        // IndexExpr
-        public virtual bool Walk(IndexExpr node) { return true; }
-        public virtual void PostWalk(IndexExpr node) { }
+        // IndexExpression
+        public virtual bool Walk(IndexExpression node) { return true; }
+        public virtual void PostWalk(IndexExpression node) { }
 
-        // LambdaExpr
-        public virtual bool Walk(LambdaExpr node) { return true; }
-        public virtual void PostWalk(LambdaExpr node) { }
+        // LambdaExpression
+        public virtual bool Walk(LambdaExpression node) { return true; }
+        public virtual void PostWalk(LambdaExpression node) { }
 
-        // ListComp
-        public virtual bool Walk(ListComp node) { return true; }
-        public virtual void PostWalk(ListComp node) { }
+        // ListComprehension
+        public virtual bool Walk(ListComprehension node) { return true; }
+        public virtual void PostWalk(ListComprehension node) { }
 
-        // ListExpr
-        public virtual bool Walk(ListExpr node) { return true; }
-        public virtual void PostWalk(ListExpr node) { }
+        // ListExpression
+        public virtual bool Walk(ListExpression node) { return true; }
+        public virtual void PostWalk(ListExpression node) { }
 
-        // NameExpr
-        public virtual bool Walk(NameExpr node) { return true; }
-        public virtual void PostWalk(NameExpr node) { }
+        // NameExpression
+        public virtual bool Walk(NameExpression node) { return true; }
+        public virtual void PostWalk(NameExpression node) { }
 
-        // OrExpr
-        public virtual bool Walk(OrExpr node) { return true; }
-        public virtual void PostWalk(OrExpr node) { }
+        // OrExpression
+        public virtual bool Walk(OrExpression node) { return true; }
+        public virtual void PostWalk(OrExpression node) { }
 
-        // ParenExpr
-        public virtual bool Walk(ParenExpr node) { return true; }
-        public virtual void PostWalk(ParenExpr node) { }
+        // ParenthesisExpression
+        public virtual bool Walk(ParenthesisExpression node) { return true; }
+        public virtual void PostWalk(ParenthesisExpression node) { }
 
-        // SliceExpr
-        public virtual bool Walk(SliceExpr node) { return true; }
-        public virtual void PostWalk(SliceExpr node) { }
+        // SliceExpression
+        public virtual bool Walk(SliceExpression node) { return true; }
+        public virtual void PostWalk(SliceExpression node) { }
 
-        // TupleExpr
-        public virtual bool Walk(TupleExpr node) { return true; }
-        public virtual void PostWalk(TupleExpr node) { }
+        // TupleExpression
+        public virtual bool Walk(TupleExpression node) { return true; }
+        public virtual void PostWalk(TupleExpression node) { }
 
-        // UnaryExpr
-        public virtual bool Walk(UnaryExpr node) { return true; }
-        public virtual void PostWalk(UnaryExpr node) { }
+        // UnaryExpression
+        public virtual bool Walk(UnaryExpression node) { return true; }
+        public virtual void PostWalk(UnaryExpression node) { }
 
-        // AssertStmt
-        public virtual bool Walk(AssertStmt node) { return true; }
-        public virtual void PostWalk(AssertStmt node) { }
+        // AssertStatement
+        public virtual bool Walk(AssertStatement node) { return true; }
+        public virtual void PostWalk(AssertStatement node) { }
 
-        // AssignStmt
-        public virtual bool Walk(AssignStmt node) { return true; }
-        public virtual void PostWalk(AssignStmt node) { }
+        // AssignStatement
+        public virtual bool Walk(AssignStatement node) { return true; }
+        public virtual void PostWalk(AssignStatement node) { }
 
-        // AugAssignStmt
-        public virtual bool Walk(AugAssignStmt node) { return true; }
-        public virtual void PostWalk(AugAssignStmt node) { }
+        // AugAssignStatement
+        public virtual bool Walk(AugAssignStatement node) { return true; }
+        public virtual void PostWalk(AugAssignStatement node) { }
 
-        // BreakStmt
-        public virtual bool Walk(BreakStmt node) { return true; }
-        public virtual void PostWalk(BreakStmt node) { }
+        // BreakStatement
+        public virtual bool Walk(BreakStatement node) { return true; }
+        public virtual void PostWalk(BreakStatement node) { }
 
-        // ClassDef
-        public virtual bool Walk(ClassDef node) { return true; }
-        public virtual void PostWalk(ClassDef node) { }
+        // ClassDefinition
+        public virtual bool Walk(ClassDefinition node) { return true; }
+        public virtual void PostWalk(ClassDefinition node) { }
 
-        // ContinueStmt
-        public virtual bool Walk(ContinueStmt node) { return true; }
-        public virtual void PostWalk(ContinueStmt node) { }
+        // ContinueStatement
+        public virtual bool Walk(ContinueStatement node) { return true; }
+        public virtual void PostWalk(ContinueStatement node) { }
 
-        // DelStmt
-        public virtual bool Walk(DelStmt node) { return true; }
-        public virtual void PostWalk(DelStmt node) { }
+        // DelStatement
+        public virtual bool Walk(DelStatement node) { return true; }
+        public virtual void PostWalk(DelStatement node) { }
 
-        // ExecStmt
-        public virtual bool Walk(ExecStmt node) { return true; }
-        public virtual void PostWalk(ExecStmt node) { }
+        // ExecStatement
+        public virtual bool Walk(ExecStatement node) { return true; }
+        public virtual void PostWalk(ExecStatement node) { }
 
-        // ExprStmt
-        public virtual bool Walk(ExprStmt node) { return true; }
-        public virtual void PostWalk(ExprStmt node) { }
+        // ExpressionStatement
+        public virtual bool Walk(ExpressionStatement node) { return true; }
+        public virtual void PostWalk(ExpressionStatement node) { }
 
-        // ForStmt
-        public virtual bool Walk(ForStmt node) { return true; }
-        public virtual void PostWalk(ForStmt node) { }
+        // ForStatement
+        public virtual bool Walk(ForStatement node) { return true; }
+        public virtual void PostWalk(ForStatement node) { }
 
-        // FromImportStmt
-        public virtual bool Walk(FromImportStmt node) { return true; }
-        public virtual void PostWalk(FromImportStmt node) { }
+        // FromImportStatement
+        public virtual bool Walk(FromImportStatement node) { return true; }
+        public virtual void PostWalk(FromImportStatement node) { }
 
-        // FuncDef
-        public virtual bool Walk(FuncDef node) { return true; }
-        public virtual void PostWalk(FuncDef node) { }
+        // FunctionDefinition
+        public virtual bool Walk(FunctionDefinition node) { return true; }
+        public virtual void PostWalk(FunctionDefinition node) { }
 
-        // GlobalStmt
-        public virtual bool Walk(GlobalStmt node) { return true; }
-        public virtual void PostWalk(GlobalStmt node) { }
+        // GlobalStatement
+        public virtual bool Walk(GlobalStatement node) { return true; }
+        public virtual void PostWalk(GlobalStatement node) { }
 
         // GlobalSuite
         public virtual bool Walk(GlobalSuite node) { return true; }
         public virtual void PostWalk(GlobalSuite node) { }
 
-        // IfStmt
-        public virtual bool Walk(IfStmt node) { return true; }
-        public virtual void PostWalk(IfStmt node) { }
+        // IfStatement
+        public virtual bool Walk(IfStatement node) { return true; }
+        public virtual void PostWalk(IfStatement node) { }
 
-        // ImportStmt
-        public virtual bool Walk(ImportStmt node) { return true; }
-        public virtual void PostWalk(ImportStmt node) { }
+        // ImportStatement
+        public virtual bool Walk(ImportStatement node) { return true; }
+        public virtual void PostWalk(ImportStatement node) { }
 
-        // PassStmt
-        public virtual bool Walk(PassStmt node) { return true; }
-        public virtual void PostWalk(PassStmt node) { }
+        // PassStatement
+        public virtual bool Walk(PassStatement node) { return true; }
+        public virtual void PostWalk(PassStatement node) { }
 
-        // PrintStmt
-        public virtual bool Walk(PrintStmt node) { return true; }
-        public virtual void PostWalk(PrintStmt node) { }
+        // PrintStatement
+        public virtual bool Walk(PrintStatement node) { return true; }
+        public virtual void PostWalk(PrintStatement node) { }
 
-        // RaiseStmt
-        public virtual bool Walk(RaiseStmt node) { return true; }
-        public virtual void PostWalk(RaiseStmt node) { }
+        // RaiseStatement
+        public virtual bool Walk(RaiseStatement node) { return true; }
+        public virtual void PostWalk(RaiseStatement node) { }
 
-        // ReturnStmt
-        public virtual bool Walk(ReturnStmt node) { return true; }
-        public virtual void PostWalk(ReturnStmt node) { }
+        // ReturnStatement
+        public virtual bool Walk(ReturnStatement node) { return true; }
+        public virtual void PostWalk(ReturnStatement node) { }
 
-        // SuiteStmt
-        public virtual bool Walk(SuiteStmt node) { return true; }
-        public virtual void PostWalk(SuiteStmt node) { }
+        // SuiteStatement
+        public virtual bool Walk(SuiteStatement node) { return true; }
+        public virtual void PostWalk(SuiteStatement node) { }
 
-        // TryFinallyStmt
-        public virtual bool Walk(TryFinallyStmt node) { return true; }
-        public virtual void PostWalk(TryFinallyStmt node) { }
+        // TryFinallyStatement
+        public virtual bool Walk(TryFinallyStatement node) { return true; }
+        public virtual void PostWalk(TryFinallyStatement node) { }
 
-        // TryStmt
-        public virtual bool Walk(TryStmt node) { return true; }
-        public virtual void PostWalk(TryStmt node) { }
+        // TryStatement
+        public virtual bool Walk(TryStatement node) { return true; }
+        public virtual void PostWalk(TryStatement node) { }
 
-        // WhileStmt
-        public virtual bool Walk(WhileStmt node) { return true; }
-        public virtual void PostWalk(WhileStmt node) { }
+        // WhileStatement
+        public virtual bool Walk(WhileStatement node) { return true; }
+        public virtual void PostWalk(WhileStatement node) { }
 
-        // YieldStmt
-        public virtual bool Walk(YieldStmt node) { return true; }
-        public virtual void PostWalk(YieldStmt node) { }
+        // YieldStatement
+        public virtual bool Walk(YieldStatement node) { return true; }
+        public virtual void PostWalk(YieldStatement node) { }
 
         // Arg
         public virtual bool Walk(Arg node) { return true; }
@@ -373,21 +373,21 @@ namespace IronPython.Compiler.AST {
         public virtual bool Walk(DottedName node) { return true; }
         public virtual void PostWalk(DottedName node) { }
 
-        // IfStmtTest
-        public virtual bool Walk(IfStmtTest node) { return true; }
-        public virtual void PostWalk(IfStmtTest node) { }
+        // IfStatementTest
+        public virtual bool Walk(IfStatementTest node) { return true; }
+        public virtual void PostWalk(IfStatementTest node) { }
 
-        // ListCompFor
-        public virtual bool Walk(ListCompFor node) { return true; }
-        public virtual void PostWalk(ListCompFor node) { }
+        // ListComprehensionFor
+        public virtual bool Walk(ListComprehensionFor node) { return true; }
+        public virtual void PostWalk(ListComprehensionFor node) { }
 
-        // ListCompIf
-        public virtual bool Walk(ListCompIf node) { return true; }
-        public virtual void PostWalk(ListCompIf node) { }
+        // ListComprehensionIf
+        public virtual bool Walk(ListComprehensionIf node) { return true; }
+        public virtual void PostWalk(ListComprehensionIf node) { }
 
-        // TryStmtHandler
-        public virtual bool Walk(TryStmtHandler node) { return true; }
-        public virtual void PostWalk(TryStmtHandler node) { }
+        // TryStatementHandler
+        public virtual bool Walk(TryStatementHandler node) { return true; }
+        public virtual void PostWalk(TryStatementHandler node) { }
     }
 
 
@@ -395,185 +395,185 @@ namespace IronPython.Compiler.AST {
     /// AstWalkerNonRecursive abstract class - the powerful walker (default result is false)
     /// </summary>
     public abstract class AstWalkerNonRecursive : IAstWalker {
-        // AndExpr
-        public virtual bool Walk(AndExpr node) { return false; }
-        public virtual void PostWalk(AndExpr node) { }
+        // AndExpression
+        public virtual bool Walk(AndExpression node) { return false; }
+        public virtual void PostWalk(AndExpression node) { }
 
-        // BackquoteExpr
-        public virtual bool Walk(BackquoteExpr node) { return false; }
-        public virtual void PostWalk(BackquoteExpr node) { }
+        // BackQuoteExpression
+        public virtual bool Walk(BackQuoteExpression node) { return false; }
+        public virtual void PostWalk(BackQuoteExpression node) { }
 
-        // BinaryExpr
-        public virtual bool Walk(BinaryExpr node) { return false; }
-        public virtual void PostWalk(BinaryExpr node) { }
+        // BinaryExpression
+        public virtual bool Walk(BinaryExpression node) { return false; }
+        public virtual void PostWalk(BinaryExpression node) { }
 
-        // CallExpr
-        public virtual bool Walk(CallExpr node) { return false; }
-        public virtual void PostWalk(CallExpr node) { }
+        // CallExpression
+        public virtual bool Walk(CallExpression node) { return false; }
+        public virtual void PostWalk(CallExpression node) { }
 
-        // CondExpr
-        public virtual bool Walk(CondExpr node) { return false; }
-        public virtual void PostWalk(CondExpr node) { }
+        // ConditionalExpression
+        public virtual bool Walk(ConditionalExpression node) { return false; }
+        public virtual void PostWalk(ConditionalExpression node) { }
 
-        // ConstantExpr
-        public virtual bool Walk(ConstantExpr node) { return false; }
-        public virtual void PostWalk(ConstantExpr node) { }
+        // ConstantExpression
+        public virtual bool Walk(ConstantExpression node) { return false; }
+        public virtual void PostWalk(ConstantExpression node) { }
 
-        // DictExpr
-        public virtual bool Walk(DictExpr node) { return false; }
-        public virtual void PostWalk(DictExpr node) { }
+        // DictionaryExpression
+        public virtual bool Walk(DictionaryExpression node) { return false; }
+        public virtual void PostWalk(DictionaryExpression node) { }
 
-        // ErrorExpr
-        public virtual bool Walk(ErrorExpr node) { return false; }
-        public virtual void PostWalk(ErrorExpr node) { }
+        // ErrorExpression
+        public virtual bool Walk(ErrorExpression node) { return false; }
+        public virtual void PostWalk(ErrorExpression node) { }
 
-        // FieldExpr
-        public virtual bool Walk(FieldExpr node) { return false; }
-        public virtual void PostWalk(FieldExpr node) { }
+        // FieldExpression
+        public virtual bool Walk(FieldExpression node) { return false; }
+        public virtual void PostWalk(FieldExpression node) { }
 
-        // GenExpr
-        public virtual bool Walk(GenExpr node) { return false; }
-        public virtual void PostWalk(GenExpr node) { }
+        // GeneratorExpression
+        public virtual bool Walk(GeneratorExpression node) { return false; }
+        public virtual void PostWalk(GeneratorExpression node) { }
 
-        // IndexExpr
-        public virtual bool Walk(IndexExpr node) { return false; }
-        public virtual void PostWalk(IndexExpr node) { }
+        // IndexExpression
+        public virtual bool Walk(IndexExpression node) { return false; }
+        public virtual void PostWalk(IndexExpression node) { }
 
-        // LambdaExpr
-        public virtual bool Walk(LambdaExpr node) { return false; }
-        public virtual void PostWalk(LambdaExpr node) { }
+        // LambdaExpression
+        public virtual bool Walk(LambdaExpression node) { return false; }
+        public virtual void PostWalk(LambdaExpression node) { }
 
-        // ListComp
-        public virtual bool Walk(ListComp node) { return false; }
-        public virtual void PostWalk(ListComp node) { }
+        // ListComprehension
+        public virtual bool Walk(ListComprehension node) { return false; }
+        public virtual void PostWalk(ListComprehension node) { }
 
-        // ListExpr
-        public virtual bool Walk(ListExpr node) { return false; }
-        public virtual void PostWalk(ListExpr node) { }
+        // ListExpression
+        public virtual bool Walk(ListExpression node) { return false; }
+        public virtual void PostWalk(ListExpression node) { }
 
-        // NameExpr
-        public virtual bool Walk(NameExpr node) { return false; }
-        public virtual void PostWalk(NameExpr node) { }
+        // NameExpression
+        public virtual bool Walk(NameExpression node) { return false; }
+        public virtual void PostWalk(NameExpression node) { }
 
-        // OrExpr
-        public virtual bool Walk(OrExpr node) { return false; }
-        public virtual void PostWalk(OrExpr node) { }
+        // OrExpression
+        public virtual bool Walk(OrExpression node) { return false; }
+        public virtual void PostWalk(OrExpression node) { }
 
-        // ParenExpr
-        public virtual bool Walk(ParenExpr node) { return false; }
-        public virtual void PostWalk(ParenExpr node) { }
+        // ParenthesisExpression
+        public virtual bool Walk(ParenthesisExpression node) { return false; }
+        public virtual void PostWalk(ParenthesisExpression node) { }
 
-        // SliceExpr
-        public virtual bool Walk(SliceExpr node) { return false; }
-        public virtual void PostWalk(SliceExpr node) { }
+        // SliceExpression
+        public virtual bool Walk(SliceExpression node) { return false; }
+        public virtual void PostWalk(SliceExpression node) { }
 
-        // TupleExpr
-        public virtual bool Walk(TupleExpr node) { return false; }
-        public virtual void PostWalk(TupleExpr node) { }
+        // TupleExpression
+        public virtual bool Walk(TupleExpression node) { return false; }
+        public virtual void PostWalk(TupleExpression node) { }
 
-        // UnaryExpr
-        public virtual bool Walk(UnaryExpr node) { return false; }
-        public virtual void PostWalk(UnaryExpr node) { }
+        // UnaryExpression
+        public virtual bool Walk(UnaryExpression node) { return false; }
+        public virtual void PostWalk(UnaryExpression node) { }
 
-        // AssertStmt
-        public virtual bool Walk(AssertStmt node) { return false; }
-        public virtual void PostWalk(AssertStmt node) { }
+        // AssertStatement
+        public virtual bool Walk(AssertStatement node) { return false; }
+        public virtual void PostWalk(AssertStatement node) { }
 
-        // AssignStmt
-        public virtual bool Walk(AssignStmt node) { return false; }
-        public virtual void PostWalk(AssignStmt node) { }
+        // AssignStatement
+        public virtual bool Walk(AssignStatement node) { return false; }
+        public virtual void PostWalk(AssignStatement node) { }
 
-        // AugAssignStmt
-        public virtual bool Walk(AugAssignStmt node) { return false; }
-        public virtual void PostWalk(AugAssignStmt node) { }
+        // AugAssignStatement
+        public virtual bool Walk(AugAssignStatement node) { return false; }
+        public virtual void PostWalk(AugAssignStatement node) { }
 
-        // BreakStmt
-        public virtual bool Walk(BreakStmt node) { return false; }
-        public virtual void PostWalk(BreakStmt node) { }
+        // BreakStatement
+        public virtual bool Walk(BreakStatement node) { return false; }
+        public virtual void PostWalk(BreakStatement node) { }
 
-        // ClassDef
-        public virtual bool Walk(ClassDef node) { return false; }
-        public virtual void PostWalk(ClassDef node) { }
+        // ClassDefinition
+        public virtual bool Walk(ClassDefinition node) { return false; }
+        public virtual void PostWalk(ClassDefinition node) { }
 
-        // ContinueStmt
-        public virtual bool Walk(ContinueStmt node) { return false; }
-        public virtual void PostWalk(ContinueStmt node) { }
+        // ContinueStatement
+        public virtual bool Walk(ContinueStatement node) { return false; }
+        public virtual void PostWalk(ContinueStatement node) { }
 
-        // DelStmt
-        public virtual bool Walk(DelStmt node) { return false; }
-        public virtual void PostWalk(DelStmt node) { }
+        // DelStatement
+        public virtual bool Walk(DelStatement node) { return false; }
+        public virtual void PostWalk(DelStatement node) { }
 
-        // ExecStmt
-        public virtual bool Walk(ExecStmt node) { return false; }
-        public virtual void PostWalk(ExecStmt node) { }
+        // ExecStatement
+        public virtual bool Walk(ExecStatement node) { return false; }
+        public virtual void PostWalk(ExecStatement node) { }
 
-        // ExprStmt
-        public virtual bool Walk(ExprStmt node) { return false; }
-        public virtual void PostWalk(ExprStmt node) { }
+        // ExpressionStatement
+        public virtual bool Walk(ExpressionStatement node) { return false; }
+        public virtual void PostWalk(ExpressionStatement node) { }
 
-        // ForStmt
-        public virtual bool Walk(ForStmt node) { return false; }
-        public virtual void PostWalk(ForStmt node) { }
+        // ForStatement
+        public virtual bool Walk(ForStatement node) { return false; }
+        public virtual void PostWalk(ForStatement node) { }
 
-        // FromImportStmt
-        public virtual bool Walk(FromImportStmt node) { return false; }
-        public virtual void PostWalk(FromImportStmt node) { }
+        // FromImportStatement
+        public virtual bool Walk(FromImportStatement node) { return false; }
+        public virtual void PostWalk(FromImportStatement node) { }
 
-        // FuncDef
-        public virtual bool Walk(FuncDef node) { return false; }
-        public virtual void PostWalk(FuncDef node) { }
+        // FunctionDefinition
+        public virtual bool Walk(FunctionDefinition node) { return false; }
+        public virtual void PostWalk(FunctionDefinition node) { }
 
-        // GlobalStmt
-        public virtual bool Walk(GlobalStmt node) { return false; }
-        public virtual void PostWalk(GlobalStmt node) { }
+        // GlobalStatement
+        public virtual bool Walk(GlobalStatement node) { return false; }
+        public virtual void PostWalk(GlobalStatement node) { }
 
         // GlobalSuite
         public virtual bool Walk(GlobalSuite node) { return false; }
         public virtual void PostWalk(GlobalSuite node) { }
 
-        // IfStmt
-        public virtual bool Walk(IfStmt node) { return false; }
-        public virtual void PostWalk(IfStmt node) { }
+        // IfStatement
+        public virtual bool Walk(IfStatement node) { return false; }
+        public virtual void PostWalk(IfStatement node) { }
 
-        // ImportStmt
-        public virtual bool Walk(ImportStmt node) { return false; }
-        public virtual void PostWalk(ImportStmt node) { }
+        // ImportStatement
+        public virtual bool Walk(ImportStatement node) { return false; }
+        public virtual void PostWalk(ImportStatement node) { }
 
-        // PassStmt
-        public virtual bool Walk(PassStmt node) { return false; }
-        public virtual void PostWalk(PassStmt node) { }
+        // PassStatement
+        public virtual bool Walk(PassStatement node) { return false; }
+        public virtual void PostWalk(PassStatement node) { }
 
-        // PrintStmt
-        public virtual bool Walk(PrintStmt node) { return false; }
-        public virtual void PostWalk(PrintStmt node) { }
+        // PrintStatement
+        public virtual bool Walk(PrintStatement node) { return false; }
+        public virtual void PostWalk(PrintStatement node) { }
 
-        // RaiseStmt
-        public virtual bool Walk(RaiseStmt node) { return false; }
-        public virtual void PostWalk(RaiseStmt node) { }
+        // RaiseStatement
+        public virtual bool Walk(RaiseStatement node) { return false; }
+        public virtual void PostWalk(RaiseStatement node) { }
 
-        // ReturnStmt
-        public virtual bool Walk(ReturnStmt node) { return false; }
-        public virtual void PostWalk(ReturnStmt node) { }
+        // ReturnStatement
+        public virtual bool Walk(ReturnStatement node) { return false; }
+        public virtual void PostWalk(ReturnStatement node) { }
 
-        // SuiteStmt
-        public virtual bool Walk(SuiteStmt node) { return false; }
-        public virtual void PostWalk(SuiteStmt node) { }
+        // SuiteStatement
+        public virtual bool Walk(SuiteStatement node) { return false; }
+        public virtual void PostWalk(SuiteStatement node) { }
 
-        // TryFinallyStmt
-        public virtual bool Walk(TryFinallyStmt node) { return false; }
-        public virtual void PostWalk(TryFinallyStmt node) { }
+        // TryFinallyStatement
+        public virtual bool Walk(TryFinallyStatement node) { return false; }
+        public virtual void PostWalk(TryFinallyStatement node) { }
 
-        // TryStmt
-        public virtual bool Walk(TryStmt node) { return false; }
-        public virtual void PostWalk(TryStmt node) { }
+        // TryStatement
+        public virtual bool Walk(TryStatement node) { return false; }
+        public virtual void PostWalk(TryStatement node) { }
 
-        // WhileStmt
-        public virtual bool Walk(WhileStmt node) { return false; }
-        public virtual void PostWalk(WhileStmt node) { }
+        // WhileStatement
+        public virtual bool Walk(WhileStatement node) { return false; }
+        public virtual void PostWalk(WhileStatement node) { }
 
-        // YieldStmt
-        public virtual bool Walk(YieldStmt node) { return false; }
-        public virtual void PostWalk(YieldStmt node) { }
+        // YieldStatement
+        public virtual bool Walk(YieldStatement node) { return false; }
+        public virtual void PostWalk(YieldStatement node) { }
 
         // Arg
         public virtual bool Walk(Arg node) { return false; }
@@ -583,21 +583,21 @@ namespace IronPython.Compiler.AST {
         public virtual bool Walk(DottedName node) { return false; }
         public virtual void PostWalk(DottedName node) { }
 
-        // IfStmtTest
-        public virtual bool Walk(IfStmtTest node) { return false; }
-        public virtual void PostWalk(IfStmtTest node) { }
+        // IfStatementTest
+        public virtual bool Walk(IfStatementTest node) { return false; }
+        public virtual void PostWalk(IfStatementTest node) { }
 
-        // ListCompFor
-        public virtual bool Walk(ListCompFor node) { return false; }
-        public virtual void PostWalk(ListCompFor node) { }
+        // ListComprehensionFor
+        public virtual bool Walk(ListComprehensionFor node) { return false; }
+        public virtual void PostWalk(ListComprehensionFor node) { }
 
-        // ListCompIf
-        public virtual bool Walk(ListCompIf node) { return false; }
-        public virtual void PostWalk(ListCompIf node) { }
+        // ListComprehensionIf
+        public virtual bool Walk(ListComprehensionIf node) { return false; }
+        public virtual void PostWalk(ListComprehensionIf node) { }
 
-        // TryStmtHandler
-        public virtual bool Walk(TryStmtHandler node) { return false; }
-        public virtual void PostWalk(TryStmtHandler node) { }
+        // TryStatementHandler
+        public virtual bool Walk(TryStatementHandler node) { return false; }
+        public virtual void PostWalk(TryStatementHandler node) { }
     }
 
     // *** END GENERATED CODE ***

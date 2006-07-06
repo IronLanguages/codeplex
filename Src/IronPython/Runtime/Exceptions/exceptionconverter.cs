@@ -26,7 +26,12 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using Builtin = IronPython.Modules.Builtin;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
+
+
+
+[module: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", Scope = "member", Target = "IronPython.Runtime.Exceptions.ExceptionConverter.CreateThrowable(System.Object):System.Exception", MessageId = "Throwable")]
+[module: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", Scope = "member", Target = "IronPython.Runtime.Exceptions.ExceptionConverter.CreateThrowable(System.Object,System.Object):System.Exception", MessageId = "Throwable")]
 
 namespace IronPython.Runtime.Exceptions {
 
@@ -46,8 +51,6 @@ namespace IronPython.Runtime.Exceptions {
         static PythonFunction unicodeErrorInit;
         static PythonFunction systemExitInitMethod;
 
-        public delegate OldClass ExceptionClassCreator(string name, string module, IPythonType baseType);
-
         const string pythonExceptionKey = "PythonExceptionInfo";
         const string prevStackTraces = "PreviousStackTraces";
         internal const string defaultExceptionModule = "exceptions";
@@ -59,33 +62,33 @@ namespace IronPython.Runtime.Exceptions {
          */
         static readonly ExceptionMapping[] exceptionMappings = new ExceptionMapping[]{
             new ExceptionMapping("Exception", typeof(System.Exception), new ExceptionMapping[]{
-                new ExceptionMapping("SystemExit", typeof(PythonSystemExit), SystemExitExceptionCreator),
+                new ExceptionMapping("SystemExit", typeof(PythonSystemExitException), SystemExitExceptionCreator),
                 new ExceptionMapping("StopIteration", typeof(StopIterationException)),
                 new ExceptionMapping("StandardError", typeof(System.ApplicationException), new ExceptionMapping[]{
-                    new ExceptionMapping("KeyboardInterrupt", typeof(PythonKeyboardInterrupt)),
-                    new ExceptionMapping("ImportError", typeof(PythonImportError)),
+                    new ExceptionMapping("KeyboardInterrupt", typeof(PythonKeyboardInterruptException)),
+                    new ExceptionMapping("ImportError", typeof(PythonImportErrorException)),
                     new ExceptionMapping("EnvironmentError", typeof(System.Runtime.InteropServices.ExternalException), new ExceptionMapping[]{
                         new ExceptionMapping("IOError",typeof(System.IO.IOException)),
-                        new ExceptionMapping("OSError", typeof(PythonOSError), new ExceptionMapping[]{
+                        new ExceptionMapping("OSError", typeof(PythonOSErrorException), new ExceptionMapping[]{
                             new ExceptionMapping("WindowsError", typeof(System.ComponentModel.Win32Exception))
                         }),
                     }),
                     new ExceptionMapping("EOFError", typeof(System.IO.EndOfStreamException)),
-                    new ExceptionMapping("RuntimeError", typeof(PythonRuntimeError), new ExceptionMapping[]{
+                    new ExceptionMapping("RuntimeError", typeof(PythonRuntimeErrorException), new ExceptionMapping[]{
                         new ExceptionMapping("NotImplementedError", typeof(System.NotImplementedException)),
                     }),
-                    new ExceptionMapping("NameError", typeof(PythonNameError), new ExceptionMapping[]{
-                        new ExceptionMapping("UnboundLocalError", typeof(PythonUnboundLocalError)),
+                    new ExceptionMapping("NameError", typeof(PythonNameErrorException), new ExceptionMapping[]{
+                        new ExceptionMapping("UnboundLocalError", typeof(PythonUnboundLocalErrorException)),
                     }),
                     new ExceptionMapping("AttributeError", typeof(System.MissingMemberException)),
-                    new ExceptionMapping("SyntaxError", typeof(PythonSyntaxError), SyntaxErrorExceptionCreator, new ExceptionMapping[]{
+                    new ExceptionMapping("SyntaxError", typeof(PythonSyntaxErrorException), SyntaxErrorExceptionCreator, new ExceptionMapping[]{
                         new ExceptionMapping("IndentationError", typeof(PythonIndentationError), SyntaxErrorExceptionCreator, new ExceptionMapping[]{
                             new ExceptionMapping("TabError", typeof(PythonTabError), SyntaxErrorExceptionCreator)
                         }),
                     }),
                     new ExceptionMapping("TypeError", typeof(ArgumentTypeException)),
-                    new ExceptionMapping("AssertionError", typeof(PythonAssertionError)),
-                    new ExceptionMapping("LookupError", typeof(PythonLookupError), new ExceptionMapping[]{
+                    new ExceptionMapping("AssertionError", typeof(PythonAssertionErrorException)),
+                    new ExceptionMapping("LookupError", typeof(PythonLookupErrorException), new ExceptionMapping[]{
                         new ExceptionMapping("IndexError", typeof(System.IndexOutOfRangeException)),
                         new ExceptionMapping("KeyError", typeof(System.Collections.Generic.KeyNotFoundException)),
                     }),
@@ -93,44 +96,44 @@ namespace IronPython.Runtime.Exceptions {
                     new ExceptionMapping("ArithmeticError", typeof(System.ArithmeticException), new ExceptionMapping[]{
                         new ExceptionMapping("OverflowError", typeof(System.OverflowException)),
                         new ExceptionMapping("ZeroDivisionError", typeof(System.DivideByZeroException)),
-                        new ExceptionMapping("FloatingPointError", typeof(PythonFloatingPointError)),
+                        new ExceptionMapping("FloatingPointError", typeof(PythonFloatingPointErrorException)),
                     }),
                     
                     new ExceptionMapping("ValueError", typeof(System.ArgumentException), new ExceptionMapping[]{
-                        new ExceptionMapping("UnicodeError", typeof(PythonUnicodeError), new ExceptionMapping[]{
+                        new ExceptionMapping("UnicodeError", typeof(PythonUnicodeErrorException), new ExceptionMapping[]{
                             new ExceptionMapping("UnicodeEncodeError", typeof(System.Text.EncoderFallbackException), UnicodeErrorExceptionCreator),
                             new ExceptionMapping("UnicodeDecodeError", typeof(System.Text.DecoderFallbackException), UnicodeErrorExceptionCreator),
-                            new ExceptionMapping("UnicodeTranslateError", typeof(PythonUnicodeTranslateError)),
+                            new ExceptionMapping("UnicodeTranslateError", typeof(PythonUnicodeTranslateErrorException)),
                         }),
                     }),
-                    new ExceptionMapping("ReferenceError", typeof(PythonReferenceError)),
+                    new ExceptionMapping("ReferenceError", typeof(PythonReferenceErrorException)),
                     new ExceptionMapping("SystemError", typeof(SystemException)),
                     new ExceptionMapping("MemoryError", typeof(System.OutOfMemoryException)),
 
                 }),
                 new ExceptionMapping("Warning",typeof(System.ComponentModel.WarningException), new ExceptionMapping[]{
-                    new ExceptionMapping("UserWarning",typeof(PythonUserWarning)),
-                    new ExceptionMapping("DeprecationWarning",typeof(PythonDeprecationWarning)),
-                    new ExceptionMapping("PendingDeprecationWarning",typeof(PythonPendingDeprecationWarning)),
-                    new ExceptionMapping("SyntaxWarning",typeof(PythonSyntaxWarning)),
-                    new ExceptionMapping("OverflowWarning",typeof(PythonOverflowWarning)),
-                    new ExceptionMapping("RuntimeWarning",typeof(PythonRuntimeWarning)),
-                    new ExceptionMapping("FutureWarning",typeof(PythonFutureWarning)),
+                    new ExceptionMapping("UserWarning",typeof(PythonUserWarningException)),
+                    new ExceptionMapping("DeprecationWarning",typeof(PythonDeprecationWarningException)),
+                    new ExceptionMapping("PendingDeprecationWarning",typeof(PythonPendingDeprecationWarningException)),
+                    new ExceptionMapping("SyntaxWarning",typeof(PythonSyntaxWarningException)),
+                    new ExceptionMapping("OverflowWarning",typeof(PythonOverflowWarningException)),
+                    new ExceptionMapping("RuntimeWarning",typeof(PythonRuntimeWarningException)),
+                    new ExceptionMapping("FutureWarning",typeof(PythonFutureWarningException)),
                 }),
             })            
         };
 
         static ExceptionConverter() {
-            exceptionInitMethod = new FunctionX(null, "__init__", new CallTargetN(ExceptionConverter.ExceptionInit), new string[] { "args" }, new object[0], FuncDefType.ArgList);
-            exceptionGetItemMethod = new FunctionX(null, "__getitem__", new CallTargetN(ExceptionConverter.ExceptionGetItem), new string[] { "args" }, new object[0], FuncDefType.ArgList);
-            exceptionStrMethod = new FunctionX(null, "__str__", new CallTargetN(ExceptionConverter.ExceptionToString), new string[] { "args" }, new object[0], FuncDefType.ArgList);
+            exceptionInitMethod = new FunctionX(null, "__init__", new CallTargetN(ExceptionConverter.ExceptionInit), new string[] { "args" }, new object[0], FunctionAttributes.ArgumentList);
+            exceptionGetItemMethod = new FunctionX(null, "__getitem__", new CallTargetN(ExceptionConverter.ExceptionGetItem), new string[] { "args" }, new object[0], FunctionAttributes.ArgumentList);
+            exceptionStrMethod = new FunctionX(null, "__str__", new CallTargetN(ExceptionConverter.ExceptionToString), new string[] { "args" }, new object[0], FunctionAttributes.ArgumentList);
             syntaxErrorStrMethod = new FunctionX(null, "__str__",
-                new CallTargetN(ExceptionConverter.SyntaxErrorToString), new string[] { "args" }, new object[0], FuncDefType.ArgList);
+                new CallTargetN(ExceptionConverter.SyntaxErrorToString), new string[] { "args" }, new object[0], FunctionAttributes.ArgumentList);
             unicodeErrorInit = new FunctionX(null,
                 "__init__",
                 new CallTargetN(ExceptionConverter.UnicodeErrorInit),
-                new string[] { "self", "encoding", "object", "start", "end", "reason" }, new object[0], FuncDefType.None);
-            systemExitInitMethod = new FunctionX(null, "__init__", new CallTargetN(ExceptionConverter.SystemExitExceptionInit), new string[] { "args" }, new object[0], FuncDefType.ArgList);
+                new string[] { "self", "encoding", "object", "start", "end", "reason" }, new object[0], FunctionAttributes.None);
+            systemExitInitMethod = new FunctionX(null, "__init__", new CallTargetN(ExceptionConverter.SystemExitExceptionInit), new string[] { "args" }, new object[0], FunctionAttributes.ArgumentList);
 
             for (int i = 0; i < exceptionMappings.Length; i++) {
                 CreateExceptionMapping(null, exceptionMappings[i]);
@@ -176,15 +179,15 @@ namespace IronPython.Runtime.Exceptions {
             return false;
         }
 
-        public static object UnicodeErrorInit(params object[] prms) {
-            if (prms.Length != 6) throw Ops.TypeError("expected 5 arguments, got {0}", prms.Length);
+        public static object UnicodeErrorInit(params object[] parameters) {
+            if (parameters.Length != 6) throw Ops.TypeError("expected 5 arguments, got {0}", parameters.Length);
 
-            object self = prms[0];
-            string encoding = Converter.ConvertToString(prms[1]);
-            string @object = Converter.ConvertToString(prms[2]);
-            int start = Converter.ConvertToInt32(prms[3]);
-            int end = Converter.ConvertToInt32(prms[4]);
-            string reason = Converter.ConvertToString(prms[5]);
+            object self = parameters[0];
+            string encoding = Converter.ConvertToString(parameters[1]);
+            string @object = Converter.ConvertToString(parameters[2]);
+            int start = Converter.ConvertToInt32(parameters[3]);
+            int end = Converter.ConvertToInt32(parameters[4]);
+            string reason = Converter.ConvertToString(parameters[5]);
 
             ExceptionInit(new Tuple(false, new object[] { self, encoding, @object, start, end, reason }));
 
@@ -197,10 +200,10 @@ namespace IronPython.Runtime.Exceptions {
             return null;
         }
 
-        public static object SystemExitExceptionInit(params object[] prms) {
-            if (prms.Length == 0) throw Ops.TypeError("expected at least 1 argument, got 0");
+        public static object SystemExitExceptionInit(params object[] parameters) {
+            if (parameters.Length == 0) throw Ops.TypeError("expected at least 1 argument, got 0");
 
-            Tuple tuple = prms[0] as Tuple;
+            Tuple tuple = parameters[0] as Tuple;
 
             if (tuple != null) {
                 object self = tuple[0];
@@ -453,7 +456,7 @@ namespace IronPython.Runtime.Exceptions {
             ThreadAbortException ta = clrException as ThreadAbortException;
             if (ta != null) {
                 // transform TA w/ our reason into a KeyboardInterrupt exception.
-                PythonKeyboardInterrupt reason = ta.ExceptionState as PythonKeyboardInterrupt;
+                PythonKeyboardInterruptException reason = ta.ExceptionState as PythonKeyboardInterruptException;
                 if (reason != null) return ToPython(reason);
             }
 
@@ -505,7 +508,7 @@ namespace IronPython.Runtime.Exceptions {
         /// <summary>
         /// Returns all the stack traces associates with an exception
         /// </summary>
-        public static List<StackTrace> GetExceptionStackTraces(Exception rethrow) {
+        public static IList<StackTrace> GetExceptionStackTraces(Exception rethrow) {
             return rethrow.Data[prevStackTraces] as List<StackTrace>;
         }
 
@@ -513,6 +516,7 @@ namespace IronPython.Runtime.Exceptions {
         /// <summary>
         /// Creates a new throwable exception of type type.  
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Throwable")]
         public static Exception CreateThrowable(object type, object value) {
             object pyEx;
 
@@ -530,74 +534,16 @@ namespace IronPython.Runtime.Exceptions {
         public static void CreateExceptionMapping(IPythonType baseType, ExceptionMapping em) {
             IPythonType type = CreatePythonException(em.PythonException, em.PythonModule, baseType, em.Creator);
 
-            pythonToClr[type] = em.CLRException;
-            clrToPython[em.CLRException] = type;
+            pythonToClr[type] = em.ClrException;
+            clrToPython[em.ClrException] = type;
 
-            if (em.SubTypes != null) {
-                for (int i = 0; i < em.SubTypes.Length; i++) {
-                    CreateExceptionMapping(type, em.SubTypes[i]);
+            if (em.Subtypes != null) {
+                for (int i = 0; i < em.Subtypes.Count; i++) {
+                    CreateExceptionMapping(type, em.Subtypes[i]);
                 }
             }
         }
 
-        /// <summary>
-        /// Represents a single exception mapping from a CLR type to python type.
-        /// </summary>
-        public struct ExceptionMapping {
-            public ExceptionMapping(string python, Type clr) {
-                PythonException = python;
-                PythonModule = ExceptionConverter.defaultExceptionModule;
-                CLRException = clr;
-                SubTypes = null;
-                Creator = DefaultExceptionCreator;
-            }
-
-            public ExceptionMapping(string python, string module, Type clr) {
-                PythonException = python;
-                PythonModule = module;
-                CLRException = clr;
-                SubTypes = null;
-                Creator = DefaultExceptionCreator;
-            }
-
-            public ExceptionMapping(string python, Type clr, ExceptionClassCreator creator) {
-                PythonException = python;
-                PythonModule = ExceptionConverter.defaultExceptionModule;
-                CLRException = clr;
-                SubTypes = null;
-                Creator = creator;
-            }
-
-            public ExceptionMapping(string python, string module, Type clr, ExceptionMapping[] subTypes) {
-                PythonException = python;
-                PythonModule = module;
-                CLRException = clr;
-                SubTypes = subTypes;
-                Creator = DefaultExceptionCreator;
-            }
-
-            public ExceptionMapping(string python, Type clr, ExceptionMapping[] subTypes) {
-                PythonException = python;
-                PythonModule = ExceptionConverter.defaultExceptionModule;
-                CLRException = clr;
-                SubTypes = subTypes;
-                Creator = DefaultExceptionCreator;
-            }
-
-            public ExceptionMapping(string python, Type clr, ExceptionClassCreator creator, ExceptionMapping[] subTypes) {
-                PythonException = python;
-                PythonModule = ExceptionConverter.defaultExceptionModule;
-                CLRException = clr;
-                SubTypes = subTypes;
-                Creator = creator;
-            }
-
-            public string PythonException;
-            public string PythonModule;
-            public Type CLRException;
-            public ExceptionMapping[] SubTypes;
-            public ExceptionClassCreator Creator;
-        }
         #endregion
 
         #region Private implementation details
@@ -642,7 +588,7 @@ namespace IronPython.Runtime.Exceptions {
             return typeof(Exception);
         }
 
-        private static OldClass DefaultExceptionCreator(string name, string module, object baseType) {
+        internal static OldClass DefaultExceptionCreator(string name, string module, object baseType) {
             Tuple bases = ObjectToTuple(baseType);
 
             FieldIdDict dict = new FieldIdDict();
@@ -699,4 +645,87 @@ namespace IronPython.Runtime.Exceptions {
         }
         #endregion
     }
+
+    public delegate OldClass ExceptionClassCreator(string name, string module, IPythonType baseType);
+
+    /// <summary>
+    /// Represents a single exception mapping from a CLR type to python type.
+    /// </summary>
+    public struct ExceptionMapping {
+        private string pythonException;
+        private string pythonModule;
+        private Type clrException;
+        private ExceptionMapping[] subtypes;
+        private ExceptionClassCreator creator;
+
+        public ExceptionMapping(string python, Type clr) {
+            pythonException = python;
+            pythonModule = ExceptionConverter.defaultExceptionModule;
+            clrException = clr;
+            this.subtypes = null;
+            creator = ExceptionConverter.DefaultExceptionCreator;
+        }
+
+        public ExceptionMapping(string python, string module, Type clr) {
+            pythonException = python;
+            pythonModule = module;
+            clrException = clr;
+            this.subtypes = null;
+            creator = ExceptionConverter.DefaultExceptionCreator;
+        }
+
+        public ExceptionMapping(string python, Type clr, ExceptionClassCreator creator) {
+            pythonException = python;
+            pythonModule = ExceptionConverter.defaultExceptionModule;
+            clrException = clr;
+            this.subtypes = null;
+            this.creator = creator;
+        }
+
+        public ExceptionMapping(string python, string module, Type clr, ExceptionMapping[] subtypes) {
+            pythonException = python;
+            pythonModule = module;
+            clrException = clr;
+            this.subtypes = subtypes;
+            creator = ExceptionConverter.DefaultExceptionCreator;
+        }
+
+        public ExceptionMapping(string python, Type clr, ExceptionMapping[] subtypes) {
+            pythonException = python;
+            pythonModule = ExceptionConverter.defaultExceptionModule;
+            clrException = clr;
+            this.subtypes = subtypes;
+            creator = ExceptionConverter.DefaultExceptionCreator;
+        }
+
+        public ExceptionMapping(string python, Type clr, ExceptionClassCreator creator, ExceptionMapping[] subtypes) {
+            pythonException = python;
+            pythonModule = ExceptionConverter.defaultExceptionModule;
+            clrException = clr;
+            this.subtypes = subtypes;
+            this.creator = creator;
+        }
+
+
+        public string PythonException {
+            get { return pythonException; }
+        }
+
+        public string PythonModule {
+            get { return pythonModule; }
+        }
+
+        public Type ClrException {
+            get { return clrException; }
+        }
+
+        public IList<ExceptionMapping> Subtypes {
+            get { return subtypes; }
+        }
+
+        public ExceptionClassCreator Creator {
+            get { return creator; }
+        }
+    }
+
 }

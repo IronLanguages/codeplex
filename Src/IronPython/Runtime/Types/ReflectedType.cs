@@ -1288,7 +1288,7 @@ namespace IronPython.Runtime.Types {
         #region IContextAwareMember Members
 
         bool IContextAwareMember.IsVisible(ICallerContext context) {
-            return !clsOnly || (context.ContextFlags & CallerContextFlags.ShowCls) != 0;
+            return !clsOnly || (context.ContextFlags & CallerContextAttributes.ShowCls) != 0;
         }
 
         #endregion

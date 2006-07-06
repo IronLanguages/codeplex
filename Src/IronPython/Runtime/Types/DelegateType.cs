@@ -60,7 +60,7 @@ namespace IronPython.Runtime.Types {
         private void CreateInvoker() {
             MethodInfo delegateInfo = type.GetMethod("Invoke");
             Debug.Assert(delegateInfo != null);
-            invoker = MethodBinder.MakeFastCallable("invoke", delegateInfo, FunctionType.Method);
+            invoker = MethodBinder.MakeFastCallable("invoke", delegateInfo);
         }
     }
 

@@ -30,32 +30,32 @@ using IronPython.Runtime.Operations;
 using IronPython.Compiler.Generation;
 using IronPython.CodeDom;
 
-namespace IronPython.Compiler.AST {
+namespace IronPython.Compiler.Ast {
     [FlagsAttribute]
-    public enum FuncDefType { None = 0, ArgList, KeywordDict }
+    public enum FunctionAttributes { None = 0, ArgumentList, KeywordDictionary }
 
     /// <summary>
     /// Summary description for FuncDef.
     /// </summary>
-    public partial class FuncDef : ScopeStatement {
+    public partial class FunctionDefinition : ScopeStatement {
         private static int counter = 0;
 
         const string tupleArgHeader = "tupleArg#";
 
         private Location header;
         private readonly SymbolId name;
-        private readonly Expr[] parameters;
-        private readonly Expr[] defaults;        
-        private readonly FuncDefType flags;        
-        private Expr decorators;        
+        private readonly Expression[] parameters;
+        private readonly Expression[] defaults;        
+        private readonly FunctionAttributes flags;        
+        private Expression decorators;        
         private string filename;        
         private int yieldCount = 0;        
 
-        public FuncDef(SymbolId name, Expr[] parameters, Expr[] defaults, FuncDefType flags, string sourceFile)
+        public FunctionDefinition(SymbolId name, Expression[] parameters, Expression[] defaults, FunctionAttributes flags, string sourceFile)
             : this(name, parameters, defaults, flags, null, sourceFile) {
         }
 
-        public FuncDef(SymbolId name, Expr[] parameters, Expr[] defaults, FuncDefType flags, Stmt body, string sourceFile)
+        public FunctionDefinition(SymbolId name, Expression[] parameters, Expression[] defaults, FunctionAttributes flags, Statement body, string sourceFile)
             : base(body) {
             this.name = name;
             this.parameters = parameters;
@@ -74,24 +74,24 @@ namespace IronPython.Compiler.AST {
             get { return name; }
         }
 
-        public IList<Expr> Parameters {
+        public IList<Expression> Parameters {
             get { return parameters; }
         }
 
-        public IList<Expr> Defaults {
+        public IList<Expression> Defaults {
             get { return defaults; }
         }
 
-        public FuncDefType Flags {
+        public FunctionAttributes Flags {
             get { return flags; }
         }
 
-        public Expr Decorators {
+        public Expression Decorators {
             get { return decorators; }
             set { decorators = value; }
         }
 
-        public string Filename {
+        public string FileName {
             get { return filename; }
             set { filename = value; }
         }
@@ -101,24 +101,24 @@ namespace IronPython.Compiler.AST {
             set { yieldCount = value; }
         }
 
-        public object MakeFunction(NameEnv env) {
+        public object MakeFunction(NameEnvironment environment) {
             string[] names = SymbolTable.IdsToStrings(makeNames(parameters));
-            object[] defaults = Expr.Evaluate(this.defaults, env);
-            return new InterpFunction(names, defaults, body, env.globals);
+            object[] defaults = Expression.Evaluate(this.defaults, environment);
+            return new InterpFunction(names, defaults, Body, environment.Globals);
         }
 
-        public override object Execute(NameEnv env) {
-            env.Set(name.GetString(), MakeFunction(env));
-            return NextStmt;
+        public override object Execute(NameEnvironment environment) {
+            environment.Set(name.GetString(), MakeFunction(environment));
+            return NextStatement;
         }
 
-        public override void Walk(IAstWalker w) {
-            if (w.Walk(this)) {
-                foreach (Expr e in parameters) e.Walk(w);
-                foreach (Expr e in defaults) e.Walk(w);
-                body.Walk(w);
+        public override void Walk(IAstWalker walker) {
+            if (walker.Walk(this)) {
+                foreach (Expression e in parameters) e.Walk(walker);
+                foreach (Expression e in defaults) e.Walk(walker);
+                Body.Walk(walker);
             }
-            w.PostWalk(this);
+            walker.PostWalk(this);
         }
 
         internal override void Emit(CodeGen cg) {
@@ -172,16 +172,16 @@ namespace IronPython.Compiler.AST {
             }
             cg.EmitObjectArray(defaults);
 
-            if (flags == FuncDefType.None) {
+            if (flags == FunctionAttributes.None) {
                 cg.Emit(OpCodes.Newobj, funcType.GetConstructor(
                     new Type[] { typeof(PythonModule), typeof(string), targetType, typeof(string[]), typeof(object[]) }));
             } else {
                 cg.EmitInt((int)flags);
                 cg.Emit(OpCodes.Newobj, funcType.GetConstructor(
-                    new Type[] { typeof(PythonModule), typeof(string), targetType, typeof(string[]), typeof(object[]), typeof(FuncDefType) }));
+                    new Type[] { typeof(PythonModule), typeof(string), targetType, typeof(string[]), typeof(object[]), typeof(FunctionAttributes) }));
             }
 
-            string doc = body.GetDocString();
+            string doc = Body.Documentation;
             if (doc != null) {
                 cg.Emit(OpCodes.Dup);
                 cg.EmitString(doc);
@@ -197,7 +197,7 @@ namespace IronPython.Compiler.AST {
             cg.Emit(OpCodes.Castclass, typeof(FunctionCode));
             cg.Emit(OpCodes.Dup);
             functionCode.EmitSet(cg);
-            cg.EmitInt(this.Start.line);
+            cg.EmitInt(this.Start.Line);
             cg.EmitCall(typeof(FunctionCode), "SetLineNumber");
 
             functionCode.EmitGet(cg);
@@ -285,7 +285,7 @@ namespace IronPython.Compiler.AST {
         }
 
         private bool NeedsWrapperMethod() {
-            return parameters.Length > Ops.MaximumCallArgs || flags != FuncDefType.None;
+            return parameters.Length > Ops.MaximumCallArgs || flags != FunctionAttributes.None;
         }
 
         private CodeGen MakeWrapperMethodN(CodeGen cg, MethodInfo impl, bool context) {
@@ -314,10 +314,10 @@ namespace IronPython.Compiler.AST {
 
         private void EmitTupleParams(CodeGen cg) {
             for (int i = 0; i < parameters.Length; i++) {
-                Expr p = parameters[i];
-                if (p is NameExpr) continue;
+                Expression p = parameters[i];
+                if (p is NameExpression) continue;
 
-                cg.Names[EncodeTupleParamName(p as TupleExpr)].EmitGet(cg);
+                cg.Names[EncodeTupleParamName(p as TupleExpression)].EmitGet(cg);
 
                 p.EmitSet(cg);
             }
@@ -336,7 +336,7 @@ namespace IronPython.Compiler.AST {
             CreateClosureSlots(cg);
             CreateLocalSlots(cg);
             EmitTupleParams(cg);
-            body.Emit(cg);
+            Body.Emit(cg);
             cg.EmitReturn(null);
         }
 
@@ -391,7 +391,7 @@ namespace IronPython.Compiler.AST {
         }
 
         private void CreateGeneratorTemps(EnvironmentFactory ef, CodeGen cg) {
-            for (int i = 0; i < tempsCount; i++) {
+            for (int i = 0; i < TempsCount; i++) {
                 cg.Names.AddTempSlot(ef.MakeEnvironmentReference(SymbolTable.StringToId("temp$" + i)).CreateSlot(cg.EnvironmentSlot));
             }
         }
@@ -408,7 +408,7 @@ namespace IronPython.Compiler.AST {
             YieldTarget[] targets = YieldLabelBuilder.BuildYieldTargets(this, ncg);
 
             Label[] jumpTable = new Label[yieldCount];
-            for (int i = 0; i < yieldCount; i++) jumpTable[i] = targets[i].topBranchTarget;
+            for (int i = 0; i < yieldCount; i++) jumpTable[i] = targets[i].TopBranchTarget;
             ncg.yieldLabels = jumpTable;
 
             ncg.PushTryBlock();
@@ -420,7 +420,7 @@ namespace IronPython.Compiler.AST {
 
             // fall-through on first pass
             // yield statements will insert the needed labels after their returns
-            body.Emit(ncg);
+            Body.Emit(ncg);
 
             // fall-through is almost always possible in generators, so this
             // is almost always needed
@@ -436,12 +436,12 @@ namespace IronPython.Compiler.AST {
         }
 
         public override bool TryGetBinding(SymbolId name, out Binding binding) {
-            if (names.TryGetValue(name, out binding)) {
+            if (Names.TryGetValue(name, out binding)) {
                 return binding.IsBound;
             } else return false;
         }
 
-        private static SymbolId EncodeTupleParamName(TupleExpr param) {
+        private static SymbolId EncodeTupleParamName(TupleExpression param) {
             // we encode a tuple parameter so we can extract the compound
             // members back out of it's name.
             StringBuilder sb = new StringBuilder(tupleArgHeader);
@@ -450,15 +450,15 @@ namespace IronPython.Compiler.AST {
             return SymbolTable.StringToId(sb.ToString());
         }
 
-        private static void AppendTupleParamNames(StringBuilder sb, TupleExpr param) {
-            for (int i = 0; i < param.Items.Length; i++) {
-                NameExpr ne = param.Items[i] as NameExpr;
+        private static void AppendTupleParamNames(StringBuilder sb, TupleExpression param) {
+            for (int i = 0; i < param.Items.Count; i++) {
+                NameExpression ne = param.Items[i] as NameExpression;
                 if (ne != null) {
                     sb.Append('!');
                     sb.Append(ne.Name.GetString());
                 } else {
                     // nested tuple
-                    AppendTupleParamNames(sb, param.Items[i] as TupleExpr);
+                    AppendTupleParamNames(sb, param.Items[i] as TupleExpression);
                 }
             }
         }
@@ -491,16 +491,16 @@ namespace IronPython.Compiler.AST {
             return new Tuple(names);
         }
 
-        private static SymbolId makeName(Expr param) {
-            NameExpr ne = param as NameExpr;
+        private static SymbolId makeName(Expression param) {
+            NameExpression ne = param as NameExpression;
             if (ne == null) {
-                return EncodeTupleParamName((TupleExpr)param);
+                return EncodeTupleParamName((TupleExpression)param);
             } else {
                 return ne.Name;
             }
         }
 
-        private static SymbolId[] makeNames(Expr[] parameters) {
+        private static SymbolId[] makeNames(Expression[] parameters) {
             SymbolId[] ret = new SymbolId[parameters.Length];
             for (int i = 0; i < parameters.Length; i++) {
                 ret[i] = makeName(parameters[i]);
@@ -524,14 +524,29 @@ namespace IronPython.Compiler.AST {
     }
 
     public struct YieldTarget {
-        public Label topBranchTarget;
-        public Label tryBranchTarget;
-        public bool finallyBranch;
+        private Label topBranchTarget;
+        private Label tryBranchTarget;
+        private bool finallyBranch;
 
         public YieldTarget(Label topBranchTarget) {
             this.topBranchTarget = topBranchTarget;
             tryBranchTarget = new Label();
             finallyBranch = false;
+        }
+
+        public Label TopBranchTarget {
+            get { return topBranchTarget; }
+            set { topBranchTarget = value; }
+        }
+        
+        public Label TryBranchTarget {
+            get { return tryBranchTarget; }
+            set { tryBranchTarget = value; }
+        }
+        
+        public bool FinallyBranch {
+            get { return finallyBranch; }
+            set { finallyBranch = value; }
         }
 
         internal YieldTarget FixForTry(CodeGen cg) {
@@ -559,53 +574,53 @@ namespace IronPython.Compiler.AST {
                 this.state = state;
             }
 
-            public abstract void AddYieldTarget(YieldStmt ys, YieldTarget yt, CodeGen cg);
+            public abstract void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg);
         }
 
         public sealed class TryBlock : ExceptionBlock {
-            private TryStmt stmt;
+            private TryStatement stmt;
 
-            public TryBlock(TryStmt stmt)
+            public TryBlock(TryStatement stmt)
                 : this(stmt, State.Try) {
             }
-            public TryBlock(TryStmt stmt, State state)
+            public TryBlock(TryStatement stmt, State state)
                 : base(state) {
                 this.stmt = stmt;
             }
 
-            public override void AddYieldTarget(YieldStmt ys, YieldTarget yt, CodeGen cg) {
+            public override void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg) {
                 switch (state) {
                     case State.Try:
                         stmt.AddYieldTarget(yt.FixForTry(cg));
-                        ys.Label = yt.tryBranchTarget;
+                        ys.Label = yt.TryBranchTarget;
                         break;
                     case State.Handler:
                         stmt.YieldInExcept = true;
-                        ys.Label = yt.topBranchTarget;
+                        ys.Label = yt.TopBranchTarget;
                         break;
                 }
             }
         }
 
         public sealed class TryFinallyBlock : ExceptionBlock {
-            private TryFinallyStmt stmt;
+            private TryFinallyStatement stmt;
 
-            public TryFinallyBlock(TryFinallyStmt stmt)
+            public TryFinallyBlock(TryFinallyStatement stmt)
                 : this(stmt, State.Try) {
             }
-            public TryFinallyBlock(TryFinallyStmt stmt, State state)
+            public TryFinallyBlock(TryFinallyStatement stmt, State state)
                 : base(state) {
                 this.stmt = stmt;
             }
 
-            public override void AddYieldTarget(YieldStmt ys, YieldTarget yt, CodeGen cg) {
+            public override void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg) {
                 switch (state) {
                     case State.Try:
                         cg.Context.AddError("cannot yield from try block with finally", ys);
                         break;
                     case State.Finally:
                         stmt.AddYieldTarget(yt.FixForFinally(cg));
-                        ys.Label = yt.tryBranchTarget;
+                        ys.Label = yt.TryBranchTarget;
                         break;
                 }
             }
@@ -613,16 +628,16 @@ namespace IronPython.Compiler.AST {
 
         Stack<ExceptionBlock> tryBlocks = new Stack<ExceptionBlock>();
         YieldTarget[] topYields;
-        FuncDef func;
+        FunctionDefinition func;
         CodeGen cg;
 
-        private YieldLabelBuilder(FuncDef func, CodeGen cg) {
+        private YieldLabelBuilder(FunctionDefinition func, CodeGen cg) {
             this.func = func;
             this.cg = cg;
             this.topYields = new YieldTarget[func.YieldCount];
         }
 
-        public static YieldTarget[] BuildYieldTargets(FuncDef func, CodeGen cg) {
+        public static YieldTarget[] BuildYieldTargets(FunctionDefinition func, CodeGen cg) {
             YieldLabelBuilder b = new YieldLabelBuilder(func, cg);
             func.Walk(b);
             return b.topYields;
@@ -630,12 +645,12 @@ namespace IronPython.Compiler.AST {
 
         #region AstWalker method overloads
 
-        public override bool Walk(FuncDef node) {
+        public override bool Walk(FunctionDefinition node) {
             // Do not recurse into nested functions
             return node == func;
         }
 
-        public override bool Walk(TryFinallyStmt node) {
+        public override bool Walk(TryFinallyStatement node) {
             TryFinallyBlock tfb = new TryFinallyBlock(node);
             tryBlocks.Push(tfb);
             node.Body.Walk(this);
@@ -647,13 +662,13 @@ namespace IronPython.Compiler.AST {
         }
 
 
-        public override bool Walk(TryStmt node) {
+        public override bool Walk(TryStatement node) {
             TryBlock tb = new TryBlock(node);
             tryBlocks.Push(tb);
             node.Body.Walk(this);
 
             tb.state = TryBlock.State.Handler;
-            foreach (TryStmtHandler handler in node.Handlers) {
+            foreach (TryStatementHandler handler in node.Handlers) {
                 handler.Walk(this);
             }
 
@@ -666,11 +681,11 @@ namespace IronPython.Compiler.AST {
             return false;
         }
 
-        public override void PostWalk(YieldStmt node) {
+        public override void PostWalk(YieldStatement node) {
             topYields[node.Index] = new YieldTarget(cg.DefineLabel());
 
             if (tryBlocks.Count == 0) {
-                node.Label = topYields[node.Index].topBranchTarget;
+                node.Label = topYields[node.Index].TopBranchTarget;
             } else if (tryBlocks.Count == 1) {
                 ExceptionBlock eb = tryBlocks.Peek();
                 eb.AddYieldTarget(node, topYields[node.Index], cg);

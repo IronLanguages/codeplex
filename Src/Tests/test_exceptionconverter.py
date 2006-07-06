@@ -20,6 +20,7 @@ import IronPythonTest
 
 import System
 from IronPython.Runtime.Exceptions import ExceptionConverter as EC
+from IronPython.Runtime.Exceptions import ExceptionMapping
 
 # CreatePythonException
 
@@ -98,7 +99,7 @@ def test_CreateExceptionMapping_Py2CLR_NoMapping():
 def test_CreateExceptionMapping_Py2CLR_WithMapping():
     pyex2 = EC.CreatePythonException("PythonException2")
 
-    m = EC.ExceptionMapping("PythonException2", IronPythonTest.CLRException2)
+    m = ExceptionMapping("PythonException2", IronPythonTest.CLRException2)
     EC.CreateExceptionMapping(EC.GetPythonException("Exception"), m)
 
     success = False
@@ -124,7 +125,7 @@ def test_CreateExceptionMapping_CLR2Py_NoMapping():
 def test_CreateExceptionMapping_CLR2Py_WithMapping():
     pyex4 = EC.CreatePythonException("PythonException4")
 
-    m = EC.ExceptionMapping("PythonException4", IronPythonTest.CLRException4)
+    m = ExceptionMapping("PythonException4", IronPythonTest.CLRException4)
     EC.CreateExceptionMapping(EC.GetPythonException("Exception"), m)
 
     success = False

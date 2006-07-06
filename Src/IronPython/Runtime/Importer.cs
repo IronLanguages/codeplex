@@ -22,7 +22,7 @@ using System.IO;
 using System.Diagnostics;
 
 using IronPython.Compiler;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Compiler.Generation;
 using IronPython.Modules;
 using IronPython.Runtime.Types;
@@ -321,7 +321,7 @@ namespace IronPython.Runtime {
 
             if (name.Equals("sys")) return mod.SystemState;
             if (name.Equals("clr")) {
-                ((ICallerContext)mod).ContextFlags |= CallerContextFlags.ShowCls;
+                ((ICallerContext)mod).ContextFlags |= CallerContextAttributes.ShowCls;
                 return ((ICallerContext)mod).SystemState.ClrModule;
             }
             Type ty;
@@ -338,7 +338,7 @@ namespace IronPython.Runtime {
         private static object ImportReflected(PythonModule mod, string name) {
             object res = mod.SystemState.TopPackage.TryGetPackageAny(mod.SystemState, name);
             if (res != null) {
-                ((ICallerContext)mod).ContextFlags |= CallerContextFlags.ShowCls;
+                ((ICallerContext)mod).ContextFlags |= CallerContextAttributes.ShowCls;
             }
             return res;
         }
@@ -367,7 +367,7 @@ namespace IronPython.Runtime {
         private static PythonModule LoadFromSource(SystemState state, string fullName, string fileName) {
             CompilerContext context = new CompilerContext(fileName);
             Parser parser = Parser.FromFile(state, context);
-            Stmt s = parser.ParseFileInput();
+            Statement s = parser.ParseFileInput();
 
             PythonModule pmod = OutputGenerator.GenerateModule(state, context, s, fullName);
 

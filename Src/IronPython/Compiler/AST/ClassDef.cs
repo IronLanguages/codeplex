@@ -29,17 +29,17 @@ using IronPython.Runtime.Calls;
 using IronPython.CodeDom;
 using IronPython.Compiler.Generation;
 
-namespace IronPython.Compiler.AST {
+namespace IronPython.Compiler.Ast {
     /// <summary>
     /// Summary description for ClassDef.
     /// </summary>
-    public class ClassDef : ScopeStatement {
+    public class ClassDefinition : ScopeStatement {
         private Location header;
         private SymbolId name;
-        private Expr[] bases;
+        private Expression[] bases;
         private static int index = 0;
 
-        public ClassDef(SymbolId name, Expr[] bases, Stmt body)
+        public ClassDefinition(SymbolId name, Expression[] bases, Statement body)
             : base(body) {
             this.name = name;
             this.bases = bases;
@@ -55,7 +55,7 @@ namespace IronPython.Compiler.AST {
             set { name = value; }
         }
 
-        public IList<Expr> Bases {
+        public IList<Expression> Bases {
             get { return bases; }
         }
 
@@ -127,7 +127,7 @@ namespace IronPython.Compiler.AST {
             // Populate the namespace with slots
             PrepareForEmit(cg, icg);
 
-            body.Emit(icg);
+            Body.Emit(icg);
         }
 
         internal void PrepareForEmit(CodeGen cg, CodeGen icg) {
@@ -144,7 +144,7 @@ namespace IronPython.Compiler.AST {
             FlowChecker.Check(this);
             CreateBackedSlots(icg);
 
-            string doc = body.GetDocString();
+            string doc = Body.Documentation;
             if (doc != null) {
                 icg.EmitString(doc);
                 icg.EmitSet(SymbolTable.Doc);
@@ -152,7 +152,7 @@ namespace IronPython.Compiler.AST {
         }
 
         private void CreateBackedSlots(CodeGen icg) {
-            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in Names) {
                 if (kv.Value.IsLocal && kv.Value.Uninitialized) {
                     Slot global = icg.Names.Globals.GetOrMakeSlot(kv.Key);
                     Slot attribute = icg.Names.Slots[kv.Key];
@@ -161,12 +161,12 @@ namespace IronPython.Compiler.AST {
             }
         }
 
-        public override void Walk(IAstWalker w) {
-            if (w.Walk(this)) {
-                foreach (Expr e in bases) e.Walk(w);
-                body.Walk(w);
+        public override void Walk(IAstWalker walker) {
+            if (walker.Walk(this)) {
+                foreach (Expression e in bases) e.Walk(walker);
+                Body.Walk(walker);
             }
-            w.PostWalk(this);
+            walker.PostWalk(this);
         }
     }
 }

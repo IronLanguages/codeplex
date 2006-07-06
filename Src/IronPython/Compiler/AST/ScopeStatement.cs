@@ -22,133 +22,11 @@ using System.Reflection.Emit;
 using IronPython.Runtime;
 using IronPython.Compiler.Generation;
 
-namespace IronPython.Compiler.AST {
-    public abstract partial class ScopeStatement : Stmt {
-        public class Binding {
-            [Flags]
-            private enum Kind {
-                Free = 0,
-                Bound = 0x1,        // Defined in the scope
-                Global = 0x2,       // Global name
-                Environment = 0x4,  // Part of the scope's environment (referenced from enlosed scopes)
-
-                ValidityMask = Bound | Global | Environment,
-
-                Deleted = 0x8,      // del was detected for this name in the scope
-                Assigned = 0x10,    // assignment (definition) was detected for the name in the scope
-                Parameter = 0x20,   // the variable is a parameter
-            }
-            private Kind kind;
-            private int index;          // Flow analysis - index into the bit vector
-            private bool unassigned;    // Name ever referenced without being bound
-            private bool uninitialized; // Name ever used either uninitialized or after deletion
-
-            public override string ToString() {
-                return string.Format("Binding [({0}), idx {1}, unb {2}]", kind, index, unassigned);
-            }
-
-            public bool IsFree {
-                get { return kind == Kind.Free; }
-            }
-
-            public bool IsBound {
-                get { return (kind & Kind.Bound) != 0; }
-            }
-
-            public bool IsEnvironment {
-                get { return (kind & Kind.Environment) != 0; }
-            }
-
-            public bool IsLocal {
-                get { return (kind & Kind.Bound) != 0 && (kind & Kind.Global) == 0; }
-            }
-
-            public bool IsGlobal {
-                get { return (kind & Kind.Global) != 0; }
-            }
-
-            public bool IsDeleted {
-                get { return (kind & Kind.Deleted) != 0; }
-            }
-
-            public bool IsAssigned {
-                get { return (kind & Kind.Assigned) != 0; }
-            }
-
-            public bool IsParameter {
-                get { return (kind & Kind.Parameter) != 0; }
-            }
-
-            public void Bind() {
-                kind |= Kind.Bound | Kind.Assigned;
-            }
-
-            public void BindParameter() {
-                kind |= Kind.Bound | Kind.Assigned | Kind.Parameter;
-            }
-
-            public void BindGlobal() {
-                kind |= Kind.Bound | Kind.Global;
-            }
-
-            public void BindDeleted() {
-                kind |= Kind.Bound | Kind.Deleted;
-            }
-
-            public void Reference() {
-            }
-
-            public void MakeEnvironment() {
-                kind |= Kind.Environment;
-            }
-
-            public void MakeUnboundGlobal() {
-                kind |= Kind.Global;
-            }
-
-            internal int Index {
-                get { return index; }
-                set { index = value; }
-            }
-
-            internal bool Unassigned {
-                get { return unassigned; }
-            }
-
-            internal void UnassignedUse() {
-                unassigned = true;
-            }
-
-            internal bool Uninitialized {
-                get { return uninitialized; }
-            }
-
-            internal void UninitializedUse() {
-                uninitialized = true;
-            }
-
-            [Conditional("DEBUG")]
-            public void Validate() {
-                switch (kind & Kind.ValidityMask) {
-                    case Kind.Free:                             // free variable
-                    case Kind.Global:                           // free bound to global
-                    case Kind.Bound:                            // bound local
-                    case Kind.Bound | Kind.Global:              // bound global
-                    case Kind.Bound | Kind.Environment:         // bound local promoted to environment
-                        break;
-
-                    // invalid cases
-                    case Kind.Environment:
-                    case Kind.Environment | Kind.Global:
-                    case Kind.Bound | Kind.Environment | Kind.Global:
-                        Debug.Fail("invalid binding");
-                        break;
-                }
-            }
-        }
+namespace IronPython.Compiler.Ast {
+    public abstract partial class ScopeStatement : Statement {
 
         [Flags]
-        public enum ScopeFlags {
+        public enum ScopeAttributes {
             ContainsImportStar = 0x01,              // from module import *
             ContainsUnqualifiedExec = 0x02,         // exec "code"
             ContainsNestedFreeVariables = 0x04,     // nested function with free variable
@@ -159,49 +37,64 @@ namespace IronPython.Compiler.AST {
                                                     // (or passes environment through for access across scopes)
         }
 
-        public ScopeStatement parent;
-        public Stmt body;
+        private ScopeStatement parent;
+        private Statement body;
 
-        protected ScopeFlags scopeInfo;
+        private ScopeAttributes scopeInfo;
 
         // Names referenced in the scope with and their binding kind
-        protected Dictionary<SymbolId, Binding> names = new Dictionary<SymbolId, Binding>();
+        private Dictionary<SymbolId, Binding> names = new Dictionary<SymbolId, Binding>();
 
         // Names that need to be promoted to the environment and their assigned index in the environment
         internal Dictionary<SymbolId, EnvironmentReference> environment;
         internal EnvironmentFactory environmentFactory;
-        public int tempsCount;
+        private int tempsCount;
 
-        protected ScopeStatement(Stmt body) {
+        protected ScopeStatement(Statement body) {
             this.body = body;
         }
 
-        internal ScopeFlags ScopeInfo {
+        public ScopeAttributes ScopeInfo {
             get { return scopeInfo; }
         }
         internal bool IsClosure {
-            get { return (scopeInfo & ScopeFlags.IsClosure) != 0; }
-            set { if (value) scopeInfo |= ScopeFlags.IsClosure; else scopeInfo &= ~ScopeFlags.IsClosure; }
+            get { return (scopeInfo & ScopeAttributes.IsClosure) != 0; }
+            set { if (value) scopeInfo |= ScopeAttributes.IsClosure; else scopeInfo &= ~ScopeAttributes.IsClosure; }
         }
         internal bool HasEnvironment {
-            get { return (scopeInfo & ScopeFlags.HasEnvironment) != 0; }
-            set { if (value) scopeInfo |= ScopeFlags.HasEnvironment; else scopeInfo &= ~ScopeFlags.HasEnvironment; }
+            get { return (scopeInfo & ScopeAttributes.HasEnvironment) != 0; }
+            set { if (value) scopeInfo |= ScopeAttributes.HasEnvironment; else scopeInfo &= ~ScopeAttributes.HasEnvironment; }
         }
         internal bool ContainsImportStar {
-            get { return (scopeInfo & ScopeFlags.ContainsImportStar) != 0; }
-            set { if (value) scopeInfo |= ScopeFlags.ContainsImportStar; else scopeInfo &= ~ScopeFlags.ContainsImportStar; }
+            get { return (scopeInfo & ScopeAttributes.ContainsImportStar) != 0; }
+            set { if (value) scopeInfo |= ScopeAttributes.ContainsImportStar; else scopeInfo &= ~ScopeAttributes.ContainsImportStar; }
         }
         internal bool ContainsUnqualifiedExec {
-            get { return (scopeInfo & ScopeFlags.ContainsUnqualifiedExec) != 0; }
-            set { if (value) scopeInfo |= ScopeFlags.ContainsUnqualifiedExec; else scopeInfo &= ~ScopeFlags.ContainsUnqualifiedExec; }
+            get { return (scopeInfo & ScopeAttributes.ContainsUnqualifiedExec) != 0; }
+            set { if (value) scopeInfo |= ScopeAttributes.ContainsUnqualifiedExec; else scopeInfo &= ~ScopeAttributes.ContainsUnqualifiedExec; }
         }
         internal bool ContainsNestedFreeVariables {
-            get { return (scopeInfo & ScopeFlags.ContainsNestedFreeVariables) != 0; }
-            set { if (value) scopeInfo |= ScopeFlags.ContainsNestedFreeVariables; else scopeInfo &= ~ScopeFlags.ContainsNestedFreeVariables; }
+            get { return (scopeInfo & ScopeAttributes.ContainsNestedFreeVariables) != 0; }
+            set { if (value) scopeInfo |= ScopeAttributes.ContainsNestedFreeVariables; else scopeInfo &= ~ScopeAttributes.ContainsNestedFreeVariables; }
         }
 
         public Dictionary<SymbolId, Binding> Bindings {
             get { return names; }
+        }
+        
+        public ScopeStatement Parent {
+            get { return parent; }
+            set { parent = value; }
+        }
+
+        public Statement Body {
+            get { return body; }
+            set { body = value; }
+        }
+
+        public int TempsCount {
+            get { return tempsCount; }
+            set { tempsCount = value; }
         }
 
         protected Binding Get(SymbolId name) {
@@ -211,6 +104,10 @@ namespace IronPython.Compiler.AST {
                 names[name] = binding;
             }
             return binding;
+        }
+
+        protected Dictionary<SymbolId, Binding> Names {
+            get { return names; }
         }
 
         public void Bind(SymbolId name) {
@@ -483,7 +380,7 @@ namespace IronPython.Compiler.AST {
                             break;
                         }
                     }
-                    instance = current.environmentFactory.MakeParentSlot(instance);
+                    instance = EnvironmentFactory.MakeParentSlot(instance);
                     current = current.parent;
                 }
             }
@@ -504,13 +401,15 @@ namespace IronPython.Compiler.AST {
             }
         }
 
-        public override string GetDocString() {
-            return body.GetDocString();
+        public override string Documentation {
+            get {
+                return body.Documentation;
+            }
         }
     }
 
     internal class MightNeedLocalsWalker : AstWalker {
-        public static bool CheckMightNeedLocalsDictionary(Stmt s) {
+        public static bool CheckMightNeedLocalsDictionary(Statement s) {
             MightNeedLocalsWalker w = new MightNeedLocalsWalker();
             s.Walk(w);
             return w.MightNeedLocals;
@@ -522,20 +421,20 @@ namespace IronPython.Compiler.AST {
 
         #region AstWalker Method Overrides
 
-        public override void PostWalk(CallExpr node) {
+        public override void PostWalk(CallExpression node) {
             MightNeedLocals |= node.MightNeedLocalsDictionary();
         }
 
-        public override void PostWalk(ExecStmt node) {
+        public override void PostWalk(ExecStatement node) {
             MightNeedLocals |= node.NeedsLocalsDictionary();
         }
 
-        public override bool Walk(ClassDef node) {
+        public override bool Walk(ClassDefinition node) {
             // Do not recurse into nested classes
             return false;
         }
 
-        public override bool Walk(FuncDef node) {
+        public override bool Walk(FunctionDefinition node) {
             // Do not recurse into nested functions
             return false;
         }
@@ -544,24 +443,24 @@ namespace IronPython.Compiler.AST {
     }
 
     public class GlobalSuite : ScopeStatement {
-        public GlobalSuite(Stmt body)
+        public GlobalSuite(Statement body)
             : base(body) {
         }
 
         internal override void Emit(CodeGen cg) {
             CreateGlobalSlots(cg);
-            body.Emit(cg);
+            Body.Emit(cg);
         }
 
-        public override void Walk(IAstWalker w) {
-            if (w.Walk(this)) {
-                body.Walk(w);
+        public override void Walk(IAstWalker walker) {
+            if (walker.Walk(this)) {
+                Body.Walk(walker);
             }
-            w.PostWalk(this);
+            walker.PostWalk(this);
         }
 
         internal void CreateGlobalSlots(CodeGen cg) {
-            foreach (KeyValuePair<SymbolId, Binding> kv in names) {
+            foreach (KeyValuePair<SymbolId, Binding> kv in Names) {
                 Slot slot = cg.Names.Globals.GetOrMakeSlot(kv.Key);
                 if (kv.Value.IsGlobal) {
                     cg.Names.SetSlot(kv.Key, slot);
@@ -571,4 +470,129 @@ namespace IronPython.Compiler.AST {
             }
         }
     }
+
+    public class Binding {
+        [Flags]
+        private enum Kind {
+            Free = 0,
+            Bound = 0x1,        // Defined in the scope
+            Global = 0x2,       // Global name
+            Environment = 0x4,  // Part of the scope's environment (referenced from enlosed scopes)
+
+            ValidityMask = Bound | Global | Environment,
+
+            Deleted = 0x8,      // del was detected for this name in the scope
+            Assigned = 0x10,    // assignment (definition) was detected for the name in the scope
+            Parameter = 0x20,   // the variable is a parameter
+        }
+        private Kind kind;
+        private int index;          // Flow analysis - index into the bit vector
+        private bool unassigned;    // Name ever referenced without being bound
+        private bool uninitialized; // Name ever used either uninitialized or after deletion
+
+        public override string ToString() {
+            return string.Format("Binding [({0}), idx {1}, unb {2}]", kind, index, unassigned);
+        }
+
+        public bool IsFree {
+            get { return kind == Kind.Free; }
+        }
+
+        public bool IsBound {
+            get { return (kind & Kind.Bound) != 0; }
+        }
+
+        public bool IsEnvironment {
+            get { return (kind & Kind.Environment) != 0; }
+        }
+
+        public bool IsLocal {
+            get { return (kind & Kind.Bound) != 0 && (kind & Kind.Global) == 0; }
+        }
+
+        public bool IsGlobal {
+            get { return (kind & Kind.Global) != 0; }
+        }
+
+        public bool IsDeleted {
+            get { return (kind & Kind.Deleted) != 0; }
+        }
+
+        public bool IsAssigned {
+            get { return (kind & Kind.Assigned) != 0; }
+        }
+
+        public bool IsParameter {
+            get { return (kind & Kind.Parameter) != 0; }
+        }
+
+        public void Bind() {
+            kind |= Kind.Bound | Kind.Assigned;
+        }
+
+        public void BindParameter() {
+            kind |= Kind.Bound | Kind.Assigned | Kind.Parameter;
+        }
+
+        public void BindGlobal() {
+            kind |= Kind.Bound | Kind.Global;
+        }
+
+        public void BindDeleted() {
+            kind |= Kind.Bound | Kind.Deleted;
+        }
+
+        public void Reference() {
+            GC.KeepAlive(this); // access this
+        }
+
+        public void MakeEnvironment() {
+            kind |= Kind.Environment;
+        }
+
+        public void MakeUnboundGlobal() {
+            kind |= Kind.Global;
+        }
+
+        internal int Index {
+            get { return index; }
+            set { index = value; }
+        }
+
+        internal bool Unassigned {
+            get { return unassigned; }
+        }
+
+        internal void UnassignedUse() {
+            unassigned = true;
+        }
+
+        internal bool Uninitialized {
+            get { return uninitialized; }
+        }
+
+        internal void UninitializedUse() {
+            uninitialized = true;
+        }
+
+        [Conditional("DEBUG")]
+        public void Validate() {
+            switch (kind & Kind.ValidityMask) {
+                case Kind.Free:                             // free variable
+                case Kind.Global:                           // free bound to global
+                case Kind.Bound:                            // bound local
+                case Kind.Bound | Kind.Global:              // bound global
+                case Kind.Bound | Kind.Environment:         // bound local promoted to environment
+                    break;
+
+                // invalid cases
+                case Kind.Environment:
+                case Kind.Environment | Kind.Global:
+                case Kind.Bound | Kind.Environment | Kind.Global:
+                    Debug.Fail("invalid binding");
+                    break;
+            }
+        }
+    }
+
 }

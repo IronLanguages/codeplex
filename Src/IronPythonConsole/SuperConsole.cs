@@ -216,7 +216,7 @@ namespace IronPythonConsole {
             if (e.SpecialKey == ConsoleSpecialKey.ControlC) {
                 e.Cancel = true;
                 ctrlCEvent.Set();
-                MainEngineThread.Abort(new PythonKeyboardInterrupt(""));
+                MainEngineThread.Abort(new PythonKeyboardInterruptException(""));
             }
         }
 

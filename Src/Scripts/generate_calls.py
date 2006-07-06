@@ -466,7 +466,7 @@ CodeGenerator("Function FastCallable Members", gen_function_fastcall).doit()
 
 def gen_funcdef(cw):
     cw.enter_block("private void GetFunctionType(out Type ft, out Type tt)")
-    cw.enter_block("if (flags == FuncDefType.None)")
+    cw.enter_block("if (flags == FunctionAttributes.None)")
     cw.enter_block("if (parameters.Length <= Ops.MaximumCallArgs)")
     cw.enter_block("switch (parameters.Length)")
     for i in xrange(MAX_ARGS+1):

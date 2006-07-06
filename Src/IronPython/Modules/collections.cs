@@ -25,9 +25,9 @@ using IronPython.Runtime.Types;
 
 [assembly: PythonModule("collections", typeof(IronPython.Modules.PythonCollections))]
 namespace IronPython.Modules {
+    [Documentation("High performance data structures\n")]
     public class PythonCollections {
         public static object deque = Ops.GetDynamicTypeFromType(typeof(PythonDequeCollection));
-        public static string __doc__ = "High performance data structures\n";
 
         [PythonType("deque")]
         public class PythonDequeCollection : IEnumerable, IComparable, ICodeFormattable, IRichEquality {

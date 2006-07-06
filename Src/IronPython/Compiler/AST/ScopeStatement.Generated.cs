@@ -22,7 +22,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Compiler.Generation;
 
-namespace IronPython.Compiler.AST {
+namespace IronPython.Compiler.Ast {
     public abstract partial class ScopeStatement {
         private static Type GetEnvironmentType(int size, CodeGen cg, out ConstructorInfo ctor, out EnvironmentFactory ef) {
             Type envType;

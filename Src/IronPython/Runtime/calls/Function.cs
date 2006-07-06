@@ -22,7 +22,7 @@ using System.Reflection;
 
 using System.Threading;
 using IronPython.Runtime.Operations;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Compiler;
 using IronPython.Runtime.Types;
 
@@ -133,8 +133,8 @@ namespace IronPython.Runtime.Calls {
                 FunctionX funcX = func as FunctionX;
                 if (funcN != null) res |= FuncCodeFlags.VarArgs;
                 if (funcX != null) {
-                    if ((funcX.Flags & FuncDefType.KeywordDict) != 0) res |= FuncCodeFlags.KwArgs;
-                    if ((funcX.Flags & FuncDefType.ArgList) != 0) res |= FuncCodeFlags.VarArgs;
+                    if ((funcX.Flags & FunctionAttributes.KeywordDictionary) != 0) res |= FuncCodeFlags.KwArgs;
+                    if ((funcX.Flags & FunctionAttributes.ArgumentList) != 0) res |= FuncCodeFlags.VarArgs;
                 }
                 return (int)res;
             }
@@ -225,7 +225,7 @@ namespace IronPython.Runtime.Calls {
             for (int i = 0; i < func.ArgNames.Length; i++) {
                 if (func.ArgNames[i].IndexOf('#') != -1 && func.ArgNames[i].IndexOf('!') != -1) {
                     names.Add("." + (i * 2).ToString());
-                    nested.Add(FuncDef.DecodeTupleParamName(func.ArgNames[i]));
+                    nested.Add(FunctionDefinition.DecodeTupleParamName(func.ArgNames[i]));
                 } else {
                     names.Add(func.ArgNames[i]);
                 }
@@ -753,7 +753,7 @@ namespace IronPython.Runtime.Calls {
     /// </summary>
     [PythonType(typeof(PythonFunction))]
     public class FunctionX : FunctionN {
-        private FuncDefType flags;
+        private FunctionAttributes flags;
 
         // Given "foo(a, b, c=3, *argList, **argDist), only a, b, and c are considered "normal" parameters
         private int nparams;
@@ -763,19 +763,19 @@ namespace IronPython.Runtime.Calls {
 
         private int argListPos = -1, kwDictPos = -1;
 
-        public FunctionX(PythonModule globals, string name, CallTargetN target, string[] argNames, object[] defaults, FuncDefType flags)
+        public FunctionX(PythonModule globals, string name, CallTargetN target, string[] argNames, object[] defaults, FunctionAttributes flags)
             :
             base(globals, name, target, argNames, defaults) {
             this.flags = flags;
             nparams = argNames.Length;
 
-            if ((flags & FuncDefType.KeywordDict) != 0) {
+            if ((flags & FunctionAttributes.KeywordDictionary) != 0) {
                 extraArgs++;
                 nparams--;
                 kwDictPos = nparams;
             }
 
-            if ((flags & FuncDefType.ArgList) != 0) {
+            if ((flags & FunctionAttributes.ArgumentList) != 0) {
                 extraArgs++;
                 nparams--;
                 argListPos = nparams;
@@ -871,7 +871,7 @@ namespace IronPython.Runtime.Calls {
             throw PythonFunction.TypeErrorForIncorrectArgumentCount(Name, nparams, Defaults.Length, count, argListPos != -1, false);
         }
 
-        internal FuncDefType Flags {
+        internal FunctionAttributes Flags {
             get {
                 return flags;
             }
@@ -1123,10 +1123,10 @@ namespace IronPython.Runtime.Calls {
         string[] argNames;
         object[] defaults;
 
-        Stmt body;
+        Statement body;
         PythonModule globals;
 
-        public InterpFunction(string[] argNames, object[] defaults, Stmt body, PythonModule globals) {
+        public InterpFunction(string[] argNames, object[] defaults, Statement body, PythonModule globals) {
             this.argNames = argNames;
             this.defaults = defaults;
             this.body = body;
@@ -1138,7 +1138,7 @@ namespace IronPython.Runtime.Calls {
         #region ICallable Members
 
         public object Call(params object[] args) {
-            NameEnv env = new NameEnv(globals, new Dict());
+            NameEnvironment env = new NameEnvironment(globals, new Dict());
             int i = 0;
             for (; i < args.Length; i++) {
                 env.Set(argNames[i], args[i]);

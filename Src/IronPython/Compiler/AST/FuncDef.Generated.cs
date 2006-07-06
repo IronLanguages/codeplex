@@ -20,14 +20,14 @@ using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
-namespace IronPython.Compiler.AST {
-    public partial class FuncDef {
+namespace IronPython.Compiler.Ast {
+    public partial class FunctionDefinition {
         #region Generated FuncDef Code
 
         // *** BEGIN GENERATED CODE ***
 
         private void GetFunctionType(out Type ft, out Type tt) {
-            if (flags == FuncDefType.None) {
+            if (flags == FunctionAttributes.None) {
                 if (parameters.Length <= Ops.MaximumCallArgs) {
                     switch (parameters.Length) {
                         case 0: ft = typeof(Function0); tt = typeof(CallTarget0); break;

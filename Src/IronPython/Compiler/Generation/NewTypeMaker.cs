@@ -100,10 +100,10 @@ namespace IronPython.Compiler.Generation {
 
         private static NewTypeMaker GetTypeMaker(Tuple bases, string typeName, NewTypeInfo ti) {
             if (IsInstanceType(ti.BaseType)) {
-                return new NewSubtypeMaker(bases, typeName, ti);
+                return new NewSubtypeMaker(bases, ti);
             }
 
-            return new NewTypeMaker(bases, typeName, ti);
+            return new NewTypeMaker(bases, ti);
         }
 
         private static List<string> GetSlots(IDictionary<object, object> dict) {
@@ -237,7 +237,7 @@ namespace IronPython.Compiler.Generation {
             return new NewTypeInfo(baseCLIType, interfaceTypes, slots);
         }
 
-        protected NewTypeMaker(Tuple baseClasses, String name, NewTypeInfo typeInfo) {
+        protected NewTypeMaker(Tuple baseClasses, NewTypeInfo typeInfo) {
             this.baseType = typeInfo.BaseType;
             this.baseClasses = baseClasses;
             this.interfaceTypes = typeInfo.InterfaceTypes;

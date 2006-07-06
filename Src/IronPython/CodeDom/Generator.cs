@@ -371,7 +371,7 @@ namespace IronPython.CodeDom {
         }
 
         protected override void GenerateEvent(CodeMemberEvent e, CodeTypeDeclaration c) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         protected override void GenerateEventReferenceExpression(CodeEventReferenceExpression e) {
@@ -1190,19 +1190,19 @@ namespace IronPython.CodeDom {
 
         #region Not supported overrides
         protected override void GenerateAttributeDeclarationsEnd(CodeAttributeDeclarationCollection attributes) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         protected override void GenerateAttributeDeclarationsStart(CodeAttributeDeclarationCollection attributes) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         protected override void GenerateGotoStatement(CodeGotoStatement e) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         protected override void GenerateLabeledStatement(CodeLabeledStatement e) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         protected override void GenerateLinePragmaEnd(CodeLinePragma e) {
@@ -1457,20 +1457,20 @@ namespace IronPython.CodeDom {
             userData[typeof(System.Drawing.Point)] = new System.Drawing.Point(cursorCol, cursorRow);
         }
 
-        private string UserDataString(IDictionary userData, string name, string defaultValue) {
+        private static string UserDataString(IDictionary userData, string name, string defaultValue) {
             if (userData == null) return defaultValue;
             string res = userData[name] as string;
             if (res == null) return defaultValue;
             return res;
         }
 
-        private bool UserDataFalse(IDictionary userData, string name) {
+        private static bool UserDataFalse(IDictionary userData, string name) {
             return userData == null ||
                 userData[name] == null ||
                 ((bool)userData[name]) == false;
         }
         
-        private bool UserDataTrue(IDictionary userData, string name) {
+        private static bool UserDataTrue(IDictionary userData, string name) {
             return userData == null || 
                 userData[name] == null || 
                 ((bool)userData[name]) == true;

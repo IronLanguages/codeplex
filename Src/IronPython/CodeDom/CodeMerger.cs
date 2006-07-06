@@ -141,7 +141,7 @@ namespace IronPython.CodeDom {
             }
         }
 
-        private List<string> GetLines(string text) {
+        private static List<string> GetLines(string text) {
             List<string> res;
             if (text.IndexOf("\r\n") != -1) {
                 res = new List<string>(text.Split(new string[] { "\r\n" }, StringSplitOptions.None));

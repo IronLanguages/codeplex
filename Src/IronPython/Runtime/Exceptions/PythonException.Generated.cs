@@ -26,190 +26,190 @@ namespace IronPython.Runtime.Exceptions {
 
     [PythonType("ImportError")]
     [Serializable]
-    public class PythonImportError : Exception {
-        public PythonImportError() : base() { }
-        public PythonImportError(string msg) : base(msg) { }
-        public PythonImportError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonImportErrorException : Exception {
+        public PythonImportErrorException() : base() { }
+        public PythonImportErrorException(string msg) : base(msg) { }
+        public PythonImportErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("RuntimeError")]
     [Serializable]
-    public class PythonRuntimeError : Exception {
-        public PythonRuntimeError() : base() { }
-        public PythonRuntimeError(string msg) : base(msg) { }
-        public PythonRuntimeError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonRuntimeErrorException : Exception {
+        public PythonRuntimeErrorException() : base() { }
+        public PythonRuntimeErrorException(string msg) : base(msg) { }
+        public PythonRuntimeErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("UnicodeTranslateError")]
     [Serializable]
-    public class PythonUnicodeTranslateError : PythonUnicodeError {
-        public PythonUnicodeTranslateError() : base() { }
-        public PythonUnicodeTranslateError(string msg) : base(msg) { }
-        public PythonUnicodeTranslateError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonUnicodeTranslateErrorException : PythonUnicodeErrorException {
+        public PythonUnicodeTranslateErrorException() : base() { }
+        public PythonUnicodeTranslateErrorException(string msg) : base(msg) { }
+        public PythonUnicodeTranslateErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("PendingDeprecationWarning")]
     [Serializable]
-    public class PythonPendingDeprecationWarning : PythonWarning {
-        public PythonPendingDeprecationWarning() : base() { }
-        public PythonPendingDeprecationWarning(string msg) : base(msg) { }
-        public PythonPendingDeprecationWarning(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonPendingDeprecationWarningException : PythonWarningException {
+        public PythonPendingDeprecationWarningException() : base() { }
+        public PythonPendingDeprecationWarningException(string msg) : base(msg) { }
+        public PythonPendingDeprecationWarningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("EnvironmentError")]
     [Serializable]
-    public class PythonEnvironmentError : Exception {
-        public PythonEnvironmentError() : base() { }
-        public PythonEnvironmentError(string msg) : base(msg) { }
-        public PythonEnvironmentError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonEnvironmentErrorException : Exception {
+        public PythonEnvironmentErrorException() : base() { }
+        public PythonEnvironmentErrorException(string msg) : base(msg) { }
+        public PythonEnvironmentErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("LookupError")]
     [Serializable]
-    public class PythonLookupError : Exception {
-        public PythonLookupError() : base() { }
-        public PythonLookupError(string msg) : base(msg) { }
-        public PythonLookupError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonLookupErrorException : Exception {
+        public PythonLookupErrorException() : base() { }
+        public PythonLookupErrorException(string msg) : base(msg) { }
+        public PythonLookupErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("OSError")]
     [Serializable]
-    public class PythonOSError : PythonEnvironmentError {
-        public PythonOSError() : base() { }
-        public PythonOSError(string msg) : base(msg) { }
-        public PythonOSError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonOSErrorException : PythonEnvironmentErrorException {
+        public PythonOSErrorException() : base() { }
+        public PythonOSErrorException(string msg) : base(msg) { }
+        public PythonOSErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("DeprecationWarning")]
     [Serializable]
-    public class PythonDeprecationWarning : PythonWarning {
-        public PythonDeprecationWarning() : base() { }
-        public PythonDeprecationWarning(string msg) : base(msg) { }
-        public PythonDeprecationWarning(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonDeprecationWarningException : PythonWarningException {
+        public PythonDeprecationWarningException() : base() { }
+        public PythonDeprecationWarningException(string msg) : base(msg) { }
+        public PythonDeprecationWarningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("UnicodeError")]
     [Serializable]
-    public class PythonUnicodeError : Exception {
-        public PythonUnicodeError() : base() { }
-        public PythonUnicodeError(string msg) : base(msg) { }
-        public PythonUnicodeError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonUnicodeErrorException : Exception {
+        public PythonUnicodeErrorException() : base() { }
+        public PythonUnicodeErrorException(string msg) : base(msg) { }
+        public PythonUnicodeErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("FloatingPointError")]
     [Serializable]
-    public class PythonFloatingPointError : Exception {
-        public PythonFloatingPointError() : base() { }
-        public PythonFloatingPointError(string msg) : base(msg) { }
-        public PythonFloatingPointError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonFloatingPointErrorException : Exception {
+        public PythonFloatingPointErrorException() : base() { }
+        public PythonFloatingPointErrorException(string msg) : base(msg) { }
+        public PythonFloatingPointErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("ReferenceError")]
     [Serializable]
-    public class PythonReferenceError : Exception {
-        public PythonReferenceError() : base() { }
-        public PythonReferenceError(string msg) : base(msg) { }
-        public PythonReferenceError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonReferenceErrorException : Exception {
+        public PythonReferenceErrorException() : base() { }
+        public PythonReferenceErrorException(string msg) : base(msg) { }
+        public PythonReferenceErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("NameError")]
     [Serializable]
-    public class PythonNameError : Exception {
-        public PythonNameError() : base() { }
-        public PythonNameError(string msg) : base(msg) { }
-        public PythonNameError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonNameErrorException : Exception {
+        public PythonNameErrorException() : base() { }
+        public PythonNameErrorException(string msg) : base(msg) { }
+        public PythonNameErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("OverflowWarning")]
     [Serializable]
-    public class PythonOverflowWarning : PythonWarning {
-        public PythonOverflowWarning() : base() { }
-        public PythonOverflowWarning(string msg) : base(msg) { }
-        public PythonOverflowWarning(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonOverflowWarningException : PythonWarningException {
+        public PythonOverflowWarningException() : base() { }
+        public PythonOverflowWarningException(string msg) : base(msg) { }
+        public PythonOverflowWarningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("FutureWarning")]
     [Serializable]
-    public class PythonFutureWarning : PythonWarning {
-        public PythonFutureWarning() : base() { }
-        public PythonFutureWarning(string msg) : base(msg) { }
-        public PythonFutureWarning(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonFutureWarningException : PythonWarningException {
+        public PythonFutureWarningException() : base() { }
+        public PythonFutureWarningException(string msg) : base(msg) { }
+        public PythonFutureWarningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("AssertionError")]
     [Serializable]
-    public class PythonAssertionError : Exception {
-        public PythonAssertionError() : base() { }
-        public PythonAssertionError(string msg) : base(msg) { }
-        public PythonAssertionError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonAssertionErrorException : Exception {
+        public PythonAssertionErrorException() : base() { }
+        public PythonAssertionErrorException(string msg) : base(msg) { }
+        public PythonAssertionErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("RuntimeWarning")]
     [Serializable]
-    public class PythonRuntimeWarning : PythonWarning {
-        public PythonRuntimeWarning() : base() { }
-        public PythonRuntimeWarning(string msg) : base(msg) { }
-        public PythonRuntimeWarning(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonRuntimeWarningException : PythonWarningException {
+        public PythonRuntimeWarningException() : base() { }
+        public PythonRuntimeWarningException(string msg) : base(msg) { }
+        public PythonRuntimeWarningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("KeyboardInterrupt")]
     [Serializable]
-    public class PythonKeyboardInterrupt : Exception {
-        public PythonKeyboardInterrupt() : base() { }
-        public PythonKeyboardInterrupt(string msg) : base(msg) { }
-        public PythonKeyboardInterrupt(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonKeyboardInterruptException : Exception {
+        public PythonKeyboardInterruptException() : base() { }
+        public PythonKeyboardInterruptException(string msg) : base(msg) { }
+        public PythonKeyboardInterruptException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("UserWarning")]
     [Serializable]
-    public class PythonUserWarning : PythonWarning {
-        public PythonUserWarning() : base() { }
-        public PythonUserWarning(string msg) : base(msg) { }
-        public PythonUserWarning(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonUserWarningException : PythonWarningException {
+        public PythonUserWarningException() : base() { }
+        public PythonUserWarningException(string msg) : base(msg) { }
+        public PythonUserWarningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("SyntaxWarning")]
     [Serializable]
-    public class PythonSyntaxWarning : PythonWarning {
-        public PythonSyntaxWarning() : base() { }
-        public PythonSyntaxWarning(string msg) : base(msg) { }
-        public PythonSyntaxWarning(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonSyntaxWarningException : PythonWarningException {
+        public PythonSyntaxWarningException() : base() { }
+        public PythonSyntaxWarningException(string msg) : base(msg) { }
+        public PythonSyntaxWarningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("UnboundLocalError")]
     [Serializable]
-    public class PythonUnboundLocalError : PythonNameError {
-        public PythonUnboundLocalError() : base() { }
-        public PythonUnboundLocalError(string msg) : base(msg) { }
-        public PythonUnboundLocalError(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonUnboundLocalErrorException : PythonNameErrorException {
+        public PythonUnboundLocalErrorException() : base() { }
+        public PythonUnboundLocalErrorException(string msg) : base(msg) { }
+        public PythonUnboundLocalErrorException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 
     [PythonType("Warning")]
     [Serializable]
-    public class PythonWarning : Exception {
-        public PythonWarning() : base() { }
-        public PythonWarning(string msg) : base(msg) { }
-        public PythonWarning(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    public class PythonWarningException : Exception {
+        public PythonWarningException() : base() { }
+        public PythonWarningException(string msg) : base(msg) { }
+        public PythonWarningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
 

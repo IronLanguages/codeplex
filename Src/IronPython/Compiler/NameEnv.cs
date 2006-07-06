@@ -25,17 +25,24 @@ using IronPython.Runtime.Operations;
 using IronPython.Modules;
 
 namespace IronPython.Compiler {
-    public class NameEnv {
-        public PythonModule globals;
+    public class NameEnvironment {
+        private PythonModule globals;
         private object locals;
         private Dictionary<string, bool> globalNames = new Dictionary<string, bool>();
         private ReflectedType builtin;
 
-        public NameEnv(PythonModule globals, object locals) {
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "0#globals")]
+        public NameEnvironment(PythonModule globals, object locals) {
             this.globals = globals;
             if (locals == null) locals = globals.__dict__;
             this.locals = locals;
             this.builtin = TypeCache.Builtin;
+        }
+
+        public PythonModule Globals {
+            get { return globals; }
+            set { globals = value; }
         }
 
         public void MarkGlobal(string name) {

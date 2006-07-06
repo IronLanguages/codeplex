@@ -27,7 +27,7 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Calls;
 using IronPython.Compiler;
 using IronPython.Compiler.Generation;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Runtime.Operations;
 
 using IronMath;
@@ -237,13 +237,13 @@ namespace IronPython.Modules {
             CompiledCode compiledCode;
 
             if (kind == "exec") {
-                Stmt s = p.ParseFileInput();
+                Statement s = p.ParseFileInput();
                 compiledCode = OutputGenerator.GenerateSnippet(cc, s);
             } else if (kind == "eval") {
-                Expr e = p.ParseTestListAsExpression();
-                compiledCode = OutputGenerator.GenerateSnippet(cc, new ReturnStmt(e), true, false);
+                Expression e = p.ParseTestListAsExpression();
+                compiledCode = OutputGenerator.GenerateSnippet(cc, new ReturnStatement(e), true, false);
             } else if (kind == "single") {
-                Stmt s = p.ParseSingleStatement();
+                Statement s = p.ParseSingleStatement();
                 compiledCode = OutputGenerator.GenerateSnippet(cc, s, true, false);
             } else {
                 throw Ops.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
@@ -346,19 +346,19 @@ namespace IronPython.Modules {
 
             PythonModule mod = new PythonModule(context.Module.ModuleName, globals, context.SystemState, null, context.ContextFlags);
             ModuleScope moduleScope = new ModuleScope(mod, globals, locals, context);
-            return Eval(moduleScope, expression, IronPython.Hosting.ExecutionOptions.Default);
+            return Eval(moduleScope, expression, IronPython.Hosting.ExecutionOptions.None);
         }
 
         internal static object Eval(ModuleScope moduleScope, string expression, IronPython.Hosting.ExecutionOptions executionOptions) {
             CompilerContext cc = moduleScope.CreateCompilerContext();
             Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, cc, expression.TrimStart(' ', '\t'));
-            Expr e = p.ParseTestListAsExpression();
+            Expression e = p.ParseTestListAsExpression();
 
-            if (Options.FastEval) {
+            if (Options.FastEvaluation) {
                 // Direct evaluation can be much faster than codegen (>100x)
-                return e.Evaluate(new NameEnv(moduleScope.Module, ((ICallerContext)moduleScope).Locals));
+                return e.Evaluate(new NameEnvironment(moduleScope.Module, ((ICallerContext)moduleScope).Locals));
             } else {
-                Stmt s = new ReturnStmt(e);
+                Statement s = new ReturnStatement(e);
                 bool enableDebugging = (executionOptions & IronPython.Hosting.ExecutionOptions.EnableDebugging) != 0;
                 CompiledCode compiledCode = OutputGenerator.GenerateSnippet(cc, s, false, enableDebugging);
                 return compiledCode.Run(moduleScope);
@@ -398,7 +398,7 @@ namespace IronPython.Modules {
             } catch (UnauthorizedAccessException x) {
                 throw Ops.IOError(x.Message);
             }
-            Stmt s = p.ParseFileInput();
+            Statement s = p.ParseFileInput();
 
             IAttributesDictionary l = locals as IAttributesDictionary;
             if (l == null) {
@@ -1094,7 +1094,7 @@ namespace IronPython.Modules {
 
             CompilerContext cc = new CompilerContext(module.Filename);
             Parser parser = Parser.FromFile(module.SystemState, cc);
-            Stmt s = parser.ParseFileInput();
+            Statement s = parser.ParseFileInput();
             PythonModule pmod = OutputGenerator.GenerateModule(module.SystemState, cc, s, module.ModuleName, "__" + System.Threading.Interlocked.Increment(ref reloadCounter));
 
             foreach (KeyValuePair<object, object> attr in module.__dict__) {

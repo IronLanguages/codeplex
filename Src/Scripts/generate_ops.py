@@ -21,9 +21,10 @@ import operator
 kwlist = ['and', 'assert', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'exec', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'not', 'or', 'pass', 'print', 'raise', 'return', 'try', 'while', 'yield']
 
 class Symbol:
-    def __init__(self, symbol, name):
+    def __init__(self, symbol, name, titleName = None):
         self.symbol = symbol
         self.name = name
+        self.titleName = titleName
 
     def cap_name(self):
         return self.name.title().replace(' ', '')
@@ -32,7 +33,8 @@ class Symbol:
         return self.name.upper().replace(' ', '_')
 
     def title_name(self):
-        return self.name.title().replace(' ', '')
+        if not self.titleName: return self.name.title().replace(' ', '')
+        return self.titleName
 
     def simple_name(self):
         return self.name[0] + self.cap_name()[1:]
@@ -232,8 +234,8 @@ class DivisionOperator(Operator):
         
         return 6
 class Grouping(Symbol):
-    def __init__(self, symbol, name, side):
-        Symbol.__init__(self, symbol, side+" "+name)
+    def __init__(self, symbol, name, side, titleName=None):
+        Symbol.__init__(self, symbol, side+" "+name, titleName)
         self.base_name = name
         self.side = side
 
@@ -255,13 +257,13 @@ binaries2 = [('%', 'mod', 5, 'Mod'), ('<<', 'lshift', 3, 'LeftShift'), ('>>', 'r
 def add_binaries(list):
     for sym, name, prec,clrName in list:
         ops.append(Operator(sym, name, 'r'+name, clrName, prec))
-        ops.append(Symbol(sym+"=", name+" equal"))
+        ops.append(Symbol(sym+"=", name+" Equal", clrName+ "Equal"))
 
 add_binaries(binaries1)
 
 sym, name, prec, clrName, tname, tclrName = ('/', 'div', 5, 'Divide', 'truediv', 'TrueDivide')
 ops.append(DivisionOperator(sym, name, 'r'+name, clrName, prec, tname, 'r'+tname, tclrName))
-ops.append(Symbol(sym+"=", name+" equal"))
+ops.append(Symbol(sym+"=", name+" Equal"))
 
 add_binaries(binaries2)
 
@@ -275,15 +277,21 @@ compares = [('<', 'lt', 'ge', 'LessThan', 'GreaterThan', "false", "true", "false
 for sym, name, rname,clrName,opposite, bool1, bool2, bool3 in compares:
     ops.append(Operator(sym, name, rname,clrName, opposite=opposite, bool1=bool1, bool2=bool2, bool3=bool3))
 
-groupings = [('(', ')', 'paren'), ('[', ']', 'bracket'), ('{', '}', 'brace')]
-for sym, rsym, name in groupings:
-    ops.append(Grouping(sym, name, 'l'))
-    ops.append(Grouping(rsym, name, 'r'))
+groupings = [('(', ')', 'paren', 'Parenthesis'), ('[', ']', 'bracket', 'Bracket'), ('{', '}', 'brace', 'Brace')]
+for sym, rsym, name, fullName in groupings:
+    ops.append(Grouping(sym, name, 'l', 'Left' + fullName))
+    ops.append(Grouping(rsym, name, 'r', 'Right' + fullName))
 
-simple = [(',', 'comma'), (':', 'colon'), ('`', 'backquote'), (';', 'semicolon'),
-          ('=', 'assign'), ('~', 'twidle'), ('@', 'at')]
-for sym, name in simple:
-    ops.append(Symbol(sym, name))
+simple = [(',', 'comma'), (':', 'colon'), ('`', 'backquote', 'BackQuote'), (';', 'semicolon'),
+          ('=', 'assign'), ('~', 'twiddle'), ('@', 'at')]
+for info in simple:
+    if len(info) == 2:
+        sym, name = info
+        title = None
+    else:
+        sym, name, title = info
+    
+    ops.append(Symbol(sym, name, title))
 
 start_symbols = {}
 for op in ops:
@@ -341,6 +349,14 @@ def tokenize_generator(cw):
 
 CodeGenerator("Tokenize Ops", tokenize_generator).doit()
 
+friendlyOverload = {'elif':"ElseIf"}
+def keywordToFriendly(kw):
+    if friendlyOverload.has_key(kw):
+        return friendlyOverload[kw]
+    
+    return kw.title()
+    
+
 def tokenkinds_generator(cw):
     i = 32
     for op in ops:
@@ -351,7 +367,7 @@ def tokenkinds_generator(cw):
     keyword_list = list(kwlist)
     keyword_list.sort()
     for kw in keyword_list:
-        cw.write("Keyword%s = %d," % (kw.title(), i))
+        cw.write("Keyword%s = %d," % (keywordToFriendly(kw), i))
         i += 1
 
 CodeGenerator("Token Kinds", tokenkinds_generator).doit()
@@ -359,7 +375,7 @@ CodeGenerator("Token Kinds", tokenkinds_generator).doit()
 def tokens_generator(cw):
     for op in ops:
         if isinstance(op, Operator) and op.name != "lg":
-            creator = 'new OperatorToken(TokenKind.%s, Operator.%s)' % (
+            creator = 'new OperatorToken(TokenKind.%s, PythonOperator.%s)' % (
                 op.title_name(), op.title_name())
         else:
             creator = 'new SymbolToken(TokenKind.%s, "%s")' % (
@@ -383,18 +399,18 @@ def tokens_generator(cw):
 
     for kw in keyword_list:
         creator = 'new SymbolToken(TokenKind.Keyword%s, "%s")' % (
-            kw.title(), kw)
+            keywordToFriendly(kw), kw)
         cw.write("private static readonly Token kw%sToken = %s;" %
-               (kw.title(), creator))
+               (keywordToFriendly(kw), creator))
 
         dict_init.append("Keywords[SymbolTable.StringToId(\"%s\")] = kw%sToken;" %
-                         (kw, kw.title()))
+                         (kw, keywordToFriendly(kw)))
 
     cw.write("")
     cw.write("")
     for kw in keyword_list:
-        cw.enter_block("public static Token Keyword%sToken" % kw.title())
-        cw.write("get { return kw%sToken; }" % kw.title())
+        cw.enter_block("public static Token Keyword%sToken" % keywordToFriendly(kw))
+        cw.write("get { return kw%sToken; }" % keywordToFriendly(kw))
         cw.exit_block()
         cw.write("")
         

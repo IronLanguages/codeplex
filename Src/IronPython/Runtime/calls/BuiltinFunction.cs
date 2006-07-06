@@ -112,7 +112,7 @@ namespace IronPython.Runtime.Calls {
             get {
                 if (optimizedTarget == null) {
                     if (targets.Length == 0) throw Ops.TypeError("cannot call generic method w/o specifying type");
-                    optimizedTarget = MethodBinder.MakeFastCallable(Name, targets, FunctionType);
+                    optimizedTarget = MethodBinder.MakeFastCallable(Name, targets);
                     if (IsReversedOperator) optimizedTarget = new ReversedFastCallableWrapper(optimizedTarget);
                 }
                 return optimizedTarget;
@@ -482,7 +482,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         #region IContextAwareMember Members
 
         public bool IsVisible(ICallerContext context) {
-            return IsPythonVisible || ((context.ContextFlags & CallerContextFlags.ShowCls) != 0);
+            return IsPythonVisible || ((context.ContextFlags & CallerContextAttributes.ShowCls) != 0);
         }
 
         #endregion
@@ -818,7 +818,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         }
 
         public override object CallInstance(ICallerContext context, object instance, params object[] args) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public bool TryCall(object arg, out object ret) {

@@ -33,20 +33,20 @@ namespace IronPython.Runtime {
         int GetLength();
 
         // return Ops.FALSE or Ops.TRUE
-        object Contains(object o);
-        object IsSubset(object s);
-        object IsSuperset(object s);
+        object Contains(object value);
+        object IsSubset(object set);
+        object IsSuperset(object set);
 
         // private methods used for operations between set types.
-        ISet PrivDifference(IEnumerable s);
-        ISet PrivIntersection(IEnumerable s);
-        ISet PrivSymmetricDifference(IEnumerable s);
-        ISet PrivUnion(IEnumerable s);
-        void PrivAdd(object o);
-        void PrivRemove(object o);
+        ISet PrivDifference(IEnumerable set);
+        ISet PrivIntersection(IEnumerable set);
+        ISet PrivSymmetricDifference(IEnumerable set);
+        ISet PrivUnion(IEnumerable set);
+        void PrivAdd(object adding);
+        void PrivRemove(object removing);
         void PrivFreeze();
 
-        void SetData(Dict dict);
+        void SetData(Dict data);
         void SetData(IEnumerator set);
     }
 
@@ -248,38 +248,38 @@ namespace IronPython.Runtime {
             return Ops.Bool2Object(items.ContainsKey(o));
         }
         [PythonName("issubset")]
-        public object IsSubset(object s) {
-            return SetHelpers.IsSubset(this, s);
+        public object IsSubset(object set) {
+            return SetHelpers.IsSubset(this, set);
         }
         [PythonName("issuperset")]
-        public object IsSuperset(object s) {
-            return GreaterThanOrEqual(new SetCollection(Ops.GetEnumerator(s)));
+        public object IsSuperset(object set) {
+            return GreaterThanOrEqual(new SetCollection(Ops.GetEnumerator(set)));
         }
 
-        ISet ISet.PrivDifference(IEnumerable s) {
-            return (ISet)Difference(s);
+        ISet ISet.PrivDifference(IEnumerable set) {
+            return (ISet)Difference(set);
         }
-        ISet ISet.PrivIntersection(IEnumerable s) {
-            return (ISet)Intersection(s);
+        ISet ISet.PrivIntersection(IEnumerable set) {
+            return (ISet)Intersection(set);
         }
-        ISet ISet.PrivSymmetricDifference(IEnumerable s) {
-            return (ISet)SymmetricDifference(s);
+        ISet ISet.PrivSymmetricDifference(IEnumerable set) {
+            return (ISet)SymmetricDifference(set);
         }
-        ISet ISet.PrivUnion(IEnumerable s) {
-            return (ISet)Union(s);
+        ISet ISet.PrivUnion(IEnumerable set) {
+            return (ISet)Union(set);
         }
-        void ISet.PrivAdd(object o) {
-            Add(o);
+        void ISet.PrivAdd(object adding) {
+            Add(adding);
         }
-        void ISet.PrivRemove(object o) {
-            Remove(o);
+        void ISet.PrivRemove(object removing) {
+            Remove(removing);
         }
         void ISet.PrivFreeze() {
             // nop for non-frozen sets.
         }
 
-        void ISet.SetData(Dict dict) {
-            items = dict;
+        void ISet.SetData(Dict data) {
+            items = data;
         }
 
         void ISet.SetData(IEnumerator set) {
@@ -436,7 +436,7 @@ namespace IronPython.Runtime {
         #region Operators
 
         [PythonName("__iand__")]
-        public SetCollection __iand__(object s) {
+        public SetCollection InPlaceAnd(object s) {
             ISet set = s as ISet; 
             if (set == null) throw Ops.TypeError("unsupported operand type(s) for &=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
@@ -445,7 +445,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__ior__")]
-        public SetCollection __ior__(object s) {
+        public SetCollection InPlaceOr(object s) {
             ISet set = s as ISet; 
             if (set == null) throw Ops.TypeError("unsupported operand type(s) for |=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
@@ -454,7 +454,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__isub__")]
-        public SetCollection __isub__(object s) {
+        public SetCollection InPlaceSubtract(object s) {
             ISet set = s as ISet;
             if (set == null) throw Ops.TypeError("unsupported operand type(s) for -=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
@@ -463,7 +463,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__ixor__")]
-        public SetCollection __ixor__(object s) {
+        public SetCollection InPlaceXor(object s) {
             ISet set = s as ISet;
             if (set == null) throw Ops.TypeError("unsupported operand type(s) for ^=: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
@@ -472,12 +472,12 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__cmp__")]
-        public int __cmp__(object o) {
+        public int Compare(object o) {
             throw Ops.TypeError("cannot compare sets using cmp()");
         }
 
         [PythonName("__and__")]
-        public object __and__(object s) {
+        public object OperatorAnd(object s) {
             ISet set = s as ISet;
             if (set == null) throw Ops.TypeError("unsupported operand type(s) for &: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
@@ -494,7 +494,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__ror__")]
-        public object __ror__(object s) {
+        public object OperatorOr(object s) {
             ISet set = s as ISet;
             if (set == null) throw Ops.TypeError("unsupported operand type(s) for |: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
@@ -511,7 +511,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__rsub__")]
-        public object __rsub__(object s) {
+        public object ReverseSubtract(object s) {
             ISet set = s as ISet;
             if (set == null) throw Ops.TypeError("unsupported operand type(s) for -: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
@@ -524,7 +524,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__rxor__")]
-        public object __rxor__(object s) {
+        public object ReverseXor(object s) {
             ISet set = s as ISet; 
             if (set == null) throw Ops.TypeError("unsupported operand type(s) for ^: {0} and {1}", Ops.StringRepr(Ops.GetDynamicType(s)), Ops.StringRepr(Ops.GetDynamicType(this)));
 
@@ -732,42 +732,42 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("issubset")]
-        public object IsSubset(object s) {
-            return SetHelpers.IsSubset(this, s);
+        public object IsSubset(object set) {
+            return SetHelpers.IsSubset(this, set);
         }
 
         [PythonName("issuperset")]
-        public object IsSuperset(object s) {
-            return GreaterThanOrEqual(new FrozenSetCollection(Ops.GetEnumerator(s)));
+        public object IsSuperset(object set) {
+            return GreaterThanOrEqual(new FrozenSetCollection(Ops.GetEnumerator(set)));
         }
 
-        ISet ISet.PrivDifference(IEnumerable s) {
-            return (ISet)Difference(s);
+        ISet ISet.PrivDifference(IEnumerable set) {
+            return (ISet)Difference(set);
         }
-        ISet ISet.PrivIntersection(IEnumerable s) {
-            return (ISet)Intersection(s);
+        ISet ISet.PrivIntersection(IEnumerable set) {
+            return (ISet)Intersection(set);
         }
-        ISet ISet.PrivSymmetricDifference(IEnumerable s) {
-            return (ISet)SymmetricDifference(s);
+        ISet ISet.PrivSymmetricDifference(IEnumerable set) {
+            return (ISet)SymmetricDifference(set);
         }
-        ISet ISet.PrivUnion(IEnumerable s) {
-            return (ISet)Union(s);
+        ISet ISet.PrivUnion(IEnumerable set) {
+            return (ISet)Union(set);
         }
 
-        void ISet.PrivAdd(object o) {
-            Ops.Hash(o);// make sure we're hashable
-            if (!items.ContainsKey(o)) {
-                items.Add(o, o);
+        void ISet.PrivAdd(object adding) {
+            Ops.Hash(adding);// make sure we're hashable
+            if (!items.ContainsKey(adding)) {
+                items.Add(adding, adding);
             }
         }
 
-        void ISet.PrivRemove(object o) {
-            Ops.Hash(o);// make sure we're hashable
-            items.Remove(o);
+        void ISet.PrivRemove(object removing) {
+            Ops.Hash(removing);// make sure we're hashable
+            items.Remove(removing);
         }
 
-        void ISet.SetData(Dict dict) {
-            items = dict;
+        void ISet.SetData(Dict data) {
+            items = data;
         }
 
         void ISet.SetData(IEnumerator set) {

@@ -379,7 +379,7 @@ namespace IronPython.Modules {
             }
 
             public void Reset() {
-                throw new Exception("The method or operation is not implemented.");
+                throw new NotImplementedException("The method or operation is not implemented.");
             }
 
             #endregion
@@ -501,7 +501,7 @@ namespace IronPython.Modules {
             }
 
             public void Reset() {
-                throw new Exception("The method or operation is not implemented.");
+                throw new NotImplementedException("The method or operation is not implemented.");
             }
 
             #endregion

@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace IronPython.Hosting {
@@ -41,12 +42,12 @@ namespace IronPython.Hosting {
     }
 
     public struct CodeSpan {
-        public int startLine;
-        public int startColumn;
-        public int endLine;
-        public int endColumn;
+        private int startLine;
+        private int startColumn;
+        private int endLine;
+        private int endColumn;
 
-        public static CodeSpan Empty;
+        public static readonly CodeSpan Empty;
 
         public CodeSpan(int startLine, int startColumn, int endLine, int endColumn) {
             this.startLine = startLine;
@@ -56,10 +57,60 @@ namespace IronPython.Hosting {
         }
 
         public CodeSpan(IronPython.Compiler.Location start, IronPython.Compiler.Location end) {
-            this.startLine = start.line;
-            this.startColumn = start.column;
-            this.endLine = end.line;
-            this.endColumn = end.column;
+            this.startLine = start.Line;
+            this.startColumn = start.Column;
+            this.endLine = end.Line;
+            this.endColumn = end.Column;
+        }
+
+        public override bool Equals(object obj) {
+            if (!(obj is CodeSpan)) return false;
+
+            CodeSpan other = (CodeSpan)obj;
+            return startColumn == other.startColumn &&
+                    startLine == other.startLine &&
+                    endColumn == other.endColumn &&
+                    endLine == other.endLine;
+        }
+
+        public override int GetHashCode() {
+            // 7 bits for each column (0-128), 9 bits for each row (0-512), xor helps if
+            // we have a bigger file.
+            return (startColumn) ^ (endColumn << 7) ^ (startLine << 14) ^ (endLine << 23);            
+        }
+
+        public static bool operator ==(CodeSpan self, CodeSpan other) {
+            return self.startColumn == other.startColumn &&
+                    self.startLine == other.startLine &&
+                    self.endColumn == other.endColumn &&
+                    self.endLine == other.endLine;            
+        }
+
+        public static bool operator !=(CodeSpan self, CodeSpan other) {
+            return self.startColumn != other.startColumn ||
+                    self.startLine != other.startLine ||
+                    self.endColumn != other.endColumn ||
+                    self.endLine != other.endLine;
+        }
+        
+        public int StartLine {
+            get { return startLine; }
+            set { startLine = value; }
+        }
+
+        public int StartColumn {
+            get { return startColumn; }
+            set { startColumn = value; }
+        }
+
+        public int EndLine {
+            get { return endLine; }
+            set { endLine = value; }
+        }
+
+        public int EndColumn {
+            get { return endColumn; }
+            set { endColumn = value; }
         }
     }
 
@@ -89,7 +140,7 @@ namespace IronPython.Hosting {
     }
 
     public class CompilerExceptionSink : CompilerSink {
-        public override void AddError(string path, string message, string lineText, CodeSpan span, int errorCode, Severity severity) {
+        public override void AddError(string path, string message, string lineText, CodeSpan location, int errorCode, Severity severity) {
             string sev;
             if (severity >= Severity.Error)
                 sev = "Error";
@@ -98,7 +149,18 @@ namespace IronPython.Hosting {
             else
                 sev = "Message";
 
-            throw new Exception(string.Format("{0}:{1} at {2} {3}:{4}-{5}:{6}", sev, message, path, span.startLine, span.startColumn, span.endLine, span.endColumn));
+            throw new CompilerException(string.Format("{0}:{1} at {2} {3}:{4}-{5}:{6}", sev, message, path, location.StartLine, location.StartColumn, location.EndLine, location.EndColumn));
         }
+    }
+
+    /// <summary>
+    /// Private class used for raising compiler exceptions.
+    /// </summary>
+    class CompilerException : Exception {
+        public CompilerException(string msg)
+            : base(msg) {
+        }
+
+        public CompilerException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 }

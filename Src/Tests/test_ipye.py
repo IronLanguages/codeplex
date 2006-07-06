@@ -27,11 +27,11 @@ def test_trival():
 
 def test_coverage():
     # 1. fasteval 
-    save = IronPython.Compiler.Options.FastEval
-    IronPython.Compiler.Options.FastEval = True
+    save = IronPython.Compiler.Options.FastEvaluation
+    IronPython.Compiler.Options.FastEvaluation = True
     AreEqual(eval("None"), None)
     AreEqual(eval("str(2)"), "2")
-    IronPython.Compiler.Options.FastEval = save
+    IronPython.Compiler.Options.FastEvaluation = save
     
     # 2. ...
 

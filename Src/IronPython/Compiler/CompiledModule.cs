@@ -34,6 +34,7 @@ namespace IronPython.Compiler {
     /// in that context too.
     /// </summary>
     [PythonType(typeof(Dict))]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     public abstract class CompiledModule : CustomSymbolDict {
 
         internal static PythonModule Load(string moduleName, Type compiledModuleType, SystemState state) {

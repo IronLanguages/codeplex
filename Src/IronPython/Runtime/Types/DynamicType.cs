@@ -611,7 +611,7 @@ namespace IronPython.Runtime.Types {
             Initialize();
 
             List names = new List();
-            if ((context.ContextFlags & CallerContextFlags.ShowCls) == 0) {
+            if ((context.ContextFlags & CallerContextAttributes.ShowCls) == 0) {
                 // Filter out the non-CLS attribute names
                 foreach (KeyValuePair<object, object> kvp in dict) {
                     IContextAwareMember icaa = kvp.Value as IContextAwareMember;
@@ -645,7 +645,7 @@ namespace IronPython.Runtime.Types {
         public IDictionary<object, object> GetAttrDict(ICallerContext context) {
             Initialize();
 
-            if ((context.ContextFlags & CallerContextFlags.ShowCls) != 0) {
+            if ((context.ContextFlags & CallerContextAttributes.ShowCls) != 0) {
                 // All the attributes should be displayed. Just return 'dict'
                 return dict.AsObjectKeyedDictionary();
             }

@@ -42,27 +42,27 @@ using IronPython.Runtime;
  *         print x
  */
 
-namespace IronPython.Compiler.AST {
+namespace IronPython.Compiler.Ast {
     class DefineBinder : AstWalkerNonRecursive {
         protected Binder binder;
         public DefineBinder(Binder binder) {
             this.binder = binder;
         }
 
-        public override bool Walk(NameExpr node) {
+        public override bool Walk(NameExpression node) {
             binder.Define(node.Name);
             return false;
         }
 
-        public override bool Walk(ParenExpr node) {
+        public override bool Walk(ParenthesisExpression node) {
             return true;
         }
 
-        public override bool Walk(TupleExpr node) {
+        public override bool Walk(TupleExpression node) {
             return true;
         }
 
-        public override bool Walk(ListExpr node) {
+        public override bool Walk(ListExpression node) {
             return true;
         }
     }
@@ -73,16 +73,16 @@ namespace IronPython.Compiler.AST {
             this.binder = binder;
         }
 
-        public override bool Walk(NameExpr node) {
+        public override bool Walk(NameExpression node) {
             binder.DefineParameter(node.Name);
             return false;
         }
 
-        public override bool Walk(ParenExpr node) {
+        public override bool Walk(ParenthesisExpression node) {
             return true;
         }
 
-        public override bool Walk(TupleExpr node) {
+        public override bool Walk(TupleExpression node) {
             return true;
         }
     }
@@ -93,7 +93,7 @@ namespace IronPython.Compiler.AST {
             this.binder = binder;
         }
 
-        public override bool Walk(NameExpr node) {
+        public override bool Walk(NameExpression node) {
             binder.Deleted(node.Name);
             return false;
         }
@@ -120,12 +120,12 @@ namespace IronPython.Compiler.AST {
             this.context = context;
         }
 
-        public static GlobalSuite Bind(Stmt root, CompilerContext context) {
+        public static GlobalSuite Bind(Statement root, CompilerContext context) {
             Binder binder = new Binder(context);
             return binder.DoBind(root);
         }
 
-        private GlobalSuite DoBind(Stmt root) {
+        private GlobalSuite DoBind(Statement root) {
             GlobalSuite global = new GlobalSuite(root);
             current = global;
 
@@ -140,19 +140,19 @@ namespace IronPython.Compiler.AST {
             // Validate
             foreach (ScopeStatement scope in processed) {
                 if ((scope.ScopeInfo &
-                    (ScopeStatement.ScopeFlags.ContainsFreeVariables |
-                    ScopeStatement.ScopeFlags.ContainsImportStar |
-                    ScopeStatement.ScopeFlags.ContainsUnqualifiedExec |
-                    ScopeStatement.ScopeFlags.ContainsNestedFreeVariables)) == 0) {
+                    (ScopeStatement.ScopeAttributes.ContainsFreeVariables |
+                    ScopeStatement.ScopeAttributes.ContainsImportStar |
+                    ScopeStatement.ScopeAttributes.ContainsUnqualifiedExec |
+                    ScopeStatement.ScopeAttributes.ContainsNestedFreeVariables)) == 0) {
                     continue;
                 }
 
-                FuncDef func;
-                if ((func = scope as FuncDef) != null) {
+                FunctionDefinition func;
+                if ((func = scope as FunctionDefinition) != null) {
                     if (func.ContainsImportStar && func.IsClosure) {
                         ReportSyntaxError(String.Format("import * is not allowed in function '{0}' because it is a nested function", func.Name.GetString()), func);
                     }
-                    if (func.ContainsImportStar && func.parent is FuncDef) {
+                    if (func.ContainsImportStar && func.Parent is FunctionDefinition) {
                         ReportSyntaxError(String.Format("import * is not allowed in function '{0}' because it is a nested function", func.Name.GetString()), func);
                     }
                     if (func.ContainsImportStar && func.ContainsNestedFreeVariables) {
@@ -166,8 +166,8 @@ namespace IronPython.Compiler.AST {
                     }
                 }
 
-                ClassDef cls;
-                if ((cls = scope as ClassDef) != null) {
+                ClassDefinition cls;
+                if ((cls = scope as ClassDefinition) != null) {
                     if (cls.ContainsImportStar) {
                         // warning
                     }
@@ -192,36 +192,36 @@ namespace IronPython.Compiler.AST {
         #region AstBinder Overrides
 
         // NameExpr
-        public override bool Walk(NameExpr node) {
+        public override bool Walk(NameExpression node) {
             Reference(node.Name);
             return true;
         }
 
         // AssignStmt
-        public override bool Walk(AssignStmt node) {
-            foreach (Expr e in node.Left) {
+        public override bool Walk(AssignStatement node) {
+            foreach (Expression e in node.Left) {
                 e.Walk(define);
             }
             return true;
         }
 
         // AugAssignStmt
-        public override bool Walk(AugAssignStmt node) {
+        public override bool Walk(AugAssignStatement node) {
             node.Left.Walk(define);
             return true;
         }
 
         // ClassDef
-        public override bool Walk(ClassDef node) {
+        public override bool Walk(ClassDefinition node) {
             Define(node.Name);
 
             // Base references are in the outer scope
-            foreach (Expr b in node.Bases) b.Walk(this);
+            foreach (Expression b in node.Bases) b.Walk(this);
 
             // And so is the __name__ reference
             Reference(SymbolTable.Name);
 
-            node.parent = current;
+            node.Parent = current;
             current = node;
 
             // define the __doc__ and the __module__
@@ -229,25 +229,25 @@ namespace IronPython.Compiler.AST {
             Define(SymbolTable.Module);
 
             // Walk the body
-            node.body.Walk(this);
+            node.Body.Walk(this);
             processed.Add(node);
             return false;
         }
-        public override void PostWalk(ClassDef node) {
+        public override void PostWalk(ClassDefinition node) {
             Debug.Assert(node == current);
-            current = current.parent;
+            current = current.Parent;
         }
 
         // DelStmt
-        public override bool Walk(DelStmt node) {
-            foreach (Expr e in node.Expressions) {
+        public override bool Walk(DelStatement node) {
+            foreach (Expression e in node.Expressions) {
                 e.Walk(delete);
             }
             return true;
         }
 
         // ExecStmt
-        public override bool Walk(ExecStmt node) {
+        public override bool Walk(ExecStatement node) {
             if (node.Locals == null && node.Globals == null) {
                 Debug.Assert(current != null);
                 current.ContainsUnqualifiedExec = true;
@@ -256,17 +256,17 @@ namespace IronPython.Compiler.AST {
         }
 
         // ForStmt
-        public override bool Walk(ForStmt node) {
+        public override bool Walk(ForStatement node) {
             node.Left.Walk(define);
             // Add locals
             Debug.Assert(current != null);
-            current.tempsCount += node.LocalSlots;
+            current.TempsCount += ForStatement.LocalSlots;
             return true;
         }
 
         // FromImportStmt
-        public override bool Walk(FromImportStmt node) {
-            if (node.Names != FromImportStmt.Star) {
+        public override bool Walk(FromImportStatement node) {
+            if (node.Names != FromImportStatement.Star) {
                 for (int i = 0; i < node.Names.Count; i++) {
                     Define(node.AsNames[i] != SymbolTable.Empty ? node.AsNames[i] : node.Names[i]);
                 }
@@ -278,12 +278,12 @@ namespace IronPython.Compiler.AST {
         }
 
         // FuncDef
-        public override bool Walk(FuncDef node) {
+        public override bool Walk(FunctionDefinition node) {
             // Name is defined in the enclosing scope
             Define(node.Name);
 
             // process the default arg values in the outer scope
-            foreach (Expr e in node.Defaults) {
+            foreach (Expression e in node.Defaults) {
                 e.Walk(this);
             }
             // process the decorators in the outer scope
@@ -291,27 +291,27 @@ namespace IronPython.Compiler.AST {
                 node.Decorators.Walk(this);
             }
 
-            node.parent = current;
+            node.Parent = current;
             current = node;
-            foreach (Expr e in node.Parameters) {
+            foreach (Expression e in node.Parameters) {
                 e.Walk(parameter);
             }
 
-            node.body.Walk(this);
+            node.Body.Walk(this);
             processed.Add(node);
 
             return false;
         }
-        public override void PostWalk(FuncDef node) {
+        public override void PostWalk(FunctionDefinition node) {
             Debug.Assert(current == node);
-            current = current.parent;
+            current = current.Parent;
         }
 
         // GlobalStmt
-        public override bool Walk(GlobalStmt node) {
+        public override bool Walk(GlobalStatement node) {
             foreach (SymbolId n in node.Names) {
                 if (current != null) {
-                    ScopeStatement.Binding binding;
+                    Binding binding;
                     if (current.Bindings.TryGetValue(n, out binding)) {
                         if (binding.IsParameter) {
                             ReportSyntaxError(String.Format("name '{0}' is a function parameter and declared global", n.GetString()), node);
@@ -329,11 +329,11 @@ namespace IronPython.Compiler.AST {
 
         // GlobalSuite
         public override void PostWalk(GlobalSuite node) {
-            current = current.parent;
+            current = current.Parent;
         }
 
         // ImportStmt
-        public override bool Walk(ImportStmt node) {
+        public override bool Walk(ImportStatement node) {
             for (int i = 0; i < node.Names.Count; i++) {
                 Define(node.AsNames[i] != SymbolTable.Empty ? node.AsNames[i] : node.Names[i].Names[0]);
             }
@@ -341,8 +341,8 @@ namespace IronPython.Compiler.AST {
         }
 
         // TryStmt
-        public override bool Walk(TryStmt node) {
-            foreach (TryStmtHandler tsh in node.Handlers) {
+        public override bool Walk(TryStatement node) {
+            foreach (TryStatementHandler tsh in node.Handlers) {
                 if (tsh.Target != null) {
                     tsh.Target.Walk(define);
                 }
@@ -357,7 +357,7 @@ namespace IronPython.Compiler.AST {
         }
 
         // ListCompFor
-        public override bool Walk(ListCompFor node) {
+        public override bool Walk(ListComprehensionFor node) {
             node.Left.Walk(define);
             return true;
         }

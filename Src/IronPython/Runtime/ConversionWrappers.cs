@@ -180,7 +180,7 @@ namespace IronPython.Runtime {
         }
 
         public void CopyTo(KeyValuePair<K, V>[] array, int arrayIndex) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public int Count {

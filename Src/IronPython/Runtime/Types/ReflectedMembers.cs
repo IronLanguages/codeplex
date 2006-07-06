@@ -90,7 +90,7 @@ namespace IronPython.Runtime.Types {
         #region IContextAwareMember Members
 
         public bool IsVisible(ICallerContext context) {
-            return nameType == NameType.PythonField || (context.ContextFlags & CallerContextFlags.ShowCls) != 0;
+            return nameType == NameType.PythonField || (context.ContextFlags & CallerContextAttributes.ShowCls) != 0;
         }
 
         #endregion
@@ -285,7 +285,7 @@ namespace IronPython.Runtime.Types {
         #region IContextAwareMember Members
 
         public bool IsVisible(ICallerContext context) {
-            return nameType == NameType.PythonProperty || (context.ContextFlags & CallerContextFlags.ShowCls) != 0;
+            return nameType == NameType.PythonProperty || (context.ContextFlags & CallerContextAttributes.ShowCls) != 0;
         }
 
         #endregion
@@ -357,7 +357,7 @@ namespace IronPython.Runtime.Types {
 
         bool IContextAwareMember.IsVisible(ICallerContext context) {
             // events aren't visible w/o importing clr.
-            return !clsOnly || (context.ContextFlags & CallerContextFlags.ShowCls) != 0;
+            return !clsOnly || (context.ContextFlags & CallerContextAttributes.ShowCls) != 0;
         }
 
         #endregion

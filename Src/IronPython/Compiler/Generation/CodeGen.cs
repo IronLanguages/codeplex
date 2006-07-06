@@ -28,7 +28,7 @@ using System.IO;
 
 using IronPython.Runtime;
 using IronMath;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
@@ -311,7 +311,7 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        public void EmitReturn(Expr expr) {
+        public void EmitReturn(Expression expr) {
             if (yieldLabels != null) {
                 EmitReturnInGenerator(expr);
                 return;
@@ -325,7 +325,7 @@ namespace IronPython.Compiler.Generation {
             EmitReturn();
         }
 
-        public void EmitReturnInGenerator(Expr expr) {
+        public void EmitReturnInGenerator(Expression expr) {
             Emit(OpCodes.Ldarg_1);
             //??? is an expr legal
             EmitExprOrNone(expr);
@@ -335,7 +335,7 @@ namespace IronPython.Compiler.Generation {
             EmitReturn();
         }
 
-        public void EmitYield(Expr expr, int index, Label label) {
+        public void EmitYield(Expression expr, int index, Label label) {
             Emit(OpCodes.Ldarg_1);
             expr.Emit(this);
             Emit(OpCodes.Stind_Ref);
@@ -351,16 +351,16 @@ namespace IronPython.Compiler.Generation {
         }
 
         public void EmitPosition(Location start, Location end) {
-            EmitCurrentLine(start.line);
+            EmitCurrentLine(start.Line);
 
             if (!EmitDebugInfo) return;
 
-            Debug.Assert(start.line != 0 && end.line != 0);
+            Debug.Assert(start.Line != 0 && end.Line != 0);
 
             MarkSequencePoint(
                 debugSymbolWriter,
-                start.line, start.column + 1,
-                end.line, end.column + 1
+                start.Line, start.Column + 1,
+                end.Line, end.Column + 1
                 );
 
             Emit(OpCodes.Nop);
@@ -477,7 +477,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         public void EmitCurrentLine(int line) {
-            if (Options.TracebackSupport) {
+            if (Options.TraceBackSupport) {
                 if (currentLineSlot == null) {
                     currentLineSlot = GetNamedLocal(typeof(int), "$line");
                 }
@@ -556,18 +556,18 @@ namespace IronPython.Compiler.Generation {
             Emit(OpCodes.Ldarg_0);
         }
 
-        public void EmitExprOrNone(Expr e) {
+        public void EmitExprOrNone(Expression e) {
             if (e == null) Emit(OpCodes.Ldnull);
             else e.Emit(this);
         }
 
-        public void EmitTestTrue(Expr e) {
+        public void EmitTestTrue(Expression e) {
             // Optimize the common case of <a> <cmp> <b> where <cmp> is a comparison operator and
             // we have a more efficient route to return a bool directly. We don't bother with the
             // more convoluted case of <a> <cmp> <b> <cmp> <c> but that's less likely to occur
             // anyway.
-            BinaryExpr be = e as BinaryExpr;
-            if (be != null && BinaryExpr.IsComparision(be) && !BinaryExpr.IsComparision(be.Right)) {
+            BinaryExpression be = e as BinaryExpression;
+            if (be != null && BinaryExpression.IsComparison(be) && !BinaryExpression.IsComparison(be.Right)) {
                 string call;
                 if (be.Operator == BinaryOperator.Equal)
                     call = "EqualRetBool";
@@ -590,7 +590,7 @@ namespace IronPython.Compiler.Generation {
                 else if (be.Operator == BinaryOperator.IsNot)
                     call = "IsNotRetBool";
                 else
-                    throw new NotImplementedException("optimized comparison: " + be.Operator.symbol);
+                    throw new NotImplementedException("optimized comparison: " + be.Operator.Symbol);
                 be.Left.Emit(this);
                 be.Right.Emit(this);
                 EmitCall(typeof(Ops), call);
@@ -619,7 +619,7 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        public void EmitObjectArray(IList<Expr> items) {
+        public void EmitObjectArray(IList<Expression> items) {
             EmitObjectArray(items.Count, delegate(int index) {
                 items[index].Emit(this);
             });
@@ -1333,7 +1333,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         internal void EmitTraceBackTryBlockStart() {
-            if (Options.TracebackSupport) {
+            if (Options.TraceBackSupport) {
                 // push a try for traceback support
                 PushTryBlock();
                 BeginExceptionBlock();
@@ -1341,7 +1341,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         internal void EmitTraceBackFaultBlock(string name, string filename) {
-            if (Options.TracebackSupport) {
+            if (Options.TraceBackSupport) {
                 // push a fault block (runs only if there's an exception, doesn't handle the exception)
                 PopTargets();
                 if (IsDynamicMethod) {
@@ -1542,7 +1542,7 @@ namespace IronPython.Compiler.Generation {
             if (Options.ILDebug) WriteIL("label_{0}:", GetLabelId(l).ToString());
         }
 
-        int GetLabelId(Label l) {
+        private static int GetLabelId(Label l) {
             return l.GetHashCode();
         }
         #endregion

@@ -92,14 +92,14 @@ namespace IronPythonTest {
             // standardEngine.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
         }
 
-        static readonly SymbolId clsPart_SymbolId = (SymbolId)"clsPart";
+        static readonly string clspartName = "clsPart";
 
         // Execute
         public void ScenarioExecute() {
             PythonEngine pe = new PythonEngine();
 
             ClsPart clsPart = new ClsPart();
-            pe.SetGlobal(clsPart_SymbolId, clsPart);
+            pe.SetGlobal(clspartName, clsPart);
 
             // field: assign and get back
             pe.Execute("clsPart.Field = 100");
@@ -124,11 +124,11 @@ namespace IronPythonTest {
             // ===============================================
 
             // reset the same variable with instance of the same type
-            pe.SetGlobal(clsPart_SymbolId, new ClsPart());
+            pe.SetGlobal(clspartName, new ClsPart());
             pe.Execute("if 0 != clsPart.Field: raise AssertionError('test failed')");
 
             // add cls method as event handler
-            pe.SetGlobal((SymbolId)"clsMethod", new IntIntDelegate(Negate));
+            pe.SetGlobal("clsMethod", new IntIntDelegate(Negate));
             pe.Execute("clsPart.Event += clsMethod");
             pe.Execute("a = clsPart.Method(2)");
             pe.Execute("if -2 != a: raise AssertionError('test failed')");
@@ -136,9 +136,9 @@ namespace IronPythonTest {
             // ===============================================
 
             // reset the same variable with integer
-            pe.SetGlobal(clsPart_SymbolId, 1);
+            pe.SetGlobal(clspartName, 1);
             pe.Execute("if 1 != clsPart: raise AssertionError('test failed')");
-            AreEqual((int)pe.GetGlobal(clsPart_SymbolId), 1);
+            AreEqual((int)pe.GetGlobal(clspartName), 1);
         }
 
         // No intereference between two engines
@@ -151,7 +151,7 @@ namespace IronPythonTest {
             try {
                 pe2.Execute("print a");
                 throw new Exception("Scenario3");
-            } catch (IronPython.Runtime.Exceptions.PythonNameError) { }
+            } catch (IronPython.Runtime.Exceptions.PythonNameErrorException) { }
         }
 
         public void ScenarioEvaluateInAnonymousModuleScope() {
@@ -159,42 +159,43 @@ namespace IronPythonTest {
             ModuleScope anonymousScope = new ModuleScope();
             ModuleScope anotherAnonymousScope = new ModuleScope();
             standardEngine.Execute("x = 0");
-            standardEngine.Execute("x = 1", anonymousScope, ExecutionOptions.Default);
+            standardEngine.Execute("x = 1", anonymousScope, ExecutionOptions.None);
             anotherAnonymousScope.SetGlobal(x_SymbolId, 2);
 
             // Ensure that the default ModuleScope is not affected
-            AreEqual(0, standardEngine.Evaluate<int>("x"));
+            AreEqual(0, standardEngine.EvaluateAs<int>("x"));
             AreEqual(0, (int)standardEngine.DefaultModuleScope.GetGlobal(x_SymbolId));
             // Ensure that the anonymous scope has been updated as expected
-            AreEqual(1, standardEngine.Evaluate<int>("x", anonymousScope, ExecutionOptions.Default));
+            AreEqual(1, standardEngine.EvaluateAs<int>("x", anonymousScope, ExecutionOptions.None));
             AreEqual(1, (int)anonymousScope.GetGlobal(x_SymbolId));
             // Ensure that other anonymous scopes are not affected
-            AreEqual(2, standardEngine.Evaluate<int>("x", anotherAnonymousScope, ExecutionOptions.Default));
+            AreEqual(2, standardEngine.EvaluateAs<int>("x", anotherAnonymousScope, ExecutionOptions.None));
             AreEqual(2, (int)anotherAnonymousScope.GetGlobal(x_SymbolId));
         }
 
         public void ScenarioEvaluateInPublishedModuleScope() {
             ModuleScope publishedScope = new ModuleScope("published_scope_test");
             standardEngine.Execute("x = 0");
-            standardEngine.Execute("x = 1", publishedScope, ExecutionOptions.Default);
+            standardEngine.Execute("x = 1", publishedScope, ExecutionOptions.None);
             // Ensure that the default ModuleScope is not affected
-            AreEqual(0, standardEngine.Evaluate<int>("x"));
+            AreEqual(0, standardEngine.EvaluateAs<int>("x"));
             // Ensure that the published scope has been updated as expected
-            AreEqual(1, standardEngine.Evaluate<int>("x", publishedScope, ExecutionOptions.Default));
+            AreEqual(1, standardEngine.EvaluateAs<int>("x", publishedScope, ExecutionOptions.None));
 
             // Ensure that the published scope is accessible from other scopes using sys.modules
             standardEngine.Execute(@"
 import sys
 x_from_published_scope_test = sys.modules['published_scope_test'].x
 ");
-            AreEqual(1, standardEngine.Evaluate<int>("x_from_published_scope_test"));
+            AreEqual(1, standardEngine.EvaluateAs<int>("x_from_published_scope_test"));
         }
 
         class CustomModuleScope : ModuleScope {
             // Make "customSymbol" always be accessible. This could have been accomplished just by
             // doing SetGlobal. However, this mechanism could be used for other extensibility
             // purposes like getting a callback whenever the symbol is read
-            internal static readonly SymbolId customSymbol = (SymbolId)"customSymbol";
+            internal const string customSymbolString = "customSymbol";
+            internal static readonly SymbolId customSymbol = (SymbolId)customSymbolString;
             internal const int customSymbolValue = 100;
 
             public override object GetGlobal(SymbolId symbol) {
@@ -212,13 +213,13 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
 
             public override void SetGlobal(SymbolId symbol, object value) {
                 if (symbol == customSymbol)
-                    throw new PythonNameError("Cannot set " + symbol);
+                    throw new PythonNameErrorException("Cannot set " + symbol);
                 base.SetGlobal(symbol, value);
             }
 
             public override void DelGlobal(SymbolId symbol) {
                 if (symbol == customSymbol)
-                    throw new PythonNameError("Cannot delete " + symbol);
+                    throw new PythonNameErrorException("Cannot delete " + symbol);
                 base.DelGlobal(symbol);
             }
         }
@@ -227,37 +228,37 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
             CustomModuleScope customScope = new CustomModuleScope();
 
             // Evaluate
-            AreEqual(standardEngine.Evaluate<int>("customSymbol + 1", customScope, ExecutionOptions.Default), CustomModuleScope.customSymbolValue + 1);
+            AreEqual(standardEngine.EvaluateAs<int>("customSymbol + 1", customScope, ExecutionOptions.None), CustomModuleScope.customSymbolValue + 1);
 
             // Execute
-            standardEngine.Execute("customSymbolPlusOne = customSymbol + 1", customScope, ExecutionOptions.Default);
-            AreEqual(standardEngine.Evaluate<int>("customSymbolPlusOne", customScope, ExecutionOptions.Default), CustomModuleScope.customSymbolValue + 1);
-            AreEqual((int)standardEngine.GetGlobal((SymbolId)"customSymbolPlusOne", customScope), CustomModuleScope.customSymbolValue + 1);
+            standardEngine.Execute("customSymbolPlusOne = customSymbol + 1", customScope, ExecutionOptions.None);
+            AreEqual(standardEngine.EvaluateAs<int>("customSymbolPlusOne", customScope, ExecutionOptions.None), CustomModuleScope.customSymbolValue + 1);
+            AreEqual((int)standardEngine.GetGlobal("customSymbolPlusOne", customScope), CustomModuleScope.customSymbolValue + 1);
 
             // Compile
-            CompiledCode code = standardEngine.Compile("customSymbolPlusTwo = customSymbol + 2", ExecutionOptions.Default);
+            CompiledCode code = standardEngine.Compile("customSymbolPlusTwo = customSymbol + 2", ExecutionOptions.None);
             standardEngine.Execute(code, customScope);
-            AreEqual(standardEngine.Evaluate<int>("customSymbolPlusTwo", customScope, ExecutionOptions.Default), CustomModuleScope.customSymbolValue + 2);
-            AreEqual((int)standardEngine.GetGlobal((SymbolId)"customSymbolPlusTwo", customScope), CustomModuleScope.customSymbolValue + 2);
+            AreEqual(standardEngine.EvaluateAs<int>("customSymbolPlusTwo", customScope, ExecutionOptions.None), CustomModuleScope.customSymbolValue + 2);
+            AreEqual((int)standardEngine.GetGlobal("customSymbolPlusTwo", customScope), CustomModuleScope.customSymbolValue + 2);
 
             // override SetGlobal
             try {
                 standardEngine.Execute(@"global customSymbol
-customSymbol = 1", customScope, ExecutionOptions.Default);
+customSymbol = 1", customScope, ExecutionOptions.None);
                 throw new Exception("We should not reach here");
-            } catch (PythonNameError) { }
+            } catch (PythonNameErrorException) { }
 
             // override DelGlobal
             try {
                 standardEngine.Execute(@"global customSymbol
-del customSymbol", customScope, ExecutionOptions.Default);
+del customSymbol", customScope, ExecutionOptions.None);
                 throw new Exception("We should not reach here");
-            } catch (PythonNameError) { }
+            } catch (PythonNameErrorException) { }
 
             // This shows that SetGlobal is used only if the variable is explicitly declared as "global var"
-            standardEngine.Execute("customSymbol = customSymbol + 1", customScope, ExecutionOptions.Default);
-            AreEqual(standardEngine.Evaluate<int>("customSymbol", customScope, ExecutionOptions.Default), CustomModuleScope.customSymbolValue + 1);
-            AreEqual((int)standardEngine.GetGlobal(CustomModuleScope.customSymbol, customScope), CustomModuleScope.customSymbolValue + 1);
+            standardEngine.Execute("customSymbol = customSymbol + 1", customScope, ExecutionOptions.None);
+            AreEqual(standardEngine.EvaluateAs<int>("customSymbol", customScope, ExecutionOptions.None), CustomModuleScope.customSymbolValue + 1);
+            AreEqual((int)standardEngine.GetGlobal(CustomModuleScope.customSymbolString, customScope), CustomModuleScope.customSymbolValue + 1);
 
         }
 
@@ -276,8 +277,8 @@ del customSymbol", customScope, ExecutionOptions.Default);
             for (int scopeCount = 0; scopeCount < 100; scopeCount++) {
                 ModuleScope scope = new ModuleScope(scenarioGCModuleName);
                 scope.SetGlobal((SymbolId)"x", "Hello");
-                engine.ExecuteFile(Common.InputTestDirectory + "\\simpleCommand.py", scope, ExecutionOptions.Default);
-                AreEqual(engine.Evaluate<int>("x", scope, ExecutionOptions.Default), 1);
+                engine.ExecuteFile(Common.InputTestDirectory + "\\simpleCommand.py", scope, ExecutionOptions.None);
+                AreEqual(engine.EvaluateAs<int>("x", scope, ExecutionOptions.None), 1);
             }
         }
 
@@ -306,23 +307,23 @@ del customSymbol", customScope, ExecutionOptions.Default);
             PythonEngine pe = new PythonEngine();
 
             AreEqual(10, (int)pe.Evaluate("4+6"));
-            AreEqual(10, pe.Evaluate<int>("4+6"));
+            AreEqual(10, pe.EvaluateAs<int>("4+6"));
 
             AreEqual("abab", (string)pe.Evaluate("'ab' * 2"));
-            AreEqual("abab", pe.Evaluate<string>("'ab' * 2"));
+            AreEqual("abab", pe.EvaluateAs<string>("'ab' * 2"));
 
             ClsPart clsPart = new ClsPart();
-            pe.SetGlobal(clsPart_SymbolId, clsPart);
+            pe.SetGlobal(clspartName, clsPart);
             AreEqual(clsPart, pe.Evaluate("clsPart") as ClsPart);
-            AreEqual(clsPart, pe.Evaluate<ClsPart>("clsPart"));
+            AreEqual(clsPart, pe.EvaluateAs<ClsPart>("clsPart"));
 
             pe.Execute("clsPart.Field = 100");
             AreEqual(100, (int)pe.Evaluate("clsPart.Field"));
-            AreEqual(100, pe.Evaluate<int>("clsPart.Field"));
+            AreEqual(100, pe.EvaluateAs<int>("clsPart.Field"));
 
             // Ensure that we can get back a delegate to a Python method
             pe.Execute("def IntIntMethod(a): return a * 100");
-            IntIntDelegate d = pe.Evaluate<IntIntDelegate>("IntIntMethod");
+            IntIntDelegate d = pe.EvaluateAs<IntIntDelegate>("IntIntMethod");
             AreEqual(d(2), 2 * 100);
         }
 
@@ -343,7 +344,7 @@ del customSymbol", customScope, ExecutionOptions.Default);
                 }
 
                 ClsPart clsPart = new ClsPart();
-                pe.SetGlobal(clsPart_SymbolId, clsPart);
+                pe.SetGlobal(clspartName, clsPart);
                 pe.ExecuteFile(tempFile1);
 
                 using (StreamWriter sw = new StreamWriter(tempFile2)) {
@@ -384,8 +385,8 @@ del customSymbol", customScope, ExecutionOptions.Default);
 
                 pe.ExecuteFile(tempFile1);
 
-                AreEqual(-1, pe.Evaluate<int>("M1()"));
-                AreEqual(+1, pe.Evaluate<int>("M2()"));
+                AreEqual(-1, pe.EvaluateAs<int>("M1()"));
+                AreEqual(+1, pe.EvaluateAs<int>("M2()"));
 
                 AreEqual(-1, (int)pe.Evaluate("M1()"));
                 AreEqual(+1, (int)pe.Evaluate("M2()"));
@@ -395,8 +396,8 @@ del customSymbol", customScope, ExecutionOptions.Default);
 
 
                 pe.Execute("c = C()");
-                AreEqual(-1, pe.Evaluate<int>("c.M1()"));
-                AreEqual(+1, pe.Evaluate<int>("c.M2()"));
+                AreEqual(-1, pe.EvaluateAs<int>("c.M1()"));
+                AreEqual(+1, pe.EvaluateAs<int>("c.M2()"));
 
                 AreEqual(-1, (int)pe.Evaluate("c.M1()"));
                 AreEqual(+1, (int)pe.Evaluate("c.M2()"));
@@ -424,8 +425,8 @@ del customSymbol", customScope, ExecutionOptions.Default);
             PythonEngine pe = new PythonEngine();
 
             pe.Execute("a=1\r\nb=-1");
-            AreEqual(1, pe.Evaluate<int>("a"));
-            AreEqual(-1, pe.Evaluate<int>("b"));
+            AreEqual(1, pe.EvaluateAs<int>("a"));
+            AreEqual(-1, pe.EvaluateAs<int>("b"));
         }
 
         // AddToPath
@@ -442,7 +443,7 @@ del customSymbol", customScope, ExecutionOptions.Default);
                 try {
                     pe.ExecuteFile(tempFile1);
                     throw new Exception("Scenario7");
-                } catch (IronPython.Runtime.Exceptions.PythonImportError) { }
+                } catch (IronPython.Runtime.Exceptions.PythonImportErrorException) { }
 
                 pe.AddToPath(Common.ScriptTestDirectory);
 
@@ -474,7 +475,7 @@ del customSymbol", customScope, ExecutionOptions.Default);
 
             // Ensure that you do not get good line numbers without ExecutionOptions.Default
             try {
-                standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.Default);
+                standardEngine.ExecuteFile(Common.InputTestDirectory + "\\raise.py", standardEngine.DefaultModuleScope, ExecutionOptions.None);
                 throw new Exception("We should not get here");
             } catch (StringException e2) {
                 if (e2.StackTrace.Contains(lineNumber1) || e2.StackTrace.Contains(lineNumber2))
@@ -485,38 +486,43 @@ del customSymbol", customScope, ExecutionOptions.Default);
         public void ScenarioExecuteFileOptimized() {
             PythonEngine pe = new PythonEngine();
             ModuleScope moduleScope;
-            pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\simpleCommand.py", "__main__", ExecutionOptions.Default, out moduleScope);
-            AreEqual(1, pe.Evaluate<int>("x", moduleScope, ExecutionOptions.Default));
+            pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\simpleCommand.py", "__main__", ExecutionOptions.None, out moduleScope);
+            AreEqual(1, pe.EvaluateAs<int>("x", moduleScope, ExecutionOptions.None));
 
             // Ensure that we can set new globals in the scope, and execute further code
             moduleScope.SetGlobal((SymbolId)"y", 2);
-            AreEqual(3, pe.Evaluate<int>("x+y", moduleScope, ExecutionOptions.Default));
+            AreEqual(3, pe.EvaluateAs<int>("x+y", moduleScope, ExecutionOptions.None));
         }
-
+        
         public void ScenarioExecuteFileOptimized_ScriptThrows() {
             // We should be able to use the ModuleScope even if an exception is thrown by the script
-            PythonEngine pe = new PythonEngine();
-            ModuleScope moduleScope = null;
             try {
-                pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\raise.py", "__main__", ExecutionOptions.Default, out moduleScope);
-                throw new Exception("We should not reach here");
-            } catch (StringException) {
-                AreEqual(1, pe.Evaluate<int>("x", moduleScope, ExecutionOptions.Default));
+                PythonEngine pe = new PythonEngine();
+                ModuleScope moduleScope = null;
+                try {
+                    pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\raise.py", "__main__", ExecutionOptions.None, out moduleScope);
+                    throw new Exception("We should not reach here");
+                } catch (StringException) {
+                    AreEqual(1, pe.EvaluateAs<int>("x", moduleScope, ExecutionOptions.None));
 
-                // Ensure that we can set new globals in the scope, and execute further code
-                moduleScope.SetGlobal((SymbolId)"y", 2);
-                AreEqual(3, pe.Evaluate<int>("x+y", moduleScope, ExecutionOptions.Default));
+                    // Ensure that we can set new globals in the scope, and execute further code
+                    moduleScope.SetGlobal((SymbolId)"y", 2);
+                    AreEqual(3, pe.EvaluateAs<int>("x+y", moduleScope, ExecutionOptions.None));
+                }
+            } catch (Exception e) {
+                Console.WriteLine(e);
             }
         }
+
 
         public void ScenarioExecuteFileOptimized_ParserThrows() {
             // We should be able to use the ModuleScope even if an exception is thrown before the script starts executing
             PythonEngine pe = new PythonEngine();
             ModuleScope moduleScope = null;
             try {
-                pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\syntaxError.py", "__main__", ExecutionOptions.Default, out moduleScope);
+                pe.ExecuteFileOptimized(Common.InputTestDirectory + "\\syntaxError.py", "__main__", ExecutionOptions.None, out moduleScope);
                 throw new Exception("We should not reach here");
-            } catch (PythonSyntaxError) {
+            } catch (PythonSyntaxErrorException) {
                 AreEqual((ModuleScope)null, moduleScope);
             }
         }
@@ -526,7 +532,7 @@ del customSymbol", customScope, ExecutionOptions.Default);
             PythonEngine pe = new PythonEngine();
             ClsPart clsPart = new ClsPart();
 
-            pe.SetGlobal(clsPart_SymbolId, clsPart);
+            pe.SetGlobal(clspartName, clsPart);
             CompiledCode code = pe.Compile("def f(): clsPart.Field += 10");
             pe.Execute(code);
 

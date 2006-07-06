@@ -23,32 +23,43 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler {
     public struct Location {
-        public int line;
-        public int column;
+        private int line;
+        private int column;
 
         public Location(int lineNo, int columnNo) {
             line = lineNo;
             column = columnNo;
         }
-        public static bool operator <(Location a, Location b) {
-            return a.line < b.line || (a.line == b.line && a.column < b.column);
-        }
-        public static bool operator >(Location a, Location b) {
-            return a.line > b.line || (a.line == b.line && a.column > b.column);
-        }
-        public static bool operator <=(Location a, Location b) {
-            return a.line < b.line || (a.line == b.line && a.column <= b.column);
-        }
-        public static bool operator >=(Location a, Location b) {
-            return a.line > b.line || (a.line == b.line && a.column >= b.column);
+
+        public int Line {
+            get { return line; }
+            set { line = value; }
         }
 
-        public static int Compare(Location a, Location b) {
-            int res = a.line - b.line;
+        public int Column {
+            get { return column; }
+            set { column = value; }
+        }
+
+        public static bool operator <(Location left, Location right) {
+            return left.line < right.line || (left.line == right.line && left.column < right.column);
+        }
+        public static bool operator >(Location left, Location right) {
+            return left.line > right.line || (left.line == right.line && left.column > right.column);
+        }
+        public static bool operator <=(Location left, Location right) {
+            return left.line < right.line || (left.line == right.line && left.column <= right.column);
+        }
+        public static bool operator >=(Location left, Location right) {
+            return left.line > right.line || (left.line == right.line && left.column >= right.column);
+        }
+
+        public static int Compare(Location left, Location right) {
+            int res = left.line - right.line;
             if (res < 0) return -1;
             if (res > 0) return 1;
 
-            res = a.column - b.column;
+            res = left.column - right.column;
             if (res < 0) return -1;
             if (res > 0) return 1;
 
@@ -61,6 +72,8 @@ namespace IronPython.Compiler {
     /// <summary>
     /// Summary description for Tokenizer.
     /// </summary>
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Tokenizer")]
     public partial class Tokenizer {
         private readonly char[] data;
         private readonly int length;
@@ -73,11 +86,9 @@ namespace IronPython.Compiler {
         private int start, end;
 
         // Token positions in the source text
-        public Location startLoc;
-        public Location endLoc;
-
-        // Current position in the source text
-        public Location current;
+        private Location startLoc;
+        private Location endLoc;
+        private Location current;
 
         // indentation state
         private const int MAX_INDENT = 80;
@@ -106,9 +117,9 @@ namespace IronPython.Compiler {
             this.length = data.Length;
             this.verbatim = verbatim;
 
-            this.current.line = 1;
-            this.startLoc.line = 1;
-            this.endLoc.line = 1;
+            this.current.Line = 1;
+            this.startLoc.Line = 1;
+            this.endLoc.Line = 1;
 
             this.context = context;
             this.systemState = state;
@@ -137,20 +148,20 @@ namespace IronPython.Compiler {
             if (index < length) {
                 int ret = data[index];
                 index++;
-                current.column++;
+                current.Column++;
                 if (ret == '\n') {
-                    current.line++; current.column = 0;
+                    current.Line++; current.Column = 0;
                 } else if (ret == '\r') {
                     if (PeekChar() == '\n') {
                         NextChar();
                     } else {
-                        current.line++; current.column = 0;
+                        current.Line++; current.Column = 0;
                     }
                     ret = '\n';
                 }
                 return ret;
             } else {
-                index++; current.column++;
+                index++; current.Column++;
                 return EOF;
             }
         }
@@ -162,7 +173,7 @@ namespace IronPython.Compiler {
 
         protected void Backup() {
             index--;
-            current.column--;
+            current.Column--;
 
             switch (PeekChar()) {
                 case '\n':
@@ -170,18 +181,18 @@ namespace IronPython.Compiler {
                     goto case '\r';
 
                 case '\r':
-                    System.Diagnostics.Debug.Assert(current.column == -1);
-                    current.line--;
+                    System.Diagnostics.Debug.Assert(current.Column == -1);
+                    current.Line--;
 
                     // Calculate new column value
-                    for (current.column = 0; current.column < index; current.column++) {
-                        int ch = data[index - current.column - 1];
+                    for (current.Column = 0; current.Column < index; current.Column++) {
+                        int ch = data[index - current.Column - 1];
                         if (ch == '\n' || ch == '\r') break;
                     }
                     break;
             }
 
-            System.Diagnostics.Debug.Assert(current.column >= 0);
+            System.Diagnostics.Debug.Assert(current.Column >= 0);
         }
 
         internal String GetImage() {
@@ -198,6 +209,30 @@ namespace IronPython.Compiler {
             get {
                 return PeekChar() == EOF;
             }
+        }
+
+        /// <summary>
+        /// Starting location in the source text
+        /// </summary>
+        public Location StartLocation {
+            get { return startLoc; }
+            set { startLoc = value; }
+        }
+
+        /// <summary>
+        /// Ending location in the source text
+        /// </summary>
+        public Location EndLocation {
+            get { return endLoc; }
+            set { endLoc = value; }
+        }
+
+        /// <summary>
+        /// Current position in the source text 
+        /// </summary>
+        public Location CurrentLocation {
+            get { return current; }
+            set { current = value; }
         }
 
         public Token Next() {
@@ -246,11 +281,11 @@ namespace IronPython.Compiler {
                             if (NextChar('\'')) return ReadString('\'', true, true);
                             Backup();
                         }
-                        return ReadName((char)ch);
+                        return ReadName();
                     case 'r': case 'R':
                         if (NextChar('\"')) return ReadString('\"', true, false);
                         if (NextChar('\'')) return ReadString('\'', true, false);
-                        return ReadName((char)ch);
+                        return ReadName();
                     case '.':
                         if (IsDigit(PeekChar())) {
                             return ReadFloatPostDot();
@@ -266,7 +301,7 @@ namespace IronPython.Compiler {
                     case '5': case '6': case '7': case '8': case '9': 
                         return ReadNumber((char)ch);
 
-                    case '_': return ReadName('_');
+                    case '_': return ReadName();
 
                     case '\xEF':
                         if (start == 0 && NextChar('\xBB') && NextChar('\xBF')) {
@@ -278,7 +313,7 @@ namespace IronPython.Compiler {
                         Token res = NextOperator(ch);
                         if (res != null) return res;
 
-                        if (IsNameStart(ch)) return ReadName((char)ch);
+                        if (IsNameStart(ch)) return ReadName();
                         return BadChar(ch);
                 }
             }
@@ -381,12 +416,12 @@ namespace IronPython.Compiler {
             return new String(data, curIndex, endIndex - curIndex);
         }
 
-        public Token ContinueString(char quote, bool isRaw, bool isUni, bool isTriple) {
+        public Token ContinueString(char quote, bool isRaw, bool isUnicode, bool isTriple) {
             this.start = index;
-            return ContinueString(quote, isRaw, isUni, isTriple, 0);
+            return ContinueString(quote, isRaw, isUnicode, isTriple, 0);
         }
 
-        private Token ContinueString(char quote, bool isRaw, bool isUni, bool isTriple, int sadd) {
+        private Token ContinueString(char quote, bool isRaw, bool isUnicode, bool isTriple, int startAdd) {
             bool complete = true;
             int eadd = 0;
             for (; ; ) {
@@ -439,15 +474,15 @@ namespace IronPython.Compiler {
             int end = this.end;
             if (end >= length) end = length;
 
-            string contents = new string(data, start + sadd, end - start - (sadd + eadd));
+            string contents = new string(data, start + startAdd, end - start - (startAdd + eadd));
             if (isTriple) {
                 contents = contents.Replace("\r\n", "\n");
             }
-            contents = LiteralParser.ParseString(contents, isRaw, isUni, complete);
+            contents = LiteralParser.ParseString(contents, isRaw, isUnicode, complete);
             if (complete) {
                 return new ConstantValueToken(contents);
             } else {
-                return new IncompleteStringToken(contents, quote == '\'', isRaw, isUni, isTriple);
+                return new IncompleteStringToken(contents, quote == '\'', isRaw, isUnicode, isTriple);
             }
         }
 
@@ -558,7 +593,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        private Token ReadName(char first) {
+        private Token ReadName() {
             int ch = NextChar();
             while (IsNamePart(ch)) {
                 ch = NextChar();
@@ -576,25 +611,25 @@ namespace IronPython.Compiler {
         private void SetNewLine(Location loc) {
             startLoc = loc;
             endLoc = loc;
-            endLoc.column++;
+            endLoc.Column++;
         }
 
         private void SetStart() {
             start = index;
-            startLoc.column = current.column;
-            startLoc.line = current.line;
+            startLoc.Column = current.Column;
+            startLoc.Line = current.Line;
         }
 
         private void SetEnd() {
             end = index;
-            endLoc.column = current.column;
-            endLoc.line = current.line;
+            endLoc.Column = current.Column;
+            endLoc.Line = current.Line;
         }
 
         private void SetEnd(int revert) {
             end = index - revert;
-            endLoc.column = current.column - revert;
-            endLoc.line = current.line;
+            endLoc.Column = current.Column - revert;
+            endLoc.Line = current.Line;
         }
 
         public int GroupingLevel {
@@ -625,7 +660,7 @@ namespace IronPython.Compiler {
                     current = indent[indentLevel];                    
                 }
                 if (spaces != current) {
-                    ReportSyntaxError("unindent does not match any outer indentation level on line " + this.current.line.ToString(), ErrorCodes.IndentationError);
+                    ReportSyntaxError("unindent does not match any outer indentation level on line " + this.current.Line.ToString(), ErrorCodes.IndentationError);
                 }
             }
         }
@@ -648,7 +683,7 @@ namespace IronPython.Compiler {
                     case '#': ReadToEol(); spaces = 0; continue;
                     case EOF:
                         SetIndent(0, null);
-                        return Tokens.NewlineToken;
+                        return Tokens.NewLineToken;
                     default:
                         if (InGrouping()) {
                             Backup();
@@ -658,7 +693,7 @@ namespace IronPython.Compiler {
                         SetIndent(spaces, null);
                         Backup();
                         SetNewLine(newLine);
-                        return Tokens.NewlineToken;
+                        return Tokens.NewLineToken;
                 }
             }
         }
@@ -683,7 +718,7 @@ namespace IronPython.Compiler {
                     case '#': ReadToEol(); spaces = 0; sb.Length = 0; continue;
                     case EOF:
                         SetIndent(0, null);
-                        return Tokens.NewlineToken;
+                        return Tokens.NewLineToken;
                     default:
                         if (InGrouping()) {
                             Backup();
@@ -700,11 +735,11 @@ namespace IronPython.Compiler {
                             for (int i = 0; i < checkLength; i++)
                                 if (sb[i] != previousIndent[i]) {
                                     // We've hit a difference in the way we're indenting, report it.
-                                    string message = String.Format("inconsistent use of tabs and spaces in indentation ({0}, line {1})", context.SourceFile, current.line);
+                                    string message = String.Format("inconsistent use of tabs and spaces in indentation ({0}, line {1})", context.SourceFile, current.Line);
                                     if (Options.ErrorOnIndentationInconsistency) {
                                         context.AddError("inconsistent use of tabs and spaces in indentation",
-                                            GetRawLineForError(current.line),
-                                            current.line, current.column, current.line, current.column,
+                                            GetRawLineForError(current.Line),
+                                            current.Line, current.Column, current.Line, current.Column,
                                             ErrorCodes.TabError, Severity.Error);
                                     }
 
@@ -719,7 +754,7 @@ namespace IronPython.Compiler {
 
                         Backup();
                         SetNewLine(newLine);
-                        return Tokens.NewlineToken;
+                        return Tokens.NewLineToken;
                 }
             }
         }
@@ -767,7 +802,7 @@ namespace IronPython.Compiler {
             //if (pendingNewlines-- > 0 && (indentLevel > 0 || data[length-1] != '\n')) {
                 return ReadNewline();
             } else {
-                return Tokens.EofToken;
+                return Tokens.EndOfFileToken;
             }
         }
 
@@ -795,8 +830,8 @@ namespace IronPython.Compiler {
 
         private void ReportSyntaxError(string message, int errorCode) {
             Debug.Assert(context != null);
-            string lineText = GetRawLineForError(startLoc.line);
-            context.AddError(message, lineText, startLoc.line, startLoc.column, endLoc.line, endLoc.column, errorCode, Severity.Error);
+            string lineText = GetRawLineForError(startLoc.Line);
+            context.AddError(message, lineText, startLoc.Line, startLoc.Column, endLoc.Line, endLoc.Column, errorCode, Severity.Error);
         }
     }
 }

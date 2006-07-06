@@ -33,24 +33,24 @@ namespace IronPython.Compiler {
                     SetEnd(); return Tokens.AddToken;
                 case '-':
                     if (NextChar('=')) {
-                        SetEnd(); return Tokens.SubEqualToken;
+                        SetEnd(); return Tokens.SubtractEqualToken;
                     }
                     SetEnd(); return Tokens.SubtractToken;
                 case '*':
                     if (NextChar('*')) {
                         if (NextChar('=')) {
-                            SetEnd(); return Tokens.PowEqualToken;
+                            SetEnd(); return Tokens.PowerEqualToken;
                         }
                         SetEnd(); return Tokens.PowerToken;
                     }
                     if (NextChar('=')) {
-                        SetEnd(); return Tokens.MulEqualToken;
+                        SetEnd(); return Tokens.MultiplyEqualToken;
                     }
                     SetEnd(); return Tokens.MultiplyToken;
                 case '/':
                     if (NextChar('/')) {
                         if (NextChar('=')) {
-                            SetEnd(); return Tokens.FloordivEqualToken;
+                            SetEnd(); return Tokens.FloorDivideEqualToken;
                         }
                         SetEnd(); return Tokens.FloorDivideToken;
                     }
@@ -66,7 +66,7 @@ namespace IronPython.Compiler {
                 case '<':
                     if (NextChar('<')) {
                         if (NextChar('=')) {
-                            SetEnd(); return Tokens.LshiftEqualToken;
+                            SetEnd(); return Tokens.LeftShiftEqualToken;
                         }
                         SetEnd(); return Tokens.LeftShiftToken;
                     }
@@ -80,7 +80,7 @@ namespace IronPython.Compiler {
                 case '>':
                     if (NextChar('>')) {
                         if (NextChar('=')) {
-                            SetEnd(); return Tokens.RshiftEqualToken;
+                            SetEnd(); return Tokens.RightShiftEqualToken;
                         }
                         SetEnd(); return Tokens.RightShiftToken;
                     }
@@ -90,12 +90,12 @@ namespace IronPython.Compiler {
                     SetEnd(); return Tokens.GreaterThanToken;
                 case '&':
                     if (NextChar('=')) {
-                        SetEnd(); return Tokens.AndEqualToken;
+                        SetEnd(); return Tokens.BitwiseAndEqualToken;
                     }
                     SetEnd(); return Tokens.BitwiseAndToken;
                 case '|':
                     if (NextChar('=')) {
-                        SetEnd(); return Tokens.OrEqualToken;
+                        SetEnd(); return Tokens.BitwiseOrEqualToken;
                     }
                     SetEnd(); return Tokens.BitwiseOrToken;
                 case '^':
@@ -115,32 +115,32 @@ namespace IronPython.Compiler {
                     return BadChar(NextChar());
                 case '(':
                     parenLevel++;
-                    SetEnd(); return Tokens.LParenToken;
+                    SetEnd(); return Tokens.LeftParenthesisToken;
                 case ')':
                     parenLevel--;
-                    SetEnd(); return Tokens.RParenToken;
+                    SetEnd(); return Tokens.RightParenthesisToken;
                 case '[':
                     bracketLevel++;
-                    SetEnd(); return Tokens.LBracketToken;
+                    SetEnd(); return Tokens.LeftBracketToken;
                 case ']':
                     bracketLevel--;
-                    SetEnd(); return Tokens.RBracketToken;
+                    SetEnd(); return Tokens.RightBracketToken;
                 case '{':
                     braceLevel++;
-                    SetEnd(); return Tokens.LBraceToken;
+                    SetEnd(); return Tokens.LeftBraceToken;
                 case '}':
                     braceLevel--;
-                    SetEnd(); return Tokens.RBraceToken;
+                    SetEnd(); return Tokens.RightBraceToken;
                 case ',':
                     SetEnd(); return Tokens.CommaToken;
                 case ':':
                     SetEnd(); return Tokens.ColonToken;
                 case '`':
-                    SetEnd(); return Tokens.BackquoteToken;
+                    SetEnd(); return Tokens.BackQuoteToken;
                 case ';':
                     SetEnd(); return Tokens.SemicolonToken;
                 case '~':
-                    SetEnd(); return Tokens.TwidleToken;
+                    SetEnd(); return Tokens.TwiddleToken;
                 case '@':
                     SetEnd(); return Tokens.AtToken;
 

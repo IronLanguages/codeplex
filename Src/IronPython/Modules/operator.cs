@@ -418,7 +418,7 @@ namespace IronPython.Modules {
             }
             object getitem;
             if (Ops.TryGetAttr(o, SymbolTable.GetItem, out getitem)) {
-                if ((context.ContextFlags & CallerContextFlags.ShowCls) == 0) {
+                if ((context.ContextFlags & CallerContextAttributes.ShowCls) == 0) {
                     // in standard Python methods aren't mapping types, therefore
                     // if the user hasn't broken out of that box yet don't treat 
                     // them as mapping types.

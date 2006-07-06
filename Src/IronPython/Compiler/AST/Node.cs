@@ -21,16 +21,16 @@ using IronPython.Hosting;
 using IronPython.CodeDom;
 
 
-namespace IronPython.Compiler.AST {
+namespace IronPython.Compiler.Ast {
     public abstract class Node {
         private Location start;
         private Location end;
 
         protected Node() {
-            start.line = -1;
-            start.column = -1;
-            end.line = -1;
-            end.column = -1;
+            start.Line = -1;
+            start.Column = -1;
+            end.Line = -1;
+            end.Column = -1;
         }
 
         public void SetLoc(Location start, Location end) {
@@ -39,19 +39,19 @@ namespace IronPython.Compiler.AST {
         }
 
         public void SetLoc(CodeSpan span) {
-            start.line = span.startLine;
-            start.column = span.startColumn;
-            end.line = span.endLine;
-            end.column = span.endColumn;
+            start.Line = span.StartLine;
+            start.Column = span.StartColumn;
+            end.Line = span.EndLine;
+            end.Column = span.EndColumn;
         }
 
         internal CodeSpan Span {
             get {
-                return new CodeSpan(start.line, start.column, end.line, end.column);
+                return new CodeSpan(start.Line, start.Column, end.Line, end.Column);
             }
         }
 
-        public abstract void Walk(IAstWalker w);
+        public abstract void Walk(IAstWalker walker);
 
         public Location Start {
             get { return start; }

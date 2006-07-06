@@ -25,7 +25,7 @@ using System.CodeDom;
 using System.CodeDom.Compiler;
 
 using IronPython.Runtime;
-using IronPython.Compiler.AST;
+using IronPython.Compiler.Ast;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.CodeDom {
@@ -58,10 +58,10 @@ namespace IronPython.CodeDom {
         }
         #region IAstWalker Members
 
-        public bool Walk(FuncDef node) {
+        public bool Walk(FunctionDefinition node) {
             string nameStr = node.Name.GetString();
             if (nameStr == PythonGenerator.ctorFieldInit) {
-                if (WalkFieldInitializations(node.body)) {
+                if (WalkFieldInitializations(node.Body)) {
                     // method is just a bunch of field member assignments,
                     // hide it...
                     return false;
@@ -81,12 +81,12 @@ namespace IronPython.CodeDom {
             }
 
             // method starts at decorators, if they're available.
-            if (node.Decorators != null && node.Decorators.Start.line != -1) MarkForCodeDomMember(node.Decorators, method);
+            if (node.Decorators != null && node.Decorators.Start.Line != -1) MarkForCodeDomMember(node.Decorators, method);
             else MarkForCodeDomMember(node, method);
 
             // process the method...
             try {
-                string[] args = ProcessDecorators(node, method, node.Decorators as CallExpr);
+                string[] args = ProcessDecorators(node, method, node.Decorators as CallExpression);
 
                 ProcessParameters(node, method, args);
 
@@ -109,13 +109,13 @@ namespace IronPython.CodeDom {
             // point is where the designer will try to focus if the
             // user wants to add event handler stuff.  We set it
             // to the line after the method & indented in 4 characters.
-            method.UserData[typeof(System.Drawing.Point)] = new System.Drawing.Point(node.Start.column + 4, node.Start.line + 1);
+            method.UserData[typeof(System.Drawing.Point)] = new System.Drawing.Point(node.Start.Column + 4, node.Start.Line + 1);
             lastObject = method;
 
             return false;
         }
 
-        public bool Walk(ClassDef node) {
+        public bool Walk(ClassDefinition node) {
             CodeTypeDeclaration ctd;
             CodeObject res = ctd = MarkForCodeDomMember(node, new CodeTypeDeclaration(node.Name.GetString()));
 
@@ -129,17 +129,17 @@ namespace IronPython.CodeDom {
                 using (PushType(ctd)) {
                     ctd.UserData["HasSlots"] = false;
 
-                    if (!IsPassStmt(node.body)) { // don't generate pass statements
-                        if (node.body is SuiteStmt) {
+                    if (!IsPassStmt(node.Body)) { // don't generate pass statements
+                        if (node.Body is SuiteStatement) {
                             PreProcessSuite(node, ctd);
 
                             res = ProcessSuite(node, ctd);
                         } else {
-                            CodeObject codebody = RecursiveWalk(node.body);
+                            CodeObject codebody = RecursiveWalk(node.Body);
                             if (codebody is CodeTypeMember) {
                                 ctd.Members.Add((CodeTypeMember)codebody);
                             } else {
-                                throw CodeDomSerializerError(node, "ClassDef for {0}", node.body);
+                                throw CodeDomSerializerError(node, "ClassDef for {0}", node.Body);
                             }
                         }
                     }
@@ -162,14 +162,14 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(CallExpr node) {
+        public bool Walk(CallExpression node) {
             CodeMethodReferenceExpression mref = MarkForCodeDom(node, new CodeMethodReferenceExpression());
             CodeExpression[] prms = new CodeExpression[node.Args.Count];
             CodeTypeReference[] paramTypes = new CodeTypeReference[node.Args.Count];
 
             for (int i = 0; i < node.Args.Count; i++) {
                 // we allow tuples for array creation, but no where else.
-                if (i == 0 && node.Args[i].Expression is TupleExpr) continue;
+                if (i == 0 && node.Args[i].Expression is TupleExpression) continue;
 
                 prms[i] = (CodeExpression)RecursiveWalk(node.Args[i].Expression);
 
@@ -183,7 +183,7 @@ namespace IronPython.CodeDom {
                 }
             }
 
-            NameExpr ne = node.Target as NameExpr;
+            NameExpression ne = node.Target as NameExpression;
             if (ne == null) {
                 // we only have a name or a target, not both.
                 CodeObject targetExpr = RecursiveWalk(node.Target);
@@ -193,12 +193,12 @@ namespace IronPython.CodeDom {
 
                 if ((arrCreate = targetExpr as CodeArrayCreateExpression) != null) {
                     // System.Array[type]( (...) ), we fill in the args here...
-                    Debug.Assert(node.Target is IndexExpr);
-                    TupleExpr te = node.Args[0].Expression as TupleExpr;
+                    Debug.Assert(node.Target is IndexExpression);
+                    TupleExpression te = node.Args[0].Expression as TupleExpression;
                     if (te == null) throw CodeDomSerializerError(node, "expected tuple for object creation");
 
-                    CodeExpression[] vals = new CodeExpression[te.Items.Length];
-                    for (int i = 0; i < te.Items.Length; i++) {
+                    CodeExpression[] vals = new CodeExpression[te.Items.Count];
+                    for (int i = 0; i < te.Items.Count; i++) {
                         vals[i] = (CodeExpression)RecursiveWalk(te.Items[i]);
                     }
                     arrCreate.Initializers.AddRange(vals);
@@ -247,7 +247,7 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(FieldExpr node) {
+        public bool Walk(FieldExpression node) {
             CodeObject targetObj = RecursiveWalk(node.Target);
 
             CodeTypeReferenceExpression treParent = targetObj as CodeTypeReferenceExpression;
@@ -304,7 +304,7 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(IndexExpr node) {
+        public bool Walk(IndexExpression node) {
             CodeExpression targetExpr = (CodeExpression)RecursiveWalk(node.Target);
             CodeExpression indexExpr = (CodeExpression)RecursiveWalk(node.Index);
 
@@ -324,17 +324,17 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(ParenExpr node) {
+        public bool Walk(ParenthesisExpression node) {
             lastObject = RecursiveWalk(node.Expression);
             return false;
         }
 
-        public bool Walk(ConstantExpr node) {
+        public bool Walk(ConstantExpression node) {
             lastObject = MarkForCodeDom(node, new CodePrimitiveExpression(node.Value));
             return false;
         }
 
-        public bool Walk(NameExpr node) {
+        public bool Walk(NameExpression node) {
             CodeObject res;
 
             string name = node.Name.GetString();
@@ -367,7 +367,7 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(AndExpr node) {
+        public bool Walk(AndExpression node) {
             lastObject = MarkForCodeDom(node, new CodeBinaryOperatorExpression(
                 (CodeExpression)RecursiveWalk(node.Left),
                 CodeBinaryOperatorType.BooleanAnd,
@@ -377,7 +377,7 @@ namespace IronPython.CodeDom {
 
         }
 
-        public bool Walk(OrExpr node) {
+        public bool Walk(OrExpression node) {
             lastObject = MarkForCodeDom(node, new CodeBinaryOperatorExpression(
                 (CodeExpression)RecursiveWalk(node.Left),
                 CodeBinaryOperatorType.BooleanOr,
@@ -385,7 +385,7 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(BinaryExpr node) {
+        public bool Walk(BinaryExpression node) {
             CodeBinaryOperatorType theOp;
 
             if (node.Operator == BinaryOperator.Add) theOp = CodeBinaryOperatorType.Add;
@@ -404,7 +404,7 @@ namespace IronPython.CodeDom {
             else if (node.Operator == BinaryOperator.Subtract) theOp = CodeBinaryOperatorType.Subtract;
             else if (node.Operator == BinaryOperator.NotEqual) theOp = CodeBinaryOperatorType.IdentityInequality;
 
-            else throw CodeDomSerializerError(node, "can't generate CodeDom tree for: {0}", node.Operator.symbol);
+            else throw CodeDomSerializerError(node, "can't generate CodeDom tree for: {0}", node.Operator.Symbol);
 
             lastObject = MarkForCodeDom(node, new CodeBinaryOperatorExpression(
                 (CodeExpression)RecursiveWalk(node.Left),
@@ -422,11 +422,11 @@ namespace IronPython.CodeDom {
             }
             return null;
         }
-        public bool Walk(AssignStmt node) {
+        public bool Walk(AssignStatement node) {
             if (node.Left.Count != 1)
                 throw CodeDomSerializerError(node, "Can only generate CodeDom trees w/ one left-hand side");
 
-            NameExpr lhname = node.Left[0] as NameExpr;
+            NameExpression lhname = node.Left[0] as NameExpression;
             if (lhname != null) {
                 string name = lhname.Name.GetString();
                 // assignment to a local, return w/ an init expression.
@@ -436,9 +436,9 @@ namespace IronPython.CodeDom {
                     CodeExpression initStmt = (CodeExpression)RecursiveWalk(node.Right);
                     if (CurrentMethod != null) DeclareLocal(name, LastExpression);
                     else if (CurrentType != null) {
-                        CallExpr ce = node.Right as CallExpr;
+                        CallExpression ce = node.Right as CallExpression;
                         if (ce != null) {
-                            NameExpr callTargetName = ce.Target as NameExpr;
+                            NameExpression callTargetName = ce.Target as NameExpression;
                             if (callTargetName != null && callTargetName.Name.GetString() == "property") {
                                 return AddProperty(node, name, ce);
                             }
@@ -460,21 +460,21 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        private bool AddProperty(AssignStmt node, string name, CallExpr ce) {
+        private bool AddProperty(AssignStatement node, string name, CallExpression ce) {
             CodeMemberProperty prop = new CodeMemberProperty();
             prop.Name = name;
             for (int i = 0; i < ce.Args.Count; i++) {
                 Arg arg = ce.Args[i];
                 if (arg.Name != SymbolTable.Empty) {
                     switch (arg.Name.GetString()) {
-                        case "fget": AddGetter(node, name, prop, arg.Expression); break;
-                        case "fset": AddSetter(node, name, prop, arg.Expression); break;
+                        case "fget": AddGetter(node, prop, arg.Expression); break;
+                        case "fset": AddSetter(node, prop, arg.Expression); break;
                         default: throw CodeDomSerializerError(node, "cannot deserialized del properties");
                     }
                 } else {
                     switch (i) {
-                        case 0: AddGetter(node, name, prop, arg.Expression); break;
-                        case 1: AddSetter(node, name, prop, arg.Expression); break;
+                        case 0: AddGetter(node, prop, arg.Expression); break;
+                        case 1: AddSetter(node, prop, arg.Expression); break;
                         default: throw CodeDomSerializerError(node, "cannot deserialized del properties");
                     }
                 }
@@ -483,8 +483,8 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        private CodeMemberMethod AddSetter(AssignStmt node, string name, CodeMemberProperty prop, Expr propExpr) {
-            NameExpr ne = propExpr as NameExpr;
+        private CodeMemberMethod AddSetter(AssignStatement node, CodeMemberProperty prop, Expression propExpr) {
+            NameExpression ne = propExpr as NameExpression;
             if (ne == null) throw CodeDomSerializerError(node, "setter method is not a name");
 
             prop.HasSet = true;
@@ -502,8 +502,8 @@ namespace IronPython.CodeDom {
             return method;
         }
 
-        private CodeMemberMethod AddGetter(AssignStmt node, string name, CodeMemberProperty prop, Expr propExpr) {
-            NameExpr ne = propExpr as NameExpr;
+        private CodeMemberMethod AddGetter(AssignStatement node, CodeMemberProperty prop, Expression propExpr) {
+            NameExpression ne = propExpr as NameExpression;
             if (ne == null) throw CodeDomSerializerError(node, "setter method is not a name");
 
             prop.HasGet = true;
@@ -520,7 +520,7 @@ namespace IronPython.CodeDom {
             return method;
         }
 
-        public bool Walk(AugAssignStmt node) {
+        public bool Walk(AugAssignStatement node) {
             CodeMethodReferenceExpression cm = RecursiveWalk(node.Right) as CodeMethodReferenceExpression;
             if (cm == null) throw CodeDomSerializerError(node, "+= must be followed by method for event");
 
@@ -537,20 +537,20 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(ExprStmt node) {
+        public bool Walk(ExpressionStatement node) {
             lastObject = MarkForCodeDomStatement(node,
                 new CodeExpressionStatement((CodeExpression)RecursiveWalk(node.Expression)));
             return false;
         }
 
-        public bool Walk(FromImportStmt node) {
+        public bool Walk(FromImportStatement node) {
             StringBuilder name = new StringBuilder();
             for (int i = 0; i < node.Names.Count; i++) {
                 if (i != 0) name.Append(".");
                 name.Append(node.Names[i]);
             }
             CodeNamespaceImport cni = MarkForCodeDom(node, new CodeNamespaceImport(node.Root.MakeString()));
-            if (node.Names == FromImportStmt.Star) {
+            if (node.Names == FromImportStatement.Star) {
                 cni.UserData["FromImport"] = "*";
                 AddImportAs(node.Root.MakeString());
             } else {
@@ -562,7 +562,7 @@ namespace IronPython.CodeDom {
             return false;
         }
         
-        public bool Walk(IfStmt node) {
+        public bool Walk(IfStatement node) {
             CodeConditionStatement startCcs;
 
             CodeConditionStatement ccs = startCcs = MarkForCodeDomStatement(node, new CodeConditionStatement(
@@ -598,7 +598,7 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(ImportStmt node) {
+        public bool Walk(ImportStatement node) {
             StringBuilder name = new StringBuilder();
             for (int i = 0; i < node.Names.Count; i++) {
                 if (i != 0) name.Append(".");
@@ -612,22 +612,22 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(PassStmt node) {
+        public bool Walk(PassStatement node) {
             lastObject = MarkForCodeDomStatement(node, new CodeSnippetStatement("pass"));
             return false;
         }
 
-        public bool Walk(ReturnStmt node) {
+        public bool Walk(ReturnStatement node) {
             lastObject = MarkForCodeDomStatement(node, 
                 new CodeMethodReturnStatement((CodeExpression)RecursiveWalk(node.Expression)));
             return false;
         }
 
-        public bool Walk(SuiteStmt node) {
+        public bool Walk(SuiteStatement node) {
             CodeObject[] cos = new CodeObject[node.Statements.Count];
 
             int i = 0;
-            foreach (Stmt s in node.Statements) {
+            foreach (Statement s in node.Statements) {
                 cos[i++] = RecursiveWalk(s);
             }
 
@@ -635,7 +635,7 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(WhileStmt node) {
+        public bool Walk(WhileStatement node) {
             if (node.ElseStatement != null) {
                 throw CodeDomSerializerError(node, "Cannot create CodeDom trees w/ while's w/ elses");
             }
@@ -644,7 +644,7 @@ namespace IronPython.CodeDom {
             if (IsPassStmt(node.Body)) {
                 statements = new CodeStatement[] { };
             } else {
-                SuiteStmt ss = node.Body as SuiteStmt;
+                SuiteStatement ss = node.Body as SuiteStatement;
                 if (ss != null) {
                     statements = new CodeStatement[ss.Statements.Count];
                     for (int i = 0; i < ss.Statements.Count; i++) {
@@ -665,34 +665,34 @@ namespace IronPython.CodeDom {
             return false;
         }
 
-        public bool Walk(RaiseStmt node) {
+        public bool Walk(RaiseStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(TryFinallyStmt node) {
+        public bool Walk(TryFinallyStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(TryStmt node) {
+        public bool Walk(TryStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(BreakStmt node) {
+        public bool Walk(BreakStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
-        public bool Walk(ContinueStmt node) {
-            throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
-        }
-
-        public bool Walk(DelStmt node) {
+        public bool Walk(ContinueStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(ExecStmt node) {
+        public bool Walk(DelStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(GlobalStmt node) {
+        public bool Walk(ExecStatement node) {
+            throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
+        }
+
+        public bool Walk(GlobalStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
@@ -700,63 +700,63 @@ namespace IronPython.CodeDom {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(ForStmt node) {
+        public bool Walk(ForStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(PrintStmt node) {
+        public bool Walk(PrintStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
         
-        public bool Walk(AssertStmt node) {
+        public bool Walk(AssertStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(YieldStmt node) {
+        public bool Walk(YieldStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(BackquoteExpr node) {
+        public bool Walk(BackQuoteExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(DictExpr node) {
+        public bool Walk(DictionaryExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(ErrorExpr node) {
+        public bool Walk(ErrorExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(GenExpr node) {
+        public bool Walk(GeneratorExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(LambdaExpr node) {
+        public bool Walk(LambdaExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(ListComp node) {
+        public bool Walk(ListComprehension node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(ListExpr node) {
+        public bool Walk(ListExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(SliceExpr node) {
+        public bool Walk(SliceExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(TupleExpr node) {
+        public bool Walk(TupleExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(UnaryExpr node) {
+        public bool Walk(UnaryExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(CondExpr node) {
+        public bool Walk(ConditionalExpression node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
@@ -768,160 +768,160 @@ namespace IronPython.CodeDom {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(IfStmtTest node) {
+        public bool Walk(IfStatementTest node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(ListCompFor node) {
+        public bool Walk(ListComprehensionFor node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(ListCompIf node) {
+        public bool Walk(ListComprehensionIf node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
-        public bool Walk(TryStmtHandler node) {
+        public bool Walk(TryStatementHandler node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
         
         //////////////////////////////////////////////////////////////////////////////////////
         // post-walkers, we do nothing w/ these.
 
-        public void PostWalk(AndExpr node) {
+        public void PostWalk(AndExpression node) {
         }
 
-        public void PostWalk(BackquoteExpr node) {
+        public void PostWalk(BackQuoteExpression node) {
         }
 
-        public void PostWalk(BinaryExpr node) {
+        public void PostWalk(BinaryExpression node) {
         }
 
-        public void PostWalk(CallExpr node) {
-        }
-
-
-        public void PostWalk(ConstantExpr node) {
-        }
-
-        public void PostWalk(DictExpr node) {
+        public void PostWalk(CallExpression node) {
         }
 
 
-        public void PostWalk(ErrorExpr node) {
-        }
-        public void PostWalk(FieldExpr node) {
+        public void PostWalk(ConstantExpression node) {
         }
 
-
-        public void PostWalk(GenExpr node) {
-        }
-
-        public void PostWalk(IndexExpr node) {
-        }
-
-        public void PostWalk(LambdaExpr node) {
+        public void PostWalk(DictionaryExpression node) {
         }
 
 
-        public void PostWalk(ListComp node) {
+        public void PostWalk(ErrorExpression node) {
         }
-
-        public void PostWalk(ListExpr node) {
-        }
-
-        public void PostWalk(NameExpr node) {
+        public void PostWalk(FieldExpression node) {
         }
 
 
-        public void PostWalk(OrExpr node) {
+        public void PostWalk(GeneratorExpression node) {
         }
 
-        public void PostWalk(ParenExpr node) {
-        }
-        public void PostWalk(SliceExpr node) {
+        public void PostWalk(IndexExpression node) {
         }
 
-        public void PostWalk(TupleExpr node) {
-        }
-        public void PostWalk(UnaryExpr node) {
-        }
-
-        public void PostWalk(CondExpr node) {
+        public void PostWalk(LambdaExpression node) {
         }
 
 
-        public void PostWalk(AssertStmt node) {
+        public void PostWalk(ListComprehension node) {
         }
 
-        public void PostWalk(AssignStmt node) {
+        public void PostWalk(ListExpression node) {
+        }
+
+        public void PostWalk(NameExpression node) {
         }
 
 
-        public void PostWalk(AugAssignStmt node) {
+        public void PostWalk(OrExpression node) {
+        }
+
+        public void PostWalk(ParenthesisExpression node) {
+        }
+        public void PostWalk(SliceExpression node) {
+        }
+
+        public void PostWalk(TupleExpression node) {
+        }
+        public void PostWalk(UnaryExpression node) {
+        }
+
+        public void PostWalk(ConditionalExpression node) {
         }
 
 
-        public void PostWalk(BreakStmt node) {
+        public void PostWalk(AssertStatement node) {
         }
 
-        public void PostWalk(ClassDef node) {
+        public void PostWalk(AssignStatement node) {
         }
 
-        public void PostWalk(ContinueStmt node) {
+
+        public void PostWalk(AugAssignStatement node) {
         }
 
-        public void PostWalk(DelStmt node) {
+
+        public void PostWalk(BreakStatement node) {
         }
 
-        public void PostWalk(ExecStmt node) {
+        public void PostWalk(ClassDefinition node) {
+        }
+
+        public void PostWalk(ContinueStatement node) {
+        }
+
+        public void PostWalk(DelStatement node) {
+        }
+
+        public void PostWalk(ExecStatement node) {
         }
         
-        public void PostWalk(ExprStmt node) {
+        public void PostWalk(ExpressionStatement node) {
         }
 
-        public void PostWalk(ForStmt node) {
+        public void PostWalk(ForStatement node) {
         }
 
-        public void PostWalk(FromImportStmt node) {
+        public void PostWalk(FromImportStatement node) {
         }
 
-        public void PostWalk(GlobalStmt node) {
+        public void PostWalk(GlobalStatement node) {
         }
 
         public void PostWalk(GlobalSuite node) {
         }
 
-        public void PostWalk(IfStmt node) {            
+        public void PostWalk(IfStatement node) {            
         }
 
-        public void PostWalk(ImportStmt node) {
+        public void PostWalk(ImportStatement node) {
         }
 
-        public void PostWalk(PassStmt node) {
+        public void PostWalk(PassStatement node) {
         }
 
-        public void PostWalk(PrintStmt node) {
+        public void PostWalk(PrintStatement node) {
         }
 
-        public void PostWalk(RaiseStmt node) {
+        public void PostWalk(RaiseStatement node) {
         }
 
-        public void PostWalk(ReturnStmt node) {
+        public void PostWalk(ReturnStatement node) {
         }
 
-        public void PostWalk(SuiteStmt node) {
+        public void PostWalk(SuiteStatement node) {
         }
 
-        public void PostWalk(TryFinallyStmt node) {
+        public void PostWalk(TryFinallyStatement node) {
         }
 
-        public void PostWalk(TryStmt node) {
+        public void PostWalk(TryStatement node) {
         }
 
-        public void PostWalk(WhileStmt node) {
+        public void PostWalk(WhileStatement node) {
         }
 
-        public void PostWalk(YieldStmt node) {
+        public void PostWalk(YieldStatement node) {
         }
 
         public void PostWalk(Arg node) {
@@ -930,18 +930,18 @@ namespace IronPython.CodeDom {
         public void PostWalk(DottedName node) {
         }
 
-        public void PostWalk(IfStmtTest node) {
+        public void PostWalk(IfStatementTest node) {
         }
 
-        public void PostWalk(ListCompFor node) {
+        public void PostWalk(ListComprehensionFor node) {
         }
 
-        public void PostWalk(ListCompIf node) {
+        public void PostWalk(ListComprehensionIf node) {
         }
 
-        public void PostWalk(TryStmtHandler node) {
+        public void PostWalk(TryStatementHandler node) {
         }
-        public void PostWalk(FuncDef node) {
+        public void PostWalk(FunctionDefinition node) {
         }
         #endregion
 
@@ -1002,7 +1002,7 @@ namespace IronPython.CodeDom {
 
         /// <summary> Given a CodeTypeDeclaration try and find the member associated
         /// with the specifid name </summary>
-        public CodeTypeMember FindMember(CodeTypeDeclaration ctd, string name) {
+        private static CodeTypeMember FindMember(CodeTypeDeclaration ctd, string name) {
             for (int i = 0; i < ctd.Members.Count; i++) {
                 if (ctd.Members[i].Name == name) {
                     return (ctd.Members[i]);
@@ -1013,7 +1013,7 @@ namespace IronPython.CodeDom {
 
         /// <summary> Given a NameExpr try to determines the type.  We handle self references,
         /// arguments, locals, and other CLR types. </summary>
-        public CodeTypeReference GetTypeFromVariableName(NameExpr ne) {
+        public CodeTypeReference GetTypeFromVariableName(NameExpression ne) {
             string name = ne.Name.GetString();
 
             if (name == "self" &&
@@ -1183,7 +1183,7 @@ namespace IronPython.CodeDom {
         private Exception CodeDomSerializerError(Node node, string format, params object[] args) {
             return new System.ComponentModel.Design.Serialization.CodeDomSerializerException(
                 String.Format(format, args),
-                new System.CodeDom.CodeLinePragma(Filename, node.Start.line));
+                new System.CodeDom.CodeLinePragma(Filename, node.Start.Line));
 
         }
 
@@ -1192,12 +1192,12 @@ namespace IronPython.CodeDom {
         /// <summary>
         /// Walks the body of the function turning it into code statements.
         /// </summary>
-        private void ProcessBody(FuncDef node, CodeMemberMethod method) {
-            if (IsPassStmt(node.body)) {
+        private void ProcessBody(FunctionDefinition node, CodeMemberMethod method) {
+            if (IsPassStmt(node.Body)) {
                 // don't generate pass statements.
             } else {
                 //body
-                CodeObject co = RecursiveWalk(node.body);
+                CodeObject co = RecursiveWalk(node.Body);
 
                 if (co is CodeStatement) {
                     method.Statements.Add(co as CodeStatement);
@@ -1212,16 +1212,16 @@ namespace IronPython.CodeDom {
             }
         }
 
-        private void ProcessParameters(FuncDef node, CodeMemberMethod method, string[] args) {
+        private void ProcessParameters(FunctionDefinition node, CodeMemberMethod method, string[] args) {
             int argIndex = 0;
-            foreach (Expr e in node.Parameters) {
+            foreach (Expression e in node.Parameters) {
                 CodeParameterDeclarationExpression cpde = MarkForCodeDom(e, new CodeParameterDeclarationExpression());
 
-                if (e is NameExpr) {
+                if (e is NameExpression) {
                     if (args == null || argIndex >= args.Length) cpde.Type = MarkForCodeDom(e, new CodeTypeReference(typeof(object)));
                     else cpde.Type = MarkForCodeDom(e, new CodeTypeReference(args[argIndex]));
 
-                    cpde.Name = ((NameExpr)e).Name.GetString();
+                    cpde.Name = ((NameExpression)e).Name.GetString();
                 } else throw CodeDomSerializerError(e, "non-Name expression: {0}", e);
 
                 argIndex++;
@@ -1242,14 +1242,14 @@ namespace IronPython.CodeDom {
         /// the argument types, return type, and determines if the method
         /// is static or not.  Returns the argument types as strings.
         /// </summary>
-        private string[] ProcessDecorators(FuncDef node, CodeMemberMethod method, CallExpr decs) {
+        private string[] ProcessDecorators(FunctionDefinition node, CodeMemberMethod method, CallExpression decs) {
             method.UserData["HasReturns"] = false;
             method.UserData["HasAccepts"] = false;
             string[] args = null;
             while (decs != null) {
-                CallExpr ce = decs.Target as CallExpr;
+                CallExpression ce = decs.Target as CallExpression;
                 if (ce != null) {
-                    switch (((NameExpr)ce.Target).Name.GetString()) {
+                    switch (((NameExpression)ce.Target).Name.GetString()) {
                         case "returns":
                             method.ReturnType = MarkForCodeDom(ce, new CodeTypeReference(ExtractArgument(node, ce, 0)));
                             method.UserData["HasReturns"] = true;
@@ -1263,72 +1263,72 @@ namespace IronPython.CodeDom {
                     }
                 }
 
-                NameExpr ne = decs.Target as NameExpr;
+                NameExpression ne = decs.Target as NameExpression;
                 if (ne != null) {
                     if (ne.Name.GetString() != "staticmethod") throw Ops.ValueError("bad value for decorator name");
                     method.Attributes |= MemberAttributes.Static;
                 }
 
-                decs = decs.Args[0].Expression as CallExpr;
+                decs = decs.Args[0].Expression as CallExpression;
             }
             return args;
         }
 
-        private void ExtractArgumentTypes(FuncDef node, string[] args, CallExpr ce) {
+        private void ExtractArgumentTypes(FunctionDefinition node, string[] args, CallExpression ce) {
             for (int i = 0; i < ce.Args.Count; i++) {
                 args[i] = ExtractArgument(node, ce, i);
             }
         }
 
-        private string ExtractArgument(FuncDef node, CallExpr ce, int arg) {
-            NameExpr typeName = ce.Args[arg].Expression as NameExpr;
+        private string ExtractArgument(FunctionDefinition node, CallExpression ce, int arg) {
+            NameExpression typeName = ce.Args[arg].Expression as NameExpression;
             string res;
             if (typeName != null) {
                 res = typeName.Name.GetString();
-            } else if (ce.Args[arg].Expression is ConstantExpr) {
-                ConstantExpr cne = ce.Args[arg].Expression as ConstantExpr;
+            } else if (ce.Args[arg].Expression is ConstantExpression) {
+                ConstantExpression cne = ce.Args[arg].Expression as ConstantExpression;
                 if (cne.Value == null) {
                     res = "System.Void";
                 } else {
                     throw CodeDomSerializerError(node, "unexpected constant " + cne.Value.ToString());
                 }
-            } else if (arg == 0 && ce.Args[arg].Expression is CallExpr) {
+            } else if (arg == 0 && ce.Args[arg].Expression is CallExpression) {
                 // Self() ???  - we can't refer our own typename inside of a classdef
-                CallExpr ice = ce.Args[arg].Expression as CallExpr;
-                NameExpr selfName = ice.Target as NameExpr;
+                CallExpression ice = ce.Args[arg].Expression as CallExpression;
+                NameExpression selfName = ice.Target as NameExpression;
                 if (selfName == null || (selfName.Name.GetString() != "Self"))
                     throw CodeDomSerializerError(node, "unexpected call in @accepts: {0}", ice.Target);
                 return CurrentType.Name;
             } else {
 
-                FieldExpr fe = ce.Args[arg].Expression as FieldExpr;
+                FieldExpression fe = ce.Args[arg].Expression as FieldExpression;
                 if (fe != null) return GetFieldString(fe);
                 else throw CodeDomSerializerError(node, "Extracting argument w/ non-field & non-name");
             }
             return res;
         }
 
-        private bool WalkFieldInitializations(Stmt body) {
-            SuiteStmt suite = body as SuiteStmt;
+        private bool WalkFieldInitializations(Statement body) {
+            SuiteStatement suite = body as SuiteStatement;
             if(suite != null){
                 // first time through make sure we have a valid initialization func def
                 for (int i = 0; i < suite.Statements.Count; i++) {
-                    AssignStmt assign = suite.Statements[i] as AssignStmt;
+                    AssignStatement assign = suite.Statements[i] as AssignStatement;
                     if (assign == null) return false;
 
                     if (assign.Left.Count != 1) return false;
 
-                    FieldExpr fe = assign.Left[0] as FieldExpr;
+                    FieldExpression fe = assign.Left[0] as FieldExpression;
                     if (fe == null) return false;
 
-                    NameExpr ne = fe.Target as NameExpr;
+                    NameExpression ne = fe.Target as NameExpression;
                     if(ne == null || ne.Name.GetString() != "self") return false;
                 }
 
                 // second time through set the member init expressions
                 for (int i = 0; i < suite.Statements.Count; i++) {
-                    AssignStmt assign = suite.Statements[i] as AssignStmt;
-                    FieldExpr fe = assign.Left[0] as FieldExpr;
+                    AssignStatement assign = suite.Statements[i] as AssignStatement;
+                    FieldExpression fe = assign.Left[0] as FieldExpression;
                     SymbolId name = fe.Name;
 
                     for (int j = 0; j < this.CurrentType.Members.Count; j++) {
@@ -1349,14 +1349,14 @@ namespace IronPython.CodeDom {
             
         }
 
-        private bool IsPassStmt(Stmt statement) {
+        private static bool IsPassStmt(Statement statement) {
             //!!! Need to store the difference between these two in UserData
-            if (statement is PassStmt)
+            if (statement is PassStatement)
                 return true;
 
-            if (statement is SuiteStmt
-                && ((SuiteStmt)statement).Statements.Count == 1
-                && ((SuiteStmt)statement).Statements[0] is PassStmt)
+            if (statement is SuiteStatement
+                && ((SuiteStatement)statement).Statements.Count == 1
+                && ((SuiteStatement)statement).Statements[0] is PassStatement)
                 return true;
 
             return false;
@@ -1367,9 +1367,9 @@ namespace IronPython.CodeDom {
         #region ClassDef helpers
         /// <summary> Scans a suite for method declarations and pre-adds them to
         /// the class (so we can properly look them up later) </summary>
-        private void PreProcessSuite(ClassDef node, CodeTypeDeclaration ctd) {
-            foreach (Stmt s in ((SuiteStmt)node.body).Statements) {
-                FuncDef fd = s as FuncDef;
+        private static void PreProcessSuite(ClassDefinition node, CodeTypeDeclaration ctd) {
+            foreach (Statement s in ((SuiteStatement)node.Body).Statements) {
+                FunctionDefinition fd = s as FunctionDefinition;
                 if (fd != null) {
                     CodeMemberMethod method = new CodeMemberMethod();
                     method.Name = fd.Name.GetString();
@@ -1383,29 +1383,29 @@ namespace IronPython.CodeDom {
             }
         }
 
-        private CodeObject ProcessSuite(ClassDef node, CodeTypeDeclaration ctd) {
+        private CodeObject ProcessSuite(ClassDefinition node, CodeTypeDeclaration ctd) {
             int docIndex = -1;
             bool fFirst = true;
             CodeNamespace cn = null;
             CodeObject res = ctd;
 
-            foreach (Stmt s in ((SuiteStmt)node.body).Statements) {
+            foreach (Statement s in ((SuiteStatement)node.Body).Statements) {
                 // pull out doc statement
                 if (fFirst) {
                     fFirst = false;
-                    if (node.body.GetDocString() != null) {
-                        docIndex = ctd.Members.Add(MarkForCodeDom(node, new CodeSnippetTypeMember("\"\"\"" + node.body.GetDocString() + "\"\"\"")));
+                    if (node.Body.Documentation != null) {
+                        docIndex = ctd.Members.Add(MarkForCodeDom(node, new CodeSnippetTypeMember("\"\"\"" + node.Body.Documentation + "\"\"\"")));
                         continue;
                     }
                 }
 
-                if (ProcessSlotsAssign(node, ctd, docIndex, s as AssignStmt)) {
+                if (ProcessSlotsAssign(node, ctd, docIndex, s as AssignStatement)) {
                     // assignment to slots, we intercept this.
                     continue;
                 }
 
                 CodeObject co = RecursiveWalk(s);
-                if (!(s is FuncDef && ((FuncDef)s).Name.GetString() == PythonGenerator.ctorFieldInit)) {
+                if (!(s is FunctionDefinition && ((FunctionDefinition)s).Name.GetString() == PythonGenerator.ctorFieldInit)) {
                     CodeTypeMember ctm;
                     if (co is CodeNamespaceImport) {
                         // this would appear to be a top-level namespace, not a type declaration
@@ -1426,22 +1426,22 @@ namespace IronPython.CodeDom {
             return res;
         }
 
-        private CodeTypeReference[] GetBaseCodeTypeReferences(ClassDef node) {
+        private CodeTypeReference[] GetBaseCodeTypeReferences(ClassDefinition node) {
             CodeTypeReference[] baseRefs = new CodeTypeReference[node.Bases.Count];
             for (int i = 0; i < node.Bases.Count; i++) {
-                Expr o = node.Bases[i];
+                Expression o = node.Bases[i];
 
-                if (o is NameExpr) {
-                    baseRefs[i] = MarkForCodeDom(node, new CodeTypeReference(((NameExpr)o).Name.GetString()));
-                } else if (o is FieldExpr) {
-                    FieldExpr fe = o as FieldExpr;
+                if (o is NameExpression) {
+                    baseRefs[i] = MarkForCodeDom(node, new CodeTypeReference(((NameExpression)o).Name.GetString()));
+                } else if (o is FieldExpression) {
+                    FieldExpression fe = o as FieldExpression;
                     baseRefs[i] = MarkForCodeDom(node, new CodeTypeReference(GetFieldString(fe)));
                 } else throw CodeDomSerializerError(node, "bad type for base: {0}", o);
             }
             return baseRefs;
         }
 
-        private void SaveCodeTypeMember(ClassDef node, CodeTypeDeclaration ctd, CodeNamespace cn, CodeTypeMember co) {
+        private void SaveCodeTypeMember(ClassDefinition node, CodeTypeDeclaration ctd, CodeNamespace cn, CodeTypeMember co) {
             if (cn != null && co is CodeTypeDeclaration) {
                 cn.Types.Add((CodeTypeDeclaration)co);
             } else {
@@ -1487,25 +1487,25 @@ namespace IronPython.CodeDom {
             }
         }
 
-        private bool ProcessSlotsAssign(ClassDef node, CodeTypeDeclaration ctd, int docIndex, AssignStmt assign) {
+        private bool ProcessSlotsAssign(ClassDefinition node, CodeTypeDeclaration ctd, int docIndex, AssignStatement assign) {
             if (assign != null &&
                 assign.Left.Count == 1 &&
-                assign.Left[0] is NameExpr &&
-                ((NameExpr)assign.Left[0]).Name.GetString() == "__slots__") {
+                assign.Left[0] is NameExpression &&
+                ((NameExpression)assign.Left[0]).Name.GetString() == "__slots__") {
 
                 ctd.UserData["HasSlots"] = true;
-                ListExpr le = assign.Right as ListExpr;
+                ListExpression le = assign.Right as ListExpression;
                 if (le == null) throw CodeDomSerializerError(node, "assignment to __slots__ other than lists");
 
                 List<string> slots = new List<string>();
-                foreach (Expr expr in le.Items) {
-                    ConstantExpr ce = expr as ConstantExpr;
+                foreach (Expression expr in le.Items) {
+                    ConstantExpression ce = expr as ConstantExpression;
                     if (ce == null) throw CodeDomSerializerError(node, "non-constant assignment to __slots__");
 
                     slots.Add((string)ce.Value);
                 }
 
-                string docStr = node.body.GetDocString();
+                string docStr = node.Body.Documentation;
                 if (docStr != null) {
                     // pull out the types from the string.
                     foreach (string slot in slots) {
@@ -1613,23 +1613,23 @@ namespace IronPython.CodeDom {
             return MemberTypes.All;
         }
 
-        public static string GetFieldString(FieldExpr fe) {
+        public static string GetFieldString(FieldExpression fe) {
             StringBuilder sb = new StringBuilder();
             while (fe != null) {
                 if (sb.Length != 0) sb.Insert(0, '.');
                 sb.Insert(0, fe.Name.GetString());
 
-                NameExpr typeName = fe.Target as NameExpr;
+                NameExpression typeName = fe.Target as NameExpression;
                 if (typeName != null) {
                     sb.Insert(0, typeName.Name.GetString() + ".");
                 }
-                fe = fe.Target as FieldExpr;
+                fe = fe.Target as FieldExpression;
             }
             return sb.ToString();
         }
         #endregion
 
-        private CodeStatement[] GetStatements(CodeObject co) {
+        private static CodeStatement[] GetStatements(CodeObject co) {
             if (co is CodeObjectSuite) {
                 CodeObjectSuite cos = co as CodeObjectSuite;
                 CodeStatement[] res = new CodeStatement[cos.Count];
@@ -1646,10 +1646,10 @@ namespace IronPython.CodeDom {
         /// Updates user data w/ common information on the node so that
         /// we can correctly round-trip and identity that we created the node.
         /// </summary>
-        public T MarkForCodeDom<T>(Node node, T codeObject) where T : CodeObject {
+        public static T MarkForCodeDom<T>(Node node, T codeObject) where T : CodeObject {
             codeObject.UserData["IPCreated"] = true;
-            codeObject.UserData["Line"] = node.Start.line;
-            codeObject.UserData["Column"] = node.Start.column;
+            codeObject.UserData["Line"] = node.Start.Line;
+            codeObject.UserData["Column"] = node.Start.Column;
             return codeObject;
         }
 
@@ -1659,16 +1659,16 @@ namespace IronPython.CodeDom {
         /// </summary>
         public T MarkForCodeDomStatement<T>(Node node, T codeObject) where T : CodeStatement {
             codeObject.UserData["IPCreated"] = true;
-            codeObject.UserData["Column"] = node.Start.column;
-            codeObject.LinePragma = new CodeLinePragma(Filename, node.Start.line);
+            codeObject.UserData["Column"] = node.Start.Column;
+            codeObject.LinePragma = new CodeLinePragma(Filename, node.Start.Line);
 
             return codeObject;
         }
 
         public T MarkForCodeDomMember<T>(Node node, T codeMember) where T : CodeTypeMember {
             codeMember.UserData["IPCreated"] = true;
-            codeMember.UserData["Column"] = node.Start.column;
-            codeMember.LinePragma = new CodeLinePragma(Filename, node.Start.line);
+            codeMember.UserData["Column"] = node.Start.Column;
+            codeMember.LinePragma = new CodeLinePragma(Filename, node.Start.Line);
 
             return codeMember;
         }

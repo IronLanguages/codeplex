@@ -24,7 +24,7 @@ namespace IronPython.Compiler.Generation {
         public EnvironmentReference MakeEnvironmentReference(SymbolId name) {
             return MakeEnvironmentReference(name, typeof(object));
         }
-        public Slot MakeParentSlot(Slot instance) {
+        public static Slot MakeParentSlot(Slot instance) {
             return new FieldSlot(instance, typeof(FunctionEnvironmentDictionary).GetField("parent"));
         }
         public abstract Type EnvironmentType { get; }

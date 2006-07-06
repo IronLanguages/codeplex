@@ -43,12 +43,12 @@ namespace IronPython.CodeDom {
 
         protected override void ProcessCompilerOutputLine(CompilerResults results, string line) {
             // gets called from base classes FromFileBatch - which is never invoked because we override it
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         protected override string CmdArgsFromParameters(CompilerParameters options) {
             // gets called from base classes FromFileBatch - which is never invoked because we override it
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         protected override CompilerResults FromFileBatch(CompilerParameters options, string[] fileNames) {
@@ -77,7 +77,7 @@ namespace IronPython.CodeDom {
         #endregion
 
         #region Private implementation details
-        private CompilerResults FromFileWorker(CompilerParameters options, params string[] files) {
+        private static CompilerResults FromFileWorker(CompilerParameters options, params string[] files) {
             CompilerResults res = new CompilerResults(options.TempFiles);
 
             PEFileKinds targetKind;
@@ -141,11 +141,11 @@ namespace IronPython.CodeDom {
             return res;
         }
 
-        private object InvokeCompiler(IReflect compiler, string api) {
+        private static object InvokeCompiler(IReflect compiler, string api) {
             return compiler.InvokeMember(api, BindingFlags.Public, null, null, null, null, null, null);
         }
 
-        private CompilerResults FromSourceWorker(CompilerParameters options, params string[] sources) {
+        private static CompilerResults FromSourceWorker(CompilerParameters options, params string[] sources) {
             string[] tempFiles = new string[sources.Length];
             for (int i = 0; i < tempFiles.Length; i++) {
                 tempFiles[i] = options.TempFiles.AddExtension("py", true);
@@ -157,7 +157,7 @@ namespace IronPython.CodeDom {
             return FromFileWorker(options, tempFiles);
         }
 
-        private CompilerResults FromDomWorker(CompilerParameters options, params CodeCompileUnit[] ea) {
+        private static CompilerResults FromDomWorker(CompilerParameters options, params CodeCompileUnit[] ea) {
             string[] tempFiles = new string[ea.Length];
             for (int i = 0; i < tempFiles.Length; i++) {
                 tempFiles[i] = options.TempFiles.AddExtension("py", true);
@@ -180,7 +180,7 @@ namespace IronPython.CodeDom {
         }
 
         public override void AddError(string path, string message, string lineText, CodeSpan span, int errorCode, Severity severity) {
-            compResults.Errors.Add(new CompilerError(path, span.startLine, span.startColumn, errorCode.ToString(), message));
+            compResults.Errors.Add(new CompilerError(path, span.StartLine, span.StartColumn, errorCode.ToString(), message));
             throw new CompilerException();
         }
     }
@@ -216,13 +216,13 @@ namespace IronPython.CodeDom {
         public RemoteCompiler() {
         }
 
-        public RemoteCompiler(string[] filenames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind) {
+        public RemoteCompiler(string[] fileNames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind) {
             instance = this;
-            Initialize(filenames, outputAssembly, includeDebug, references, targetKind);
+            Initialize(fileNames, outputAssembly, includeDebug, references, targetKind);
         }
 
-        public void Initialize(string[] filenames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind) {
-            files = filenames;
+        public void Initialize(string[] fileNames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind) {
+            files = fileNames;
             outAsm = outputAssembly;
             if (outAsm == null) outAsm = "assembly.dll";
             debugInfo = includeDebug;
@@ -283,7 +283,7 @@ namespace IronPython.CodeDom {
             }
         }
 
-        public List<CompilerError> Errors {
+        public IList<CompilerError> Errors {
             
             get {
                 return errors;
@@ -293,43 +293,43 @@ namespace IronPython.CodeDom {
         #region IReflect Members
 
         public FieldInfo GetField(string name, BindingFlags bindingAttr) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public FieldInfo[] GetFields(BindingFlags bindingAttr) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public MemberInfo[] GetMember(string name, BindingFlags bindingAttr) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public MemberInfo[] GetMembers(BindingFlags bindingAttr) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public MethodInfo GetMethod(string name, BindingFlags bindingAttr) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public MethodInfo GetMethod(string name, BindingFlags bindingAttr, Binder binder, Type[] types, ParameterModifier[] modifiers) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public MethodInfo[] GetMethods(BindingFlags bindingAttr) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public PropertyInfo[] GetProperties(BindingFlags bindingAttr) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public PropertyInfo GetProperty(string name, BindingFlags bindingAttr, Binder binder, Type returnType, Type[] types, ParameterModifier[] modifiers) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public PropertyInfo GetProperty(string name, BindingFlags bindingAttr) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public object InvokeMember(string name, BindingFlags invokeAttr, Binder binder, object target, object[] args, ParameterModifier[] modifiers, System.Globalization.CultureInfo culture, string[] namedParameters) {
@@ -343,7 +343,7 @@ namespace IronPython.CodeDom {
         }
 
         public Type UnderlyingSystemType {
-            get { throw new Exception("The method or operation is not implemented."); }
+            get { throw new NotImplementedException("The method or operation is not implemented."); }
         }
 
         #endregion

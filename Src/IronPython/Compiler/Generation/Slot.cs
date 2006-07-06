@@ -541,7 +541,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         public override void EmitGetAddr(CodeGen cg) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override Type Type {
@@ -568,7 +568,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         public override void EmitGetAddr(CodeGen cg) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override void EmitSet(CodeGen cg) {
@@ -676,15 +676,15 @@ namespace IronPython.Compiler.Generation {
         // should never be set.
 
         public override void EmitSet(CodeGen cg) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override void EmitSet(CodeGen cg, Slot val) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override void EmitGetAddr(CodeGen cg) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public override Type Type {

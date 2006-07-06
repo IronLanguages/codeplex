@@ -84,11 +84,11 @@ namespace IronPython.Runtime {
                                             Console.InputEncoding, 
                                             "<stdin>", 
                                             "r");
-                __stdout__ = new PythonFile(Options.UnbufferedStdOutAndError ? Console.OpenStandardOutput(0) : Console.OpenStandardOutput(),
+                __stdout__ = new PythonFile(Options.BufferedStandardOutAndError ? Console.OpenStandardOutput() : Console.OpenStandardOutput(0),
                                             Console.OutputEncoding, 
                                             "<stdout>", 
                                             "w");
-                __stderr__ = new PythonFile(Options.UnbufferedStdOutAndError ? Console.OpenStandardError(0) : Console.OpenStandardError(), 
+                __stderr__ = new PythonFile(Options.BufferedStandardOutAndError ? Console.OpenStandardError() : Console.OpenStandardError(0) , 
                                             Console.OutputEncoding, 
                                             "<stderr>", 
                                             "w");
@@ -198,10 +198,6 @@ namespace IronPython.Runtime {
         public Tuple exc_info() {
             if (RawException == null)  return Tuple.MakeTuple(null, null, null);
             object pyExcep = ExceptionConverter.ToPython(RawException);
-
-            if(Options.TracebackSupport && RawTraceBack != null){
-                RawTraceBack.UpdateFromStackTrace(new System.Diagnostics.StackTrace(RawException, true));
-            }
 
             exc_traceback = RawTraceBack;
 

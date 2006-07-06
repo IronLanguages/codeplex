@@ -66,7 +66,7 @@ namespace IronPython.Modules {
 
         [PythonName("exit")]
         public static void Exit() {
-            throw new PythonSystemExit();
+            throw new PythonSystemExitException();
         }
 
         [Documentation("allocate_lock() -> lock object\nAllocates a new lock object that can be used for synchronization")]
@@ -178,7 +178,7 @@ namespace IronPython.Modules {
                     } else {
                         Ops.CallWithArgsTuple(func, new object[0], args);
                     }
-                } catch (PythonSystemExit) {
+                } catch (PythonSystemExitException) {
                     // ignore and quit
                 } catch (Exception e) {
                     Ops.Print(context.SystemState, "Unhandled exception on thread");

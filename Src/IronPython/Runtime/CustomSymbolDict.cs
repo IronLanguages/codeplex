@@ -525,7 +525,7 @@ namespace IronPython.Runtime {
         #region ICollection Members
 
         public void CopyTo(Array array, int index) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         public bool IsSynchronized {

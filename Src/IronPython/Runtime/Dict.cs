@@ -91,7 +91,7 @@ namespace IronPython.Runtime {
         }
 
         public ICollection<object> Keys {
-            get { lock (this) return new DictKeyCollection(this, data.Keys); }
+            get { lock (this) return new DictionaryKeyCollection(this, data.Keys); }
         }
 
         public bool Remove(object key) {
@@ -159,7 +159,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__iter__")]
         IEnumerator IEnumerable.GetEnumerator() {
-            return new DictKeyEnumerator(data);
+            return new DictionaryKeyEnumerator(data);
         }
 
         #endregion
@@ -449,7 +449,7 @@ namespace IronPython.Runtime {
         #region ICollection Members
 
         void ICollection.CopyTo(Array array, int index) {
-            throw new Exception("The method or operation is not implemented.");
+            throw new NotImplementedException("The method or operation is not implemented.");
         }
 
         int ICollection.Count {
@@ -587,8 +587,8 @@ namespace IronPython.Runtime {
     }
 
     [PythonType(typeof(Dict))]
-    internal class EnvironmentDict : Dict {
-        public EnvironmentDict() : base(Environment.GetEnvironmentVariables()) { }
+    internal class EnvironmentDictionary : Dict {
+        public EnvironmentDictionary() : base(Environment.GetEnvironmentVariables()) { }
 
         public override object this[object key] {
             set {
@@ -871,11 +871,11 @@ namespace IronPython.Runtime {
         }
     }
 
-    public class DictKeyCollection : ICollection<object> {
+    public class DictionaryKeyCollection : ICollection<object> {
         private ICollection<object> items;
         private Dict dict;
 
-        public DictKeyCollection(Dict dictionary, ICollection<object> collection) {
+        public DictionaryKeyCollection(Dict dictionary, ICollection<object> collection) {
             items = collection;
             dict = dictionary;
         }
@@ -919,7 +919,7 @@ namespace IronPython.Runtime {
         #region IEnumerable<object> Members
 
         public IEnumerator<object> GetEnumerator() {
-            return new DictKeyEnumerator(dict.data);
+            return new DictionaryKeyEnumerator(dict.data);
         }
 
         #endregion
@@ -927,7 +927,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
-            return new DictKeyEnumerator(dict.data);
+            return new DictionaryKeyEnumerator(dict.data);
         }
 
         #endregion
@@ -938,13 +938,13 @@ namespace IronPython.Runtime {
     ///   innerEnum.MoveNext() will throw InvalidOperation even if the values get changed,
     ///   which is supported in python
     /// </summary>
-    public class DictKeyEnumerator : IEnumerator, IEnumerator<object> {
+    public class DictionaryKeyEnumerator : IEnumerator, IEnumerator<object> {
         readonly int size;
         readonly Dictionary<object, object> dict;
         readonly object[] keys;
         int pos;
 
-        public DictKeyEnumerator(Dictionary<object, object> dict) {
+        public DictionaryKeyEnumerator(Dictionary<object, object> dict) {
             this.dict = dict;
             this.size = dict.Count;
             keys = new object[size];

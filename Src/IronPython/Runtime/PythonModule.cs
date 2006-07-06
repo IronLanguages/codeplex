@@ -44,7 +44,7 @@ namespace IronPython.Runtime {
 
         private ICustomAttributes innerMod;
         private bool packageImported;
-        private CallerContextFlags contextFlags;
+        private CallerContextAttributes contextFlags;
         private bool trueDivision;
         private InitializeModule initialize;
         private SystemState systemState;
@@ -52,14 +52,14 @@ namespace IronPython.Runtime {
         #region Public constructors
 
         public PythonModule(string name, IAttributesDictionary dict, SystemState state)
-            : this(name, dict, state, null, CallerContextFlags.None) {
+            : this(name, dict, state, null, CallerContextAttributes.None) {
         }
 
         public PythonModule(string name, CompiledModule compiledModule, SystemState state, InitializeModule init)
-            : this(name, compiledModule, state, init, CallerContextFlags.None) {
+            : this(name, compiledModule, state, init, CallerContextAttributes.None) {
         }
 
-        public PythonModule(string name, IAttributesDictionary dict, SystemState state, InitializeModule init, CallerContextFlags callerContextFlags) {
+        public PythonModule(string name, IAttributesDictionary dict, SystemState state, InitializeModule init, CallerContextAttributes callerContextFlags) {
             Debug.Assert(state != null);
 
             __dict__ = dict;
@@ -157,7 +157,7 @@ namespace IronPython.Runtime {
             throw new InvalidOperationException("not supported on standard modules");
         }
 
-        CallerContextFlags ICallerContext.ContextFlags {
+        CallerContextAttributes ICallerContext.ContextFlags {
             get { return contextFlags; }
             set { contextFlags = value; }
         }
@@ -264,7 +264,7 @@ namespace IronPython.Runtime {
 
         public List GetAttrNames(ICallerContext context) {
             List ret;
-            if ((context.ContextFlags & CallerContextFlags.ShowCls) == 0) {
+            if ((context.ContextFlags & CallerContextAttributes.ShowCls) == 0) {
                 ret = new List();
                 foreach (KeyValuePair<object, object> kvp in __dict__) {
                     IContextAwareMember icaa = kvp.Value as IContextAwareMember;
@@ -305,7 +305,7 @@ namespace IronPython.Runtime {
     }
 
     [Flags]
-    public enum CallerContextFlags {
+    public enum CallerContextAttributes {
         None = 0,
         ShowCls = 0x01,
     }

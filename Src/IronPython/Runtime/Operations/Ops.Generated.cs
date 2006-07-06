@@ -2129,87 +2129,87 @@ namespace IronPython.Runtime.Operations {
 
 
         public static Exception ImportError(string format, params object[] args) {
-            return new PythonImportError(string.Format(format, args));
+            return new PythonImportErrorException(string.Format(format, args));
         }
 
         public static Exception RuntimeError(string format, params object[] args) {
-            return new PythonRuntimeError(string.Format(format, args));
+            return new PythonRuntimeErrorException(string.Format(format, args));
         }
 
         public static Exception UnicodeTranslateError(string format, params object[] args) {
-            return new PythonUnicodeTranslateError(string.Format(format, args));
+            return new PythonUnicodeTranslateErrorException(string.Format(format, args));
         }
 
         public static Exception PendingDeprecationWarning(string format, params object[] args) {
-            return new PythonPendingDeprecationWarning(string.Format(format, args));
+            return new PythonPendingDeprecationWarningException(string.Format(format, args));
         }
 
         public static Exception EnvironmentError(string format, params object[] args) {
-            return new PythonEnvironmentError(string.Format(format, args));
+            return new PythonEnvironmentErrorException(string.Format(format, args));
         }
 
         public static Exception LookupError(string format, params object[] args) {
-            return new PythonLookupError(string.Format(format, args));
+            return new PythonLookupErrorException(string.Format(format, args));
         }
 
         public static Exception OSError(string format, params object[] args) {
-            return new PythonOSError(string.Format(format, args));
+            return new PythonOSErrorException(string.Format(format, args));
         }
 
         public static Exception DeprecationWarning(string format, params object[] args) {
-            return new PythonDeprecationWarning(string.Format(format, args));
+            return new PythonDeprecationWarningException(string.Format(format, args));
         }
 
         public static Exception UnicodeError(string format, params object[] args) {
-            return new PythonUnicodeError(string.Format(format, args));
+            return new PythonUnicodeErrorException(string.Format(format, args));
         }
 
         public static Exception FloatingPointError(string format, params object[] args) {
-            return new PythonFloatingPointError(string.Format(format, args));
+            return new PythonFloatingPointErrorException(string.Format(format, args));
         }
 
         public static Exception ReferenceError(string format, params object[] args) {
-            return new PythonReferenceError(string.Format(format, args));
+            return new PythonReferenceErrorException(string.Format(format, args));
         }
 
         public static Exception NameError(string format, params object[] args) {
-            return new PythonNameError(string.Format(format, args));
+            return new PythonNameErrorException(string.Format(format, args));
         }
 
         public static Exception OverflowWarning(string format, params object[] args) {
-            return new PythonOverflowWarning(string.Format(format, args));
+            return new PythonOverflowWarningException(string.Format(format, args));
         }
 
         public static Exception FutureWarning(string format, params object[] args) {
-            return new PythonFutureWarning(string.Format(format, args));
+            return new PythonFutureWarningException(string.Format(format, args));
         }
 
         public static Exception AssertionError(string format, params object[] args) {
-            return new PythonAssertionError(string.Format(format, args));
+            return new PythonAssertionErrorException(string.Format(format, args));
         }
 
         public static Exception RuntimeWarning(string format, params object[] args) {
-            return new PythonRuntimeWarning(string.Format(format, args));
+            return new PythonRuntimeWarningException(string.Format(format, args));
         }
 
         public static Exception KeyboardInterrupt(string format, params object[] args) {
-            return new PythonKeyboardInterrupt(string.Format(format, args));
+            return new PythonKeyboardInterruptException(string.Format(format, args));
         }
 
         public static Exception UserWarning(string format, params object[] args) {
-            return new PythonUserWarning(string.Format(format, args));
+            return new PythonUserWarningException(string.Format(format, args));
         }
 
         public static Exception SyntaxWarning(string format, params object[] args) {
-            return new PythonSyntaxWarning(string.Format(format, args));
+            return new PythonSyntaxWarningException(string.Format(format, args));
         }
 
         public static Exception UnboundLocalError(string format, params object[] args) {
-            return new PythonUnboundLocalError(string.Format(format, args));
+            return new PythonUnboundLocalErrorException(string.Format(format, args));
         }
 
         public static Exception Warning(string format, params object[] args) {
-            return new PythonWarning(string.Format(format, args));
+            return new PythonWarningException(string.Format(format, args));
         }
 
         // *** END GENERATED CODE ***

@@ -214,7 +214,7 @@ namespace IronPython.Runtime {
             return staticData[index];
         }
 
-        CallerContextFlags ICallerContext.ContextFlags {
+        CallerContextAttributes ICallerContext.ContextFlags {
             get {
                 return ((ICallerContext)this.__module__).ContextFlags;
             }

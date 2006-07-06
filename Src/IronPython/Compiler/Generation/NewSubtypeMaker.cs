@@ -28,8 +28,8 @@ namespace IronPython.Compiler.Generation {
     /// layout which the subtype also inherits.
     /// </summary>
     class NewSubtypeMaker : NewTypeMaker {
-        public NewSubtypeMaker(Tuple bases, string typeName, NewTypeInfo ti)
-            : base(bases, typeName, ti) {
+        public NewSubtypeMaker(Tuple bases, NewTypeInfo ti)
+            : base(bases, ti) {
         }
 
         protected override string GetName() {

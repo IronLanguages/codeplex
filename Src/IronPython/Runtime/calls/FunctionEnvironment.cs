@@ -113,7 +113,7 @@ namespace IronPython.Runtime.Calls {
             return context.GetStaticData(index);
         }
 
-        public CallerContextFlags ContextFlags {
+        public CallerContextAttributes ContextFlags {
             get { return context.ContextFlags; }
             set { context.ContextFlags = value; }
         }
