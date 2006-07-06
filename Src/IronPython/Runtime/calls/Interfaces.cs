@@ -42,7 +42,7 @@ namespace IronPython.Runtime.Calls {
         IAttributesDictionary Globals { get; }
         object GetStaticData(int index);
         bool TrueDivision { get; set; }
-        CallerContextFlags ContextFlags { get; set; }
+        CallerContextAttributes ContextFlags { get; set; }
         IronPython.Compiler.CompilerContext CreateCompilerContext();
     }
 }
