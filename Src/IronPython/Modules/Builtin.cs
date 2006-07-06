@@ -798,7 +798,8 @@ namespace IronPython.Modules {
         [PythonName("max")]
         public static object Max(object x) {
             IEnumerator i = Ops.GetEnumerator(x);
-            i.MoveNext();
+            if (!i.MoveNext())
+                throw Ops.ValueError("max() arg is an empty sequence");
             object ret = i.Current;
             while (i.MoveNext()) {
                 if (Ops.GreaterThanRetBool(i.Current, ret)) ret = i.Current;
@@ -813,12 +814,74 @@ namespace IronPython.Modules {
 
         [PythonName("max")]
         public static object Max(params object[] args) {
-            object ret = args[0];
-            if (args.Length == 1) return Max(ret);
-            for (int i = 1; i < args.Length; i++) {
-                if (Ops.GreaterThanRetBool(args[i], ret)) ret = args[i];
+            if (args.Length > 0) {
+                object ret = args[0];
+                if (args.Length == 1) return Max(ret);
+                for (int i = 1; i < args.Length; i++) {
+                    if (Ops.GreaterThanRetBool(args[i], ret)) ret = args[i];
+                }
+                return ret;
+            } else {
+                throw Ops.TypeError("max expecting 1 arguments, got 0");
+            }
+
+        }
+
+        [PythonVersion(2, 5)]
+        [PythonName("max")]
+        public static object Max(object x, [ParamDict] Dict dict) {
+            IEnumerator i = Ops.GetEnumerator(x);
+            if (!i.MoveNext())
+                throw Ops.ValueError(" max() arg is an empty sequence");
+            object method = GetMaxKwArg(dict);
+            object ret = i.Current;
+            object retValue = Ops.Call(method, i.Current);
+            while (i.MoveNext()) {
+                object tmpRetValue = Ops.Call(method, i.Current);
+                if (Ops.GreaterThanRetBool(tmpRetValue, retValue)) {
+                    ret = i.Current;
+                    retValue = tmpRetValue;
+                }
             }
             return ret;
+        }
+
+        [PythonVersion(2, 5)]
+        [PythonName("max")]
+        public static object Max(object x, object y, [ParamDict] Dict dict) {
+            object method = GetMaxKwArg(dict);
+            return Ops.GreaterThanRetBool(Ops.Call(method, x), Ops.Call(method, y)) ? x : y;
+        }
+
+        [PythonVersion(2, 5)]
+        [PythonName("max")]
+        public static object Max([ParamDict] Dict dict, params object[] args) {
+            if (args.Length > 0) {
+                int retIndex = 0;
+                if (args.Length == 1) return Max(args[retIndex], dict);
+                object method = GetMaxKwArg(dict);
+                object retValue = Ops.Call(method, args[retIndex]);
+                for (int i = 1; i < args.Length; i++) {
+                    object tmpRetValue = Ops.Call(method, args[i]);
+                    if (Ops.GreaterThanRetBool(tmpRetValue, retValue)) {
+                        retIndex = i;
+                        retValue = tmpRetValue;
+                    }
+                }
+                return args[retIndex];
+            } else {
+                throw Ops.TypeError("max expecting 1 arguments, got 0");
+            }
+        }
+
+        private static object GetMaxKwArg([ParamDict] Dict dict) {
+            if (dict.Count != 1)
+                throw Ops.TypeError(" max() should have only 1 keyword argument, but got {0} keyword arguments", dict.Count);
+
+            object value;
+            if (!dict.TryGetValue("key", out value))
+                throw Ops.TypeError(" max() got an unexpected keyword argument ({0})", dict.keys()[0]);
+            return value;
         }
 
         [PythonName("min")]
@@ -853,6 +916,61 @@ namespace IronPython.Modules {
             }
         }
 
+        [PythonVersion(2, 5)]
+        [PythonName("min")]
+        public static object Min(object x, [ParamDict] Dict dict) {
+            IEnumerator i = Ops.GetEnumerator(x);
+            if (!i.MoveNext())
+                throw Ops.ValueError(" min() arg is an empty sequence");
+            object method = GetMinKwArg(dict);
+            object ret = i.Current;
+            object retValue = Ops.Call(method, i.Current);
+            while (i.MoveNext()) {
+                object tmpRetValue = Ops.Call(method, i.Current);
+                if (Ops.LessThanRetBool(tmpRetValue, retValue)) {
+                    ret = i.Current;
+                    retValue = tmpRetValue;
+                }
+            }
+            return ret;
+        }
+
+        [PythonVersion(2, 5)]
+        [PythonName("min")]
+        public static object Min(object x, object y, [ParamDict] Dict dict) {
+            object method = GetMinKwArg(dict);
+            return Ops.LessThanRetBool(Ops.Call(method, x), Ops.Call(method, y)) ? x : y;
+        }
+
+        [PythonVersion(2, 5)]
+        [PythonName("min")]
+        public static object Min([ParamDict] Dict dict, params object[] args) {
+            if (args.Length > 0) {
+                int retIndex = 0;
+                if (args.Length == 1) return Min(args[retIndex], dict);
+                object method = GetMinKwArg(dict);
+                object retValue = Ops.Call(method, args[retIndex]);
+                for (int i = 1; i < args.Length; i++) {
+                    object tmpRetValue = Ops.Call(method, args[i]);
+                    if (Ops.LessThanRetBool(tmpRetValue, retValue)) {
+                        retIndex = i;
+                        retValue = tmpRetValue;
+                    }
+                }
+                return args[retIndex];
+            } else {
+                throw Ops.TypeError("min expecting 1 arguments, got 0");
+            }
+        }
+
+        private static object GetMinKwArg([ParamDict] Dict dict) {
+            if (dict.Count != 1)
+                throw Ops.TypeError(" min() should have only 1 keyword argument, but got {0} keyword arguments", dict.Count);
+            object value;
+            if (!dict.TryGetValue("key", out value))
+                throw Ops.TypeError(" min() got an unexpected keyword argument ({0})", dict.keys()[0]);
+            return value;
+        }
 
         public static object @object = Ops.GetDynamicTypeFromType(typeof(object));
 

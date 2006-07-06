@@ -122,11 +122,11 @@ namespace IronPython.Runtime {
         }
 
         public static List operator *(List l, int count) {
-            return List.MultiplySequenceWorker(l, count);            
+            return List.MultiplySequenceWorker(l, count);
         }
 
         public static List operator *(int count, List l) {
-            return List.MultiplySequenceWorker(l, count);            
+            return List.MultiplySequenceWorker(l, count);
         }
 
         public object[] GetObjectArray() {
@@ -492,7 +492,7 @@ namespace IronPython.Runtime {
         internal void AddNoLockNoDups(object item) {
             for (int i = 0; i < size; i++) {
                 if (Ops.EqualRetBool(data[i], item)) {
-                   return;
+                    return;
                 }
             }
 
@@ -1011,7 +1011,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         [PythonName("__iter__")]
-        public IEnumerator GetEnumerator() {
+        public virtual IEnumerator GetEnumerator() {
             return new ListEnumeratorCollection(this);
         }
 
@@ -1083,7 +1083,7 @@ namespace IronPython.Runtime {
         public virtual object RichEquals(object other) {
             List l = other as List;
             if (l == null) return Ops.NotImplemented;
-            
+
             if (l.Count != this.Count) return Ops.FALSE;
             return Ops.Bool2Object(CompareTo(l) == 0);
         }

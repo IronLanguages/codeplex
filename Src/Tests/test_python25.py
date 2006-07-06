@@ -480,6 +480,11 @@ if isPython25:
 	    AreEqual(any({True:0,False:"hi"}),True) # Dict with onely 1 True
 	    AreEqual(any({a:"hello",False:"bye"}),True) # Dict with Class
 
+        class mylist(list):
+            def __iter__(self):
+                return [1,2,0].__iter__()
+        AreEqual(any(mylist()),True)
+
         class raiser:
             def __nonzero__(self):
                 raise RuntimeError
@@ -512,6 +517,12 @@ if isPython25:
 	    AreEqual(all([a,None]),False) # array with None and Class
 	    AreEqual(all({"hello":"hi",True:0,False:"hi",0:0}),False) # dict with some True, False
 	    AreEqual(all({True:0,100:"hi","hello":200,a:100}),True) # dict with all True
+
+        class mylist(list):
+            def __iter__(self):
+                return [1,2,0].__iter__()
+        AreEqual(all(mylist()),False)
+        
         class raiser:
             def __nonzero__(self):
                 raise RuntimeError
@@ -522,11 +533,115 @@ if isPython25:
         AssertError(RuntimeError,all,{raiser():True,200:"",300:1000})# Dict  with raiser before False
         AssertError(TypeError,all) # no params
         AssertError(TypeError,all,(20,30,40),(50,60,70)) # extra params
-	    
+        
+	def test_max_with_kwarg():
+		class A(int):
+			def __len__(self):
+				return 10
+		a=A()
+		AreEqual(max(a,"aaaaaaa",key=len),a) # 2 args + buitin method
+		def userfunc(arg):
+			if(arg == None):return -1
+			if(type(arg) == bool):return 0
+			if(type(arg) == int):return 10
+			if(type(arg) == str):return len(arg)
+			if(type(arg) == list):return len(arg)
+			return 40    
+            
+		AreEqual(max(["b","aaaaaaaaaaaaaaaaa",["this",True,"is","Python"],0, a, None],key=userfunc),a)# array  + user method
+		AreEqual(max(("b","aaa",["this",True,"is","Python"],0, 1.8, True,a, None),key=userfunc),1.8)# Tuple  + user method
+		AreEqual(max("b","aaa",["this",None,"is","Python"], True,None,key=userfunc),["this",None,"is","Python"])# param list  + user method
+		# error scenarios
+		#apply invalid key k
+		try: max("aaaaa","b",k=len) 
+		except TypeError:pass
+		else: Fail("Expected TypeError, but found None")
+
+		#apply non-existing Name 
+		try: max([1,2,3,4],key=method) 
+		except NameError:pass
+		else: Fail("Expected TypeError, but found None")
+
+		#apply non-callable Method 
+		method = 100;		
+		try: max([1,2,3,4],key=method) 
+		except TypeError:pass
+		else: Fail("Expected TypeError, but found None")
+
+		#apply callable on empty list 
+		try: max([],key=len) 
+		except ValueError:pass
+		else: Fail("Expected ValueError, but found None")
+
+		#apply callable on non-enumerable type 
+		try: max(None,key=len) 
+		except TypeError:pass
+		else: Fail("Expected TypeError, but found None")
+
+		#apply Method on non callable class 
+		class B:pass
+		try: max((B(),"hi"),key=len) 
+		except AttributeError:pass
+		else: Fail("Expected AttributeError, but found None")
+
+
+	def test_min_with_kwarg():
+		class A(int):
+			def __len__(self):
+				return -100
+		a=A()
+		AreEqual(min(a,"aaaaaaa",key=len),a) # 2 args + buitin method
+		def userfunc(arg):
+			if(arg == None):return 100
+			if(type(arg) == bool):return 90
+			if(type(arg) == int):return 80
+			if(type(arg) == str):return len(arg)
+			if(type(arg) == list):return len(arg)
+			return 5    
+            
+		AreEqual(min(["aaaaaaaaaaaaaaaaa",["this",True,"is","Python","Iron","Python"],0, a, None],key=userfunc),a)# array  + user method
+		AreEqual(min(("aaaaaaaaaaaaa",["this",True,"is","Python","Iron","Python"],0, 1.8, True,a, None),key=userfunc),1.8)# Tuple  + user method
+		AreEqual(min("aaaaaaaaaaaaaa",["this",None,"is","Python"], True,None,key=userfunc),["this",None,"is","Python"])# param list  + user method
+		# error scenarios
+		#apply invalid key k
+		try: min("aaaaa","b",k=len) 
+		except TypeError:pass
+		else: Fail("Expected TypeError, but found None")
+
+		#apply non-existing Name 
+		try: min([1,2,3,4],key=method) 
+		except NameError:pass
+		else: Fail("Expected TypeError, but found None")
+
+		#apply non-callable Method 
+		method = 100;		
+		try: min([1,2,3,4],key=method) 
+		except TypeError:pass
+		else: Fail("Expected TypeError, but found None")
+
+		#apply callable on empty list 
+		try: min([],key=len) 
+		except ValueError:pass
+		else: Fail("Expected ValueError, but found None")
+
+		#apply callable on non-enumerable type 
+		try: min(None,key=len) 
+		except TypeError:pass
+		else: Fail("Expected TypeError, but found None")
+
+		#apply Method on non callable class 
+		class B:pass
+		try: min((B(),"hi"),key=len) 
+		except AttributeError:pass
+		else: Fail("Expected AttributeError, but found None")
+
+
 run_test(__name__)
 
 if not isPython25: 
     from lib.process_util import *
     result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_python25.py"), ["-X:Python25"])
     AreEqual(result, 0)
+    
+    
 
