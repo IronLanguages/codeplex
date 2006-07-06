@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
 <title>IronPython Tutorial</title>
-<link rel="stylesheet" href="../Doc/IronPython.css" type="text/css"/>
+<link rel="stylesheet" type="text/css" href="../../../ip/IronPython/Public/Doc/IronPython.css">
 </head>
 
 <body lang="EN-US">
@@ -95,12 +95,20 @@
 <div class="Section2">
 	<h1><a name="Intro">Introduction</a></h1>
 	<p class="Normal">IronPython is the .NET implementation of the Python programming language
-        (<a href="http://www.python.org">www.python.org</a>).  It's a dynamically typed language with support
-        for many programming paradigms such as object-oriented programming, and also allows to seamlessly use .NET code.  
-        The goal of this tutorial is to quickly familiarize yourself with the IronPython console, as well as
-        learning how to make use of the extensive .NET libraries available.<br><br>
-        (Some of the exercises in this tutorial require prerequisites.) 
-	The prerequisites to successfully complete the whole tutorial are:</p>
+        (<a href="http://www.python.org">www.python.org</a>).&nbsp; It's a dynamically typed language with support
+        for many programming paradigms such as object-oriented programming, and also allows 
+	you to seamlessly use .NET code.</p>
+	<p class="Normal">&nbsp;</p>
+	<p class="Normal">The goal of this tutorial is to quickly 
+	familiarize you with the IronPython console, and to show you how to make use of the extensive .NET libraries available.&nbsp; 
+	This tutorial also shows you how to get started in more specialized areas 
+	such as interoperating with COM, extending IronPython with C#, and embedding 
+	IronPython.&nbsp; This tutorial is NOT meant to be an introduction to Python 
+	itself, and if you're looking for that, we recommend you start with the 
+	tutorial at <a href="http://docs.python.org/tut/tut.html">www.python.org</a> 
+	or the often recommend book <i>Learning Python</i> by Mark Lutz and David 
+	Ascher.<br><br>
+        Some of the exercises in this tutorial require prerequisites.&nbsp; The prerequisites to successfully complete the whole tutorial are:</p>
 	<ul type="disc">
 		<li class="Normal">Microsoft .NET Framework Version 2.0 Redistributable 
 		Package (x86)
@@ -126,7 +134,8 @@
 	<ul>
 		<li class="Normal"><a name="Avalon">Microsoft WinFX Runtime Components</a> 
 		(Avalon)<ul type="circle">
-			<li class="Normal">Required for Advanced IronPython and embedding tutorials.</li>
+			<li class="Normal">Required for &quot;Advanced IronPython&quot; and &quot;Embedding 
+			IronPython&quot; tutorials.</li>
 			<li class="Normal">Download from
 			<a href="http://msdn.microsoft.com/windowsvista/getthebeta/default.aspx">
 			here</a>.</li>
@@ -134,8 +143,9 @@
 		</li>
 	</ul>
 	<ul>
-		<li class="Normal"><a name="Mapack">Mapack</a><ul>
-			<li>Required for the basic IronPython tutorial, exercise &quot;Loading .NET 
+		<li class="Normal"><a name="Mapack">Mapack</a> (example assembly found 
+		on the internet)<ul>
+			<li>Required for the &quot;Basic IronPython&quot; tutorial, exercise &quot;Loading .NET 
 			Libraries&quot;.</li>
 			<li>Download Mapack from
 			<a href="http://www.aisto.com/roeder/dotnet/">here</a> (direct link 
@@ -154,8 +164,14 @@
 	SDK, there is no need to install those explicitly if you have Visual Studio 
 	2005 available.</p>
 	<p class="Body">This tutorial assumes that the IronPython distribution was uncompressed 
-	into the directory C:\IronPython. Please note that your individual setup may 
+	into the directory C:\IronPython.&nbsp; Please note that your individual setup may 
 	vary.</p>
+	<p class="Body">This tutorial also assumes that you will launch the 
+	IronPython console (c:\ironpython\ipy.exe) from the tutorial directory.&nbsp; 
+	When the tutorials direct you to start the IronPython console from the tutorial directory, 
+	you should change to the tutorial directory (&gt;cd c:\ironpython\tutorial) 
+	and launch the console with the tutorial as your working directory (&gt;..\ipy.exe).</p>
+	<p class="Body">&nbsp;</p>
 	<h1><a name="T1">Tutorial 1: Basic IronPython</a></h1>
 	<p class="Body">The emphasis of this tutorial is on the basic interaction with 
 	the IronPython interpreter and using the interactive environment to explore 
@@ -187,7 +203,12 @@
 	<h3><a name="T1.1.1">Task 1: IronPython console</a></h3>
 	<ol>
 		<li>
-		<p class="Step">Start the IronPython console from the tutorial directory (ipy.bat)</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		by changing to the tutorial directory (&gt;cd c:\ironpython\tutorial) and 
+		launching the console c:\ironpython\ipy.exe executable (&gt;..\ipy.exe).&nbsp; 
+		This is how you should always launch the console for the tutorials, but 
+		from now on, we'll just direct you to &quot;start the IronPython console from 
+		the tutorial directory&quot;.</p>
 		</li>
 	</ol>
 	<p class="Code-Background">IronPython 1.0 (Beta) on .NET 2.0.50727.42<br />
@@ -195,8 +216,10 @@
 	<p class="Code-Highlighted">&gt;&gt;&gt; _</p>
 	<ol start="2">
 		<li>
-		<p class="Step">Execute simple statements listed below. After each statement 
-		IronPython prints the result, if any, and awaits more input.</p>
+		<p class="Step">Execute simple statements listed below.&nbsp; After each statement IronPython prints the result, if any, and awaits more input.&nbsp; 
+		(The input line starting with &quot;for&quot; requires an extra return or enter 
+		key press because the interpreter prompts for more statements in the 
+		'for' loop.)</p>
 		</li>
 	</ol>
 	<p class="TypedExample">2+2</p>
@@ -213,6 +236,7 @@
 	<p class="Code-Highlighted">&gt;&gt;&gt; print &quot;Hello World!&quot;</p>
 	<p class="Code-Background">Hello World!</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; for i in range(3): print i</p>
+	<p class="Code-Highlighted">...</p>
 	<p class="Code-Background">0<br />
 	1<br />
 	2</p>
@@ -223,17 +247,18 @@
 	<ol start="3">
 		<li>
 		<p class="Step">IronPython console supports multi-line statements, often 
-		used by function definitions. IronPython prompts for additional lines of 
+		used by function definitions.&nbsp; IronPython prompts for additional lines of 
 		multi-line statements using:</p>
 		</li>
 	</ol>
 	<p class="Code-Highlighted">...</p>
 	<p class="Code-Background">&nbsp;</p>
 	<p class="Stepnonumbering">Unlike C# or Java, where blocks of code are grouped by curly brackets "{...}",
-        blocks of code in IronPython are grouped based on their level of indentation.  Every new block of code
-        must be indented one more than the previous block of code.  Blocks of code are used for
-        function and class definitions as well as if statements and loops. </p>
-	<p class="Stepnonumbering">Define the &quot;add&quot; function:</p>
+        blocks of code in Python are grouped based on their level of indentation.&nbsp; Every new block of code
+        must be indented one more level than the previous block of code.&nbsp; Blocks of code are used for
+        function and class definitions as well as 'if' statements and loops. </p>
+	<p class="Stepnonumbering">Define the &quot;add&quot; function (note, you 
+	need to enter spaces before the 'return' statement):</p>
 	<p class="TypedExample">def add(a, b):<br>
 &nbsp;&nbsp;&nbsp; return a + b</p>
 	<p class="Stepnonumbering">To complete the function definition, press Enter 
@@ -252,7 +277,7 @@
 	<p class="Step">&nbsp;</p>
 	<ol start="4">
 		<li>
-		<p class="Step">To exit the console, type Ctrl+Z and Enter (alternatively, 
+		<p class="Step">To exit the IronPython interactive console, type Ctrl+Z and Enter (alternatively, 
 		press F6 followed by Enter).</p>
 		</li>
 	</ol>
@@ -260,7 +285,8 @@
 	<h3><a name="T1.1.2">Task 2: Built-in modules and interactive exploration</a></h3>
 	<ol>
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat).</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 		<li>
 		<p class="Step">Using the built-in dir() function, list the contents of 
@@ -270,13 +296,12 @@
 	<p class="TypedExample">dir()</p>
 	<p class="Stepnonumbering">The output in the console window will be:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; dir()</p>
-	<p class="Code-Background">['__builtins__', '__dict__', '__doc__', 
-	'__name__', 'site']<br />
+	<p class="Code-Background">['__builtins__', '__doc__', '__name__']<br />
 	&gt;&gt;&gt; </p>
 	<ol start="3">
 		<li>
 		<p class="Step">IronPython comes with several built-in modules, the most 
-		frequently used one being &quot;sys&quot;. Import &quot;sys&quot; module using the &quot;import&quot; 
+		frequently used one being &quot;sys&quot;.&nbsp; Import &quot;sys&quot; module using the &quot;import&quot; 
 		statement:</p>
 		</li>
 	</ol>
@@ -287,8 +312,9 @@
 		of C# or &quot;Imports&quot; statement of Visual Basic. The important difference is 
 		that the C# and VB statements bring the names from the imported namespace 
 		into to the global namespace to be accessed directly. Python’s import doesn’t 
-		do that. To access the attributes of the imported modules, prefix their 
-		names with the module name:</p>
+		do that. To access the names or attributes in an imported module, prefix 
+		the 
+		names with the module's name:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">sys.version</p>
@@ -298,15 +324,12 @@
 		</li>
 	</ol>
 	<p class="TypedExample">dir()</p>
-	<p class="Stepnonumbering">The environment (global namespace) has changed, now 
+	<p class="Stepnonumbering" style="margin-left: 0.5in">The environment (global namespace) has changed, now 
 	it contains the &quot;sys&quot; module:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; dir()</p>
-	<p class="Code-Background">['_', '__builtins__', '__dict__', '__doc__', 
-	'__name__', 'site', 'sys']<br />
+	<p class="Code-Background">['__builtins__', '__doc__', 
+	'__name__', 'sys']<br />
 	&gt;&gt;&gt;</p>
-	<p class="Normal">&nbsp;</p>
-	<p class="TypedExample">Note also the &quot;_&quot; in the dir() output. &quot;_&quot; is a useful Python
-        variable that equals the last result produced by the interactive console.</p>
 	<ol start="6">
 		<li>
 		<p class="Step">Use the dir() function to explore the contents of the &quot;sys&quot; 
@@ -387,7 +410,8 @@
 	<h3><a name="T1.2.1">Task 1: Basic .NET library use</a></h3>
 	<ol>
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat)</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 		<li>
 		<p class="Step">Using the &quot;import&quot; statement, import the .NET System namespace:</p>
@@ -430,8 +454,7 @@
 	<p class="Code-Background">[&#39;Abs&#39;, &#39;Acos&#39;, &#39;Asin&#39;, &#39;Atan&#39;, &#39;Atan2&#39;, &#39;BigMul&#39;, 
 	&#39;Ceiling&#39;, &#39;Cos&#39;, &#39;Cosh&#39;, &#39;DivRem&#39;, &#39;E&#39;, &#39;Equals&#39;, &#39;Exp&#39;, &#39;Floor&#39;, &#39;GetHashCode&#39;, 
 	&#39;GetType&#39;, &#39;IEEERemainder&#39;, &#39;Log&#39;, &#39;Log10&#39;, &#39;Max&#39;, &#39;Min&#39;, &#39;PI&#39;, &#39;Pow&#39;, &#39;Round&#39;, 
-	&#39;Sign&#39;, &#39;Sin&#39;, &#39;Sinh&#39;, &#39;Sqrt&#39;, &#39;System&#39;, &#39;Tan&#39;, &#39;Tanh&#39;, &#39;ToString&#39;, &#39;Truncate&#39;, 
-	&#39;_&#39;, &#39;__builtins__&#39;, &#39;__doc__&#39;, &#39;__name__&#39;]</p>
+	&#39;Sign&#39;, &#39;Sin&#39;, &#39;Sinh&#39;, &#39;Sqrt&#39;, &#39;System&#39;, &#39;Tan&#39;, &#39;Tanh&#39;, &#39;ToString&#39;, &#39;Truncate&#39;, &#39;__builtins__&#39;, &#39;__doc__&#39;, &#39;__name__&#39;]</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; Sin(PI/2)</p>
 	<p class="Code-Background">1.0</p>
 	<h3><a name="T1.2.2">Task 2: Working with .NET classes</a></h3>
@@ -603,7 +626,8 @@
 	<h3><a name="T1.3.1">Task 1: Using System.Xml - AddReference</a></h3>
 	<ol>
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat).</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 		<li>
 		<p class="Step">To import System.Xml, the reference to the assembly containing 
@@ -698,7 +722,8 @@
 	for download details.</p>
 	<ol>
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat).</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 		<li>
 		<p class="Step">Use the clr.AddReferenceToFile function to load the Matrix 
@@ -716,7 +741,7 @@
 	&gt;&gt;&gt; dir()</p>
 	<p class="Code-Background">[&#39;CholeskyDecomposition&#39;, &#39;EigenvalueDecomposition&#39;, 
 	&#39;LuDecomposition&#39;, &#39;Matrix&#39;, &#39;QrDecomposition&#39;, &#39;SingularValueDecomposition&#39;, 
-	&#39;_&#39;, &#39;__builtins__&#39;, &#39;__doc__&#39;, &#39;__name__&#39;, &#39;sys&#39;]</p>
+	&#39;__builtins__&#39;, &#39;__doc__&#39;, &#39;__name__&#39;, &#39;sys&#39;]</p>
 	<ol start="3">
 		<li>
 		<p class="Step">Create instance of Matrix class:</p>
@@ -855,7 +880,8 @@
 	<h3><a name="T2.1.1">Task 1: File System Watcher</a></h3>
 	<ol>
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat).</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 		<li>
 		<p class="Step">Import the contents of System.IO into the global namespace:</p>
@@ -1056,7 +1082,8 @@
 	<h3><a name="T2.2.1">Task 1: Simple Windows Forms application</a></h3>
 	<ol>
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat).</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 		<li>
 		<p class="Step">Initialize Windows Forms by loading the winforms module/script:</p>
@@ -1158,7 +1185,8 @@
 	<h3><a name="T2.3.1">Task 1: Simple Avalon Application</a></h3>
 	<ol>
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat).</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 		<li>
 		<p class="Step">Initialize Windows Presentation Foundation:</p>
@@ -1405,7 +1433,8 @@
 	<h3><a name="T3.1.2">Task 2: Using COM objects from IronPython</a></h3>
 	<ol>
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat).</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 		<li>
 		<p class="Step">Using the &quot;AddReferenceToFile&quot; function in the sys module, 
@@ -1659,10 +1688,10 @@
 	<p class="TypedExample">csx</p>
 	<ol start="6">
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat):</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 	</ol>
-	<p class="TypedExample">ip</p>
 	<ol start="7">
 		<li>
 		<p class="Step">Load the dll that you just built (csextend.dll) into IronPython. 
@@ -1963,10 +1992,10 @@
 	<p class="TypedExample">vbx</p>
 	<ol start="6">
 		<li>
-		<p class="Step">Start the IronPython console (ipy.bat):</p>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 	</ol>
-	<p class="TypedExample">ip</p>
 	<ol start="7">
 		<li>
 		<p class="Step">Load the dll that you just built (vbextend.dll) into IronPython. 
@@ -2462,7 +2491,7 @@ by attempting to reference an undefined variable, so:
 </ol>
 <p class="Stepnonumbering">
 Compile and run <b>App.exe</b>; again, the prepared source-file for this step is available, as <b>MonthAtAGlance.2.1.cs</b>. At once, you will see an exception dialog:<br><br>
-<img src="dialog1.jpg"/><br><br>
+<img src="../../../ip/ip/IronPython/Public/Tutorial/dialog1.jpg"/><br><br>
 This dialogue appears because the default UncaughtExceptionHandler for the current AppDomain is invoked. By adding a new UncaughtExceptionHandler, you can perform various clean-up and reporting tasks before this dialogue appears. However, ideally you would like to handle the situation a little better than that. At the very least, your application can catch exceptions raised inside the PythonEngine and display the stack-trace to the user.
 </p>
 	<ol start="2">
@@ -2497,7 +2526,8 @@ can interact with the application normally.</p>
 </p>
 	<ol start="4">
 		<li>
-		<p class="Step">Compile and run again; note the different message-box that appears:<br><br><img src="dialog2.jpg"></p>
+		<p class="Step">Compile and run again; note the different message-box that appears:<br><br>
+		<img src="../../../ip/ip/IronPython/Public/Tutorial/dialog2.jpg"></p>
 		</li>
 	</ol>
 	<h3><a name="T6.2.3">Task 3: Redirect the engine’s output streams</a></h3>
