@@ -34,75 +34,6 @@ namespace IronPython.Runtime {
         #region Conversion entry points
 
         //
-        // ConvertToByte - fast paths and custom logic
-        //
-        public static Byte ConvertToByte(object value) {
-            // Fast Paths
-            if (value is Int32) return checked((Byte)(Int32)value);
-            if (value is Boolean) return (Boolean)value ? (Byte)1 : (Byte)0;
-            if (value is Byte) return (Byte)value;
-
-            // Fall back to comprehensive conversion
-            Byte result;
-            if (ConvertToByteImpl(value, out result)) return result;
-
-            //// Fall back to __xxx__ method call
-            //object newValue;
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToByteImpl(newValue, out result)) return result;
-            //}
-
-            throw CannotConvertTo("Byte", value);
-        }
-
-        //
-        // ConvertToSByte - fast paths and custom logic
-        //
-        public static SByte ConvertToSByte(object value) {
-            // Fast Paths
-            if (value is Int32) return checked((SByte)(Int32)value);
-            if (value is Boolean) return (Boolean)value ? (SByte)1 : (SByte)0;
-            if (value is SByte) return (SByte)value;
-
-            // Fall back to comprehensive conversion
-            SByte result;
-            if (ConvertToSByteImpl(value, out result)) return result;
-
-            //// Fall back to __xxx__ method call
-            //object newValue;
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToSByteImpl(newValue, out result)) return result;
-            //}
-
-            throw CannotConvertTo("SByte", value);
-        }
-
-        //
-        // ConvertToInt16 - fast paths and custom logic
-        //
-        public static Int16 ConvertToInt16(object value) {
-            // Fast Paths
-            if (value is Int32) return checked((Int16)(Int32)value);
-            if (value is Boolean) return (Boolean)value ? (Int16)1 : (Int16)0;
-            if (value is Int16) return (Int16)value;
-
-            Int16 result;
-            // Fall back to comprehensive conversion
-            if (ConvertToInt16Impl(value, out result)) return result;
-
-            // Fall back to __xxx__ method call
-            //object newValue;
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToInt16Impl(newValue, out result)) return result;
-            //}
-
-            throw CannotConvertTo("Int16", value);
-        }
-
-        //
         // ConvertToInt32 - fast paths and custom logic
         //
         public static Int32 ConvertToInt32(object value) {
@@ -126,129 +57,6 @@ namespace IronPython.Runtime {
             }
 
             throw CannotConvertTo("Int32", value);
-        }
-
-        //
-        // ConvertToInt64 - fast paths and custom logic
-        //
-        public static Int64 ConvertToInt64(object value) {
-            // Fast Paths
-            ExtensibleInt ei;
-            BigInteger bi;
-
-            if (value is Int32) return (Int64)(Int32)value;
-            if ((ei = value as ExtensibleInt) != null) return (Int64)ei.value;
-            if (value is Boolean) return (Boolean)value ? (Int64)1 : (Int64)0;
-            if ((Object)(bi = value as BigInteger) != null) return ((BigInteger)value).ToInt64();
-
-            // Fall back to comprehensive conversion
-            Int64 result;
-            if (ConvertToInt64Impl(value, out result)) return result;
-
-            // Fall back to __xxx__ method call
-            //object newValue;
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToInt64Impl(newValue, out result)) return result;
-            //}
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToLong, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToInt64Impl(newValue, out result)) return result;
-            //}
-
-            throw CannotConvertTo("Int64", value);
-        }
-
-        //
-        // ConvertToUInt16 - fast paths and custom logic
-        //
-        public static UInt16 ConvertToUInt16(object value) {
-            // Fast Paths
-            if (value is Int32) return checked((UInt16)(Int32)value);
-            if (value is UInt16) return (UInt16)value;
-
-            // Fall back to comprehensive conversion
-            UInt16 result;
-            if (ConvertToUInt16Impl(value, out result)) return result;
-
-            //// Fall back to __xxx__ method call
-            //object newValue;
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToUInt16Impl(newValue, out result)) return result;
-            //}
-
-            throw CannotConvertTo("UInt16", value);
-        }
-
-        //
-        // ConvertToUInt32 - fast paths and custom logic
-        //
-        public static UInt32 ConvertToUInt32(object value) {
-            // Fast Paths
-            if (value is Int32) return checked((UInt32)(Int32)value);
-            if (value is UInt32) return (UInt32)value;
-
-            // Fall back to comprehensive conversion
-            UInt32 result;
-            if (ConvertToUInt32Impl(value, out result)) return result;
-
-            // Fall back to __xxx__ method call
-            //object newValue;
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToUInt32Impl(newValue, out result)) return result;
-            //}
-
-            throw CannotConvertTo("UInt32", value);
-        }
-
-        //
-        // ConvertToUInt64 - fast paths and custom logic
-        //
-        public static UInt64 ConvertToUInt64(object value) {
-            // Fast Paths
-            if (value is Int32) return checked((UInt64)(Int32)value);
-            if (value is UInt64) return (UInt64)value;
-
-            // Fall back to comprehensive conversion
-            UInt64 result;
-            if (ConvertToUInt64Impl(value, out result)) return result;
-
-            // Fall back to __xxx__ method call
-            //object newValue;
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToUInt64Impl(newValue, out result)) return result;
-            //}
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToLong, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToUInt64Impl(newValue, out result)) return result;
-            //}
-
-            throw CannotConvertTo("UInt64", value);
-        }
-
-        //
-        // ConvertToSingle - fast paths and custom logic
-        //
-        public static Single ConvertToSingle(object value) {
-            // Fast Paths
-            if (value is Int32) return (Single)(Int32)value;
-            if (value is Single) return (Single)value;
-
-            // Fall back to comprehensive conversion
-            Single result;
-            if (ConvertToSingleImpl(value, out result)) return result;
-
-            // Fall back to __xxx__ method call
-            object newValue;
-            if (Ops.TryInvokeSpecialMethod(value, SymbolTable.ConvertToFloat, out newValue)) {
-                // Convert resulting object to the desired type
-                if (ConvertToSingleImpl(newValue, out result)) return result;
-            }
-
-            throw CannotConvertTo("Single", value);
         }
 
         //
@@ -278,36 +86,6 @@ namespace IronPython.Runtime {
         }
 
         //
-        // ConvertToDecimal - fast paths and custom logic
-        //
-        public static Decimal ConvertToDecimal(object value) {
-            // Fast Paths
-            if (value is Decimal) return (Decimal)value;
-            if (value is Int32) return (Decimal)(Int32)value;
-
-            // Fall back to comprehensive conversion
-            Decimal result;
-            if (ConvertToDecimalImpl(value, out result)) return result;
-
-            // Fall back to __xxx__ method call
-            //object newValue;
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToInt, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToDecimalImpl(newValue, out result)) return result;
-            //}
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToLong, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToDecimalImpl(newValue, out result)) return result;
-            //}
-            //if (Ops.TryToInvoke(value, SymbolTable.ConvertToFloat, out newValue)) {
-            //    // Convert resulting object to the desired type
-            //    if (ConvertToDecimalImpl(newValue, out result)) return result;
-            //}
-
-            throw CannotConvertTo("Decimal", value);
-        }
-
-        //
         // ConvertToBigInteger - fast paths and custom logic
         //
         public static BigInteger ConvertToBigInteger(object value) {
@@ -318,6 +96,7 @@ namespace IronPython.Runtime {
             if ((Object)(bi = value as BigInteger) != null) return bi;
             if (value is Int32) return BigInteger.Create((Int32)value);
             if ((el = value as ExtensibleLong) != null) return el.Value;
+            if (value == null) return null;
 
             // Fall back to comprehensive conversion
             BigInteger result;
@@ -366,7 +145,7 @@ namespace IronPython.Runtime {
             if ((result = value as String) != null) return result;
             if (value == null) return null;
             if (value is Char) return Ops.Char2String((Char)value);
-            if ((es = value as ExtensibleString) != null) return es.Value;
+            if ((Object)(es = value as ExtensibleString) != null) return es.Value;
 
             throw CannotConvertTo("String", value);
         }
@@ -380,8 +159,8 @@ namespace IronPython.Runtime {
             ExtensibleString es;
 
             if (value is Char) return (Char)value;
-            if (!Object.Equals((str = value as string), null) && str.Length == 1) return str[0];
-            if (!Object.Equals((es = value as ExtensibleString), null) && es.Value.Length == 1) return es.Value[0];
+            if ((object)(str = value as string) != null && str.Length == 1) return str[0];
+            if ((object)(es = value as ExtensibleString) != null && es.Value.Length == 1) return es.Value[0];
 
             throw CannotConvertTo("Char", value);
         }
@@ -443,8 +222,8 @@ namespace IronPython.Runtime {
             ExtensibleString es;
             if (value is Char) return (Char)value;
             if (value is Int32) return checked((Char)(Int32)value);
-            if (!Object.Equals((str = value as string), null) && str.Length == 1) return str[0];
-            if (!Object.Equals((es = value as ExtensibleString), null) && es.Value.Length == 1) return es.Value[0];
+            if ((Object)(str = value as string) != null && str.Length == 1) return str[0];
+            if ((Object)(es = value as ExtensibleString) != null && es.Value.Length == 1) return es.Value[0];
             if (value is SByte) return checked((Char)(SByte)value);
             if (value is Int16) return checked((Char)(Int16)value);
             if (value is UInt32) return checked((Char)(UInt32)value);
@@ -457,6 +236,10 @@ namespace IronPython.Runtime {
             throw CannotConvertTo("char", value);
         }
 
+        /// <summary>
+        /// General conversion routine TryConvert - tries to convert the object to the desired type.
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
         internal static bool TryConvert(object value, Type to, out object result) {
             try {
                 result = Convert(value, to);
@@ -468,10 +251,6 @@ namespace IronPython.Runtime {
         }
 
         internal static object Convert(object value, Type to) {
-            if (IronPython.Hosting.PythonEngine.options.EngineDebug) {
-                PerfTrack.NoteEvent(PerfTrack.Categories.Properties, String.Format("ConvertTo {0}, from {1}", to, Ops.GetDynamicType(value).__name__));
-            }
-
             if (value == null) {
                 if (to.IsValueType) throw MakeTypeError(to, value);
                 return null;
@@ -523,19 +302,8 @@ namespace IronPython.Runtime {
             if (to == SingleType) return ConvertToSingle(value);
             if (to == DecimalType) return ConvertToDecimal(value);
             if (to == Int64Type) return ConvertToInt64(value);
-            //if (to == ArrayListType) return ConvertToArrayList(value);
-            //if (to == HashtableType) return ConvertToHashtable(value);
 
             if (from.IsValueType) {
-                // !!! keep the IsEnum ???
-                if (to.IsEnum) {
-                    if (value is int) {
-                        int IntValue = (int)value;
-                        if (IntValue == 0) {
-                            return 0;
-                        }
-                    }
-                }
                 if (to == ValueTypeType) {
                     return (System.ValueType)value;
                 }
@@ -603,18 +371,6 @@ namespace IronPython.Runtime {
             throw MakeTypeError("dict", value);
         }
 
-        private static object TryConvertFromNull(Type to) {
-            if (!to.IsValueType) {
-                return null;
-            }
-
-            // value type, if it's nullable, we convert, if not
-            // we have no conversion.
-            if (to.IsGenericType && to.GetGenericTypeDefinition() == typeof(Nullable<>)) {
-                return Activator.CreateInstance(to, new object[0]);
-            }
-            return null;
-        }
         private static bool ExtendList(IEnumerable ie, IList list) {
             try {
                 foreach (object o in ie) {
@@ -652,34 +408,8 @@ namespace IronPython.Runtime {
                 return result;
             }
 
-            //Dict d = value as Dict;
-            //if (d != null) {
-            //    return new DictWrapperForHashtableDictionary(d);
-            //}
-
             throw MakeTypeError("Hashtable", value);
         }
-
-        //private static ArrayList ConvertToArrayList(object value) {
-        //    ArrayList result = value as ArrayList;
-        //    if (result != null) return result;
-
-        //    Tuple t = value as Tuple;
-        //    if (t != null) {
-        //        result = new ArrayList(t.Count);
-        //        for (int i = 0; i < t.Count; i++) {
-        //            result.Add(t[i]);
-        //        }
-        //        return result;
-        //    } else {
-        //        List list = value as List;
-        //        if (list != null) {
-        //            return new ListWrapperForArrayListCollection(list);
-        //        }
-        //    }
-
-        //    throw MakeTypeError("ArrayList", value);
-        //}
 
         public static object ConvertToIEnumeratorT(object value, Type[] enumOf) {
             Type type = IEnumeratorOfT.MakeGenericType(enumOf);
@@ -785,81 +515,23 @@ namespace IronPython.Runtime {
         private static readonly Type ValueTypeType = typeof(ValueType);
         private static readonly Type TypeType = typeof(Type);
         private static readonly Type ArrayListType = typeof(ArrayList);
-        private static readonly Type NullableOfT = typeof(Nullable<int>).GetGenericTypeDefinition();
-        private static readonly Type IListOfTType = typeof(System.Collections.Generic.IList<int>).GetGenericTypeDefinition();
-        private static readonly Type ListOfTType = typeof(System.Collections.Generic.List<int>).GetGenericTypeDefinition();
-        private static readonly Type IDictOfTType = typeof(System.Collections.Generic.IDictionary<int, int>).GetGenericTypeDefinition();
+        private static readonly Type NullableOfT = typeof(Nullable<>);
+        private static readonly Type IListOfTType = typeof(System.Collections.Generic.IList<>);
+        private static readonly Type ListOfTType = typeof(System.Collections.Generic.List<>);
+        private static readonly Type IDictOfTType = typeof(System.Collections.Generic.IDictionary<,>);
         private static readonly Type HashtableType = typeof(Hashtable);
-        private static readonly Type ListWrapperForIListType = typeof(ListWrapperForIList<int>).GetGenericTypeDefinition();
-        private static readonly Type IEnumeratorOfT = typeof(System.Collections.Generic.IEnumerator<int>).GetGenericTypeDefinition();
-        private static readonly Type IEnumeratorOfTWrapper = typeof(IEnumeratorOfTWrapper<int>).GetGenericTypeDefinition();
-        private static readonly Type DictWrapperForIDictType = typeof(DictWrapperForIDict<int, int>).GetGenericTypeDefinition();
+        private static readonly Type ListWrapperForIListType = typeof(ListWrapperForIList<>);
+        private static readonly Type IEnumeratorOfT = typeof(System.Collections.Generic.IEnumerator<>);
+        private static readonly Type IEnumeratorOfTWrapper = typeof(IEnumeratorOfTWrapper<>);
+        private static readonly Type DictWrapperForIDictType = typeof(DictWrapperForIDict<,>);
         private static readonly Type IListOfObjectType = typeof(System.Collections.Generic.IList<object>);
         private static readonly Type IDictionaryOfObjectType = typeof(System.Collections.Generic.IDictionary<object, object>);
-        private static readonly Type ListGenericWrapperType = typeof(ListGenericWrapper<object>).GetGenericTypeDefinition();
-        private static readonly Type DictionaryGenericWrapperType = typeof(DictionaryGenericWrapper<object, object>).GetGenericTypeDefinition();
+        private static readonly Type ListGenericWrapperType = typeof(ListGenericWrapper<>);
+        private static readonly Type DictionaryGenericWrapperType = typeof(DictionaryGenericWrapper<,>);
 
         #endregion
 
         #region Implementation routines
-
-        //
-        //  ConvertToBigIntegerImpl Conversion Routine
-        //
-
-        private static bool ConvertToBigIntegerImpl(object value, out BigInteger result) {
-            if (value is BigInteger) {
-                result = (BigInteger)value;
-                return true;
-            } else if (value is Int32) {
-                result = (BigInteger)(Int32)value;
-                return true;
-            //} else if (value is Double) {
-            //    // DEPRECATED IMPLICIT CONVERSION FROM FLOAT TO INT
-            //    result = BigInteger.Create((Double)value);
-            //    return true;
-            } else if (value is Boolean) {
-                result = (Boolean)value ? BigInteger.One : BigInteger.Zero;
-                return true;
-            } else if (value is ExtensibleInt) {
-                result = (BigInteger)((ExtensibleInt)value).value;
-                return true;
-            } else if (value is ExtensibleLong) {
-                result = ((ExtensibleLong)value).Value;
-                return true;
-            //} else if (value is ExtensibleFloat) {
-            //    // DEPRECATED IMPLICIT CONVERSION FROM FLOAT TO INT
-            //    result = BigInteger.Create(((ExtensibleFloat)value).value);
-            //    return true;
-            } else if (value is Int64) {
-                result = (BigInteger)(Int64)value;
-                return true;
-            } else if (value is Byte) {
-                result = (BigInteger)(Byte)value;
-                return true;
-            } else if (value is SByte) {
-                result = (BigInteger)(SByte)value;
-                return true;
-            } else if (value is Int16) {
-                result = (BigInteger)(Int16)value;
-                return true;
-            } else if (value is UInt16) {
-                result = (BigInteger)(UInt16)value;
-                return true;
-            } else if (value is UInt32) {
-                result = (BigInteger)(UInt32)value;
-                return true;
-            } else if (value is UInt64) {
-                result = (BigInteger)(UInt64)value;
-                return true;
-            } else if (value is Decimal) {
-                result = BigInteger.Create((Decimal)value);
-                return true;
-            }
-            result = null;
-            return false;
-        }
-
         //
         //  ConvertToBooleanImpl Conversion Routine
         //
@@ -967,7 +639,7 @@ namespace IronPython.Runtime {
         #endregion
 
         private static object ConvertToNullableOfT(object value, Type[] typeOf) {
-            if (value == null) return null; 
+            if (value == null) return null;
             else return Convert(value, typeOf[0]);
         }
 
@@ -984,20 +656,6 @@ namespace IronPython.Runtime {
         public static object ConvertToValueType(object fromObject, RuntimeTypeHandle typeHandle) {
             if (fromObject == null) throw Ops.InvalidType(fromObject, typeHandle);
             return Convert(fromObject, Type.GetTypeFromHandle(typeHandle));
-        }
-
-        public static bool ConvertToIEnumeratorT(object value, Type[] enumOf, out object result) {
-            Type type = IEnumeratorOfT.MakeGenericType(enumOf);
-            if (type.IsInstanceOfType(value)) { result = value; return true; }
-
-            IEnumerator ie = value as IEnumerator;
-            if (ie == null) {
-                ie = Ops.GetEnumerator(value);
-            }
-
-            type = IEnumeratorOfTWrapper.MakeGenericType(enumOf);
-            result = Activator.CreateInstance(type, ie);
-            return true;
         }
 
         public static object ConvertToIListT(object value, Type[] listOf) {

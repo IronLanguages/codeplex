@@ -29,10 +29,11 @@ namespace IronPython.Runtime {
         // *** BEGIN GENERATED CODE ***
 
 
-        ///<summary>
-        ///Conversion routine TryConvertToByte - converts object to Byte
-        ///</summary>
-        public static bool TryConvertToByte(object value, out Byte result) {
+        /// <summary>
+        /// Conversion routine TryConvertToByte - converts object to Byte
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToByte(object value, out Byte result) {
             try {
                 result = ConvertToByte(value);
                 return true;
@@ -42,10 +43,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToSByte - converts object to SByte
-        ///</summary>
-        public static bool TryConvertToSByte(object value, out SByte result) {
+        /// <summary>
+        /// Conversion routine TryConvertToSByte - converts object to SByte
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToSByte(object value, out SByte result) {
             try {
                 result = ConvertToSByte(value);
                 return true;
@@ -55,10 +57,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToInt16 - converts object to Int16
-        ///</summary>
-        public static bool TryConvertToInt16(object value, out Int16 result) {
+        /// <summary>
+        /// Conversion routine TryConvertToInt16 - converts object to Int16
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToInt16(object value, out Int16 result) {
             try {
                 result = ConvertToInt16(value);
                 return true;
@@ -68,10 +71,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToInt32 - converts object to Int32
-        ///</summary>
-        public static bool TryConvertToInt32(object value, out Int32 result) {
+        /// <summary>
+        /// Conversion routine TryConvertToInt32 - converts object to Int32
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToInt32(object value, out Int32 result) {
             try {
                 result = ConvertToInt32(value);
                 return true;
@@ -81,10 +85,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToInt64 - converts object to Int64
-        ///</summary>
-        public static bool TryConvertToInt64(object value, out Int64 result) {
+        /// <summary>
+        /// Conversion routine TryConvertToInt64 - converts object to Int64
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToInt64(object value, out Int64 result) {
             try {
                 result = ConvertToInt64(value);
                 return true;
@@ -94,10 +99,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToUInt16 - converts object to UInt16
-        ///</summary>
-        public static bool TryConvertToUInt16(object value, out UInt16 result) {
+        /// <summary>
+        /// Conversion routine TryConvertToUInt16 - converts object to UInt16
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToUInt16(object value, out UInt16 result) {
             try {
                 result = ConvertToUInt16(value);
                 return true;
@@ -107,10 +113,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToUInt32 - converts object to UInt32
-        ///</summary>
-        public static bool TryConvertToUInt32(object value, out UInt32 result) {
+        /// <summary>
+        /// Conversion routine TryConvertToUInt32 - converts object to UInt32
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToUInt32(object value, out UInt32 result) {
             try {
                 result = ConvertToUInt32(value);
                 return true;
@@ -120,10 +127,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToUInt64 - converts object to UInt64
-        ///</summary>
-        public static bool TryConvertToUInt64(object value, out UInt64 result) {
+        /// <summary>
+        /// Conversion routine TryConvertToUInt64 - converts object to UInt64
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToUInt64(object value, out UInt64 result) {
             try {
                 result = ConvertToUInt64(value);
                 return true;
@@ -133,23 +141,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToSingle - converts object to Single
-        ///</summary>
-        public static bool TryConvertToSingle(object value, out Single result) {
-            try {
-                result = ConvertToSingle(value);
-                return true;
-            } catch {
-                result = default(Single);
-                return false;
-            }
-        }
-
-        ///<summary>
-        ///Conversion routine TryConvertToDouble - converts object to Double
-        ///</summary>
-        public static bool TryConvertToDouble(object value, out Double result) {
+        /// <summary>
+        /// Conversion routine TryConvertToDouble - converts object to Double
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToDouble(object value, out Double result) {
             try {
                 result = ConvertToDouble(value);
                 return true;
@@ -159,23 +155,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToDecimal - converts object to Decimal
-        ///</summary>
-        public static bool TryConvertToDecimal(object value, out Decimal result) {
-            try {
-                result = ConvertToDecimal(value);
-                return true;
-            } catch {
-                result = default(Decimal);
-                return false;
-            }
-        }
-
-        ///<summary>
-        ///Conversion routine TryConvertToBigInteger - converts object to BigInteger
-        ///</summary>
-        public static bool TryConvertToBigInteger(object value, out BigInteger result) {
+        /// <summary>
+        /// Conversion routine TryConvertToBigInteger - converts object to BigInteger
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToBigInteger(object value, out BigInteger result) {
             try {
                 result = ConvertToBigInteger(value);
                 return true;
@@ -185,10 +169,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToComplex64 - converts object to Complex64
-        ///</summary>
-        public static bool TryConvertToComplex64(object value, out Complex64 result) {
+        /// <summary>
+        /// Conversion routine TryConvertToComplex64 - converts object to Complex64
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToComplex64(object value, out Complex64 result) {
             try {
                 result = ConvertToComplex64(value);
                 return true;
@@ -198,10 +183,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToString - converts object to String
-        ///</summary>
-        public static bool TryConvertToString(object value, out String result) {
+        /// <summary>
+        /// Conversion routine TryConvertToString - converts object to String
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToString(object value, out String result) {
             try {
                 result = ConvertToString(value);
                 return true;
@@ -211,54 +197,16 @@ namespace IronPython.Runtime {
             }
         }
 
-        ///<summary>
-        ///Conversion routine TryConvertToChar - converts object to Char
-        ///</summary>
-        public static bool TryConvertToChar(object value, out Char result) {
+        /// <summary>
+        /// Conversion routine TryConvertToChar - converts object to Char
+        /// Try to avoid using this method, the goal is to ultimately remove it!
+        /// </summary>
+        internal static bool TryConvertToChar(object value, out Char result) {
             try {
                 result = ConvertToChar(value);
                 return true;
             } catch {
                 result = default(Char);
-                return false;
-            }
-        }
-
-        ///<summary>
-        ///Conversion routine TryConvertToBoolean - converts object to Boolean
-        ///</summary>
-        public static bool TryConvertToBoolean(object value, out Boolean result) {
-            try {
-                result = ConvertToBoolean(value);
-                return true;
-            } catch {
-                result = default(Boolean);
-                return false;
-            }
-        }
-
-        ///<summary>
-        ///Conversion routine TryConvertToType - converts object to Type
-        ///</summary>
-        public static bool TryConvertToType(object value, out Type result) {
-            try {
-                result = ConvertToType(value);
-                return true;
-            } catch {
-                result = default(Type);
-                return false;
-            }
-        }
-
-        ///<summary>
-        ///Conversion routine TryConvertToIEnumerator - converts object to IEnumerator
-        ///</summary>
-        public static bool TryConvertToIEnumerator(object value, out IEnumerator result) {
-            try {
-                result = ConvertToIEnumerator(value);
-                return true;
-            } catch {
-                result = default(IEnumerator);
                 return false;
             }
         }
@@ -271,14 +219,14 @@ namespace IronPython.Runtime {
 
         // *** BEGIN GENERATED CODE ***
 
-        ///<summary>
+        /// <summary>
         /// Explicit conversion of Enum to Int32
-        ///</summary>
+        /// </summary>
         internal static Int32 CastEnumToInt32(object value) {
             Debug.Assert(value is Enum);
             switch (((Enum)value).GetTypeCode()) {
                 case TypeCode.Int32:
-                    return (Int32)(Int32)value;
+                    return (Int32)value;
                 case TypeCode.Byte:
                     return (Int32)(Byte)value;
                 case TypeCode.SByte:
@@ -298,16 +246,16 @@ namespace IronPython.Runtime {
             Debug.Fail("Invalid enum detected");
             return default(Int32);
         }
-        ///<summary>
+        /// <summary>
         /// Explicit conversion of Enum to Byte
-        ///</summary>
+        /// </summary>
         internal static Byte CastEnumToByte(object value) {
             Debug.Assert(value is Enum);
             switch (((Enum)value).GetTypeCode()) {
                 case TypeCode.Int32:
                     return (Byte)(Int32)value;
                 case TypeCode.Byte:
-                    return (Byte)(Byte)value;
+                    return (Byte)value;
                 case TypeCode.SByte:
                     return (Byte)(SByte)value;
                 case TypeCode.Int16:
@@ -325,9 +273,9 @@ namespace IronPython.Runtime {
             Debug.Fail("Invalid enum detected");
             return default(Byte);
         }
-        ///<summary>
+        /// <summary>
         /// Explicit conversion of Enum to SByte
-        ///</summary>
+        /// </summary>
         internal static SByte CastEnumToSByte(object value) {
             Debug.Assert(value is Enum);
             switch (((Enum)value).GetTypeCode()) {
@@ -336,7 +284,7 @@ namespace IronPython.Runtime {
                 case TypeCode.Byte:
                     return (SByte)(Byte)value;
                 case TypeCode.SByte:
-                    return (SByte)(SByte)value;
+                    return (SByte)value;
                 case TypeCode.Int16:
                     return (SByte)(Int16)value;
                 case TypeCode.Int64:
@@ -352,9 +300,9 @@ namespace IronPython.Runtime {
             Debug.Fail("Invalid enum detected");
             return default(SByte);
         }
-        ///<summary>
+        /// <summary>
         /// Explicit conversion of Enum to Int16
-        ///</summary>
+        /// </summary>
         internal static Int16 CastEnumToInt16(object value) {
             Debug.Assert(value is Enum);
             switch (((Enum)value).GetTypeCode()) {
@@ -365,7 +313,7 @@ namespace IronPython.Runtime {
                 case TypeCode.SByte:
                     return (Int16)(SByte)value;
                 case TypeCode.Int16:
-                    return (Int16)(Int16)value;
+                    return (Int16)value;
                 case TypeCode.Int64:
                     return (Int16)(Int64)value;
                 case TypeCode.UInt16:
@@ -379,9 +327,9 @@ namespace IronPython.Runtime {
             Debug.Fail("Invalid enum detected");
             return default(Int16);
         }
-        ///<summary>
+        /// <summary>
         /// Explicit conversion of Enum to Int64
-        ///</summary>
+        /// </summary>
         internal static Int64 CastEnumToInt64(object value) {
             Debug.Assert(value is Enum);
             switch (((Enum)value).GetTypeCode()) {
@@ -394,7 +342,7 @@ namespace IronPython.Runtime {
                 case TypeCode.Int16:
                     return (Int64)(Int16)value;
                 case TypeCode.Int64:
-                    return (Int64)(Int64)value;
+                    return (Int64)value;
                 case TypeCode.UInt16:
                     return (Int64)(UInt16)value;
                 case TypeCode.UInt32:
@@ -406,9 +354,9 @@ namespace IronPython.Runtime {
             Debug.Fail("Invalid enum detected");
             return default(Int64);
         }
-        ///<summary>
+        /// <summary>
         /// Explicit conversion of Enum to UInt16
-        ///</summary>
+        /// </summary>
         internal static UInt16 CastEnumToUInt16(object value) {
             Debug.Assert(value is Enum);
             switch (((Enum)value).GetTypeCode()) {
@@ -423,7 +371,7 @@ namespace IronPython.Runtime {
                 case TypeCode.Int64:
                     return (UInt16)(Int64)value;
                 case TypeCode.UInt16:
-                    return (UInt16)(UInt16)value;
+                    return (UInt16)value;
                 case TypeCode.UInt32:
                     return (UInt16)(UInt32)value;
                 case TypeCode.UInt64:
@@ -433,9 +381,9 @@ namespace IronPython.Runtime {
             Debug.Fail("Invalid enum detected");
             return default(UInt16);
         }
-        ///<summary>
+        /// <summary>
         /// Explicit conversion of Enum to UInt32
-        ///</summary>
+        /// </summary>
         internal static UInt32 CastEnumToUInt32(object value) {
             Debug.Assert(value is Enum);
             switch (((Enum)value).GetTypeCode()) {
@@ -452,7 +400,7 @@ namespace IronPython.Runtime {
                 case TypeCode.UInt16:
                     return (UInt32)(UInt16)value;
                 case TypeCode.UInt32:
-                    return (UInt32)(UInt32)value;
+                    return (UInt32)value;
                 case TypeCode.UInt64:
                     return (UInt32)(UInt64)value;
             }
@@ -460,9 +408,9 @@ namespace IronPython.Runtime {
             Debug.Fail("Invalid enum detected");
             return default(UInt32);
         }
-        ///<summary>
+        /// <summary>
         /// Explicit conversion of Enum to UInt64
-        ///</summary>
+        /// </summary>
         internal static UInt64 CastEnumToUInt64(object value) {
             Debug.Assert(value is Enum);
             switch (((Enum)value).GetTypeCode()) {
@@ -481,7 +429,7 @@ namespace IronPython.Runtime {
                 case TypeCode.UInt32:
                     return (UInt64)(UInt32)value;
                 case TypeCode.UInt64:
-                    return (UInt64)(UInt64)value;
+                    return (UInt64)value;
             }
             // Should never get here
             Debug.Fail("Invalid enum detected");
@@ -520,153 +468,149 @@ namespace IronPython.Runtime {
 
         // *** BEGIN GENERATED CODE ***
 
-        ///<summary>
-        /// ConvertToByte Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
-        private static bool ConvertToByteImpl(object value, out Byte result) {
-            if (value is Int32) {
-                result = checked((Byte)(Int32)value); return true;
+        /// <summary>
+        /// ConvertToByte Conversion Routine. If no conversion exists, throws TypeError false. Can throw OverflowException.
+        /// </summary>
+        public static Byte ConvertToByte(object value) {
+            if (value is Byte) {
+                 return (Byte)value;
+            } else if (value is Int32) {
+                return checked((Byte)(Int32)value);
             } else if (value is Boolean) {
-                result = (Boolean)value ? (Byte)1 : (Byte)0; return true;
+                return (Boolean)value ? (Byte)1 : (Byte)0;
             } else if (value is BigInteger) {
                 UInt32 UInt32Value = ((BigInteger)value).ToUInt32();
-                result = checked((Byte)UInt32Value); return true;
+                return checked((Byte)UInt32Value);
             } else if (value is ExtensibleInt) {
-                result = checked((Byte)(Int32)((ExtensibleInt)value).value); return true;
+                return checked((Byte)(Int32)((ExtensibleInt)value).value);
             } else if (value is ExtensibleLong) {
                 UInt32 UInt32Value = ((BigInteger)((ExtensibleLong)value).Value).ToUInt32();
-                result = checked((Byte)UInt32Value); return true;
+                return checked((Byte)UInt32Value);
             } else if (value is Int64) {
-                result = checked((Byte)(Int64)value); return true;
-            } else if (value is Byte) {
-                result = (Byte)value; return true;
+                return checked((Byte)(Int64)value);
             } else if (value is SByte) {
-                result = checked((Byte)(SByte)value); return true;
+                return checked((Byte)(SByte)value);
             } else if (value is Int16) {
-                result = checked((Byte)(Int16)value); return true;
+                return checked((Byte)(Int16)value);
             } else if (value is UInt16) {
-                result = checked((Byte)(UInt16)value); return true;
+                return checked((Byte)(UInt16)value);
             } else if (value is UInt32) {
-                result = checked((Byte)(UInt32)value); return true;
+                return checked((Byte)(UInt32)value);
             } else if (value is UInt64) {
-                result = checked((Byte)(UInt64)value); return true;
+                return checked((Byte)(UInt64)value);
             } else if (value is Decimal) {
-                result = checked((Byte)(Decimal)value); return true;
+                return checked((Byte)(Decimal)value);
             }
-            result = default(Byte);
-            return false;
+            throw CannotConvertTo("Byte", value);
         }
-        ///<summary>
-        /// ConvertToSByte Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
-        private static bool ConvertToSByteImpl(object value, out SByte result) {
-            if (value is Int32) {
-                result = checked((SByte)(Int32)value); return true;
+        /// <summary>
+        /// ConvertToSByte Conversion Routine. If no conversion exists, throws TypeError false. Can throw OverflowException.
+        /// </summary>
+        public static SByte ConvertToSByte(object value) {
+            if (value is SByte) {
+                 return (SByte)value;
+            } else if (value is Int32) {
+                return checked((SByte)(Int32)value);
             } else if (value is Boolean) {
-                result = (Boolean)value ? (SByte)1 : (SByte)0; return true;
+                return (Boolean)value ? (SByte)1 : (SByte)0;
             } else if (value is BigInteger) {
                 Int32 Int32Value = ((BigInteger)value).ToInt32();
-                result = checked((SByte)Int32Value); return true;
+                return checked((SByte)Int32Value);
             } else if (value is ExtensibleInt) {
-                result = checked((SByte)(Int32)((ExtensibleInt)value).value); return true;
+                return checked((SByte)(Int32)((ExtensibleInt)value).value);
             } else if (value is ExtensibleLong) {
                 Int32 Int32Value = ((BigInteger)((ExtensibleLong)value).Value).ToInt32();
-                result = checked((SByte)Int32Value); return true;
+                return checked((SByte)Int32Value);
             } else if (value is Int64) {
-                result = checked((SByte)(Int64)value); return true;
+                return checked((SByte)(Int64)value);
             } else if (value is Byte) {
-                result = checked((SByte)(Byte)value); return true;
-            } else if (value is SByte) {
-                result = (SByte)value; return true;
+                return checked((SByte)(Byte)value);
             } else if (value is Int16) {
-                result = checked((SByte)(Int16)value); return true;
+                return checked((SByte)(Int16)value);
             } else if (value is UInt16) {
-                result = checked((SByte)(UInt16)value); return true;
+                return checked((SByte)(UInt16)value);
             } else if (value is UInt32) {
-                result = checked((SByte)(UInt32)value); return true;
+                return checked((SByte)(UInt32)value);
             } else if (value is UInt64) {
-                result = checked((SByte)(UInt64)value); return true;
+                return checked((SByte)(UInt64)value);
             } else if (value is Decimal) {
-                result = checked((SByte)(Decimal)value); return true;
+                return checked((SByte)(Decimal)value);
             }
-            result = default(SByte);
-            return false;
+            throw CannotConvertTo("SByte", value);
         }
-        ///<summary>
-        /// ConvertToInt16 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
-        private static bool ConvertToInt16Impl(object value, out Int16 result) {
-            if (value is Int32) {
-                result = checked((Int16)(Int32)value); return true;
+        /// <summary>
+        /// ConvertToInt16 Conversion Routine. If no conversion exists, throws TypeError false. Can throw OverflowException.
+        /// </summary>
+        public static Int16 ConvertToInt16(object value) {
+            if (value is Int16) {
+                 return (Int16)value;
+            } else if (value is Int32) {
+                return checked((Int16)(Int32)value);
             } else if (value is Boolean) {
-                result = (Boolean)value ? (Int16)1 : (Int16)0; return true;
+                return (Boolean)value ? (Int16)1 : (Int16)0;
             } else if (value is BigInteger) {
                 Int32 Int32Value = ((BigInteger)value).ToInt32();
-                result = checked((Int16)Int32Value); return true;
+                return checked((Int16)Int32Value);
             } else if (value is ExtensibleInt) {
-                result = checked((Int16)(Int32)((ExtensibleInt)value).value); return true;
+                return checked((Int16)(Int32)((ExtensibleInt)value).value);
             } else if (value is ExtensibleLong) {
                 Int32 Int32Value = ((BigInteger)((ExtensibleLong)value).Value).ToInt32();
-                result = checked((Int16)Int32Value); return true;
+                return checked((Int16)Int32Value);
             } else if (value is Int64) {
-                result = checked((Int16)(Int64)value); return true;
+                return checked((Int16)(Int64)value);
             } else if (value is Byte) {
-                result = (Int16)(Byte)value; return true;
+                return (Int16)(Byte)value;
             } else if (value is SByte) {
-                result = (Int16)(SByte)value; return true;
-            } else if (value is Int16) {
-                result = (Int16)value; return true;
+                return (Int16)(SByte)value;
             } else if (value is UInt16) {
-                result = checked((Int16)(UInt16)value); return true;
+                return checked((Int16)(UInt16)value);
             } else if (value is UInt32) {
-                result = checked((Int16)(UInt32)value); return true;
+                return checked((Int16)(UInt32)value);
             } else if (value is UInt64) {
-                result = checked((Int16)(UInt64)value); return true;
+                return checked((Int16)(UInt64)value);
             } else if (value is Decimal) {
-                result = checked((Int16)(Decimal)value); return true;
+                return checked((Int16)(Decimal)value);
             }
-            result = default(Int16);
-            return false;
+            throw CannotConvertTo("Int16", value);
         }
-        ///<summary>
-        /// ConvertToUInt16 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
-        private static bool ConvertToUInt16Impl(object value, out UInt16 result) {
-            if (value is Int32) {
-                result = checked((UInt16)(Int32)value); return true;
+        /// <summary>
+        /// ConvertToUInt16 Conversion Routine. If no conversion exists, throws TypeError false. Can throw OverflowException.
+        /// </summary>
+        public static UInt16 ConvertToUInt16(object value) {
+            if (value is UInt16) {
+                 return (UInt16)value;
+            } else if (value is Int32) {
+                return checked((UInt16)(Int32)value);
             } else if (value is Boolean) {
-                result = (Boolean)value ? (UInt16)1 : (UInt16)0; return true;
+                return (Boolean)value ? (UInt16)1 : (UInt16)0;
             } else if (value is BigInteger) {
                 UInt32 UInt32Value = ((BigInteger)value).ToUInt32();
-                result = checked((UInt16)UInt32Value); return true;
+                return checked((UInt16)UInt32Value);
             } else if (value is ExtensibleInt) {
-                result = checked((UInt16)(Int32)((ExtensibleInt)value).value); return true;
+                return checked((UInt16)(Int32)((ExtensibleInt)value).value);
             } else if (value is ExtensibleLong) {
                 UInt32 UInt32Value = ((BigInteger)((ExtensibleLong)value).Value).ToUInt32();
-                result = checked((UInt16)UInt32Value); return true;
+                return checked((UInt16)UInt32Value);
             } else if (value is Int64) {
-                result = checked((UInt16)(Int64)value); return true;
+                return checked((UInt16)(Int64)value);
             } else if (value is Byte) {
-                result = (UInt16)(Byte)value; return true;
+                return (UInt16)(Byte)value;
             } else if (value is SByte) {
-                result = checked((UInt16)(SByte)value); return true;
+                return checked((UInt16)(SByte)value);
             } else if (value is Int16) {
-                result = checked((UInt16)(Int16)value); return true;
-            } else if (value is UInt16) {
-                result = (UInt16)value; return true;
+                return checked((UInt16)(Int16)value);
             } else if (value is UInt32) {
-                result = checked((UInt16)(UInt32)value); return true;
+                return checked((UInt16)(UInt32)value);
             } else if (value is UInt64) {
-                result = checked((UInt16)(UInt64)value); return true;
+                return checked((UInt16)(UInt64)value);
             } else if (value is Decimal) {
-                result = checked((UInt16)(Decimal)value); return true;
+                return checked((UInt16)(Decimal)value);
             }
-            result = default(UInt16);
-            return false;
+            throw CannotConvertTo("UInt16", value);
         }
-        ///<summary>
-        /// ConvertToInt32 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
+        /// <summary>
+        /// ConvertToInt32Impl Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        /// </summary>
         private static bool ConvertToInt32Impl(object value, out Int32 result) {
             if (value is Int32) {
                 result = (Int32)value; return true;
@@ -704,166 +648,172 @@ namespace IronPython.Runtime {
             result = default(Int32);
             return false;
         }
-        ///<summary>
-        /// ConvertToUInt32 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
-        private static bool ConvertToUInt32Impl(object value, out UInt32 result) {
-            if (value is Int32) {
-                result = checked((UInt32)(Int32)value); return true;
+        /// <summary>
+        /// ConvertToUInt32 Conversion Routine. If no conversion exists, throws TypeError false. Can throw OverflowException.
+        /// </summary>
+        public static UInt32 ConvertToUInt32(object value) {
+            if (value is UInt32) {
+                 return (UInt32)value;
+            } else if (value is Int32) {
+                return checked((UInt32)(Int32)value);
             } else if (value is Boolean) {
-                result = (Boolean)value ? (UInt32)1 : (UInt32)0; return true;
+                return (Boolean)value ? (UInt32)1 : (UInt32)0;
             } else if (value is BigInteger) {
-                result = ((BigInteger)value).ToUInt32(); return true;
+                return ((BigInteger)value).ToUInt32();
             } else if (value is ExtensibleInt) {
-                result = checked((UInt32)(Int32)((ExtensibleInt)value).value); return true;
+                return checked((UInt32)(Int32)((ExtensibleInt)value).value);
             } else if (value is ExtensibleLong) {
-                result = ((BigInteger)((ExtensibleLong)value).Value).ToUInt32(); return true;
+                return ((BigInteger)((ExtensibleLong)value).Value).ToUInt32();
             } else if (value is Int64) {
-                result = checked((UInt32)(Int64)value); return true;
+                return checked((UInt32)(Int64)value);
             } else if (value is Byte) {
-                result = (UInt32)(Byte)value; return true;
+                return (UInt32)(Byte)value;
             } else if (value is SByte) {
-                result = checked((UInt32)(SByte)value); return true;
+                return checked((UInt32)(SByte)value);
             } else if (value is Int16) {
-                result = checked((UInt32)(Int16)value); return true;
+                return checked((UInt32)(Int16)value);
             } else if (value is UInt16) {
-                result = (UInt32)(UInt16)value; return true;
-            } else if (value is UInt32) {
-                result = (UInt32)value; return true;
+                return (UInt32)(UInt16)value;
             } else if (value is UInt64) {
-                result = checked((UInt32)(UInt64)value); return true;
+                return checked((UInt32)(UInt64)value);
             } else if (value is Decimal) {
-                result = checked((UInt32)(Decimal)value); return true;
+                return checked((UInt32)(Decimal)value);
             }
-            result = default(UInt32);
-            return false;
+            throw CannotConvertTo("UInt32", value);
         }
-        ///<summary>
-        /// ConvertToInt64 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
-        private static bool ConvertToInt64Impl(object value, out Int64 result) {
-            if (value is Int32) {
-                result = (Int64)(Int32)value; return true;
+        /// <summary>
+        /// ConvertToInt64 Conversion Routine. If no conversion exists, throws TypeError false. Can throw OverflowException.
+        /// </summary>
+        public static Int64 ConvertToInt64(object value) {
+            if (value is Int64) {
+                 return (Int64)value;
+            } else if (value is Int32) {
+                return (Int64)(Int32)value;
             } else if (value is Boolean) {
-                result = (Boolean)value ? (Int64)1 : (Int64)0; return true;
+                return (Boolean)value ? (Int64)1 : (Int64)0;
             } else if (value is BigInteger) {
-                result = ((BigInteger)value).ToInt64(); return true;
+                return ((BigInteger)value).ToInt64();
             } else if (value is ExtensibleInt) {
-                result = (Int64)(Int32)((ExtensibleInt)value).value; return true;
+                return (Int64)(Int32)((ExtensibleInt)value).value;
             } else if (value is ExtensibleLong) {
-                result = ((BigInteger)((ExtensibleLong)value).Value).ToInt64(); return true;
-            } else if (value is Int64) {
-                result = (Int64)value; return true;
+                return ((BigInteger)((ExtensibleLong)value).Value).ToInt64();
             } else if (value is Byte) {
-                result = (Int64)(Byte)value; return true;
+                return (Int64)(Byte)value;
             } else if (value is SByte) {
-                result = (Int64)(SByte)value; return true;
+                return (Int64)(SByte)value;
             } else if (value is Int16) {
-                result = (Int64)(Int16)value; return true;
+                return (Int64)(Int16)value;
             } else if (value is UInt16) {
-                result = (Int64)(UInt16)value; return true;
+                return (Int64)(UInt16)value;
             } else if (value is UInt32) {
-                result = (Int64)(UInt32)value; return true;
+                return (Int64)(UInt32)value;
             } else if (value is UInt64) {
-                result = checked((Int64)(UInt64)value); return true;
+                return checked((Int64)(UInt64)value);
             } else if (value is Decimal) {
-                result = checked((Int64)(Decimal)value); return true;
+                return checked((Int64)(Decimal)value);
             }
-            result = default(Int64);
-            return false;
+            throw CannotConvertTo("Int64", value);
         }
-        ///<summary>
-        /// ConvertToUInt64 Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
-        private static bool ConvertToUInt64Impl(object value, out UInt64 result) {
-            if (value is Int32) {
-                result = checked((UInt64)(Int32)value); return true;
+        /// <summary>
+        /// ConvertToUInt64 Conversion Routine. If no conversion exists, throws TypeError false. Can throw OverflowException.
+        /// </summary>
+        public static UInt64 ConvertToUInt64(object value) {
+            if (value is UInt64) {
+                 return (UInt64)value;
+            } else if (value is Int32) {
+                return checked((UInt64)(Int32)value);
             } else if (value is Boolean) {
-                result = (Boolean)value ? (UInt64)1 : (UInt64)0; return true;
+                return (Boolean)value ? (UInt64)1 : (UInt64)0;
             } else if (value is BigInteger) {
-                result = ((BigInteger)value).ToUInt64(); return true;
+                return ((BigInteger)value).ToUInt64();
             } else if (value is ExtensibleInt) {
-                result = checked((UInt64)(Int32)((ExtensibleInt)value).value); return true;
+                return checked((UInt64)(Int32)((ExtensibleInt)value).value);
             } else if (value is ExtensibleLong) {
-                result = ((BigInteger)((ExtensibleLong)value).Value).ToUInt64(); return true;
+                return ((BigInteger)((ExtensibleLong)value).Value).ToUInt64();
             } else if (value is Int64) {
-                result = checked((UInt64)(Int64)value); return true;
+                return checked((UInt64)(Int64)value);
             } else if (value is Byte) {
-                result = (UInt64)(Byte)value; return true;
+                return (UInt64)(Byte)value;
             } else if (value is SByte) {
-                result = checked((UInt64)(SByte)value); return true;
+                return checked((UInt64)(SByte)value);
             } else if (value is Int16) {
-                result = checked((UInt64)(Int16)value); return true;
+                return checked((UInt64)(Int16)value);
             } else if (value is UInt16) {
-                result = (UInt64)(UInt16)value; return true;
+                return (UInt64)(UInt16)value;
             } else if (value is UInt32) {
-                result = (UInt64)(UInt32)value; return true;
-            } else if (value is UInt64) {
-                result = (UInt64)value; return true;
+                return (UInt64)(UInt32)value;
             } else if (value is Decimal) {
-                result = checked((UInt64)(Decimal)value); return true;
+                return checked((UInt64)(Decimal)value);
             }
-            result = default(UInt64);
-            return false;
+            throw CannotConvertTo("UInt64", value);
         }
-        ///<summary>
-        /// ConvertToSingle Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
-        private static bool ConvertToSingleImpl(object value, out Single result) {
-            if (value is Int32) {
-                result = (Single)(Int32)value; return true;
+        /// <summary>
+        /// ConvertToSingle Conversion Routine. If no conversion exists, throws TypeError false. Can throw OverflowException.
+        /// </summary>
+        public static Single ConvertToSingle(object value) {
+            if (value is Single) {
+                 return (Single)value;
+            } else if (value is Int32) {
+                return (Single)(Int32)value;
             } else if (value is Boolean) {
-                result = (Boolean)value ? (Single)1 : (Single)0; return true;
+                return (Boolean)value ? (Single)1 : (Single)0;
             } else if (value is BigInteger) {
-                Double DoubleValue = ((BigInteger)value).ToFloat64();
-                result = checked((Single)DoubleValue); return true;
+                Single SingleValue = checked((Single)((BigInteger)value).ToFloat64());
+                if (Single.IsInfinity(SingleValue)) {
+                    throw Ops.OverflowError("{0} won't fit into Single", value);
+                }
+                return SingleValue;
             } else if (value is Double) {
-                result = checked((Single)(Double)value);
-                if (Single.IsInfinity(result)) throw Ops.OverflowError("{0} won't fit into Single", value);
-                return true;
+                Single SingleValue = checked((Single)(Double)value);
+                if (Single.IsInfinity(SingleValue)) {
+                    throw Ops.OverflowError("{0} won't fit into Single", value);
+                }
+                return SingleValue;
             } else if (value is ExtensibleInt) {
-                result = (Single)(Int32)((ExtensibleInt)value).value; return true;
+                return (Single)(Int32)((ExtensibleInt)value).value;
             } else if (value is ExtensibleLong) {
-                Double DoubleValue = ((BigInteger)((ExtensibleLong)value).Value).ToFloat64();
-                result = checked((Single)DoubleValue); return true;
+                Single SingleValue = checked((Single)((BigInteger)((ExtensibleLong)value).Value).ToFloat64());
+                if (Single.IsInfinity(SingleValue)) {
+                    throw Ops.OverflowError("{0} won't fit into Single", ((ExtensibleLong)value).Value);
+                }
+                return SingleValue;
             } else if (value is ExtensibleFloat) {
-                result = checked((Single)(Double)((ExtensibleFloat)value).value);
-                if (Single.IsInfinity(result)) throw Ops.OverflowError("{0} won't fit into Single", ((ExtensibleFloat)value).value);
-                return true;
+                Single SingleValue = checked((Single)(Double)((ExtensibleFloat)value).value);
+                if (Single.IsInfinity(SingleValue)) {
+                    throw Ops.OverflowError("{0} won't fit into Single", ((ExtensibleFloat)value).value);
+                }
+                return SingleValue;
             } else if (value is Int64) {
-                result = (Single)(Int64)value; return true;
+                return (Single)(Int64)value;
             } else if (value is Byte) {
-                result = (Single)(Byte)value; return true;
+                return (Single)(Byte)value;
             } else if (value is SByte) {
-                result = (Single)(SByte)value; return true;
+                return (Single)(SByte)value;
             } else if (value is Int16) {
-                result = (Single)(Int16)value; return true;
+                return (Single)(Int16)value;
             } else if (value is UInt16) {
-                result = (Single)(UInt16)value; return true;
+                return (Single)(UInt16)value;
             } else if (value is UInt32) {
-                result = (Single)(UInt32)value; return true;
+                return (Single)(UInt32)value;
             } else if (value is UInt64) {
-                result = (Single)(UInt64)value; return true;
-            } else if (value is Single) {
-                result = (Single)value; return true;
+                return (Single)(UInt64)value;
             } else if (value is Decimal) {
-                result = (Single)(Decimal)value; return true;
+                return (Single)(Decimal)value;
             }
-            result = default(Single);
-            return false;
+            throw CannotConvertTo("Single", value);
         }
-        ///<summary>
-        /// ConvertToDouble Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
+        /// <summary>
+        /// ConvertToDoubleImpl Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        /// </summary>
         private static bool ConvertToDoubleImpl(object value, out Double result) {
-            if (value is Int32) {
+            if (value is Double) {
+                result = (Double)value; return true;
+            } else if (value is Int32) {
                 result = (Double)(Int32)value; return true;
             } else if (value is Boolean) {
                 result = (Boolean)value ? (Double)1 : (Double)0; return true;
             } else if (value is BigInteger) {
                 result = ((BigInteger)value).ToFloat64(); return true;
-            } else if (value is Double) {
-                result = (Double)value; return true;
             } else if (value is ExtensibleInt) {
                 result = (Double)(Int32)((ExtensibleInt)value).value; return true;
             } else if (value is ExtensibleLong) {
@@ -892,44 +842,79 @@ namespace IronPython.Runtime {
             result = default(Double);
             return false;
         }
-        ///<summary>
-        /// ConvertToDecimal Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
-        ///</summary>
-        private static bool ConvertToDecimalImpl(object value, out Decimal result) {
-            if (value is Int32) {
-                result = (Decimal)(Int32)value; return true;
+        /// <summary>
+        /// ConvertToDecimal Conversion Routine. If no conversion exists, throws TypeError false. Can throw OverflowException.
+        /// </summary>
+        public static Decimal ConvertToDecimal(object value) {
+            if (value is Decimal) {
+                 return (Decimal)value;
+            } else if (value is Int32) {
+                return (Decimal)(Int32)value;
             } else if (value is Boolean) {
-                result = (Boolean)value ? (Decimal)1 : (Decimal)0; return true;
+                return (Boolean)value ? (Decimal)1 : (Decimal)0;
             } else if (value is BigInteger) {
-                result = ((BigInteger)value).ToDecimal(); return true;
+                return ((BigInteger)value).ToDecimal();
             } else if (value is Double) {
-                result = checked((Decimal)(Double)value); return true;
+                return checked((Decimal)(Double)value);
             } else if (value is ExtensibleInt) {
-                result = (Decimal)(Int32)((ExtensibleInt)value).value; return true;
+                return (Decimal)(Int32)((ExtensibleInt)value).value;
             } else if (value is ExtensibleLong) {
-                result = ((BigInteger)((ExtensibleLong)value).Value).ToDecimal(); return true;
+                return ((BigInteger)((ExtensibleLong)value).Value).ToDecimal();
             } else if (value is ExtensibleFloat) {
-                result = checked((Decimal)(Double)((ExtensibleFloat)value).value); return true;
+                return checked((Decimal)(Double)((ExtensibleFloat)value).value);
             } else if (value is Int64) {
-                result = (Decimal)(Int64)value; return true;
+                return (Decimal)(Int64)value;
             } else if (value is Byte) {
-                result = (Decimal)(Byte)value; return true;
+                return (Decimal)(Byte)value;
             } else if (value is SByte) {
-                result = (Decimal)(SByte)value; return true;
+                return (Decimal)(SByte)value;
             } else if (value is Int16) {
-                result = (Decimal)(Int16)value; return true;
+                return (Decimal)(Int16)value;
             } else if (value is UInt16) {
-                result = (Decimal)(UInt16)value; return true;
+                return (Decimal)(UInt16)value;
             } else if (value is UInt32) {
-                result = (Decimal)(UInt32)value; return true;
+                return (Decimal)(UInt32)value;
             } else if (value is UInt64) {
-                result = (Decimal)(UInt64)value; return true;
+                return (Decimal)(UInt64)value;
             } else if (value is Single) {
-                result = checked((Decimal)(Single)value); return true;
-            } else if (value is Decimal) {
-                result = (Decimal)value; return true;
+                return checked((Decimal)(Single)value);
             }
-            result = default(Decimal);
+            throw CannotConvertTo("Decimal", value);
+        }
+        /// <summary>
+        /// ConvertToBigIntegerImpl Conversion Routine. If no conversion exists, returns false. Can throw OverflowException.
+        /// </summary>
+        private static bool ConvertToBigIntegerImpl(object value, out BigInteger result) {
+            if (value is BigInteger) {
+                result = (BigInteger)value; return true;
+            } else if (value is Int32) {
+                result = (BigInteger)(Int32)value; return true;
+            } else if (value is Boolean) {
+                result = (Boolean)value ? BigInteger.One : BigInteger.Zero; return true;
+            } else if (value is ExtensibleInt) {
+                result = (BigInteger)(Int32)((ExtensibleInt)value).value; return true;
+            } else if (value is ExtensibleLong) {
+                result = (BigInteger)((ExtensibleLong)value).Value; return true;
+            } else if (value is Int64) {
+                result = (BigInteger)(Int64)value; return true;
+            } else if (value is Byte) {
+                result = (BigInteger)(Byte)value; return true;
+            } else if (value is SByte) {
+                result = (BigInteger)(SByte)value; return true;
+            } else if (value is Int16) {
+                result = (BigInteger)(Int16)value; return true;
+            } else if (value is UInt16) {
+                result = (BigInteger)(UInt16)value; return true;
+            } else if (value is UInt32) {
+                result = (BigInteger)(UInt32)value; return true;
+            } else if (value is UInt64) {
+                result = (BigInteger)(UInt64)value; return true;
+            } else if (value is Decimal) {
+                result = (BigInteger)(Decimal)value; return true;
+            } else if (value == null) {
+                result = null; return true;
+            }
+            result = default(BigInteger);
             return false;
         }
 

@@ -135,7 +135,7 @@ namespace IronPython.Runtime.Operations {
             if (o is double) return FloatOps.ToInteger((double)o);
             if (o is int) return o;
             if (o is BigInteger) return o;
-            if ((el = o as ExtensibleLong)!=null) return el.Value;
+            if ((el = o as ExtensibleLong) != null) return el.Value;
             if (o is float) return FloatOps.ToInteger((double)(float)o);
 
             if (o is Complex64) throw Ops.TypeError("can't convert complex to int; use int(abs(z))");
@@ -145,7 +145,7 @@ namespace IronPython.Runtime.Operations {
             if (o is Int16) return (Int32)(Int16)o;
             if (o is Int64) {
                 Int64 val = (Int64)o;
-                if (Int32.MinValue<= val && val <= Int32.MaxValue) {
+                if (Int32.MinValue <= val && val <= Int32.MaxValue) {
                     return (Int32)val;
                 } else {
                     return BigInteger.Create(val);
@@ -155,7 +155,7 @@ namespace IronPython.Runtime.Operations {
 
             if (o is UInt32) {
                 UInt32 val = (UInt32)o;
-                if (val < Int32.MaxValue) {
+                if (val <= Int32.MaxValue) {
                     return (Int32)val;
                 } else {
                     return BigInteger.Create(val);
@@ -163,7 +163,16 @@ namespace IronPython.Runtime.Operations {
             }
             if (o is UInt64) {
                 UInt64 val = (UInt64)o;
-                if (val < Int32.MaxValue) {
+                if (val <= Int32.MaxValue) {
+                    return (Int32)val;
+                } else {
+                    return BigInteger.Create(val);
+                }
+            }
+
+            if (o is Decimal) {
+                Decimal val = (Decimal)o;
+                if (Int32.MinValue <= val && val <= Int32.MaxValue) {
                     return (Int32)val;
                 } else {
                     return BigInteger.Create(val);
@@ -302,7 +311,7 @@ namespace IronPython.Runtime.Operations {
                 return Int64Ops.PowerMod(x, y, (long)z);
             } else if (z is BigInteger) {
                 return LongOps.PowerMod(BigInteger.Create(x), BigInteger.Create(y), (BigInteger)z);
-            } else if ((el = z as ExtensibleLong)!=null) {
+            } else if ((el = z as ExtensibleLong) != null) {
                 return LongOps.PowerMod(BigInteger.Create(x), BigInteger.Create(y), el.Value);
             }
             return Ops.NotImplemented;
@@ -476,16 +485,16 @@ namespace IronPython.Runtime.Operations {
             } else if (other is ushort) {
                 res = x == (int)(ushort)other;
                 return true;
-            } else if (other is Decimal) { 
+            } else if (other is Decimal) {
                 res = x == (decimal)other;
                 return true;
-            } else if (other is ExtensibleFloat) { 
+            } else if (other is ExtensibleFloat) {
                 res = x == ((ExtensibleFloat)other).value;
                 return true;
-            }  else if (other is ExtensibleComplex) { 
+            } else if (other is ExtensibleComplex) {
                 res = x == ((ExtensibleComplex)other).value;
                 return true;
-            } else if ((el = other as ExtensibleLong)!=null) {
+            } else if ((el = other as ExtensibleLong) != null) {
                 res = (BigInteger)x == el.Value;
                 return true;
             } else if (other is uint) {
@@ -551,7 +560,7 @@ namespace IronPython.Runtime.Operations {
                 return ei.ReverseLeftShift(x);
             } else if (other is byte) {
                 return LeftShift(x, (byte)other);
-            } else if ((el = other as ExtensibleLong)!=null) {
+            } else if ((el = other as ExtensibleLong) != null) {
                 return el.ReverseLeftShift(BigInteger.Create(x));
             }
             return Ops.NotImplemented;
@@ -590,11 +599,11 @@ namespace IronPython.Runtime.Operations {
                     return x > 0 ? 0 : 1;
                 }
                 return RightShift(x, (int)y);
-            } else if ((ei = other as ExtensibleInt)!= null) {
+            } else if ((ei = other as ExtensibleInt) != null) {
                 return ei.ReverseRightShift(x);
             } else if (other is byte) {
                 return RightShift(x, (byte)other);
-            } else if ((el = other as ExtensibleLong)!=null) {
+            } else if ((el = other as ExtensibleLong) != null) {
                 return el.ReverseRightShift(BigInteger.Create(x));
             }
 
@@ -659,11 +668,11 @@ namespace IronPython.Runtime.Operations {
                 return ComplexOps.Power(x, other);
             } else if (other is byte) {
                 return Power(x, (int)(byte)other);
-            } else if ((num = other as INumber)!=null) {
+            } else if ((num = other as INumber) != null) {
                 return num.ReversePower(x);
             } else if ((ec = other as ExtensibleComplex) != null) {
                 return ec.ReversePower(x);
-            }            
+            }
             return Ops.NotImplemented;
         }
 
@@ -694,14 +703,14 @@ namespace IronPython.Runtime.Operations {
                 return FloatOps.Power(((ExtensibleFloat)other).value, x);
             } else if (other is ExtensibleComplex) {
                 return ComplexOps.Power(((ExtensibleComplex)other).value, x);
-            } else if ((el = other as ExtensibleLong)!=null) {
+            } else if ((el = other as ExtensibleLong) != null) {
                 return LongOps.Power(el.Value, x);
             }
             return Ops.NotImplemented;
         }
 
         [PythonName("__rtruediv__")]
-        public static object ReverseTrueDivide(int x, object other){
+        public static object ReverseTrueDivide(int x, object other) {
             ExtensibleLong el;
 
             if (other is int) {
@@ -734,7 +743,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__rlshift__")]
-        public static object ReverseLeftShift(int x, object other){
+        public static object ReverseLeftShift(int x, object other) {
             ExtensibleLong el;
 
             if (other is int) {
@@ -757,7 +766,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__rrshift__")]
-        public static object ReverseRightShift(int x, object other){
+        public static object ReverseRightShift(int x, object other) {
             ExtensibleLong el;
 
             if (other is int) {
@@ -795,12 +804,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__rand__")]
-        public static object ReverseBitwiseAnd(int x, object y){
+        public static object ReverseBitwiseAnd(int x, object y) {
             return BitwiseAnd(x, y);
         }
 
         [PythonName("__ror__")]
-        public static object ReverseBitwiseOr(int x, object y){
+        public static object ReverseBitwiseOr(int x, object y) {
             return BitwiseOr(x, y);
         }
 

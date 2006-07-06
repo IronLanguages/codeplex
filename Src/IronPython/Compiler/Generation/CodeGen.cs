@@ -853,32 +853,32 @@ namespace IronPython.Compiler.Generation {
                 EmitCall(typeof(Converter), "ConvertToInt32");
             } else if (paramType == typeof(string)) {
                 EmitCall(typeof(Converter), "ConvertToString");
-            //} else if (paramType == typeof(long)) {
-            //    EmitCall(typeof(Converter), "ConvertToInt64");
+            } else if (paramType == typeof(long)) {
+                EmitCall(typeof(Converter), "ConvertToInt64");
             } else if (paramType == typeof(double)) {
                 EmitCall(typeof(Converter), "ConvertToDouble");
             } else if (paramType == typeof(bool)) {
                 EmitCall(typeof(Converter), "ConvertToBoolean");
-            //} else if (paramType == typeof(BigInteger)) {
-            //    EmitCall(typeof(Converter), "ConvertToBigInteger");
-            //} else if (paramType == typeof(Complex64)) {
-            //    EmitCall(typeof(Converter), "ConvertToComplex64");
+            } else if (paramType == typeof(BigInteger)) {
+                EmitCall(typeof(Converter), "ConvertToBigInteger");
+            } else if (paramType == typeof(Complex64)) {
+                EmitCall(typeof(Converter), "ConvertToComplex64");
             } else if (paramType == typeof(IEnumerator)) {
                 EmitCall(typeof(Converter), "ConvertToIEnumerator");
-            //} else if (paramType == typeof(float)) {
-            //    EmitCall(typeof(Converter), "ConvertToSingle");
-            //} else if (paramType == typeof(byte)) {
-            //    EmitCall(typeof(Converter), "ConvertToByte");
-            //} else if (paramType == typeof(sbyte)) {
-            //    EmitCall(typeof(Converter), "ConvertToSByte");
-            //} else if (paramType == typeof(short)) {
-            //    EmitCall(typeof(Converter), "ConvertToInt16");
-            //} else if (paramType == typeof(uint)) {
-            //    EmitCall(typeof(Converter), "ConvertToUInt32");
-            //} else if (paramType == typeof(ulong)) {
-            //    EmitCall(typeof(Converter), "ConvertToUInt64");
-            //} else if (paramType == typeof(ushort)) {
-            //    EmitCall(typeof(Converter), "ConvertToUInt16");
+            } else if (paramType == typeof(float)) {
+                EmitCall(typeof(Converter), "ConvertToSingle");
+            } else if (paramType == typeof(byte)) {
+                EmitCall(typeof(Converter), "ConvertToByte");
+            } else if (paramType == typeof(sbyte)) {
+                EmitCall(typeof(Converter), "ConvertToSByte");
+            } else if (paramType == typeof(short)) {
+                EmitCall(typeof(Converter), "ConvertToInt16");
+            } else if (paramType == typeof(uint)) {
+                EmitCall(typeof(Converter), "ConvertToUInt32");
+            } else if (paramType == typeof(ulong)) {
+                EmitCall(typeof(Converter), "ConvertToUInt64");
+            } else if (paramType == typeof(ushort)) {
+                EmitCall(typeof(Converter), "ConvertToUInt16");
             } else if (paramType == typeof(Type)) {
                 EmitCall(typeof(Converter), "ConvertToType");
             } else if (typeof(Delegate).IsAssignableFrom(paramType)) {

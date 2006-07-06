@@ -127,7 +127,6 @@ namespace IronMath {
         public static implicit operator BigInteger(ushort i) {
             return Create((uint)i);
         }
-
         public static implicit operator BigInteger(uint i) {
             return Create(i);
         }
@@ -138,6 +137,9 @@ namespace IronMath {
             return Create(i);
         }
         public static implicit operator BigInteger(long i) {
+            return Create(i);
+        }
+        public static implicit operator BigInteger(decimal i) {
             return Create(i);
         }
 
