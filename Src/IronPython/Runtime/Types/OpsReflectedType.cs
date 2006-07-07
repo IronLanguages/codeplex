@@ -129,7 +129,7 @@ namespace IronPython.Runtime.Types {
             // store CLR version, if different and we don't have a clash (if we do
             // have a clash our version is still available under the python name)
             if (name != mi.Name && !ContainsNonOps(SymbolTable.StringToId(mi.Name))) {
-                StoreMethod(mi.Name, mi, funcType | FunctionType.OpsFunction);
+                StoreMethod(mi.Name, mi, (funcType & ~FunctionType.PythonVisible)| FunctionType.OpsFunction);
             }
         }
 

@@ -117,8 +117,7 @@ namespace IronPython.Runtime.Types {
         #region Protected API Surface
 
         protected virtual void AddOps() {
-        }
-
+        }        
        
         #endregion
 
@@ -284,20 +283,19 @@ namespace IronPython.Runtime.Types {
                 BuiltinFunction reflectedCtors = GetConstructors();
                 if (reflectedCtors == null) return; // no ctors, no __new__
 
+                ctor = reflectedCtors;
                 if (reflectedCtors.Targets.Length == 1 && 
                     reflectedCtors.Targets[0].GetParameters().Length == 0) {
-                    ctor = reflectedCtors;
                     if (IsPythonType) {
-                        dict[SymbolTable.NewInst] = InstanceOps.New;
+                        dict[SymbolTable.NewInst] = InstanceOps.New; 
                     } else {
                         dict[SymbolTable.NewInst] = InstanceOps.NewCls;
                     }
                 } else {
-                    ctor = reflectedCtors;
-                    dict[SymbolTable.NewInst] = InstanceOps.CreateNonDefaultNew();
+                    dict[SymbolTable.NewInst] = new ConstructorFunction(InstanceOps.CreateNonDefaultNew(), reflectedCtors.Targets);
                 }
             }
-        }
+        }        
 
         private BuiltinFunction GetConstructors() {
             BuiltinFunction reflectedCtors = null;
@@ -373,7 +371,10 @@ namespace IronPython.Runtime.Types {
 
                 return null;
             }
-            return newMeth.Documentation;
+
+            // strip off function name & cls parameter and just
+            // display as plain type
+            return newMeth.Documentation.Replace("__new__(cls)", Name + "()").Replace("__new__(cls, ", Name + "(");
         }
 
         private string GetName(Type type) {
@@ -387,7 +388,7 @@ namespace IronPython.Runtime.Types {
                 return attr.name;
             } else {
                 string name;
-                NameConverter.TryGetName(type, out name);
+                NameConverter.TryGetName(this, type, out name);
                 return name;
             }
         }
@@ -712,7 +713,7 @@ namespace IronPython.Runtime.Types {
 
         private void AddNestedType(Type type) {
             string name;
-            NameType nt = NameConverter.TryGetName(type, out name);
+            NameType nt = NameConverter.TryGetName(this, type, out name);
             if (nt == NameType.None) return;
             else if (nt == NameType.Type) dict[SymbolTable.StringToId(name)] = Ops.GetDynamicTypeFromClsOnlyType(type);
             else dict[SymbolTable.StringToId(name)] = Ops.GetDynamicTypeFromType(type);

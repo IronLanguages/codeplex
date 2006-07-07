@@ -1206,6 +1206,20 @@ def test_hexoct():
     AssertError(TypeError, hex, bar())
     AssertError(TypeError, oct, bar())
 
+def test_no_clr_attributes():
+    """verify types have no CLR attributes"""
+    
+    AreEqual(hasattr(int, 'MaxValue'), False)
+    AreEqual(hasattr(int, 'MinValue'), False)
+    AreEqual(hasattr(int, 'Abs'), False)
+    AreEqual(hasattr(int, 'BitwiseOr'), False)
+    AreEqual(hasattr(int, 'Equals'), False)
+    
+    AreEqual(hasattr(str, 'Empty'), False)
+    AreEqual(hasattr(str, 'Compare'), False)
+    AreEqual(hasattr(str, 'Equals'), False)
+    AreEqual(hasattr(str, 'IndexOf'), False)
+
 ############################################################
 def test_outer_scope():
     """do not automatically include outer scopes in closure scenarios"""

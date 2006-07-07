@@ -34,6 +34,7 @@ using IronMath;
 
 [assembly: PythonModule("__builtin__", typeof(IronPython.Modules.Builtin))]
 namespace IronPython.Modules {
+    [PythonType("__builtin__")]
     public static partial class Builtin {
         public static object True = Ops.Bool2Object(true);
         public static object False = Ops.Bool2Object(false);

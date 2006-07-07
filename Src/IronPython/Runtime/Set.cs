@@ -559,6 +559,17 @@ namespace IronPython.Runtime {
 
         #region IRichComparable
         object IRichComparable.CompareTo(object other) {
+            if (other.GetType() != typeof(SetCollection)){
+                ISet iother = other as ISet;
+                if (iother == null) throw Ops.TypeError("can only compare to a set");
+
+                if (this.GetLength() > iother.GetLength() && Ops.IsTrue(IsSuperset(iother))) return 1;
+                if (this.GetLength() < iother.GetLength() && Ops.IsTrue(IsSubset(iother))) return -1;
+                if (GetLength() == iother.GetLength() &&
+                    iother.IsSubset(this) == Ops.TRUE && this.IsSubset(iother) == Ops.TRUE)
+                    return 0;
+            }
+
             throw Ops.TypeError("cannot compare sets using cmp()");
         }
 
@@ -1011,6 +1022,16 @@ namespace IronPython.Runtime {
 
         #region IRichComparable
         object  IRichComparable.CompareTo(object other) {
+            if (other.GetType() != typeof(FrozenSetCollection)) {
+                ISet iother = other as ISet;
+                if (iother == null) throw Ops.TypeError("can only compare to a set");
+
+                if (this.GetLength() > iother.GetLength() && Ops.IsTrue(IsSuperset(iother))) return 1;
+                if (this.GetLength() < iother.GetLength() && Ops.IsTrue(IsSubset(iother))) return -1;
+                if (GetLength() == iother.GetLength() &&
+                    iother.IsSubset(this) == Ops.TRUE && this.IsSubset(iother) == Ops.TRUE)
+                    return 0;
+            } 
             throw Ops.TypeError("cannot compare sets using cmp()");
         }
 

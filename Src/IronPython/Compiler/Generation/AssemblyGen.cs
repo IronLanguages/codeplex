@@ -227,6 +227,7 @@ namespace IronPython.Compiler.Generation {
             tb.SetParent(parent);
             return new TypeGen(this, tb);
         }
+
         public CodeGen DefineDynamicMethod(string methodName, Type returnType, Type[] paramTypes) {
             CodeGen cg;
             if (Options.GenerateDynamicMethods) {

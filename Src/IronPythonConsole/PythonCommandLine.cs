@@ -84,7 +84,10 @@ namespace IronPythonConsole {
         private static void MTAThread(object obj) {
             MTAParameters p = obj as MTAParameters;
             if (p != null) {
-                p.result = Run(p.engine, p.args[0]);
+                if (p.args.Count > 0)
+                    p.result = Run(p.engine, p.args[0]);
+                else
+                    p.result = Run(p.engine, null);
             }
         }
 

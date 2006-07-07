@@ -55,6 +55,8 @@ namespace IronPython.Hosting {
         SkipFirstLine = 0x08
     }
 
+    public delegate T ScopeBinder<T>(ModuleScope scope);
+
     public class PythonEngine : IDisposable {
 
         #region Static Public Members
@@ -579,6 +581,290 @@ namespace IronPython.Hosting {
         public T EvaluateAs<T>(string expression, ModuleScope moduleScope, ExecutionOptions executionOptions) {
             return Converter.Convert<T>(Evaluate(expression, moduleScope, executionOptions));
         }
+
+        /// <summary>
+        /// Create's a strongly typed delegate of type T bound to the default module scope.
+        /// 
+        /// The delegate's parameter names will be available within the function as argument names.
+        /// </summary>
+        public DelegateType CreateMethod<DelegateType>(string statements) where DelegateType : class {
+            return CreateMethod<DelegateType>(statements, null, defaultScope);
+        }
+
+        /// <summary>
+        /// Create's a strongly typed delegate of type T bound to the default module scope.
+        /// 
+        /// The delegate calls a function which consists of the provided method body. If parameters
+        /// is null the parameter names are taken from the delegate, otherwise the provided parameter
+        /// names are used. 
+        /// </summary>
+        public DelegateType CreateMethod<DelegateType>(string statements, IList<string> parameters) where DelegateType : class {
+            return CreateMethod<DelegateType>(statements, parameters, defaultScope);
+        }
+
+        /// <summary>
+        /// Creates a strongly typed delegate of type T bound to the specifed module scope.
+        /// 
+        /// The delegate's parameter names will be available within the function as argument names.
+        /// 
+        /// Variable's that aren't locals will be retrived at run-time from the provided module scope.
+        /// </summary>
+        public DelegateType CreateMethod<DelegateType>(string statements, ModuleScope scope) where DelegateType : class {
+            return CreateMethod<DelegateType>(statements, null, scope);
+        }
+
+        /// <summary>
+        /// Creates a strongly typed delegate of type T bound to the specified module scope.
+        /// 
+        /// The delegate calls a function which consists of the provided method body. If parameters
+        /// is null the parameter names are taken from the delegate, otherwise the provided parameter
+        /// names are used. 
+        /// 
+        /// Variables that aren't locals will be retrieved at run-time from the provided module scope.
+        /// </summary>
+        public DelegateType CreateMethod<DelegateType>(string statements, IList<string> parameters, ModuleScope scope) where DelegateType : class {
+            if (scope == null) scope = defaultScope;
+
+            return CreateMethodUnscoped<DelegateType>(statements, parameters)(scope);
+        }
+
+        /// <summary>
+        /// Creates a strongly typed delegate bound to an expression which returns a value.
+        /// 
+        /// The delegate's parameter names will be available within the function as locals
+        /// </summary>
+        public DelegateType CreateLambda<DelegateType>(string expression) where DelegateType : class {
+            return CreateLambda<DelegateType>(expression, null, defaultScope);
+        }
+
+        /// <summary>
+        /// Creates a strongly typed delegate bound to an expression which returns a value.
+        /// 
+        /// The delegate causes the given expression to be evaluated. If parameters is null then
+        /// the delegate's parameter names are used for available locals, otherwise the given parameter
+        /// names are used.
+        /// </summary>
+        public DelegateType CreateLambda<DelegateType>(string expression, IList<string> parameters) where DelegateType : class {
+            return CreateLambda<DelegateType>(expression, parameters, defaultScope);
+        }
+
+        /// <summary>
+        /// Creates a strongly typed delegate bound to an expression which returns a value.
+        ///
+        /// The delegate's parameter names will be available within the function as locals
+        /// 
+        /// Variable's that aren't localed will be retrieved at run-time from the provided module scope.
+        /// </summary>
+        public DelegateType CreateLambda<DelegateType>(string expression, ModuleScope scope) where DelegateType : class {
+            return CreateLambda<DelegateType>(expression, null, scope);
+        }
+
+        /// <summary>
+        /// Creates a strongly typed delegate bound to an expression which returns a value.
+        /// 
+        /// The delegate causes the given expression to be evaluated. If parameters is null then
+        /// the delegate's parameter names are used for available locals, otherwise the given parameter
+        /// names are used.
+        /// 
+        /// Variable's that aren't localed will be retrieved at run-time from the provided module scope.
+        /// </summary>
+        public DelegateType CreateLambda<DelegateType>(string expression, IList<string> parameters, ModuleScope scope) where DelegateType : class {
+            if (scope == null) scope = defaultScope;
+
+            return CreateLambdaUnscoped<DelegateType>(expression, parameters)(scope);
+        }
+
+        /// <summary>
+        /// Creates a strongly typed delegate bound to an expression.
+        /// </summary>
+        public ScopeBinder<DelegateType> CreateMethodUnscoped<DelegateType>(string statements) where DelegateType : class {
+            return CreateMethodUnscoped<DelegateType>(statements,null);
+        }
+
+        public ScopeBinder<DelegateType> CreateLambdaUnscoped<DelegateType>(string expression) where DelegateType : class {
+            return CreateLambdaUnscoped<DelegateType>(expression, null);
+        }
+
+        /// <summary>
+        /// Creates an unbound delegate that can be re-bound to a new module scope using
+        /// the returned ScopeBinder.  The result of the re-bind is a strongly typed
+        /// delegate that will execute in the provided scope.
+        ///
+        /// The delegate calls a function which consists of the provided method body. If parameters
+        /// is null the parameter names are taken from the delegate, otherwise the provided parameter
+        /// names are used. 
+        /// </summary>
+        public ScopeBinder<DelegateType> CreateMethodUnscoped<DelegateType>(string statements, IList<string> parameters) where DelegateType : class {
+            ValidateCreationParameters<DelegateType>();
+
+            Parser p = Parser.FromString(Sys, compilerContext, statements);
+            CodeGen cg = CreateDelegateWorker<DelegateType>(p.ParseFunction(), parameters);
+            
+            return delegate(ModuleScope scope) {
+                scope.EnsureInitialized(Sys);
+                return cg.CreateDelegate(typeof(DelegateType), scope) as DelegateType;
+            };
+        }
+
+#if DEBUG
+        static int methodIndex;
+#endif
+        /// <summary>
+        /// Creates an unbound delegate to an expression that can be re-bound to a new module scope using
+        /// the returned ScopeBinder.  The result of the re-bind is a strongly typed
+        /// delegate that will execute in the provided scope.
+        /// 
+        /// The delegate causes the given expression to be evaluated. If parameters is null then
+        /// the delegate's parameter names are used for available locals, otherwise the given parameter
+        /// names are used.
+        /// </summary>
+        public ScopeBinder<DelegateType> CreateLambdaUnscoped<DelegateType>(string expression, IList<string> parameters) where DelegateType : class {
+            ValidateCreationParameters<DelegateType>();
+
+            Parser p = Parser.FromString(Sys, compilerContext, expression.TrimStart(' ', '\t'));
+            Expression e = p.ParseTestListAsExpression();
+            ReturnStatement ret = new ReturnStatement(e);
+            int lineCnt = expression.Split('\n').Length;
+            ret.SetLoc(new Location(lineCnt, 0), new Location(lineCnt, 10));
+            CodeGen cg = CreateDelegateWorker<DelegateType>(ret, parameters);
+            
+            return delegate(ModuleScope scope) {
+                scope.EnsureInitialized(Sys);
+                return cg.CreateDelegate(typeof(DelegateType), scope) as DelegateType;
+            };
+        }
+
+        private static void ValidateCreationParameters<T>() where T : class {
+            if (typeof(T) == typeof(MulticastDelegate) || typeof(T) == typeof(Delegate))
+                throw new ArgumentException("T must be a concrete delegate, not MulticastDelegate or Delegate");
+            if (!typeof(T).IsSubclassOf(typeof(Delegate)))
+                throw new ArgumentException("T must be a subclass of Delegate");
+        }
+
+        private CodeGen CreateDelegateWorker<DelegateType>(Statement s, IList<string> parameters) where DelegateType : class {
+            NameExpression[] paramExpr = GetParameterExpressions<DelegateType>(parameters);
+            FunctionDefinition fd = new FunctionDefinition(SymbolTable.Text, paramExpr, new Expression[0], FunctionAttributes.None, "<engine>");
+            fd.Body = s;
+            // create a method that corresponds w/ the delegate's signature - we also
+            // add a 1st parameter which is the module scope, and we bind the method
+            // against that.
+            MethodInfo mi = typeof(DelegateType).GetMethod("Invoke");
+            CodeGen cg = CreateTargetMethod(mi);
+            List<ReturnFixer> fixers = PromoteArgumentsToLocals(paramExpr, cg);
+
+            // bind the slots
+            Compiler.Ast.Binder.Bind(fd, compilerContext);
+
+            foreach (KeyValuePair<SymbolId, Compiler.Ast.Binding> kv in fd.Names) {
+                Slot slot = cg.Names.Globals.GetOrMakeSlot(kv.Key);
+                if (kv.Value.IsGlobal) {
+                    cg.Names.SetSlot(kv.Key, slot);
+                } else {
+                    cg.Names.EnsureLocalSlot(kv.Key);
+                }
+            }
+
+            // finally emit the function into the method, if we
+            // have ref/out params then we wrap it in a try/finally
+            // that updates them before the function ends.
+            if (fixers != null) {
+                cg.PushTryBlock();
+                cg.BeginExceptionBlock();
+            }
+
+            fd.EmitFunctionImplementation(cg, null);
+
+            if (fixers != null) {
+                cg.PopTargets();
+                Slot returnVar = cg.GetLocalTmp(typeof(bool));
+                cg.PushFinallyBlock(returnVar);
+                cg.BeginFinallyBlock();
+
+                foreach (ReturnFixer rf in fixers) {
+                    rf.FixReturn(cg);
+                }
+
+                cg.EndExceptionBlock();
+                cg.PopTargets();
+            }
+            cg.Finish();
+            return cg;
+        }
+
+        private static List<ReturnFixer> PromoteArgumentsToLocals(NameExpression[] paramExpr, CodeGen cg) {
+            List<ReturnFixer> fixers = null;
+            for (int i = 0; i < paramExpr.Length; i++) {
+                ReturnFixer rf = CompilerHelpers.EmitArgument(cg, cg.GetArgumentSlot(i + 1));
+                if (rf != null) {
+                    if (fixers == null) fixers = new List<ReturnFixer>();
+                    fixers.Add(rf);
+                }
+                Slot localSlot = cg.GetLocalTmp(typeof(object));
+                localSlot.EmitSet(cg);
+                cg.Names.SetSlot(paramExpr[i].Name, localSlot);
+            }
+            return fixers;
+        }
+
+        private CodeGen CreateTargetMethod(MethodInfo mi) {
+            CodeGen cg;
+#if DEBUG
+            if (Options.SaveAndReloadBinaries) {
+                TypeGen delegateGen = OutputGenerator.Snippets.DefinePublicType("DelegateGen$" + Interlocked.Increment(ref methodIndex).ToString(), typeof(object));
+                
+                cg = delegateGen.DefineUserHiddenMethod(MethodAttributes.Public | MethodAttributes.Static,
+                    "pythonFunc" + Interlocked.Increment(ref methodIndex).ToString(),
+                    mi.ReturnType,
+                    PrependScope(mi.GetParameters()));
+            } else
+#endif
+                cg = OutputGenerator.Snippets.DefineDynamicMethod("pythonFunction",
+                    mi.ReturnType,
+                    PrependScope(mi.GetParameters()));
+
+            cg.ContextSlot = cg.GetArgumentSlot(0);
+            cg.ModuleSlot = cg.ContextSlot;
+            // setup the namespace for the method - get the arguments &
+            // bind any globals into the module scope or ensure we have
+            // a local slot for them.
+            cg.Names = CodeGen.CreateLocalNamespace(cg);
+            cg.Names.Globals = new GlobalEnvironmentNamespace(new EnvironmentNamespace(new GlobalEnvironmentFactory()), cg.ModuleSlot);
+            cg.doNotCacheConstants = true;
+
+            return cg;
+        }
+
+        private Type[] PrependScope(ParameterInfo[] pis) {
+            Type[] res = new Type[pis.Length + 1];
+            res[0] = typeof(ModuleScope);
+            for (int i = 0; i < pis.Length; i++) {
+                res[i + 1] = pis[i].ParameterType;
+            }
+            return res;
+        }
+
+        private NameExpression[] GetParameterExpressions<T>(IList<string> parameters) {
+            NameExpression[] exprs;
+            MethodInfo mi = typeof(T).GetMethod("Invoke");
+            ParameterInfo[] pis = mi.GetParameters();
+            if (parameters == null) {
+                exprs = new NameExpression[pis.Length];
+                for (int i = 0; i < pis.Length; i++) {
+                    exprs[i] = new NameExpression(SymbolTable.StringToId(pis[i].Name));
+                }
+            } else {
+                if (parameters.Count != pis.Length) {
+                    throw new ArgumentException("delegate argument length and parameter name lengths differ");
+                }
+
+                exprs = new NameExpression[parameters.Count];
+                for (int i = 0; i < exprs.Length; i++) {
+                    exprs[i] = new NameExpression(SymbolTable.StringToId(parameters[i]));
+                }
+            }
+            return exprs;
+        }
+
         #endregion
 
         #region Compile

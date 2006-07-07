@@ -24,6 +24,7 @@ using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("itertools", typeof(IronPython.Modules.PythonIterTools))]
 namespace IronPython.Modules {
+    [PythonType("itertools")]
     public static class PythonIterTools {
         [PythonName("tee")]
         public static object Tee(object iterable) {

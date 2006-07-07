@@ -148,6 +148,8 @@ namespace IronPython.Compiler.Ast {
 
             // then generate the actual method
             EmitFunctionImplementation(impl, cg);
+            impl.Finish();
+
             if (NeedsWrapperMethod()) impl = MakeWrapperMethodN(cg, impl.MethodInfo, sigInfo.HasContext);
 
             //  Create instance of the Function? object
@@ -281,7 +283,6 @@ namespace IronPython.Compiler.Ast {
 
             methodCodeGen.EmitTraceBackFaultBlock(name.GetString(), filename);
 
-            methodCodeGen.Finish();
         }
 
         private bool NeedsWrapperMethod() {
@@ -332,8 +333,10 @@ namespace IronPython.Compiler.Ast {
             }
 
             // Populate the environment with slots
-            CreateGlobalSlots(cg, ocg);
-            CreateClosureSlots(cg);
+            if (ocg != null) {
+                CreateGlobalSlots(cg, ocg);
+                CreateClosureSlots(cg);
+            }
             CreateLocalSlots(cg);
             EmitTupleParams(cg);
             Body.Emit(cg);

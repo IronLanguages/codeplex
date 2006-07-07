@@ -35,7 +35,7 @@ namespace IronPython.Runtime.Calls {
     /// All calls are made through the optimizedTarget which is created lazily.
     /// </summary>
     [PythonType("builtin_function_or_method")]
-    public sealed partial class BuiltinFunction : 
+    public partial class BuiltinFunction : 
         FastCallable, IFancyCallable, IContextAwareMember, IDynamicObject {
         private string name;
         private MethodBase[] targets;
@@ -219,10 +219,10 @@ namespace IronPython.Runtime.Calls {
                 for (int i = 0; i < pis.Length; i++) {
                     dynamicArgs[i] = Ops.GetDynamicTypeFromType(pis[i].ParameterType);
                 }
-                BuiltinFunction bf = (BuiltinFunction)this.Overloads[new Tuple(true, dynamicArgs)];
+                FastCallable fc = (FastCallable)Overloads.GetKeywordArgumentOverload(new Tuple(true, dynamicArgs));
                 object ret;
-                if (instance == null) ret = bf.Call(context, callArgs);
-                else ret = bf.CallInstance(context, instance, callArgs);
+                if (instance == null) ret = fc.Call(context, callArgs);
+                else ret = fc.CallInstance(context, instance, callArgs);
 
                 // any unbound arguments left over we assume the user
                 // wants to do a property set with.  We'll go ahead and try
@@ -306,7 +306,7 @@ namespace IronPython.Runtime.Calls {
             return string.Format("<built-in function {0}>", Name);
         }
 
-        public string Documentation {
+        public virtual string Documentation {
             [PythonName("__doc__")]
             get {
                 StringBuilder sb = new StringBuilder();
@@ -331,7 +331,7 @@ namespace IronPython.Runtime.Calls {
         // which takes this signature.
         // signature with syntax like the following:
         //    someClass.SomeMethod.__overloads__[str, int]("Foo", 123)
-        public BuiltinFunctionOverloadMapper Overloads {
+        public virtual BuiltinFunctionOverloadMapper Overloads {
             [PythonName("__overloads__")]
             [Documentation(@"__overloads__() -> dictionary of methods indexed by a tuple of types.
 
@@ -525,6 +525,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         }
 
         #endregion
+
     }
 
     [Flags]
@@ -783,7 +784,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
     // Used to map signatures to specific targets on the embedded reflected method.
     public class BuiltinFunctionOverloadMapper {
-
         private BuiltinFunction function;
         private object instance;
 
@@ -794,6 +794,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         public override string ToString() {
             Dict overloadList = new Dict();
+
             foreach (MethodBase mb in function.Targets) {
                 string key = ReflectionUtil.CreateAutoDoc(mb);
                 overloadList[key] = function;
@@ -803,59 +804,155 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         public object this[object key] {
             get {
-                // Retrieve the signature from the index.
-                Type[] sig;
-                Tuple sigTuple = key as Tuple;
-
-                if (sigTuple != null) {
-                    sig = new Type[sigTuple.Count];
-                    for (int i = 0; i < sig.Length; i++) {
-                        sig[i] = Converter.ConvertToType(sigTuple[i]);
-                    }
-                } else {
-                    sig = new Type[] { Converter.ConvertToType(key) };
-                }
-
-                // We can still end up with more than one target since generic and non-generic
-                // methods can share the same name and signature. So we'll build up a new
-                // reflected method with all the candidate targets. A caller can then index this
-                // reflected method if necessary in order to provide generic type arguments and
-                // fully disambiguate the target.
-                BuiltinFunction rm = new BuiltinFunction();
-                rm.Name = function.Name;
-                rm.FunctionType = function.FunctionType | FunctionType.OptimizeChecked; // don't allow optimization that would whack the real entry
-
-
-                // Search for targets with the right number of arguments.
-                int args = sig.Length;
-                foreach (MethodBase mb in function.Targets) {
-                    ParameterInfo[] pis = mb.GetParameters();
-                    if (pis.Length != args)
-                        continue;
-
-                    // Check each parameter type for an exact match.
-                    bool match = true;
-                    for (int i = 0; i < args; i++)
-                        if (pis[i].ParameterType != sig[i]) {
-                            match = false;
-                            break;
-                        }
-                    if (!match)
-                        continue;
-
-                    // Okay, we have a match, add it to the list.
-                    rm.AddMethod(mb);
-                }
-                if (rm.Targets == null)
-                    throw Ops.TypeError("No match found for the method signature {0}", key);
-
-                if (instance != null) {
-                    return new BoundBuiltinFunction(rm, instance);
-                } else {
-                    return rm;
-                }
+                return GetOverload(key, Targets);
             }
+        }
+
+        protected object GetOverload(object key, MethodBase[] targets) {
+            // Retrieve the signature from the index.
+            Type[] sig = GetSignatureFromKey(key);
+
+            // We can still end up with more than one target since generic and non-generic
+            // methods can share the same name and signature. So we'll build up a new
+            // reflected method with all the candidate targets. A caller can then index this
+            // reflected method if necessary in order to provide generic type arguments and
+            // fully disambiguate the target.
+            BuiltinFunction rm = new BuiltinFunction();
+            rm.Name = function.Name;
+            rm.FunctionType = function.FunctionType | FunctionType.OptimizeChecked; // don't allow optimization that would whack the real entry
+
+            // Search for targets with the right number of arguments.
+            FindMatchingTargets(sig, targets, rm);
+
+            if (rm.Targets == null)
+                throw Ops.TypeError("No match found for the method signature {0}", key);
+
+            if (instance != null) {
+                return new BoundBuiltinFunction(rm, instance);
+            } else {
+                return GetTargetFunction(rm);
+            }
+        }
+
+        private void FindMatchingTargets(Type[] sig, MethodBase[] targets, BuiltinFunction rm) {
+            int args = sig.Length;
+
+            foreach (MethodBase mb in targets) {
+                ParameterInfo[] pis = mb.GetParameters();
+                if (pis.Length != args)
+                    continue;
+
+                // Check each parameter type for an exact match.
+                bool match = true;
+                for (int i = 0; i < args; i++)
+                    if (pis[i].ParameterType != sig[i]) {
+                        match = false;
+                        break;
+                    }
+                if (!match)
+                    continue;
+
+                // Okay, we have a match, add it to the list.
+                rm.AddMethod(mb);
+            }
+        }
+
+        private static Type[] GetSignatureFromKey(object key) {
+            Type[] sig;
+            Tuple sigTuple = key as Tuple;
+
+            if (sigTuple != null) {
+                sig = new Type[sigTuple.Count];
+                for (int i = 0; i < sig.Length; i++) {
+                    sig[i] = Converter.ConvertToType(sigTuple[i]);
+                }
+            } else {
+                sig = new Type[] { Converter.ConvertToType(key) };
+            }
+            return sig;
+        }
+
+        protected BuiltinFunction Function {
+            get {
+                return function;
+            }
+        }
+
+        protected virtual MethodBase[] Targets {
+            get {
+                return function.Targets;
+            }
+        }
+
+        protected virtual object GetTargetFunction(BuiltinFunction bf) {
+            return bf;
+        }
+
+        internal virtual object GetKeywordArgumentOverload(object key) {
+            return GetOverload(key, Function.Targets);
+        }
+
+    }
+
+    public class ConstructorOverloadMapper : BuiltinFunctionOverloadMapper {
+        public ConstructorOverloadMapper(ConstructorFunction builtinFunction, object instance)
+            : base(builtinFunction, instance) {
+        }
+
+        protected override MethodBase[] Targets {
+            get {
+                return ((ConstructorFunction)Function).ConstructorTargets;
+            }
+        }
+
+        internal override object GetKeywordArgumentOverload(object key) {
+            return base.GetOverload(key, Function.Targets);
+        }
+
+        protected override object GetTargetFunction(BuiltinFunction bf) {
+            // return a function that's bound to the overloads, we'll
+            // the user then calls this w/ the dynamic type, and the bound
+            // function drops the class & calls the overload.
+            if(bf.Targets[0].DeclaringType != typeof(InstanceOps))
+                return new BoundBuiltinFunction(new ConstructorFunction(InstanceOps.OverloadedNew, bf.Targets), bf);
+            return base.GetTargetFunction(bf);
         }
     }
 
+    public class ConstructorFunction : BuiltinFunction {
+        private MethodBase[] ctors;
+
+        public ConstructorFunction(BuiltinFunction realTarget, MethodBase []constructors)
+            : base() {
+            base.Name = "__new__";
+            base.Targets = realTarget.Targets;
+            base.FunctionType = realTarget.FunctionType;
+            this.ctors = constructors;
+        }
+
+        public override BuiltinFunctionOverloadMapper Overloads {
+            get {
+                return new ConstructorOverloadMapper(this, null);
+            }
+        }
+
+        public override string Documentation {
+            get {
+                StringBuilder sb = new StringBuilder();
+                MethodBase[] targets = ctors;
+
+                for (int i = 0; i < targets.Length; i++) {
+                    if(targets[i] != null) sb.AppendLine(ReflectionUtil.DocOneInfo(targets[i]));
+                }
+                return sb.ToString();
+               
+            }
+        }
+        
+        internal MethodBase[] ConstructorTargets {
+            get {
+                return ctors;
+            }
+        }
+    }
 }

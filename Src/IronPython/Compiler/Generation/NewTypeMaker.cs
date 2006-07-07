@@ -32,6 +32,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Reference = IronPython.Modules.ClrModule.Reference;
 
 namespace IronPython.Compiler.Generation {
     /// <summary>
@@ -911,13 +912,13 @@ namespace IronPython.Compiler.Generation {
             int nargs = args.Length - firstArg;
             if (nargs <= Ops.MaximumCallArgs) {
                 for (int i=firstArg; i < args.Length; i++) {
-                    ReturnFixer rf = EmitArgument(cg, args[i]);
+                    ReturnFixer rf = CompilerHelpers.EmitArgument(cg, args[i]);
                     if (rf != null) fixers.Add(rf);
                 }
                 cg.EmitCall(typeof(Ops), "Call", CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 1));
             } else {
                 cg.EmitObjectArray(nargs, delegate(int index) {
-                    ReturnFixer rf = EmitArgument(cg, args[index+firstArg]);
+                    ReturnFixer rf = CompilerHelpers.EmitArgument(cg, args[index + firstArg]);
                     if (rf != null) fixers.Add(rf);
                 });
                 cg.EmitCall(typeof(Ops), "Call", new Type[] { typeof(object), typeof(object[]) });
@@ -926,23 +927,7 @@ namespace IronPython.Compiler.Generation {
                 rf.FixReturn(cg);
             }
             cg.EmitReturnFromObject();
-        }
-
-        private static ReturnFixer EmitArgument(CodeGen cg, Slot argSlot) {
-            argSlot.EmitGet(cg);
-            if (argSlot.Type.IsByRef) {
-                Slot refSlot = cg.GetLocalTmp(typeof(IronPython.Modules.ClrModule.Reference));
-                cg.EmitLoadValueIndirect(argSlot.Type.GetElementType());
-                cg.EmitConvertToObject(argSlot.Type.GetElementType());
-                cg.EmitNew(typeof(IronPython.Modules.ClrModule.Reference), new Type[] { typeof(object) });
-                refSlot.EmitSet(cg);
-                refSlot.EmitGet(cg);
-                return new ReturnFixer(refSlot, argSlot);
-            } else {
-                cg.EmitConvertToObject(argSlot.Type);
-                return null;
-            }
-        }
+        }        
 
 
         private void CreateVTableMethodOverride(MethodInfo mi, VTableEntry methField) {
@@ -1045,9 +1030,16 @@ namespace IronPython.Compiler.Generation {
         public void FixReturn(CodeGen cg) {
             argSlot.EmitGet(cg);
             refSlot.EmitGet(cg);
-            cg.EmitCall(typeof(IronPython.Modules.ClrModule.Reference).GetProperty("Value").GetGetMethod());
+            cg.Emit(OpCodes.Isinst, typeof(Reference));
+            cg.EmitCall(typeof(Reference).GetProperty("Value").GetGetMethod());
             cg.EmitConvertFromObject(argSlot.Type.GetElementType());
             cg.EmitStoreValueIndirect(argSlot.Type);
+        }
+
+        internal Slot RefSlot {
+            get {
+                return refSlot;
+            }
         }
     }
 

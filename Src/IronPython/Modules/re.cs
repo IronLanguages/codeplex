@@ -30,6 +30,7 @@ namespace IronPython.Modules {
     /// <summary>
     /// Python regular expression module.
     /// </summary>
+    [PythonType("re")]
     public static class PythonRegex {
 
         #region CONSTANTS

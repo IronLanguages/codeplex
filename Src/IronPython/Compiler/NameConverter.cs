@@ -79,7 +79,10 @@ namespace IronPython.Compiler {
             NameType nt = NameType.PythonField;
             name = null;
 
-            if (fi.IsDefined(typeof(PythonHiddenFieldAttribute), false)) return NameType.None;
+            // hide MinValue & MaxValue on int, Empty on string
+            if (fi.DeclaringType == typeof(string) ||
+                fi.DeclaringType == typeof(int) ||
+                fi.IsDefined(typeof(PythonHiddenFieldAttribute), false)) nt = NameType.Field;
 
             string namePrefix = "";
             if (fi.IsPrivate || (fi.IsAssembly && !fi.IsFamilyOrAssembly)) {
@@ -139,7 +142,7 @@ namespace IronPython.Compiler {
             return res;
         }
 
-        public static NameType TryGetName(Type t, out string name) {
+        public static NameType TryGetName(ReflectedType outerType, Type t, out string name) {
             name = t.Name;
 
             int backtickIndex;
@@ -157,14 +160,18 @@ namespace IronPython.Compiler {
             }
 
             NameType res = NameType.Type;
-            object[] attribute = t.GetCustomAttributes(typeof(PythonTypeAttribute), false);
+            if (outerType.IsPythonType) {
+                object[] attribute = t.GetCustomAttributes(typeof(PythonTypeAttribute), false);
 
-            if (attribute.Length > 0) {
-                PythonTypeAttribute attr = attribute[0] as PythonTypeAttribute;
-                if (attr.name != null && attr.name.Length > 0) {
-                    res = NameType.PythonType;
-                    name = attr.name;
+                if (attribute.Length > 0) {
+                    PythonTypeAttribute attr = attribute[0] as PythonTypeAttribute;
+                    if (attr.name != null && attr.name.Length > 0) {
+                        res = NameType.PythonType;
+                        name = attr.name;
+                    }
                 }
+            } else {
+                res = NameType.PythonType;
             }
 
             name = namePrefix + name;

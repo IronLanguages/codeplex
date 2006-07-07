@@ -1193,6 +1193,24 @@ namespace IronPython.Runtime.Operations {
             return ie;
         }
 
+        public static IEnumerator GetEnumeratorForUnpack(object enumerable) {
+            IEnumerator ie;
+            if (!TryGetEnumerator(enumerable, out ie)) {
+                throw Ops.TypeError("unpack non-sequence of type {0}", 
+                    StringRepr(Ops.GetDynamicType(enumerable)));
+            }
+            return ie;
+        }
+
+        public static IEnumerator GetEnumeratorForIteration(object enumerable) {
+            IEnumerator ie;
+            if (!TryGetEnumerator(enumerable, out ie)) {
+                throw Ops.TypeError("iteration over non-sequence of type {0}",
+                    StringRepr(Ops.GetDynamicType(enumerable)));
+            }
+            return ie;
+        }
+
         /// <summary>
         /// Returns the number of elements in the collection, and the element values
         /// </summary>

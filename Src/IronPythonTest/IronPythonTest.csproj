@@ -71,6 +71,7 @@
     <Compile Include="InheritTest.cs" />
     <Compile Include="IntegerTest.cs" />
     <Compile Include="LoadTest.cs" />
+    <Compile Include="NestedClass.cs" />
     <Compile Include="TypeDescriptor.cs" />
     <AppDesigner Include="Properties\" />
   </ItemGroup>

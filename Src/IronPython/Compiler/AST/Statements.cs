@@ -323,7 +323,7 @@ namespace IronPython.Compiler.Ast {
             cg.EmitPosition(Start, header);
 
             list.Emit(cg);
-            cg.EmitCall(typeof(Ops), "GetEnumerator");
+            cg.EmitCall(typeof(Ops), "GetEnumeratorForIteration");
 
             Slot iter;
             if (cg.IsGenerator()) {

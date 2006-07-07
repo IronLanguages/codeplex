@@ -23,6 +23,7 @@ using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
 namespace IronPython.Modules {
+    [PythonType("gc")]
     public static class PythonGC {
         public static object gc = Ops.GetDynamicTypeFromType(typeof(PythonGC));
         public const int DEBUG_STATS = 1;

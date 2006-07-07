@@ -1117,6 +1117,7 @@ namespace IronPython.Compiler.Generation {
             if (ilOut != null) {
                 ilOut.Flush();
                 ilOut.Close();
+                ilOut = null;
             }
         }
 
@@ -1141,6 +1142,10 @@ namespace IronPython.Compiler.Generation {
         }
         public Delegate CreateDelegate(Type delegateType) {
             return CreateDelegate(CreateDelegateMethodInfo(), delegateType);
+        }
+
+        public Delegate CreateDelegate(Type delegateType, object target) {
+            return CreateDelegate(CreateDelegateMethodInfo(), delegateType, target);
         }
 
         public static Delegate CreateDelegate(MethodInfo methodInfo, Type delegateType) {

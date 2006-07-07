@@ -33,6 +33,7 @@ using IronPython.Runtime.Exceptions;
 
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]
 namespace IronPython.Modules {
+    [PythonType("socket")]
     public static class PythonSocket {
         public static string __doc__ = "Implementation module for socket operations.\n\n"
             + "This module is a loose wrapper around the .NET System.Net.Sockets API, so you\n"

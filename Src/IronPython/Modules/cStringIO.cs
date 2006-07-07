@@ -165,6 +165,7 @@ namespace IronPython.Modules {
         }
     }
 
+    [PythonType("cStringIO")]
     public static class PythonStringIO {
         public static object InputType = Ops.GetDynamicType(typeof(StringI));
         public static object OutputType = Ops.GetDynamicType(typeof(StringO));

@@ -23,6 +23,7 @@ using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("operator", typeof(IronPython.Modules.PythonOperator))]
 namespace IronPython.Modules {
+    [PythonType("operator")]
     public static class PythonOperator {
         [PythonType("attrgetter")]
         public class AttributeGetter {

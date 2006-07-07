@@ -284,6 +284,14 @@ namespace IronPython.Compiler {
             return FixName(n.Name);
         }
 
+        internal Statement ParseFunction() {
+            PushFunction(new FunctionDefinition(SymbolTable.Empty, new Expression[0], new Expression[0], FunctionAttributes.None, context.SourceFile));
+            try {
+                return ParseFileInput();
+            } finally {
+                PopFunction();
+            }
+        }
         #region Public parser interface
 
         //single_input: Newline | simple_stmt | compound_stmt Newline

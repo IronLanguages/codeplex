@@ -130,17 +130,23 @@ namespace IronPython.Runtime.Types {
             Initialize();
             if (ctor == null) throw Ops.TypeError("Cannot create instances of {0}", this);
 
-            object []finalArgs = new object[args.Length + dict.Count];
+            object[] finalArgs;
+            string[] names;
+            GetKeywordArgs(dict, args, out finalArgs, out names);
+
+            return ((BuiltinFunction)ctor).CallHelper(DefaultContext.Default, finalArgs, names, null);
+        }
+
+        internal static void GetKeywordArgs(Dict dict, object[] args, out object[] finalArgs, out string[] names) {
+            finalArgs = new object[args.Length + dict.Count];
             Array.Copy(args, finalArgs, args.Length);
-            string[] names = new string[dict.Count];
+            names = new string[dict.Count];
             int i = 0;
             foreach (KeyValuePair<object, object> kvp in dict) {
                 names[i] = (string)kvp.Key;
                 finalArgs[i + args.Length] = kvp.Value;
                 i++;
             }
-
-            return ((BuiltinFunction)ctor).CallHelper(DefaultContext.Default, finalArgs, names, null);
         }
 
         protected DynamicType(Type type) {

@@ -25,3 +25,27 @@ if is_cli:
 
     UseCLI.Form().Controls.Add(UseCLI.Control())
 
+    nc = UseCLI.NestedClass()
+    
+    ic = UseCLI.NestedClass.InnerClass()
+    
+    tc = UseCLI.NestedClass.InnerClass.TripleNested()
+    
+    # access methods, fields, and properties on the class w/ nesteds,
+    # the nested class, and the triple nested class
+    for x in ((nc, ''), (ic, 'Inner'), (tc, 'Triple')):
+        obj, name = x[0], x[1]
+        
+        AreEqual(getattr(obj, 'CallMe' + name)(), name + ' Hello World')
+        
+        AreEqual(getattr(obj, name+'Field'), None)
+        
+        AreEqual(getattr(obj, name+'Property'), None)
+        
+        setattr(obj, name+'Property', name)
+        
+        AreEqual(getattr(obj, name+'Field'), name)
+        
+        AreEqual(getattr(obj, name+'Property'), name)
+        
+        

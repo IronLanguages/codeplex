@@ -27,7 +27,7 @@ using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {
-
+    [PythonType("thread")]
     public static class PythonThread {
         #region Public API Surface
         public static object LockType = Ops.GetDynamicTypeFromType(typeof(Lock));

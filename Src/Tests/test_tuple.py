@@ -81,5 +81,12 @@ def test_tuple_cli_interactions():
     AreEqual(str(a), a.ToString())
     
 
+def test_sequence_assign():
+    try:
+        a, b = None
+        AssertUnreachable()
+    except TypeError, e:
+        AreEqual(e.msg.startswith('unpack non-sequence'), True)
+    
 run_test(__name__)
 

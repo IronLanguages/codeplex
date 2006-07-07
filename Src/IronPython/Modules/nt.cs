@@ -25,6 +25,7 @@ using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
+    [PythonType("nt")]
     public static class PythonNT {
 
         #region Public API Surface
@@ -59,7 +60,7 @@ namespace IronPython.Modules {
             }
         }
 
-        public static object error = ExceptionConverter.GetPythonException("OSError");
+        public static object error = ExceptionConverter.GetPythonException("OSError", "exceptions");
 
         [PythonName("_exit")]
         public static void ExitProcess(int code) {
@@ -106,10 +107,14 @@ namespace IronPython.Modules {
         [PythonName("listdir")]
         public static List ListDirectory(string path) {
             List ret = List.Make();
-            string[] files = Directory.GetFiles(path);
-            addBase(files, ret);
-            addBase(Directory.GetDirectories(path), ret);
-            return ret;
+            try {
+                string[] files = Directory.GetFiles(path);
+                addBase(files, ret);
+                addBase(Directory.GetDirectories(path), ret);
+                return ret;
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         // 
@@ -124,14 +129,24 @@ namespace IronPython.Modules {
         [PythonName("mkdir")]
         public static void MakeDirectory(string path) {
             if (Directory.Exists(path)) throw Ops.IOError("directory already exists");
-            Directory.CreateDirectory(path);
+
+            try {
+                Directory.CreateDirectory(path);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("mkdir")]
         public static void MakeDirectory(string path, int mode) {
             if (Directory.Exists(path)) throw Ops.IOError("directory already exists");
             // we ignore mode
-            Directory.CreateDirectory(path);
+
+            try {
+                Directory.CreateDirectory(path);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }            
         }
         [PythonName("open")]
         public static object Open(ICallerContext context, string filename, int flag) {
@@ -140,15 +155,19 @@ namespace IronPython.Modules {
 
         [PythonName("open")]
         public static object Open(ICallerContext context, string filename, int flag, int mode) {
-            FileStream fs = File.Open(filename, FileModeFromFlags(flag), FileAccessFromFlags(flag));
+            try {
+                FileStream fs = File.Open(filename, FileModeFromFlags(flag), FileAccessFromFlags(flag));
 
-            string mode2;
-            if (fs.CanRead && fs.CanWrite) mode2 = "w+";
-            else if (fs.CanWrite) mode2 = "w";
-            else mode2 = "r";
+                string mode2;
+                if (fs.CanRead && fs.CanWrite) mode2 = "w+";
+                else if (fs.CanWrite) mode2 = "w";
+                else mode2 = "r";
 
-            PythonFile pf = new PythonFile(fs, context.SystemState.DefaultEncoding, filename, mode2, false);
-            return PythonFileManager.AddToStrongMapping(pf);
+                PythonFile pf = new PythonFile(fs, context.SystemState.DefaultEncoding, filename, mode2, false);
+                return PythonFileManager.AddToStrongMapping(pf);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("popen")]
@@ -168,21 +187,25 @@ namespace IronPython.Modules {
             Process p;
             PythonFile res;
 
-            switch (mode) {
-                case "r":
-                    psi.RedirectStandardOutput = true;
-                    p = Process.Start(psi);
+            try {
+                switch (mode) {
+                    case "r":
+                        psi.RedirectStandardOutput = true;
+                        p = Process.Start(psi);
 
-                    res = new POpenFile(context, command, p, p.StandardOutput.BaseStream, "r");
-                    break;
-                case "w":
-                    psi.RedirectStandardInput = true;
-                    p = Process.Start(psi);
+                        res = new POpenFile(context, command, p, p.StandardOutput.BaseStream, "r");
+                        break;
+                    case "w":
+                        psi.RedirectStandardInput = true;
+                        p = Process.Start(psi);
 
-                    res = new POpenFile(context, command, p, p.StandardInput.BaseStream, "w");
-                    break;
-                default:
-                    throw Ops.ValueError("expected 'r' or 'w' for mode, got {0}", mode);
+                        res = new POpenFile(context, command, p, p.StandardInput.BaseStream, "w");
+                        break;
+                    default:
+                        throw Ops.ValueError("expected 'r' or 'w' for mode, got {0}", mode);
+                }
+            } catch (Exception e) {
+                throw ToPythonException(e);
             }
 
             return res;
@@ -204,13 +227,17 @@ namespace IronPython.Modules {
             if (mode != "t" && mode != "b") throw Ops.ValueError("mode must be 't' or 'b' (default is t)");
             if (mode == "t") mode = String.Empty;
 
-            ProcessStartInfo psi = GetProcessInfo(command);
-            psi.RedirectStandardInput = true;
-            psi.RedirectStandardOutput = true;
-            Process p = Process.Start(psi);
+            try {
+                ProcessStartInfo psi = GetProcessInfo(command);
+                psi.RedirectStandardInput = true;
+                psi.RedirectStandardOutput = true;
+                Process p = Process.Start(psi);
 
-            return Tuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
-                    new POpenFile(context, command, p, p.StandardOutput.BaseStream, "r" + mode));
+                return Tuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
+                        new POpenFile(context, command, p, p.StandardOutput.BaseStream, "r" + mode));
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("popen3")]
@@ -229,67 +256,97 @@ namespace IronPython.Modules {
             if (mode != "t" && mode != "b") throw Ops.ValueError("mode must be 't' or 'b' (default is t)");
             if (mode == "t") mode = String.Empty;
 
-            ProcessStartInfo psi = GetProcessInfo(command);
-            psi.RedirectStandardInput = true;
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError = true;
-            Process p = Process.Start(psi);
+            try {
+                ProcessStartInfo psi = GetProcessInfo(command);
+                psi.RedirectStandardInput = true;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                Process p = Process.Start(psi);
 
-            return Tuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
-                    new POpenFile(context, command, p, p.StandardOutput.BaseStream, "r" + mode),
-                    new POpenFile(context, command, p, p.StandardError.BaseStream, "r+" + mode));
+                return Tuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
+                        new POpenFile(context, command, p, p.StandardOutput.BaseStream, "r" + mode),
+                        new POpenFile(context, command, p, p.StandardError.BaseStream, "r+" + mode));
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("putenv")]
         public static void PutEnvironment(string varname, string value) {
-            System.Environment.SetEnvironmentVariable(varname, value);
+            try {
+                System.Environment.SetEnvironmentVariable(varname, value);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("read")]
         public static string ReadFromFileDescriptor(int fd, int buffersize) {
-            PythonFile pf = PythonFileManager.GetFileFromId(fd);
-            return pf.Read();
+            try {
+                PythonFile pf = PythonFileManager.GetFileFromId(fd);
+                return pf.Read();
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("remove")]
         public static void RemoveFile(string path) {
-            UnlinkFile(path);
+            try {
+                UnlinkFile(path);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("rename")]
         public static void Rename(string src, string dst) {
-            Directory.Move(src, dst);
+            try {
+                Directory.Move(src, dst);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("rmdir")]
         public static void RemoveDirectory(string path) {
-            Directory.Delete(path);
+            try {
+                Directory.Delete(path);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("spawnl")]
         public static object SpawnProcess(int mode, string path, params object[] args) {
-            System.Diagnostics.Process process = new System.Diagnostics.Process();
-            process.StartInfo.FileName = path;
-            process.StartInfo.UseShellExecute = false;
-            if (args != null && args.Length > 0) {
-                System.Text.StringBuilder sb = new System.Text.StringBuilder();
-                bool space = false;
-                foreach (object arg in args) {
-                    string strarg = Ops.ToString(arg);
-                    if (space) {
-                        sb.Append(' ');
+            System.Diagnostics.Process process;
+            try {
+                process = new System.Diagnostics.Process();
+                process.StartInfo.FileName = path;
+                process.StartInfo.UseShellExecute = false;
+                if (args != null && args.Length > 0) {
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                    bool space = false;
+                    foreach (object arg in args) {
+                        string strarg = Ops.ToString(arg);
+                        if (space) {
+                            sb.Append(' ');
+                        }
+                        if (strarg.IndexOf(' ') != -1) {
+                            sb.Append('"');
+                            sb.Append(strarg);
+                            sb.Append('"');
+                        } else {
+                            sb.Append(strarg);
+                        }
+                        space = true;
                     }
-                    if (strarg.IndexOf(' ') != -1) {
-                        sb.Append('"');
-                        sb.Append(strarg);
-                        sb.Append('"');
-                    } else {
-                        sb.Append(strarg);
-                    }
-                    space = true;
+                    process.StartInfo.Arguments = sb.ToString();
                 }
-                process.StartInfo.Arguments = sb.ToString();
+            } catch (Exception e) {
+                throw ToPythonException(e);
             }
+
             if (!process.Start()) {
                 throw Ops.OSError("Cannot start process: {0}", path);
             }
@@ -432,7 +489,7 @@ namespace IronPython.Modules {
                     throw new IOException("file does not exist");
                 }
             } catch (Exception e) {
-                throw ExceptionConverter.CreateThrowable(error, e.Message);
+                throw ToPythonException(e);
             }
 
             return sr;
@@ -450,18 +507,22 @@ namespace IronPython.Modules {
 
         [PythonName("tempnam")]
         public static string GetTemporaryFileName(string dir, string prefix) {
-            if (dir == null) dir = Path.GetTempPath();
-            else dir = Path.GetDirectoryName(dir);
+            try {
+                if (dir == null) dir = Path.GetTempPath();
+                else dir = Path.GetDirectoryName(dir);
 
-            if (prefix == null) prefix = "";
+                if (prefix == null) prefix = "";
 
-            string path;
-            if (dir.Length > 0 && (dir[dir.Length - 1] == Path.DirectorySeparatorChar || dir[dir.Length - 1] == Path.AltDirectorySeparatorChar))
-                path = dir + prefix + Path.GetRandomFileName();
-            else
-                path = dir + Path.DirectorySeparatorChar + prefix + Path.GetRandomFileName();
+                string path;
+                if (dir.Length > 0 && (dir[dir.Length - 1] == Path.DirectorySeparatorChar || dir[dir.Length - 1] == Path.AltDirectorySeparatorChar))
+                    path = dir + prefix + Path.GetRandomFileName();
+                else
+                    path = dir + Path.DirectorySeparatorChar + prefix + Path.GetRandomFileName();
 
-            return path;
+                return path;
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("times")]
@@ -477,9 +538,13 @@ namespace IronPython.Modules {
 
         [PythonName("tmpfile")]
         public static PythonFile GetTemporaryFile(ICallerContext context) {
-            FileStream sw = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
+            try {
+                FileStream sw = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
 
-            return new PythonFile(sw, context.SystemState.DefaultEncoding, "w+b");
+                return new PythonFile(sw, context.SystemState.DefaultEncoding, "w+b");
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("tmpnam")]
@@ -489,7 +554,11 @@ namespace IronPython.Modules {
 
         [PythonName("unlink")]
         public static void UnlinkFile(string path) {
-            File.Delete(path);
+            try {
+                File.Delete(path);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("unsetenv")]
@@ -508,18 +577,22 @@ namespace IronPython.Modules {
 
         [PythonName("utime")]
         public static void SetFileTimes(string path, Tuple times) {
-            FileInfo fi = new FileInfo(path);
-            if (times == null) {
-                fi.LastAccessTime = DateTime.Now;
-                fi.LastWriteTime = DateTime.Now;
-            } else if (times.Count == 2) {
-                DateTime atime = new DateTime(1969, 12, 31, 16, 0, 0).Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[0])));
-                DateTime mtime = new DateTime(1969, 12, 31, 16, 0, 0).Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[1])));
+            try {
+                FileInfo fi = new FileInfo(path);
+                if (times == null) {
+                    fi.LastAccessTime = DateTime.Now;
+                    fi.LastWriteTime = DateTime.Now;
+                } else if (times.Count == 2) {
+                    DateTime atime = new DateTime(1969, 12, 31, 16, 0, 0).Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[0])));
+                    DateTime mtime = new DateTime(1969, 12, 31, 16, 0, 0).Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[1])));
 
-                fi.LastAccessTime = atime;
-                fi.LastAccessTime = mtime;
-            } else {
-                throw Ops.TypeError("times value must be a 2-value tuple (atime, mtime)");
+                    fi.LastAccessTime = atime;
+                    fi.LastAccessTime = mtime;
+                } else {
+                    throw Ops.TypeError("times value must be a 2-value tuple (atime, mtime)");
+                }
+            } catch (Exception e) {
+                throw ToPythonException(e);
             }
         }
 
@@ -535,8 +608,12 @@ namespace IronPython.Modules {
 
         [PythonName("write")]
         public static void WriteToFileDescriptor(int fd, string text) {
-            PythonFile pf = PythonFileManager.GetFileFromId(fd);
-            pf.Write(text);
+            try {
+                PythonFile pf = PythonFileManager.GetFileFromId(fd);
+                pf.Write(text);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         public static object O_APPEND = 0x8;
@@ -562,6 +639,22 @@ namespace IronPython.Modules {
         #endregion
 
         #region Private implementation details
+
+        private static Exception ToPythonException(Exception e){
+            if (e is ArgumentException || e is ArgumentNullException || e is ArgumentTypeException) {
+                // rethrow reasonable exceptions
+                return ExceptionConverter.UpdateForRethrow(e);
+            }
+
+            string message = e.Message;
+            int hr = System.Runtime.InteropServices.Marshal.GetHRForException(e);
+            if ((hr & ~0xfff) == 0x8007000) {
+                // win32 error code, present the user w/ the error code & message   
+                message = "[Errno " + (hr & 0xfff).ToString() + "] " + e.Message;
+            }
+
+            return ExceptionConverter.CreateThrowable(error, e.Message);
+        }
 
         private const int S_IWRITE = 0x200;
         private const int S_IREAD = 0x400;

@@ -64,6 +64,7 @@ namespace IronPython.Runtime.Operations {
     public class InstanceOps : OpsReflectedType {
         internal static BuiltinFunction New = CreateFunction("__new__", "DefaultNew", "DefaultNewKW");
         internal static BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNew", "DefaultNewClsKW");
+        internal static BuiltinFunction OverloadedNew = CreateFunction("__new__", "OverloadedNewBasic", "OverloadedNewKW", "OverloadedNewClsKW");
         internal static object Init = CreateInitMethod();
 
         InstanceOps() : base("object", typeof(DynamicType), typeof(InstanceOps), null) { }
@@ -110,7 +111,38 @@ namespace IronPython.Runtime.Operations {
             }
             return res;
         }
-        
+
+        [PythonName("__new__")]
+        public static object OverloadedNewBasic(ICallerContext context, BuiltinFunction overloads, DynamicType type, params object[] args) {
+            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
+            if (args == null) args = new object[1];
+            return overloads.Call(context, args);
+        }
+
+        [PythonName("__new__")]
+        public static object OverloadedNewKW(ICallerContext context, BuiltinFunction overloads, DynamicType type, [ParamDict] Dict kwArgs) {
+            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
+
+            object[] finalArgs;
+            string[] names;
+            DynamicType.GetKeywordArgs(kwArgs, new object[0], out finalArgs, out names);
+
+
+            return overloads.CallHelper(context, finalArgs, names, null);
+        }
+
+        [PythonName("__new__")]
+        public static object OverloadedNewClsKW(ICallerContext context, BuiltinFunction overloads, DynamicType type, [ParamDict] Dict kwDict, params object[] args) {
+            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
+            if (args == null) args = new object[1];
+
+            object[] finalArgs;
+            string[] names;
+            DynamicType.GetKeywordArgs(kwDict, args, out finalArgs, out names);
+
+            return overloads.CallHelper(context, finalArgs, names, null);
+        }
+
         [PythonName("__init__")]
         public static void DefaultInit(ICallerContext context, object self, params object[] args) {
         }

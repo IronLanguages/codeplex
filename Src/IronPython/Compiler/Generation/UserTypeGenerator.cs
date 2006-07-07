@@ -218,6 +218,8 @@ namespace IronPython.Compiler.Generation {
 
                 //  Generate the function implementation
                 node.EmitFunctionImplementation(icg, typeCctor);
+                icg.Finish();
+
 
                 stack.Peek().Methods.Add(icg);
 

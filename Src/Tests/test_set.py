@@ -123,6 +123,35 @@ def test_none():
     a = set()
     a.add(None)
     AreEqual(repr(a), 'set([None])')
+
+
+def test_cmp():
+    """Verify we can compare sets that aren't the same type"""
+    
+    a = frozenset([1,2])
+    b = set([1,2])
+    
+    abig = frozenset([1,2,3])
+    bbig = set([1,2,3])
+    
+    AreEqual(cmp(a,b), 0)
+    AreEqual(cmp(a,bbig), -1)
+    AreEqual(cmp(abig,b), 1)
+    
+    class sset(set): pass
+    
+    class fset(frozenset): pass
+    
+    a = fset([1,2])
+    b = sset([1,2])
+    
+    abig = fset([1,2,3])
+    bbig = sset([1,2,3])
+    
+    AreEqual(cmp(a,b), 0)
+    AreEqual(cmp(a,bbig), -1)
+    AreEqual(cmp(abig,b), 1)
+    
     
 run_test(__name__)
 

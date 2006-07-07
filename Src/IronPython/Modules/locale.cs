@@ -26,6 +26,7 @@ using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {
+    [PythonType("_locale")]
     public static class PythonLocale {
         private static LocaleInfo currentLocale = new LocaleInfo();
 

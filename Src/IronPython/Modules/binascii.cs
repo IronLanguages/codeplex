@@ -23,6 +23,7 @@ using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("binascii", typeof(IronPython.Modules.PythonBinaryAscii))]
 namespace IronPython.Modules {
+    [PythonType("binascii")]
     public static class PythonBinaryAscii {
         public static object Error = ExceptionConverter.CreatePythonException("Error", "binascii");
 

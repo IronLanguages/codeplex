@@ -131,6 +131,12 @@ namespace IronPython.Runtime {
             ret.Append("(");
             bool needComma = false;
 
+            if (mi == null) {
+                // constructor, auto-insert cls
+                ret.Append("cls");
+                needComma = true;
+            }
+
             foreach (ParameterInfo pi in info.GetParameters()) {
                 if (pi.IsOut || pi.ParameterType.IsByRef) {
                     if (returnCount == 1) {

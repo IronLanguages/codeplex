@@ -16,3 +16,9 @@
 import clr
 clr.AddReference('System.Windows.Forms')
 from System.Windows.Forms import Form, Control
+
+from lib.assert_util import *
+load_iron_python_test()
+
+
+from IronPythonTest import NestedClass

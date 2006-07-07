@@ -166,6 +166,16 @@ def test_symbol_dict():
 def test_unbound_generic_repr():
     AreEqual(repr(System.IComparable), "<types 'IComparable', 'IComparable[T]'>")
 
+def test_autodoc():
+    from System.Threading import Thread, ThreadStart
+    
+    Assert(Thread.__doc__.find('Thread(ThreadStart start)') != -1)
+    
+    Assert(Thread.__new__.__doc__.find('__new__(cls, ThreadStart start)') != -1)
+    
+    AreEqual(Thread.__new__.__overloads__[ThreadStart].__doc__, '__new__(cls, ThreadStart start)\r\n')
+    
+    
 def test_type_descs():
     test = TypeDescTests()
     

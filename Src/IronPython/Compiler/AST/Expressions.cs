@@ -404,7 +404,7 @@ namespace IronPython.Compiler.Ast {
 
             // ie = Ops.GetEnumerator(<value on stack>)
             Slot ie = cg.GetLocalTmp(typeof(IEnumerator));
-            cg.EmitCall(typeof(Ops), "GetEnumerator");
+            cg.EmitCall(typeof(Ops), "GetEnumeratorForUnpack");
             ie.EmitSet(cg);
 
             // int rightCount = Ops.GetEnumeratorValues(ie, ref values);
@@ -1063,7 +1063,7 @@ namespace IronPython.Compiler.Ast {
                 if (iter is ListComprehensionFor) {
                     ListComprehensionFor cfor = iter as ListComprehensionFor;
                     cfor.List.Emit(cg);
-                    cg.EmitCall(typeof(Ops), "GetEnumerator");
+                    cg.EmitCall(typeof(Ops), "GetEnumeratorForIteration");
                     enumerators[iFors].EmitSet(cg);
 
                     cg.MarkLabel(continueTargets[iFors]);

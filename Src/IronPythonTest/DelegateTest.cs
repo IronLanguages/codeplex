@@ -26,6 +26,11 @@ namespace IronPythonTest {
     public delegate int RefReturnDelegate(object sender, ref object res);
     public delegate void SimpleDelegate();
     public delegate void SimpleDelegateWithOneArg(object arg1);
+    public delegate object SimpleReturnDelegate();
+    public delegate object SimpleReturnDelegateArg1(object arg1);
+    public delegate object SimpleReturnDelegateArg2(object arg1, object arg2);
+    public delegate object IntArgDelegate(int arg1, int arg2);
+    public delegate object StringArgDelegate(string arg1, string arg2);
     
     public class DelegateTest {
         // custom delegates used for various event handlers...        

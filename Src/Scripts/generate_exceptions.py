@@ -24,7 +24,7 @@ def collect_excs():
     for e in exceptions.__dict__.values():  
         if not hasattr(e, '__bases__'): continue
         if e.__name__ == "exceptions": continue
-        if e.__name__ == "Builtin": continue
+        if e.__name__ == "__builtin__": continue
         
         assert len(e.__bases__) <= 1, e
         if len(e.__bases__) == 0:

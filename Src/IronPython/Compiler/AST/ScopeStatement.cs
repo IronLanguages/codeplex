@@ -45,6 +45,7 @@ namespace IronPython.Compiler.Ast {
         // Names referenced in the scope with and their binding kind
         private Dictionary<SymbolId, Binding> names = new Dictionary<SymbolId, Binding>();
 
+
         // Names that need to be promoted to the environment and their assigned index in the environment
         internal Dictionary<SymbolId, EnvironmentReference> environment;
         internal EnvironmentFactory environmentFactory;
@@ -106,7 +107,7 @@ namespace IronPython.Compiler.Ast {
             return binding;
         }
 
-        protected Dictionary<SymbolId, Binding> Names {
+        internal Dictionary<SymbolId, Binding> Names {
             get { return names; }
         }
 

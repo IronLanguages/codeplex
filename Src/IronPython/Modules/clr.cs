@@ -178,6 +178,8 @@ namespace IronPython.Modules {
             }
 
             public override string ToString() {
+                if (Value == this)
+                    return "Reference (...)";
                 return string.Format("Reference({0})", Value);
             }
         }
