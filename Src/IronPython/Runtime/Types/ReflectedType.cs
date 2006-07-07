@@ -1041,7 +1041,7 @@ namespace IronPython.Runtime.Types {
 
             object dummy;
             if (TryLookupSlot(context, name, out dummy)) {
-                selfDict[name] = new Uninitialized(name.ToString());
+                selfDict[name] = Uninitialized.instance;
                 return true;
             } else {
                 return selfDict.Remove(name);

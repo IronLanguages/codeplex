@@ -738,7 +738,7 @@ namespace IronPython.Runtime.Types {
             int index = Array.BinarySearch(keys, key);
             if (index >= 0) {
                 value = values[index];
-                return !(value is Uninitialized) && !isInherited[index]; //isInherited???
+                return value != Uninitialized.instance && !isInherited[index]; //isInherited???
             }
             value = null;
             return false;
@@ -806,12 +806,12 @@ namespace IronPython.Runtime.Types {
         public override SymbolId[] GetExtraKeys() {
             int count = 0;
             for (int i = 0; i < values.Length; i++) {
-                if (!isInherited[i] && !(values[i] is Uninitialized)) count++;
+                if (!isInherited[i] && values[i] != Uninitialized.instance) count++;
             }
             SymbolId[] ret = new SymbolId[count];
             count = 0;
             for (int i = 0; i < values.Length; i++) {
-                if (!isInherited[i] && !(values[i] is Uninitialized)) ret[count++] = keys[i];
+                if (!isInherited[i] && values[i] != Uninitialized.instance) ret[count++] = keys[i];
             }
             return ret;
         }
@@ -833,7 +833,7 @@ namespace IronPython.Runtime.Types {
             for (int i = 0; i < ks.Length; i++) {
                 if (ks[i].Equals(key)) {
                     value = values[i];
-                    return !(value is Uninitialized) && !isInherited[i];
+                    return value != Uninitialized.instance && !isInherited[i];
                 }
             }
             value = null;
@@ -847,7 +847,7 @@ namespace IronPython.Runtime.Types {
                 return false;
             } else {
                 value = values[key];
-                return !(value is Uninitialized);
+                return value != Uninitialized.instance;
             }
         }
 

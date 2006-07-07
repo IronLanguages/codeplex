@@ -100,7 +100,7 @@ namespace IronPython.Compiler {
                 if (fi.GetValue(null) == null) {
                     Debug.Assert(fi.FieldType == typeof(object));
 
-                    fi.SetValue(null, new Uninitialized(fi.Name));
+                    fi.SetValue(null, Uninitialized.instance);
                 }
             }
         }

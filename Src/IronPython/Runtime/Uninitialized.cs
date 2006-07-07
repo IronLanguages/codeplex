@@ -17,9 +17,7 @@ using System;
 
 namespace IronPython.Runtime {
     public sealed class Uninitialized {
-        public readonly string name;
-        public Uninitialized(string name) {
-            this.name = name;
-        }
+        public readonly static Uninitialized instance = new Uninitialized();
+        private Uninitialized() { }
     }
 }

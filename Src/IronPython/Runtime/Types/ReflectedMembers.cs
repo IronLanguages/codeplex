@@ -135,7 +135,7 @@ namespace IronPython.Runtime.Types {
 
     /// <summary>
     /// Just like a reflected property, but we also allow deleting of values (setting them to
-    /// uninitialized)
+    /// Uninitialized.instance)
     /// </summary>
     public class ReflectedSlotProperty : ReflectedProperty {
         
@@ -146,7 +146,7 @@ namespace IronPython.Runtime.Types {
         [PythonName("__delete__")]
         public override bool DeleteAttribute(object instance) {
             if (instance != null) {
-                SetAttribute(instance, new Uninitialized(Info.Name));
+                SetAttribute(instance, Uninitialized.instance);
                 return true;
             }
             return false;

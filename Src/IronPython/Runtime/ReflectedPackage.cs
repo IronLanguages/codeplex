@@ -366,7 +366,7 @@ namespace IronPython.Runtime {
                 LoadAllTypes();
 
             if (__dict__.TryGetValue(name, out value)) {
-                if (value is Uninitialized) return false;
+                if (value == Uninitialized.instance) return false;
 
                 int level;
                 if (!loadLevels.TryGetValue(name, out level) || level >= packageAssemblies.Count) {
@@ -441,7 +441,7 @@ namespace IronPython.Runtime {
         public void DeleteAttr(ICallerContext context, SymbolId name) {            
             if (!__dict__.ContainsKey(name)) throw Ops.AttributeErrorForMissingAttribute(ToString(), name);
 
-            __dict__[name] = new Uninitialized(name.ToString());
+            __dict__[name] = Uninitialized.instance;
         }
 
         public List GetAttrNames(ICallerContext context) {

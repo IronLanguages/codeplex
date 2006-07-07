@@ -111,7 +111,7 @@ namespace IronPython.Runtime {
                     if (key.Id < 0) break;
 
                     object dummy;
-                    if (TryGetExtraValue(key, out dummy) && !(dummy is Uninitialized)) {
+                    if (TryGetExtraValue(key, out dummy) && dummy != Uninitialized.instance) {
                         res.Add(SymbolTable.IdToString(key));
                     }
                 }
@@ -130,7 +130,7 @@ namespace IronPython.Runtime {
             lock (this) {
                 if (strKey != null) {
                     SymbolId fieldId = SymbolTable.StringToId(strKey);
-                    if (TrySetExtraValue(fieldId, new Uninitialized(key.ToString()))) return true;
+                    if (TrySetExtraValue(fieldId, Uninitialized.instance)) return true;
 
                     if (data == null) return false;
                     return data.Remove(fieldId);
@@ -150,7 +150,7 @@ namespace IronPython.Runtime {
                 if (strKey != null) {
                     SymbolId fieldId = SymbolTable.StringToId(strKey);
 
-                    if (TryGetExtraValue(fieldId, out value) && !(value is Uninitialized)) return true;
+                    if (TryGetExtraValue(fieldId, out value) && value != Uninitialized.instance) return true;
 
                     if (data == null) return false;
                     return data.TryGetValue(fieldId, out value);
@@ -180,7 +180,7 @@ namespace IronPython.Runtime {
                     if (key.Id < 0) break;
 
                     object value;
-                    if (TryGetExtraValue(key, out value) && !(value is Uninitialized)) {
+                    if (TryGetExtraValue(key, out value) && value != Uninitialized.instance) {
                         res.Add(value);
                     }
                 }
@@ -246,7 +246,7 @@ namespace IronPython.Runtime {
                 foreach (SymbolId key in ExtraKeys) {
                     if (key.Id < 0) break;
 
-                    TrySetExtraValue(key, new Uninitialized((string)SymbolTable.IdToString(key)));
+                    TrySetExtraValue(key, Uninitialized.instance);
                 }
                 data = null;
             }
@@ -279,7 +279,7 @@ namespace IronPython.Runtime {
                         if (key.Id < 0) break;
 
                         object dummy;
-                        if (TryGetExtraValue(key, out dummy) && !(dummy is Uninitialized)) count++;
+                        if (TryGetExtraValue(key, out dummy) && dummy != Uninitialized.instance) count++;
                     }
                 }
 
@@ -312,7 +312,7 @@ namespace IronPython.Runtime {
                 if (o.Id < 0) break;
 
                 object val;
-                if (TryGetExtraValue(o, out val) && !(val is Uninitialized)) {
+                if (TryGetExtraValue(o, out val) && val != Uninitialized.instance) {
                     yield return new KeyValuePair<object, object>(SymbolTable.IdToString(o), val);
                 }
             }
@@ -376,14 +376,14 @@ namespace IronPython.Runtime {
 
         public bool ContainsKey(SymbolId key) {
             object value;
-            if (TryGetExtraValue(key, out value) && !(value is Uninitialized)) return true;
+            if (TryGetExtraValue(key, out value) && value != Uninitialized.instance) return true;
             if (data == null) return false;
 
             lock (this) return data.ContainsKey(key);
         }
 
         public bool Remove(SymbolId key) {
-            if (TrySetExtraValue(key, new Uninitialized((string)SymbolTable.IdToString(key)))) return true;
+            if (TrySetExtraValue(key, Uninitialized.instance)) return true;
 
             if (data == null) return false;
 
@@ -391,7 +391,7 @@ namespace IronPython.Runtime {
         }
 
         public bool TryGetValue(SymbolId key, out object value) {
-            if (TryGetExtraValue(key, out value) && !(value is Uninitialized)) return true;
+            if (TryGetExtraValue(key, out value) && value != Uninitialized.instance) return true;
 
             if (data == null) return false;
 
@@ -401,7 +401,7 @@ namespace IronPython.Runtime {
         public object this[SymbolId key] {
             get {
                 object res;
-                if (TryGetExtraValue(key, out res) && !(res is Uninitialized)) return res;
+                if (TryGetExtraValue(key, out res) && res != Uninitialized.instance) return res;
 
                 lock (this) {
                     if (data == null) throw Ops.KeyError("'{0}'", key);
@@ -497,7 +497,7 @@ namespace IronPython.Runtime {
             string strKey = key as string;
             if (strKey != null) {
                 SymbolId id = SymbolTable.StringToId(strKey);
-                if (TrySetExtraValue(id, new Uninitialized(key.ToString()))) return;
+                if (TrySetExtraValue(id, Uninitialized.instance)) return;
 
                 lock (this) if (data != null) data.Remove(id);
             } else lock (this) {
@@ -820,7 +820,7 @@ namespace IronPython.Runtime {
                 curIndex++;
                 if (idDict.GetExtraKeys()[curIndex].Id < 0) break;
 
-                if (idDict.TryGetExtraValue(idDict.GetExtraKeys()[curIndex], out val) && !(val is Uninitialized)) {
+                if (idDict.TryGetExtraValue(idDict.GetExtraKeys()[curIndex], out val) && val != Uninitialized.instance) {
                     return true;
                 }
             }

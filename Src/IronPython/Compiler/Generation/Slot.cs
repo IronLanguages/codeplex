@@ -67,17 +67,15 @@ namespace IronPython.Compiler.Generation {
         // for performance and better integration with the CLI, the engine
         // implements many Slot types as CLI entities, which cannot be
         // deleted once they are created. Hence, to implement "del",
-        // an alternate scheme is used. We just assign an instance of the
-        // type "Uninitialized" to represent that the Slot has been deleted.
-        // Any access to the Slot first checks if it is holding an "Uninitialized",
+        // an alternate scheme is used. We just assign Uninitialized.instance
+        // to represent that the Slot has been deleted.
+        // Any access to the Slot first checks if it is holding Uninitialized.instance,
         // which means that it should virtually not exist
 
         public virtual void EmitSetUninitialized(CodeGen cg, SymbolId name) {
             // Emit the following:
-            //     <name> = new Uninitialized("<name>");
-            // Including "name" helps with debugging
-            cg.EmitName(name);
-            cg.EmitNew(typeof(Uninitialized), new Type[] { typeof(string) });
+            //     <name> = Uninitialized.instance;
+            cg.EmitUninitialized();
             EmitSet(cg);
         }
 
@@ -86,20 +84,26 @@ namespace IronPython.Compiler.Generation {
             // should cause a NameError
             if (check && Options.CheckInitialized) {
                 EmitGet(cg);
-                EmitCheck(cg);
+                EmitCheck(cg, name);
                 cg.Emit(OpCodes.Pop);
             }
 
             EmitSetUninitialized(cg, name);
         }
 
-        public virtual void EmitCheck(CodeGen cg) {
+        public virtual void EmitCheck(CodeGen cg, SymbolId name) {
             if (Options.CheckInitialized) {
                 if (local) {
+                    Label endCheck = cg.DefineLabel();
                     cg.Emit(OpCodes.Dup);
-                    cg.EmitCall(typeof(Ops), "CheckInitializedLocal");
+                    cg.EmitUninitialized();
+                    cg.Emit(OpCodes.Bne_Un_S, endCheck);
+                    cg.EmitName(name);
+                    cg.EmitCall(typeof(Ops), "ThrowUnboundLocalError");
+                    cg.MarkLabel(endCheck);
                 } else {
                     cg.EmitCallerContext();
+                    cg.EmitName(name);
                     cg.EmitCall(typeof(Ops), "CheckInitializedOrBuiltin");
                 }
             }
@@ -598,14 +602,14 @@ namespace IronPython.Compiler.Generation {
             attribute.EmitGet(cg);
         }
 
-        public override void EmitCheck(CodeGen cg) {
+        public override void EmitCheck(CodeGen cg, SymbolId name) {
             Label initialized = cg.DefineLabel();
             cg.Emit(OpCodes.Dup);
-            cg.Emit(OpCodes.Isinst, typeof(Uninitialized));
-            cg.Emit(OpCodes.Brfalse, initialized);
+            cg.EmitUninitialized();
+            cg.Emit(OpCodes.Bne_Un_S, initialized);
             cg.Emit(OpCodes.Pop);
             global.EmitGet(cg);
-            global.EmitCheck(cg);
+            global.EmitCheck(cg, name);
             cg.MarkLabel(initialized);
         }
 
@@ -647,7 +651,7 @@ namespace IronPython.Compiler.Generation {
 
         public override void EmitGet(CodeGen cg) {
             //
-            // if ($env.TryGetValue(name, out local) && !(local is Uninitialized)) {
+            // if ($env.TryGetValue(name, out local) && local != Uninitialized.instance) {
             //     local
             // } else {
             //     global
@@ -662,8 +666,8 @@ namespace IronPython.Compiler.Generation {
             cg.EmitCall(typeof(IDictionary<object, object>).GetMethod("TryGetValue"));
             cg.Emit(OpCodes.Brfalse_S, notFound);
             local.EmitGet(cg);
-            cg.Emit(OpCodes.Isinst, typeof(Uninitialized));
-            cg.Emit(OpCodes.Brtrue_S, notFound);
+            cg.EmitUninitialized();
+            cg.Emit(OpCodes.Beq_S, notFound);
             local.EmitGet(cg);
             cg.Emit(OpCodes.Br_S, found);
             cg.MarkLabel(notFound);

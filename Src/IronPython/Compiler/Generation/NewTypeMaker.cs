@@ -448,12 +448,11 @@ namespace IronPython.Compiler.Generation {
             cg.EmitArgGet(0);
             typeField.EmitSet(cg);
 
-            // initialize all slots to Uninitialized
+            // initialize all slots to Uninitialized.instance
             if (slots != null) {
                 for (int i = 0; i < slots.Count; i++) {
                     if (slots[i] != "__weakref__" && slots[i] != "__dict__") {
-                        cg.EmitString(slots[i]);
-                        cg.EmitNew(typeof(Uninitialized), new Type[] { typeof(string) });
+                        cg.EmitUninitialized();
                     } else {
                         cg.Emit(OpCodes.Ldnull);
                     }
@@ -704,6 +703,7 @@ namespace IronPython.Compiler.Generation {
                     s.EmitGet(getter);
                     getter.Emit(OpCodes.Dup);
                     getter.EmitThis();
+                    getter.EmitString(slots[i]);
                     getter.EmitCall(typeof(Ops), "CheckInitializedAttribute");                        
                     getter.EmitReturn();                    
                     getter.Finish();

@@ -451,7 +451,7 @@ namespace IronPython.Compiler.Generation {
             Slot s = names[name];
             s.EmitGet(this);
             if (check) {
-                s.EmitCheck(this);
+                s.EmitCheck(this, name);
             }
         }
 
@@ -485,6 +485,10 @@ namespace IronPython.Compiler.Generation {
                 EmitInt(line);
                 currentLineSlot.EmitSet(this);
             }
+        }
+
+        public void EmitUninitialized() {
+            Emit(OpCodes.Ldsfld, typeof(Uninitialized).GetField("instance"));
         }
 
         bool returnBlockCreated = false;

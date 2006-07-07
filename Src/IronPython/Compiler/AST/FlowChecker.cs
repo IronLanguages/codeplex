@@ -25,8 +25,8 @@ using IronPython.Runtime;
  * Each local name is represented as 2 bits:
  * One is for definitive assignment, the other is for uninitialized use detection.
  * The only difference between the two is behavior on delete.
- * On delete, the name is not assigned to meaningful value (we need to emit Ops.CheckInitialized() call),
- * but it is not uninitialized either (because delete statement will set it to Uninitialized).
+ * On delete, the name is not assigned to meaningful value (we need to check at runtime if it's initialized),
+ * but it is not uninitialized either (because delete statement will set it to Uninitialized.instance).
  * This way, codegen doesn’t have to emit an explicit initialization for it.
  * 
  * Consider:
@@ -38,10 +38,12 @@ using IronPython.Runtime;
  * We compile this into:
  * 
  * static void f$f0() {
- *     object a = new Uninitialized("a"); // explicit initialization because of the uninitialized use
+ *     object a = Uninitialized.instance; // explicit initialization because of the uninitialized use
  *     // print statement
- *     Ops.CheckUninitialized(a)
- *     Ops.Print(a);
+ *     if(a == Uninitialized.instance)
+ *       throw ThrowUnboundLocalError("a");
+ *     else
+ *       Ops.Print(a);
  *     // a = 10
  *     a = 10
  * }
@@ -50,31 +52,33 @@ using IronPython.Runtime;
  * 
  * def f():
  *     a = 10
- *     del a        # explicit deletion which will set to Uninitialized
+ *     del a        # explicit deletion which will set to Uninitialized.instance
  *     print a
  * 
  * compiles into:
  * 
  * static void f$f0() {
- *     object a = 10                // a = 10
- *     a = new Uninitialized("a");  // del a
- *     Ops.CheckUninitialized(a)    // print a
- *     Ops.Print(a);                // also print a
+ *     object a = 10;                        // a = 10
+ *     a = Uninitialized.instance;           // del a
+ *     if(a == Uninitialized.instance)       // print a
+ *       throw ThrowUnboundLocalError("a");
+ *     else
+ *       Ops.Print(a);
  * }
  * 
  * The bit arrays in the flow checker hold the state and upon encountering NameExpr we figure
  * out whether the name has not yet been initialized at all (in which case we need to emit the
- * first explicit assignment to Uninitialized("name") and guard the use with CheckUninitialized()
- * or whether it is definitely assigned (we don't need to emit the CheckUninitialized() guard)
- * or whether it may be uninitialized, in which case we must only guard the use by CheckUninitialized()
+ * first explicit assignment to Uninitialized.instance and guard the use with an inlined check
+ * or whether it is definitely assigned (we don't need to inline the check)
+ * or whether it may be uninitialized, in which case we must only guard the use by inlining the Uninitialized check
  * 
  * More details on the bits.
  * 
  * First bit:
- *  1 .. value is definitely assigned (initialized and != Uninitialized())
- *  0 .. value may be uninitialized or set to Uninitialized()
+ *  1 .. value is definitely assigned (initialized and != Uninitialized.instance)
+ *  0 .. value may be uninitialized or set to Uninitialized.instance
  * Second bit:
- *  1 .. is definitely initialized  (including definitely initialized to Uninitialized() instance)
+ *  1 .. is definitely initialized  (including definitely initialized to Uninitialized.instance)
  *  0 .. may be uninitialized
  * 
  * In combination:
@@ -179,7 +183,7 @@ namespace IronPython.Compiler.Ast {
             if (bindings.TryGetValue(name, out binding)) {
                 int index = binding.Index * 2;
                 bits.Set(index, false);     // is not initialized
-                bits.Set(index + 1, true);  // is assigned (to Uninitialized())
+                bits.Set(index + 1, true);  // is assigned (to Uninitialized.instance)
             }
         }
 
@@ -225,7 +229,7 @@ namespace IronPython.Compiler.Ast {
                     binding.UninitializedUse();
                 }
                 if (!bits.Get(index + 1)) {
-                    // Found an unbound use of the name => need to initialize to Uninitialized
+                    // Found an unbound use of the name => need to initialize to Uninitialized.instance
                     binding.UnassignedUse();
                 }
             }

@@ -373,16 +373,20 @@ def NoFinAddToInstance():
 
     global res
     res = ''
-    b = Bar()
-    Assert(hasattr(Bar, '__del__') == False)
+    
+    def inner():
+        b = Bar()
+        Assert(hasattr(Bar, '__del__') == False)
 
-    Assert(hasattr(b, '__del__') == False)
+        Assert(hasattr(b, '__del__') == False)
 
-    b.__del__ = Hello
-    Assert(hasattr(Bar, '__del__') == False)
-    Assert(hasattr(b, '__del__'))
+        b.__del__ = Hello
+        Assert(hasattr(Bar, '__del__') == False)
+        Assert(hasattr(b, '__del__'))
 
-    del(b)
+        del(b)
+
+    inner()
     FullCollect()
 
     Assert(res == 'Hello finalizer')

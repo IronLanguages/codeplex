@@ -321,18 +321,18 @@ namespace IronPython.Runtime {
 
         public BuiltinWrapper(object value, string name) {
             originalValue = value;
-            currentValue = new Uninitialized(name);
+            currentValue = Uninitialized.instance;
             this.name = name;
         }
 
 
         public object CurrentValue {
             get {
-                if (currentValue is Uninitialized) return originalValue;
+                if (currentValue == Uninitialized.instance) return originalValue;
                 return currentValue;
             }
             set {
-                if (value is Uninitialized && currentValue is Uninitialized) throw Ops.NameError("name '{0}' is not defined", name);
+                if (value == Uninitialized.instance && currentValue == Uninitialized.instance) throw Ops.NameError("name '{0}' is not defined", name);
                 currentValue = value;
             }
         }

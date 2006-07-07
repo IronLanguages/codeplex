@@ -831,8 +831,7 @@ namespace IronPython.Compiler.Generation {
                             fld = newType.AddField(typeof(object), slots[i]);
                         }
 
-                        cg.EmitString(slots[i]);
-                        cg.EmitNew(typeof(Uninitialized), new Type[1] { typeof(string) });
+                        cg.EmitUninitialized();
                         fld.EmitSet(cg);
                     }
 

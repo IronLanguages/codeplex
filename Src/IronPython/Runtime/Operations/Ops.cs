@@ -1669,34 +1669,23 @@ namespace IronPython.Runtime.Operations {
             return GetDynamicType(o).GetAttrDict(context, o);
         }
 
-        public static void CheckInitializedAttribute(object o, object self) {
-            if (o is Uninitialized) {
+        public static void CheckInitializedAttribute(object o, object self, string name) {
+            if (o == Uninitialized.instance) {
                 throw Ops.AttributeError("'{0}' object has no attribute '{1}'", 
                     Ops.GetDynamicType(self), 
-                    ((Uninitialized)o).name);
+                    name);
             }
         }
 
-        public static void CheckInitializedLocal(object o) {
-            if (o is Uninitialized) {
-                throw Ops.UnboundLocalError("local variable '{0}' referenced before assignment", ((Uninitialized)o).name);
+        public static object CheckInitializedOrBuiltin(object o, ICallerContext context, string name) {
+            if (o == Uninitialized.instance) {
+                object builtin;
+                if (!Ops.TryGetAttr(context.SystemState.modules["__builtin__"], SymbolTable.StringToId(name), out builtin)) {
+                    throw Ops.NameError("name '{0}' not defined", name);
+                }
+                return builtin;
             }
-        }
 
-        public static object CheckInitializedOrBuiltin(object o, ICallerContext context) {
-            Uninitialized ui;
-            if ((ui = o as Uninitialized)!=null) {
-                o = GetBuiltinOrThrow(o, context, ui);
-            }
-            return o;
-        }
-
-        public static object GetBuiltinOrThrow(object o, ICallerContext context, Uninitialized ui) {
-            if (!Ops.TryGetAttr(context.SystemState.modules["__builtin__"],
-                SymbolTable.StringToId(ui.name),
-                out o))
-
-                throw Ops.NameError("name '{0}' not defined", ui.name);
             return o;
         }
 
@@ -1759,12 +1748,12 @@ namespace IronPython.Runtime.Operations {
 
         private static void Write(SystemState state, object f, string text) {
             if (f == null) f = state.stdout;
-            if (f == null || f is Uninitialized) throw Ops.RuntimeError("lost sys.std_out");
+            if (f == null || f == Uninitialized.instance) throw Ops.RuntimeError("lost sys.std_out");
             Ops.Invoke(f, SymbolTable.ConsoleWrite, text);
         }
 
         private static object ReadLine(object f) {
-            if (f == null || f is Uninitialized) throw Ops.RuntimeError("lost sys.std_in");
+            if (f == null || f == Uninitialized.instance) throw Ops.RuntimeError("lost sys.std_in");
             return Ops.Invoke(f, SymbolTable.ConsoleReadLine);
         }
 
@@ -2419,6 +2408,10 @@ namespace IronPython.Runtime.Operations {
 
         public static Exception AttributeErrorForMissingAttribute(string typeName, SymbolId attributeName) {
             return Ops.AttributeError("'{0}' object has no attribute '{1}'", typeName, attributeName.ToString());
+        }
+
+        public static void ThrowUnboundLocalError(string name) {
+            throw Ops.UnboundLocalError("local variable '{0}' referenced before assignment", name);
         }
     }
 }
