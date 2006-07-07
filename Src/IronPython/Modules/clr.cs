@@ -127,7 +127,7 @@ namespace IronPython.Modules {
                     if (File.Exists(trying)) {
                         res = LoadAssemblyFromFileWithPath(trying);
                         if (res != null) return res;
-                    }                    
+                    }
                 }
             }
 

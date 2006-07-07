@@ -136,9 +136,6 @@
     <Compile Include="..\IronPythonConsole\PythonCommandLine.cs">
       <Link>PythonCommandLine.cs</Link>
     </Compile>
-    <Compile Include="..\IronPythonConsole\SuperConsole.cs">
-      <Link>SuperConsole.cs</Link>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

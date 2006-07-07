@@ -368,7 +368,7 @@ namespace IronPython.Compiler.Generation {
 
 
         public override void EmitGet(CodeGen cg) {
-            //Debug.Assert(cg == this.codeGen);
+            Debug.Assert(cg == this.codeGen);
             cg.EmitTrueArgGet(index);
         }
 

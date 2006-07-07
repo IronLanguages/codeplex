@@ -345,20 +345,23 @@ namespace IronPython.Runtime {
 
         private static object ImportFromPath(SystemState state, string name, string fullName, List path) {
             object ret = null;
-            foreach (string dirname in path) {
-                string pathname = Path.Combine(dirname, name);
+            foreach (object dirname in path) {
+                string str;
+                if (Converter.TryConvertToString(dirname, out str)) {  // ignore non-string
+                    string pathname = Path.Combine(str, name);
 
-                if (Directory.Exists(pathname)) {
-                    if (File.Exists(Path.Combine(pathname, "__init__.py"))) {
-                        ret = LoadPackageFromSource(state, fullName, pathname);
+                    if (Directory.Exists(pathname)) {
+                        if (File.Exists(Path.Combine(pathname, "__init__.py"))) {
+                            ret = LoadPackageFromSource(state, fullName, pathname);
+                            break;
+                        }
+                    }
+
+                    string filename = pathname + ".py";
+                    if (File.Exists(filename)) {
+                        ret = LoadModuleFromSource(state, fullName, filename);
                         break;
                     }
-                }
-
-                string filename = pathname + ".py";
-                if (File.Exists(filename)) {
-                    ret = LoadModuleFromSource(state, fullName, filename);
-                    break;
                 }
             }
             return ret;

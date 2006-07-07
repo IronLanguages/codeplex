@@ -1143,10 +1143,6 @@ namespace IronPython.Runtime.Operations {
                 throw Ops.ValueError("complex modulo");
             }
 
-            //            ret = GetDynamicType(x).Power(x, y);
-            //            if (ret != NotImplemented) return ret;
-            //            ret = GetDynamicType(y).ReversePower(y, x);
-            //            if (ret != NotImplemented) return ret;
             throw Ops.TypeErrorForBinaryOp("power with modulus", x, y);
         }
 

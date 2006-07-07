@@ -92,7 +92,7 @@ namespace IronPythonConsole {
         }
 
         [STAThread]
-        static int Main(string [] rawArgs) {
+        static int Main(string[] rawArgs) {
             List<string> args = new List<string>(rawArgs);
             Options options = ParseOptions(args);
 
@@ -104,12 +104,15 @@ namespace IronPythonConsole {
             engine = new PythonEngine(options);
 
             try {
+#if IRONPYTHON_WINDOW
+                MyConsole = new BasicConsole(engine.Sys, ColorfulConsole);
+#else
                 if (TabCompletion) {
                     UseSuperConsole(engine);
                 } else {
                     MyConsole = new BasicConsole(engine.Sys, ColorfulConsole);
                 }
-
+#endif
                 if (Options.WarningFilters != null)
                     engine.Sys.warnoptions = IronPython.Runtime.List.Make(Options.WarningFilters);
 
@@ -216,7 +219,7 @@ namespace IronPythonConsole {
                         Options.MaximumRecursion = maxRecurVal;
                         break;
                     case "-X:PrivateBinding": Options.PrivateBinding = true; break;
-                    case "-X:Python25": Options.Python25 = true; break; 
+                    case "-X:Python25": Options.Python25 = true; break;
                     case "-X:SaveAssemblies": Options.SaveAndReloadBinaries = true; break;
                     case "-X:ShowCLSExceptions": options.ShowClsExceptions = true; break;
                     case "-X:StaticMethods": Options.GenerateDynamicMethods = false; break;
@@ -507,13 +510,14 @@ namespace IronPythonConsole {
             return result;
         }
 
+#if !IRONPYTHON_WINDOW
         // The advanced console functions are in a special non-inlined function so that 
         // dependencies are pulled in only if necessary.
         [MethodImplAttribute(MethodImplOptions.NoInlining)]
         private static void UseSuperConsole(PythonEngine engine) {
             MyConsole = new SuperConsole(engine, ColorfulConsole);
         }
-
+#endif
         public static bool DoOneInteractive(ModuleScope topFrame) {
             bool continueInteraction;
             string s = ReadStatement(out continueInteraction);
@@ -701,7 +705,7 @@ namespace IronPythonConsole {
                 RunStartup(engine);
                 result = 0;
             } catch (PythonSystemExitException pythonSystemExit) {
-                return pythonSystemExit.GetExitCode(engine.DefaultModuleScope);                
+                return pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
             } catch (Exception) {
             }
 
@@ -710,7 +714,7 @@ namespace IronPythonConsole {
             }
 
             PythonEngine.DumpDebugInfo();
-            return (int) result;
+            return (int)result;
         }
 #endif
         private static void DefaultExceptionHandler(object sender, UnhandledExceptionEventArgs args) {
@@ -734,7 +738,7 @@ namespace IronPythonConsole {
     public enum Style {
         Prompt, Out, Error
     }
-    
+
     public class BasicConsole : IConsole {
 
         public ConsoleColor PromptColor = Console.ForegroundColor;
@@ -780,7 +784,7 @@ namespace IronPythonConsole {
                 // delay when shutting down the process via ctrl-z, but it's
                 // not really perceptible.  In the ctrl-C case we will return
                 // as soon as the event is signaled.
-                if (ctrlCEvent != null && ctrlCEvent.WaitOne(100,false)) {
+                if (ctrlCEvent != null && ctrlCEvent.WaitOne(100, false)) {
                     // received ctrl-C
                     return "";
                 } else {
@@ -802,10 +806,10 @@ namespace IronPythonConsole {
         private void WriteColor(string s, Style style, ConsoleColor c) {
             ConsoleColor origColor = Console.ForegroundColor;
             Console.ForegroundColor = c;
-            
+
             Ops.PrintWithDestNoNewline(sys, sys.stdout, s);
             Ops.Invoke(sys.stdout, SymbolTable.StringToId("flush"));
-            
+
             Console.ForegroundColor = origColor;
         }
 

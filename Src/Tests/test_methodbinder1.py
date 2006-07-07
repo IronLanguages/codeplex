@@ -77,7 +77,7 @@ def _helper(func, positiveArgs, flagValue, negativeArgs, exceptType):
         try:
             _my_call(func, arg)
         except Exception, e:
-            Fail("unexpected exception %s when calling %s with %s\n%s" % (func, arg, func.__doc__))
+            Fail("unexpected exception %s when calling %s with %s\n%s" % (e, func, arg, func.__doc__))
         else:
             AreEqual(Flag.Value, flagValue)
             Flag.Value = -188
@@ -175,7 +175,7 @@ def test_this_matrix():
 ##################################################  pass in char    #########################################################
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                          int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-(     System.Char.Parse('A'), TypeE, TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  True,  ),
+(     System.Char.Parse('A'), TypeE, TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  TypeE, True,  ),
 ##################################################  pass in float   #########################################################
 ####   single/double becomes Int32, but this does not apply to other primitive types
 ####                          int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
@@ -319,6 +319,7 @@ def test_collections():
     arrayInt = array_int((10, 20))
     tupleInt = ((10, 20), )
     listInt  = ([10, 20], )
+    tupleBool = ((True, False, True, True, False), )
     tupleLong1, tupleLong2  = ((10L, 20L), ), ((System.Int64.MaxValue, System.Int32.MaxValue * 2),)    
     arrayByte = array_byte((10, 20))
     arrayObj = array_object(['str', 10])
@@ -337,10 +338,10 @@ def test_collections():
     _helper(target.M653, [arrayInt, arrayObj, arrayByte, listInt, tupleInt, tupleLong1, tupleLong2, ], 653, [], TypeError)
     
     # Int32[]
-    _helper(target.M500, [arrayInt, tupleInt, ], 500, [listInt, arrayByte, arrayObj, tupleLong1, ], TypeError)
+    _helper(target.M500, [arrayInt, tupleInt, tupleLong1, tupleBool, ], 500, [listInt, arrayByte, arrayObj, ], TypeError)
     _helper(target.M500, [], 500, [tupleLong2, ], OverflowError)
     # params Int32[]
-    _helper(target.M600, [arrayInt, tupleInt, ], 600, [listInt, arrayByte, arrayObj, tupleLong1, ], TypeError)
+    _helper(target.M600, [arrayInt, tupleInt, tupleLong1, tupleBool, ], 600, [listInt, arrayByte, arrayObj, ], TypeError)
     _helper(target.M600, [], 600, [tupleLong2, ], OverflowError)
     
     # Int32, params Int32[]

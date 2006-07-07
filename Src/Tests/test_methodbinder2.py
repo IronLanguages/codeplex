@@ -95,16 +95,18 @@ def _try_arg(target, arg, mapping, funcTypeError, funcOverflowError):
         print funcname, 
         func = getattr(target, funcname)
 
+        if funcname in funcOverflowError: expectError = OverflowError
+        elif funcname in funcTypeError:  expectError = TypeError
+        else: expectError = None
+
         try:
             _my_call(func, arg)
         except Exception, e:
-            if funcname in funcOverflowError: expectError = OverflowError
-            elif funcname in funcTypeError:  expectError = TypeError
-            else: 
-                Fail("unexpected exception %s when func %s with arg %s (%s)\n%s" % (e, Flag.Value, funcname, arg, type(arg), func.__doc__))
+            if expectError == None:
+                Fail("unexpected exception %s when func %s with arg %s (%s)\n%s" % (e, funcname, arg, type(arg), func.__doc__))
 
             if funcname in mapping.keys():  # No exception expected:
-                Fail("unexpected exception %s when func %s with arg %s (%s)\n%s" % (e, Flag.Value, funcname, arg, type(arg), func.__doc__))
+                Fail("unexpected exception %s when func %s with arg %s (%s)\n%s" % (e, funcname, arg, type(arg), func.__doc__))
 
             if not isinstance(e, expectError):
                 Fail("expect '%s', but got '%s' (flag %s) when func %s with arg %s (%s)\n%s" % (expectError, e, Flag.Value, funcname, arg, type(arg), func.__doc__))
@@ -303,9 +305,9 @@ def test_arg_Collections():
 (    arrayInt, _merge(_first('M100 '), _second('M101 M102 M103 M104 ')), '', '', ),
 (    tupleInt, _merge(_first('M102 '), _second('M100 M101 M103 M104 ')), '', '', ),
 (     listInt, _merge(_first('M102 '), _second('M100 M103 ')), 'M101 M104 ', '', ),
-(  tupleLong1, _merge(_first('M102 '), _second('M100 M103 ')), 'M101 M104 ', '', ),
+(  tupleLong1, _merge(_first('M102 '), _second('M100 M101 M103 M104 ')), '', '', ),
 (  tupleLong2, _merge(_first('M102 '), _second('M100 M103 ')), '', 'M101 M104 ', ),
-(   arrayByte, _first('M101 '), 'M100 M102 M103 M104 ', '', ),
+(   arrayByte, _merge(_first('M101 '), _second('')),  'M100 M102 M103 M104 ', '', ),
 (    arrayObj, _merge(_first('M101 M102 '), _second('M100 M103 ')), 'M104 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)

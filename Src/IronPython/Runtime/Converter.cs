@@ -236,6 +236,10 @@ namespace IronPython.Runtime {
             throw CannotConvertTo("char", value);
         }
 
+        public static T Convert<T>(object value) {
+            return (T)Convert(value, typeof(T));
+        }
+
         /// <summary>
         /// General conversion routine TryConvert - tries to convert the object to the desired type.
         /// Try to avoid using this method, the goal is to ultimately remove it!
@@ -268,6 +272,19 @@ namespace IronPython.Runtime {
             if (to == CharType) return ConvertToChar(value);
             if (to == StringType) return ConvertToString(value);
 
+            if (to == BigIntegerType) return ConvertToBigInteger(value);
+            if (to == Complex64Type) return ConvertToComplex64(value);
+
+            if (to == ByteType) return ConvertToByte(value);
+            if (to == SByteType) return ConvertToSByte(value);
+            if (to == Int16Type) return ConvertToInt16(value);
+            if (to == UInt32Type) return ConvertToUInt32(value);
+            if (to == UInt64Type) return ConvertToUInt64(value);
+            if (to == UInt16Type) return ConvertToUInt16(value);
+            if (to == SingleType) return ConvertToSingle(value);
+            if (to == Int64Type) return ConvertToInt64(value);
+            if (to == DecimalType) return ConvertToDecimal(value);
+
             if (to == IEnumeratorType) return ConvertToIEnumerator(value);
             if (DelegateType.IsAssignableFrom(to)) return ConvertToDelegate(value, to);
 
@@ -285,23 +302,11 @@ namespace IronPython.Runtime {
 
             if (to.IsGenericType) {
                 Type genTo = to.GetGenericTypeDefinition();
-                if (genTo == NullableOfT) return ConvertToNullableOfT(value, to.GetGenericArguments());
+                if (genTo == NullableOfTType) return ConvertToNullableT(value, to.GetGenericArguments());
                 if (genTo == IListOfTType) return ConvertToIListT(value, to.GetGenericArguments());
                 if (genTo == IDictOfTType) return ConvertToIDictT(value, to.GetGenericArguments());
                 if (genTo == IEnumeratorOfT) return ConvertToIEnumeratorT(value, to.GetGenericArguments());
             }
-
-            if (to == BigIntegerType) return ConvertToBigInteger(value);
-            if (to == Complex64Type) return ConvertToComplex64(value);
-            if (to == ByteType) return ConvertToByte(value);
-            if (to == SByteType) return ConvertToSByte(value);
-            if (to == Int16Type) return ConvertToInt16(value);
-            if (to == UInt32Type) return ConvertToUInt32(value);
-            if (to == UInt64Type) return ConvertToUInt64(value);
-            if (to == UInt16Type) return ConvertToUInt16(value);
-            if (to == SingleType) return ConvertToSingle(value);
-            if (to == DecimalType) return ConvertToDecimal(value);
-            if (to == Int64Type) return ConvertToInt64(value);
 
             if (from.IsValueType) {
                 if (to == ValueTypeType) {
@@ -310,19 +315,6 @@ namespace IronPython.Runtime {
             }
 
             throw MakeTypeError(to, value);
-        }
-
-
-        public static Type ConvertToType(object value) {
-            if (value == null) return null;
-
-            Type TypeVal = value as Type;
-            if (TypeVal != null) return TypeVal;
-
-            DynamicType DynamicTypeVal = value as DynamicType;
-            if (DynamicTypeVal != null) return DynamicTypeVal.type;
-
-            throw MakeTypeError("Type", value);
         }
 
         public static IEnumerator ConvertToIEnumerator(object o) {
@@ -348,67 +340,12 @@ namespace IronPython.Runtime {
                         for (int i = 0; i < tupleVal.Count; i++) {
                             ret.SetValue(Convert(tupleVal[i], elemType), i);
                         }
+                        return ret;
                     }
                 }
             }
 
             throw MakeTypeError("Array", value);
-        }
-
-        private static object ConvertToIDictOfT(object value, Type[] dictOf) {
-            Dict dv = value as Dict;
-            if (dv != null) {
-                if (((dictOf[0] != typeof(object) || dictOf[1] != typeof(object)) &&
-                  (dictOf[0] != typeof(SymbolId) && dictOf[1] != typeof(object)))) {
-                    Type t = DictWrapperForIDictType.MakeGenericType(dictOf);
-                    return Activator.CreateInstance(t, dv);
-                } else {
-                    // our dicts can be both of these, don't do a wrapping...
-                    return dv;
-                }
-            }
-
-            throw MakeTypeError("dict", value);
-        }
-
-        private static bool ExtendList(IEnumerable ie, IList list) {
-            try {
-                foreach (object o in ie) {
-                    list.Add(o);
-                }
-                return true;
-            } catch (ArgumentException) {
-                // conversion failed
-                return false;
-            }
-        }
-
-        private static object ConvertToListOfT(object value, Type[] listOf) {
-            // create a new List<T> and return it            
-            Tuple t;
-            if ((t = value as Tuple) != null) {
-                Type type = ListOfTType.MakeGenericType(listOf);
-                IList list = Activator.CreateInstance(type) as IList;
-
-                if (ExtendList(t, list)) {
-                    return list;
-                }
-            }
-
-            // no conversion from List to List<T> as we won't see any updates.
-            throw MakeTypeError("list", value);
-        }
-
-        private static Hashtable ConvertToHashtable(object value) {
-
-            Debug.Fail("Should I ever show up here, in ConvertToHashtable??");
-
-            Hashtable result = value as Hashtable;
-            if (result != null) {
-                return result;
-            }
-
-            throw MakeTypeError("Hashtable", value);
         }
 
         public static object ConvertToIEnumeratorT(object value, Type[] enumOf) {
@@ -427,25 +364,7 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        public static T Convert<T>(object value) {
-            return (T)Convert(value, typeof(T));
-        }
-
-        public static object ConvertToDelegate(object value, Type to) {
-            Debug.Assert(typeof(Delegate).IsAssignableFrom(to));
-            if (value == null) return null;
-
-            Type inType = value.GetType();
-
-            if (to.IsAssignableFrom(inType)) return value;
-
-            object deleg = Ops.GetDelegate(value, to);
-            if (deleg != null) return deleg;
-
-            throw Ops.TypeErrorForBadInstance("expected compatible function, found {0}", value);
-        }
-
-        public static int ConvertToSliceIndex(object value) {
+        internal static int ConvertToSliceIndex(object value) {
             int val;
             if (TryConvertToInt32(value, out val))
                 return val;
@@ -458,7 +377,7 @@ namespace IronPython.Runtime {
             throw Ops.TypeError("slice indices must be integers");
         }
 
-        public static int ConvertToXRangeIndex(object value) {
+        internal static int ConvertToXRangeIndex(object value) {
             int val;
             if (TryConvertToInt32(value, out val)) return val;
 
@@ -483,11 +402,11 @@ namespace IronPython.Runtime {
             return Ops.TypeError("Cannot convert {0}({1}) to {2}", Ops.GetDynamicType(value).__name__, value, name);
         }
 
-        public static Exception MakeTypeError(Type expectedType, object o) {
+        private static Exception MakeTypeError(Type expectedType, object o) {
             return MakeTypeError(Ops.GetDynamicTypeFromType(expectedType).__name__.ToString(), o);
         }
 
-        public static Exception MakeTypeError(string expectedType, object o) {
+        private static Exception MakeTypeError(string expectedType, object o) {
             return Ops.TypeErrorForTypeMismatch(expectedType, o);
         }
 
@@ -515,7 +434,7 @@ namespace IronPython.Runtime {
         private static readonly Type ValueTypeType = typeof(ValueType);
         private static readonly Type TypeType = typeof(Type);
         private static readonly Type ArrayListType = typeof(ArrayList);
-        private static readonly Type NullableOfT = typeof(Nullable<>);
+        private static readonly Type NullableOfTType = typeof(Nullable<>);
         private static readonly Type IListOfTType = typeof(System.Collections.Generic.IList<>);
         private static readonly Type ListOfTType = typeof(System.Collections.Generic.List<>);
         private static readonly Type IDictOfTType = typeof(System.Collections.Generic.IDictionary<,>);
@@ -638,10 +557,12 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        private static object ConvertToNullableOfT(object value, Type[] typeOf) {
+        private static object ConvertToNullableT(object value, Type[] typeOf) {
             if (value == null) return null;
             else return Convert(value, typeOf[0]);
         }
+
+        #region Entry points called from the generated code
 
         public static object ConvertToReferenceType(object fromObject, RuntimeTypeHandle typeHandle) {
             if (fromObject == null) return null;
@@ -658,7 +579,36 @@ namespace IronPython.Runtime {
             return Convert(fromObject, Type.GetTypeFromHandle(typeHandle));
         }
 
-        public static object ConvertToIListT(object value, Type[] listOf) {
+        public static Type ConvertToType(object value) {
+            if (value == null) return null;
+
+            Type TypeVal = value as Type;
+            if (TypeVal != null) return TypeVal;
+
+            DynamicType DynamicTypeVal = value as DynamicType;
+            if (DynamicTypeVal != null) return DynamicTypeVal.type;
+
+            throw MakeTypeError("Type", value);
+        }
+
+        public static object ConvertToDelegate(object value, Type to) {
+            Debug.Assert(DelegateType.IsAssignableFrom(to));
+            if (value == null) return null;
+
+            Type inType = value.GetType();
+
+            if (to.IsAssignableFrom(inType)) return value;
+
+            object deleg = Ops.GetDelegate(value, to);
+            if (deleg != null) return deleg;
+
+            throw Ops.TypeErrorForBadInstance("expected compatible function, found {0}", value);
+        }
+
+
+        #endregion
+
+        private static object ConvertToIListT(object value, Type[] listOf) {
             System.Collections.Generic.IList<object> lst = value as System.Collections.Generic.IList<object>;
             if (lst != null) {
                 Type t = ListGenericWrapperType.MakeGenericType(listOf);
@@ -667,7 +617,7 @@ namespace IronPython.Runtime {
             throw MakeTypeError("IList<T>", value);
         }
 
-        public static object ConvertToIDictT(object value, Type[] dictOf) {
+        private static object ConvertToIDictT(object value, Type[] dictOf) {
             System.Collections.Generic.IDictionary<object, object> dict = value as System.Collections.Generic.IDictionary<object, object>;
             if (dict != null) {
                 Type t = DictionaryGenericWrapperType.MakeGenericType(dictOf);
@@ -684,22 +634,22 @@ namespace IronPython.Runtime {
             if (HasImplicitNumericConversion(fromType, toType)) return true;
 
             // Handling the hole that Type is the only object that we 'box'
-            if (toType == typeof(Type) && typeof(DynamicType).IsAssignableFrom(fromType)) return true;
+            if (toType == TypeType && typeof(DynamicType).IsAssignableFrom(fromType)) return true;
 
             // Support extensible types with simple implicit conversions to their base types
-            if (typeof(ExtensibleInt).IsAssignableFrom(fromType) && CanConvertFrom(typeof(int), toType, allowNarrowing)) {
+            if (typeof(ExtensibleInt).IsAssignableFrom(fromType) && CanConvertFrom(Int32Type, toType, allowNarrowing)) {
                 return true;
             }
-            if (typeof(ExtensibleLong).IsAssignableFrom(fromType) && CanConvertFrom(typeof(IronMath.BigInteger), toType, allowNarrowing)) {
+            if (typeof(ExtensibleLong).IsAssignableFrom(fromType) && CanConvertFrom(BigIntegerType, toType, allowNarrowing)) {
                 return true;
             }
-            if (typeof(ExtensibleString).IsAssignableFrom(fromType) && CanConvertFrom(typeof(string), toType, allowNarrowing)) {
+            if (typeof(ExtensibleString).IsAssignableFrom(fromType) && CanConvertFrom(StringType, toType, allowNarrowing)) {
                 return true;
             }
-            if (typeof(ExtensibleFloat).IsAssignableFrom(fromType) && CanConvertFrom(typeof(float), toType, allowNarrowing)) {
+            if (typeof(ExtensibleFloat).IsAssignableFrom(fromType) && CanConvertFrom(DoubleType, toType, allowNarrowing)) {
                 return true;
             }
-            if (typeof(ExtensibleComplex).IsAssignableFrom(fromType) && CanConvertFrom(typeof(IronMath.Complex64), toType, allowNarrowing)) {
+            if (typeof(ExtensibleComplex).IsAssignableFrom(fromType) && CanConvertFrom(Complex64Type, toType, allowNarrowing)) {
                 return true;
             }
 
@@ -710,7 +660,7 @@ namespace IronPython.Runtime {
             return HasNarrowingConversion(fromType, toType, allowNarrowing);
         }
 
-        public static bool HasImplicitNumericConversion(Type fromType, Type toType) {
+        private static bool HasImplicitNumericConversion(Type fromType, Type toType) {
             if (fromType.IsEnum) return false;
 
             switch (Type.GetTypeCode(fromType)) {
@@ -724,8 +674,8 @@ namespace IronPython.Runtime {
                         case TypeCode.Decimal:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.BigInteger)) return true;
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == BigIntegerType) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.Byte:
@@ -741,8 +691,8 @@ namespace IronPython.Runtime {
                         case TypeCode.Decimal:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.BigInteger)) return true;
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == BigIntegerType) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.Int16:
@@ -754,8 +704,8 @@ namespace IronPython.Runtime {
                         case TypeCode.Decimal:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.BigInteger)) return true;
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == BigIntegerType) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.UInt16:
@@ -769,8 +719,8 @@ namespace IronPython.Runtime {
                         case TypeCode.Decimal:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.BigInteger)) return true;
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == BigIntegerType) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.Int32:
@@ -781,8 +731,8 @@ namespace IronPython.Runtime {
                         case TypeCode.Decimal:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.BigInteger)) return true;
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == BigIntegerType) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.UInt32:
@@ -794,8 +744,8 @@ namespace IronPython.Runtime {
                         case TypeCode.Decimal:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.BigInteger)) return true;
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == BigIntegerType) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.Int64:
@@ -805,8 +755,8 @@ namespace IronPython.Runtime {
                         case TypeCode.Decimal:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.BigInteger)) return true;
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == BigIntegerType) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.UInt64:
@@ -816,8 +766,8 @@ namespace IronPython.Runtime {
                         case TypeCode.Decimal:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.BigInteger)) return true;
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == BigIntegerType) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.Char:
@@ -832,8 +782,8 @@ namespace IronPython.Runtime {
                         case TypeCode.Decimal:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.BigInteger)) return true;
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == BigIntegerType) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.Single:
@@ -841,13 +791,13 @@ namespace IronPython.Runtime {
                         case TypeCode.Double:
                             return true;
                         default:
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 case TypeCode.Double:
                     switch (Type.GetTypeCode(toType)) {
                         default:
-                            if (toType == typeof(IronMath.Complex64)) return true;
+                            if (toType == Complex64Type) return true;
                             return false;
                     }
                 default:
@@ -895,7 +845,7 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        public static bool HasNarrowingConversion(Type fromType, Type toType, NarrowingLevel allowNarrowing) {
+        private static bool HasNarrowingConversion(Type fromType, Type toType, NarrowingLevel allowNarrowing) {
             if (allowNarrowing == NarrowingLevel.All) {
                 if (IsNumeric(fromType) && IsNumeric(toType)) return true;
 
@@ -903,39 +853,37 @@ namespace IronPython.Runtime {
                     return typeof(Tuple).IsAssignableFrom(fromType);
                 }
 
-                if (toType == typeof(char) && fromType == typeof(string)) return true;
-                if (toType == typeof(int) && fromType == typeof(bool)) return true;
+                if (toType == CharType && fromType == StringType) return true;
+                if (toType == Int32Type && fromType == BooleanType) return true;
 
-                if (toType == typeof(bool) && IsPythonType(fromType)) return true;
-                if (typeof(Delegate).IsAssignableFrom(toType) && IsPythonType(fromType)) return true;
-                if (typeof(System.Collections.IEnumerator) == toType && IsPythonType(fromType)) return true;
+                if (toType == BooleanType && IsPythonType(fromType)) return true;
+                if (DelegateType.IsAssignableFrom(toType) && IsPythonType(fromType)) return true;
+                if (IEnumeratorType == toType && IsPythonType(fromType)) return true;
 
                 //__int__, __float__, __long__
-                if (toType == typeof(int) && HasPythonProtocol(fromType, SymbolTable.ConvertToInt)) return true;
-                if (toType == typeof(double) && HasPythonProtocol(fromType, SymbolTable.ConvertToFloat)) return true;
-                if (toType == typeof(BigInteger) && HasPythonProtocol(fromType, SymbolTable.ConvertToLong)) return true;
+                if (toType == Int32Type && HasPythonProtocol(fromType, SymbolTable.ConvertToInt)) return true;
+                if (toType == DoubleType && HasPythonProtocol(fromType, SymbolTable.ConvertToFloat)) return true;
+                if (toType == BigIntegerType && HasPythonProtocol(fromType, SymbolTable.ConvertToLong)) return true;
             }
 
             if (toType.IsGenericType) {
                 Type genTo = toType.GetGenericTypeDefinition();
-                if (genTo == typeof(System.Collections.Generic.IList<>)) {
+                if (genTo == IListOfTType) {
                     return IListOfObjectType.IsAssignableFrom(fromType);
-                    //return typeof(Tuple).IsAssignableFrom(fromType) || typeof(List).IsAssignableFrom(fromType);
                 } else if (genTo == typeof(System.Collections.Generic.IEnumerator<>)) {
                     if (IsPythonType(fromType)) return true;
-                    //return typeof(Tuple).IsAssignableFrom(fromType) || typeof(List).IsAssignableFrom(fromType);
-                } else if (genTo == typeof(System.Collections.Generic.IDictionary<,>)) {
+                } else if (genTo == IDictOfTType) {
                     return IDictionaryOfObjectType.IsAssignableFrom(fromType);
                 }
             }
 
-            if (fromType == typeof(IronMath.BigInteger) && toType == typeof(long)) return true;
+            if (fromType == BigIntegerType && toType == Int64Type) return true;
 
             return false;
         }
 
 
-        public static bool IsNumeric(Type t) {
+        private static bool IsNumeric(Type t) {
             if (t.IsEnum) return false;
 
             switch (Type.GetTypeCode(t)) {
@@ -947,17 +895,17 @@ namespace IronPython.Runtime {
                 case TypeCode.Boolean:
                     return false;
                 case TypeCode.Object:
-                    return t == typeof(IronMath.BigInteger) || t == typeof(IronMath.Complex64);
+                    return t == BigIntegerType || t == Complex64Type;
                 default:
                     return true;
             }
         }
 
-        public static bool IsPythonType(Type t) {
+        private static bool IsPythonType(Type t) {
             return t.FullName.StartsWith("IronPython."); //!!! this and the check below are hacks
         }
 
-        public static bool HasPythonProtocol(Type t, SymbolId name) {
+        private static bool HasPythonProtocol(Type t, SymbolId name) {
             if (t.FullName.StartsWith("IronPython.NewTypes.")) return true;
             if (t == typeof(OldInstance)) return true;
             ICustomAttributes dt = Ops.GetDynamicTypeFromType(t) as ICustomAttributes;
