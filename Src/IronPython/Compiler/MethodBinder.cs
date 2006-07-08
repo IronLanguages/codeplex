@@ -427,6 +427,8 @@ namespace IronPython.Compiler {
             public override object ConvertFrom(object arg) {
                 ClrModule.Reference r = arg as ClrModule.Reference;
                 if (r == null) throw Ops.TypeErrorForTypeMismatch("clr.Reference", arg);
+                // For an uninitialized Reference we will use the default value for the type
+                if (r.Value == null) return null;
                 return Converter.Convert(r.Value, elementType);
             }
 

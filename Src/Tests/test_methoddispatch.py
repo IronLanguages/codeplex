@@ -190,12 +190,12 @@ for binding in [BoolType, ByteType, CharType, DecimalType, DoubleType,
     expect = binding[2]
 
     # Select using System.Type object
-    select = BindTest.Bind.__overloads__[type]
+    select = BindTest.Bind.Overloads[type]
     result = select(value)
     AreEqual(expect, result)
 
     # Select using ReflectedType object
-    select = BindTest.Bind.__overloads__[type]
+    select = BindTest.Bind.Overloads[type]
     result = select(value)
     AreEqual(expect, result)
 
@@ -210,7 +210,7 @@ for binding in [BoolType, ByteType, CharType, DecimalType, DoubleType,
 
     # Select using Array type
     arrtype = System.Type.MakeArrayType(type)
-    select = BindTest.Bind.__overloads__[arrtype]
+    select = BindTest.Bind.Overloads[arrtype]
     array  = System.Array.CreateInstance(type, 1)
     array[0] = value
     result = select(array)
@@ -218,17 +218,17 @@ for binding in [BoolType, ByteType, CharType, DecimalType, DoubleType,
 
     # Select using ByRef type
     reftype = System.Type.MakeByRefType(type)
-    select = BindTest.Bind.__overloads__[reftype]
+    select = BindTest.Bind.Overloads[reftype]
     result, output = select()
     AreEqual(expect | BindResult.Out, result)
 
-    select = BindTest.BindRef.__overloads__[reftype]
+    select = BindTest.BindRef.Overloads[reftype]
     result, output = select(value)
     AreEqual(expect | BindResult.Ref, result)
 
 type = saveType
 
-select = BindTest.Bind.__overloads__[()]
+select = BindTest.Bind.Overloads[()]
 result = select()
 AreEqual(BindResult.None, result)
 

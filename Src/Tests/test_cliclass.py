@@ -173,7 +173,7 @@ def test_autodoc():
     
     Assert(Thread.__new__.__doc__.find('__new__(cls, ThreadStart start)') != -1)
     
-    AreEqual(Thread.__new__.__overloads__[ThreadStart].__doc__, '__new__(cls, ThreadStart start)\r\n')
+    AreEqual(Thread.__new__.Overloads[ThreadStart].__doc__, '__new__(cls, ThreadStart start)\r\n')
     
     
 def test_type_descs():

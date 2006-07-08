@@ -330,14 +330,13 @@ namespace IronPython.Runtime.Calls {
         // Provides (for reflected methods) a mapping from a signature to the exact target
         // which takes this signature.
         // signature with syntax like the following:
-        //    someClass.SomeMethod.__overloads__[str, int]("Foo", 123)
+        //    someClass.SomeMethod.Overloads[str, int]("Foo", 123)
         public virtual BuiltinFunctionOverloadMapper Overloads {
-            [PythonName("__overloads__")]
-            [Documentation(@"__overloads__() -> dictionary of methods indexed by a tuple of types.
+            [Documentation(@"Overloads -> dictionary of methods indexed by a tuple of types.
 
 Returns all signature overloads of a builtin method.
 Eg. The following will call the overload of WriteLine that takes an int argument.
-   System.Console.WriteLine.__overloads__()[int](100)")]
+   System.Console.WriteLine.Overloads[int](100)")]
             get {
                 // The mapping is actually provided by a class rather than a dictionary
                 // since it's hard to generate all the keys of the signature mapping when
@@ -736,7 +735,6 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         }
 
         public BuiltinFunctionOverloadMapper Overloads {
-            [PythonName("__overloads__")]
             get {
                 return new BuiltinFunctionOverloadMapper(target, instance);
             }

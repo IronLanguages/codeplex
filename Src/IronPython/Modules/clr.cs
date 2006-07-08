@@ -182,6 +182,17 @@ namespace IronPython.Modules {
                     return "Reference (...)";
                 return string.Format("Reference({0})", Value);
             }
+
+            /// <summary>
+            /// Always throw an exception when trying to convert a Reference to
+            /// a boolean.
+            /// </summary>
+            /// <returns></returns>
+            [PythonName("__nonzero__")]
+            public bool ToBoolean() {
+                throw Ops.TypeError("Can't convert a clr.Reference object to a bool");
+            }
+
         }
 
 
