@@ -45,8 +45,7 @@ def test_common_attributes():
             AssertError(TypeError, i.__reduce_ex__)
     
     for i in builtin_hashable_type_instances:
-        if (is_cli == False or i == None): # !!! Need to expose __hash__ on all types
-            AreEqual(hash(i), i.__hash__())
+        AreEqual(hash(i), i.__hash__())
             
     for i in builtin_types:
           if is_cli and i == type(None):

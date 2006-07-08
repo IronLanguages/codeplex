@@ -31,6 +31,17 @@ using IronPython.Runtime.Exceptions;
 using System.Diagnostics;
 
 namespace IronPythonConsole {
+    class ConsoleOptions : EngineOptions {
+        internal static string Command;
+        internal static bool PrintVersionAndExit = false;
+        internal static bool IgnoreEnvironmentVariables;
+        internal static bool ImportSite = true;
+        internal static int AutoIndentSize = 4;
+#if !IRONPYTHON_WINDOW
+        internal static bool Introspection;
+#endif
+    }
+
     /// <summary>
     /// A simple Python command-line should mimic the standard python.exe
     /// </summary>
@@ -91,17 +102,24 @@ namespace IronPythonConsole {
             }
         }
 
+        private static void CreateMainModule() {
+            EngineModule engineModule = engine.CreateModule("__main__", new Dictionary<string, object>(), true);
+            engineModule.Globals["__doc__"] = null;
+            engine.DefaultModule = engineModule;
+        }
+
         [STAThread]
         static int Main(string[] rawArgs) {
             List<string> args = new List<string>(rawArgs);
-            Options options = ParseOptions(args);
+            ConsoleOptions options = ParseOptions(args);
 
-            if (Options.PrintVersionAndExit) {
+            if (ConsoleOptions.PrintVersionAndExit) {
                 Console.WriteLine(PythonEngine.VersionString);
                 return 0;
             }
 
             engine = new PythonEngine(options);
+            CreateMainModule();
 
             try {
 #if IRONPYTHON_WINDOW
@@ -150,8 +168,8 @@ namespace IronPythonConsole {
 
         private static int Run(PythonEngine engine, string fileName) {
             try {
-                if (Options.Command != null) {
-                    return RunString(engine, Options.Command);
+                if (ConsoleOptions.Command != null) {
+                    return RunString(engine, ConsoleOptions.Command);
                 } else if (fileName == null) {
 #if !IRONPYTHON_WINDOW
                     return RunInteractive(engine);
@@ -169,13 +187,13 @@ namespace IronPythonConsole {
             }
         }
 
-        private static Options ParseOptions(List<string> args) {
-            Options options = new Options();
+        private static ConsoleOptions ParseOptions(List<string> args) {
+            ConsoleOptions options = new ConsoleOptions();
 
             while (args.Count > 0) {
                 switch ((string)args[0]) {
-                    case "-O": options.DebugMode = false; break;
-                    case "-D": options.EngineDebug = true; break;
+                    case "-O": Options.DebugMode = false; break;
+                    case "-D": Options.EngineDebug = true; break;
 
                     // the following extension switches are in alphabetic order
                     case "-X:AssembliesDir":
@@ -194,7 +212,7 @@ namespace IronPythonConsole {
                         if (args.Count == 0) {
                             PrintUsageAndExit();
                         }
-                        Options.Command = (string)args[0];
+                        ConsoleOptions.Command = (string)args[0];
                         return options;
                     case "-X:PassExceptions": handleExceptions = false; break;
 #if !IRONPYTHON_WINDOW
@@ -202,9 +220,9 @@ namespace IronPythonConsole {
                     case "-X:ExceptionDetail": options.ExceptionDetail = true; break;
                     case "-X:TabCompletion": TabCompletion = true; break;
                     case "-X:AutoIndent": AutoIndent = true; break;
-                    case "-i": Options.Introspection = true; break;
+                    case "-i": ConsoleOptions.Introspection = true; break;
                     case "-V":
-                        Options.PrintVersionAndExit = true;
+                        ConsoleOptions.PrintVersionAndExit = true;
                         return options;
 #endif
                     case "-X:MTA": mta = true; break;
@@ -221,21 +239,21 @@ namespace IronPythonConsole {
                     case "-X:PrivateBinding": Options.PrivateBinding = true; break;
                     case "-X:Python25": Options.Python25 = true; break;
                     case "-X:SaveAssemblies": Options.SaveAndReloadBinaries = true; break;
-                    case "-X:ShowCLSExceptions": options.ShowClsExceptions = true; break;
+                    case "-X:ShowClrExceptions": options.ShowClrExceptions = true; break;
                     case "-X:StaticMethods": Options.GenerateDynamicMethods = false; break;
                     case "-X:TrackPerformance": // accepted but ignored on retail builds
 #if DEBUG
                         Options.TrackPerformance = true;
 #endif
                         break;
-                    case "-x": Options.SkipFirstLine = true; break;
-                    case "-v": options.Verbose = true; break;
+                    case "-x": options.SkipFirstLine = true; break;
+                    case "-v": Options.Verbose = true; break;
                     case "-u": Options.BufferedStandardOutAndError = false; break;
                     case "-S":
-                        Options.ImportSite = false;
+                        ConsoleOptions.ImportSite = false;
                         break;
                     case "-E":
-                        Options.IgnoreEnvironmentVariables = true;
+                        ConsoleOptions.IgnoreEnvironmentVariables = true;
                         break;
                     case "-t":
                         Options.WarningOnIndentationInconsistency = true;
@@ -244,7 +262,7 @@ namespace IronPythonConsole {
                         Options.ErrorOnIndentationInconsistency = true;
                         break;
                     case "-OO":
-                        options.DebugMode = false;
+                        Options.DebugMode = false;
                         Options.StripDocStrings = true;
                         break;
                     case "-Q":
@@ -317,7 +335,7 @@ namespace IronPythonConsole {
             Console.WriteLine("  -X:PassExceptions      Do not catch exceptions that are unhandled by Python code");
             Console.WriteLine("  -X:PrivateBinding      Enable binding to private members");
             Console.WriteLine("  -X:SaveAssemblies      Save generated assemblies");
-            Console.WriteLine("  -X:ShowCLSExceptions   Display CLS Exception information");
+            Console.WriteLine("  -X:ShowClrExceptions   Display CLS Exception information");
             Console.WriteLine("  -X:StaticMethods       Generate static methods only");
 #if !IRONPYTHON_WINDOW
             Console.WriteLine("  -X:TabCompletion       Enable TabCompletion mode");
@@ -355,7 +373,7 @@ namespace IronPythonConsole {
         }
 
         private static void InitializePath(PythonEngine engine) {
-            if (Options.IgnoreEnvironmentVariables)
+            if (ConsoleOptions.IgnoreEnvironmentVariables)
                 return;
             string path = Environment.GetEnvironmentVariable("IRONPYTHONPATH");
             if (path != null && path.Length > 0) {
@@ -375,7 +393,7 @@ namespace IronPythonConsole {
         }
 
         private static void ImportSite(PythonEngine engine) {
-            if (!Options.ImportSite)
+            if (!ConsoleOptions.ImportSite)
                 return;
             string site = System.Reflection.Assembly.GetExecutingAssembly().Location;
             site = Path.Combine(Path.GetDirectoryName(site), "Lib");
@@ -388,7 +406,7 @@ namespace IronPythonConsole {
         }
 
         private static void RunStartup(PythonEngine engine) {
-            if (Options.IgnoreEnvironmentVariables)
+            if (ConsoleOptions.IgnoreEnvironmentVariables)
                 return;
 
             string startup = Environment.GetEnvironmentVariable("IRONPYTHONSTARTUP");
@@ -428,24 +446,22 @@ namespace IronPythonConsole {
             ImportSite(engine);
             int result = 1;
 
-            ExecutionOptions executionOptions = ExecutionOptions.None;
-            if (Options.SkipFirstLine) executionOptions |= ExecutionOptions.SkipFirstLine;
-
             if (handleExceptions) {
                 try {
-                    ModuleScope scope;
 #if !IRONPYTHON_WINDOW
-                    if (Options.Introspection) {
-                        scope = ExecuteFileConsole(fileName, executionOptions);
+                    if (ConsoleOptions.Introspection) {
+                        RunFileWithIntrospection(fileName);
                     } else {
-                        engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+                        OptimizedEngineModule engineModule = engine.CreateOptimizedModule(fileName, "__main__", true);
+                        engineModule.Execute();
                     }
 #else
-                engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+                OptimizedEngineModule engineModule = engine.CreateOptimizedModule(fileName, "__main__", true);
+                engineModule.Execute();
 #endif
                     result = 0;
                 } catch (PythonSystemExitException pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                    result = pythonSystemExit.GetExitCode();
                 } catch (Exception e) {
                     MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
@@ -453,19 +469,20 @@ namespace IronPythonConsole {
                 }
             } else {
                 try {
-                    ModuleScope scope;
 #if !IRONPYTHON_WINDOW
-                    if (Options.Introspection) {
-                        scope = ExecuteFileConsole(fileName, executionOptions);
+                    if (ConsoleOptions.Introspection) {
+                        RunFileWithIntrospection(fileName);
                     } else {
-                        engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+                        OptimizedEngineModule engineModule = engine.CreateOptimizedModule(fileName, "__main__", true);
+                        engineModule.Execute();
                     }
 #else
-                    engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scope);
+                    OptimizedEngineModule engineModule = engine.CreateOptimizedModule(fileName, "__main__", true);
+                    engineModule.Execute();
 #endif
                     result = 0;
                 } catch (PythonSystemExitException pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                    result = pythonSystemExit.GetExitCode();
                 } finally {
                     PythonEngine.DumpDebugInfo();
                 }
@@ -486,11 +503,10 @@ namespace IronPythonConsole {
 
             if (handleExceptions) {
                 try {
-                    //engine.Execute(command, engine.DefaultModuleScope, ExecutionOptions.PrintExpressions);
                     engine.ExecuteToConsole(command);
                     result = 0;
                 } catch (PythonSystemExitException pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                    result = pythonSystemExit.GetExitCode();
                 } catch (Exception e) {
                     MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
@@ -501,7 +517,7 @@ namespace IronPythonConsole {
                     engine.ExecuteToConsole(command);
                     result = 0;
                 } catch (PythonSystemExitException pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                    result = pythonSystemExit.GetExitCode();
                 } finally {
                     PythonEngine.DumpDebugInfo();
                 }
@@ -517,8 +533,9 @@ namespace IronPythonConsole {
         private static void UseSuperConsole(PythonEngine engine) {
             MyConsole = new SuperConsole(engine, ColorfulConsole);
         }
+
 #endif
-        public static bool DoOneInteractive(ModuleScope topFrame) {
+        public static bool DoOneInteractive() {
             bool continueInteraction;
             string s = ReadStatement(out continueInteraction);
 
@@ -531,47 +548,38 @@ namespace IronPythonConsole {
                 return true;
             }
 
-            engine.ExecuteToConsole(s, topFrame);
+            engine.ExecuteToConsole(s);
 
             return true;
         }
 
 #if !IRONPYTHON_WINDOW
-        public static ModuleScope ExecuteFileConsole(string fileName, ExecutionOptions executionOptions) {
-            ModuleScope moduleScope = null;
-
-            ModuleScope scopeResult = null;
+        public static void RunFileWithIntrospection(string fileName) {
             bool continueInteraction;
             TryInteractiveAction(
                 delegate(out bool continueInteractionArgument) {
-                    engine.ExecuteFileOptimized(fileName, "__main__", executionOptions, out scopeResult);
+                    OptimizedEngineModule engineModule = engine.CreateOptimizedModule(fileName, "__main__", true);
+                    engine.DefaultModule = engineModule;
+                    engineModule.Execute();
                     continueInteractionArgument = true;
                     return 0;
                 },
                 out continueInteraction);
 
-            if (continueInteraction) {
-                if (scopeResult == null) {
-                    // If there was an error generating a new module (for eg. because of a syntax error),
-                    // we will just use the existing "topFrame"
-                } else {
-                    engine.DefaultModuleScope = moduleScope = scopeResult;
-                }
+            if (continueInteraction)
                 RunInteractiveLoop();
-            }
-            return moduleScope;
         }
 #endif
-        static IConsole _console;
+        static IConsole console;
         public static IConsole MyConsole {
             get {
-                if (_console == null) {
-                    _console = new BasicConsole(engine.Sys, ColorfulConsole);
+                if (console == null) {
+                    console = new BasicConsole(engine.Sys, ColorfulConsole);
                 }
-                return _console;
+                return console;
             }
             set {
-                _console = value;
+                console = value;
             }
         }
 
@@ -584,13 +592,13 @@ namespace IronPythonConsole {
             try {
                 result = interactiveAction(out continueInteraction);
             } catch (PythonSystemExitException se) {
-                return se.GetExitCode(engine.DefaultModuleScope);
+                return se.GetExitCode();
             } catch (ThreadAbortException tae) {
                 PythonKeyboardInterruptException pki = tae.ExceptionState as PythonKeyboardInterruptException;
                 if (pki != null) {
                     Thread.ResetAbort();
                     bool endOfMscorlib = false;
-                    string ex = engine.FormatException(tae, ExceptionConverter.ToPython(pki), delegate(StackFrame sf) {
+                    string ex = engine.FormatException(tae, pki, delegate(StackFrame sf) {
                         // filter out mscorlib methods that show up on the stack initially, 
                         // for example ReadLine / ReadBuffer etc...
                         if (!endOfMscorlib &&
@@ -657,8 +665,8 @@ namespace IronPythonConsole {
                 bool s = engine.ParseInteractiveInput(b.ToString(), allowIncompleteStatement);
                 if (s) return b.ToString();
 
-                if (AutoIndent && Options.AutoIndentSize != 0) {
-                    autoIndentSize = Parser.GetNextAutoIndentSize(b.ToString(), Options.AutoIndentSize);
+                if (AutoIndent && ConsoleOptions.AutoIndentSize != 0) {
+                    autoIndentSize = Parser.GetNextAutoIndentSize(b.ToString(), ConsoleOptions.AutoIndentSize);
                 }
 
                 // Keep on reading input
@@ -672,7 +680,7 @@ namespace IronPythonConsole {
             while (continueInteraction) {
                 result = TryInteractiveAction(
                     delegate(out bool continueInteractionArgument) {
-                        continueInteractionArgument = DoOneInteractive(engine.DefaultModuleScope);
+                        continueInteractionArgument = DoOneInteractive();
                         return 0;
                     },
                     out continueInteraction);
@@ -682,8 +690,6 @@ namespace IronPythonConsole {
         }
 
         private static int RunInteractive() {
-            engine.DefaultModuleScope.SetGlobal(SymbolTable.Doc, null);
-            engine.Sys.modules[engine.DefaultModuleScope.Module.ModuleName] = engine.DefaultModuleScope.Module;
             return RunInteractiveLoop();
         }
 
@@ -705,7 +711,7 @@ namespace IronPythonConsole {
                 RunStartup(engine);
                 result = 0;
             } catch (PythonSystemExitException pythonSystemExit) {
-                return pythonSystemExit.GetExitCode(engine.DefaultModuleScope);
+                return pythonSystemExit.GetExitCode();
             } catch (Exception) {
             }
 
@@ -727,7 +733,7 @@ namespace IronPythonConsole {
 namespace IronPythonConsole {
     public interface IConsole {
         // Read a single line of interactive input
-        // autoIndentSize is the indentation level to be used for the current suite of a compound statement.
+        // AutoIndentSize is the indentation level to be used for the current suite of a compound statement.
         // The console can ignore this argument if it does not want to support auto-indentation
         string ReadLine(int autoIndentSize);
 

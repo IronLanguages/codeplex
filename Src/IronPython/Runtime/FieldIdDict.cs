@@ -22,13 +22,13 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
+
     /// <summary>
     /// Represents a dictionary that can be looked up by SymbolId (that corresponds to a string) 
     /// or arbitrary object key.  SymbolIds are handed out by the SymbolTable.
     /// </summary>
     [PythonType(typeof(Dict))]
-    class FieldIdDict : IDictionary, IDictionary<object, object>, IAttributesDictionary,
-                        IMapping, ICloneable, IRichEquality, IRichComparable, ICodeFormattable {
+    class FieldIdDict : SymbolIdDictBase, IDictionary, IDictionary<object, object>, IAttributesDictionary {
         Dictionary<SymbolId, object> data = new Dictionary<SymbolId, object>();
 
         public FieldIdDict() {
@@ -216,7 +216,7 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region ICollection<KeyValuePair<string,object>> Members
+        #region ICollection<KeyValuePair<object, object>> Members
 
         public void Add(KeyValuePair<object, object> item) {
             string strKey = item.Key as string;
@@ -231,7 +231,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("clear")]
-        public void Clear() {
+        public override void Clear() {
             lock (this) data.Clear();
         }
 
@@ -281,7 +281,7 @@ namespace IronPython.Runtime {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object,object>>.GetEnumerator() {
             foreach (KeyValuePair<SymbolId, object> o in data) {
                 if (o.Key == SymbolTable.ObjectKeys) continue;
                 yield return new KeyValuePair<object, object>(SymbolTable.IdToString(o.Key), o.Value);
@@ -300,7 +300,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         [PythonName("__iter__")]
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
+        public override System.Collections.IEnumerator GetEnumerator() {
             foreach (KeyValuePair<SymbolId, object> o in data) {
                 if (o.Key == SymbolTable.ObjectKeys) continue;
                 yield return SymbolTable.IdToString(o.Key);
@@ -373,11 +373,15 @@ namespace IronPython.Runtime {
             return AsObjectKeyedDictionary().TryGetValue(key, out value);
         }
 
-        public IDictionary<object, object> AsObjectKeyedDictionary() {
-            return this;
+        public ICollection<object> Keys { get { return AsObjectKeyedDictionary().Keys; } }
+
+        IDictionary<object, object> IAttributesDictionary.AsObjectKeyedDictionary() {
+            return AsObjectKeyedDictionary();
         }
 
-        public ICollection<object> Keys { get { return AsObjectKeyedDictionary().Keys; } }
+        internal override IDictionary<object, object> AsObjectKeyedDictionary() {
+            return this;
+        }
 
         #endregion
 
@@ -467,233 +471,5 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region ICollection Members
-
-        public void CopyTo(Array array, int index) {
-            throw new Exception("The method or operation is not implemented.");
-        }
-
-        public bool IsSynchronized {
-            get { return false; }
-        }
-
-        public object SyncRoot {
-            get { return null; }
-        }
-
-        #endregion
-
-        #region IMapping Members
-
-        [PythonName("get")]
-        public object GetValue(object key) {
-            Debug.Assert(!(key is SymbolId));
-            return DictOps.GetIndex(this, key);
-        }
-
-        [PythonName("get")]
-        public object GetValue(object key, object defaultValue) {
-            Debug.Assert(!(key is SymbolId));
-            return DictOps.GetIndex(this, key, defaultValue);
-        }
-
-        bool IMapping.TryGetValue(object key, out object value) {
-            return ((IDictionary<object, object>)this).TryGetValue(key, out value);
-        }
-
-        object IMapping.this[object key] {
-            get { return AsObjectKeyedDictionary()[key]; }
-            set { AsObjectKeyedDictionary()[key] = value; }
-        }
-
-        [PythonName("__delitem__")]
-        public void DeleteItem(object key) {
-            DictOps.DelIndex(this, key);
-        }
-
-        #endregion
-
-        [PythonName("has_key")]
-        public object has_key(object key) {
-            return DictOps.HasKey(this, key);
-        }
-
-        [PythonName("pop")]
-        public object pop(object key) {
-            return DictOps.Pop(this, key);
-        }
-
-        [PythonName("pop")]
-        public object pop(object key, object defaultValue) {
-            return DictOps.Pop(this, key, defaultValue);
-        }
-
-        [PythonName("setdefault")]
-        public object setdefault(object key) {
-            return DictOps.SetDefault(this, key);
-        }
-
-        [PythonName("setdefault")]
-        public object setdefault(object key, object defaultValue) {
-            return DictOps.SetDefault(this, key, defaultValue);
-        }
-
-        [PythonName("keys")]
-        public List keys() {
-            return DictOps.Keys(this);
-        }
-
-        [PythonName("values")]
-        public List values() {
-            return DictOps.Values(this);
-        }
-
-        [PythonName("items")]
-        public List items() {
-            return DictOps.Items(this);
-        }
-
-        [PythonName("iteritems")]
-        public IEnumerator iteritems() {
-            return DictOps.IterItems(this);
-        }
-        [PythonName("iterkeys")]
-        public IEnumerator iterkeys() {
-            return DictOps.IterKeys(this);
-        }
-        [PythonName("itervalues")]
-        public IEnumerator itervalues() {
-            return DictOps.IterValues(this);
-        }
-
-        [PythonName("__str__")]
-        public override string ToString() {
-            return DictOps.ToString(this);
-        }
-
-        [PythonName("update")]
-        public void update(object b) {
-            DictOps.Update(this, b);
-        }
-
-        [PythonName("popitem")]
-        public Tuple popitem() {
-            return DictOps.PopItem(this);
-        }
-
-        [PythonClassMethod("fromkeys")]
-        public static object fromkeys(DynamicType cls, object seq) {
-            return Dict.FromKeys(cls, seq, null);
-        }
-
-        [PythonClassMethod("fromkeys")]
-        public static object fromkeys(DynamicType cls, object seq, object value) {
-            return Dict.FromKeys(cls, seq, value);
-        }
-
-
-        #region IPythonContainer Members
-
-        [PythonName("__len__")]
-        public int GetLength() {
-            return DictOps.Length(this);
-        }
-
-        [PythonName("__contains__")]
-        public bool ContainsValue(object value) {
-            return DictOps.Contains(this, value);
-        }
-
-        #endregion
-
-        #region ICloneable Members
-
-        [PythonName("copy")]
-        public object Clone() {
-            return new Dict(this);
-        }
-
-        #endregion
-
-        #region IRichEquality Members
-
-        [PythonName("__hash__")]
-        public object RichGetHashCode() {
-            throw Ops.TypeErrorForUnhashableType("dict");
-        }
-
-        [PythonName("__eq__")]
-        public object RichEquals(object other) {
-            IAttributesDictionary oth = other as IAttributesDictionary;
-            IAttributesDictionary ths = this as IAttributesDictionary;
-            if (oth == null) return Ops.FALSE;
-
-            if (oth.Count != Count) return Ops.FALSE;
-
-            foreach (KeyValuePair<object, object> o in ths) {
-                object res;
-                if (!oth.TryGetObjectValue(o.Key, out res) || !Ops.EqualRetBool(res, o.Value)) return Ops.FALSE;
-            }
-            return Ops.TRUE;
-        }
-
-        [PythonName("__ne__")]
-        public object RichNotEquals(object other) {
-            object res = RichEquals(other);
-            if (res != Ops.NotImplemented) return Ops.Not(res);
-
-            return Ops.NotImplemented;
-        }
-
-        #endregion
-
-        #region IRichComparable Members
-
-        [PythonName("__cmp__")]
-        public object CompareTo(object obj) {
-            IDictionary<object, object> other = obj as IDictionary<object, object>;
-            // CompareTo is allowed to throw (string, int, etc... all do it if they don't get a matching type)
-            if (other == null) return Ops.NotImplemented;
-
-            return DictOps.CompareTo(this, other);
-        }
-
-        public object GreaterThan(object other) {
-            object res = CompareTo(other);
-            if (res == Ops.NotImplemented) return res;
-
-            return ((int)res) > 0;
-        }
-
-        public object LessThan(object other) {
-            object res = CompareTo(other);
-            if (res == Ops.NotImplemented) return res;
-
-            return ((int)res) < 0;
-        }
-
-        public object GreaterThanOrEqual(object other) {
-            object res = CompareTo(other);
-            if (res == Ops.NotImplemented) return res;
-
-            return ((int)res) >= 0;
-        }
-
-        public object LessThanOrEqual(object other) {
-            object res = CompareTo(other);
-            if (res == Ops.NotImplemented) return res;
-
-            return ((int)res) <= 0;
-        }
-
-        #endregion
-
-        #region ICodeFormattable Members
-
-        public string ToCodeString() {
-            return ToString();
-        }
-
-        #endregion
     }
 }

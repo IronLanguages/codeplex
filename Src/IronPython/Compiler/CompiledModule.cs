@@ -85,7 +85,7 @@ namespace IronPython.Compiler {
                 if (!fi.IsStatic) continue;
 
                 if (fi.Name == "__debug__") {
-                    fi.SetValue(null, new BuiltinWrapper(PythonEngine.options.DebugMode, "__debug__"));
+                    fi.SetValue(null, new BuiltinWrapper(Options.DebugMode, "__debug__"));
                     continue;
                 }
 

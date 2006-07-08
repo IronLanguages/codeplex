@@ -26,10 +26,13 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Represents a dictionary that can be looked up by SymbolId (that corresponds to a string) 
     /// or arbitrary object key.  SymbolIds are handed out by the SymbolTable.
+    /// The derived type can maintain an extra set of keys. If user code adds an entry into the
+    /// Dict, the value is either associated with an extra key if one exists, or it is
+    /// simply added to the simple dictionary "data". The extra keys are usually maintained
+    /// in a highly optimized data-structure, and are hence not maintained in "data".
     /// </summary>
     [PythonType(typeof(Dict))]
-    public abstract class CustomSymbolDict : IDictionary, IDictionary<object, object>, IAttributesDictionary,
-                                              IMapping, ICloneable, IRichEquality, IRichComparable, ICodeFormattable {
+    public abstract class CustomSymbolDict : SymbolIdDictBase, IDictionary, IDictionary<object, object>, IAttributesDictionary {
         Dictionary<SymbolId, object> data;
 
         protected CustomSymbolDict() {
@@ -40,6 +43,8 @@ namespace IronPython.Runtime {
 
         //!!! shouldn't need to be public
         public abstract SymbolId[] GetExtraKeys();
+        // These return true if the key exits in ExtraKeys. 
+        // Note that they do return true if the value is Uninitialized.
         public abstract bool TrySetExtraValue(SymbolId key, object value);
         public abstract bool TryGetExtraValue(SymbolId key, out object value);
 
@@ -81,7 +86,10 @@ namespace IronPython.Runtime {
                 if (data == null) InitializeData();
                 string strKey = key as string;
                 if (strKey != null) {
-                    data.Add(SymbolTable.StringToId(strKey), value);
+                    SymbolId keyId = SymbolTable.StringToId(strKey);
+                    if (TrySetExtraValue(keyId, value))
+                        return;
+                    data.Add(keyId, value);
                 } else {
                     Dictionary<object, object> objData = GetObjectKeysDictionary();
                     objData[key] = value;
@@ -201,7 +209,7 @@ namespace IronPython.Runtime {
                     if (strKey != null) {
                         SymbolId id = SymbolTable.StringToId(strKey);
                         object res;
-                        if (TryGetExtraValue(id, out res)) return res;
+                        if (TryGetExtraValue(id, out res) && !(res is Uninitialized)) return res;
 
                         if (data == null) throw Ops.KeyError("'{0}'", key);
                         return data[id];
@@ -241,7 +249,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("clear")]
-        public void Clear() {
+        public override void Clear() {
             lock (this) {
                 foreach (SymbolId key in ExtraKeys) {
                     if (key.Id < 0) break;
@@ -299,7 +307,7 @@ namespace IronPython.Runtime {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object,object>>.GetEnumerator() {
             if (data != null) {
                 foreach (KeyValuePair<SymbolId, object> o in data) {
                     if (o.Key == SymbolTable.Invalid) break;
@@ -330,37 +338,8 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         [PythonName("__iter__")]
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
+        public override System.Collections.IEnumerator GetEnumerator() {
             return keys().GetEnumerator();
-        }
-
-        #endregion
-
-        #region IMapping Members
-
-        [PythonName("get")]
-        public object GetValue(object key) {
-            return DictOps.GetIndex(this, key);
-        }
-
-        [PythonName("get")]
-        public object GetValue(object key, object defaultValue) {
-            return DictOps.GetIndex(this, key, defaultValue);
-        }
-
-        bool IMapping.TryGetValue(object key, out object value) {
-            return AsObjectKeyedDictionary().TryGetValue(key, out value);
-        }
-
-        object IMapping.this[object key] {
-            get { return AsObjectKeyedDictionary()[key]; }
-            set { AsObjectKeyedDictionary()[key] = value; }
-        }
-
-
-        [PythonName("__delitem__")]
-        public void DeleteItem(object key) {
-            DictOps.DelIndex(this, key);
         }
 
         #endregion
@@ -369,6 +348,8 @@ namespace IronPython.Runtime {
 
         public void Add(SymbolId key, object value) {
             lock (this) {
+                if (TrySetExtraValue(key, value)) return;
+
                 if (data == null) InitializeData();
                 data.Add(key, value);
             }
@@ -420,13 +401,16 @@ namespace IronPython.Runtime {
 
         public IDictionary<SymbolId, object> SymbolAttributes {
             get {
-                if (GetObjectKeysDictionaryIfExists() == null) return data;
-
                 Dictionary<SymbolId, object> d = new Dictionary<SymbolId, object>();
                 lock (this) {
                     foreach (KeyValuePair<SymbolId, object> name in data) {
                         if (name.Key == SymbolTable.ObjectKeys) continue;
                         d.Add(name.Key, name.Value);
+                    }
+                    foreach(SymbolId extraKey in ExtraKeys) {
+                        object value;
+                        if (TryGetExtraValue(extraKey, out value) && !(value is Uninitialized))
+                            d.Add(extraKey, value);
                     }
                 }
                 return d;
@@ -449,11 +433,15 @@ namespace IronPython.Runtime {
             return AsObjectKeyedDictionary().TryGetValue(key, out value);
         }
 
-        public IDictionary<object, object> AsObjectKeyedDictionary() {
-            return this;
+        public ICollection<object> Keys { get { return AsObjectKeyedDictionary().Keys; } }
+
+        IDictionary<object, object> IAttributesDictionary.AsObjectKeyedDictionary() {
+            return AsObjectKeyedDictionary();
         }
 
-        public ICollection<object> Keys { get { return AsObjectKeyedDictionary().Keys; } }
+        internal override IDictionary<object, object> AsObjectKeyedDictionary() {
+            return this;
+        }
 
         #endregion
 
@@ -509,9 +497,7 @@ namespace IronPython.Runtime {
 
         ICollection IDictionary.Values {
             get {
-                if (data == null) return new ArrayList(0);
-
-                lock (this) return data.Values;
+                return new List(AsObjectKeyedDictionary().Values);
             }
         }
 
@@ -522,127 +508,10 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region ICollection Members
-
-        public void CopyTo(Array array, int index) {
-            throw new NotImplementedException("The method or operation is not implemented.");
-        }
-
-        public bool IsSynchronized {
-            get { return false; }
-        }
-
-        public object SyncRoot {
-            get { return null; }
-        }
-
-        #endregion
-
-        #region IPythonContainer Members
-
-        [PythonName("__len__")]
-        public int GetLength() {
-            return DictOps.Length(this);
-        }
-
-        [PythonName("__contains__")]
-        public bool ContainsValue(object value) {
-            return DictOps.Contains(this, value);
-        }
-
-        #endregion
-
-        [PythonName("has_key")]
-        public object HasKey(object key) {
-            return DictOps.HasKey(this, key);
-        }
-
-        [PythonName("pop")]
-        public object Pop(object key) {
-            return DictOps.Pop(this, key);
-        }
-
-        [PythonName("pop")]
-        public object Pop(object key, object defaultValue) {
-            return DictOps.Pop(this, key, defaultValue);
-        }
-
-        [PythonName("setdefault")]
-        public object SetDefault(object key) {
-            return DictOps.SetDefault(this, key);
-        }
-
-        [PythonName("setdefault")]
-        public object SetDefault(object key, object defaultValue) {
-            return DictOps.SetDefault(this, key, defaultValue);
-        }
-
-        [PythonName("keys")]
-        public List keys() {
-            return DictOps.Keys(this);
-        }
-
-        [PythonName("values")]
-        public List values() {
-            return DictOps.Values(this);
-        }
-
-        [PythonName("items")]
-        public List Items() {
-            return DictOps.Items(this);
-        }
-
-        [PythonName("iteritems")]
-        public IEnumerator IterItems() {
-            return DictOps.IterItems(this);
-        }
-        [PythonName("iterkeys")]
-        public IEnumerator IterKeys() {
-            return DictOps.IterKeys(this);
-        }
-        [PythonName("itervalues")]
-        public IEnumerator IterValues() {
-            return DictOps.IterValues(this);
-        }
-
-        [PythonName("__str__")]
-        public override string ToString() {
-            return DictOps.ToString(this);
-        }
-
-        [PythonName("update")]
-        public void Update() {
-        }
-
-        [PythonName("update")]
-        public void Update(object b) {
-            DictOps.Update(this, b);
-        }
-
-        [PythonName("popitem")]
-        public Tuple PopItem() {
-            return DictOps.PopItem(this);
-        }
-
-        [PythonClassMethod("fromkeys")]
-        public static object FromKeys(DynamicType cls, object seq) {
-            return Dict.FromKeys(cls, seq, null);
-        }
-
-        [PythonClassMethod("fromkeys")]
-        public static object FromKeys(DynamicType cls, object seq, object value) {
-            return Dict.FromKeys(cls, seq, value);
-        }
-
         #region IRichEquality Members
 
-        [PythonName("__hash__")]
-        public object RichGetHashCode() {
-            throw Ops.TypeErrorForUnhashableType("dict");
-        }
-
         [PythonName("__eq__")]
-        public object RichEquals(object obj) {
+        public override object RichEquals(object obj) {
             IDictionary<object, object> other = obj as IDictionary<object, object>;
             if (other == null) throw Ops.TypeError("CompareTo argument must be a Dictionary");
 
@@ -657,69 +526,6 @@ namespace IronPython.Runtime {
             return thisItems.RichEquals(otherItems);
         }
 
-        [PythonName("__ne__")]
-        public object RichNotEquals(object obj) {
-            return Ops.Not(RichEquals(obj));
-        }
-
-        #endregion
-
-        #region ICloneable Members
-
-        [PythonName("copy")]
-        public object Clone() {
-            return new Dict(this);
-        }
-
-        #endregion
-
-        #region IRichComparable Members
-
-        [PythonName("__cmp__")]
-        public object CompareTo(object obj) {
-            IDictionary<object, object> other = obj as IDictionary<object, object>;
-            // CompareTo is allowed to throw (string, int, etc... all do it if they don't get a matching type)
-            if (other == null) return Ops.NotImplemented;
-
-            return DictOps.CompareTo(this, other);
-        }
-
-        public object GreaterThan(object other) {
-            object res = CompareTo(other);
-            if (res == Ops.NotImplemented) return res;
-
-            return ((int)res) > 0;
-        }
-
-        public object LessThan(object other) {
-            object res = CompareTo(other);
-            if (res == Ops.NotImplemented) return res;
-
-            return ((int)res) < 0;
-        }
-
-        public object GreaterThanOrEqual(object other) {
-            object res = CompareTo(other);
-            if (res == Ops.NotImplemented) return res;
-
-            return ((int)res) >= 0;
-        }
-
-        public object LessThanOrEqual(object other) {
-            object res = CompareTo(other);
-            if (res == Ops.NotImplemented) return res;
-
-            return ((int)res) <= 0;
-        }
-
-        #endregion
-
-        #region ICodeFormattable Members
-
-        public string ToCodeString() {
-            return ToString();
-        }
-
         #endregion
     }
 
@@ -727,7 +533,7 @@ namespace IronPython.Runtime {
     /// Not all .NET enumerators throw exceptions if accessed in an invalid state. This type
     /// can be used to throw exceptions from enumerators implemented in IronPython.
     /// </summary>
-    internal abstract class CheckedDictionaryEnumerator : IDictionaryEnumerator {
+    internal abstract class CheckedDictionaryEnumerator : IDictionaryEnumerator, IEnumerator<KeyValuePair<object, object>> {
         enum EnumeratorState {
             NotStarted,
             Started,
@@ -787,12 +593,27 @@ namespace IronPython.Runtime {
         }
         #endregion
 
+        #region IEnumerator<KeyValuePair<object,object>> Members
+
+        KeyValuePair<object, object> IEnumerator<KeyValuePair<object, object>>.Current {
+            get { return new KeyValuePair<object,object>(Key, Value); }
+        }
+
+        #endregion
+
+        #region IDisposable Members
+
+        public void Dispose() {}
+
+        #endregion
+
         #region Methods that a sub-type needs to implement
         protected abstract object GetKey();
         protected abstract object GetValue();
         protected abstract bool DoMoveNext();
         protected abstract void DoReset();
         #endregion
+
     }
 
     class ExtraKeyEnumerator : CheckedDictionaryEnumerator {
@@ -810,16 +631,19 @@ namespace IronPython.Runtime {
         protected override object GetValue() {
             object val;
             bool hasExtraValue = idDict.TryGetExtraValue(idDict.GetExtraKeys()[curIndex], out val);
-            Debug.Assert(hasExtraValue);
+            Debug.Assert(hasExtraValue && !(val is Uninitialized));
             return val;
         }
 
         protected override bool DoMoveNext() {
-            object val;
+            if (idDict.GetExtraKeys().Length == 0)
+                return false;
+
             while (curIndex < (idDict.GetExtraKeys().Length - 1)) {
                 curIndex++;
                 if (idDict.GetExtraKeys()[curIndex].Id < 0) break;
 
+                object val;
                 if (idDict.TryGetExtraValue(idDict.GetExtraKeys()[curIndex], out val) && val != Uninitialized.instance) {
                     return true;
                 }

@@ -28,17 +28,10 @@ namespace IronPython.Compiler {
     /// <summary>
     /// Summary description for Options.
     /// </summary>
-    public class Options {        
-        // per-engine options
-        private bool debugMode = true;
-        private bool engineDebug;
-        private bool exceptionDetail;
-        private bool showCLSExceptions;
-        private bool verbose;
-
-        // global options
-        private static bool introspection;
-        private static bool skipFirstLine;
+    public class Options {
+        private static bool debugMode = true;
+        private static bool engineDebug;
+        private static bool verbose;
         private static bool traceBackSupport = (IntPtr.Size == 4);  // currently only enabled on 32-bit
         private static bool checkInitialized = true;
         private static bool optimizeReflectCalls = true;
@@ -56,27 +49,36 @@ namespace IronPython.Compiler {
         private static bool generateModulesAsSnippets;
         private static int maximumRecursion = Int32.MaxValue;
         private static bool bufferedStdOutAndError = true;
-        private static string command;
-        private static bool printVersionAndExit = false;
-        private static bool ignoreEnvironmentVariables;
-        private static bool importSite = true;
-        private static int autoIndentSize = 4;
         private static bool warningOnIndentationInconsistency ;
         private static bool errorOnIndentationInconsistency;
         private static List<string> warningFilters;
         private static DivisionOption division = DivisionOption.Old;
         private static bool python25;
 
-        #region Static options
-        // Will the command-line script be introspected after execution? Corresponds to the "-i" command-line argument
-        public static bool Introspection {
-            get { return Options.introspection; }
-            set { Options.introspection = value; }
+        #region Public accessors
+
+        /// <summary>
+        ///  Is this a debug mode? "__debug__" is defined, and Asserts are active
+        /// </summary>
+        public static bool DebugMode {
+            get { return Options.debugMode; }
+            set { Options.debugMode = value; }
         }
 
-        public static bool SkipFirstLine {
-            get { return Options.skipFirstLine; }
-            set { Options.skipFirstLine = value; }
+        /// <summary>
+        /// corresponds to the "-v" command line parameter
+        /// </summary>
+        public static bool Verbose {
+            get { return Options.verbose; }
+            set { Options.verbose = value; }
+        }
+
+        /// <summary>
+        /// Is the engine in debug mode? This is useful for debugging the engine itself
+        /// </summary>
+        public static bool EngineDebug {
+            get { return Options.engineDebug; }
+            set { Options.engineDebug = value; }
         }
 
         public static bool TraceBackSupport {
@@ -189,14 +191,6 @@ namespace IronPython.Compiler {
             set { Options.generateModulesAsSnippets = value; }
         }
 
-        /// <summary>
-        ///  Should the console auto-indent the start of the suite statements of a compound statement?
-        /// </summary>
-        public static int AutoIndentSize {
-            get { return Options.autoIndentSize; }
-            set { Options.autoIndentSize = value; }
-        }
-
         public static int MaximumRecursion {
             get { return Options.maximumRecursion; }
             set { Options.maximumRecursion = value; }
@@ -207,32 +201,6 @@ namespace IronPython.Compiler {
             set { Options.bufferedStdOutAndError = value; }
         }
 
-        /// <summary>
-        /// String containing python source to eval (used to implement the '-c' command 
-        /// line switch).
-        /// </summary>
-        public static string Command {
-            get { return Options.command; }
-            set { Options.command = value; }
-        }
-
-        public static bool PrintVersionAndExit {
-            get { return Options.printVersionAndExit; }
-            set { Options.printVersionAndExit = value; }
-        }
-
-        /// <summary>
-        ///  Whether to imply "import Site" on initialization.
-        /// </summary>
-        public static bool ImportSite {
-            get { return Options.importSite; }
-            set { Options.importSite = value; }
-        }
-
-        public static bool IgnoreEnvironmentVariables {
-            get { return Options.ignoreEnvironmentVariables; }
-            set { Options.ignoreEnvironmentVariables = value; }
-        }
 
         /// <summary> 
         /// Whether to generate a warning if the tokenizer detects that indentation is
@@ -282,50 +250,5 @@ namespace IronPython.Compiler {
         }
 
         #endregion
-
-        #region Instance options
-
-        /// <summary>
-        ///  Is this a debug mode? "__debug__" is defined, and Asserts are active
-        /// </summary>
-        public bool DebugMode {
-            get { return debugMode; }
-            set { debugMode = value; }
-        }
-
-        /// <summary>
-        /// Is the engine in debug mode? This is useful for debugging the engine itself
-        /// </summary>
-        public bool EngineDebug {
-            get { return engineDebug; }
-            set { engineDebug = value; }
-        }
-
-        /// <summary>
-        ///  Display exception detail (callstack) when exception gets caught
-        /// </summary>
-        public bool ExceptionDetail {
-            get { return exceptionDetail; }
-            set { exceptionDetail = value; }
-        }
-
-        public bool ShowClsExceptions {
-            get { return showCLSExceptions; }
-            set { showCLSExceptions = value; }
-        }
-
-        /// <summary>
-        /// corresponds to the "-v" command line parameter
-        /// </summary>
-        public bool Verbose {
-            get { return verbose; }
-            set { verbose = value; }
-        }
-
-        #endregion
-
-        internal Options Clone() {
-            return (Options)MemberwiseClone();
-        }
     }
 }

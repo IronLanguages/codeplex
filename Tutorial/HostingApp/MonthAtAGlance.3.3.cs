@@ -37,15 +37,15 @@ namespace HostingApp {
 
         void InitializePythonEngine() {
             engine = new PythonEngine();
-            engine.ImportSite();
+            engine.Import("site");
             System.IO.FileStream fs = new System.IO.FileStream("scripting-log.txt",
               System.IO.FileMode.Create);
-            engine.SetStdout(fs);
-            engine.SetStderr(fs);
-            engine.SetVariable("dateentries", dateEntries);
+            engine.SetStandardOutput(fs);
+            engine.SetStandardError(fs);
+            engine.Globals["dateentries"] = dateEntries;
             try {
                 engine.Execute("print 'Hello world!'");
-            } catch (IronPython.Runtime.PythonNameError exc) {
+            } catch (IronPython.Runtime.Exceptions.PythonNameErrorException exc) {
                 MessageBox.Show("IronPython engine complained: " + exc.Message);
             } catch (Exception exc) {
                 MessageBox.Show("Unexpected exception " + exc.ToString() + "\n Shutting down!");
@@ -111,7 +111,7 @@ namespace HostingApp {
                 EntryChangedHandler(changedTo, currText);
 
             engine.Execute("n = dateentries.Count");
-            int nEntries = engine.Evaluate<int>("n");
+            int nEntries = engine.EvaluateAs<int>("n");
             MessageBox.Show("There are now " + nEntries.ToString() + " entries in the dictionary.");
 
         }

@@ -98,7 +98,7 @@ namespace IronPythonConsole {
         /// <summary>
         /// List of available options
         /// </summary>
-        class Options : History {
+        class SuperConsoleOptions : History {
             private string root;
 
             public string Root {
@@ -190,7 +190,7 @@ namespace IronPythonConsole {
         /// <summary>
         /// Tab options available in current context
         /// </summary>
-        private Options options = new Options();
+        private SuperConsoleOptions options = new SuperConsoleOptions();
         /// <summary>
         /// Cursort anchor - position of cursor when the routine was called
         /// </summary>
@@ -295,7 +295,7 @@ namespace IronPythonConsole {
             }
 
             // Calculate the previous indentation level
-            int newLength = ((input.Length - 1) / IronPython.Compiler.Options.AutoIndentSize) * IronPython.Compiler.Options.AutoIndentSize;
+            int newLength = ((input.Length - 1) / ConsoleOptions.AutoIndentSize) * ConsoleOptions.AutoIndentSize;
 
             int backspaceSize = input.Length - newLength;
             input.Remove(newLength, backspaceSize);

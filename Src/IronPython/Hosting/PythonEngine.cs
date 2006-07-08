@@ -34,28 +34,58 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Hosting {
 
-    /// <summary>
-    /// Options to affect the PythonEngine.Execute* APIs. Note that these options only apply to
-    /// the direct script code executed by the APIs, but not for other script code that happens
-    /// to get called as a result of the execution.
-    /// </summary>
-    [Flags]
-    public enum ExecutionOptions {
-        None = 0x00,
+    public class EngineOptions {
+        private bool clrDebuggingEnabled;
+        private bool exceptionDetail;
+        private bool showClrExceptions;
+        private bool skipFirstLine;
 
-        // Enable CLI debugging. This allows debugging the script with a CLI debugger. Also, CLI exceptions
-        // will have line numbers in the stack-trace.
-        // Note that this is independent of the "traceback" Python module.
-        // Also, the generated code will not be reclaimed, and so this should only be used for bounded number 
-        // of executions.
-        EnableDebugging = 0x02,
+        #region Public accessors
 
-        // Skip the first line of the code to execute. This is useful for Unix scripts which
-        // have the command to execute specified in the first line.
-        SkipFirstLine = 0x08
+        /// <summary>
+        /// Skip the first line of the code to execute. This is useful for Unix scripts which
+        /// have the command to execute specified in the first line.
+        /// This only apply to the script code executed by the PythonEngine APIs, but not for other script code 
+        /// that happens to get called as a result of the execution.
+        /// </summary>
+        public bool SkipFirstLine {
+            get { return skipFirstLine; }
+            set { skipFirstLine = value; }
+        }
+
+        /// <summary>
+        /// Enable CLI debugging. This allows debugging the script with a CLI debugger. Also, CLI exceptions
+        /// will have line numbers in the stack-trace.
+        /// Note that this is independent of the "traceback" Python module.
+        /// Also, the generated code will not be reclaimed, and so this should only be used for bounded number 
+        /// of executions.
+        /// </summary>
+        public bool ClrDebuggingEnabled {
+            get { return clrDebuggingEnabled; }
+            set { clrDebuggingEnabled = value; }
+        }
+
+        /// <summary>
+        ///  Display exception detail (callstack) when exception gets caught
+        /// </summary>
+        public bool ExceptionDetail {
+            get { return exceptionDetail; }
+            set { exceptionDetail = value; }
+        }
+
+        public bool ShowClrExceptions {
+            get { return showClrExceptions; }
+            set { showClrExceptions = value; }
+        }
+
+        #endregion
+
+        internal EngineOptions Clone() {
+            return (EngineOptions)MemberwiseClone();
+        }
     }
 
-    public delegate T ScopeBinder<T>(ModuleScope scope);
+    public delegate T ModuleBinder<T>(EngineModule engineModule);
 
     public class PythonEngine : IDisposable {
 
@@ -91,7 +121,7 @@ namespace IronPython.Hosting {
         // while maintaingin unique significant state for every engine..
         private SystemState systemState;
 
-        private ModuleScope defaultScope;
+        private EngineModule defaultModule;
 
         private CompilerContext compilerContext = new CompilerContext("<stdin>");
         private PythonFile stdIn, stdOut, stdErr;
@@ -99,26 +129,25 @@ namespace IronPython.Hosting {
         #endregion
 
         #region Constructor
+        /// <summary>
+        /// The caller is responsible for setting Sys.argv to expose command-line options
+        /// </summary>
         public PythonEngine() {
-            // make sure cctor for OutputGenerator has run
-            System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(OutputGenerator).TypeHandle);
-
-            defaultScope = new ModuleScope("__main__");
-            systemState = new SystemState();
+            Initialize(new EngineOptions());
         }
 
-        public PythonEngine(Options options)
-            : this() {
+        public PythonEngine(EngineOptions engineOptions) {
             if (options == null)
                 throw new ArgumentNullException("options", "No options specified for PythonEngine");
-            // Save the options. Clone it first to prevent the client from unexpectedly mutating it
-            PythonEngine.options = options.Clone();
+            // Clone it first to prevent the client from unexpectedly mutating it
+            engineOptions = engineOptions.Clone();
+            Initialize(engineOptions);
         }
 
         public void Shutdown() {
             object callable;
 
-            if (Sys.TryGetAttr(defaultScope, SymbolTable.SysExitFunc, out callable)) {
+            if (Ops.TryGetAttr(Sys, SymbolTable.SysExitFunc, out callable)) {
                 Ops.Call(callable);
             }
 
@@ -126,7 +155,7 @@ namespace IronPython.Hosting {
         }
 
         public static void DumpDebugInfo() {
-            if (PythonEngine.options.EngineDebug) {
+            if (IronPython.Compiler.Options.EngineDebug) {
                 PerfTrack.DumpStats();
                 try {
                     OutputGenerator.DumpSnippets();
@@ -144,21 +173,22 @@ namespace IronPython.Hosting {
 
         #region Non-Public Members
 
-        private const ExecutionOptions ExecuteStringOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.SkipFirstLine;
-        private const ExecutionOptions ExecuteFileOptions = ExecutionOptions.EnableDebugging | ExecutionOptions.SkipFirstLine;
-        private const ExecutionOptions EvaluateStringOptions = ExecutionOptions.EnableDebugging;
+        private void Initialize(EngineOptions engineOptions) {
+            // make sure cctor for OutputGenerator has run
+            System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(OutputGenerator).TypeHandle);
 
-        private static void ValidateExecutionOptions(ExecutionOptions userOptions, ExecutionOptions permissibleOptions) {
-            ExecutionOptions invalidOptions = userOptions & ~permissibleOptions;
-            if (invalidOptions == 0)
-                return;
-
-            throw new ArgumentOutOfRangeException("executionOptions", userOptions, invalidOptions.ToString() + " is invalid");
+            systemState = new SystemState(engineOptions);
+            defaultModule = new EngineModule("defaultModule", new Dictionary<string, object>(), systemState);
         }
 
-        private void EnsureValidArguments(ModuleScope moduleScope, ExecutionOptions userOptions, ExecutionOptions permissibleOptions) {
-            moduleScope.EnsureInitialized(Sys);
-            ValidateExecutionOptions(userOptions, permissibleOptions);
+        internal void EnsureValidModule(EngineModule engineModule) {
+            if (engineModule.CallerContext.SystemState != Sys)
+                throw new ArgumentOutOfRangeException("module", "An EngineModule can only be used with the PythonEngine that was used to create it");
+        }
+
+        internal ModuleScope GetModuleScope(EngineModule engineModule, IDictionary<string, object> locals) {
+            EnsureValidModule(engineModule);
+            return engineModule.GetModuleScope(locals);
         }
 
         private static string FormatPythonException(object python) {
@@ -223,7 +253,7 @@ namespace IronPython.Hosting {
 
         private string FormatStackTraces(Exception e, FilterStackFrame fsf, ref bool printedHeader) {
             string result = "";
-            if (PythonEngine.options.ExceptionDetail) {
+            if (Sys.EngineOptions.ExceptionDetail) {
                 if (!printedHeader) {
                     result = e.Message + Environment.NewLine;
                     printedHeader = true;
@@ -327,11 +357,18 @@ namespace IronPython.Hosting {
             }
         }
 
-        private static void ExecuteSnippet(Parser p, ModuleScope moduleScope, ExecutionOptions executionOptions) {
+        private void ExecuteSnippet(Parser p, ModuleScope moduleScope) {
             Statement s = p.ParseFileInput();
-            bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
-            CompiledCode compiledCode = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, enableDebugging);
+            CompiledCode compiledCode = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, Sys.EngineOptions.ClrDebuggingEnabled);
             compiledCode.Run(moduleScope);
+        }
+
+        private CompiledCode Compile(Parser p) {
+            Statement s = p.ParseFileInput();
+
+            CompiledCode compiledCode = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, Sys.EngineOptions.ClrDebuggingEnabled);
+            compiledCode.engine = this;
+            return compiledCode;
         }
 
         public delegate bool FilterStackFrame(StackFrame frame);
@@ -345,7 +382,7 @@ namespace IronPython.Hosting {
             bool printedHeader = false;
             result += FormatStackTraces(exception, filter, ref printedHeader);
             result += FormatPythonException(pythonException);
-            if (PythonEngine.options.ShowClsExceptions) {
+            if (Sys.EngineOptions.ShowClrExceptions) {
                 result += FormatCLSException(exception);
             }
 
@@ -353,33 +390,62 @@ namespace IronPython.Hosting {
         }
         #endregion
 
-        #region Console Support
-        /// <summary>
-        /// Execute the code in a new module.
-        /// The code is able to be optimized since it does not have to deal with any incoming ModuleScope,
-        /// and it can optimize all global variable accesses.
-        /// The caller is responsible for setting Sys.argv
-        /// </summary>
-        /// <param name="moduleName">If this is non-null, the module will be published to sys.modules</param>
-        /// <param name="moduleScope">The resulting scope can be inspected using moduleScope. 
-        /// Further code may be executed using this scope, and it will be able to access global variables that 
-        /// were set in ExecuteFileOptimized. However, any further code run in this scope will not be optimized.</param>
-        public void ExecuteFileOptimized(string fileName, string moduleName, ExecutionOptions executionOptions, out ModuleScope moduleScope) {
-            CompilerContext context = this.compilerContext.CopyWithNewSourceFile(fileName);
-            bool skipLine = (executionOptions & ExecutionOptions.SkipFirstLine) != 0;
-            Parser p = Parser.FromFile(Sys, context, skipLine, false);
-            Statement s = p.ParseFileInput();
+        #region Factory methods to create new modules
 
-            PythonModule mod = OutputGenerator.GenerateModule(Sys, context, s, moduleName);
-            moduleScope = new ModuleScope(mod);
-
-            if (moduleName != null)
-                Sys.modules[mod.ModuleName] = mod;
-            mod.SetAttr(mod, SymbolTable.File, fileName);
-
-            mod.Initialize();
+        public EngineModule CreateModule() {
+            return CreateModule(String.Empty, new Dictionary<string, object>(), false);
         }
 
+        public EngineModule CreateModule(string moduleName, bool publishModule) {
+            return CreateModule(moduleName, new Dictionary<string, object>(), publishModule);
+        }
+
+        /// <summary>
+        /// Create a module. A module is required to be able to execute any code.
+        /// </summary>
+        /// <param name="publishModule">If this is true, the module will be published as sys.modules[moduleName].
+        /// The module may later be unpublished by executing "del sys.modules[moduleName]". All resources associated
+        /// with the module will be reclaimed after that.
+        /// </param>
+        public EngineModule CreateModule(string moduleName, IDictionary<string, object> globals, bool publishModule) {
+            if (moduleName == null) throw new ArgumentException("moduleName");
+            if (globals == null) throw new ArgumentException("globals");
+
+            EngineModule engineModule = new EngineModule(moduleName, globals, Sys);
+            if (publishModule) {
+                Sys.modules[moduleName] = engineModule.Module;
+            }
+            return engineModule;
+        }
+
+        /// <summary>
+        /// Create a module with optimized code. The restriction is that the user cannot specify a globals 
+        /// dictionary of her liking.
+        /// </summary>
+        public OptimizedEngineModule CreateOptimizedModule(string fileName, string moduleName, bool publishModule) {
+            if (fileName == null) throw new ArgumentException("fileName");
+            if (moduleName == null) throw new ArgumentException("moduleName");
+
+            CompilerContext context = this.compilerContext.CopyWithNewSourceFile(fileName);
+            Parser p = Parser.FromFile(Sys, context, Sys.EngineOptions.SkipFirstLine, false);
+            Statement s = p.ParseFileInput();
+
+            PythonModule module = OutputGenerator.GenerateModule(Sys, context, s, moduleName);
+            ModuleScope moduleScope = new ModuleScope(module);
+            OptimizedEngineModule engineModule = new OptimizedEngineModule(moduleScope);
+
+            module.SetAttr(module, SymbolTable.File, fileName);
+
+            if (publishModule) {
+                Sys.modules[moduleName] = module;
+            }
+
+            return engineModule;
+        }
+
+        #endregion
+
+        #region Console Support
         public delegate void CommandDispatcher(Delegate consoleCommand);
 
         // This can be set to a method like System.Windows.Forms.Control.Invoke for Winforms scenario 
@@ -390,11 +456,12 @@ namespace IronPython.Hosting {
             set { consoleCommandDispatcher = value; }
         }
 
-        public void ExecuteToConsole(string text) { ExecuteToConsole(text, defaultScope); }
-        public void ExecuteToConsole(string text, ModuleScope defaultScope) {
-            defaultScope.EnsureInitialized(Sys);
+        public void ExecuteToConsole(string text) { ExecuteToConsole(text, defaultModule, null); }
 
-            Parser p = Parser.FromString(((ICallerContext)defaultScope).SystemState, compilerContext, text);
+        public void ExecuteToConsole(string text, EngineModule engineModule, IDictionary<string, object> locals) {
+            ModuleScope moduleScope = GetModuleScope(engineModule, locals);
+
+            Parser p = Parser.FromString(Sys, compilerContext, text);
             bool isEmptyStmt = false;
             Statement s = p.ParseInteractiveInput(false, out isEmptyStmt);
 
@@ -406,7 +473,7 @@ namespace IronPython.Hosting {
 
                 if (consoleCommandDispatcher != null) {
                     CallTarget0 runCode = delegate() {
-                        try { compiledCode.Run(defaultScope); } catch (Exception e) { ex = e; }
+                        try { compiledCode.Run(moduleScope); } catch (Exception e) { ex = e; }
                         return null;
                     };
 
@@ -416,7 +483,7 @@ namespace IronPython.Hosting {
                     if (ex != null)
                         throw ex;
                 } else {
-                    compiledCode.Run(defaultScope);
+                    compiledCode.Run(moduleScope);
                 }
             }
         }
@@ -452,13 +519,13 @@ namespace IronPython.Hosting {
             Sys.TopPackage.LoadAssembly(Sys, assembly);
         }
 
-        public object Import(string module) {
-            defaultScope.EnsureInitialized(Sys);
+        public object Import(string moduleName) {
+            EnsureValidModule(defaultModule);
 
-            object mod = Importer.ImportModule(defaultScope, module, true);
+            object mod = Importer.ImportModule(defaultModule.CallerContext, moduleName, true);
             if (mod != null) {
-                string[] names = module.Split('.');
-                defaultScope.SetGlobal(SymbolTable.StringToId(names[names.Length - 1]), mod);
+                string[] names = moduleName.Split('.');
+                defaultModule.CallerContext.Globals[SymbolTable.StringToId(names[names.Length - 1])] = mod;
             }
             return mod;
         }
@@ -481,51 +548,34 @@ namespace IronPython.Hosting {
         }
         #endregion
 
-        #region Get\Set Global
-        public void SetGlobal(string name, object value) {
-            if (name == null) throw new ArgumentNullException("name");
-
-            SetGlobal(name, value, defaultScope);
+        #region Get\Set Globals of DefaultModule
+        public IDictionary<string, object> Globals {
+            get { return defaultModule.Globals; }
         }
 
-        public void SetGlobal(string name, object value, ModuleScope moduleScope) {
-            if (name == null) throw new ArgumentNullException("name");
-
-            moduleScope.EnsureInitialized(Sys);
-            Ops.SetAttr(moduleScope, moduleScope.Module, SymbolTable.StringToId(name), value);
+        public EngineModule DefaultModule {
+            get { return defaultModule; }
+            set {
+                if (value == null)
+                    throw new ArgumentNullException("value");
+                EnsureValidModule(value);
+                defaultModule = value;
+            }
         }
-
-        public object GetGlobal(string name) {
-            if (name == null) throw new ArgumentNullException("name");
-
-            return GetGlobal(name, defaultScope);
-        }
-
-        public object GetGlobal(string name, ModuleScope moduleScope) {
-            if (name == null) throw new ArgumentNullException("name");
-            if (moduleScope == null) throw new ArgumentNullException("moduleScope");
-
-            moduleScope.EnsureInitialized(Sys);
-
-            return Ops.GetAttr(moduleScope, moduleScope.Module, SymbolTable.StringToId(name));
-        }
-
-        public ModuleScope DefaultModuleScope { get { return defaultScope; } set { defaultScope = value; } }
 
         #endregion
 
         #region Dynamic Execution\Evaluation
-        public void Execute(string text) {
-            if (text == null) throw new ArgumentNullException("text");
-
-            Execute(text, defaultScope, ExecutionOptions.None);
+        public void Execute(string scriptCode) {
+            Execute(scriptCode, defaultModule);
         }
 
-        public void Execute(string text, ModuleScope moduleScope, ExecutionOptions executionOptions) {
-            if (text == null) throw new ArgumentNullException("text");
-            if (moduleScope == null) moduleScope = defaultScope;
+        public void Execute(string scriptCode, EngineModule engineModule) {
+            Execute(scriptCode, null /*fileName*/, engineModule, null);
+        }
 
-            Execute(text, null /*fileName*/, moduleScope, executionOptions);
+        public void Execute(string scriptCode, EngineModule engineModule, IDictionary<string, object> locals) {
+            Execute(scriptCode, null /*sourceFileName*/, engineModule, locals);
         }
 
         /// <summary>
@@ -533,99 +583,104 @@ namespace IronPython.Hosting {
         /// The API will throw any exceptions raised by the code. If PythonSystemExit is thrown, the host should 
         /// interpret that in a way that is appropriate for the host.
         /// </summary>
-        /// <param name="text"></param>
         /// <param name="fileName">This is used for scenarios when a file contains embedded Python code, along with
         /// non-Python code. The host can creating a string with just the Python code, with empty lines in place 
         /// of the non-Python code. The fileName will then be used for debugging and traceback information</param>
         /// <param name="moduleScope">The module context to execute the code in.</param>
-        public void Execute(string text, string fileName, ModuleScope moduleScope, ExecutionOptions executionOptions) {
-            EnsureValidArguments(moduleScope, executionOptions, ExecuteStringOptions);
-
-            CompilerContext context = compilerContext;
-
-            // When a fileName is passed in, it is used to generated debug info
-            if (fileName != null)
-                context = compilerContext.CopyWithNewSourceFile(fileName);
-
-            Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, context, text);
-            ExecuteSnippet(p, moduleScope, executionOptions);
+        public void Execute(string scriptCode, string fileName, EngineModule engineModule, IDictionary<string, object> locals) {
+            CompiledCode compiledCode = Compile(scriptCode, fileName);
+            compiledCode.Execute(engineModule, locals);
         }
 
         public void ExecuteFile(string fileName) {
-            ExecuteFile(fileName, defaultScope, ExecutionOptions.None);
+            ExecuteFile(fileName, defaultModule);
         }
 
-        public void ExecuteFile(string fileName, ModuleScope moduleScope, ExecutionOptions executionOptions) {
-            EnsureValidArguments(moduleScope, executionOptions, ExecuteFileOptions);
+        public void ExecuteFile(string fileName, EngineModule engineModule) {
+            ExecuteFile(fileName, engineModule, null);
+        }
 
-            Parser p = Parser.FromFile(Sys, compilerContext.CopyWithNewSourceFile(fileName));
-            ExecuteSnippet(p, moduleScope, executionOptions);
+        public void ExecuteFile(string fileName, EngineModule engineModule, IDictionary<string, object> locals) {
+            CompiledCode compiledCode = CompileFile(fileName);
+            compiledCode.Execute(engineModule, locals);
         }
 
         public object Evaluate(string expression) {
-            return Evaluate(expression, defaultScope, ExecutionOptions.None);
+            return Evaluate(expression, defaultModule);
         }
 
-        public object Evaluate(string expression, ModuleScope moduleScope, ExecutionOptions executionOptions) {
-            EnsureValidArguments(moduleScope, executionOptions, EvaluateStringOptions);
+        public object Evaluate(string expression, EngineModule engineModule) {
+            return Evaluate(expression, engineModule, null);
+        }
 
-            return Builtin.Eval(moduleScope, expression, executionOptions);
+        public object Evaluate(string expression, EngineModule engineModule, IDictionary<string, object> locals) {
+            ModuleScope moduleScope = GetModuleScope(engineModule, locals);
+
+            return Builtin.Eval(moduleScope, expression);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public T EvaluateAs<T>(string expression) {
-            return Converter.Convert<T>(Evaluate(expression));
+            return EvaluateAs<T>(expression, defaultModule);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public T EvaluateAs<T>(string expression, ModuleScope moduleScope, ExecutionOptions executionOptions) {
-            return Converter.Convert<T>(Evaluate(expression, moduleScope, executionOptions));
+        public T EvaluateAs<T>(string expression, EngineModule engineModule) {
+            return EvaluateAs<T>(expression, engineModule, null);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
+        public T EvaluateAs<T>(string expression, EngineModule engineModule, IDictionary<string, object> locals) {
+            object result = Evaluate(expression, engineModule, locals);
+            return Converter.Convert<T>(result);
+        }
+
+        #region CreateMethod and CreateDelegate
+
         /// <summary>
-        /// Create's a strongly typed delegate of type T bound to the default module scope.
+        /// Create's a strongly typed delegate of type T bound to the default EngineModule.
         /// 
         /// The delegate's parameter names will be available within the function as argument names.
         /// </summary>
         public DelegateType CreateMethod<DelegateType>(string statements) where DelegateType : class {
-            return CreateMethod<DelegateType>(statements, null, defaultScope);
+            return CreateMethod<DelegateType>(statements, null, defaultModule);
         }
 
         /// <summary>
-        /// Create's a strongly typed delegate of type T bound to the default module scope.
+        /// Create's a strongly typed delegate of type T bound to the default EngineModule.
         /// 
         /// The delegate calls a function which consists of the provided method body. If parameters
         /// is null the parameter names are taken from the delegate, otherwise the provided parameter
         /// names are used. 
         /// </summary>
         public DelegateType CreateMethod<DelegateType>(string statements, IList<string> parameters) where DelegateType : class {
-            return CreateMethod<DelegateType>(statements, parameters, defaultScope);
+            return CreateMethod<DelegateType>(statements, parameters, defaultModule);
         }
 
         /// <summary>
-        /// Creates a strongly typed delegate of type T bound to the specifed module scope.
+        /// Creates a strongly typed delegate of type T bound to the specifed EngineModule.
         /// 
         /// The delegate's parameter names will be available within the function as argument names.
         /// 
-        /// Variable's that aren't locals will be retrived at run-time from the provided module scope.
+        /// Variable's that aren't locals will be retrived at run-time from the provided EngineModule.
         /// </summary>
-        public DelegateType CreateMethod<DelegateType>(string statements, ModuleScope scope) where DelegateType : class {
-            return CreateMethod<DelegateType>(statements, null, scope);
+        public DelegateType CreateMethod<DelegateType>(string statements, EngineModule engineModule) where DelegateType : class {
+            return CreateMethod<DelegateType>(statements, null, engineModule);
         }
 
         /// <summary>
-        /// Creates a strongly typed delegate of type T bound to the specified module scope.
+        /// Creates a strongly typed delegate of type T bound to the specified EngineModule.
         /// 
         /// The delegate calls a function which consists of the provided method body. If parameters
         /// is null the parameter names are taken from the delegate, otherwise the provided parameter
         /// names are used. 
         /// 
-        /// Variables that aren't locals will be retrieved at run-time from the provided module scope.
+        /// Variables that aren't locals will be retrieved at run-time from the provided EngineModule.
         /// </summary>
-        public DelegateType CreateMethod<DelegateType>(string statements, IList<string> parameters, ModuleScope scope) where DelegateType : class {
-            if (scope == null) scope = defaultScope;
+        public DelegateType CreateMethod<DelegateType>(string statements, IList<string> parameters, EngineModule engineModule) where DelegateType : class {
+            if (engineModule == null) throw new ArgumentNullException("engineModule");
 
-            return CreateMethodUnscoped<DelegateType>(statements, parameters)(scope);
+            return CreateMethodUnscoped<DelegateType>(statements, parameters)(engineModule);
         }
 
         /// <summary>
@@ -634,7 +689,7 @@ namespace IronPython.Hosting {
         /// The delegate's parameter names will be available within the function as locals
         /// </summary>
         public DelegateType CreateLambda<DelegateType>(string expression) where DelegateType : class {
-            return CreateLambda<DelegateType>(expression, null, defaultScope);
+            return CreateLambda<DelegateType>(expression, null, defaultModule);
         }
 
         /// <summary>
@@ -645,7 +700,7 @@ namespace IronPython.Hosting {
         /// names are used.
         /// </summary>
         public DelegateType CreateLambda<DelegateType>(string expression, IList<string> parameters) where DelegateType : class {
-            return CreateLambda<DelegateType>(expression, parameters, defaultScope);
+            return CreateLambda<DelegateType>(expression, parameters, defaultModule);
         }
 
         /// <summary>
@@ -653,10 +708,10 @@ namespace IronPython.Hosting {
         ///
         /// The delegate's parameter names will be available within the function as locals
         /// 
-        /// Variable's that aren't localed will be retrieved at run-time from the provided module scope.
+        /// Variable's that aren't localed will be retrieved at run-time from the provided EngineModule.
         /// </summary>
-        public DelegateType CreateLambda<DelegateType>(string expression, ModuleScope scope) where DelegateType : class {
-            return CreateLambda<DelegateType>(expression, null, scope);
+        public DelegateType CreateLambda<DelegateType>(string expression, EngineModule engineModule) where DelegateType : class {
+            return CreateLambda<DelegateType>(expression, null, engineModule);
         }
 
         /// <summary>
@@ -666,42 +721,42 @@ namespace IronPython.Hosting {
         /// the delegate's parameter names are used for available locals, otherwise the given parameter
         /// names are used.
         /// 
-        /// Variable's that aren't localed will be retrieved at run-time from the provided module scope.
+        /// Variable's that aren't localed will be retrieved at run-time from the provided EngineModule.
         /// </summary>
-        public DelegateType CreateLambda<DelegateType>(string expression, IList<string> parameters, ModuleScope scope) where DelegateType : class {
-            if (scope == null) scope = defaultScope;
+        public DelegateType CreateLambda<DelegateType>(string expression, IList<string> parameters, EngineModule engineModule) where DelegateType : class {
+            if (engineModule == null) throw new ArgumentNullException("engineModule");
 
-            return CreateLambdaUnscoped<DelegateType>(expression, parameters)(scope);
+            return CreateLambdaUnscoped<DelegateType>(expression, parameters)(engineModule);
         }
 
         /// <summary>
         /// Creates a strongly typed delegate bound to an expression.
         /// </summary>
-        public ScopeBinder<DelegateType> CreateMethodUnscoped<DelegateType>(string statements) where DelegateType : class {
+        public ModuleBinder<DelegateType> CreateMethodUnscoped<DelegateType>(string statements) where DelegateType : class {
             return CreateMethodUnscoped<DelegateType>(statements,null);
         }
 
-        public ScopeBinder<DelegateType> CreateLambdaUnscoped<DelegateType>(string expression) where DelegateType : class {
+        public ModuleBinder<DelegateType> CreateLambdaUnscoped<DelegateType>(string expression) where DelegateType : class {
             return CreateLambdaUnscoped<DelegateType>(expression, null);
         }
 
         /// <summary>
-        /// Creates an unbound delegate that can be re-bound to a new module scope using
-        /// the returned ScopeBinder.  The result of the re-bind is a strongly typed
-        /// delegate that will execute in the provided scope.
+        /// Creates an unbound delegate that can be re-bound to a new EngineModule using
+        /// the returned ModuleBinder.  The result of the re-bind is a strongly typed
+        /// delegate that will execute in the provided EngineModule.
         ///
         /// The delegate calls a function which consists of the provided method body. If parameters
         /// is null the parameter names are taken from the delegate, otherwise the provided parameter
         /// names are used. 
         /// </summary>
-        public ScopeBinder<DelegateType> CreateMethodUnscoped<DelegateType>(string statements, IList<string> parameters) where DelegateType : class {
+        public ModuleBinder<DelegateType> CreateMethodUnscoped<DelegateType>(string statements, IList<string> parameters) where DelegateType : class {
             ValidateCreationParameters<DelegateType>();
 
             Parser p = Parser.FromString(Sys, compilerContext, statements);
             CodeGen cg = CreateDelegateWorker<DelegateType>(p.ParseFunction(), parameters);
-            
-            return delegate(ModuleScope scope) {
-                scope.EnsureInitialized(Sys);
+
+            return delegate(EngineModule engineModule) {
+                ModuleScope scope = GetModuleScope(engineModule, null);
                 return cg.CreateDelegate(typeof(DelegateType), scope) as DelegateType;
             };
         }
@@ -710,15 +765,15 @@ namespace IronPython.Hosting {
         static int methodIndex;
 #endif
         /// <summary>
-        /// Creates an unbound delegate to an expression that can be re-bound to a new module scope using
-        /// the returned ScopeBinder.  The result of the re-bind is a strongly typed
-        /// delegate that will execute in the provided scope.
+        /// Creates an unbound delegate to an expression that can be re-bound to a new EngineModule using
+        /// the returned ModuleBinder.  The result of the re-bind is a strongly typed
+        /// delegate that will execute in the provided EngineModule.
         /// 
         /// The delegate causes the given expression to be evaluated. If parameters is null then
         /// the delegate's parameter names are used for available locals, otherwise the given parameter
         /// names are used.
         /// </summary>
-        public ScopeBinder<DelegateType> CreateLambdaUnscoped<DelegateType>(string expression, IList<string> parameters) where DelegateType : class {
+        public ModuleBinder<DelegateType> CreateLambdaUnscoped<DelegateType>(string expression, IList<string> parameters) where DelegateType : class {
             ValidateCreationParameters<DelegateType>();
 
             Parser p = Parser.FromString(Sys, compilerContext, expression.TrimStart(' ', '\t'));
@@ -727,9 +782,9 @@ namespace IronPython.Hosting {
             int lineCnt = expression.Split('\n').Length;
             ret.SetLoc(new Location(lineCnt, 0), new Location(lineCnt, 10));
             CodeGen cg = CreateDelegateWorker<DelegateType>(ret, parameters);
-            
-            return delegate(ModuleScope scope) {
-                scope.EnsureInitialized(Sys);
+
+            return delegate(EngineModule engineModule) {
+                ModuleScope scope = GetModuleScope(engineModule, null);
                 return cg.CreateDelegate(typeof(DelegateType), scope) as DelegateType;
             };
         }
@@ -867,46 +922,31 @@ namespace IronPython.Hosting {
 
         #endregion
 
+        #endregion
+
         #region Compile
-        public void Execute(CompiledCode compiledCode) {
-            Execute(compiledCode, defaultScope);
+        public CompiledCode Compile(string scriptCode) {
+            return Compile(scriptCode, null);
         }
 
-        public void Execute(CompiledCode compiledCode, ModuleScope moduleScope) {
-            moduleScope.EnsureInitialized(Sys);
-            compiledCode.Run(moduleScope);
-        }
+        public CompiledCode Compile(string scriptCode, string sourceFileName) {
+            if (scriptCode == null) throw new ArgumentNullException("scriptCode");
 
-        public CompiledCode Compile(string text) {
-            return Compile(text, ExecutionOptions.None);
-        }
+            // When a sourceFileName is passed in, it is used to generated debug info
+            CompilerContext context = compilerContext;
+            if (sourceFileName != null)
+                context = compilerContext.CopyWithNewSourceFile(sourceFileName);
 
-        /// <returns>This can be used with the "Execute(CompiledCode compiledCode)" API.
-        /// The same CompiledCode can be used in multiple PythonEngines.</returns>
-        public CompiledCode Compile(string text, ExecutionOptions executionOptions) {
-            ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
-
-            Parser p = Parser.FromString(Sys, compilerContext, text);
-            return Compile(p, executionOptions);
+            Parser p = Parser.FromString(Sys, context, scriptCode);
+            return Compile(p);
         }
 
         public CompiledCode CompileFile(string fileName) {
-            return CompileFile(fileName, ExecutionOptions.None);
-        }
-
-        public CompiledCode CompileFile(string fileName, ExecutionOptions executionOptions) {
-            ValidateExecutionOptions(executionOptions, ExecuteStringOptions);
-
+            if (fileName == null) throw new ArgumentException("fileName");
             Parser p = Parser.FromFile(Sys, compilerContext.CopyWithNewSourceFile(fileName));
-            return Compile(p, executionOptions);
+            return Compile(p);
         }
 
-        private static CompiledCode Compile(Parser p, ExecutionOptions executionOptions) {
-            Statement s = p.ParseFileInput();
-
-            bool enableDebugging = (executionOptions & ExecutionOptions.EnableDebugging) != 0;
-            return OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, enableDebugging);
-        }
         #endregion
 
         #region Dump
@@ -915,7 +955,7 @@ namespace IronPython.Hosting {
 
             string result = FormatStackTraces(exception);
             result += FormatPythonException(pythonEx);
-            if (PythonEngine.options.ShowClsExceptions) {
+            if (Sys.EngineOptions.ShowClrExceptions) {
                 result += FormatCLSException(exception);
             }
 

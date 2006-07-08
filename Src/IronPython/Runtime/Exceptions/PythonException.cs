@@ -59,6 +59,10 @@ namespace IronPython.Runtime.Exceptions {
         }
         public PythonSystemExitException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 
+        public int GetExitCode() {
+            return GetExitCode(DefaultContext.Default);
+        }
+
         public int GetExitCode(ICallerContext context) {
             object pyObj = ExceptionConverter.ToPython(this);
 

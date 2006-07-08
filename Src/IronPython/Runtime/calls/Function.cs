@@ -25,6 +25,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Compiler.Ast;
 using IronPython.Compiler;
 using IronPython.Runtime.Types;
+using IronPython.Hosting;
 
 namespace IronPython.Runtime.Calls {
 

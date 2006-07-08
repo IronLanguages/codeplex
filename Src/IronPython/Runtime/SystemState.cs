@@ -28,6 +28,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
+using IronPython.Hosting;
 
 using ClrModule = IronPython.Modules.ClrModule;
 
@@ -41,11 +42,15 @@ namespace IronPython.Runtime {
         private object exception_type, exception_value, exception_traceback;
         private TopReflectedPackage topPackage;
         private ClrModule clrModule;
+        private EngineOptions engineOptions;
 
         // See _socket.cs for details
         internal bool isSocketRefCountHookInstalled;
 
-        public SystemState() {
+        public SystemState() : this(new EngineOptions()) {
+        }
+
+        public SystemState(EngineOptions options) {
 #if DEBUG
             // All fields should be initialized in Initialize(). So ensure that the fields have default values
             FieldInfo[] fields = typeof(SystemState).GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
@@ -58,6 +63,7 @@ namespace IronPython.Runtime {
                     (value is bool && ((bool)value) == false));
             }
 #endif
+            engineOptions = options;
             Initialize();
         }
 
@@ -400,5 +406,7 @@ namespace IronPython.Runtime {
                 return clrModule;
             }
         }
+
+        internal EngineOptions EngineOptions { get { return engineOptions; } }
     }
 }

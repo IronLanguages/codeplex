@@ -1023,6 +1023,8 @@ namespace IronPython.Compiler.Generation {
         private Slot argSlot, refSlot;
 
         public ReturnFixer(Slot refSlot, Slot argSlot) {
+            Debug.Assert(refSlot.Type == typeof(IronPython.Modules.ClrModule.Reference));
+            Debug.Assert(argSlot.Type.IsByRef);
             this.refSlot = refSlot;
             this.argSlot = argSlot;
         }
@@ -1033,7 +1035,7 @@ namespace IronPython.Compiler.Generation {
             cg.Emit(OpCodes.Isinst, typeof(Reference));
             cg.EmitCall(typeof(Reference).GetProperty("Value").GetGetMethod());
             cg.EmitConvertFromObject(argSlot.Type.GetElementType());
-            cg.EmitStoreValueIndirect(argSlot.Type);
+            cg.EmitStoreValueIndirect(argSlot.Type.GetElementType());
         }
 
         internal Slot RefSlot {

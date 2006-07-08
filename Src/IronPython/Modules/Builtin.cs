@@ -29,6 +29,7 @@ using IronPython.Compiler;
 using IronPython.Compiler.Generation;
 using IronPython.Compiler.Ast;
 using IronPython.Runtime.Operations;
+using IronPython.Hosting;
 
 using IronMath;
 
@@ -51,7 +52,7 @@ namespace IronPython.Modules {
         public static bool __debug__ {
             [PythonName("__debug__")]
             get {
-                return IronPython.Hosting.PythonEngine.options.DebugMode;
+                return IronPython.Compiler.Options.DebugMode;
             }
         }
 
@@ -338,12 +339,12 @@ namespace IronPython.Modules {
 
             PythonModule mod = new PythonModule(context.Module.ModuleName, globals, context.SystemState, null, context.ContextFlags);
             ModuleScope moduleScope = new ModuleScope(mod, globals, locals, context);
-            return Eval(moduleScope, expression, IronPython.Hosting.ExecutionOptions.None);
+            return Eval(moduleScope, expression);
         }
 
-        internal static object Eval(ModuleScope moduleScope, string expression, IronPython.Hosting.ExecutionOptions executionOptions) {
+        internal static object Eval(ModuleScope moduleScope, string expression) {
             CompilerContext cc = moduleScope.CreateCompilerContext();
-            Parser p = Parser.FromString(((ICallerContext)moduleScope).SystemState, cc, expression.TrimStart(' ', '\t'));
+            Parser p = Parser.FromString(moduleScope.SystemState, cc, expression.TrimStart(' ', '\t'));
             Expression e = p.ParseTestListAsExpression();
 
             if (Options.FastEvaluation) {
@@ -351,7 +352,7 @@ namespace IronPython.Modules {
                 return e.Evaluate(new NameEnvironment(moduleScope.Module, ((ICallerContext)moduleScope).Locals));
             } else {
                 Statement s = new ReturnStatement(e);
-                bool enableDebugging = (executionOptions & IronPython.Hosting.ExecutionOptions.EnableDebugging) != 0;
+                bool enableDebugging = moduleScope.SystemState.EngineOptions.ClrDebuggingEnabled;
                 CompiledCode compiledCode = OutputGenerator.GenerateSnippet(cc, s, false, enableDebugging);
                 return compiledCode.Run(moduleScope);
             }

@@ -359,14 +359,14 @@ namespace IronPython.Runtime.Types {
         }
 
         private static Type ConvertTypeLibToAssembly(ICallerContext context, IntPtr typeInfoPtr, Guid typeInfoGuid) {
-            if (IronPython.Hosting.PythonEngine.options.Verbose)
+            if (IronPython.Compiler.Options.Verbose)
                 Console.WriteLine("Generating Interop assembly for " + typeInfoGuid);
 
             // This can be very slow. If this is taking a long time, you need to add a reference
             // to the Primary Interop Assembly using clr.AddReference
             Type interfaceType = Marshal.GetTypeForITypeInfo(typeInfoPtr);
 
-            if (IronPython.Hosting.PythonEngine.options.Verbose) {
+            if (IronPython.Compiler.Options.Verbose) {
                 if (interfaceType == null)
                     Console.WriteLine("Could not find COM interface " + typeInfoGuid);
                 else

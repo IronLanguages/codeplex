@@ -129,6 +129,9 @@
     <Compile Include="Compiler\Options.cs" />
     <Compile Include="Compiler\Generation\OutputGenerator.cs" />
     <Compile Include="Compiler\MethodBinder.cs" />
+    <Compile Include="Hosting\AdapterDict.cs" />
+    <Compile Include="Hosting\CompiledCode.cs" />
+    <Compile Include="Hosting\EngineModule.cs" />
     <Compile Include="Modules\Builtin.cs" />
     <Compile Include="Modules\Builtin.Generated.cs" />
     <Compile Include="Modules\locale.cs" />
@@ -143,6 +146,7 @@
     <Compile Include="Runtime\Operations\CharOps.cs" />
     <Compile Include="Runtime\Operations\NoneTypeOps.cs" />
     <Compile Include="Runtime\ReflectedPackage.cs" />
+    <Compile Include="Runtime\SymbolIdDictBase.cs" />
     <Compile Include="Runtime\Types\MethodWrapper.cs" />
     <Compile Include="Runtime\Types\DelegateType.cs" />
     <Compile Include="Runtime\Types\Mro.cs" />

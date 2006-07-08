@@ -29,7 +29,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// PythonModule normally runs code using compiled modules. However, CompiledCode snippet code can also 
     /// be run in the context of a PythonModule. In such a case, ModuleScope holds the context and scope information
-    /// of the PythonModule..
+    /// of the PythonModule. There can be multiple ModuleScopes corresponding to a single PythonModule.
     /// </summary>
 
     public class ModuleScope : IModuleEnvironment, ICloneable {
@@ -46,29 +46,14 @@ namespace IronPython.Runtime {
 
         public List<object> staticData;
 
-        private string moduleName;
-
-        /// <summary>
-        /// These overloads of the constructor allows delayed creating of the PythonModule. The ModuleScope cannot
-        /// be used until EnsureInitialized has been called.
-        /// </summary>
-        public ModuleScope() : this(String.Empty) {
-        }
-
-        public ModuleScope(string modName) {
-            if (modName == null)
-                throw new ArgumentException("moduleName");
-
-            moduleName = modName;
-            // Populate the dictionary so that SetGlobal will work
-            f_globals = new FieldIdDict();
-        }
-
         internal ModuleScope(PythonModule mod) : this(mod, mod.__dict__, mod.__dict__) {
         }
 
         internal ModuleScope(PythonModule mod, IAttributesDictionary globals, object locals) {
-            Initialize(mod, globals, locals);
+            __module__ = mod;
+            f_globals = globals;
+            f_locals = locals;
+            __builtin__ = TypeCache.Builtin;
         }
 
         internal ModuleScope(PythonModule mod, IAttributesDictionary globals, object locals, ICallerContext context) 
@@ -76,35 +61,8 @@ namespace IronPython.Runtime {
             trueDivision = context.TrueDivision;
         }
 
-        internal void EnsureInitialized(SystemState state) {
-            Debug.Assert(state != null);
-
-            if (__module__ == null) {
-                lock (this) {
-                    if (__module__ == null) {
-                        PythonModule mod = new PythonModule(moduleName, f_globals, state);
-                        Initialize(mod, mod.__dict__, mod.__dict__);
-
-                        if (moduleName != String.Empty)
-                            mod.SystemState.modules[moduleName] = mod;
-                    }
-                }
-            }
-
-            if (__module__.SystemState != state)
-                throw new ArgumentException("A ModuleScope can only be used with its associated PythonEngine", "moduleScope");
-        }
-
-        private void Initialize(PythonModule mod, IAttributesDictionary globals, object locals) {
-            __module__ = mod;
-            f_globals = globals;
-            f_locals = locals;
-            __builtin__ = TypeCache.Builtin;
-            moduleName = mod.ModuleName;
-        }
-
         public override string ToString() {
-            return moduleName;
+            return Module.ToString();
         }
 
         public object GetLocal(SymbolId symbol) {
@@ -118,14 +76,14 @@ namespace IronPython.Runtime {
                 // couple of exception-free fast paths...
                 IAttributesDictionary ad = f_locals as IAttributesDictionary;
                 if (ad != null) {
-                    if (ad.TryGetValue(symbol, out ret)) return true;
+                    return ad.TryGetValue(symbol, out ret);
                 }
 
                 string name = symbol.ToString();
 
                 IDictionary<object, object> dict = f_locals as IDictionary<object, object>;
                 if (dict != null) {
-                    if (dict.TryGetValue(name, out ret)) return true;
+                    return dict.TryGetValue(name, out ret);
                 }
 
                 IMapping imap = f_locals as IMapping;
@@ -196,25 +154,25 @@ namespace IronPython.Runtime {
             get { return __module__; }
         }
 
-        SystemState ICallerContext.SystemState {
+        public SystemState SystemState {
             get {
                 return ((ICallerContext)__module__).SystemState;
             }
         }
 
-        object ICallerContext.Locals {
+        public object Locals {
             get { return f_locals; }
         }
 
-        IAttributesDictionary ICallerContext.Globals {
+        public IAttributesDictionary Globals {
             get { return f_globals; }
         }
 
-        object ICallerContext.GetStaticData(int index) {
+        public object GetStaticData(int index) {
             return staticData[index];
         }
 
-        CallerContextAttributes ICallerContext.ContextFlags {
+        public CallerContextAttributes ContextFlags {
             get {
                 return ((ICallerContext)this.__module__).ContextFlags;
             }
@@ -223,7 +181,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        bool ICallerContext.TrueDivision {
+        public bool TrueDivision {
             get { return trueDivision; }
             set { trueDivision = value; }
         }
@@ -243,33 +201,5 @@ namespace IronPython.Runtime {
         }
 
         #endregion
-    }
-
-
-    public delegate object CompiledCodeDelegate(ModuleScope moduleScope);
-
-    // CompiledCode represents code that executes in the context of a ModuleScope. This is typically
-    // code executed from the interactive console, code compiled with the "eval" keyword, etc.
-    // Also see CompiledModule which represents code of an entire module
-    public class CompiledCode {
-        private CompiledCodeDelegate code;
-        private string name;
-        private List<object> staticData;
-
-        public CompiledCode(string name, CompiledCodeDelegate code, List<object> staticData) {
-            this.name = name;
-            this.code = code;
-            this.staticData = staticData;
-        }
-
-        public object Run(ModuleScope moduleScope) {
-            moduleScope = (ModuleScope)moduleScope.Clone();
-            moduleScope.staticData = staticData;
-            return code(moduleScope);
-        }
-
-        public override string ToString() {
-            return string.Format("<code {0}>", name);
-        }
     }
 }

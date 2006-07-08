@@ -189,7 +189,6 @@ namespace IronPython.Hosting {
             this.resourceFiles = resourceFiles;
             this.outputAssembly = outputAssembly;
             this.compilerSink = compilerSink;
-            PythonEngine.options = new Options();
             this.state = new SystemState();
         }
 

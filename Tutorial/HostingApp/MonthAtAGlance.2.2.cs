@@ -37,8 +37,8 @@ namespace HostingApp {
 
         void InitializePythonEngine() {
             engine = new PythonEngine();
-            engine.ImportSite();
-            engine.SetVariable("dateentries", dateEntries);
+            engine.Import("site");
+            engine.Globals["dateentries"] = dateEntries;
             try {
                 engine.Execute("print y");
             } catch (Exception exc) {
@@ -104,7 +104,7 @@ namespace HostingApp {
                 EntryChangedHandler(changedTo, currText);
 
             engine.Execute("n = dateentries.Count");
-            int nEntries = engine.Evaluate<int>("n");
+            int nEntries = engine.EvaluateAs<int>("n");
             MessageBox.Show("There are now " + nEntries.ToString() + " entries in the dictionary.");
 
         }

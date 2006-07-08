@@ -135,8 +135,7 @@ namespace IronPython.Compiler.Generation {
         public void Dump() {
             myAssembly.Save(outFileName, peKind, machine);
 #if DEBUG
-            if (IronPython.Hosting.PythonEngine.options != null && // This gets called from the PythonEngine constructor
-                IronPython.Hosting.PythonEngine.options.EngineDebug) {
+            if (IronPython.Compiler.Options.EngineDebug) {
                 PeVerifyThis();
             }
 #endif

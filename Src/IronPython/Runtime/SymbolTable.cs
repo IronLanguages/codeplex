@@ -202,7 +202,7 @@ namespace IronPython.Runtime {
     }
 
     /// <summary>
-    /// Exposes a IDictionary<SymbolId, object> as a IDictionary<string, object>
+    /// Exposes a IDictionary<SymbolId, object> as a IDictionary<object, object>
     /// </summary>
     class TransformDictEnum : CheckedDictionaryEnumerator {
         IEnumerator<KeyValuePair<SymbolId, object>> backing;
@@ -216,7 +216,7 @@ namespace IronPython.Runtime {
         }
 
         protected override object GetValue() {
-            return backing.Current.Key;
+            return backing.Current.Value;
         }
 
         protected override bool DoMoveNext() {

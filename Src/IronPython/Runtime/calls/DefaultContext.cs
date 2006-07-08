@@ -67,6 +67,11 @@ namespace IronPython.Runtime.Calls {
             return new CompilerContext();
         }
 
+        public Options EngineOptions {
+            get {
+                throw new InvalidOperationException("EngineOptions on default context is not supported");
+            }
+        }
         #endregion
     }
 }

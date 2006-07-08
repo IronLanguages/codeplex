@@ -726,7 +726,7 @@ namespace IronPython.Compiler {
             }
 
             public object CallReflected(ICallerContext context, object[] args) {
-                if (IronPython.Hosting.PythonEngine.options.EngineDebug) {
+                if (IronPython.Compiler.Options.EngineDebug) {
                     PerfTrack.NoteEvent(PerfTrack.Categories.Methods, this);
                 }
 
@@ -811,7 +811,7 @@ namespace IronPython.Compiler {
                     if (ret != null) return ret;
                 }
 
-                if (IronPython.Hosting.PythonEngine.options.EngineDebug) {
+                if (IronPython.Compiler.Options.EngineDebug) {
                     PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "CT:" + this.ToString());
                 }
 

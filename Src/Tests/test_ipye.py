@@ -70,8 +70,7 @@ def test_CreateMethod():
     """Test cases specific to PythonEngine.CreateMethod<DelegateType>"""
 
     pe = IronPython.Hosting.PythonEngine(CreateOptions())
-    from IronPython.Runtime import ModuleScope    
-    from IronPython.Runtime import SymbolTable
+    from IronPython.Hosting import EngineModule
     from clr import Reference
     
     load_iron_python_test()
@@ -91,8 +90,7 @@ def test_CreateLambdaAndMethod():
     """Common Test cases for PythonEngine.CreateLambda<DelegateType>(...) and PythonEngine.CreateMethod<DelegateType>"""
     
     pe = IronPython.Hosting.PythonEngine(CreateOptions())
-    from IronPython.Runtime import ModuleScope    
-    from IronPython.Runtime import SymbolTable
+    from IronPython.Hosting import EngineModule
     
     load_iron_python_test()
     from IronPythonTest import SimpleReturnDelegate, SimpleReturnDelegateArg1, SimpleReturnDelegateArg2
@@ -105,33 +103,33 @@ def test_CreateLambdaAndMethod():
         AreEqual(func[SimpleReturnDelegate](prepend+'123')(), 123)
         
         # eval w/ different module scopes works
-        ms = ModuleScope('test')
-        ms.SetGlobal(SymbolTable.StringToId('abc'), 'xyz')
+        engineModule1 = pe.CreateModule('test', False)
+        engineModule1.Globals['abc'] = 'xyz'
         
-        ms2 = ModuleScope('test')
-        ms2.SetGlobal(SymbolTable.StringToId('abc'), 'def')
+        engineModule2 = pe.CreateModule('test', False)
+        engineModule2.Globals['abc'] = 'def'
     
-        AreEqual(func[SimpleReturnDelegate](prepend+'abc', ms)(), 'xyz')
-        AreEqual(func[SimpleReturnDelegate](prepend+'abc', ms2)(), 'def')
+        AreEqual(func[SimpleReturnDelegate](prepend+'abc', engineModule1)(), 'xyz')
+        AreEqual(func[SimpleReturnDelegate](prepend+'abc', engineModule2)(), 'def')
             
         # scoped w/ 1 arg, none remapped    
-        AreEqual(func[SimpleReturnDelegateArg1](prepend+'abc + arg1', ms)('qrt'), 'xyzqrt')
-        AreEqual(func[SimpleReturnDelegateArg1](prepend+'abc + arg1', ms2)('qrt'), 'defqrt')
+        AreEqual(func[SimpleReturnDelegateArg1](prepend+'abc + arg1', engineModule1)('qrt'), 'xyzqrt')
+        AreEqual(func[SimpleReturnDelegateArg1](prepend+'abc + arg1', engineModule2)('qrt'), 'defqrt')
         
         # scoped w/ 2 args, none remapped    
-        AreEqual(func[SimpleReturnDelegateArg2](prepend+'abc + arg1 + arg2', ms)('qrt','asd'), 'xyzqrtasd')
-        AreEqual(func[SimpleReturnDelegateArg2](prepend+'abc + arg1 + arg2', ms2)('qrt','asd'), 'defqrtasd')
+        AreEqual(func[SimpleReturnDelegateArg2](prepend+'abc + arg1 + arg2', engineModule1)('qrt','asd'), 'xyzqrtasd')
+        AreEqual(func[SimpleReturnDelegateArg2](prepend+'abc + arg1 + arg2', engineModule2)('qrt','asd'), 'defqrtasd')
     
         # scoped w/ 1 arg, remapped
-        AreEqual(func[SimpleReturnDelegateArg1](prepend+'abc + xyz', ('xyz',), ms)('qrt'), 'xyzqrt')
-        AreEqual(func[SimpleReturnDelegateArg1](prepend+'abc + xyz', ('xyz',),ms2)('qrt'), 'defqrt')
+        AreEqual(func[SimpleReturnDelegateArg1](prepend+'abc + xyz', ('xyz',), engineModule1)('qrt'), 'xyzqrt')
+        AreEqual(func[SimpleReturnDelegateArg1](prepend+'abc + xyz', ('xyz',),engineModule2)('qrt'), 'defqrt')
         
         # unscoped w/ 1 arg remapped
         AreEqual(func[SimpleReturnDelegateArg1](prepend+'xyz', ('xyz',))('qrt'), 'qrt')
         
         # scoped w/ 2 args, remapped
-        AreEqual(func[SimpleReturnDelegateArg2](prepend+'abc + xyz + qrt', ('xyz','qrt'), ms)('qrt','asd'), 'xyzqrtasd')
-        AreEqual(func[SimpleReturnDelegateArg2](prepend+'abc + xyz + qrt', ('xyz','qrt'), ms2)('qrt','asd'), 'defqrtasd')
+        AreEqual(func[SimpleReturnDelegateArg2](prepend+'abc + xyz + qrt', ('xyz','qrt'), engineModule1)('qrt','asd'), 'xyzqrtasd')
+        AreEqual(func[SimpleReturnDelegateArg2](prepend+'abc + xyz + qrt', ('xyz','qrt'), engineModule2)('qrt','asd'), 'defqrtasd')
 
     for funcInfo in [(pe.CreateLambdaUnscoped,''), (pe.CreateMethodUnscoped,'return ')]:
         func = funcInfo[0]
@@ -140,8 +138,8 @@ def test_CreateLambdaAndMethod():
         # unscoped lambda
         x = func[SimpleReturnDelegate](prepend+'abc')
         
-        AreEqual(x(ms)(), 'xyz')
-        AreEqual(x(ms2)(), 'def')
+        AreEqual(x(engineModule1)(), 'xyz')
+        AreEqual(x(engineModule2)(), 'def')
         
     
     
@@ -150,15 +148,15 @@ def test_CreateMethod_Negative():
     
     pe = IronPython.Hosting.PythonEngine(CreateOptions())
     from System import ArgumentException, Delegate, MulticastDelegate
-    from IronPython.Runtime import ModuleScope    
+    from IronPython.Hosting import EngineModule    
 
     load_iron_python_test()
     from IronPythonTest import SimpleDelegate, SimpleReturnDelegateArg1, SimpleReturnDelegateArg2
-    ms = ModuleScope()
+    engineModule = pe.CreateModule()
 
     # specifying too many arguments should raise a ArgumentException
     try:
-        pe.CreateMethod[SimpleDelegate]('abc', ('abc',), ms)
+        pe.CreateMethod[SimpleDelegate]('abc', ('abc',), engineModule)
         AreEqual(True, False)
     except ArgumentException:
         pass
@@ -172,7 +170,7 @@ def test_CreateMethod_Negative():
 
     # scoped w/ 2 args, only 1st arg is remapped, so we throw due to bad args
     try:
-        pe.CreateMethod[SimpleReturnDelegateArg2]('abc + xyz + arg2', ('xyz',), ms)('qrt','asd')
+        pe.CreateMethod[SimpleReturnDelegateArg2]('abc + xyz + arg2', ('xyz',), engineModule)('qrt','asd')
         AssertUnreachable()
     except ValueError:
         pass
@@ -203,8 +201,8 @@ def test_CreateMethod_Negative():
 def CreateOptions():
     import sys
     
-    from IronPython.Compiler import Options
-    o = Options()
+    from IronPython.Hosting import EngineOptions
+    o = EngineOptions()
     if sys.argv.count('-X:ExceptionDetail') > 0: o.ExceptionDetail = True
     return o
 
@@ -213,16 +211,16 @@ def test_CreateLambda_Negative():
     pe = IronPython.Hosting.PythonEngine(CreateOptions())
 
     from System import ArgumentException, Delegate, MulticastDelegate
-    from IronPython.Runtime import ModuleScope, SymbolTable
+    from IronPython.Hosting import EngineModule
 
     load_iron_python_test()
     from IronPythonTest import SimpleReturnDelegate, SimpleReturnDelegateArg2
-    ms = ModuleScope()
-    ms.SetGlobal(SymbolTable.StringToId('abc'), 'abc')
+    engineModule = pe.CreateModule()
+    engineModule.Globals['abc'] = 'abc'
 
     # specifying too many arguments should raise a ArgumentException
     try:
-        pe.CreateLambda[SimpleReturnDelegate]('abc', ('abc',), ms)
+        pe.CreateLambda[SimpleReturnDelegate]('abc', ('abc',), engineModule)
         Assert(False)
     except ArgumentException:
         pass
@@ -243,7 +241,7 @@ def test_CreateLambda_Negative():
         
     # scoped w/ 2 args, only 1st arg is remapped, so we throw due to not providing enough args
     try:
-        pe.CreateLambda[SimpleReturnDelegateArg2]('abc + xyz + arg2', ('xyz',), ms)('qrt','asd')
+        pe.CreateLambda[SimpleReturnDelegateArg2]('abc + xyz + arg2', ('xyz',), engineModule)('qrt','asd')
         AssertUnreachable()
     except ValueError:
         pass

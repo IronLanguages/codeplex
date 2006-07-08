@@ -1182,7 +1182,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            if (IronPython.Hosting.PythonEngine.options.DebugMode) {
+            if (Options.DebugMode) {
                 cg.EmitPosition(Start, End);
                 cg.EmitTestTrue(test);
                 Label endLabel = cg.DefineLabel();
