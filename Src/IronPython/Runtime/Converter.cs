@@ -285,7 +285,8 @@ namespace IronPython.Runtime {
             if (to == Int64Type) return ConvertToInt64(value);
             if (to == DecimalType) return ConvertToDecimal(value);
 
-            if (to == IEnumeratorType) return ConvertToIEnumerator(value);
+            if (to == IEnumerableType) return ConvertToIEnumerable(value);
+
             if (DelegateType.IsAssignableFrom(to)) return ConvertToDelegate(value, to);
 
             if (to.IsArray) return ConvertToArray(value, to);
@@ -305,7 +306,7 @@ namespace IronPython.Runtime {
                 if (genTo == NullableOfTType) return ConvertToNullableT(value, to.GetGenericArguments());
                 if (genTo == IListOfTType) return ConvertToIListT(value, to.GetGenericArguments());
                 if (genTo == IDictOfTType) return ConvertToIDictT(value, to.GetGenericArguments());
-                if (genTo == IEnumeratorOfT) return ConvertToIEnumeratorT(value, to.GetGenericArguments());
+                if (genTo == IEnumerableOfTType) return ConvertToIEnumerableT(value, to.GetGenericArguments());
             }
 
             if (from.IsValueType) {
@@ -317,11 +318,65 @@ namespace IronPython.Runtime {
             throw MakeTypeError(to, value);
         }
 
-        public static IEnumerator ConvertToIEnumerator(object o) {
-            IEnumerator ie = o as IEnumerator;
-            if (ie != null) return ie;
+        /// <summary>
+        /// This function tries to convert an object to IEnumerator, or wraps it into an adapter
+        /// Do not use this function directly. It is only meant to be used by Ops.GetEnumerator.
+        /// </summary>
+        internal static bool TryConvertToIEnumerator(object o, out IEnumerator e) {
+            if (o is string) {
+                e = StringOps.GetEnumerator((string)o);
+                return true;
+            } else if (o is IEnumerable) {
+                e = ((IEnumerable)o).GetEnumerator();
+                return true;
+            } else if (o is IEnumerator) {
+                e = (IEnumerator)o;
+                return true;
+            }
+
+            if (PythonEnumerator.TryCreate(o, out e)) {
+                return true;
+            }
+            if (ItemEnumerator.TryCreate(o, out e)) {
+                return true;
+            }
+            e = null;
+            return false;
+        }
+
+        public static IEnumerable ConvertToIEnumerable(object o) {
             if (o == null) return null;
-            return Ops.GetEnumerator(o);
+
+            IEnumerable e = o as IEnumerable;
+            if (e != null) return e;
+
+            PythonEnumerable pe;
+            if (PythonEnumerable.TryCreate(o, out pe)) {
+                return pe;
+            }
+
+            ItemEnumerable ie;
+            if (ItemEnumerable.TryCreate(o, out ie)) {
+                return ie;
+            }
+
+            throw MakeTypeError("IEnumerable", o);
+        }
+
+        public static object ConvertToIEnumerableT(object value, Type[] enumOf) {
+            Type type = IEnumerableOfTType.MakeGenericType(enumOf);
+            if (type.IsInstanceOfType(value)) {
+                return value;
+            }
+
+            IEnumerable ie = value as IEnumerable;
+            if (ie == null) {
+                ie = ConvertToIEnumerable(value);
+            }
+
+            type = IEnumerableOfTWrapperType.MakeGenericType(enumOf);
+            object res = Activator.CreateInstance(type, ie);
+            return res;
         }
 
         private static object ConvertToArray(object value, Type to) {
@@ -346,22 +401,6 @@ namespace IronPython.Runtime {
             }
 
             throw MakeTypeError("Array", value);
-        }
-
-        public static object ConvertToIEnumeratorT(object value, Type[] enumOf) {
-            Type type = IEnumeratorOfT.MakeGenericType(enumOf);
-            if (type.IsInstanceOfType(value)) {
-                return value;
-            }
-
-            IEnumerator ie = value as IEnumerator;
-            if (ie == null) {
-                ie = Ops.GetEnumerator(value);
-            }
-
-            type = IEnumeratorOfTWrapper.MakeGenericType(enumOf);
-            object res = Activator.CreateInstance(type, ie);
-            return res;
         }
 
         internal static int ConvertToSliceIndex(object value) {
@@ -430,7 +469,7 @@ namespace IronPython.Runtime {
         private static readonly Type BigIntegerType = typeof(IronMath.BigInteger);
         private static readonly Type Complex64Type = typeof(IronMath.Complex64);
         private static readonly Type DelegateType = typeof(Delegate);
-        private static readonly Type IEnumeratorType = typeof(IEnumerator);
+        private static readonly Type IEnumerableType = typeof(IEnumerable);
         private static readonly Type ValueTypeType = typeof(ValueType);
         private static readonly Type TypeType = typeof(Type);
         private static readonly Type ArrayListType = typeof(ArrayList);
@@ -440,8 +479,8 @@ namespace IronPython.Runtime {
         private static readonly Type IDictOfTType = typeof(System.Collections.Generic.IDictionary<,>);
         private static readonly Type HashtableType = typeof(Hashtable);
         private static readonly Type ListWrapperForIListType = typeof(ListWrapperForIList<>);
-        private static readonly Type IEnumeratorOfT = typeof(System.Collections.Generic.IEnumerator<>);
-        private static readonly Type IEnumeratorOfTWrapper = typeof(IEnumeratorOfTWrapper<>);
+        private static readonly Type IEnumerableOfTType = typeof(System.Collections.Generic.IEnumerable<>);
+        private static readonly Type IEnumerableOfTWrapperType = typeof(IEnumerableOfTWrapper<>);
         private static readonly Type DictWrapperForIDictType = typeof(DictWrapperForIDict<,>);
         private static readonly Type IListOfObjectType = typeof(System.Collections.Generic.IList<object>);
         private static readonly Type IDictionaryOfObjectType = typeof(System.Collections.Generic.IDictionary<object, object>);
@@ -858,7 +897,7 @@ namespace IronPython.Runtime {
 
                 if (toType == BooleanType && IsPythonType(fromType)) return true;
                 if (DelegateType.IsAssignableFrom(toType) && IsPythonType(fromType)) return true;
-                if (IEnumeratorType == toType && IsPythonType(fromType)) return true;
+                if (IEnumerableType == toType && IsPythonType(fromType)) return true;
 
                 //__int__, __float__, __long__
                 if (toType == Int32Type && HasPythonProtocol(fromType, SymbolTable.ConvertToInt)) return true;

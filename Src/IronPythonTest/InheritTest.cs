@@ -514,7 +514,10 @@ namespace IronPythonTest {
             int[] array = { 10, 20, 30 };
             return array.GetEnumerator();
         }
-
+        public virtual System.Collections.IEnumerable M_IEnumerable() {
+            int[] array = { 11, 22, 33 };
+            return array;
+        }
         public int ForDelegate(int arg) { return arg * 2; }
 
         // Non-Virtual method (the derived class in python will have the same name method)
@@ -545,6 +548,7 @@ namespace IronPythonTest {
         public RtStruct Use_RtStruct() { return type.M_RtStruct(); }
         public RtClass Use_RtClass() { return type.M_RtClass(); }
         public System.Collections.IEnumerator Use_IEnumerator() { return type.M_IEnumerator(); }
+        public System.Collections.IEnumerable Use_IEnumerable() { return type.M_IEnumerable(); }
 
         // calling Non-Virtual method 
         public int Use_NonVirtual() { return type.M_NonVirtual(); }
@@ -571,6 +575,7 @@ namespace IronPythonTest {
         RtStruct M_RtStruct();
         RtClass M_RtClass();
         System.Collections.IEnumerator M_IEnumerator();
+        System.Collections.IEnumerable M_IEnumerable();
     }
 
     public class UseIReturnTypes {
@@ -597,6 +602,7 @@ namespace IronPythonTest {
         public RtStruct Use_RtStruct() { return type.M_RtStruct(); }
         public RtClass Use_RtClass() { return type.M_RtClass(); }
         public System.Collections.IEnumerator Use_IEnumerator() { return type.M_IEnumerator(); }
+        public System.Collections.IEnumerable Use_IEnumerable() { return type.M_IEnumerable(); }
     }
 
     public abstract class AReturnTypes {
@@ -620,6 +626,7 @@ namespace IronPythonTest {
         public abstract RtStruct M_RtStruct();
         public abstract RtClass M_RtClass();
         public abstract System.Collections.IEnumerator M_IEnumerator();
+        public abstract System.Collections.IEnumerable M_IEnumerable();
     }
 
     public class UseAReturnTypes {
@@ -646,6 +653,7 @@ namespace IronPythonTest {
         public RtStruct Use_RtStruct() { return type.M_RtStruct(); }
         public RtClass Use_RtClass() { return type.M_RtClass(); }
         public System.Collections.IEnumerator Use_IEnumerator() { return type.M_IEnumerator(); }
+        public System.Collections.IEnumerable Use_IEnumerable() { return type.M_IEnumerable(); }
     }
 
     public class BigVirtualClass {

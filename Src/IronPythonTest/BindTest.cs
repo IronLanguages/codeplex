@@ -309,15 +309,15 @@ namespace IronPythonTest {
             return arr;
         }
 
-        public object Enumerator(IEnumerator<object> enm) {
+        public object Enumerable(IEnumerable<object> enm) {
             return enm;
         }
 
-        public object StringEnumerator(IEnumerator<string> enm) {
+        public object StringEnumerable(IEnumerable<string> enm) {
             return enm;
         }
 
-        public object IntEnumerator(IEnumerator<int> enm) {
+        public object IntEnumerable(IEnumerable<int> enm) {
             return enm;
         }
 

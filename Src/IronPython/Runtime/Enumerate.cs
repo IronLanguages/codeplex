@@ -165,12 +165,12 @@ namespace IronPython.Runtime {
      * 
      */
 
-    internal class PythonEnumerator : IEnumerator, IEnumerable {
+    internal class PythonEnumerator : IEnumerator {
         private readonly object baseObject;
         private object nextMethod;
         private object current = null;
 
-        public static bool Create(object baseEnumerator, out IEnumerator enumerator) {
+        public static bool TryCreate(object baseEnumerator, out IEnumerator enumerator) {
             object iter;
 
             if (Ops.TryGetAttr(baseEnumerator, SymbolTable.Iterator, out iter)) {
@@ -217,11 +217,37 @@ namespace IronPython.Runtime {
 
         #endregion
 
+        [PythonName("__iter__")]
+        public object GetEnumerator() {
+            return this;
+        }
+    }
+
+    internal class PythonEnumerable : IEnumerable {
+        object iterator;
+
+        public static bool TryCreate(object baseEnumerator, out PythonEnumerable enumerator) {
+            object iter;
+
+            if (Ops.TryGetAttr(baseEnumerator, SymbolTable.Iterator, out iter)) {
+                object iterator = Ops.Call(iter);
+                enumerator = new PythonEnumerable(iterator);
+                return true;
+            } else {
+                enumerator = null;
+                return false;
+            }
+        }
+
+        private PythonEnumerable(object iterator) {
+            this.iterator = iterator;
+        }
+
         #region IEnumerable Members
 
         [PythonName("__iter__")]
         public IEnumerator GetEnumerator() {
-            return this;
+            return new PythonEnumerator(iterator);
         }
 
         #endregion
@@ -232,7 +258,7 @@ namespace IronPython.Runtime {
         private object current = null;
         private int index = 0;
 
-        public static bool Create(object baseObject, out IEnumerator enumerator) {
+        public static bool TryCreate(object baseObject, out IEnumerator enumerator) {
             object getitem;
 
             if (Ops.TryGetAttr(baseObject, SymbolTable.GetItem, out getitem)) {
@@ -244,7 +270,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public ItemEnumerator(object getItemMethod) {
+        internal ItemEnumerator(object getItemMethod) {
             this.getItemMethod = getItemMethod;
         }
 
@@ -282,7 +308,36 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+    }
 
+    internal class ItemEnumerable : IEnumerable {
+        object getitem;
+
+        public static bool TryCreate(object baseObject, out ItemEnumerable ie) {
+            object getitem;
+
+            if (Ops.TryGetAttr(baseObject, SymbolTable.GetItem, out getitem)) {
+                ie = new ItemEnumerable(getitem);
+                return true;
+            } else {
+                ie = null;
+                return false;
+            }
+        }
+
+        private ItemEnumerable(object getitem) {
+            this.getitem = getitem;
+        }
+
+
+        #region IEnumerable Members
+
+        [PythonName("__iter__")]
+        public IEnumerator GetEnumerator() {
+            return new ItemEnumerator(getitem);
+        }
+
+        #endregion
     }
 
 }

@@ -332,10 +332,10 @@ def test_collections():
     _helper(target.M651, [arrayInt, arrayObj, arrayByte, ], 651, [listInt, tupleInt, tupleLong1, tupleLong2, ], TypeError)
     
     # IEnumerable[int]
-    _helper(target.M652, [arrayInt, ], 652, [arrayObj, arrayByte, listInt, tupleInt, tupleLong1, tupleLong2, ], TypeError)
+    _helper(target.M652, [arrayInt, arrayObj, arrayByte, listInt, tupleInt, tupleLong1, tupleLong2, ], 652, [], TypeError)
     
     # IEnumerator[int]
-    _helper(target.M653, [arrayInt, arrayObj, arrayByte, listInt, tupleInt, tupleLong1, tupleLong2, ], 653, [], TypeError)
+    _helper(target.M653, [], 653, [arrayInt, arrayObj, arrayByte, listInt, tupleInt, tupleLong1, tupleLong2, ], TypeError)
     
     # Int32[]
     _helper(target.M500, [arrayInt, tupleInt, tupleLong1, tupleBool, ], 500, [listInt, arrayByte, arrayObj, ], TypeError)

@@ -628,10 +628,11 @@ namespace IronPython.Runtime.Operations {
         //  in the sequence seq. The separator between elements is the 
         //  string providing this method
         [PythonName("join")]
-        public static object Join(string self, IEnumerator seq) {
-            StringBuilder ret = new StringBuilder();
+        public static object Join(string self, object sequence) {
+            IEnumerator seq = Ops.GetEnumerator(sequence);
             if (!seq.MoveNext()) return "";
 
+            StringBuilder ret = new StringBuilder();
             // check if we have just a sequnce of just one value - if so just
             // return that value.
             object curVal = seq.Current;

@@ -824,4 +824,29 @@ namespace IronPython.Runtime {
 
         #endregion
     }
+
+    internal class IEnumerableOfTWrapper<T> : IEnumerable<T>, IEnumerable {
+        IEnumerable enumerable;
+
+        public IEnumerableOfTWrapper(IEnumerable enumerable) {
+            this.enumerable = enumerable;
+        }
+
+        #region IEnumerable<T> Members
+
+        public IEnumerator<T> GetEnumerator() {
+            return new IEnumeratorOfTWrapper<T>(enumerable.GetEnumerator());
+        }
+
+        #endregion
+
+        #region IEnumerable Members
+
+        [PythonName("__iter__")]
+        IEnumerator IEnumerable.GetEnumerator() {
+            return GetEnumerator();
+        }
+
+        #endregion
+    }
 }

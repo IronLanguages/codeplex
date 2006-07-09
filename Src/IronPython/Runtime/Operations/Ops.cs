@@ -1156,34 +1156,9 @@ namespace IronPython.Runtime.Operations {
             return al;
         }
 
-        public static bool TryGetEnumerator(object o, out IEnumerator ie) {
-            if (o is string) {
-                ie = StringOps.GetEnumerator((string)o);
-                return true;
-            } else if (o is IEnumerable) {
-                ie = ((IEnumerable)o).GetEnumerator();
-                return true;
-            } else if (o is IEnumerator) {
-                ie = (IEnumerator)o;
-                return true;
-            }
-
-            IEnumerator enumerator;
-            if (PythonEnumerator.Create(o, out enumerator)) {
-                ie = enumerator;
-                return true;
-            }
-            if (ItemEnumerator.Create(o, out enumerator)) {
-                ie = enumerator;
-                return true;
-            }
-            ie = null;
-            return false;
-        }
-
         public static IEnumerator GetEnumerator(object o) {
             IEnumerator ie;
-            if (!TryGetEnumerator(o, out ie)) {
+            if (!Converter.TryConvertToIEnumerator(o, out ie)) {
                 throw Ops.TypeError("{0} is not enumerable", StringRepr(o));
             }
             return ie;
@@ -1191,7 +1166,7 @@ namespace IronPython.Runtime.Operations {
 
         public static IEnumerator GetEnumeratorForUnpack(object enumerable) {
             IEnumerator ie;
-            if (!TryGetEnumerator(enumerable, out ie)) {
+            if (!Converter.TryConvertToIEnumerator(enumerable, out ie)) {
                 throw Ops.TypeError("unpack non-sequence of type {0}", 
                     StringRepr(Ops.GetDynamicType(enumerable)));
             }
@@ -1200,7 +1175,7 @@ namespace IronPython.Runtime.Operations {
 
         public static IEnumerator GetEnumeratorForIteration(object enumerable) {
             IEnumerator ie;
-            if (!TryGetEnumerator(enumerable, out ie)) {
+            if (!Converter.TryConvertToIEnumerator(enumerable, out ie)) {
                 throw Ops.TypeError("iteration over non-sequence of type {0}",
                     StringRepr(Ops.GetDynamicType(enumerable)));
             }

@@ -617,16 +617,16 @@ strdict = {'abc': 'def', 'xyz':'abc', 'mno':'prq'}
 objdict = { (2,3) : (4,5), (1,2):(3,4), (8,9):(1,4)}
 mixeddict = {'abc': 2, 'def': 9, 'qrs': 8}
 
-objFunctions = [cd.Array,cd.ObjIList, cd.Enumerator]
+objFunctions = [cd.Array,cd.ObjIList, cd.Enumerable]
 objData = [inttuple, strtuple, othertuple]
 
-intFunctions = [cd.IntEnumerator, cd.IntIList]
+intFunctions = [cd.IntEnumerable, cd.IntIList]
 intData = [inttuple, intlist]
 
 intTupleFunctions = [cd.IntArray]
 intTupleData = [inttuple]
 
-strFunctions = [cd.StringEnumerator, cd.StringIList]
+strFunctions = [cd.StringEnumerable, cd.StringIList]
 strData = [strtuple, strlist]
 
 strTupleFunctions = [cd.StringArray]

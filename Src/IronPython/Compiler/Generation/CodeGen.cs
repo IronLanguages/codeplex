@@ -867,8 +867,8 @@ namespace IronPython.Compiler.Generation {
                 EmitCall(typeof(Converter), "ConvertToBigInteger");
             } else if (paramType == typeof(Complex64)) {
                 EmitCall(typeof(Converter), "ConvertToComplex64");
-            } else if (paramType == typeof(IEnumerator)) {
-                EmitCall(typeof(Converter), "ConvertToIEnumerator");
+            } else if (paramType == typeof(IEnumerable)) {
+                EmitCall(typeof(Converter), "ConvertToIEnumerable");
             } else if (paramType == typeof(float)) {
                 EmitCall(typeof(Converter), "ConvertToSingle");
             } else if (paramType == typeof(byte)) {

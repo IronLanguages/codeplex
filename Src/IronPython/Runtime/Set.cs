@@ -45,9 +45,7 @@ namespace IronPython.Runtime {
         void PrivAdd(object adding);
         void PrivRemove(object removing);
         void PrivFreeze();
-
-        void SetData(Dict data);
-        void SetData(IEnumerator set);
+        void SetData(IEnumerable set);
     }
 
     /// <summary>
@@ -124,7 +122,7 @@ namespace IronPython.Runtime {
                 ISet res = Ops.Call(ut) as ISet;
 
                 Debug.Assert(res != null);
-                res.SetData(set.GetEnumerator());
+                res.SetData(set);
                 return res;
             }
         }
@@ -278,17 +276,12 @@ namespace IronPython.Runtime {
             // nop for non-frozen sets.
         }
 
-        void ISet.SetData(Dict data) {
-            items = data;
-        }
-
-        void ISet.SetData(IEnumerator set) {
+        void ISet.SetData(IEnumerable set) {
             items = new Dict();
-            while (set.MoveNext()) {
-                items[set.Current] = set.Current;
+            foreach (object o in set) {
+                items[o] = o;
             }
         }
-
 
         #endregion
 
@@ -676,7 +669,7 @@ namespace IronPython.Runtime {
                     return fs;
                 }
 
-                fs = new FrozenSetCollection(Ops.GetEnumerator(setData));
+                fs = new FrozenSetCollection(setData);
                 return fs;
             } else {
                 object res = ((DynamicType)cls).ctor.Call(cls, setData);
@@ -694,7 +687,7 @@ namespace IronPython.Runtime {
                 return fs;
             }
 
-            fs = new FrozenSetCollection(Ops.GetEnumerator(setData));
+            fs = new FrozenSetCollection(setData);
             return fs;
         }
 
@@ -705,12 +698,8 @@ namespace IronPython.Runtime {
             CalculateHashCode();
         }
 
-        internal FrozenSetCollection(object setData)
-            : this(Ops.GetEnumerator(setData)) {
-            CalculateHashCode();
-        }
-
-        protected FrozenSetCollection(IEnumerator setData) {
+        protected FrozenSetCollection(object set) {
+            IEnumerator setData = Ops.GetEnumerator(set);
             items = new Dict();
             while (setData.MoveNext()) {
                 object o = setData.Current;
@@ -721,10 +710,10 @@ namespace IronPython.Runtime {
             CalculateHashCode();
         }
 
-        internal FrozenSetCollection(Dict dict) {
-            items = dict;
-            CalculateHashCode();
+        internal FrozenSetCollection(ISet set)
+            : this((object)set) {
         }
+
         #endregion
 
         #region ISet
@@ -777,14 +766,10 @@ namespace IronPython.Runtime {
             items.Remove(removing);
         }
 
-        void ISet.SetData(Dict data) {
-            items = data;
-        }
-
-        void ISet.SetData(IEnumerator set) {
+        void ISet.SetData(IEnumerable set) {
             items = new Dict();
-            while (set.MoveNext()) {
-                items[set.Current] = set.Current;
+            foreach (object o in set) {
+                items[o] = o;
             }
             CalculateHashCode();
         }

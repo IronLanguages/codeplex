@@ -768,7 +768,8 @@ AreEqual(used.Use_RtEnum(), RtEnum.B)
 AreEqual(used.Use_RtDelegate().Invoke(100), 100)
 AreEqual(used.Use_RtStruct().F, 20)
 AreEqual(used.Use_RtClass().F, 30)
-AreEqual(reduce(add, used.Use_IEnumerator()), 15)
+AssertError(TypeError, used.Use_IEnumerator)
+AreEqual(reduce(add, used.Use_IEnumerable()), 66)
 
 #############################################
 ## inherited all, but returns with a python old class, or new class, 
@@ -797,6 +798,7 @@ def create_class(retObj):
         def M_RtStruct(self): return retObj
         def M_RtClass(self): return retObj
         def M_IEnumerator(self): return retObj
+        def M_IEnumerable(self): return retObj
     return NewC
 
 ## all return None
@@ -948,13 +950,23 @@ AreEqual(used.Use_RtClass().F, 500)
 
 ## IEnumerator
 DReturnTypes.M_IEnumerator = lambda self: (2, 20, 200, 2000)
-AreEqual(reduce(add, used.Use_IEnumerator()), 2222)
+AssertError(TypeError, used.Use_IEnumerator)
+
+## IEnumerable
+DReturnTypes.M_IEnumerable = lambda self: (2, 20, 200, 2000)
+AreEqual(reduce(add, used.Use_IEnumerable()), 2222)
 
 DReturnTypes.M_IEnumerator = lambda self: { 1 : "one", 10: "two", 100: "three"}
-AreEqual(reduce(add, used.Use_IEnumerator()), 111)
+AssertError(TypeError, used.Use_IEnumerator)
+
+DReturnTypes.M_IEnumerable = lambda self: { 1 : "one", 10: "two", 100: "three"}
+AreEqual(reduce(add, used.Use_IEnumerable()), 111)
 
 DReturnTypes.M_IEnumerator = lambda self: System.Array[int](range(10))
-AreEqual(reduce(add, used.Use_IEnumerator()), 45)
+AssertError(TypeError, used.Use_IEnumerator)
+
+DReturnTypes.M_IEnumerable = lambda self: System.Array[int](range(10))
+AreEqual(reduce(add, used.Use_IEnumerable()), 45)
 
 ## RtDelegate
 def func2(arg1, arg2): return arg1 * arg2 
@@ -1011,6 +1023,7 @@ def test_returntype(basetype, usetype):
         def M_RtStruct(self): return RtStruct(20)
         def M_RtClass(self): return RtClass(30)
         def M_IEnumerator(self): return [1, 2, 3, 4, 5]
+        def M_IEnumerable(self): return [7, 8, 9, 10, 11]
 
     used = usetype(derived())
     used.Use_void()
@@ -1033,7 +1046,8 @@ def test_returntype(basetype, usetype):
     AreEqual(used.Use_RtDelegate().Invoke(100), 100 * 5)
     AreEqual(used.Use_RtStruct().F, 20)
     AreEqual(used.Use_RtClass().F, 30)
-    AreEqual(reduce(add, used.Use_IEnumerator()), 15)
+    AssertError(TypeError, used.Use_IEnumerator)
+    AreEqual(reduce(add, used.Use_IEnumerable()), 45)
 
 test_returntype(IReturnTypes, UseIReturnTypes)
 test_returntype(AReturnTypes, UseAReturnTypes)
