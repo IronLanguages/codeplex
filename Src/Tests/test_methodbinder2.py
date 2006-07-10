@@ -53,6 +53,7 @@ tupleLong1, tupleLong2  = ((10L, 20L), ), ((System.Int64.MaxValue, System.Int32.
 arrayByte = array_byte((10, 20))
 arrayObj = array_object(['str', 10])
 
+
 def _self_defined_method(name): return len(name) == 4 and name[0] == "M"
 
 def _result_pair(s, offset=0):
@@ -83,22 +84,24 @@ def _my_call(func, arg):
     else:
         func(arg)
     
-def _try_arg(target, arg, mapping, funcTypeError, funcOverflowError):
+def _try_arg(target, arg, mapping, funcTypeError, funcOverflowError, verbose=False):
     '''try the pass-in argument 'arg' on all methods 'target' has.
        mapping specifies (method-name, flag-value)
        funcOverflowError contains method-name, which will cause OverflowError when passing in 'arg'
     '''
-    print arg, 
+    if verbose: print arg, 
     for funcname in dir(target):
         if not _self_defined_method(funcname) : continue
         
-        print funcname, 
+        if verbose: print funcname, 
         func = getattr(target, funcname)
 
         if funcname in funcOverflowError: expectError = OverflowError
         elif funcname in funcTypeError:  expectError = TypeError
         else: expectError = None
 
+        if isinstance(arg, types.lambdaType):
+            arg = arg()
         try:
             _my_call(func, arg)
         except Exception, e:
@@ -118,7 +121,7 @@ def _try_arg(target, arg, mapping, funcTypeError, funcOverflowError):
             if left != right: 
                 Fail("left %s != right %s when func %s on arg %s (%s)\n%s" % (left, right, funcname, arg, type(arg), func.__doc__))
             Flag.Value = -99           # reset 
-    print 
+    if verbose: print 
     
 def test_other_concerns():
     target = COtherOverloadConcern()
@@ -134,6 +137,15 @@ def test_other_concerns():
     AreEqual(Flag.Value, 210); Flag.Value = 99
     
     AssertError(TypeError, COtherOverloadConcern.M110, target, 100)
+    
+    # static / instance 2
+    target.M111(100)
+    AreEqual(Flag.Value, 111); Flag.Value = 99
+    COtherOverloadConcern.M111(target, 100)
+    AreEqual(Flag.Value, 211); Flag.Value = 99
+        
+    AssertError(TypeError, target.M111, target, 100)
+    AssertError(TypeError, COtherOverloadConcern.M111, 100)
     
     # statics
     target.M120(target, 100)
@@ -155,10 +167,26 @@ def test_other_concerns():
 
     for x in [100, 100.1234]: 
         target.M130[int](x)
-        AreEqual(Flag.Value, 230); Flag.Value = 99
-    
+        AreEqual(Flag.Value, 230); Flag.Value = 99    
+
+import clr
+clrRefInt = clr.Reference()
 
 ######### generated python code below #########
+
+def test_arg_ClrReference():
+    target = COverloads_ClrReference()
+    for (arg, mapping, funcTypeError, funcOverflowError) in [
+(lambda :                     None, _merge(_first('M100 M107 '), _second('M104 M105 M106 ')), 'M101 M102 M103 ', '', ),
+(lambda :          clr.Reference(), _second('M100 M101 '), 'M102 M103 M104 M105 M106 M107 ', '', ),
+(lambda :      clr.Reference(None), _second('M100 M101 '), 'M102 M103 M104 M105 M106 M107 ', '', ),
+(lambda :         clr.Reference(9), _second('M100 M101 '), 'M102 M103 M104 M105 M106 M107 ', '', ),
+(lambda :      clr.Reference(True), _second('M100 M101 '), 'M102 M103 M104 M105 M106 M107 ', '', ),
+(lambda :   clr.Reference(complex), _second('M100 M101 '), 'M102 M103 M104 M105 M106 M107 ', '', ),
+(lambda :      clr.Reference(C1()), _second('M100 M101 '), 'M102 M103 M104 M105 M106 M107 ', '', ),
+(lambda :      clr.Reference(C2()), _second('M100 M101 '), 'M102 M103 M104 M105 M106 M107 ', '', ),
+    ]:
+        _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
 def test_arg_NoArgNecessary():
     target = COverloads_NoArgNecessary()
@@ -166,6 +194,7 @@ def test_arg_NoArgNecessary():
 (     tuple(), _merge(_first('M100 M101 M102 M105 '), _second('M103 M104 M106 ')), '', '', ),
 (         100, _merge(_first('M105 M106 '), _second('M101 M102 M103 M104 ')), 'M100 ', '', ),
 (  (100, 200), _second('M102 M104 M105 M106 '), 'M100 M101 M103 ', '', ),
+(   clrRefInt, _merge(_first('M103 M104 '), _second('M100 ')), 'M101 M102 M105 M106 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
@@ -175,6 +204,7 @@ def test_arg_OneArg_NormalArg():
 (     tuple(), dict(), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 ', '', ),
 (         100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 '), '', '', ),
 (  (100, 200), _second('M102 M107 M108 '), 'M100 M101 M103 M104 M105 M106 M109 ', '', ),
+(   clrRefInt, _second('M100 '), 'M101 M102 M103 M104 M105 M106 M107 M108 M109 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
@@ -184,6 +214,7 @@ def test_arg_OneArg_RefArg():
 (     tuple(), dict(), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 ', '', ),
 (         100, _merge(_first('M100 M101 M103 M105 M108 '), _second('M106 M107 ')), 'M102 M104 ', '', ),
 (  (100, 200), _second('M101 M106 M107 '), 'M100 M102 M103 M104 M105 M108 ', '', ),
+(   clrRefInt, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 '), '', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
@@ -307,7 +338,7 @@ def test_arg_Collections():
 (     listInt, _merge(_first('M102 '), _second('M100 M103 ')), 'M101 M104 ', '', ),
 (  tupleLong1, _merge(_first('M102 '), _second('M100 M101 M103 M104 ')), '', '', ),
 (  tupleLong2, _merge(_first('M102 '), _second('M100 M103 ')), '', 'M101 M104 ', ),
-(   arrayByte, _merge(_first('M101 '), _second('')),  'M100 M102 M103 M104 ', '', ),
+(   arrayByte, _first('M101 '), 'M100 M102 M103 M104 ', '', ),
 (    arrayObj, _merge(_first('M101 M102 '), _second('M100 M103 ')), 'M104 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)

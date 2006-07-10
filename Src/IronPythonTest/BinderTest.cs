@@ -179,6 +179,16 @@ namespace IronPythonTest.BinderTest {
 
         // keywords 
         public void M800(Int32 arg1, object arg2, ref string arg3) { arg3 = arg3.ToUpper(); }
+
+        // more ref/out 
+        public void M850(ref S1 arg) { arg = new S1(); }
+        public void M851(ref C1 arg) { arg = new C1(); }
+        public void M852(out S1 arg) { arg = new S1(); }
+        public void M853(out C1 arg) { arg = new C1(); }
+        public void M854(ref Boolean arg) { Flag.Value = 854; }
+        public void M855(out Boolean arg) { Flag.Value = 855; arg = true; }
+
+        public void M860(ref Int32 arg1, Int32 arg2, out Int32 arg3) { arg3 = arg1 + arg2; arg1 = 100; }
     }
 
     public class GOtherConcern<T> {
@@ -194,6 +204,10 @@ namespace IronPythonTest.BinderTest {
         public void M110(COtherOverloadConcern arg1, Int32 arg2) { Flag.Value = 110; }
         public static void M110(Int32 arg) { Flag.Value = 210; }
 
+        // static / instance 2
+        public void M111(Int32 arg2) { Flag.Value = 111; }
+        public static COtherOverloadConcern M111(COtherOverloadConcern arg1, Int32 arg) { Flag.Value = 211; return null; }
+
         // statics 
         public static void M120(COtherOverloadConcern arg1, Int32 arg2) { Flag.Value = 120; }
         public static void M120(Int32 arg) { Flag.Value = 220; }
@@ -201,6 +215,32 @@ namespace IronPythonTest.BinderTest {
         // generics
         public void M130(Int32 arg) { Flag.Value = 130; }
         public void M130<T>(T arg) { Flag.Value = 230; }
+    }
+
+    public class COverloads_ClrReference {
+        public void M100(Object arg) { Flag.Value = 100; }
+        public void M100(ref Object arg) { arg = typeof(string); Flag.Value = 200; }
+
+        public void M101(Boolean arg) { Flag.Value = 101; }
+        public void M101(ref Boolean arg) { arg = true; Flag.Value = 201; }
+
+        public void M102(ref Int32 arg) { arg = 100; Flag.Value = 102; }
+        public void M102(ref Boolean arg) { arg = true; Flag.Value = 202; }
+
+        public void M103(ref Int32 arg) { arg = 100; Flag.Value = 103; }
+        public void M103(ref Byte arg) { arg = 10; Flag.Value = 203; }
+
+        public void M104(ref Int32 arg) { arg = 100;  Flag.Value = 104; }
+        public void M104(ref Object arg) { arg = typeof(int); Flag.Value = 204; }
+
+        public void M105(ref Boolean arg) { arg = true; Flag.Value = 105; }
+        public void M105(ref Object arg) { arg = typeof(Type);  Flag.Value = 205; }
+
+        public void M106(ref C1 arg) { arg = new C1();  Flag.Value = 106; }
+        public void M106(ref C2 arg) { arg = new C2(); Flag.Value = 206; }
+
+        public void M107(ref C1 arg) { arg = new C1(); Flag.Value = 107; }
+        public void M107(ref object arg) { arg = typeof(C1); Flag.Value = 207; }
     }
 
     public class COverloads_NoArgNecessary {

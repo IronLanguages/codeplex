@@ -366,28 +366,41 @@ def test_enum():
     # E2: ushort asked
     _helper(target.M451, [E2.A, ], 451, [10, E1.A, System.UInt16.Parse("3")], TypeError)
 
-def test_pass_in_none():
-    passSet = _get_funcs('''
-BigInt Bool String Object I C1 C2 A C6 
-ArrInt32 ArrI ParamArrInt32 ParamArrI ParamArrS IParamArrI 
-IListInt Array IEnumerableInt IEnumeratorInt NullableInt
-''')
-    skipSet = []  # be empty before release
-    
+def _repeat_with_one_arg(goodStr, getArg):    
+    passSet = _get_funcs(goodStr)
+    skipSet = []
+
     for fn in passSet:
         if fn in skipSet: continue
         
-        getattr(target, fn)(None)
+        arg = getArg()
+        getattr(target, fn)(arg)
         left = Flag.Value
         right = int(fn[1:])
         if left != right: 
-            Fail("left %s != right %s when func %s on arg None" % (left, right, fn))
-            
+            Fail("left %s != right %s when func %s on arg %s" % (left, right, fn, arg))
+    
     for fn in dir(target):
         if _self_defined_method(fn) and (fn not in passSet) and (fn not in skipSet):
-            try:   getattr(target, fn)(None)
+            arg = getArg()            
+            try:   getattr(target, fn)(arg)
             except TypeError : pass
-            else:  Fail("expect TypeError, but got none when func %s on arg None" % fn)
+            else:  Fail("expect TypeError, but got none when func %s on arg %s" % (fn, arg))
+
+def test_pass_in_none():
+    _repeat_with_one_arg('''
+BigInt Bool String Object I C1 C2 A C6 
+ArrInt32 ArrI ParamArrInt32 ParamArrI ParamArrS IParamArrI 
+IListInt Array IEnumerableInt IEnumeratorInt NullableInt
+''', lambda : None)
+
+def test_pass_in_clrReference():
+    import clr        
+    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference())
+    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference(None))
+    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference(10))
+    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference(123.123))
+    _repeat_with_one_arg('Object', lambda : clr.Reference(str)) # ref.Value = (type)
 
 def test_pass_in_nothing():
     passSet = _get_funcs('NoArg ParamArrInt32 ParamArrS ParamArrI OutInt32 DefValInt32')
@@ -400,14 +413,14 @@ def test_pass_in_nothing():
         left = Flag.Value
         right = int(fn[1:])
         if left != right: 
-            Fail("left %s != right %s when func %s on arg None" % (left, right, fn))
+            Fail("left %s != right %s when func %s on arg Nothing" % (left, right, fn))
     
     for fn in dir(target):
         if _self_defined_method(fn) and (fn not in passSet) and (fn not in skipSet):
             try:   getattr(target, fn)()
             except TypeError : pass
-            else:  Fail("expect TypeError, but got none when func %s on arg None" % fn)
-
+            else:  Fail("expect TypeError, but got none when func %s on arg Nothing" % fn)
+    
 def test_other_concern():
     target = COtherConcern()
     
@@ -500,6 +513,53 @@ def test_other_concern():
     try: target.M800(100, 'Yes', arg2 = C1())
     except TypeError: pass
     else: Fail("expect: got multiple values for keyword argument arg2")
+    
+    # more ref/out sanity check
+    import clr
+    def f1(): return clr.Reference()
+    def f2(): return clr.Reference(10)
+    def f3(): return clr.Reference(S1())
+    def f4(): return clr.Reference(C2()) # C2 inherits C1
+
+    for (f, a, b, c, d) in [ 
+        ('M850', True, False, True, False), 
+        ('M851', True, False, False, True), 
+        ('M852', True, False, True, False), 
+        ('M853', True, False, False, True), 
+    ]:
+        expect = (f in 'M850 M852') and S1 or C1
+        func = getattr(target, f)
+        
+        for i in range(4): 
+            ref = (f1, f2, f3, f4)[i]()
+            if (a,b,c,d)[i]: 
+                func(ref); AreEqual(type(ref.Value), expect)
+            else: 
+                AssertError(TypeError, func, ref)
+    
+    for x in (f1, f2, lambda : clr.Reference(True)): 
+        ref = x()
+        target.M854(ref); AreEqual(Flag.Value, 854)
+        ref = x()
+        target.M855(ref); AreEqual(Flag.Value, 855)
+    
+    # practical
+    ref2 = clr.Reference()
+    ref.Value = 300
+    ref2.Value = 100
+    ## M860(ref arg1, arg2, out arg3): arg3 = arg1 + arg2; arg1 = 100;
+    x = target.M860(ref, 200, ref2)
+    AreEqual(x, None)
+    AreEqual(ref.Value, 100)
+    AreEqual(ref2.Value, 500)
+    
+    # pass one clr.Reference(), and leave the other one open
+    ref.Value = 300
+    AssertError(TypeError, target.M860, ref, 200)
+    
+    # the other way
+    x = target.M860(300, 200)
+    AreEqual(x, (100, 500))
     
     # GOtherConcern<T>            
     target = GOtherConcern[int]()

@@ -42,6 +42,7 @@ class types:
     functionType        = type(_func)
     instancemethodType  = type(_class().method)
     classType           = type(_class)
+    lambdaType          = type(lambda : 1)
 
 import sys
 if sys.platform == "cli":
