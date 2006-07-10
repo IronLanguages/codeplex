@@ -907,5 +907,13 @@ namespace IronPython.Runtime.Types {
             }
             return Ops.NotImplemented;
         }
+
+        public override int GetInstanceLength(object self) {
+            object ret;
+            if (Ops.TryInvokeSpecialMethod(self, SymbolTable.Length, out ret)) {
+                return Converter.ConvertToInt32(ret);
+            }
+            throw Ops.AttributeError("{0} instance has no attribute '__len__'", Name);
+        }
     }
 }

@@ -81,14 +81,16 @@ namespace IronPython.Runtime {
 
                 string name = symbol.ToString();
 
-                IDictionary<object, object> dict = f_locals as IDictionary<object, object>;
-                if (dict != null) {
-                    return dict.TryGetValue(name, out ret);
-                }
-
+                // always check for IMapping first, it does the right thing
+                // w.r.t. overriding __getitem__ & TryGetValue.
                 IMapping imap = f_locals as IMapping;
                 if (imap != null) {
                     return imap.TryGetValue(name, out ret);
+                }
+
+                IDictionary<object, object> dict = f_locals as IDictionary<object, object>;
+                if (dict != null) {
+                    return dict.TryGetValue(name, out ret);
                 }
 
                 // uh-oh, we may end up throwing...

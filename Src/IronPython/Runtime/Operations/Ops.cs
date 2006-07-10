@@ -202,8 +202,9 @@ namespace IronPython.Runtime.Operations {
 
         public static string ToString(object o) {
             if (o == null) return "None";
-            else if (o is double) return FloatOps.ToString((double)o);
-            else if (o is float) return FloatOps.ToString((float)o);
+            if (o is double) return FloatOps.ToString((double)o);
+            if (o is float) return FloatOps.ToString((float)o);
+            if (o is Array) return StringRepr(o);
             return o.ToString();
         }
 
@@ -1287,7 +1288,11 @@ namespace IronPython.Runtime.Operations {
             ICollection ic = o as ICollection;
             if (ic != null) return ic.Count;
 
-            return Converter.ConvertToInt32(Ops.Invoke(o, SymbolTable.Length));
+            int res = GetDynamicType(o).GetInstanceLength(o);
+            if (res < 0) {
+                throw Ops.ValueError("__len__ should return >= 0, got {0}", res);
+            }
+            return res;    
         }
 
         public static object CallWithContext(ICallerContext context, object func, params object[] args) {

@@ -187,6 +187,7 @@ def test_ord():
     class foo(str): pass
     
     AreEqual(ord(foo('A')), 65)
+    
 
 Assert("__name__" in dir())
 Assert("__builtins__" in dir())
@@ -206,6 +207,18 @@ def test_eval():
 
     AssertError(NameError, eval, "x + y", d1)
     AssertError(NameError, eval, "x + y", d1, None)
+
+def test_len():
+    # old-style classes throw AttributeError, new-style classes throw
+    # TypeError
+    AssertError(TypeError, len, 2)
+    class foo: pass
+    
+    AssertError(AttributeError, len, foo())
+    
+    class foo(object): pass
+    
+    AssertError(TypeError, len, foo())
 
 run_test(__name__)
 

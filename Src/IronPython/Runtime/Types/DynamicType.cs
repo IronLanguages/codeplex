@@ -724,7 +724,7 @@ namespace IronPython.Runtime.Types {
         }
 
         protected virtual Tuple CalculateMro(Tuple bases) {
-            return new Mro().Calculate(this, bases);
+            return Mro.Calculate(this, bases);
         }
 
         public string Name {
@@ -756,6 +756,15 @@ namespace IronPython.Runtime.Types {
 
         public virtual object CompareTo(object self, object other) {
             return InvokeSpecialMethod(SymbolTable.Cmp, self, other);
+        }
+
+        public virtual int GetInstanceLength(object self) {
+            object ret;
+            if (Ops.TryInvokeSpecialMethod(self, SymbolTable.Length, out ret)) {
+                return Converter.ConvertToInt32(ret);
+            }
+
+            throw Ops.TypeError("len() of unsized object of type {0}", Ops.StringRepr(Ops.GetDynamicType(self)));
         }
 
         #endregion

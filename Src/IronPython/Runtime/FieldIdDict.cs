@@ -333,7 +333,7 @@ namespace IronPython.Runtime {
             lock (this) return data.TryGetValue(key, out value);
         }
 
-        public object this[SymbolId key] {
+        public virtual object this[SymbolId key] {
             get {
                 lock (this) return data[key];
             }

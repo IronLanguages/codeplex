@@ -30,6 +30,7 @@ namespace IronPython.Runtime {
     public class Dict : IMapping, IDictionary<object, object>, IComparable, ICloneable, IRichComparable, 
                         IDictionary, ICodeFormattable, IAttributesDictionary {
         internal static readonly IEqualityComparer<object> Comparer = new PythonObjectComparer();
+        private static object DefaultGetItem;   // our cached __getitem__ method
 
         internal Dictionary<object, object> data;
 
@@ -100,6 +101,15 @@ namespace IronPython.Runtime {
 
         public bool TryGetValue(object key, out object value) {
             lock (this) return data.TryGetValue(DictOps.NullToObj(key), out value);
+        }
+
+        bool IMapping.TryGetValue(object key, out object value) {
+            if (DictOps.TryGetValueVirtual(this, key, ref DefaultGetItem, out value)) {
+                return true;
+            }
+
+            // call Dict.TryGetValue to get the real value.
+            return this.TryGetValue(key, out value);
         }
 
         public ICollection<object> Values {
@@ -678,6 +688,34 @@ namespace IronPython.Runtime {
             } else {
                 return defaultValue;
             }
+        }
+
+        public static bool TryGetValueVirtual(IMapping self, object key, ref object DefaultGetItem, out object value) {
+            ISuperDynamicObject sdo = self as ISuperDynamicObject;
+            if (sdo != null) {
+                Debug.Assert(sdo != null);
+                DynamicType myType = sdo.GetDynamicType();
+                object ret;
+                if (DefaultGetItem == null) {
+                    TypeCache.Dict.TryGetSlot(DefaultContext.Default, SymbolTable.GetItem, out DefaultGetItem);
+                }
+                if (myType.TryGetSlot(DefaultContext.Default, SymbolTable.GetItem, out ret) &&
+                    ret != DefaultGetItem) {
+                    // subtype of dict that has overridden __getitem__
+                    // we need to call the user's versions, and handle
+                    // any exceptions.
+                    try {
+                        value = self[key];
+                        return true;
+                    } catch(KeyNotFoundException) {
+                        value = null;
+                        return false;
+                    }
+                }
+            }
+
+            value = null;
+            return false;
         }
 
         public static Tuple PopItem(IDictionary<object, object> self) {

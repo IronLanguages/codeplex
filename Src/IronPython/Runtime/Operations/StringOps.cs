@@ -753,11 +753,14 @@ namespace IronPython.Runtime.Operations {
         [PythonName("rfind")]
         public static int RFind(string self, string sub, int start, int end) {
             if (sub == null) throw Ops.TypeError("expected string, got NoneType");
-            if (sub.Length == 0) return self.Length;
 
             start = Ops.FixSliceIndex(start, self.Length);
             end = Ops.FixSliceIndex(end, self.Length);
-            //Console.WriteLine("count {0}, {1}, {2}", end-start-sub.self.Length, self.Length, start);
+
+            if (start > end) return -1;     // can't possibly match anything, not even an empty string
+            if (sub.Length == 0) return end;    // match at the end
+            if (end == 0) return -1;    // can't possibly find anything
+            
             return self.LastIndexOf(sub, end - 1, end - start);
         }
 

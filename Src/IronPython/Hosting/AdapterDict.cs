@@ -80,7 +80,7 @@ namespace IronPython.Hosting {
             return dict.ContainsKey(SymbolTable.IdToString(name));
         }
 
-        public object this[SymbolId name] {
+        public virtual object this[SymbolId name] {
             get {
                 return dict[SymbolTable.IdToString(name)];
             }

@@ -18,8 +18,12 @@
 #
 
 from lib.assert_util import *
-from System import Environment
-isPython25 = "-X:Python25" in System.Environment.GetCommandLineArgs()
+if is_cli: 
+    from System import Environment
+    isPython25 = "-X:Python25" in System.Environment.GetCommandLineArgs()
+else:
+    import sys
+    isPython25 = ((sys.version_info[0] == 2) and (sys.version_info[1] >= 5)) or (sys.version_info[0] > 2)
 
 if isPython25:
 	def test_string_partition():
@@ -588,7 +592,7 @@ if isPython25:
 	def test_min_with_kwarg():
 		class A(int):
 			def __len__(self):
-				return -100
+				return 0
 		a=A()
 		AreEqual(min(a,"aaaaaaa",key=len),a) # 2 args + buitin method
 		def userfunc(arg):

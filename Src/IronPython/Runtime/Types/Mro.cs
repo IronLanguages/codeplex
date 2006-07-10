@@ -43,329 +43,140 @@ namespace IronPython.Runtime.Types {
     /// N(B,A) is ok  (N, B, a, object)
     /// N(C, B, A) is ok (N, C, B, A, object)
     ///
-    /// To calculate this we build a graph that is based upon the first two
-    /// properties: the base classes, and the order in which the base classes
-    /// are ordered.  At the same time of building the graph we store the
-    /// order the classes occur so that classes that come earlier in the
-    /// precedence list but at the same depth from the newly defined type have
-    /// lower values.  In the case of two classes that have the same weight
-    /// we use this distance to disambiguate, and select the class that appeared
-    /// earliest in the inheritance hierachy.
+    /// Calculates a C3 MRO as described in "The Python 2.3 Method Resolution Order"
+    /// plus support for old-style classes.
     /// 
-    /// Once we've built the graph we recursively walk it, and if we detect
-    /// any cycles the MRO is invalid.  The graph is stored using a dictionary
-    /// of dynamic types mapping to the types that are less than it.  If there
-    /// are no cycles we propagate the types in the lists up the graph so that
-    /// the top most type contains all the types less than it.  
+    /// We build up a list of our base classes MRO's plus our base classes themselves.
+    /// We go through the list in order.  Look at the 1st class in the current list, and
+    /// if it's not the non-first class in any other list then remove it from all the lists
+    /// and append it to the mro.  Otherwise continue to the next list.  If all the classes at
+    /// the start are no-good then the MRO is bad and we throw. 
     /// 
-    /// Next we need to make the graph prefer depth-first orders over breadth-first
-    /// For this we take everything on the right side of the tree (siblings) and propagate
-    /// it up the left side of the tree if the right side classes don't contain the 
-    /// left side class we're propagating into. 
-    /// 
-    /// Finally we sort that list w/ the largest # of types winning, and that
-    /// sorted order is our MRO.
-    ///
-    /// Thrown into the mix is a bunch of handling of old-style classes that get treated
-    /// independently from new-style classes.  
+    /// For old-style classes if the old-style class is the only one in the list of bases add
+    /// it as a depth-first old-style MRO, otherwise compute a new-style mro for all the classes 
+    /// and use that.
     /// </summary>
     class Mro {
-        Dictionary<IPythonType, MroRatingInfo> classes;
-
-        public Mro() {
-            classes = new Dictionary<IPythonType, MroRatingInfo>();
+        public Mro(){
         }
 
-        public Tuple Calculate(IPythonType startingType, Tuple bases) {
-            // start w/ the provided bases, and build the graph that merges inheritance
-            // and linear order as defined by the base classes
-            int count = 1;
-
-            GenerateMroGraph(startingType, bases, ref count);
-
-            // then propagate all the classes reachable from one node into that node
-            // so we get the overall weight of each node
-            foreach (IPythonType dt in classes.Keys) {
-                PropagateBases(dt);
-            }
-
-            PropagateDown(startingType);
-
-            // get the sorted keys, based upon weight, ties decided by order
-            KeyValuePair<IPythonType, MroRatingInfo>[] kvps = GetSortedRatings();
-            IPythonType[] mro = new IPythonType[classes.Count];
-
-            // and then we have our mro...
-            for (int i = 0; i < mro.Length; i++) {
-                mro[i] = kvps[i].Key;
-            }
-
-            return new Tuple(false, mro);
+        public static Tuple Calculate(IPythonType startingType, Tuple bases) {
+            return Calculate(startingType, bases, false);
         }
 
         /// <summary>
-        /// If it's not one of your children, and your children don't have it, propagate it down.
         /// </summary>
-        /// <param name="classes"></param>
-        /// <param name="parent"></param>
-        /// <param name="baseType"></param>
-        private void PropagateDown(IPythonType parent) {
-            MroRatingInfo curInfo;
-            if (!classes.TryGetValue(parent, out curInfo)) return;
+        public static Tuple Calculate(IPythonType startingType, Tuple bases, bool forceNewStyle) {
+            if (bases.ContainsValue(startingType)) {
+                throw Ops.TypeError("a __bases__ item causes an inheritance cycle");
+            }
 
-            Tuple bases = parent.BaseClasses;
-            bool foundOldClass = false;
-            for (int i = 0; i < bases.Count; i++) {
-                IPythonType baseType = (IPythonType)bases[i];
+            List<IPythonType> mro = new List<IPythonType>();
+            mro.Add(startingType);
 
-                if (bases.Count > 1 && baseType is OldClass) {
-                    if (!foundOldClass) {
-                        for (int j = i + 1; j < bases.Count; j++) {
-                            if (bases[j] is OldClass) {
-                                foundOldClass = true;
+            if (bases.Count != 0) {
+                List<List<IPythonType>> mroList = new List<List<IPythonType>>();
+                // build up the list - it contains the MRO of all our
+                // bases as well as the bases themselves in the order in
+                // which they appear.
+                int oldSytleCount = 0;
+                foreach (IPythonType type in bases) {
+                    if (!(type is DynamicType))
+                        oldSytleCount++;
+                }
+
+                foreach (IPythonType type in bases) {
+                    DynamicType dt = type as DynamicType;
+                    if (dt != null) {
+                        mroList.Add(TupleToList(dt.MethodResolutionOrder));
+                    } else if (oldSytleCount == 1 && !forceNewStyle) {
+                        mroList.Add(GetOldStyleMro(type));
+                    } else {
+                        mroList.Add(GetNewStyleMro(type));
+                    }
+                }
+
+                mroList.Add(TupleToList(bases));
+
+                int lastRemove = -1;
+                for (; ; ) {
+                    bool removed = false, sawNonZero = false;
+                    // now that we have our list, look for good heads
+                    for (int i = 0; i < mroList.Count; i++) {
+                        if (mroList[i].Count == 0) continue;    // we've removed everything from this list.
+
+                        sawNonZero = true;
+                        IPythonType head = mroList[i][0];
+                        // see if we're in the tail of any other lists...
+                        bool inTail = false;
+                        for (int j = 0; j < mroList.Count; j++) {
+                            if (mroList[j].Count != 0 && !mroList[j][0].Equals(head) && mroList[j].Contains(head)) {
+                                inTail = true;
                                 break;
                             }
                         }
 
-                        if (!foundOldClass) {
-                            EnsureOldClassLevel(parent, bases, i);
-                            continue;
-                        }
-                    }
-                }
-
-                PropagateDown(baseType);
-            }
-
-            // new-style class, or old-style class being treated w/ new-style mro
-            for (int i = 0; i < curInfo.Count; i++) {
-                PropagateDownWorker(parent, curInfo[i]);
-            }
-        }
-
-
-        /// <summary>
-        /// Ensures that an old-class graph in the middle of a new-class has
-        /// all of it's children at the same level and that the level is 1 less
-        /// than the parents level.  This allows us to use the Order property
-        /// to order the old classes
-        /// </summary>
-        private void EnsureOldClassLevel(IPythonType parent, Tuple bases, int oldClassIndex) {
-            MroRatingInfo tempInfo = new MroRatingInfo();
-
-            // first get all the sibling classes to the right of us, and
-            // anything they refer to we will add to our weight.
-            for (int i = oldClassIndex + 1; i < bases.Count; i++) {
-                if (bases[i] is OldClass) continue;
-
-                MroRatingInfo appending;
-                if (!classes.TryGetValue((IPythonType)bases[i], out appending)) continue;
-
-                if (!tempInfo.Contains((IPythonType)bases[i])) tempInfo.Add((IPythonType)bases[i]);
-
-                for (int j = 0; j < appending.Count; j++) {
-                    if (!tempInfo.Contains(appending[j]) && !(appending[j] is OldClass)) {
-                        tempInfo.Add(appending[j]);
-                    }
-                }
-            }
-
-            foreach (IPythonType innerBaseType in parent.BaseClasses) {
-                if (!(innerBaseType is OldClass)) continue;
-
-                PropageteOldClass(innerBaseType, tempInfo);
-            }
-        }
-
-        /// <summary>
-        /// Propagates list of types to old-classes that are ordered using the order
-        /// property.
-        /// </summary>
-        private void PropageteOldClass(IPythonType curType, MroRatingInfo propagating) {
-            MroRatingInfo curInfo;
-            if (!classes.TryGetValue(curType, out curInfo)) return;
-
-            Debug.Assert(curInfo.OldClassOrdered);
-
-            foreach (IPythonType dt in propagating) {
-                if (dt != curType && !curInfo.Contains(dt)) curInfo.Add(dt);
-            }
-
-            foreach (IPythonType dt in curType.BaseClasses) {
-                PropageteOldClass(dt, propagating);
-            }
-        }
-
-        private void PropagateDownWorker(IPythonType parent, IPythonType propagating) {
-            MroRatingInfo curInfosInfo = classes[propagating];
-
-            foreach (IPythonType baseType in parent.BaseClasses) {
-                MroRatingInfo childsInfo;
-
-                if (propagating == baseType ||
-                    curInfosInfo.Contains(baseType) ||
-                    !classes.TryGetValue(baseType, out childsInfo) ||
-                    childsInfo.OldClassOrdered) continue;
-
-                // propagate the current type being propagated
-                if (!childsInfo.Contains(propagating)) childsInfo.Add(propagating);
-
-                // and then propagate anything that it references down as well.
-                foreach (IPythonType dt in curInfosInfo) {
-                    if (dt == baseType || ChildHasType(dt, baseType) || ChildHasType(parent, dt)) continue;
-
-                    if (!childsInfo.Contains(dt)) childsInfo.Add(dt);
-                }
-                PropagateDownWorker(baseType, propagating);
-            }
-        }
-
-        private bool ChildHasType(IPythonType parent, IPythonType child) {
-            foreach (IPythonType baseType in parent.BaseClasses) {
-                if (baseType == child) return true;
-
-                if (!classes.ContainsKey(baseType)) continue;
-
-                MroRatingInfo childsInfo = classes[baseType];
-
-                if (childsInfo.Contains(child)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Gets the keys sorted by their weight & ties settled by the order in which
-        /// classes appear in the class hierarchy given the calculated graph
-        /// </summary>
-        private KeyValuePair<IPythonType, MroRatingInfo>[] GetSortedRatings() {
-            KeyValuePair<IPythonType, MroRatingInfo>[] kvps = new KeyValuePair<IPythonType, MroRatingInfo>[classes.Count];
-            ((ICollection<KeyValuePair<IPythonType, MroRatingInfo>>)classes).CopyTo(kvps, 0);
-
-            // sort the array, so the largest lists are on top
-            Array.Sort<KeyValuePair<IPythonType, MroRatingInfo>>(kvps,
-                delegate(KeyValuePair<IPythonType, MroRatingInfo> x, KeyValuePair<IPythonType, MroRatingInfo> y) {
-                    if (x.Key == y.Key) return 0;
-
-                    int res = y.Value.Count - x.Value.Count;
-                    if (res != 0) return res;
-
-                    // two classes are of the same precedence, 
-                    // we need to look at which one is left
-                    // most - luckily we already stored that info
-                    return x.Value.Order - y.Value.Order;
-                });
-            return kvps;
-        }
-
-        private void EnsureOldClassEntries(IPythonType parent, ref int count) {
-            Debug.Assert(parent is OldClass);
-
-            MroRatingInfo parentList;
-
-            if (!classes.TryGetValue(parent, out parentList))
-                parentList = classes[parent] = new MroRatingInfo();
-
-            parentList.OldClassOrdered = true;
-            // only set order once - if we see a type multiple times,
-            // the earliest one is the most important.
-            if (parentList.Order == 0) parentList.Order = count++;
-
-            foreach (IPythonType baseType in parent.BaseClasses) {
-                EnsureOldClassEntries(baseType, ref count);
-            }
-        }
-        /// <summary>
-        /// Updates our classes dictionary from a type's base classes, updating for both
-        /// the inheritance hierachy as well as the order the types appear as bases.
-        /// </summary>
-        private void GenerateMroGraph(IPythonType parent, Tuple bases, ref int count) {
-            MroRatingInfo parentList, innerList;
-            if (!classes.TryGetValue(parent, out parentList))
-                parentList = classes[parent] = new MroRatingInfo();
-
-            // only set order once - if we see a type multiple times,
-            // the earliest one is the most important.
-            if (parentList.Order == 0) parentList.Order = count++;
-
-            IPythonType prevType = null;
-            bool foundOldClass = false;
-            for (int i = 0; i < bases.Count; i++) {
-                IPythonType baseType = (IPythonType)bases[i];
-
-                if (bases.Count > 1 && baseType is OldClass) {
-                    if (!foundOldClass) {
-                        for (int j = i + 1; j < bases.Count; j++) {
-                            if (bases[j] is OldClass) {
-                                foundOldClass = true;
-                                break;
+                        if (!inTail) {
+                            lastRemove = i;
+                            if (mro.Contains(head)) {
+                                throw Ops.TypeError("a __bases__ item causes an inheritance cycle");
                             }
-                        }
+                            // add it to the linearization, and remove
+                            // it from our lists
+                            mro.Add(head);
 
-                        if (!foundOldClass) {
-                            // no other old-classes, let order sort it out - but make sure we have
-                            // entries for them.
-                            EnsureOldClassEntries(baseType, ref count);
-                            continue;
-                        }
+                            for (int j = 0; j < mroList.Count; j++) {
+                                mroList[j].Remove(head);
+                            }
+                            removed = true;
+                            break;
+                        } 
+                    }
+                    
+                    if (!sawNonZero) break;
+
+                    if (!removed) {
+                        // we've iterated through the list once w/o removing anything
+                        throw Ops.TypeError("invalid order for base classes: {0} {1}",
+                            mroList[0][0],
+                            mroList[1][0]);
                     }
                 }
-
-                // full new-style MRO, look at local ordering & hierarchal ordering
-                if (!parentList.Contains(baseType) && !parentList.OldClassOrdered) parentList.Add(baseType);
-
-                if (prevType != null) {
-                    innerList = classes[prevType];
-
-                    if (!innerList.Contains(baseType) && !innerList.OldClassOrdered) innerList.Add(baseType);
-                }
-
-                prevType = baseType;
-
-                GenerateMroGraph(baseType, baseType.BaseClasses, ref count);
             }
+
+            return new Tuple(mro);
         }
 
-        private void PropagateBases(IPythonType dt) {
-            MroRatingInfo innerInfo, mroInfo = classes[dt];
-            mroInfo.Processing = true;
+        private static List<IPythonType> TupleToList(Tuple t) {
+            List<IPythonType> innerList = new List<IPythonType>();
+            foreach(IPythonType ipt in t) innerList.Add(ipt);
+            return innerList;
+        }
 
-            // recurse down to the bottom of the tree
-            foreach (IPythonType lesser in mroInfo) {
-                IPythonType lesserType = lesser;
+        private static List<IPythonType> GetOldStyleMro(IPythonType oldStyleType) {
+            List<IPythonType> res = new List<IPythonType>();
+            GetOldStyleMroWorker(oldStyleType, res);
+            return res;
+        }
 
-                if (classes[lesserType].Processing) throw Ops.TypeError("invalid order for base classes: {0} and {1}", dt.Name, lesserType.Name);
-
-                PropagateBases(lesserType);
-            }
-
-            // then propagate the bases up the tree as we go.
-            int startingCount = mroInfo.Count;
-            for (int i = 0; i < startingCount; i++) {
-                IPythonType lesser = mroInfo[i];
-
-                if (!classes.TryGetValue(lesser, out innerInfo)) continue;
-
-                foreach (IPythonType newList in innerInfo) {
-                    if (!mroInfo.Contains(newList)) mroInfo.Add(newList);
+        private static void GetOldStyleMroWorker(IPythonType curType, List<IPythonType> res) {
+            if (!res.Contains(curType)) {
+                res.Add(curType);
+            
+                foreach (IPythonType dt in curType.BaseClasses) {
+                    GetOldStyleMroWorker(dt, res);
                 }
             }
-
-            mroInfo.Processing = false;
         }
 
-        private class MroRatingInfo : List<IPythonType> {
-            public int Order;
-            public bool Processing;
-            public bool OldClassOrdered;
-
-            public MroRatingInfo()
-                : base() {
+        private static List<IPythonType> GetNewStyleMro(IPythonType oldStyleType) {
+            List<IPythonType> res = new List<IPythonType>();
+            res.Add(oldStyleType);
+            foreach (IPythonType dt in oldStyleType.BaseClasses) {
+                res.AddRange(TupleToList(Calculate(dt, dt.BaseClasses, true)));
             }
-            public override string ToString() {
-                return String.Format("Count: {0} Order: {1} OldClass Ordered: {2}", Count, Order, OldClassOrdered);
-            }
+            return res;
         }
+
     }
 }

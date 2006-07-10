@@ -25,7 +25,7 @@ namespace IronPython.Runtime {
 
     [PythonType(typeof(Dict))]
     public abstract class SymbolIdDictBase : IMapping, ICloneable, IRichEquality, IRichComparable, ICodeFormattable {
-
+        private static object DefaultGetItem;
         #region Abstract Members
         abstract internal IDictionary<object, object> AsObjectKeyedDictionary();
         [PythonName("clear")] // The CustomAttribute needs to be copied down to the override
@@ -49,6 +49,10 @@ namespace IronPython.Runtime {
         }
 
         bool IMapping.TryGetValue(object key, out object value) {
+            if (DictOps.TryGetValueVirtual(this, key, ref DefaultGetItem, out value)) {
+                return true;
+            }
+
             return AsObjectKeyedDictionary().TryGetValue(key, out value);
         }
 

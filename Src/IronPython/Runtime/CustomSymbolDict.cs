@@ -379,7 +379,7 @@ namespace IronPython.Runtime {
             lock (this) return data.TryGetValue(key, out value);
         }
 
-        public object this[SymbolId key] {
+        public virtual object this[SymbolId key] {
             get {
                 object res;
                 if (TryGetExtraValue(key, out res) && res != Uninitialized.instance) return res;

@@ -91,6 +91,18 @@ def test_rfind():
     AreEqual("abcdbcda".rfind("cd", 1), 5)
     AreEqual("abcdbcda".rfind("cd", 3), 5)
     AreEqual("abcdbcda".rfind("cd", 7), -1)
+    
+    AreEqual('abc'.rfind('', 0, 0), 0)
+    AreEqual('abc'.rfind('', 0, 1), 1)
+    AreEqual('abc'.rfind('', 0, 2), 2)
+    AreEqual('abc'.rfind('', 0, 3), 3)
+    AreEqual('abc'.rfind('', 0, 4), 3)
+    
+    AreEqual('x'.rfind('x', 0, 0), -1)
+    
+    AreEqual('x'.rfind('x', 3, 0), -1)
+    AreEqual('x'.rfind('', 3, 0), -1)
+    
 
 def test_split():
     x="Hello Worllds"

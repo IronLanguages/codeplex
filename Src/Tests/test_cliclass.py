@@ -361,5 +361,11 @@ def test_explicit_interfaces():
     AreEqual(IOverrideTestInterface.y.__get__(otdc, OverrideTestDerivedClass), 'IOverrideTestInterface.y invoked')
     
 
+def test_array():
+    import System
+    arr = System.Array[int]([0])
+    AreEqual(repr(arr), str(arr))
+    AreEqual(repr(System.Array[int]([0, 1])), 'System.Int32[](0, 1)')
+
 if is_cli: 
     run_test(__name__)

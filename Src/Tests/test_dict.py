@@ -269,6 +269,27 @@ def repeat_on_class(C):
     Assert(d.has_key('f2'))
     Assert(d.has_key('f3'))
     Assert(d.has_key('fx') == False)
+    
+    # subclassing, overriding __getitem__, and passing to 
+    # eval    
+    dictType = type(d)
+    
+    try:
+        class newDict(dictType):
+            def __getitem__(self, key):
+                if self.key == 'abc':
+                    return 'def'
+                return super(self, dictType).__getitem__(key)
+    except TypeError, ex:
+        Assert(ex.msg.find('cannot derive from sealed or value types') != -1)
+    else:           
+        try:
+            nd = newDict()
+        except TypeError, ex:
+            # can't construct an instance of this dictionary
+            Assert(ex.msg.find('newDict() takes exactly') != -1)
+        else:
+            AreEqual(eval('abc', {}, nd), 'def')
 
     ############### IN THIS POINT, d LOOKS LIKE ###############
     ##  {'f1': f1, 'f2': f2, 'f3': f3, 'x3': 30, '__doc__': 'This is comment', '__module__': '??'}
