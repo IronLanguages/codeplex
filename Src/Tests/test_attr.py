@@ -124,3 +124,24 @@ AssertErrorWithMessages(AttributeError, "attribute 'center' of 'str' object is r
                                         "'str' object attribute 'center' is read-only", s.__delattr__, "center")
 
 AssertError(TypeError, getattr, object(), None)
+
+##########################################################################
+# test attribute access checks
+class C(object): pass
+c = C()
+
+def del1():
+	del c.__class__
+
+def del2():
+	del c.__doc__
+
+def del3():
+	del c.__module__
+	
+def test_attraccess(): 
+	AssertError(TypeError, del1)
+	AssertError(AttributeError, del2)
+	AssertError(AttributeError, del3)
+	
+test_attraccess()
