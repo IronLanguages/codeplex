@@ -42,7 +42,7 @@ namespace IronPython.Hosting {
         #region Public API
         public IDictionary<string, object> Globals { get { return globals; } }
 
-        internal PythonModule Module { get { return defaultModuleScope.Module; } }
+        public PythonModule Module { get { return defaultModuleScope.Module; } }
 
         public string Name { get { return Module.ModuleName; } }
 
