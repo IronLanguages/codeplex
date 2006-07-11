@@ -53,6 +53,8 @@
 	<p class="Toc2">Exercise 3: <a href="#T1.3">Loading .NET libraries</a></p>
 	<p class="Toc3">Task 1: <a href="#T1.3.1">Using System.Xml - AddReference</a></p>
 	<p class="Toc3">Task 2: <a href="#T1.3.2">Mapack - Loading the .NET libraries - AddReferenceToFile</a></p>
+	<p class="Toc2">Exercise 4: <a href="#T1.4">Obtaining and Using Python Standard Library</a></p>
+	<p class="Toc3">Task 1: <a href="#T1.4.1">Configuring IronPython to use the Python standard library</a></p>
 	<p class="Toc1">Tutorial 2: <a href="#T2">Advanced IronPython</a></p>
 	<p class="Toc2">Exercise 1: <a href="#T2.1">Events and Delegates</a></p>
 	<p class="Toc3">Task 1: <a href="#T2.1.1">File System Watcher</a></p>
@@ -88,9 +90,12 @@
 	<p class="Toc3">Task 1: <a href="#T6.2.1">Embedding IronPython in an application</a></p>
 	<p class="Toc3">Task 2: <a href="#T6.2.2">Handling IronPython exceptions gracefully</a></p>
     <p class="Toc3">Task 3: <a href="#T6.2.3">Redirecting the engine's output streams</a></p>
-    <p class="Toc1">Tutorial 7: <a href="#T7">Using Python Standard Library</a></p>
-	<p class="Toc2">Exercise 1: <a href="#T7.1">Obtaining and Using Python Standard Library</a></p>
-	<p class="Toc3">Task 1: <a href="#T7.1.1">Configuring IronPython to use the Python standard library</a></p>
+    <p class="Toc1">Tutorial 7: <a href="#T7">Using Visual Studio to Edit .py 
+	Files and Debug Them</a></p>
+	<p class="Toc2">Exercise 1: <a href="#T7.1">Setting up Visual Studio for 
+	IronPython Debugging</a></p>
+	<p class="Toc3">Task 1: <a href="#T7.1.1">Setting up Visual Studio for 
+	IronPython Debugging</a></p>
 </div>
 <div class="Section2">
 	<h1><a name="Intro">Introduction</a></h1>
@@ -230,7 +235,6 @@
 	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Stepnonumbering">After this step, the console window will contain 
 	the following text:</p>
-	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; 2+2</p>
 	<p class="Code-Background">4</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; print &quot;Hello World!&quot;</p>
@@ -349,8 +353,9 @@
 	folder.</p>
 	<ol>
 		<li>
-		<p class="Step">Import the &quot;first.py&quot; module located in the Tutorial:
-		</p>
+		<p class="Step">Import the &quot;first.py&quot; module located in the Tutorial 
+		(because you launched ipy.exe from the Tutorial directory, &quot;first&quot; will 
+		be found on your sys.path):</p>
 		</li>
 	</ol>
 	<p class="TypedExample">import first</p>
@@ -372,6 +377,7 @@
 	</ol>
 	<p class="TypedExample">first.add.__doc__</p>
 	<p class="TypedExample">first.factorial.__doc__</p>
+	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Stepnonumbering">The __doc__ attribute will be later used also for 
 	exploring .NET methods and their parameter types.</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; first.add.__doc__</p>
@@ -381,7 +387,7 @@
 	&gt;&gt;&gt; </p>
 	<ol start="4">
 		<li>
-		<p class="Step">Call the methods in &quot;first&quot; module and print the contents 
+		<p class="Step">Call the methods in the &quot;first&quot; module and print the contents 
 		of the &quot;hi&quot; attribute</p>
 		</li>
 	</ol>
@@ -427,24 +433,27 @@
 	<p class="TypedExample">dir(System.Environment)</p>
 	<p class="TypedExample">System.Environment.OSVersion</p>
 	<p class="TypedExample">System.Environment.CommandLine</p>
-	<p class="Stepnonumbering">The expected output of these commands is as follows:</p>
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">The expected output of these commands is as follows 
+	(with some ellipsis for convenience):</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; dir(System.Environment)</p>
 	<p class="Code-Background">[&#39;CommandLine&#39;, ..., &#39;OSVersion&#39;, ... ]</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; System.Environment.OSVersion</p>
 	<p class="Code-Background">Microsoft Windows NT 5.2.3790 Service Pack 1</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; System.Environment.CommandLine</p>
-	<p class="Code-Background">&#39;C:\\IronPython\\ipy.exe &#39;<br />
+	<p class="Code-Background">&#39;C:\\IronPython\\ipy.exe&#39;<br />
 	&gt;&gt;&gt; </p>
 	<ol start="4">
 		<li>
-		<p class="Step">Import statement can be used also to import contents of 
-		a class or module into the global namespace. Use the &quot;from ... import ...&quot; 
+		<p class="Step">The import statement can be used also to import contents of 
+		a class or module into the global namespace.&nbsp; Use the &quot;from ... import ...&quot; 
 		flavor of the import statement to do that and explore the contents of the 
 		global namespace using dir().</p>
 		</li>
 	</ol>
 	<p class="TypedExample">from System.Math import *</p>
 	<p class="TypedExample">dir()</p>
+	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Stepnonumbering">Now you can call Math methods without having to specify 
 	the namespace and class name prefix:</p>
 	<p class="TypedExample">Sin(PI/2)</p>
@@ -475,15 +484,17 @@
 	<p class="TypedExample">dir(h)</p>
 	<ol start="3">
 		<li>
-		<p class="Step">Insert&nbsp; few elements into the hash table:</p>
+		<p class="Step">Insert&nbsp;a few elements into the hash table:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">h[&quot;a&quot;] = &quot;IronPython&quot;</p>
 	<p class="TypedExample">h[&quot;b&quot;] = &quot;Tutorial&quot;</p>
+	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Stepnonumbering">IronPython supports the C# - style syntax for accessing 
-	the hash table elements. The same syntax applies to any index-able object (Arrays, 
+	the hash table elements.&nbsp; The same syntax applies to any index-able object (Arrays, 
 	Array lists etc):</p>
 	<p class="TypedExample">h[&quot;a&quot;]</p>
+	<p class="Stepnonumbering" style="page-break-after:avoid">&nbsp;</p>
 	<p class="Stepnonumbering" style="page-break-after:avoid">The output of this 
 	step will be:</p>
 	<p class="Code-Background" style="page-break-after:avoid">&gt;&gt;&gt; h[&quot;a&quot;] = &quot;IronPython&quot;<br />
@@ -498,30 +509,37 @@
 		</li>
 	</ol>
 	<p class="TypedExample">for e in h: print e.Key, &quot;:&quot;, e.Value</p>
-	<p class="Stepnonumbering">The expected output in the console is:</p>
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">The expected output in the console is (the input 
+	line starting with &quot;for&quot; requires an extra return or enter key press because 
+	the interpreter prompts for more statements in the 'for' loop.):</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; for e in h: print e.Key, &quot;:&quot;, e.Value</p>
+	<p class="Code-Highlighted">...</p>
 	<p class="Code-Background">a : IronPython<br />
 	b : Tutorial</p>
 	<ol start="5">
 		<li>
 		<p class="Step">You can initialize the collection classes by passing in 
-		the Python built-in list or tuple data types as arguments. Python list is 
-		created by specifying the list of elements in the square brackets: [1,2,3]. 
-		Tuple is defined by specifying elements in the parentheses: (1,2,3)</p>
+		the Python built-in list or tuple data types as arguments.&nbsp; You can 
+		create a Python list by specifying the list of elements in square brackets: [1,2,3].&nbsp; 
+		You create tuples by specifying elements in the parentheses: (1,2,3).</p>
 		</li>
 	</ol>
 	<p class="TypedExample">l = ArrayList([1,2,3])</p>
 	<p class="TypedExample">for i in l: print i</p>
 	<p class="TypedExample">s = Stack((1,2,3))</p>
 	<p class="TypedExample">while s.Count: s.Pop()</p>
+	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Stepnonumbering">The expected output is:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; l = ArrayList([1,2,3])<br />
 	&gt;&gt;&gt; for i in l: print i</p>
+	<p class="Code-Highlighted">...</p>
 	<p class="Code-Background">1<br />
 	2<br />
 	3</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; s = Stack((1,2,3))<br />
 	&gt;&gt;&gt; while s.Count: s.Pop()</p>
+	<p class="Code-Highlighted">...</p>
 	<p class="Code-Background">3<br />
 	2<br />
 	1</p>
@@ -535,9 +553,9 @@
 	<p class="TypedExample">from System.Collections.Generic import *</p>
 	<ol start="2">
 		<li>
-		<p class="Step">To instantiate generic class, the generic type arguments 
-		must be specified. IronPython uses the following syntax to specify the type 
-		arguments: generic_type[type_argument, ...]. Create instance of generic 
+		<p class="Step">To instantiate a generic class, the generic type arguments 
+		must be specified.&nbsp; IronPython uses the following syntax to specify the type 
+		arguments: generic_type[type_argument, ...].&nbsp; Create instance of generic 
 		list of string:</p>
 		</li>
 	</ol>
@@ -558,13 +576,15 @@
 	<p class="TypedExample">l.Add(3)</p>
 	<p class="TypedExample">l.Add(2.5)</p>
 	<p class="TypedExample">l.Add([1,2,3])</p>
+	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Stepnonumbering">Obviously, adding non-strings will fail with type 
 	error:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; l.Add(3)</p>
 	<p class="Code-Background">Traceback (most recent call last):<br />
-&nbsp;&nbsp; at &lt;shell&gt;</p>
-	<p class="Code-Highlighted">ValueError: Bad args for the method &lt;method# Add 
-	on ...&gt;</p>
+&nbsp;&nbsp; ...</p>
+	<p class="Code-Highlighted">ValueError: The value &quot;3&quot; is not of type &quot;System.String&quot; 
+	and cannot be used in this generic collection.</p>
+	<p class="Code-Highlighted">Parameter name: value</p>
 	<ol start="5">
 		<li>
 		<p class="Step">Enumerate the generic collection:</p>
@@ -573,6 +593,7 @@
 	<p class="TypedExample">for i in l: print i</p>
 	<p class="Stepnonumbering">The output will be:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; for i in l: print i</p>
+	<p class="Code-Highlighted">...</p>
 	<p class="Code-Background">Hello<br />
 	Hi</p>
 	<ol start="6">
@@ -583,9 +604,9 @@
 	</ol>
 	<h2><a name="T1.3">Exercise 3: Loading .NET libraries</a></h2>
 	<p class="Body">IronPython can directly import only some of the .NET libraries 
-	- the most commonly used ones. To use additional .NET libraries, they must be 
-	explicitly referenced. IronPython maintains a list of all referenced 
-	assemblies (clr.References). To add reference to the .NET assembly, use the functions 
+	- the most commonly used ones.&nbsp; To use additional .NET libraries, they must be 
+	explicitly referenced.&nbsp; IronPython maintains a list of all referenced 
+	assemblies (see clr.References in Task 1).&nbsp; To add a reference to a .NET assembly, use the functions 
 	available in the built-in &quot;clr&quot; module:</p>
 	<ul>
 		<li>
@@ -602,7 +623,7 @@
 		file regardless of the assembly version. As a result, it doesn&#39;t guarantee 
 		that the correct assembly version is being loaded. To guarantee that correct 
 		assembly version is being loaded, use clr.AddReferenceByName. Moreover, 
-		AddReferenceToFile requires that the assembly be located in the 
+		AddReferenceToFile requires that the assembly be located in a 
 		directory listed in sys.path.</p>
 		</li>
 		<li>
@@ -618,7 +639,7 @@
 		</li>
 		<li>
 		<p class="Body"><b>clr.AddReferenceByPartialName</b> adds reference to the 
-		assembly by specifying partial assembly name. This function cannot guarantee 
+		assembly by specifying a partial assembly name. This function cannot guarantee 
 		that the correct version of the assembly is being loaded. Use clr.AddReferenceByName 
 		to add reference to specific version of the assembly.</p>
 		</li>
@@ -631,8 +652,9 @@
 		</li>
 		<li>
 		<p class="Step">To import System.Xml, the reference to the assembly containing 
-		the Xml components must be first added to IronPython. Add reference to System.Xml 
-		using the following code:</p>
+		the Xml components must be first added to IronPython.&nbsp; Add reference to System.Xml 
+		using the following code&nbsp; (you can enter &quot;clr.References&quot; before 
+		and after the call to clr.AddReference to see it change if you want):</p>
 		</li>
 	</ol>
 	<p class="TypedExample">import clr</p>
@@ -641,13 +663,12 @@
 	<p class="TypedExample">dir()</p>
 	<ol start="3">
 		<li>
-		<p class="Step">Note that clr.AddReference function accepts either System.Reflection.Assembly object or string 
+		<p class="Step">Note that the clr.AddReference function accepts either System.Reflection.Assembly object or string 
 		as a parameter. The string parameter can 
-		be a full assembly name, a partial assembly name or a file name. For more control 
+		be a full assembly name, a partial assembly name, or a file name. For more control 
 		over the assembly references, use the appropriate functions described 
 		above. </p>
-		<p class="Step">For example, consider following alternatives for the statement 
-		clr.AddReference(&quot;System.Xml&quot;) above:</p>
+		<p class="Step">For example, consider the following alternatives for the statement clr.AddReference(&quot;System.Xml&quot;) above:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">clr.AddReferenceByName(&#39;System.Xml, Version=2.0.0.0, 
@@ -670,9 +691,11 @@
 	</ol>
 	<p class="TypedExample">n = d.SelectNodes(&quot;//@Version&quot;)</p>
 	<p class="TypedExample">for e in n: print e.Value</p>
+	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Stepnonumbering">The output in the console window will be:</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; n = d.SelectNodes(&quot;//@Version&quot;)<br />
 	&gt;&gt;&gt; for e in n: print e.Value</p>
+	<p class="Code-Highlighted">...</p>
 	<p class="Code-Background">0.7<br />
 	0.7.1<br />
 	0.7.2<br />
@@ -717,8 +740,8 @@
 		</li>
 	</ol>
 	<h3><a name="T1.3.2">Task 2: Mapack - Loading the .NET libraries - AddReferenceToFile</a></h3>
-	<p class="Normal">This task requires Mapack library for linear algebra computations 
-	the library is not part of IronPython distribution. See <a href="#Mapack">prerequisites</a> 
+	<p class="Normal">This task requires the Mapack.dll library for linear algebra computations.&nbsp; 
+	The library is not part of the IronPython distribution. See <a href="#Mapack">prerequisites</a> 
 	for download details.</p>
 	<ol>
 		<li>
@@ -741,20 +764,21 @@
 	&gt;&gt;&gt; dir()</p>
 	<p class="Code-Background">[&#39;CholeskyDecomposition&#39;, &#39;EigenvalueDecomposition&#39;, 
 	&#39;LuDecomposition&#39;, &#39;Matrix&#39;, &#39;QrDecomposition&#39;, &#39;SingularValueDecomposition&#39;, 
-	&#39;__builtins__&#39;, &#39;__doc__&#39;, &#39;__name__&#39;, &#39;sys&#39;]</p>
+	&#39;__builtins__&#39;, &#39;__doc__&#39;, &#39;__name__&#39;, 'clr', &#39;sys&#39;]</p>
 	<ol start="3">
 		<li>
 		<p class="Step">Create instance of Matrix class:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">m = Matrix()</p>
-	<p class="Stepnonumbering">Oops, bad arguments for the constructor. In the next 
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">Oops, bad arguments for the constructor.&nbsp; In the next 
 	step you&#39;ll learn the way to discover the constructors available.</p>
 	<p class="Code-Background">&gt;&gt;&gt; m = Matrix()<br />
 	Traceback (most recent call last):<br />
 &nbsp;&nbsp; at &lt;shell&gt;</p>
-	<p class="Code-Highlighted">ValueError: Bad args for the method &lt;constructor# 
-	for Mapack.Matrix&gt;</p>
+	<p class="Code-Highlighted">TypeError: Matrix() takes at least 1 argument (0 
+	given)</p>
 	<ol start="4">
 		<li>
 		<p class="Step">Using the __doc__ attribute, find out information about 
@@ -768,8 +792,8 @@
 	__new__(System.Double[][])</p>
 	<ol start="5">
 		<li>
-		<p class="Step">Create instances of Matrix class using the correct constructors 
-		and set some matrix elements manually. IronPython supports custom indexing 
+		<p class="Step">Create instances of the Matrix class using the correct constructors 
+		and set some matrix elements manually.&nbsp; IronPython supports custom indexing 
 		on .NET classes. </p>
 		</li>
 	</ol>
@@ -791,8 +815,7 @@
 	0</p>
 	<ol start="6">
 		<li>
-		<p class="Step">(Optional) IronPython also supports overloaded operators. 
-		Matrix does overload operators +, - (binary and unary) and *. You can see 
+		<p class="Step">(Optional) IronPython also supports overloaded operators.&nbsp; Matrix does overload operators +, - (binary and unary) and *.&nbsp; You can see 
 		Python representation of the operators (__add__, __mul__, __sub__, ...) 
 		using dir():</p>
 		</li>
@@ -828,6 +851,43 @@
 		by Enter)</p>
 		</li>
 	</ol>
+	<h2><a name="T1.4">Exercise 4: Obtaining and Using Python Standard Library</a></h2>
+	<p class="Body">In this exercise, you will obtain Python and point 
+	IronPython at the Python standard library.</p>
+	<h3><a name="T1.4.1">Task 1: Configuring IronPython to use the Python standard library</a></h3>
+	<ol>
+		<li>
+		<p class="Step">Download the latest Python installer from
+		<a href="http://www.python.org/download/">http://www.python.org/download/</a> 
+		and install Python.&nbsp; The rest of this exercise will assume you used 
+		defaults (and installed to c:\python24, for example).</p>
+		</li>
+		<li>
+		<p class="Step">Create a file named &quot;site.py&quot; and place it into your 
+		IronPython &quot;Lib&quot; directory.&nbsp; There might be one there 
+		already, so you can just edit it.&nbsp; The &quot;site.py&quot; file is executed every time 
+		you run IronPython.&nbsp; To tell IronPython where the Python standard library 
+		is, you can add the &quot;lib&quot; directory of Python to IronPython's path.&nbsp; To 
+		do so, put the following code into IronPython's &quot;site.py&quot; file (replace 
+		c:\python24\lib with your actual path to the Python lib directory):</p>
+		</li>
+	</ol>
+	<p class="Code-Highlighted">import sys</p>
+<p class="Code-Highlighted">sys.path.append(<i>r&quot;c:\python24\lib&quot;</i>)</p>
+	<ol start="3">
+		<li>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
+		</li>
+		<li>
+		<p class="Step">Now you can use the Python standard library from 
+		IronPython, for example to get the current working directory (output 
+		uses assumed location of your IronPython installation):</p>
+		</li>
+	</ol>
+	<p class="Code-Highlighted">import os</p>
+	<p class="Code-Highlighted">os.getcwd()</p>
+	<p class="Code-Background">'C:\\ironpython\\Tutorial'</p>
 	<p class="LabSummary">Tutorial Summary</p>
 	<p class="Body">In this tutorial you performed the following exercises.</p>
 	<ul>
@@ -840,25 +900,31 @@
 		<li>
 		<p class="Body"><a href="#T1.3">Loading .NET libraries</a></p>
 		</li>
+		<li>
+		<p class="Body"><a href="#T1.4">Obtaining and Using Python Standard 
+		Library</a></p>
+		</li>
 	</ul>
 	<p class="Body">In this tutorial, you became acquainted with IronPython interactive 
-	console, the dynamic exploratory way of development using the dir() function 
-	and __doc__ attribute to explore the environment. You learned to load and import 
+	console, including the dynamic exploratory way of development using the dir() function 
+	and __doc__ attribute to explore the environment.&nbsp; You learned to load and import 
 	.NET libraries from IronPython (using the import statement), create instances 
-	of .NET classes (including generic classes), call methods, enumerate .NET collections 
-	and even use overloaded operators on .NET objects.</p>
+	of .NET classes (including generic classes), call methods, enumerate .NET collections, 
+	and even use overloaded operators on .NET objects.&nbsp; Finally, you 
+	learned how to access standard Python libraries.</p>
+	<p class="Body">&nbsp;</p>
 	<h1><a name="T2">Tutorial 2: Advanced IronPython</a></h1>
 	<p class="Body">The large part of the beauty of IronPython lies within the dynamic-style 
-	development - modifying the live application by adding functioning elements 
-	to it. With Windows applications, this often requires delegates and event handling 
-	(i.e. adding a button to an existing form and adding functionality to the button 
+	development -- modifying the live application by adding functioning elements 
+	to it.&nbsp; With Windows applications, this often requires delegates and event handling 
+	(i.e., adding a button to an existing form and adding functionality to the button 
 	to handle the user pressing the button).</p>
-	<p class="Body">This tutorial will focus on creating delegates and handling 
-	events in IronPython and creating windows applications using Windows Forms and 
+	<p class="Body">This tutorial will focus on creating delegates, handling 
+	events in IronPython, and creating Windows applications using Windows Forms and 
 	the new Windows Presentation Foundation (formerly known as Avalon).</p>
 	<p class="Body">Estimated time to complete this tutorial: <b>25 minutes</b></p>
 	<p class="Body">The objective of this tutorial is to learn how to create delegates 
-	and handle events using IronPython and use that knowledge to build working Windows 
+	and handle events using IronPython, and to use that knowledge to build working Windows 
 	applications using Windows Forms and Windows Presentation Foundation.</p>
 	<ul>
 		<li>
@@ -900,14 +966,14 @@
 	<ol start="4">
 		<li>
 		<p class="Step" style="page-break-after:avoid">Create the function to handle 
-		the events. Because we don&#39;t know yet what arguments the delegate will have, 
+		the events.&nbsp; Because we don&#39;t know yet what arguments the delegate will have, 
 		let&#39;s accept any number of arguments (the *arg notation):</p>
 		</li>
 	</ol>
 	<p class="TypedExample">def handle(*args): print args</p>
 	<ol start="5">
 		<li>
-		<p class="Step">Register the event handler for the &#39;Changed&#39;, &#39;Created&#39; 
+		<p class="Step">Register the event handler for the &#39;Changed&#39;, &#39;Created&#39;, 
 		and &#39;Deleted&#39; events:</p>
 		</li>
 	</ol>
@@ -922,14 +988,15 @@
 	<p class="TypedExample">w.EnableRaisingEvents = True</p>
 	<ol start="7">
 		<li>
-		<p class="Step">Open the Tutorial folder and create a file. An easy way 
+		<p class="Step">Open the Tutorial folder and create a file.&nbsp; An easy way 
 		to create the file is to right-click with the mouse and select &quot;New\Text 
 		Document&quot;. The file watcher will raise the &quot;Created&quot; event.</p>
 		</li>
 	</ol>
 	<p class="Stepnonumbering">You can then open the file in Notepad, type in any 
-	text and save the file (this raises the &quot;Changed&quot; event) and finish by deleting 
-	the file (&quot;Deleted&quot; event).</p>
+	text, and save the file.&nbsp; This raises the &quot;Changed&quot; event.&nbsp; 
+	Then finish by deleting 
+	the file to see the &quot;Deleted&quot; event get raised.</p>
 	<p class="Stepnonumbering">At the end of this step, the output in the command 
 	window will be similar to the following:</p>
 	<p class="Code-Background">(System.IO.FileSystemWatcher, &lt;System.IO.FileSystemEventArgs 
@@ -939,8 +1006,7 @@
 	(System.IO.FileSystemWatcher, &lt;System.IO.FileSystemEventArgs object at 0x014EF022&gt;)</p>
 	<ol start="8">
 		<li>
-		<p class="Step">In the next task, we will create an improved event handler. 
-		For now, remove the current event handler from the file watcher events:</p>
+		<p class="Step">In the next task, we will create an improved event handler.&nbsp; For now, remove the current event handler from the file watcher events:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">w.Changed -= handle</p>
@@ -2580,53 +2646,101 @@ engine.Execute("for i in dateentries.Keys: print 'Day %s: %s' % (i, dateentries[
 	<p class="Normal">In this tutorial you used IronPython as an embedded expression 
 	evaluator and as a scripting engine for an existing .NET application.</p>
 </div>
-<h1><a name="T7">Tutorial 7: Using Python Standard Library</a></h1>
-	<p class="Body">IronPython can be configured to use the Python standard 
-	library. This tutorial will show how to obtain the standard library and 
-	configure IronPython to use it.</p>
+<p class="Normal">&nbsp;</p>
+<h1><a name="T7">Tutorial 7: Using Visual Studio to Edit .py Files and Debug 
+Them</a></h1>
+	<p class="Body">There's very basic support for editing .py files in Visual 
+	Studio (no coloring or expression completion), but you get .NET debugging support.&nbsp; This tutorial shows 
+	you how to quickly set up Visual Studio to work on Python scripts in a 
+	directory.</p>
 	<p class="Body">Estimated time to complete this tutorial: <b>5 minutes</b></p>
-	<p class="Body">The objective of this tutorial is to use the Python standard 
-	library from IronPython.</p>
+	<p class="Body">The objective of this tutorial is to set up Visual Studio 
+	for some basic tool support for debugging.</p>
 	<ul>
 		<li>
-		<p class="Body"><a href="#T7.1">Obtaining and Using Python Standard Library</a></p>
+		<p class="Body"><a href="#T7.1">Setting up Visual Studio for IronPython 
+		Debugging</a></p>
 		</li>
 	</ul>
-	<h2><a name="T7.1">Exercise 1: Obtaining and Using Python Standard Library</a></h2>
-	<p class="Body">In this exercise, you will obtain Python and point 
-	IronPython at the Python standard library.</p>
-	<h3><a name="T7.1.1">Task 1: Configuring IronPython to use the Python </a>standard library</h3>
+	<h2><a name="T7.1">Exercise 1: Setting up Visual Studio for IronPython 
+	Debugging</a></h2>
+	<p class="Body">In this exercise you will set up a Visual Studio solution 
+	that you can use to edit .py files in a directory and debug them using the 
+	Visual Studio .NET debugger.&nbsp; We will use the Tutorial directory as an 
+	example, but you could save your solution anywhere.</p>
+	<h3><a name="T7.1.1">Task 1: Setting up Visual Studio for IronPython 
+	Debugging</a></h3>
 	<ol>
 		<li>
-		<p class="Step">Download the latest python installer from http://www.python.org/download/</p>
+		<p class="Step">Open Visual Studio and close any solution or projects 
+		you might have open.</p>
 		</li>
 		<li>
-		<p class="Step">Create a file named &quot;site.py&quot; and place it into your 
-		IronPython &quot;Lib&quot; directory. This file is executed every time 
-		you run IronPython. To tell IronPython where the Python standard library 
-		is, you can add the &quot;lib&quot; directory of Python to IronPython's path. To 
-		do so, put the following code into the &quot;site.py&quot; file (replace 
-		path_to_cpython_lib with your actual path to the cpython lib directory):</p>
+		<p class="Step">Use the File-&gt;Open-&gt;Project/Solution ... command and 
+		browse to the ipy.exe application in your IronPython installation 
+		(c:\IronPython\ipy.exe is where the tutorial assumes you have it).</p>
 		</li>
-	</ol>
-	<p class="Code-Highlighted">import sys</p>
-<p class="Code-Highlighted">sys.path.append(<i>path_to_cpython_Lib</i>)</p>
-	<ol start="3">
 		<li>
-		<p class="Step">Now you can use the Python standard library from 
-		IronPython.</p>
+		<p class="Step">We will use the Tutorial directory as an example, and 
+		we'll want to set it up as the working directory for loading .py 
+		scripts.&nbsp; Right click on the ipy.exe project node in the Visual 
+		Studio's solution 
+		explorer and choose the Properties command.</p>
+		</li>
+		<li>
+		<p class="Step">In the properties dialog, you will fill in two 
+		fields, the Command Arguments and Working Directory.&nbsp; For the 
+		Command Arguments, enter &quot;first.py&quot;.&nbsp; For the Working Directory, 
+		enter the path to the Tutorial directory (c:\IronPython\Tutorial\ is 
+		where we assume you have it).&nbsp; Click Apply and OK to confirm your 
+		changes.</p>
+		</li>
+		<li>
+		<p class="Step">Now let's save the solution with the File-&gt;Save All ... 
+		command.&nbsp; Save it to the Tutorial directory.</p>
+		</li>
+		<li>
+		<p class="Step">To test out our set up, use Ctrl+O to open a file.&nbsp; 
+		Browse to the &quot;first.py&quot; file in the Tutorial directory.&nbsp; Place the 
+		caret on the line that reads &quot;def add(a, b):&quot;, and press F9 to set a 
+		breakpoint.</p>
+		</li>
+		<li>
+		<p class="Step">Press F5 to run the script, and you will hit the 
+		breakpoint.&nbsp; If you Press F10, you will step through the file, but 
+		all it does is load the definitions and set some variables before 
+		terminating.</p>
+		</li>
+		<li>
+		<p class="Step">To see more stepping, we'll add a line to the file and 
+		set another breakpoint.&nbsp; Add a line to the end of the file to 
+		invoke the factorial function (&quot;factorial(5)&quot;).&nbsp; Add a breakpoint to the line that reads 
+		&quot;if n &lt; 1: return 1&quot;.&nbsp; Now Press F5 to run the script.&nbsp; 
+		Press F10 repeatedly and notice the locals window where 
+		the parameter &quot;n&quot; decrements to 0 and then goes back up to 5 as the 
+		recursion unwinds.&nbsp; You can also hover the mouse over the &quot;n&quot; 
+		in the editor window to get a data tip of its value each time you stop at the 
+		breakpoint.</p>
 		</li>
 	</ol>
+<p class="Body">To work on other scripts, just change the Command Arguments 
+property for the ipy.exe project as we did above to name another script you want 
+to load on F5.&nbsp; You might also find it useful to go to the 
+Tools-&gt;Options... dialog and change a property on the Environment-&gt;Documents 
+page to show the open script files.&nbsp; If you check the property &quot;Show Miscellaneous Files in the Solution 
+Explorer&quot;, then you will get a list of the .py files you are editing.&nbsp; Each 
+time you open this solution again at a later time, you will see all the .py 
+files you developed while using this solution file.</p>
 	<p class="LabSummary">Tutorial Summary</p>
 	<p class="Body">In this tutorial you performed the following exercises.</p>
 	<ul>
 		<li>
-		<p class="Body"><a href="#T7.1">Obtaining and Using Python Standard Library</a></p>
+		<p class="Body"><a href="#T7.1">Setting up Visual Studio for IronPython 
+		Debugging</a></p>
 		</li>
 	</ul>
-	<p class="Normal">In this tutorial you downloaded Python and configured 
-	IronPython to access the Python standard library.</p>
-</div>
+	<p class="Normal">In this tutorial you set up Visual Studio to work on 
+	Python scripts in a directory and debug them.</p>
 
 </body>
 
