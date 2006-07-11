@@ -149,8 +149,8 @@ namespace IronPython.Modules {
             return sb.ToString();
         }
         [PythonName("hexlify")]
-        public static object Hexlify(object data) {
-            throw new NotImplementedException();
+        public static object Hexlify(string data) {
+            return EncodeHex(data);
         }
         [PythonName("a2b_hex")]
         public static object DecodeHex(string data) {

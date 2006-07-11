@@ -178,10 +178,20 @@ namespace IronPython.Runtime.Types {
         }
 
         protected void AddModule() {
-            if (type.Assembly == typeof(DynamicType).Assembly) {
-                dict[SymbolTable.Module] = "__builtin__";
-            } else {
-                dict[SymbolTable.Module] = type.Namespace + " in " + type.Assembly.FullName;
+            if (!dict.ContainsKey(SymbolTable.Module)) {
+                if (type.Assembly == typeof(DynamicType).Assembly || 
+                    type.Assembly == typeof(IronMath.BigInteger).Assembly ||
+                    this is OpsReflectedType) {
+                    string moduleName = null;
+                    Type curType = type;
+                    while (curType != null) {
+                        TopReflectedPackage.builtinModuleNames.TryGetValue(curType, out moduleName);
+                        curType = curType.DeclaringType;
+                    }
+                    dict[SymbolTable.Module] = moduleName ?? "__builtin__";
+                } else {
+                    dict[SymbolTable.Module] = type.Namespace + " in " + type.Assembly.FullName;
+                }
             }
         }
 
@@ -647,7 +657,7 @@ namespace IronPython.Runtime.Types {
             foreach (IPythonType dt in BaseClasses) {
                 if (dt is DynamicType && ((DynamicType)dt).type == typeof(DynamicType)) continue;
 
-                if (dt != TypeCache.Object && dt != this) {
+                if (dt != this) {
                     foreach (string name in Ops.GetAttrNames(context, dt)) {
                         if (name[0] == '_' && name[1] != '_') continue;
                         if (names.Contains(name)) continue;
@@ -872,7 +882,8 @@ namespace IronPython.Runtime.Types {
         internal virtual bool TryBaseGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
             if (name == SymbolTable.Dict) {
                 // Instances of builtin types do not have "__dict__"
-                throw Ops.AttributeErrorForMissingAttribute(__name__.ToString(), name);
+                ret = null;
+                return false;
             }
 
             if (TryLookupSlot(context, name, out ret)) {

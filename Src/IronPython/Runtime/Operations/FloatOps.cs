@@ -603,6 +603,11 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
+        [PythonName("__getnewargs__")]
+        public static object GetNewArgs(double self) {
+            return Tuple.MakeTuple(FloatOps.Make(TypeCache.Double, self));
+        }
+
         internal static object ReverseTrueDivide(double x, double y) {
             return TrueDivide(y, x);
         }

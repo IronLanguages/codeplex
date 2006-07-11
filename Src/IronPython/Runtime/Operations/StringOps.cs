@@ -176,6 +176,9 @@ namespace IronPython.Runtime.Operations {
     /// defined in the CLS System.String type.
     /// </summary>
     public static class StringOps {
+
+        internal const int LowestUnicodeValue = 0x7f;
+
         static ReflectedType StringType;
         public static ReflectedType MakeDynamicType() {
             if (StringType == null) {
@@ -622,6 +625,14 @@ namespace IronPython.Runtime.Operations {
             if (!containsUpper) return Ops.FALSE;
 
             return Ops.TRUE;
+        }
+
+        [PythonName("isunicode")]
+        public static object IsUnicode(string self) {
+            foreach(char c in self) {
+                if (c >= LowestUnicodeValue) return Ops.TRUE;
+            }
+            return Ops.FALSE;
         }
 
         //  Return a string which is the concatenation of the strings 
@@ -1112,6 +1123,15 @@ namespace IronPython.Runtime.Operations {
             return ret == 0 ? 0 : (ret < 0 ? -1 : +1);
         }
 
+        [PythonName("__getnewargs__")]
+        public static object GetNewArgs(string self) {
+            if (!Object.ReferenceEquals(self, null)) {
+                // Cast self to object to avoid exception caused by trying to access SystemState on DefaultContext
+                return Tuple.MakeTuple(StringOps.Make(DefaultContext.Default, TypeCache.String, (object)self));
+            }
+            throw Ops.TypeErrorForBadInstance("__getnewargs__ requires a 'str' object but received a '{0}'", self);
+        }
+
         #region Internal implementation details
 
         internal static IEnumerator GetEnumerator(string s) {
@@ -1146,7 +1166,7 @@ namespace IronPython.Runtime.Operations {
 
             if (codecs == null) MakeCodecsDict();
 
-            name = name.ToLower().Replace('-', '_');
+            name = NormalizeEncodingName(name);
 
             EncodingInfo encInfo;
             if (codecs.TryGetValue(name, out encInfo)) {
@@ -1231,7 +1251,7 @@ namespace IronPython.Runtime.Operations {
             for (int i = 0; i < s.Length; i++) {
                 char ch = s[i];
 
-                if (ch >= 0x7f) isUnicode = true;
+                if (ch >= LowestUnicodeValue) isUnicode = true;
                 switch (ch) {
                     case '\\': ReprInit(ref b, s, i); b.Append("\\\\"); break;
                     case '\t': ReprInit(ref b, s, i); b.Append("\\t"); break;
@@ -1264,14 +1284,41 @@ namespace IronPython.Runtime.Operations {
             sb = new StringBuilder(s, 0, c, s.Length);
         }
 
+        private static string RawUnicodeEscapeEncode(string s) {
+            // in the common case we don't need to encode anything, so we
+            // lazily create the StringBuilder only if necessary.
+            StringBuilder b = null;
+            for (int i = 0; i < s.Length; i++) {
+                char ch = s[i];
+                if (ch > 0xff) {
+                    ReprInit(ref b, s, i);
+                    b.AppendFormat("\\u{0:x4}", (int)ch);
+                } else if (b != null) {
+                    b.Append(ch);
+                }
+            }
+
+            if (b == null) return s;
+            return b.ToString();
+        }
+
         private static bool IsSign(char ch) {
             return ch == '+' || ch == '-';
         }
 
+        private static string NormalizeEncodingName(string name) {
+            return name.ToLower().Replace('-', '_');
+        }
+
         private static string RawDecode(SystemState state, string s, string encoding, string errors) {
-            if (encoding != null && encoding.Replace('_', '-') == "raw-unicode-escape") {
-                return LiteralParser.ParseString(s, true, true);
-            } 
+            if (encoding != null) {
+                string normalizedName = NormalizeEncodingName(encoding);
+                if ("raw_unicode_escape" == normalizedName) {
+                    return LiteralParser.ParseString(s, true, true);
+                } else if ("string_escape" == normalizedName) {
+                    return LiteralParser.ParseString(s, false, false);
+                }
+            }
 
             Encoding e = state.DefaultEncoding;
 
@@ -1303,9 +1350,14 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static string RawEncode(SystemState state, string s, string encoding, string errors) {
-            if (encoding != null && encoding.Replace('_', '-') == "raw-unicode-escape") {
-                bool fUnicode = false;
-                return ReprEncode(s, ref fUnicode);
+            if (encoding != null) {
+                string normalizedName = NormalizeEncodingName(encoding);
+                if ("raw_unicode_escape" == normalizedName) {
+                    return RawUnicodeEscapeEncode(s);
+                } else if ("string_escape" == normalizedName) {
+                    bool dummy = false;
+                    return ReprEncode(s, '\'', ref dummy);
+                }
             }
 
             Encoding e = state.DefaultEncoding;
@@ -1353,23 +1405,23 @@ namespace IronPython.Runtime.Operations {
             Dictionary<string, EncodingInfo> d = new Dictionary<string, EncodingInfo>();
             EncodingInfo[] encs = Encoding.GetEncodings();
             for (int i = 0; i < encs.Length; i++) {
-                string lowerName = encs[i].Name.ToLower();
+                string normalizedName = NormalizeEncodingName(encs[i].Name);
                 // setup well-known mappings, for everything
                 // else we'll store as lower case w/ _                
-                switch (lowerName) {
-                    case "us-ascii":
+                switch (normalizedName) {
+                    case "us_ascii":
                         d["ascii"] = encs[i];
                         d["646"] = encs[i];
                         d["us"] = encs[i];
                         break;
-                    case "iso-8859-1":
+                    case "iso_8859_1":
                         d["latin_1"] = encs[i];
                         d["latin1"] = encs[i];
                         break;
-                    case "utf-8":
+                    case "utf_8":
                         d["utf8"] = encs[i];
                         break;
-                    case "utf-16":
+                    case "utf_16":
                         d["utf_16_le"] = encs[i];
                         // utf-16 in CPython already writes the BOM, so we don't 
                         // want to replace it w/ ours that doesn't.
@@ -1379,9 +1431,7 @@ namespace IronPython.Runtime.Operations {
                         break;
                 }
 
-                string pyName = lowerName.Replace('-', '_');
-
-                d[pyName] = encs[i];
+                d[normalizedName] = encs[i];
             }
 
             codecs = d;

@@ -36,6 +36,7 @@ namespace IronPython.Runtime {
         private Dictionary<string, Type> builtins = new Dictionary<string, Type>();
         private int initialized;
         private bool isolated;
+        internal static Dictionary<Type, string> builtinModuleNames = new Dictionary<Type, string>();
 
         internal TopReflectedPackage() : base(String.Empty) {
         }
@@ -85,6 +86,7 @@ namespace IronPython.Runtime {
             if (!loaded) {
                 foreach (PythonModuleAttribute pma in assem.GetCustomAttributes(typeof(PythonModuleAttribute), false)) {
                     builtins.Add(pma.name, pma.type);
+                    builtinModuleNames[pma.type] = pma.name;
                 }
             }
 

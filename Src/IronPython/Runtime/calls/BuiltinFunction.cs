@@ -116,7 +116,15 @@ namespace IronPython.Runtime.Calls {
                 return Name;
             }
         }
-
+        public string Module {
+            [PythonName("__module__")]
+            get {
+                if (targets.Length > 0) {
+                    return (string)DeclaringType.dict[SymbolTable.Module];
+                }
+                return null;
+            }
+        }
         public FastCallable OptimizedTarget {
             get {
                 if (optimizedTarget == null) {

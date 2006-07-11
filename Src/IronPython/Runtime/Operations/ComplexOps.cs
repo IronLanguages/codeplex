@@ -21,6 +21,7 @@ using System.Runtime.InteropServices;
 
 using IronMath;
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
@@ -470,6 +471,20 @@ namespace IronPython.Runtime.Operations {
         [PythonName("conjugate")]
         public static Complex64 Conjugate(Complex64 x) {
             return x.Conjugate();
+        }
+
+        [PythonName("__getnewargs__")]
+        public static object GetNewArgs(Complex64 self) {
+            if (!Object.ReferenceEquals(self, null)) {
+                return Tuple.MakeTuple(
+                    ComplexOps.Make(
+                        TypeCache.Complex64,
+                        Ops.GetAttr(DefaultContext.Default, self, SymbolTable.RealPart),
+                        Ops.GetAttr(DefaultContext.Default, self, SymbolTable.ImaginaryPart)
+                    )
+                );
+            }
+            throw Ops.TypeErrorForBadInstance("__getnewargs__ requires a 'complex' object but received a '{0}'", self);
         }
 
         internal static object DivMod(Complex64 x, Complex64 y) {

@@ -54,8 +54,8 @@ namespace IronPython.Runtime.Operations {
         public static readonly object Ellipsis = "...";
         public static readonly object TRUE = true;
         public static readonly object FALSE = false;
+        public static readonly object[] EMPTY = new object[0];
 
-        private static readonly object[] EMPTY = new object[0];
         private static readonly object[] cache = new object[MAX_CACHE - MIN_CACHE];
         private static readonly string[] chars = new string[255];
         private static ReflectedType StringType;
@@ -499,7 +499,7 @@ namespace IronPython.Runtime.Operations {
             ret[typeof(string)] = StringType;
             ret[typeof(ExtensibleString)] = StringType;
 
-            ret[typeof(object)] = ReflectedType.FromType(typeof(object), true);
+            ret[typeof(object)] = ObjectOps.MakeDynamicType();
             ret[typeof(int)] = IntOps.MakeDynamicType();
             ret[typeof(ExtensibleInt)] = ret[typeof(int)];
 
@@ -526,7 +526,6 @@ namespace IronPython.Runtime.Operations {
 
             ret[typeof(void)] = NoneTypeOps.MakeDynamicType();
             
-
             return ret;
         }
 

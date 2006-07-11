@@ -126,6 +126,16 @@ fieldList = [
     ('iter', 'Iter'),
     ('__slots__', 'Slots'),
 
+    ('__getinitargs__', 'GetInitArgs'),
+    ('__getnewargs__', 'GetNewArgs'),
+    ('__getstate__', 'GetState'),
+    ('__setstate__', 'SetState'),
+    ('__newobj__', 'BuildNewObject'),
+    ('_reconstructor', 'Reconstructor'),
+    ('iteritems', 'IterItems'),
+    ('real', 'RealPart'),
+    ('imag', 'ImaginaryPart'),
+
     ('LastWellKnown', 'LastWellKnown')
     ]
 

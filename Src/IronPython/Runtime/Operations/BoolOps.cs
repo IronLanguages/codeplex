@@ -182,6 +182,12 @@ namespace IronPython.Runtime.Operations {
             return res >= 1 ? 1 : res <= -1 ? -1 : 0;
         }
 
+        [PythonName("__getnewargs__")]
+        public static object GetNewArgs(object self) {
+            if (self is bool) self = ((bool)self) ? 1 : 0;
+            return IntOps.GetNewArgs(Converter.ConvertToInt32(self));
+        }
+
         public static object Equals(bool x, object other) {
             // common case is bool vs bool
             if (other is bool)  return Ops.Bool2Object(x == (bool)other);

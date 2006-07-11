@@ -298,6 +298,24 @@ namespace IronPython.Runtime {
         public static readonly SymbolId Iter = new SymbolId(IterId);
         ///<summary>Symbol for '__slots__'</summary> 
         public static readonly SymbolId Slots = new SymbolId(SlotsId);
+        ///<summary>Symbol for '__getinitargs__'</summary> 
+        public static readonly SymbolId GetInitArgs = new SymbolId(GetInitArgsId);
+        ///<summary>Symbol for '__getnewargs__'</summary> 
+        public static readonly SymbolId GetNewArgs = new SymbolId(GetNewArgsId);
+        ///<summary>Symbol for '__getstate__'</summary> 
+        public static readonly SymbolId GetState = new SymbolId(GetStateId);
+        ///<summary>Symbol for '__setstate__'</summary> 
+        public static readonly SymbolId SetState = new SymbolId(SetStateId);
+        ///<summary>Symbol for '__newobj__'</summary> 
+        public static readonly SymbolId BuildNewObject = new SymbolId(BuildNewObjectId);
+        ///<summary>Symbol for '_reconstructor'</summary> 
+        public static readonly SymbolId Reconstructor = new SymbolId(ReconstructorId);
+        ///<summary>Symbol for 'iteritems'</summary> 
+        public static readonly SymbolId IterItems = new SymbolId(IterItemsId);
+        ///<summary>Symbol for 'real'</summary> 
+        public static readonly SymbolId RealPart = new SymbolId(RealPartId);
+        ///<summary>Symbol for 'imag'</summary> 
+        public static readonly SymbolId ImaginaryPart = new SymbolId(ImaginaryPartId);
 
         // *** END GENERATED CODE ***
 
@@ -450,7 +468,16 @@ namespace IronPython.Runtime {
         public const int EnvironmentParmNameId    = 131; // "$env"
         public const int IterId                   = 132; // "iter"
         public const int SlotsId                  = 133; // "__slots__"
-        public const int LastWellKnownId          = 134; // "LastWellKnown"
+        public const int GetInitArgsId            = 134; // "__getinitargs__"
+        public const int GetNewArgsId             = 135; // "__getnewargs__"
+        public const int GetStateId               = 136; // "__getstate__"
+        public const int SetStateId               = 137; // "__setstate__"
+        public const int BuildNewObjectId         = 138; // "__newobj__"
+        public const int ReconstructorId          = 139; // "_reconstructor"
+        public const int IterItemsId              = 140; // "iteritems"
+        public const int RealPartId               = 141; // "real"
+        public const int ImaginaryPartId          = 142; // "imag"
+        public const int LastWellKnownId          = 143; // "LastWellKnown"
 
         // *** END GENERATED CODE ***
 
@@ -603,6 +630,15 @@ namespace IronPython.Runtime {
             PublishWellKnownSymbol("$env", EnvironmentParmName);  // 131
             PublishWellKnownSymbol("iter", Iter);  // 132
             PublishWellKnownSymbol("__slots__", Slots);  // 133
+            PublishWellKnownSymbol("__getinitargs__", GetInitArgs);  // 134
+            PublishWellKnownSymbol("__getnewargs__", GetNewArgs);  // 135
+            PublishWellKnownSymbol("__getstate__", GetState);  // 136
+            PublishWellKnownSymbol("__setstate__", SetState);  // 137
+            PublishWellKnownSymbol("__newobj__", BuildNewObject);  // 138
+            PublishWellKnownSymbol("_reconstructor", Reconstructor);  // 139
+            PublishWellKnownSymbol("iteritems", IterItems);  // 140
+            PublishWellKnownSymbol("real", RealPart);  // 141
+            PublishWellKnownSymbol("imag", ImaginaryPart);  // 142
 
             // *** END GENERATED CODE ***
 

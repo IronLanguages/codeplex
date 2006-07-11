@@ -52,7 +52,8 @@ namespace IronPython.Runtime {
                 case "__neg__": return "x.__neg__() <==> -x";
                 case "__new__": return "T.__new__(S, ...) -> a new object with type S, a subtype of T";
                 case "__pow__": return "x.__pow__(y[, z]) <==> pow(x, y[, z])";
-                case "__reduce__": return "helper for pickle";
+                case "__reduce__":
+                case "__reduce_ex__": return "helper for pickle";
                 case "__rshift__": return "x.__rshift__(y) <==> x>>y";
                 case "__setitem__": return "x.__setitem__(i, y) <==> x[i]=";
                 case "__str__": return "x.__str__() <==> str(x)";

@@ -73,6 +73,7 @@ IronPythonTests = {
                 test_math
                 test_nt
                 test_operator
+                test_pickle
                 test_re
                 test_socket
                 test_struct

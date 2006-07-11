@@ -69,16 +69,6 @@ namespace IronPython.Runtime.Types {
             return Ops.Call(type, prms);
         }
 
-        [StaticOpsMethodAttribute("__reduce__")]
-        public static void ReduceMethod() {
-            throw Ops.TypeError("can't pickle None objects");
-        }
-
-        [StaticOpsMethodAttribute("__reduce_ex__")]
-        public static void ReduceExMethod() {
-            throw Ops.TypeError("can't pickle None objects");
-        }
-
         [StaticOpsMethodAttribute("__delattr__")]
         public static void DelAttrMethod(string name) {
             InstanceOfNoneType.DelAttr(DefaultContext.Default, IronPython.Modules.Builtin.None, SymbolTable.StringToId(name));

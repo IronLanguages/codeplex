@@ -282,16 +282,12 @@ namespace IronPython.Modules {
                         return true;
                     });
 
-                    return Tuple.MakeTuple(new object[] { 
-                    Ops.GetDynamicTypeFromType(GetType()), 
-                    Tuple.MakeTuple(new List(items)), 
-                    null });
+                    return Tuple.MakeTuple(
+                        Ops.GetDynamicTypeFromType(GetType()), 
+                        Tuple.MakeTuple(new List(items)), 
+                        null
+                    );
                 }
-            }
-
-            [PythonName("__reduce_ex__")]
-            public Tuple ReduceExt(object proto) {
-                return Reduce();
             }
 
             [PythonName("__len__")]

@@ -68,7 +68,10 @@ data = [
 	TypeData('PythonModule', entryName="Module"),
 	TypeData('Method'),
 	TypeData('Enumerate'),
-	TypeData('Int32', 'intType')
+	TypeData('Int32', 'intType'),
+	TypeData('Double', 'doubleType'),
+	TypeData('BigInteger'),
+	TypeData('Complex64'),
 ]
 
 # groups all of our type data by type, and outputs

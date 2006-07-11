@@ -14,10 +14,12 @@
 ######################################################################################
 
 from lib.assert_util import *
+from lib.type_util import *
 
 import sys
-import System
 load_iron_python_test()
+import System
+
 from IronPythonTest import *
 
 class InheritedClass(BaseClass):
@@ -168,7 +170,9 @@ class MetaClass(type):
         return cls
 
 MC = MetaClass('Foo', (), {})
-AreEqual(dir(MC), ['__class__', '__doc__', '__module__'])
+AreEqual(remove_clr_specific_attrs(dir(MC)),
+         ['__class__', '__doc__', '__init__', '__module__', '__new__',
+         '__reduce__', '__reduce_ex__', '__repr__'])
 
 # metaclass such as defined in string.py
 class MetaClass2(type):

@@ -188,6 +188,12 @@ namespace IronPython.Runtime {
             }
             return Ops.TRUE;
         }
+
+        public static Tuple Reduce(Dict items, DynamicType type) {
+            object[] keys = new object[items.Keys.Count];
+            items.Keys.CopyTo(keys, 0);
+            return Tuple.MakeTuple(type, Tuple.MakeTuple(new List(keys)), null);
+        }
     }
 
     /// <summary>
@@ -314,18 +320,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__reduce__")]
         public Tuple Reduce() {
-            object[] keys = new object[items.Keys.Count];
-            items.Keys.CopyTo(keys, 0);
-
-            return Tuple.MakeTuple(new object[] { 
-                TypeCache.Set, 
-                Tuple.MakeTuple(new List(keys)), 
-                null });
-        }
-
-        [PythonName("__reduce_ex__")]
-        public Tuple ReduceEx(object proto) {
-            return Reduce();
+            return SetHelpers.Reduce(items, Ops.GetDynamicTypeFromType(typeof(SetCollection)));
         }
 
         private void Init(params object[] o) {
@@ -832,18 +827,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__reduce__")]
         public Tuple Reduce() {
-            object[] keys = new object[items.Keys.Count];
-            items.Keys.CopyTo(keys, 0);
-
-            return Tuple.MakeTuple(new object[] { 
-                Ops.GetDynamicTypeFromType(typeof(SetCollection)), 
-                Tuple.MakeTuple(new List(keys)), 
-                null });
-        }
-
-        [PythonName("__reduce_ex__")]
-        public Tuple ReduceEx(object param) {
-            return Reduce();
+            return SetHelpers.Reduce(items, Ops.GetDynamicTypeFromType(typeof(SetCollection)));
         }
 
         #endregion

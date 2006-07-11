@@ -766,6 +766,14 @@ namespace IronPython.Runtime.Operations {
             return Ops.NotImplemented;
         }
 
+        [PythonName("__getnewargs__")]
+        public static object GetNewArgs(BigInteger self) {
+            if (!Object.ReferenceEquals(self, null)) {
+                return Tuple.MakeTuple(LongOps.Make(TypeCache.BigInteger, self));
+            }
+            throw Ops.TypeErrorForBadInstance("__getnewargs__ requires a 'long' object but received a '{0}'", self);
+        }
+
         private static object RightShift(BigInteger x, int y) {
             BigInteger q;
             if (y < 0) {

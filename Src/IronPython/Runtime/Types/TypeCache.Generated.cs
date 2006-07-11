@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
+using IronMath;
 using IronPython.Modules;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
@@ -28,7 +29,7 @@ namespace IronPython.Runtime.Types {
 
         // *** BEGIN GENERATED CODE ***
 
-        private static ReflectedType array, builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, obj, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, pythonmodule, method, enumerate, intType;
+        private static ReflectedType array, builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, obj, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, pythonmodule, method, enumerate, intType, doubleType, biginteger, complex64;
 
         // *** END GENERATED CODE ***
 
@@ -189,6 +190,27 @@ namespace IronPython.Runtime.Types {
             get {
                 if (intType == null) intType = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(Int32));
                 return intType;
+            }
+        }
+
+        public static ReflectedType Double {
+            get {
+                if (doubleType == null) doubleType = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(Double));
+                return doubleType;
+            }
+        }
+
+        public static ReflectedType BigInteger {
+            get {
+                if (biginteger == null) biginteger = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(BigInteger));
+                return biginteger;
+            }
+        }
+
+        public static ReflectedType Complex64 {
+            get {
+                if (complex64 == null) complex64 = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(Complex64));
+                return complex64;
             }
         }
 

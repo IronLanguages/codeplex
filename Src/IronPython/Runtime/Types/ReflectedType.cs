@@ -86,13 +86,6 @@ namespace IronPython.Runtime.Types {
             return new ReflectedType(type);
         }
 
-        public static ReflectedType FromType(Type type, bool isPythonType) {
-            ReflectedType res = FromType(type);
-            res.isPythonType = isPythonType;
-            res.isPythonTypeChecked = true;
-            return res;
-        }
-
         public static ReflectedType FromClsOnlyType(Type type) {
             ReflectedType res = FromType(type);
             res.clsOnly = true;

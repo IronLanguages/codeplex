@@ -843,6 +843,11 @@ namespace IronPython.Runtime.Operations {
             return (x != 0);
         }
 
+        [PythonName("__getnewargs__")]
+        public static object GetNewArgs(int self) {
+            return Tuple.MakeTuple(IntOps.Make(TypeCache.Int32, self));
+        }
+
         internal static object DivMod(int x, int y) {
             try {
                 return Tuple.MakeTuple(Divide(x, y), Mod(x, y));

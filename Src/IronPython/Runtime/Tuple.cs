@@ -322,22 +322,10 @@ namespace IronPython.Runtime {
             return args;
         }
 
-        [PythonName("__reduce__")]
-        public virtual Tuple Reduce() {
-            object[] newData = new object[data.Length];
-            Array.Copy(data, newData, data.Length);
-
-            return Tuple.MakeTuple(
-                new object[] { 
-                    Ops.GetDescriptor(TypeCache.Tuple, null, null),
-                    Tuple.MakeTuple(TypeCache.Tuple),
-                    TypeCache.Tuple, Tuple.MakeTuple(newData)
-                });
-        }
-
-        [PythonName("__reduce_ex__")]
-        public virtual Tuple ReduceEx(object proto) {
-            return (Reduce());
+        [PythonName("__getnewargs__")]
+        public object GetNewArgs() {
+            // Call "new Tuple()" to force result to be a Tuple (otherwise, it could possibly be a Tuple subclass)
+            return Tuple.MakeTuple(new Tuple(this));
         }
 
         #region IEnumerable<object> Members

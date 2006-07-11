@@ -46,7 +46,14 @@ class types:
 
 import sys
 if sys.platform == "cli":
+    object_attrs_before_clr_import = dir(object())
     import System
+    object_attrs_after_clr_import = dir(object())
+    clr_specific_attrs = [attr for attr in object_attrs_after_clr_import
+                          if attr not in object_attrs_before_clr_import]
+    
+    def remove_clr_specific_attrs(attr_list):
+        return [attr for attr in attr_list if attr not in clr_specific_attrs]
     
     # CLR array shortcut
     array_cli       = System.Array

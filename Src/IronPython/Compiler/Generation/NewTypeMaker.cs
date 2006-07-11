@@ -118,7 +118,7 @@ namespace IronPython.Compiler.Generation {
             return res;
         }
 
-        private static List<string> SlotsToList(object slots) {
+        internal static List<string> SlotsToList(object slots) {
             List<string> res = new List<string>(); 
             ISequence seq = slots as ISequence;
             if (seq != null && !(seq is ExtensibleString)) {

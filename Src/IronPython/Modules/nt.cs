@@ -17,7 +17,9 @@ using System;
 using System.IO;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 
+using IronMath;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
@@ -369,104 +371,191 @@ namespace IronPython.Modules {
         }
 
         [PythonType("stat_result")]
-        public class StatResult {
-            internal long mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime;
+        public class StatResult : ISequence {
+            // !!! We should convert this to be a subclass of Tuple (so that it implements
+            // the whole tuple protocol) or at least use a Tuple for internal storage rather
+            // than converting back and forth all the time. We also need to support constructors
+            // with 11-13 arguments.
 
-            public StatResult() {
+            public static object n_fields = (object)13;
+            public static object n_sequence_fields = (object)10;
+            public static object n_unnamed_fields = (object)3;
+
+            internal BigInteger mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime;
+
+            internal StatResult() {
             }
 
-            public StatResult(long mode, long ino, long dev, long nlink, long uid,
-                               long gid, long size, long atime, long mtime, long ctime) {
-                this.mode = mode;
-                this.ino = ino;
-                this.dev = dev;
-                this.nlink = nlink;
-                this.uid = uid;
-                this.gid = gid;
-                this.size = size;
-                this.atime = atime;
-                this.mtime = mtime;
-                this.ctime = ctime;
+            public StatResult(ISequence statResult, [DefaultParameterValue(null)]object dict) {
+                // dict is allowed by CPython's stat_result, but doesn't seem to do anything, so we ignore it here.
+
+                if (statResult.GetLength() != 10) {
+                    throw Ops.TypeError("stat_result() takes a 10-sequence ({0}-sequence given)", statResult.GetLength());
+                }
+
+                this.mode = Converter.ConvertToBigInteger(statResult[0]);
+                this.ino = Converter.ConvertToBigInteger(statResult[1]);
+                this.dev = Converter.ConvertToBigInteger(statResult[2]);
+                this.nlink = Converter.ConvertToBigInteger(statResult[3]);
+                this.uid = Converter.ConvertToBigInteger(statResult[4]);
+                this.gid = Converter.ConvertToBigInteger(statResult[5]);
+                this.size = Converter.ConvertToBigInteger(statResult[6]);
+                this.atime = Converter.ConvertToBigInteger(statResult[7]);
+                this.mtime = Converter.ConvertToBigInteger(statResult[8]);
+                this.ctime = Converter.ConvertToBigInteger(statResult[9]);
             }
 
-            public long StatATime {
+            public object StatATime {
                 [PythonName("st_atime")]
                 get {
                     return atime;
                 }
             }
-            public long StatCTime {
+            public object StatCTime {
                 [PythonName("st_ctime")]
                 get {
                     return ctime;
                 }
             }
-            public long StatDev {
+            public object StatDev {
                 [PythonName("st_dev")]
                 get {
                     return dev;
                 }
             }
-            public long StatGid {
+            public object StatGid {
                 [PythonName("st_gid")]
                 get {
                     return gid;
                 }
             }
-            public long StatIno {
+            public object StatIno {
                 [PythonName("st_ino")]
                 get {
                     return ino;
                 }
             }
-            public long StatMode {
+            public object StatMode {
                 [PythonName("st_mode")]
                 get {
                     return mode;
                 }
             }
-            public long StatMTime {
+            public object StatMTime {
                 [PythonName("st_mtime")]
                 get {
                     return mtime;
                 }
             }
-            public long StatNLink {
+            public object StatNLink {
                 [PythonName("st_nlink")]
                 get {
                     return nlink;
                 }
             }
-            public long StatSize {
+            public object StatSize {
                 [PythonName("st_size")]
                 get {
                     return size;
                 }
             }
-            public long StatUid {
+            public object StatUid {
                 [PythonName("st_uid")]
                 get {
                     return uid;
                 }
             }
 
+            public override string ToString() {
+                return MakeTuple().ToString();
+            }
+
+            [PythonName("__reduce__")]
+            public Tuple Reduce() {
+                Dict timeDict = new Dict(3);
+                timeDict["st_atime"] = StatATime;
+                timeDict["st_ctime"] = StatCTime;
+                timeDict["st_mtime"] = StatMTime;
+
+                return Tuple.MakeTuple(
+                    Ops.GetDynamicTypeFromType(typeof(StatResult)),
+                    Tuple.MakeTuple(MakeTuple(), timeDict)
+                );
+            }
+
+            #region ISequence Members
+
+            public object AddSequence(object other) {
+                return MakeTuple().AddSequence(other);
+            }
+
+            public object MultiplySequence(object count) {
+                return MakeTuple().MultiplySequence(count);
+            }
+
             public object this[int index] {
                 get {
-                    switch (index) {
-                        case 0: return StatMode;
-                        case 1: return StatIno;
-                        case 2: return StatDev;
-                        case 3: return StatNLink;
-                        case 4: return StatUid;
-                        case 5: return StatGid;
-                        case 6: return StatSize;
-                        case 7: return StatATime;
-                        case 8: return StatMTime;
-                        case 9: return StatCTime;
-                    }
-                    throw Ops.IndexError("index out of range: {0}", index);
+                    return MakeTuple()[index];
                 }
             }
+
+            public object this[Slice slice] {
+                get {
+                    return MakeTuple()[slice];
+                }
+            }
+
+            public object GetSlice(int start, int stop) {
+                return MakeTuple().GetSlice(start, stop);
+            }
+
+            #endregion
+
+            #region IPythonContainer Members
+
+            public int GetLength() {
+                return MakeTuple().Count;
+            }
+
+            public bool ContainsValue(object item) {
+                return MakeTuple().ContainsValue(item);
+            }
+
+            #endregion
+
+            private Tuple MakeTuple() {
+                return Tuple.MakeTuple(
+                    StatMode,
+                    StatIno,
+                    StatDev,
+                    StatNLink,
+                    StatUid,
+                    StatGid,
+                    StatSize,
+                    StatATime,
+                    StatMTime,
+                    StatCTime
+                );
+            }
+
+            #region Object overrides
+
+            [PythonName("__eq__")]
+            public override bool  Equals(object obj) {
+                if (obj is StatResult) {
+                    return MakeTuple().Equals(((StatResult)obj).MakeTuple());
+                } else {
+                    return MakeTuple().Equals(obj);
+                }
+ 	            
+            }
+
+            [PythonName("__hash__")]
+            public override int GetHashCode() {
+                return MakeTuple().GetHashCode();
+            }
+
+            #endregion
         }
 
         [Documentation("stat(path) -> stat result\nGathers statistics about the specified file or directory")]

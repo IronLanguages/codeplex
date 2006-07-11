@@ -134,6 +134,7 @@
     <Compile Include="Hosting\EngineModule.cs" />
     <Compile Include="Modules\Builtin.cs" />
     <Compile Include="Modules\Builtin.Generated.cs" />
+    <Compile Include="Modules\copy_reg.cs" />
     <Compile Include="Modules\locale.cs" />
     <Compile Include="Modules\socket.cs" />
     <Compile Include="Runtime\Calls\FastCallable.cs" />
@@ -145,6 +146,7 @@
     <Compile Include="Runtime\Operations\ByteOps.Generated.cs" />
     <Compile Include="Runtime\Operations\CharOps.cs" />
     <Compile Include="Runtime\Operations\NoneTypeOps.cs" />
+    <Compile Include="Runtime\Operations\ObjectOps.cs" />
     <Compile Include="Runtime\ReflectedPackage.cs" />
     <Compile Include="Runtime\SymbolIdDictBase.cs" />
     <Compile Include="Runtime\Types\MethodWrapper.cs" />

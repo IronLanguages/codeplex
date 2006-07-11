@@ -139,6 +139,19 @@ def test_empty_string():
     AreEqual(''.split(' '), [''])
     AreEqual(''.split('a'), [''])
 
+def test_string_escape():
+    for i in range(0x7f):
+        if chr(i) == "'":
+            AreEqual(chr(i).encode('string-escape'), "\\" + repr(chr(i))[1:-1])
+        else:
+            AreEqual(chr(i).encode('string-escape'), repr(chr(i))[1:-1])
 
+def test_string_escape_trailing_slash():
+    ok = False
+    try:
+        "\\".decode("string-escape")
+    except ValueError:
+        ok = True
+    Assert(ok, "string that ends in trailing slash should fail string decode")
 
 run_test(__name__)
