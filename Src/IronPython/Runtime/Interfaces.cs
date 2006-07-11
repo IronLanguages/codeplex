@@ -28,6 +28,10 @@ namespace IronPython.Runtime {
         }
     }
 
+    internal interface IReference {
+        object Value { get; set; }
+    }
+
     public interface IModuleScope {
         object GetGlobal(SymbolId symbol);
         bool TryGetGlobal(SymbolId name, out object value);

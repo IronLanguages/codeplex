@@ -32,7 +32,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-using Reference = IronPython.Modules.ClrModule.Reference;
+using ClrModule = IronPython.Modules.ClrModule;
 
 namespace IronPython.Compiler.Generation {
     /// <summary>
@@ -1023,7 +1023,7 @@ namespace IronPython.Compiler.Generation {
         private Slot argSlot, refSlot;
 
         public ReturnFixer(Slot refSlot, Slot argSlot) {
-            Debug.Assert(refSlot.Type == typeof(IronPython.Modules.ClrModule.Reference));
+            Debug.Assert(refSlot.Type.IsGenericType && refSlot.Type.GetGenericTypeDefinition() == typeof(ClrModule.Reference<>));
             Debug.Assert(argSlot.Type.IsByRef);
             this.refSlot = refSlot;
             this.argSlot = argSlot;
@@ -1032,9 +1032,7 @@ namespace IronPython.Compiler.Generation {
         public void FixReturn(CodeGen cg) {
             argSlot.EmitGet(cg);
             refSlot.EmitGet(cg);
-            cg.Emit(OpCodes.Isinst, typeof(Reference));
-            cg.EmitCall(typeof(Reference).GetProperty("Value").GetGetMethod());
-            cg.EmitConvertFromObject(argSlot.Type.GetElementType());
+            cg.EmitCall(refSlot.Type.GetProperty("Value").GetGetMethod());
             cg.EmitStoreValueIndirect(argSlot.Type.GetElementType());
         }
 

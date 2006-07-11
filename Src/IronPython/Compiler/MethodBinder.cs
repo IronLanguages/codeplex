@@ -411,7 +411,7 @@ namespace IronPython.Compiler {
             private Type elementType;
             private bool isOutOnly;
             public ByRefParameter(Type elementType, bool isOutOnly)
-                : base(typeof(ClrModule.Reference)) {
+                : base(typeof(ClrModule.Reference<>).MakeGenericType(elementType)) {
                 this.elementType = elementType;
                 this.isOutOnly = isOutOnly;
             }
@@ -425,11 +425,15 @@ namespace IronPython.Compiler {
             }
 
             public override object ConvertFrom(object arg) {
-                ClrModule.Reference r = arg as ClrModule.Reference;
-                if (r == null) throw Ops.TypeErrorForTypeMismatch("clr.Reference", arg);
-                // For an uninitialized Reference we will use the default value for the type
-                if (r.Value == null) return null;
-                return Converter.Convert(r.Value, elementType);
+                if (arg == null) throw Ops.TypeErrorForTypeMismatch("clr.Reference", arg);
+                Type argType = arg.GetType();
+                if (!argType.IsGenericType || argType.GetGenericTypeDefinition() != typeof(ClrModule.Reference<>))
+                    throw Ops.TypeErrorForTypeMismatch("clr.Reference", arg);
+
+                object value = ((IReference)arg).Value;
+
+                if (value == null) return null;
+                return Converter.Convert(value, elementType);
             }
 
             public override bool HasConversionFrom(object o, NarrowingLevel allowNarrowing) {
@@ -516,7 +520,7 @@ namespace IronPython.Compiler {
             }
 
             public override void UpdateFromReturn(object callArg, object[] args) {
-                ((ClrModule.Reference)args[index]).Value = callArg;
+                ((IReference)args[index]).Value = callArg;
             }
 
             public override bool CanGenerate {

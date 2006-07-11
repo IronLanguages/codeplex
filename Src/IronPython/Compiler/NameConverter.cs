@@ -148,6 +148,18 @@ namespace IronPython.Compiler {
             int backtickIndex;
             if ((backtickIndex = name.IndexOf(ReflectionUtil.GenericArityDelimiter)) != -1) {
                 name = name.Substring(0, backtickIndex);
+                if (!t.ContainsGenericParameters) {
+                    Type[] typeOf = t.GetGenericArguments();
+                    StringBuilder sb = new StringBuilder(name);
+                    sb.Append('[');
+                    bool first = true;
+                    foreach (Type tof in typeOf) {
+                        if (first) first = false; else sb.Append(", ");
+                        sb.Append(Ops.GetDynamicTypeFromType(tof).Name);
+                    }
+                    sb.Append(']');
+                    name = sb.ToString();
+                }
             }
 
             string namePrefix = "";

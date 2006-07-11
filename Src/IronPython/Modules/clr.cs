@@ -164,21 +164,23 @@ namespace IronPython.Modules {
 
         #endregion
 
-        public class Reference {
-            private object value;
-            public Reference() { }
+        public class Reference<T> : IReference {
+            private T value;
+            public Reference() {
+                value = default(T);
+            }
 
-            public Reference(object value) {
+            public Reference(T value) {
                 this.value = value;
             }
 
-            public object Value {
+            public T Value {
                 get { return value; }
                 set { this.value = value; }
             }
 
             public override string ToString() {
-                if (Value == this)
+                if ((object)Value == this)
                     return "Reference (...)";
                 return string.Format("Reference({0})", Value);
             }
@@ -190,9 +192,18 @@ namespace IronPython.Modules {
             /// <returns></returns>
             [PythonName("__nonzero__")]
             public bool ToBoolean() {
-                throw Ops.TypeError("Can't convert a clr.Reference object to a bool");
+                throw Ops.TypeError("Can't convert a Reference[{0}] instance to a bool", Ops.GetDynamicTypeFromType(typeof(T)).Name);
             }
 
+
+            #region IReference Members
+
+            object IReference.Value {
+                get { return value; }
+                set { this.value = (T)value; }
+            }
+
+            #endregion
         }
 
 

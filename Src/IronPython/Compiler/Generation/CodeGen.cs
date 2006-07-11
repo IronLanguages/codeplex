@@ -786,6 +786,9 @@ namespace IronPython.Compiler.Generation {
 
         public void EmitNew(ConstructorInfo ci) {
             Debug.Assert(ci != null, "null constructor info, calling wrong constructor?");
+            if (ci.DeclaringType.ContainsGenericParameters) {
+                throw Ops.TypeError("Cannot create instance of {0} because it contains generic parameters", ci.DeclaringType);
+            }
             Emit(OpCodes.Newobj, ci);
         }
 
@@ -943,7 +946,7 @@ namespace IronPython.Compiler.Generation {
                 else if (t == typeof(ushort)) Emit(OpCodes.Ldind_U2);
                 else if (t == typeof(long) || t == typeof(ulong)) Emit(OpCodes.Ldind_I8);
                 else if (t == typeof(char)) Emit(OpCodes.Ldind_I2);
-                else if (t == typeof(bool)) Emit(OpCodes.Ldind_I4);
+                else if (t == typeof(bool)) Emit(OpCodes.Ldind_I1);
                 else if (t == typeof(float)) Emit(OpCodes.Ldind_R4);
                 else if (t == typeof(double)) Emit(OpCodes.Ldind_R8);
                 else Emit(OpCodes.Ldobj, t);
@@ -959,7 +962,7 @@ namespace IronPython.Compiler.Generation {
                 else if (t == typeof(short)) Emit(OpCodes.Stind_I2);
                 else if (t == typeof(long) || t == typeof(ulong)) Emit(OpCodes.Stind_I8);
                 else if (t == typeof(char)) Emit(OpCodes.Stind_I2);
-                else if (t == typeof(bool)) Emit(OpCodes.Stind_I4);
+                else if (t == typeof(bool)) Emit(OpCodes.Stind_I1);
                 else if (t == typeof(float)) Emit(OpCodes.Stind_R4);
                 else if (t == typeof(double)) Emit(OpCodes.Stind_R8);
                 else Emit(OpCodes.Stobj, t);
@@ -1433,6 +1436,7 @@ namespace IronPython.Compiler.Generation {
 
             curLine++;
             ilOut.WriteLine(str);
+            ilOut.Flush();
 
             if (debugSymbolWriter != null) {
                 MarkSequencePoint(

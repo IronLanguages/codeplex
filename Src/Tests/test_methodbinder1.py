@@ -396,11 +396,11 @@ IListInt Array IEnumerableInt IEnumeratorInt NullableInt
 
 def test_pass_in_clrReference():
     import clr        
-    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference())
-    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference(None))
-    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference(10))
-    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference(123.123))
-    _repeat_with_one_arg('Object', lambda : clr.Reference(str)) # ref.Value = (type)
+    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference[int]())
+    _repeat_with_one_arg('Object OutInt32', lambda : clr.Reference[object](None))
+    _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference[int](10))
+    _repeat_with_one_arg('Object ', lambda : clr.Reference[float](123.123))
+    _repeat_with_one_arg('Object', lambda : clr.Reference[type](str)) # ref.Value = (type)
 
 def test_pass_in_nothing():
     passSet = _get_funcs('NoArg ParamArrInt32 ParamArrS ParamArrI OutInt32 DefValInt32')
@@ -516,14 +516,14 @@ def test_other_concern():
     
     # more ref/out sanity check
     import clr
-    def f1(): return clr.Reference()
-    def f2(): return clr.Reference(10)
-    def f3(): return clr.Reference(S1())
-    def f4(): return clr.Reference(C2()) # C2 inherits C1
+    def f1(): return clr.Reference[object]()
+    def f2(): return clr.Reference[int](10)
+    def f3(): return clr.Reference[S1](S1())
+    def f4(): return clr.Reference[C1](C2()) # C2 inherits C1
 
     for (f, a, b, c, d) in [ 
-        ('M850', True, False, True, False), 
-        ('M851', True, False, False, True), 
+        ('M850', False, False, True, False), 
+        ('M851', False, False, False, True), 
         ('M852', True, False, True, False), 
         ('M853', True, False, False, True), 
     ]:
@@ -532,19 +532,26 @@ def test_other_concern():
         
         for i in range(4): 
             ref = (f1, f2, f3, f4)[i]()
-            if (a,b,c,d)[i]: 
+            if (a,b,c,d)[i]:
                 func(ref); AreEqual(type(ref.Value), expect)
             else: 
                 AssertError(TypeError, func, ref)
+
+    # call 854
+    AssertError(TypeError, target.M854, clr.Reference[object]())
+    AssertError(TypeError, target.M854, clr.Reference[int](10))
     
-    for x in (f1, f2, lambda : clr.Reference(True)): 
-        ref = x()
-        target.M854(ref); AreEqual(Flag.Value, 854)
-        ref = x()
-        target.M855(ref); AreEqual(Flag.Value, 855)
+    # call 855
+    target.M855(clr.Reference[object]()); AreEqual(Flag.Value, 855)
+    AssertError(TypeError, target.M855, clr.Reference[int](10))
+    
+    # call 854 and 855 with Reference[bool]
+    target.M854(clr.Reference[bool](True)); AreEqual(Flag.Value, 854)
+    target.M855(clr.Reference[bool](True)); AreEqual(Flag.Value, 855)
     
     # practical
-    ref2 = clr.Reference()
+    ref = clr.Reference[int]()
+    ref2 = clr.Reference[int]()
     ref.Value = 300
     ref2.Value = 100
     ## M860(ref arg1, arg2, out arg3): arg3 = arg1 + arg2; arg1 = 100;

@@ -1209,3 +1209,5 @@ except TypeError:
 
 
 System.Array.Resize[System.Byte](x, 2048)
+
+AssertError(TypeError, System.Collections.Generic.List)

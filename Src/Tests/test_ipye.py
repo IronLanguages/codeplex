@@ -79,10 +79,10 @@ def test_CreateMethod():
     
     AreEqual(pe.CreateMethod[IntArgDelegate]('arg1 = "abc"\narg2="def"\nreturn arg1')(2, 3), 'abc')
     AreEqual(pe.CreateMethod[StringArgDelegate]('arg1 = 2\narg2=3\nreturn arg1')('abc', 'def'), 2)
-    y = Reference('abc')
+    y = Reference[object]()
     AreEqual(pe.CreateMethod[RefReturnDelegate]('sender = 2\nres.Value = 3\nreturn sender')('abc', y), 2)
     AreEqual(y.Value, 3)
-    
+    y = Reference[object]('abc')
     AreEqual(pe.CreateMethod[OutReturnDelegate]('res.Value = sender\nsender = "def"\nreturn sender')('abc', y), 'def')
     AreEqual(y.Value, 'abc')
 

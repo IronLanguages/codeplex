@@ -17,7 +17,7 @@ using System;
 using System.Reflection;
 using IronPython.Compiler.Generation;
 
-using Reference = IronPython.Modules.ClrModule.Reference;
+using ClrModule = IronPython.Modules.ClrModule;
 
 namespace IronPython.Compiler {
     static class CompilerHelpers {
@@ -59,10 +59,11 @@ namespace IronPython.Compiler {
         public static ReturnFixer EmitArgument(CodeGen cg, Slot argSlot) {
             argSlot.EmitGet(cg);
             if (argSlot.Type.IsByRef) {
-                Slot refSlot = cg.GetLocalTmp(typeof(IronPython.Modules.ClrModule.Reference));
-                cg.EmitLoadValueIndirect(argSlot.Type.GetElementType());
-                cg.EmitConvertToObject(argSlot.Type.GetElementType());
-                cg.EmitNew(typeof(Reference), new Type[] { typeof(object) });
+                Type elementType = argSlot.Type.GetElementType();
+                Type concreteType = typeof(ClrModule.Reference<>).MakeGenericType(elementType);
+                Slot refSlot = cg.GetLocalTmp(concreteType);
+                cg.EmitLoadValueIndirect(elementType);
+                cg.EmitNew(concreteType, new Type[] { elementType });
                 refSlot.EmitSet(cg);
                 refSlot.EmitGet(cg);
                 return new ReturnFixer(refSlot, argSlot);
