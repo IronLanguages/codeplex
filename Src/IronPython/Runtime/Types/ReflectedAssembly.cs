@@ -24,7 +24,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Types {
-    public class ReflectedAssemblyType : OpsReflectedType {
+    public class ReflectedAssemblyType : ReflectedType {
         static ReflectedAssemblyType AssemblyType;
         Dictionary<Assembly, TopReflectedPackage> assemblyMap = new Dictionary<Assembly, TopReflectedPackage>();
 
@@ -38,7 +38,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public ReflectedAssemblyType()
-            : base("Assembly", typeof(Assembly), typeof(ReflectedAssemblyType), null) {
+            : base(typeof(Assembly)) {
         }
 
         public override bool TryGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
@@ -94,6 +94,12 @@ namespace IronPython.Runtime.Types {
             }
 
             return res;
+        }
+
+        public override string Repr(object self) {
+            Assembly asmSelf = self as Assembly;
+
+            return "<Assembly " + asmSelf.FullName + ">";
         }
 
     }

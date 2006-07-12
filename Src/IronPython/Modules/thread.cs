@@ -174,9 +174,9 @@ namespace IronPython.Modules {
             public void Start() {
                 try {
                     if (kwargs != null) {
-                        Ops.CallWithArgsTupleAndKeywordDictAndContext(context, func, new object[0], new string[0], args, kwargs);
+                        Ops.CallWithArgsTupleAndKeywordDictAndContext(context, func, Ops.EMPTY, new string[0], args, kwargs);
                     } else {
-                        Ops.CallWithArgsTuple(func, new object[0], args);
+                        Ops.CallWithArgsTuple(func, Ops.EMPTY, args);
                     }
                 } catch (PythonSystemExitException) {
                     // ignore and quit

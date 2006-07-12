@@ -174,7 +174,7 @@ namespace IronPython.Runtime.Operations {
                 // we need an instance...
                 ConstructorInfo ci = sourceType.GetConstructor(Type.EmptyTypes);
                 if (ci != null) {
-                    object value = ci.Invoke(new object[0]);
+                    object value = ci.Invoke(Ops.EMPTY);
                     object result;
                     return Converter.TryConvert(value, convObj.GetType(), out result);
                 } else {

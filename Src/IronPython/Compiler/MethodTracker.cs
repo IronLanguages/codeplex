@@ -183,11 +183,11 @@ namespace IronPython.Compiler {
         }
 
         public override object[] GetCustomAttributes(bool inherit) {
-            return new object[0];
+            return Runtime.Operations.Ops.EMPTY;
         }
 
         public override object[] GetCustomAttributes(Type attributeType, bool inherit) {
-            return new object[0];
+            return Runtime.Operations.Ops.EMPTY;
         }
     }
 

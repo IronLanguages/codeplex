@@ -832,9 +832,9 @@ namespace IronPython.Runtime.Operations {
         [PythonName("__hex__")]
         public static string Hex(int x) {
             if (x < 0) {
-                return "-0x" + (-x).ToString("X");
+                return "-0x" + (-x).ToString("x");
             } else {
-                return "0x" + x.ToString("X");
+                return "0x" + x.ToString("x");
             }
         }
 

@@ -52,13 +52,12 @@ namespace IronPython.Runtime.Types {
     /// <summary>
     /// This is the ReflectedType used for all generic RCW COM objects.
     /// </summary>
-    class ComType : OpsReflectedType {
+    class ComType : ReflectedType {
         private static ComType comType;
         internal readonly static string comObjectTypeName = "System.__ComObject";
         internal readonly static Type comObjectType = Type.GetType(comObjectTypeName);
 
-        private ComType()
-            : base(comObjectTypeName, comObjectType, typeof(ComType), null) {
+        private ComType() : base(comObjectType) {
         }
 
         internal static ReflectedType MakeDynamicType() {
@@ -71,7 +70,7 @@ namespace IronPython.Runtime.Types {
         }
 
         #region DynamicType overrides
-
+        
         public override string Repr(object self) {
             ComObject com = ComObject.ObjectToComObject(self);
             return com.ToString();
@@ -220,7 +219,7 @@ namespace IronPython.Runtime.Types {
                         System.Reflection.BindingFlags.GetField,
                         Type.DefaultBinder,
                         Obj,
-                        new object[0]
+                        Ops.EMPTY
                         );
                     value = result;
                     return true;

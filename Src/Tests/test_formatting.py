@@ -144,8 +144,13 @@ if is_cli:
 
 def formatError():
     "%d" % (1,2)
-
+      
 AssertError(TypeError, formatError, None)
+
+def formatError_earlyEnd():
+    "%" % None
+
+AssertError(ValueError, formatError_earlyEnd)
 
 AreEqual(len('%10d' %(1)), 10)
 

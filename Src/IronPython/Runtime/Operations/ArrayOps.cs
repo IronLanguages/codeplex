@@ -161,7 +161,7 @@ namespace IronPython.Runtime.Operations {
         #region Internal APIs
 
         internal static ReflectedType MakeDynamicType() {
-            OpsReflectedType ret = new ReflectedArrayType("array", typeof(Array));
+            ReflectedType ret = new ReflectedArrayType("array", typeof(Array));
             ArrayType = ret;
             return ret;
         }
@@ -212,7 +212,7 @@ namespace IronPython.Runtime.Operations {
             slice.indices(size, out start, out stop, out step);
 
             if ((step > 0 && start >= stop) || (step < 0 && start <= stop))
-                return new object[0];
+                return Ops.EMPTY;
 
             if (step == 1) {
                 int n = stop - start;

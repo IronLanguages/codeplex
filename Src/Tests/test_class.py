@@ -123,6 +123,30 @@ def test_getattr():
         nt.unlink("x.txt")
     except:
         pass
+            
+    # new-style
+    class C(object):
+        def __getattr__(self, name):
+            raise AttributeError(name)
+    
+    # old-style
+    class D:
+        def __getattr__(self, name):
+            raise AttributeError(name)
+
+    # new-style __getattribute__
+    class E(object):
+        def __getattribute__(self, name):
+            if name == 'xyz':
+                raise AttributeError(name)
+            return object.__getattribute__(self, name)
+
+    # exception shouldn't propagate out
+    for cls in [C, D, E]:  
+        AreEqual(getattr(cls(), 'xyz', 'DNE'), 'DNE')
+        AreEqual(hasattr(cls(), 'xyz'), False)
+    
+    
     
 def count_elem(d,n):
     count = 0
@@ -1303,7 +1327,49 @@ def test_NoneSelf():
     except TypeError:
         pass
 
+def test_builtin_classmethod():
+    descr = dict.__dict__["fromkeys"]
+    AssertError(TypeError, descr.__get__, 42)
+    AssertError(TypeError, descr.__get__, None, 42)
+    AssertError(TypeError, descr.__get__, None, int)
 
+def test_classmethod():
+    AssertError(TypeError, classmethod, 1)
+    def foo(): pass
+        
+    cm = classmethod(foo)
+    AssertError(TypeError, cm.__get__, None)
+    AssertError(TypeError, cm.__get__, None, None)
+        
+
+def test_EmptyTypes():
+    for x in [None, Ellipsis, NotImplemented]:
+        Assert(type(x) != str)
+        
+    AreEqual(repr(Ellipsis), 'Ellipsis')
+    AreEqual(repr(NotImplemented), 'NotImplemented')
+    AreEqual(repr(type(Ellipsis)), "<type 'ellipsis'>")
+    AreEqual(repr(type(NotImplemented)), "<type 'NotImplementedType'>")
+    
+def test_property():
+    prop = property()
+    try: prop.fget = test_classmethod
+    except TypeError: pass
+    else: AssertUnreachable()
+    
+    try: prop.fdel = test_classmethod
+    except TypeError: pass
+    else: AssertUnreachable()
+    
+    try: prop.__doc__ = 'abc'
+    except TypeError: pass
+    else: AssertUnreachable()
+    
+    try: prop.fset = test_classmethod
+    except TypeError: pass
+    else: AssertUnreachable()
+    
+    
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals
     

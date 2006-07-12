@@ -434,10 +434,10 @@ namespace IronPython.Compiler.Generation {
                 if (origIndex >= 0) {
                     if (pis[origIndex].IsDefined(typeof(ParamArrayAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
-                            typeof(ParamArrayAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
+                            typeof(ParamArrayAttribute).GetConstructor(Type.EmptyTypes), Ops.EMPTY));
                     } else if (pis[origIndex].IsDefined(typeof(ParamDictAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
-                            typeof(ParamDictAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
+                            typeof(ParamDictAttribute).GetConstructor(Type.EmptyTypes), Ops.EMPTY));
                     }
                 }
             }

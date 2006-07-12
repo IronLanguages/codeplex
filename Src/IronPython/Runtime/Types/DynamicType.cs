@@ -142,7 +142,7 @@ namespace IronPython.Runtime.Types {
             Array.Copy(args, finalArgs, args.Length);
             names = new string[dict.Count];
             int i = 0;
-            foreach (KeyValuePair<object, object> kvp in dict) {
+            foreach (KeyValuePair<object, object> kvp in (IDictionary<object,object>)dict) {
                 names[i] = (string)kvp.Key;
                 finalArgs[i + args.Length] = kvp.Value;
                 i++;
@@ -421,14 +421,12 @@ namespace IronPython.Runtime.Types {
             Initialize();
 
             switch (name.Id) {
-                case SymbolTable.DictId: ret = new DictWrapper(this); return true;
                 case SymbolTable.GetAttributeId: ret = __getattribute__F; return true;
                 case SymbolTable.GetAttrId: ret = __getattr__F; return true;
                 case SymbolTable.SetAttrId: ret = __setattr__F; return true;
                 case SymbolTable.DelAttrId: ret = __delattr__F; return true;
                 case SymbolTable.ReprId: ret = __repr__F; return true;
                 case SymbolTable.StringId: ret = __str__F; return true;
-                case SymbolTable.WeakRefId: ret = new WeakRefWrapper(this); return true;
                 case SymbolTable.HashId: ret = __hash__F; return true;
                 case SymbolTable.CmpId:
                     if (!__cmp__F.IsSuperTypeMethod()) {
@@ -533,7 +531,7 @@ namespace IronPython.Runtime.Types {
             if (newObject == null) return newObject;
 
             DynamicType newObjectType = Ops.GetDynamicType(newObject);
-            if (newObjectType.IsSubclassOf(this)) {
+            if (ShouldInvokeInit(newObjectType, args.Length)) {
                 object init;
                 if (newObjectType.TryLookupBoundSlot(context, newObject, SymbolTable.Init, out init)) {
                     if (names != null) Ops.CallWithContext(context, init, args, names);
@@ -550,6 +548,14 @@ namespace IronPython.Runtime.Types {
             }
 
             return newObject;
+        }
+
+        private bool ShouldInvokeInit(DynamicType newObjectType, int argCnt) {
+            // don't run __init__ if it's not a subclass of ourselves,
+            // or if this is the user doing type(x)
+            return newObjectType.IsSubclassOf(this) &&
+                (this != TypeCache.DynamicType ||
+                argCnt > 1);
         }
 
         #endregion
@@ -636,13 +642,15 @@ namespace IronPython.Runtime.Types {
             RawDeleteSlot(name);
         }
 
-        public List GetAttrNames(ICallerContext context) {
+        public virtual List GetAttrNames(ICallerContext context) {
             Initialize();
 
             List names = new List();
             if ((context.ContextFlags & CallerContextAttributes.ShowCls) == 0) {
                 // Filter out the non-CLS attribute names
                 foreach (KeyValuePair<object, object> kvp in dict) {
+                    if (kvp.Key is string && ((string)kvp.Key) == "__dict__") continue;
+
                     IContextAwareMember icaa = kvp.Value as IContextAwareMember;
                     if (icaa == null || icaa.IsVisible(context)) {
                         // This is a non-CLS attribute. Include it.
@@ -652,6 +660,10 @@ namespace IronPython.Runtime.Types {
             } else {
                 // Add all the attribute names
                 names.AddRange(dict.Keys);
+
+                // don't display dict on built-in types
+                int index = names.IndexOf("__dict__");
+                if (index != -1) names.RemoveAt(index);
             }
 
             foreach (IPythonType dt in BaseClasses) {
@@ -1021,7 +1033,8 @@ namespace IronPython.Runtime.Types {
         /// <summary>
         /// Provides a slot object for the dictionary to allow setting of the dictionary.
         /// </summary>
-        public sealed class DictWrapper : IDataDescriptor {
+        [PythonType("getset_descriptor")]
+        public sealed class DictWrapper : IDataDescriptor, ICodeFormattable {
             DynamicType type;
 
             public DictWrapper(DynamicType pt) {
@@ -1069,9 +1082,19 @@ namespace IronPython.Runtime.Types {
             }
 
             #endregion
+
+            #region ICodeFormattable Members
+
+            public string ToCodeString() {
+                return String.Format("<attribute '__dict__' of {0} objects",
+                    Ops.StringRepr(type));
+            }
+
+            #endregion
         }
 
-        public sealed class WeakRefWrapper : IDataDescriptor {
+        [PythonType("getset_descriptor")]
+        public sealed class WeakRefWrapper : IDataDescriptor, ICodeFormattable {
             DynamicType parentType;
 
             public WeakRefWrapper(DynamicType parent) {
@@ -1114,6 +1137,15 @@ namespace IronPython.Runtime.Types {
             public override string ToString() {
                 return String.Format("<attribute '__weakref__' of '{0}' objects>", parentType.__name__);
             }
+
+            #region ICodeFormattable Members
+
+            public string ToCodeString() {
+                return String.Format("<attribute '__weakref__' of {0} objects",
+                    Ops.StringRepr(parentType));
+            }
+
+            #endregion
         }
     }
 }

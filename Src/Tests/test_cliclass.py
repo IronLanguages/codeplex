@@ -359,7 +359,14 @@ def test_explicit_interfaces():
     
     AreEqual(IOverrideTestInterface.x.__get__(otdc, OverrideTestDerivedClass), 'IOverrideTestInterface.x invoked')
     AreEqual(IOverrideTestInterface.y.__get__(otdc, OverrideTestDerivedClass), 'IOverrideTestInterface.y invoked')
-    
+
+    AreEqual(otdc.__getitem__(2), 'abc')
+    AreEqual(otdc[2], 'abc')
+    AssertError(NotImplementedError, otdc.__setitem__, 2, 3)
+    try:
+        otdc[2] = 3
+    except NotImplementedError: pass
+    else: AssertUnreachable()
 
 def test_array():
     import System

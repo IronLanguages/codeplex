@@ -50,16 +50,16 @@ namespace IronPython.Runtime.Operations {
         [ThreadStatic]
         private static ArrayList InfiniteRepr;
 
-        public static readonly object NotImplemented = "<NotImplemented>";
-        public static readonly object Ellipsis = "...";
+        private static Dictionary<Type, DynamicType> dynamicTypes = MakeDynamicTypesTable();
+        public static readonly object NotImplemented = NotImplementedTypeOps.Instance;
+        public static readonly object Ellipsis = EllipsisTypeOps.Instance;
         public static readonly object TRUE = true;
         public static readonly object FALSE = false;
-        public static readonly object[] EMPTY = new object[0];
+        internal static readonly object[] EMPTY = new object[0];
 
         private static readonly object[] cache = new object[MAX_CACHE - MIN_CACHE];
         private static readonly string[] chars = new string[255];
         private static ReflectedType StringType;
-        private static Dictionary<Type, DynamicType> dynamicTypes = MakeDynamicTypesTable();
         // The cache for dynamically generated delegates.
         private static Publisher<DelegateSignatureInfo, MethodInfo> dynamicDelegates = new Publisher<DelegateSignatureInfo, MethodInfo>();
 
@@ -525,6 +525,8 @@ namespace IronPython.Runtime.Operations {
             ret[typeof(ulong)] = UInt64Ops.MakeDynamicType();
 
             ret[typeof(void)] = NoneTypeOps.MakeDynamicType();
+            ret[typeof(Ellipsis)] = EllipsisTypeOps.MakeDynamicType();
+            ret[typeof(NotImplemented)] = NotImplementedTypeOps.MakeDynamicType();
             
             return ret;
         }
@@ -534,10 +536,19 @@ namespace IronPython.Runtime.Operations {
             if (dynamicTypes.TryGetValue(ty, out ret)) return ret;
 
             ret = ReflectedType.FromClsOnlyType(ty);
-            dynamicTypes[ty] = ret;
+
+            SaveDynamicType(ty, ret);
+            
             return ret;
         }
 
+        public static void SaveDynamicType(Type ty, DynamicType dt) {
+            lock (dynamicTypes) {
+                Debug.Assert(!dynamicTypes.ContainsKey(ty));
+
+                dynamicTypes[ty] = dt;
+            }
+        }
         public static DynamicType GetDynamicTypeFromType(Type ty) {
             PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "TypeLookup " + ty.FullName);
 
@@ -548,7 +559,7 @@ namespace IronPython.Runtime.Operations {
                 if (dynamicTypes.TryGetValue(ty, out ret)) return ret;
 
                 ret = ReflectedType.FromType(ty);
-                dynamicTypes[ty] = ret;
+                SaveDynamicType(ty, ret);
                 return ret;
             }
         }
@@ -567,7 +578,7 @@ namespace IronPython.Runtime.Operations {
             IDynamicObject dt = o as IDynamicObject;
             if (dt != null) return dt.GetDynamicType();
 
-            if (o == null) return NoneTypeOps.InstanceOfNoneType;
+            if (o == null) return NoneTypeOps.TypeInstance;
 
             if (o is String) return StringType;
 
@@ -1222,7 +1233,7 @@ namespace IronPython.Runtime.Operations {
             if (o is int) return (int)o;
             if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
             if (o is double) return (int)(double)o;
-            if (o == null) return NoneTypeOps.NoneHashCode;
+            if (o == null) return NoneTypeOps.HashCode;
 
             return o.GetHashCode();
         }
@@ -1232,7 +1243,7 @@ namespace IronPython.Runtime.Operations {
             if (o is int) return (int)o;
             if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
             if (o is double) return (int)(double)o;
-            if (o == null) return NoneTypeOps.NoneHashCode;
+            if (o == null) return NoneTypeOps.HashCode;
 
             IRichEquality ipe = o as IRichEquality;
             if (ipe != null) {
@@ -2087,7 +2098,7 @@ namespace IronPython.Runtime.Operations {
         public static void UpdateTraceBack(ICallerContext context, string funcName, string filename, int line) {
             TraceBack curTrace = SystemState.RawTraceBack;
             if (curTrace == null || !curTrace.IsUserSupplied) {
-                PythonFunction fx = new Function0(context.Module, funcName, null, new string[0], new object[0]);
+                PythonFunction fx = new Function0(context.Module, funcName, null, new string[0], Ops.EMPTY);
 
                 TraceBackFrame tbf = new TraceBackFrame(context.Globals, context.Locals, fx.FunctionCode);
                 ((FunctionCode)fx.FunctionCode).SetFilename(filename);
@@ -2294,7 +2305,7 @@ namespace IronPython.Runtime.Operations {
 
         public static Exception AssertionError(string message) {
             if (message == null) {
-                return AssertionError(String.Empty, new object[0]);
+                return AssertionError(String.Empty, Ops.EMPTY);
             } else {
                 return AssertionError("{0}", new object[]{message});
             }

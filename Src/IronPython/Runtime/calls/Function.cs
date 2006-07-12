@@ -433,7 +433,7 @@ namespace IronPython.Runtime.Calls {
             Array.Copy(args, realArgs, args.Length);
 
             int index = 0;
-            foreach (KeyValuePair<object, object> kvp in dictArgs) {
+            foreach (KeyValuePair<object, object> kvp in (IDictionary<object,object>)dictArgs) {
                 argNames[index] = kvp.Key as string;
                 realArgs[index + args.Length] = kvp.Value;
                 index++;

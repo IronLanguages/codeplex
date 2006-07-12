@@ -153,6 +153,16 @@ class Operator(Symbol):
         
         return 3
 
+    def genWeakRefOperatorNames(self, cw, x):
+        cw.writeline("dict[SymbolTable.%s] = new SlotWrapper(SymbolTable.%s, this);" % (self.symbol_name(), self.symbol_name()))
+        
+        if self.isCompare(): return 1
+        cw.writeline("dict[SymbolTable.%s] = new SlotWrapper(SymbolTable.%s, this);" % (self.reverse_symbol_name(), self.reverse_symbol_name()))
+        cw.writeline("dict[SymbolTable.%s] = new SlotWrapper(SymbolTable.%s, this);" % (self.inplace_symbol_name(), self.inplace_symbol_name()))
+        
+        return 3
+        
+
 class DivisionOperator(Operator):
     def __init__(self, symbol, name, rname, clrName, prec, tname, trname, tclrName, opposite=None):
         Operator.__init__(self, symbol, name, rname, clrName, prec, opposite)
@@ -233,6 +243,20 @@ class DivisionOperator(Operator):
         cw.writeline("public static readonly SymbolId OpInPlace%s = new SymbolId(OpInPlace%sId);" % (self.tclrName,self.tclrName))
         
         return 6
+
+    def genWeakRefOperatorNames(self, cw, x):
+        cw.writeline("dict[SymbolTable.%s] = new SlotWrapper(SymbolTable.%s, this);" % (self.symbol_name(), self.symbol_name()))
+        cw.writeline("dict[SymbolTable.%s] = new SlotWrapper(SymbolTable.%s, this);" % (self.reverse_symbol_name(), self.reverse_symbol_name()))
+        cw.writeline("dict[SymbolTable.%s] = new SlotWrapper(SymbolTable.%s, this);" % (self.inplace_symbol_name(), self.inplace_symbol_name()))
+        
+        cw.writeline("dict[SymbolTable.%s] = new SlotWrapper(SymbolTable.%s, this);" % (self.true_symbol_name(), self.true_symbol_name()))
+        cw.writeline("dict[SymbolTable.%s] = new SlotWrapper(SymbolTable.%s, this);" % (self.reverse_true_symbol_name(), self.reverse_true_symbol_name()))
+        cw.writeline("dict[SymbolTable.%s] = new SlotWrapper(SymbolTable.%s, this);" % (self.inplace_true_symbol_name(), self.inplace_true_symbol_name()))
+
+        return 6
+
+        
+        
 class Grouping(Symbol):
     def __init__(self, symbol, name, side, titleName=None):
         Symbol.__init__(self, symbol, side+" "+name, titleName)
@@ -449,6 +473,7 @@ def operators_generator(cw):
         
 
 CodeGenerator("Operators", operators_generator).doit()
+
 
 IBINOP = """
 public static object %(name)s(object x, object y) {
@@ -794,6 +819,17 @@ def gen_SymbolTable_ops_symbols(cw):
 CodeGenerator("SymbolTable Ops Values", gen_SymbolTable_ops_values).doit()
 CodeGenerator("SymbolTable Ops Added", gen_SymbolTable_ops_added).doit()
 CodeGenerator("SymbolTable Ops Symbols", gen_SymbolTable_ops_symbols).doit()
+
+
+def weakref_operators(cw):
+    x = 1
+    for op in ops:
+        if not isinstance(op, Operator): continue
+        
+        x = x + op.genWeakRefOperatorNames(cw, x)
+
+CodeGenerator("WeakRef Operators Initialization", weakref_operators).doit()
+
 
 
 def ops_generator_usertype(cw, basicTemplate, cmpTemplate):

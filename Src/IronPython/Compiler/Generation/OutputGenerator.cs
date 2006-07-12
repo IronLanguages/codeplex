@@ -332,7 +332,7 @@ namespace IronPython.Compiler.Generation {
         /// </summary>
         internal static CodeGen GenerateModuleEntryPoint(TypeGen tg, CodeGen init, string moduleName, IList<string> referencedAssemblies) {
             CodeGen main = tg.DefineMethod(MethodAttributes.Static | MethodAttributes.Public, "Main", typeof(int), Type.EmptyTypes, new string[] { });
-            main.SetCustomAttribute(new CustomAttributeBuilder(typeof(STAThreadAttribute).GetConstructor(Type.EmptyTypes), new object[0]));
+            main.SetCustomAttribute(new CustomAttributeBuilder(typeof(STAThreadAttribute).GetConstructor(Type.EmptyTypes), Ops.EMPTY));
 
             // leaves our module instance on the stack, we save it to create the delegate.
             Slot instance = new LocalSlot(main.DeclareLocal(tg.myType), main);            

@@ -129,13 +129,13 @@ namespace IronPython.Modules {
         [PythonName("apply")]
         [Documentation("apply(object[, args[, kwargs]]) -> value\n\nDeprecated.\nInstead, use:\n    function(*args, **keywords).")]
         public static object Apply(ICallerContext context, object func, object args) {
-            return Ops.CallWithArgsTupleAndContext(context, func, new object[0], args);
+            return Ops.CallWithArgsTupleAndContext(context, func, Ops.EMPTY, args);
         }
 
         [PythonName("apply")]
         [Documentation("apply(object[, args[, kwargs]]) -> value\n\nDeprecated.\nInstead, use:\n    function(*args, **keywords).")]
         public static object Apply(ICallerContext context, object func, object args, object kws) {
-            return Ops.CallWithArgsTupleAndKeywordDictAndContext(context, func, new object[0], new string[0], args, kws);
+            return Ops.CallWithArgsTupleAndKeywordDictAndContext(context, func, Ops.EMPTY, new string[0], args, kws);
         }
 
         public static object basestring = Ops.GetDynamicTypeFromType(typeof(string));
@@ -1380,7 +1380,7 @@ namespace IronPython.Modules {
         //??? should we fastpath the 1,2,3 item cases???
         [PythonName("zip")]
         public static List Zip(params object[] seqs) {
-            if (seqs == null) throw Ops.TypeError("zip argument must support iteration, got {0}", NoneTypeOps.InstanceOfNoneType);
+            if (seqs == null) throw Ops.TypeError("zip argument must support iteration, got {0}", NoneTypeOps.TypeInstance);
 
             int N = seqs.Length;
             if (N == 2) return Zip(seqs[0], seqs[1]);

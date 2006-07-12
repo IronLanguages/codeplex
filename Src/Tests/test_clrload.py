@@ -210,7 +210,7 @@ def compileAndLoad(name, filename, *args):
     
 x = compileAndLoad('c3', get_local_filename('c3.cs') )
 
-AreEqual(repr(x), "c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null")
+AreEqual(repr(x), "<Assembly c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null>")
 AreEqual(repr(x.Foo), "<type 'Foo'>")
 AreEqual(repr(x.BarNamespace), "<module 'BarNamespace' (CLS module from c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null)>")
 AreEqual(repr(x.BarNamespace.NestedNamespace), "<module 'NestedNamespace' (CLS module from c3, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null)>")

@@ -158,8 +158,7 @@ namespace IronPython.Runtime {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        [PythonName("__iter__")]
-        public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {            
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object,object>>.GetEnumerator() {            
             return new DictKeyValueEnumerator(data);
         }
 
@@ -168,7 +167,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         [PythonName("__iter__")]
-        IEnumerator IEnumerable.GetEnumerator() {
+        public IEnumerator GetEnumerator() {
             return new DictionaryKeyEnumerator(data);
         }
 
@@ -976,6 +975,7 @@ namespace IronPython.Runtime {
     ///   innerEnum.MoveNext() will throw InvalidOperation even if the values get changed,
     ///   which is supported in python
     /// </summary>
+    [PythonType("dictionary-keyiterator")]
     public class DictionaryKeyEnumerator : IEnumerator, IEnumerator<object> {
         readonly int size;
         readonly Dictionary<object, object> dict;

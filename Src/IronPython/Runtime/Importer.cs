@@ -209,7 +209,7 @@ namespace IronPython.Runtime {
 
             if (module.SystemState.TopPackage.Builtins.TryGetValue(module.ModuleName, out ty)) {
                 if (typeof(CustomSymbolDict).IsAssignableFrom(ty)) {
-                    CustomSymbolDict dict = (CustomSymbolDict)ty.GetConstructor(Type.EmptyTypes).Invoke(new object[0]);
+                    CustomSymbolDict dict = (CustomSymbolDict)ty.GetConstructor(Type.EmptyTypes).Invoke(Ops.EMPTY);
                     //@todo share logic to copy old values in when not already there from reload
                     module.__dict__ = dict;
                     module.Initialize();
@@ -219,6 +219,7 @@ namespace IronPython.Runtime {
                     type.Initialize();
                     foreach (string attrName in type.GetAttrNames(module)) {
                         SymbolId id = SymbolTable.StringToId(attrName);
+
                         module.__dict__[id] = type.GetAttr(module, null, id);
                     }
                     module.Initialize();
@@ -309,6 +310,7 @@ namespace IronPython.Runtime {
             FieldIdDict dict = new FieldIdDict();
 
             foreach (string attrName in type.GetAttrNames(DefaultContext.Default)) {
+
                 dict[SymbolTable.StringToId(attrName)] = type.GetAttr(DefaultContext.Default, null, SymbolTable.StringToId(attrName));
             }
             PythonModule ret = new PythonModule(name, dict, state);
@@ -326,6 +328,13 @@ namespace IronPython.Runtime {
             }
             Type ty;
             if (mod.SystemState.TopPackage.Builtins.TryGetValue(name, out ty)) {
+                // run the type's .cctor before doing any custom reflection on the type.
+                // This allows modules to lazily initialize DynamicType's to custom values
+                // rather than having them get populated w/ the ReflectedType.  W/o this the
+                // cctor runs after we've done a bunch of reflection over the type that doesn't
+                // force the cctor to run.
+                System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(ty.TypeHandle);
+
                 if (typeof(CompiledModule).IsAssignableFrom(ty)) {
                     return InitializeModule(name, CompiledModule.Load(name, ty, mod.SystemState));
                 } else {

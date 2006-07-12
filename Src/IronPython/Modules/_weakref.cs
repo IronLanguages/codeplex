@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -28,6 +29,17 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Modules {
     [PythonType("weakref")]
     public static class PythonWeakRef {
+        static PythonWeakRef() {
+            Ops.SaveDynamicType(typeof(PythonWeakRefProxy),
+                new ProxyDynamicType(typeof(PythonWeakRefProxy)));
+
+            Ops.SaveDynamicType(typeof(PythonCallableWeakRefProxy),
+                new ProxyDynamicType(typeof(PythonCallableWeakRefProxy)));
+
+            ProxyType = Ops.GetDynamicTypeFromType(typeof(PythonWeakRefProxy));
+            CallableProxyType = Ops.GetDynamicTypeFromType(typeof(PythonCallableWeakRefProxy));
+        }
+
         internal static IWeakReferenceable ConvertToWeakReferenceable(object obj) {
             IWeakReferenceable iwr = obj as IWeakReferenceable;
             if (iwr != null) return iwr;
@@ -60,8 +72,8 @@ namespace IronPython.Modules {
             }
         }
 
-        public static object CallableProxyType = Ops.GetDynamicTypeFromType(typeof(PythonCallableWeakRefProxy));
-        public static object ProxyType = Ops.GetDynamicTypeFromType(typeof(PythonWeakRefProxy));
+        public static object CallableProxyType;
+        public static object ProxyType;
         public static object ReferenceType = Ops.GetDynamicTypeFromType(typeof(PythonWeakReference));
         public static object ReferenceError = ExceptionConverter.GetPythonException("ReferenceError");
 
@@ -239,7 +251,7 @@ namespace IronPython.Modules {
         }
 
         [PythonType("weakproxy")]
-        public class PythonWeakRefProxy : ISuperDynamicObject, ICodeFormattable, IProxyObject, IRichEquality, ICustomAttributes {
+        public sealed class PythonWeakRefProxy : ISuperDynamicObject, ICodeFormattable, IProxyObject, IRichEquality, ICustomAttributes {
             GCHandle target;
 
             #region Python Constructors
@@ -291,14 +303,22 @@ namespace IronPython.Modules {
             /// gets the object or throws a reference exception
             /// </summary>
             object GetObject() {
-                try {
-                    object res = target.Target;
-                    if (res == null) throw Ops.ReferenceError("weakly referenced object no longer exists");
-                    GC.KeepAlive(this);
-                    return res;
-                } catch (InvalidOperationException) {
-
+                object res;
+                if (!TryGetObject(out res)) {
                     throw Ops.ReferenceError("weakly referenced object no longer exists");
+                }
+                return res;
+            }
+
+            bool TryGetObject(out object result) {
+                try {
+                    result = target.Target;
+                    if (result == null) return false;
+                    GC.KeepAlive(this);
+                    return true;
+                } catch (InvalidOperationException) {
+                    result = null;
+                    return false;
                 }
             }
             #endregion
@@ -339,7 +359,10 @@ namespace IronPython.Modules {
             string ICodeFormattable.ToCodeString() {
                 object obj = target.Target;
                 GC.KeepAlive(this);
-                return String.Format("<weakproxy object to {0}>", Ops.GetPythonTypeName(obj));
+                return String.Format("<weakproxy at {0} to {1} at {2}>", 
+                    IdDispenser.GetId(this),
+                    Ops.GetPythonTypeName(obj),
+                    IdDispenser.GetId(obj));
             }
 
             #endregion
@@ -362,7 +385,12 @@ namespace IronPython.Modules {
             }
 
             public List GetAttrNames(ICallerContext context) {
-                object o = GetObject();
+                object o;
+                if (!TryGetObject(out o)) {
+                    // if we've been disconnected return an empty list
+                    return new List();
+                }
+                
                 return Ops.GetAttrNames(context, o);
             }
 
@@ -380,11 +408,6 @@ namespace IronPython.Modules {
             }
 
             #endregion
-
-            [PythonName("__len__")]
-            public object GetLength() {
-                return Ops.Length(GetObject());
-            }
 
             #region IRichEquality Members
             public object RichGetHashCode() {
@@ -408,7 +431,7 @@ namespace IronPython.Modules {
         }
 
         [PythonType("weakcallableproxy")]
-        public class PythonCallableWeakRefProxy : ISuperDynamicObject, ICodeFormattable, ICallable, IFancyCallable, IProxyObject, IRichEquality, ICustomAttributes {
+        public sealed class PythonCallableWeakRefProxy : ISuperDynamicObject, ICodeFormattable, ICallable, IFancyCallable, IProxyObject, IRichEquality, ICustomAttributes {
             GCHandle target;
 
             #region Python Constructors
@@ -461,10 +484,23 @@ namespace IronPython.Modules {
             /// gets the object or throws a reference exception
             /// </summary>
             object GetObject() {
-                object obj = target.Target;
-                GC.KeepAlive(this);
-                if (obj == null) throw Ops.ReferenceError("weakly referenced object no longer exists");
-                return obj;
+                object res;
+                if (!TryGetObject(out res)) {
+                    throw Ops.ReferenceError("weakly referenced object no longer exists");
+                }
+                return res;
+            }
+
+            bool TryGetObject(out object result) {
+                try {
+                    result = target.Target;
+                    if (result == null) return false;
+                    GC.KeepAlive(this);
+                    return true;
+                } catch (InvalidOperationException) {
+                    result = null;
+                    return false;
+                }
             }
             #endregion
 
@@ -503,7 +539,10 @@ namespace IronPython.Modules {
             string ICodeFormattable.ToCodeString() {
                 object obj = target.Target;
                 GC.KeepAlive(this);
-                return String.Format("<weakcallableproxy object to {0}>", Ops.GetPythonTypeName(obj));
+                return String.Format("<weakproxy at {0} to {1} at {2}>",
+                    IdDispenser.GetId(this),
+                    Ops.GetPythonTypeName(obj),
+                    IdDispenser.GetId(obj));
             }
 
             #endregion
@@ -542,7 +581,12 @@ namespace IronPython.Modules {
             }
 
             public List GetAttrNames(ICallerContext context) {
-                object o = GetObject();
+                object o;
+                if (!TryGetObject(out o)) {
+                    // if we've been disconnected return an empty list
+                    return new List();
+                }
+
                 return Ops.GetAttrNames(context, o);
             }
 
@@ -597,5 +641,103 @@ namespace IronPython.Modules {
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Custom ReflectedType for proxy's that looks slots in the proxied objects
+    /// type instead of our own type
+    /// </summary>
+    [PythonType(typeof(DynamicType))]
+    public partial class ProxyDynamicType : ReflectedType {
+
+        public ProxyDynamicType(Type type)
+            : base(type) {
+        }
+
+        internal override bool TryLookupBoundSlot(ICallerContext context, object inst, SymbolId name, out object ret) {            
+            IProxyObject po = inst as IProxyObject;
+            Debug.Assert(po != null);
+
+            object target = po.Target;
+            return Ops.GetDynamicType(target).TryLookupBoundSlot(context, target, name, out ret);
+        }        
+    }
+    
+    class SlotWrapper : IDescriptor, ICodeFormattable {
+        SymbolId name;
+        ProxyDynamicType type;
+
+        public SlotWrapper(SymbolId slotName, ProxyDynamicType targetType) {
+            name = slotName;
+            this.type = targetType;
+        }
+
+        #region IDescriptor Members
+
+        public object GetAttribute(object instance, object owner) {
+            if (instance == null) return this;
+
+            IProxyObject proxy = instance as IProxyObject;
+
+            if (proxy == null)
+                throw Ops.TypeError("descriptor for {0} object doesn't apply to {1} object",
+                    Ops.StringRepr(type.Name),
+                    Ops.StringRepr(Ops.GetDynamicType(instance).Name));
+
+            return new GenericMethodWrapper(name, proxy);            
+        }
+
+        #endregion
+
+        #region ICodeFormattable Members
+
+        public string ToCodeString() {
+            return String.Format("<slot wrapper {0} of {1} objects>",
+                Ops.StringRepr(name.ToString()),
+                Ops.StringRepr(type.Name));
+        }
+
+        #endregion
+    }
+
+    [PythonType("method-wrapper")]
+    public class GenericMethodWrapper : ICallable, IFancyCallable {
+        SymbolId name;
+        IProxyObject target;
+
+        public GenericMethodWrapper(SymbolId methodName, IProxyObject proxyTarget) {
+            name = methodName;
+            target = proxyTarget;
+        }
+
+        #region ICallable Members
+
+        [PythonName("__call__")]
+        public object Call(params object[] args) {
+            object ret;
+            if(!Ops.TryInvokeSpecialMethod(target.Target, name, out ret, args))
+                throw Ops.AttributeError("type {0} has no attribute {1}", 
+                    Ops.GetDynamicType(target.Target), 
+                    name.ToString());
+
+            return ret;
+        }
+
+        #endregion
+
+        #region IFancyCallable Members
+
+        [PythonName("__call__")]
+        public object Call(ICallerContext context, object[] args, string[] names) {
+            object targetMethod;
+            if(!Ops.GetDynamicType(target).TryLookupBoundSlot(context, target, name, out targetMethod))
+                throw Ops.AttributeError("type {0} has no attribute {1}",
+                    Ops.GetDynamicType(target.Target),
+                    name.ToString());
+
+            return Ops.Call(context, targetMethod, args, names);
+        }
+
+        #endregion
     }
 }

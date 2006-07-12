@@ -39,11 +39,11 @@ namespace IronPython.Runtime.Types {
         internal static Dictionary<Type, ReflectedType> OpsTypeToType = new Dictionary<Type, ReflectedType>(10);
 
         // This is the type to extend for inheriting from the current ReflectedType.
-        protected Type extensibleType;
+        private Type extensibleType;
 
         // This is the type that implements various functionality on behalf of the
         // current ReflectedType
-        protected Type opsType;
+        private Type opsType;
         private CallTarget1 optCtor;
         private CallTarget2 optCtor2;
 
@@ -64,11 +64,17 @@ namespace IronPython.Runtime.Types {
             this.opsType = opsType;
 
             lock (OpsTypeToType) {
-                // All the array types (byte[], int[]) etc map to ArrayOps. However, we map it only to System.Array.
-                Debug.Assert(!OpsTypeToType.ContainsKey(opsType) ||
-                             (opsType == typeof(ArrayOps) && OpsTypeToType[opsType] == TypeCache.Array));
-                if (!OpsTypeToType.ContainsKey(opsType))
-                    OpsTypeToType[opsType] = this;
+                if (baseType.IsArray) {
+                    if(baseType == typeof(Array)) OpsTypeToType[opsType] = this;
+                } else {
+                    Type curType = opsType;
+                    do {
+                        Debug.Assert(!OpsTypeToType.ContainsKey(curType));
+
+                        OpsTypeToType[curType] = this;
+                        curType = curType.BaseType;
+                    } while (curType != typeof(object) && !OpsTypeToType.ContainsKey(curType));
+                }
             }
         }
 
@@ -95,9 +101,13 @@ namespace IronPython.Runtime.Types {
         /// the current ReflectedType
         /// </summary>
         protected override void AddOps() {
-            foreach (MethodInfo mi in opsType.GetMethods()) {
-                AddReflectedUnboundMethod(mi);
-            }
+            Type curType = opsType;
+            do {
+                foreach (MethodInfo mi in curType.GetMethods()) {
+                    AddReflectedUnboundMethod(mi);
+                }
+                curType = curType.BaseType;                
+            } while (curType != typeof(object));
         }
 
         private void AddReflectedUnboundMethod(MethodInfo mi) {
@@ -171,10 +181,13 @@ namespace IronPython.Runtime.Types {
 
     public class ReflectedArrayType : OpsReflectedType {
         public ReflectedArrayType(string name, Type arrayType)
-            : base(name, arrayType, typeof(ArrayOps) , arrayType) {
+            : base(arrayType.GetElementType() != null ? "Array[" + Ops.GetDynamicTypeFromType(arrayType.GetElementType()).Name + "]" : "Array",
+                    arrayType,
+                    typeof(ArrayOps),
+                    null) {
         }
 
-        public override object this[object index] {
+        public override object this[object index] {            
             get {
                 Type[] types = GetTypesFromTuple(index);
                 if (types.Length != 1) throw Ops.TypeError("expected single type");
@@ -182,7 +195,7 @@ namespace IronPython.Runtime.Types {
                 return Ops.GetDynamicTypeFromType(types[0].MakeArrayType());
             }
         }
-
+        
         public override object Call(ICallerContext context, object[] args) {
             if (args.Length != 1) throw Ops.TypeError("array expects one and only 1 argument");
             if (this.type == typeof(Array)) throw Ops.TypeError("general array type is not callable");

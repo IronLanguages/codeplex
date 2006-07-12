@@ -25,6 +25,11 @@ namespace IronPythonTest {
         string Method();
         string y { get;}
         string MethodOverridden();
+
+        object this[int index] {
+            get;
+            set;
+        }
     }
 
     public class OverrideTestDerivedClass : IOverrideTestInterface {
@@ -34,6 +39,15 @@ namespace IronPythonTest {
         public string y { get { return "OverrideTestDerivedClass.y invoked"; } }
         string IOverrideTestInterface.MethodOverridden() { return "IOverrideTestInterface.MethodOverridden() invoked"; }
         public string MethodOverridden() { return "OverrideTestDerivedClass.MethodOverridden() invoked"; }
+
+        object IOverrideTestInterface.this[int index] {
+            get{
+                return "abc";
+            }
+            set {
+                throw new NotImplementedException();
+            }
+        }
     }
 
     public struct MySize {
@@ -232,6 +246,7 @@ namespace IronPythonTest {
             return true;
         }
     }
+
 
     public abstract class Overriding {
         string protVal = "Overriding.Protected";

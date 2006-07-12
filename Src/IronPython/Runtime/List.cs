@@ -706,7 +706,7 @@ namespace IronPython.Runtime {
 
                 try {
                     // make the list appear empty for the duration of the sort...
-                    data = new object[0];
+                    data = Ops.EMPTY;
                     size = 0;
 
                     if (key != null) {

@@ -21,6 +21,9 @@ def gen_one_env(cw, i):
     for j in range(i):
         cw.writeline("[EnvironmentIndex(%i)] public object value%i;" % (j, j))
     cw.writeline()
+    cw.enter_block("public FunctionEnvironment%iDictionary()" % i)
+    cw.exit_block()
+    cw.writeline()
     cw.writeline("public FunctionEnvironment%iDictionary(FunctionEnvironmentDictionary parent, IModuleEnvironment moduleScope, SymbolId[] names, SymbolId[] outer)" % i)
     cw.enter_block("    : base(parent, moduleScope, names, outer)")
     cw.exit_block()

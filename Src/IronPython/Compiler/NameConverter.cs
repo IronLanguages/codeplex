@@ -79,9 +79,10 @@ namespace IronPython.Compiler {
             NameType nt = NameType.PythonField;
             name = null;
 
-            // hide MinValue & MaxValue on int, Empty on string
+            // hide MinValue & MaxValue on int, Empty on string, Epsilon, Min/Max, etc.. on double
             if (fi.DeclaringType == typeof(string) ||
                 fi.DeclaringType == typeof(int) ||
+                fi.DeclaringType == typeof(double) ||
                 fi.IsDefined(typeof(PythonHiddenFieldAttribute), false)) nt = NameType.Field;
 
             string namePrefix = "";

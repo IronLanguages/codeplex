@@ -184,7 +184,7 @@ namespace IronPython.Runtime.Calls {
                 realArgs[i] = arguments[i];
             }
             if (paramArrayIndex != -1 && !haveArg[paramArrayIndex]) {
-                realArgs[paramArrayIndex] = targetsCls ? (object)new object[0] : (object)Tuple.MakeTuple(new object[] { });
+                realArgs[paramArrayIndex] = targetsCls ? (object)Ops.EMPTY : (object)Tuple.MakeTuple(new object[] { });
                 haveArg[paramArrayIndex] = true;
             }
             return true;

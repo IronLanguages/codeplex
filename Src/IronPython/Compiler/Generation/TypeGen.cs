@@ -82,7 +82,7 @@ namespace IronPython.Compiler.Generation {
         public void AddModuleField(Type moduleType) {
             FieldBuilder moduleField = this.myType.DefineField(CompiledModule.ModuleFieldName,
                 moduleType, FieldAttributes.Public | FieldAttributes.Static);
-            moduleField.SetCustomAttribute(new CustomAttributeBuilder(typeof(PythonHiddenFieldAttribute).GetConstructor(new Type[0]), new object[0]));
+            moduleField.SetCustomAttribute(new CustomAttributeBuilder(typeof(PythonHiddenFieldAttribute).GetConstructor(new Type[0]), Runtime.Operations.Ops.EMPTY));
             this.moduleSlot = new StaticFieldSlot(moduleField);
         }
 

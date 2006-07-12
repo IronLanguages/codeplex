@@ -26,6 +26,9 @@ namespace IronPython.Runtime.Calls {
         [EnvironmentIndex(0)] public object value0;
         [EnvironmentIndex(1)] public object value1;
 
+        public FunctionEnvironment2Dictionary() {
+        }
+
         public FunctionEnvironment2Dictionary(FunctionEnvironmentDictionary parent, IModuleEnvironment moduleScope, SymbolId[] names, SymbolId[] outer)
             : base(parent, moduleScope, names, outer) {
         }
@@ -74,6 +77,9 @@ namespace IronPython.Runtime.Calls {
         [EnvironmentIndex(1)] public object value1;
         [EnvironmentIndex(2)] public object value2;
         [EnvironmentIndex(3)] public object value3;
+
+        public FunctionEnvironment4Dictionary() {
+        }
 
         public FunctionEnvironment4Dictionary(FunctionEnvironmentDictionary parent, IModuleEnvironment moduleScope, SymbolId[] names, SymbolId[] outer)
             : base(parent, moduleScope, names, outer) {
@@ -154,6 +160,9 @@ namespace IronPython.Runtime.Calls {
         [EnvironmentIndex(6)] public object value6;
         [EnvironmentIndex(7)] public object value7;
 
+        public FunctionEnvironment8Dictionary() {
+        }
+
         public FunctionEnvironment8Dictionary(FunctionEnvironmentDictionary parent, IModuleEnvironment moduleScope, SymbolId[] names, SymbolId[] outer)
             : base(parent, moduleScope, names, outer) {
         }
@@ -224,6 +233,9 @@ namespace IronPython.Runtime.Calls {
         [EnvironmentIndex(13)] public object value13;
         [EnvironmentIndex(14)] public object value14;
         [EnvironmentIndex(15)] public object value15;
+
+        public FunctionEnvironment16Dictionary() {
+        }
 
         public FunctionEnvironment16Dictionary(FunctionEnvironmentDictionary parent, IModuleEnvironment moduleScope, SymbolId[] names, SymbolId[] outer)
             : base(parent, moduleScope, names, outer) {
@@ -327,6 +339,9 @@ namespace IronPython.Runtime.Calls {
         [EnvironmentIndex(29)] public object value29;
         [EnvironmentIndex(30)] public object value30;
         [EnvironmentIndex(31)] public object value31;
+
+        public FunctionEnvironment32Dictionary() {
+        }
 
         public FunctionEnvironment32Dictionary(FunctionEnvironmentDictionary parent, IModuleEnvironment moduleScope, SymbolId[] names, SymbolId[] outer)
             : base(parent, moduleScope, names, outer) {

@@ -107,7 +107,7 @@ namespace IronPython.Runtime {
         }
 
         public Tuple() {
-            this.data = new object[0];
+            this.data = Ops.EMPTY;
         }
 
         internal Tuple(bool expandable, object[] items) {

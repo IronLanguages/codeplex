@@ -94,6 +94,9 @@ namespace IronPython.Runtime {
 
         private void DoFormatCode() {
             // we already pulled the first %
+            if (index == str.Length)
+                throw Ops.ValueError("incomplete format, expected format character at index {0}", index);
+
             curCh = str[index++];
 
             if (curCh == '%') {

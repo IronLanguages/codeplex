@@ -37,12 +37,14 @@ namespace IronPython.Runtime.Calls {
         }
         #endregion
     }
-
+    
     [PythonType("classmethod")]
     public class ClassMethod : IDescriptor {
         internal object func;
 
         public ClassMethod(object func) {
+            if (!Ops.IsCallable(func))
+                throw Ops.TypeError("{0} object is not callable", Ops.StringRepr(Ops.GetDynamicType(func)));
             this.func = func;
         }
 
@@ -63,17 +65,49 @@ namespace IronPython.Runtime.Calls {
 
     [PythonType("property")]
     public class Property : IDataDescriptor {
-        public object fget, fset, fdel, __doc__;
-
-        //public Property(object fget) : this(fget, null, null, null) { }
-        //public Property(object fget, object fset) : this(fget, fset, null, null) { }
-        //public Property([Optional]object fget, [Optional]object fset, [Optional]object fdel) : this(fget, fset, fdel, null) { }
+        private object fget, fset, fdel, doc;
 
         public Property([DefaultParameterValueAttribute(null)]object fget,
                         [DefaultParameterValueAttribute(null)]object fset,
                         [DefaultParameterValueAttribute(null)]object fdel,
                         [DefaultParameterValueAttribute(null)]object doc) {
-            this.fget = fget; this.fset = fset; this.fdel = fdel; this.__doc__ = doc;
+            this.fget = fget; this.fset = fset; this.fdel = fdel; this.doc = doc;
+        }
+
+        public object Documentation {
+            [PythonName("__doc__")]
+            get { return doc; }
+            [PythonName("__doc__")]
+            set {
+                throw Ops.TypeError("'property' object is immutable");
+            }
+        }
+
+        public object Deleter {
+            [PythonName("fdel")]
+            get { return fdel; }
+            [PythonName("fdel")]
+            set {
+                throw Ops.TypeError("'property' object is immutable");
+            }
+        }
+
+        public object Setter {
+            [PythonName("fset")]
+            get { return fset; }
+            [PythonName("fset")]
+            set {
+                throw Ops.TypeError("'property' object is immutable");
+            }
+        }
+
+        public object Getter {
+            [PythonName("fget")]
+            get { return fget; }
+            [PythonName("fget")]
+            set {
+                throw Ops.TypeError("'property' object is immutable");
+            }
         }
 
         #region IDataDescriptor Members

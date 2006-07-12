@@ -207,7 +207,9 @@ namespace IronPython.Runtime.Types {
         public object GetAttribute(object instance, object context) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
             if (getter == null) 
-                throw Ops.AttributeError("attribute '{0}' of '{1}' object is write-only", info.Name, info.DeclaringType.Name);
+                throw Ops.AttributeError("attribute '{0}' of '{1}' object is write-only", 
+                    Name, 
+                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name);
 
             OptimizePropertyMethod(ref optGetter, getter);
 
@@ -246,16 +248,36 @@ namespace IronPython.Runtime.Types {
         [PythonName("__delete__")]
         public virtual bool DeleteAttribute(object instance) {
             if (setter != null)
-                throw Ops.AttributeErrorForReadonlyAttribute(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
+                throw Ops.AttributeErrorForReadonlyAttribute(
+                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name, 
+                    SymbolTable.StringToId(Name));
             else
-                throw Ops.AttributeErrorForBuiltinAttributeDeletion(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
+                throw Ops.AttributeErrorForBuiltinAttributeDeletion(
+                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name, 
+                    SymbolTable.StringToId(Name));
         }
 
         [PythonName("__str__")]
         public override string ToString() {
-            return string.Format("<property# {0} on {1}>", info.Name, info.DeclaringType.Name);
+            return string.Format("<property# {0} on {1}>", Name, 
+                Ops.GetDynamicTypeFromType(info.DeclaringType).Name);
         }
 
+        internal string Name {
+            get {
+                object[] pnas = null;
+                if (getter != null) {
+                    pnas = getter.GetCustomAttributes(typeof(PythonNameAttribute), true);
+                } else if (setter != null) {
+                    pnas = setter.GetCustomAttributes(typeof(PythonNameAttribute), true);
+                }
+
+                if(pnas != null && pnas.Length > 0)
+                    return ((PythonNameAttribute)pnas[0]).name;
+
+                return info.Name;
+            }
+        }
         private void OptimizePropertyMethod(ref BuiltinFunction bf, MethodInfo method) {
             if (Options.OptimizeReflectCalls && bf == null) {
                 FunctionType ft = FunctionType.Method;
@@ -266,7 +288,11 @@ namespace IronPython.Runtime.Types {
 
         private void DoSet(object instance, object val) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
-            if (setter == null) throw Ops.AttributeErrorForReadonlyAttribute(info.DeclaringType.Name, SymbolTable.StringToId(info.Name));
+            if (setter == null) {
+                throw Ops.AttributeErrorForReadonlyAttribute(
+                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name,
+                    SymbolTable.StringToId(Name));
+            }
             try {
                 setter.Invoke(instance, new object[] { Ops.ConvertTo(val, info.PropertyType) });
             } catch (TargetInvocationException tie) {
@@ -276,7 +302,7 @@ namespace IronPython.Runtime.Types {
 
         private object DoGet(object instance) {
             try {
-                return getter.Invoke(instance, new object[0]);
+                return getter.Invoke(instance, Ops.EMPTY);
             } catch (TargetInvocationException tie) {
                 throw ExceptionConverter.UpdateForRethrow(tie.InnerException);
             }

@@ -33,6 +33,11 @@ namespace IronPython.Runtime.Calls {
         private SymbolId[] outer;       // outer scopes
         private SymbolId[] extra;       // extra keys
 
+        public FunctionEnvironmentDictionary() {
+            extra = new SymbolId[0];
+            names = new SymbolId[0];
+        }
+
         protected FunctionEnvironmentDictionary(FunctionEnvironmentDictionary parent, IModuleEnvironment context, SymbolId[] names, SymbolId[] outer) {
             this.parent = parent;
             this.context = context;
@@ -159,6 +164,9 @@ namespace IronPython.Runtime.Calls {
     public sealed class FunctionEnvironmentNDictionary : FunctionEnvironmentDictionary, ICloneable {
         // Array of the variables in the environment
         [PythonHiddenField]public object[] environmentValues;
+
+        public FunctionEnvironmentNDictionary() {
+        }
 
         public FunctionEnvironmentNDictionary(int size, FunctionEnvironmentDictionary parent, IModuleEnvironment context, SymbolId[] names, SymbolId[] outer)
             : base(parent, context, names, outer) {

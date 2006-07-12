@@ -195,15 +195,14 @@ namespace IronPython.Runtime.Types {
             SymbolId methodId = SymbolTable.StringToId(name);
             object existingMethod;
             if (dict.TryGetValue(methodId, out existingMethod)) {
-                ClassMethod cm = existingMethod as ClassMethod;
-                if (cm != null) {
-                    ((BuiltinFunction)cm.func).AddMethod(mi);
-                } else {
-                    Debug.Fail(String.Format("Replacing existing method {0} on {1}", methodId, this));
-                    dict[methodId] = new ClassMethod(BuiltinFunction.MakeMethod(name, mi, FunctionType.Function | FunctionType.PythonVisible));
-                }
+                ClassMethodDescriptor cm = existingMethod as ClassMethodDescriptor;
+
+                Debug.Assert(cm != null, 
+                    String.Format("Replacing existing method {0} on {1}", methodId, this));
+                
+                cm.func.AddMethod(mi);
             } else {
-                dict[methodId] = new ClassMethod(BuiltinFunction.MakeMethod(name, mi, FunctionType.Function | FunctionType.PythonVisible));
+                dict[methodId] = new ClassMethodDescriptor(BuiltinFunction.MakeMethod(name, mi, FunctionType.Function | FunctionType.PythonVisible));
             }
         }
 
@@ -419,22 +418,38 @@ namespace IronPython.Runtime.Types {
             AddEnumOperator("op_Inequality", "NotEqual");
         }
 
-        private static PropertyInfo GetPropertyFromMethod(MethodInfo mi, MemberInfo[] defaultMembers) {
-            Type type = mi.DeclaringType;
+        private PropertyInfo GetPropertyFromMethod(MethodInfo mi, MemberInfo[] defaultMembers) {
+            
             foreach (MemberInfo member in defaultMembers) {
                 if (member.MemberType == MemberTypes.Property) {
                     PropertyInfo property = member as PropertyInfo;
                     if (mi == property.GetGetMethod() ||
                         mi == property.GetSetMethod()) {
 
-                        return property.GetIndexParameters().Length == 1 ? property : null;
+                        return property;
                     }
                 }
             }
+
+            // check both the declaring type, and our type.  We need to check
+            // both to deal w/ interfaces & abstract classes where the property
+            // is defined in the interface/abstract class, and the methods are
+            // declared in the concrete type.
+            if (mi.DeclaringType != this.type) {
+                PropertyInfo pi = SearchTypeForProperty(mi, mi.DeclaringType);
+                if (pi != null) {
+                    return pi;
+                }
+            }
+
+            return SearchTypeForProperty(mi, type);
+        }
+
+        private static PropertyInfo SearchTypeForProperty(MethodInfo mi, Type type) {
             foreach (PropertyInfo prop in type.GetProperties(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)) {
-                if (mi == prop.GetGetMethod(true) ||
-                    mi == prop.GetSetMethod(true)) {
-                    return prop.GetIndexParameters().Length == 0 ? prop : null;
+                if ((prop.GetGetMethod(true) == mi) ||
+                    (prop.GetSetMethod(true) == mi)){
+                    return prop;
                 }
             }
             return null;
@@ -545,9 +560,6 @@ namespace IronPython.Runtime.Types {
         }
 
         private void AddExplicitInterfaceMethod(Type interfaceType, MethodInfo mi, MemberInfo[] defaultMembers) {
-            string name;
-            NameType nt;
-
             // we only add explicit interface methods if there are no collisions.  If there
             // are collisions the user needs to call via the interface type and pass the
             // instance in explicitly.  For properties this becomes:
@@ -558,26 +570,13 @@ namespace IronPython.Runtime.Types {
             //      IFoo.x(somefoo)
 
             if (mi.IsSpecialName) {
-                // property
-                PropertyInfo pi = GetPropertyFromMethod(mi, defaultMembers);
-                if (pi != null) {
-                    nt = NameConverter.TryGetName(this, pi, mi, out name);
-                    switch(nt){
-                        case NameType.None: break;
-                        case NameType.PythonProperty:
-                        case NameType.Property:
-                            if (!dict.ContainsKey(SymbolTable.StringToId(name))) {
-                                dict[SymbolTable.StringToId(name)] = new ReflectedProperty(pi, pi.GetGetMethod(true), pi.GetSetMethod(true), nt);
-                            } 
-                            break;
-                        default: Debug.Assert(false, "Unexpected name type for explicitly implemented reflected property"); break;
-                    }                    
-                }
+                AddExplicitInterfaceProperty(mi, defaultMembers);
                 return;
             }
 
             // method
-            nt = NameConverter.TryGetName(this, mi, out name);
+            string name;
+            NameType nt = NameConverter.TryGetName(this, mi, out name);
             switch (nt) {
                 case NameType.None: break;
                 case NameType.PythonMethod:
@@ -588,6 +587,43 @@ namespace IronPython.Runtime.Types {
                     } 
                     break;
                 default: Debug.Assert(false, "Unexpected name type for reflected method"); break;
+            }
+        }
+
+        private void AddExplicitInterfaceProperty(MethodInfo mi, MemberInfo[] defaultMembers) {
+            string name;
+            NameType nt;
+
+            // property
+            PropertyInfo pi = GetPropertyFromMethod(mi, defaultMembers);
+            if (pi != null) {
+                if (pi.GetIndexParameters().Length > 0) {
+                    AddExplicitInterfaceIndexer(pi);
+                    return;
+                }
+
+                nt = NameConverter.TryGetName(this, pi, mi, out name);
+                switch (nt) {
+                    case NameType.None: break;
+                    case NameType.PythonProperty:
+                    case NameType.Property:
+                        if (!dict.ContainsKey(SymbolTable.StringToId(name))) {
+                            dict[SymbolTable.StringToId(name)] = new ReflectedProperty(pi, pi.GetGetMethod(true), pi.GetSetMethod(true), nt);
+                        }
+                        break;
+                    default: Debug.Assert(false, "Unexpected name type for explicitly implemented reflected property"); break;
+                }
+            }
+        }
+
+        private void AddExplicitInterfaceIndexer(PropertyInfo pi) {
+            MethodInfo method = pi.GetGetMethod(true);
+            if (method != null && !dict.ContainsKey(SymbolTable.GetItem)) {
+                StoreReflectedMethod("__getitem__", method, NameType.PythonMethod);
+            }
+            method = pi.GetSetMethod(true);
+            if (method != null && !dict.ContainsKey(SymbolTable.SetItem)) {
+                StoreReflectedMethod("__setitem__", method, NameType.PythonMethod);
             }
         }
 
@@ -829,6 +865,16 @@ namespace IronPython.Runtime.Types {
                         AddReflectedMethod(mi, defaultMembers);
                     }
 
+                    if (type != typeof(object)) {
+                        Type curType = type.BaseType;
+                        while (curType != null && curType != typeof(object) && curType != typeof(ValueType)) {
+                            foreach (MethodInfo mi in curType.GetMethods(bf & ~BindingFlags.Instance)) {
+                                AddReflectedMethod(mi, defaultMembers);
+                            }
+                            curType = curType.BaseType;
+                        }
+                    }
+
                     foreach (FieldInfo fi in type.GetFields(bf)) {
                         AddReflectedField(fi);
                     }
@@ -859,6 +905,9 @@ namespace IronPython.Runtime.Types {
 
                     AddDocumentation();
 
+                    if (!dict.ContainsKey(SymbolTable.Dict)) {
+                        dict[SymbolTable.Dict] = new DictWrapper(this);
+                    }
                     initialized = true;
 
                     AddModule();
@@ -1049,7 +1098,7 @@ namespace IronPython.Runtime.Types {
 
             // Add the attributes from the type
             Dict typeDict = base.GetAttrDict(context, self);
-            foreach (KeyValuePair<object, object> pair in typeDict) {
+            foreach (KeyValuePair<object, object> pair in (IDictionary<object,object>)typeDict) {
                 res.Add(pair);
             }
 

@@ -307,7 +307,7 @@ namespace IronPython.Modules {
             void WriteDict(object o) {
                 Dict d = o as Dict;
                 bytes.Add((byte)'{');
-                IEnumerator<KeyValuePair<object, object>> ie = d.GetEnumerator();
+                IEnumerator<KeyValuePair<object, object>> ie = ((IEnumerable<KeyValuePair<object, object>>)d).GetEnumerator();
                 while (ie.MoveNext()) {
                     WriteObject(ie.Current.Key);
                     WriteObject(ie.Current.Value);

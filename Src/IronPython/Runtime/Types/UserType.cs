@@ -42,6 +42,7 @@ namespace IronPython.Runtime.Types {
         HasSlots = 0x0001,
         HasFinalizer = 0x0002,
         HasWeakRef = 0x0004,
+        HasDictionary = 0x008,
     }
 
     [DebuggerDisplay("UserType: {ToString()}")]
@@ -103,6 +104,42 @@ namespace IronPython.Runtime.Types {
             : base(NewTypeMaker.GetNewType(name, bases, dict)) {
             ctor = BuiltinFunction.MakeMethod(name, type.GetConstructors(), FunctionType.Function);
 
+            ValidateSupportedInheritance(dict);
+
+            IAttributesDictionary fastDict = (IAttributesDictionary)dict;
+
+            this.__name__ = name;
+            this.__module__ = fastDict[SymbolTable.Module];   // should always be present...
+
+            PopulateDefaultDictionary(fastDict);
+
+            if (fastDict.ContainsKey(SymbolTable.Slots)) {
+                HasSlots = true;
+                if (dict.ContainsKey("__dict__")) HasDictionary = true;
+            } else HasDictionary = true;
+
+            InitializeUserType(bases, fastDict, false);
+
+            this.dict = CreateNamespaceDictionary(dict);
+
+            AddProtocolWrappers();
+        }
+
+        private void PopulateDefaultDictionary(IAttributesDictionary fastDict) {
+            if (!fastDict.ContainsKey(SymbolTable.Doc)) {
+                fastDict[SymbolTable.Doc] = null;
+            }
+
+            if (!fastDict.ContainsKey(SymbolTable.WeakRef)) {
+                fastDict[SymbolTable.WeakRef] = new WeakRefWrapper(this);
+            }
+
+            if (!fastDict.ContainsKey(SymbolTable.Dict)) {
+                fastDict[SymbolTable.Dict] = new DictWrapper(this);
+            }
+        }
+
+        private void ValidateSupportedInheritance(IDictionary<object, object> dict) {
             if (type.GetInterface("ICustomAttributes") == typeof(ICustomAttributes)) {
                 // ICustomAttributes is a well-known type. Ops.GetAttr etc first check for it, and dispatch to the
                 // ICustomAttributes implementation. At the same time, built-in types like PythonModule, DynamicType, 
@@ -120,24 +157,6 @@ namespace IronPython.Runtime.Types {
             // we don't support overriding __mro__
             if (dict.ContainsKey(SymbolTable.MethodResolutionOrder.ToString()))
                 throw new NotImplementedException("Overriding __mro__ of built-in types is not implemented");
-
-
-            IAttributesDictionary fastDict = (IAttributesDictionary)dict;
-
-            this.__name__ = name;
-            this.__module__ = fastDict[SymbolTable.Module];   // should always be present...
-
-            if (!fastDict.ContainsKey(SymbolTable.Doc)) {
-                fastDict[SymbolTable.Doc] = null;
-            }
-
-            if (fastDict.ContainsKey(SymbolTable.Slots)) HasSlots = true;
-
-            InitializeUserType(bases, fastDict, false);
-
-            this.dict = CreateNamespaceDictionary(dict);
-
-            AddProtocolWrappers();
         }
 
         /// <summary>
@@ -396,6 +415,13 @@ namespace IronPython.Runtime.Types {
             return baseNames;
         }
 
+        public override List GetAttrNames(ICallerContext context) {
+            List res = base.GetAttrNames(context);
+            if (HasDictionary) {                
+                res.AddNoLock("__dict__");
+            }
+            return res;
+        }
         #endregion
 
         #region Object overrides
@@ -431,8 +457,12 @@ namespace IronPython.Runtime.Types {
             }
 
             if (!__getattr__F.IsObjectMethod()) {
-                ret = __getattr__F.Invoke(self, SymbolTable.IdToString(name));
-                return true;
+                try {
+                    ret = __getattr__F.Invoke(self, SymbolTable.IdToString(name));
+                    return true;
+                } catch (MissingMemberException) {
+                    return false;
+                }
             }
 
             return false;
@@ -479,6 +509,18 @@ namespace IronPython.Runtime.Types {
                     flags |= UserTypeFlags.HasSlots;
                 else
                     flags &= ~(UserTypeFlags.HasSlots);
+            }
+        }
+
+        internal bool HasDictionary {
+            get {
+                return (flags & UserTypeFlags.HasDictionary) != 0;
+            }
+            set {
+                if (value)
+                    flags |= UserTypeFlags.HasDictionary;
+                else
+                    flags &= ~(UserTypeFlags.HasDictionary);
             }
         }
 
@@ -775,6 +817,11 @@ namespace IronPython.Runtime.Types {
             } else {
                 return new NamespaceDictionary(knownKeys, bases);
             }
+        }
+
+        public NamespaceDictionary() {
+            keys = new SymbolId[0];
+            values = Ops.EMPTY;
         }
 
         protected NamespaceDictionary(SymbolId[] knownKeys, Tuple bases)

@@ -72,6 +72,7 @@ data = [
 	TypeData('Double', 'doubleType'),
 	TypeData('BigInteger'),
 	TypeData('Complex64'),
+	TypeData('DynamicType'),
 ]
 
 # groups all of our type data by type, and outputs

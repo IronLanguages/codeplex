@@ -170,9 +170,10 @@ class MetaClass(type):
         return cls
 
 MC = MetaClass('Foo', (), {})
+# vs CPython missing: ['__delattr__', '__getattribute__', '__hash__', '__setattr__', '__str__']
 AreEqual(remove_clr_specific_attrs(dir(MC)),
-         ['__class__', '__doc__', '__init__', '__module__', '__new__',
-         '__reduce__', '__reduce_ex__', '__repr__'])
+         ['__class__', '__dict__', '__doc__', '__init__', '__module__', '__new__',
+         '__reduce__', '__reduce_ex__', '__repr__', '__weakref__'])
 
 # metaclass such as defined in string.py
 class MetaClass2(type):

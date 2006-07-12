@@ -302,7 +302,7 @@ namespace IronPython.Runtime.Calls {
             Array.Copy(args, realArgs, args.Length);
 
             int index = 0;
-            foreach (KeyValuePair<object, object> kvp in dictArgs) {
+            foreach (KeyValuePair<object, object> kvp in (IDictionary<object,object>)dictArgs) {
                 argNames[index] = kvp.Key as string;
                 realArgs[index + args.Length] = kvp.Value;
                 index++;
@@ -665,26 +665,31 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                 return;
 
             if ((template.FunctionType & FunctionType.FunctionMethodMask) == FunctionType.Method) {
-                // to a fast check on the CLR types, if they match we can avoid the slower
-                // check that involves looking up dynamic types. (self can be null on
-                // calls like set.add(None) 
-                if (self != null && self.GetType() == template.ClrDeclaringType) return;
+                CheckSelfWorker(self, template);
+            }
+        }
 
-                DynamicType selfType = self == null ? NoneTypeOps.InstanceOfNoneType : Ops.GetDynamicTypeFromType(self.GetType());
-                Debug.Assert(selfType != null);
+        internal static void CheckSelfWorker(object self, BuiltinFunction template) {
+            // to a fast check on the CLR types, if they match we can avoid the slower
+            // check that involves looking up dynamic types. (self can be null on
+            // calls like set.add(None) 
+            if (self != null && self.GetType() == template.ClrDeclaringType) return;
 
-                ReflectedType declType = DeclaringType;
-                if (!selfType.IsSubclassOf(declType)) {
-                    // if a conversion exists to the type allow the call.
-                    object converted;
-                    if (!Converter.TryConvert(self, declType.type, out converted) || converted == null) {
-                        throw Ops.TypeError("descriptor {0} requires a {1} object but received a {2}",
-                            Ops.Repr(Name),
-                            Ops.Repr(DeclaringType.Name),
-                            Ops.Repr(Ops.GetPythonTypeName(self)));
-                    }
+            DynamicType selfType = self == null ? NoneTypeOps.TypeInstance : Ops.GetDynamicTypeFromType(self.GetType());
+            Debug.Assert(selfType != null);
+
+            ReflectedType declType = template.DeclaringType;
+            if (!selfType.IsSubclassOf(declType)) {
+                // if a conversion exists to the type allow the call.
+                object converted;
+                if (!Converter.TryConvert(self, declType.type, out converted) || converted == null) {
+                    throw Ops.TypeError("descriptor {0} requires a {1} object but received a {2}",
+                        Ops.Repr(template.Name),
+                        Ops.Repr(template.DeclaringType.Name),
+                        Ops.Repr(Ops.GetPythonTypeName(self)));
                 }
             }
+            return;
         }
 
         #region IContextAwareMember Members
@@ -695,6 +700,78 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
         #endregion        
     
+    }
+
+    [PythonType("classmethod_descriptor")]
+    public class ClassMethodDescriptor : IDescriptor, ICodeFormattable {
+        internal BuiltinFunction func;
+
+        internal ClassMethodDescriptor(BuiltinFunction func) {
+            this.func = func;
+        }
+
+        #region IDescriptor Members
+        [PythonName("__get__")]
+        public object GetAttribute(object instance) { return GetAttribute(instance, null); }
+
+        [PythonName("__get__")]
+        public object GetAttribute(object instance, object owner) {
+            owner = CheckGetArgs(instance, owner);
+            return new Method(func, owner, Ops.GetDynamicType(owner));
+        }
+
+        private object CheckGetArgs(object instance, object owner) {
+            if (owner == null) {
+                if (instance == null) throw Ops.TypeError("__get__(None, None) is invalid");
+                owner = Ops.GetDynamicType(instance);
+            } else {
+                DynamicType dt = owner as DynamicType;
+                if (dt == null) {
+                    throw Ops.TypeError("descriptor {0} for type {1} needs a type, not a {2}",
+                        Ops.StringRepr(func.Name),
+                        Ops.StringRepr(func.DeclaringType.Name),
+                        Ops.StringRepr(Ops.GetDynamicType(owner)));
+                }
+                if (!dt.IsSubclassOf(TypeCache.Dict)) {
+                    throw Ops.TypeError("descriptor {0} for type {1} doesn't apply to type {2}",
+                        Ops.StringRepr(func.Name),
+                        Ops.StringRepr(func.DeclaringType.Name),
+                        Ops.StringRepr(dt.Name));
+                }
+            }
+            if (instance != null)
+                BuiltinMethodDescriptor.CheckSelfWorker(instance, func);
+            
+            return owner;
+        }
+        #endregion
+
+        #region ICodeFormattable Members
+
+        public string ToCodeString() {
+            BuiltinFunction bf = func as BuiltinFunction;
+            if (bf != null) {
+                return String.Format("<method {0} of {1} objects>",
+                    Ops.StringRepr(bf.Name),
+                    Ops.StringRepr(bf.DeclaringType));
+            }
+
+            return String.Format("<classmethod object at {0}>",
+                IdDispenser.GetId(this));
+        }
+
+        #endregion
+
+        public override bool Equals(object obj) {
+            ClassMethodDescriptor cmd = obj as ClassMethodDescriptor;
+            if (cmd == null) return false;
+
+            return cmd.func == func;
+        }
+
+        public override int GetHashCode() {
+            return ~func.GetHashCode();
+        }
     }
 
     [PythonType(typeof(BuiltinFunction))]

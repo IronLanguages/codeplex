@@ -194,7 +194,6 @@ def contains(d, *attrs):
 def repeat_on_class(C):
     c = C()
     d = C.__dict__
-
     contains(d, '__doc__', 'x1', 'f1')
 
     ## recursive entries & repr
@@ -285,9 +284,9 @@ def repeat_on_class(C):
     else:           
         try:
             nd = newDict()
-        except TypeError, ex:
+        except TypeError:
             # can't construct an instance of this dictionary
-            Assert(ex.msg.find('newDict() takes exactly') != -1)
+            pass
         else:
             AreEqual(eval('abc', {}, nd), 'def')
 
@@ -398,25 +397,25 @@ repeat_on_class(C)
 def repeat_on_class(C1, C2):
     d1 = C1.__dict__
     d2 = C2.__dict__
-    
+        
     # object as key
     d1[int] = int
     d2[int] = int
     Assert(d1 <> d2)
 
     d2['f'] = d1['f']
-    Assert(d1 == d2)
+    Assert([x for x in d1] == [x for x in d2])
 
-    Assert(d1 >= d2)
-    Assert(d1 <= d2)
+    Assert(d1.fromkeys([x for x in d1]) >= d2.fromkeys([x for x in d2]))
+    Assert(d1.fromkeys([x for x in d1]) <= d2.fromkeys([x for x in d2]))
 
     d1['y'] = 20
     d1[int] = int
 
-    Assert(d1 > d2)
-    Assert(d1 >= d2)
-    Assert(d2 < d1)
-    Assert(d2 <= d1)
+    Assert(d1.fromkeys([x for x in d1]) > d2.fromkeys([x for x in d2]))
+    Assert(d1.fromkeys([x for x in d1]) >= d2.fromkeys([x for x in d2]))
+    Assert(d2.fromkeys([x for x in d2]) < d1.fromkeys([x for x in d1]))
+    Assert(d2.fromkeys([x for x in d2]) <= d1.fromkeys([x for x in d1]))
 
 class C1: 
     x = 10

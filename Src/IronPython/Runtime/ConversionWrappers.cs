@@ -504,7 +504,7 @@ namespace IronPython.Runtime {
             #endregion
         }
         public override IDictionaryEnumerator GetEnumerator() {
-            return new DictionaryEnumerator(dict.GetEnumerator());
+            return new DictionaryEnumerator(((IEnumerable<KeyValuePair<object,object>>)dict).GetEnumerator());
         }
 
         public override bool IsFixedSize {

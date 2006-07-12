@@ -61,18 +61,15 @@ namespace IronPython.Runtime.Operations {
     /// 
     ///     get: added for types that implement IDescriptor
     /// </summary>
-    public class InstanceOps : OpsReflectedType {
+    public static class InstanceOps {
         internal static BuiltinFunction New = CreateFunction("__new__", "DefaultNew", "DefaultNewKW");
         internal static BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNew", "DefaultNewClsKW");
         internal static BuiltinFunction OverloadedNew = CreateFunction("__new__", "OverloadedNewBasic", "OverloadedNewKW", "OverloadedNewClsKW");
         internal static object Init = CreateInitMethod();
 
-        InstanceOps() : base("object", typeof(DynamicType), typeof(InstanceOps), null) { }
-
         static InstanceOps() {
             // We create an OpsReflectedType so that the runtime can map back from the function to typeof(PythonType). 
-            new InstanceOps();
-            Debug.Assert(OpsReflectedType.OpsTypeToType.ContainsKey(typeof(InstanceOps)));
+            OpsReflectedType.OpsTypeToType[typeof(InstanceOps)] = new OpsReflectedType("InstanceOps", typeof(object), typeof(InstanceOps), null);
         }
         
         internal static BuiltinFunction CreateNonDefaultNew() {
@@ -102,7 +99,7 @@ namespace IronPython.Runtime.Operations {
             object res = DefaultNew(context, type, args);
 
             if (kwDict.Count > 0) {
-                foreach(KeyValuePair<object, object> kvp in kwDict){
+                foreach(KeyValuePair<object, object> kvp in (IDictionary<object,object>)kwDict){
                     Ops.SetAttr(context, 
                         res, 
                         SymbolTable.StringToId(kvp.Key.ToString()), 
@@ -125,7 +122,7 @@ namespace IronPython.Runtime.Operations {
 
             object[] finalArgs;
             string[] names;
-            DynamicType.GetKeywordArgs(kwArgs, new object[0], out finalArgs, out names);
+            DynamicType.GetKeywordArgs(kwArgs, Ops.EMPTY, out finalArgs, out names);
 
 
             return overloads.CallHelper(context, finalArgs, names, null);
@@ -169,7 +166,7 @@ namespace IronPython.Runtime.Operations {
         public static object NonDefaultNewKWNoParams(ICallerContext context, DynamicType type, [ParamDict] Dict dict) {
             if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
 
-            return type.AllocateObject(dict, new object[0]);
+            return type.AllocateObject(dict, Ops.EMPTY);
         }
 
         public static object NextMethod(object self) {

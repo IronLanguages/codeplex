@@ -152,7 +152,7 @@ namespace IronPython.Runtime {
 
         public object Call(params object[] args) {
             object o;
-            Ops.TryInvokeSpecialMethod(instance, SymbolTable.Unassign, out o, new object[0]);
+            Ops.TryInvokeSpecialMethod(instance, SymbolTable.Unassign, out o, Ops.EMPTY);
 
             return null;
         }

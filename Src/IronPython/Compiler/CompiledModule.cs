@@ -38,7 +38,7 @@ namespace IronPython.Compiler {
     public abstract class CompiledModule : CustomSymbolDict {
 
         internal static PythonModule Load(string moduleName, Type compiledModuleType, SystemState state) {
-            CompiledModule compiledModule = (CompiledModule)compiledModuleType.GetConstructor(Type.EmptyTypes).Invoke(new object[0]);
+            CompiledModule compiledModule = (CompiledModule)compiledModuleType.GetConstructor(Type.EmptyTypes).Invoke(Ops.EMPTY);
             return compiledModule.Load(moduleName, new InitializeModule(compiledModule.Initialize), state);
         }
 

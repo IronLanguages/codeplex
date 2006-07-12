@@ -527,7 +527,7 @@ namespace IronPython.Compiler.Generation {
                 if ((node.Flags & FunctionAttributes.KeywordDictionary) != 0) {
                     typeArr[curIndex] = typeof(Dict);
                     cabs = new CustomAttributeBuilder[typeArr.Length];
-                    cabs[curIndex] = new CustomAttributeBuilder(typeof(ParamDictAttribute).GetConstructor(new Type[0]), new object[0]);
+                    cabs[curIndex] = new CustomAttributeBuilder(typeof(ParamDictAttribute).GetConstructor(new Type[0]), Ops.EMPTY);
 
                     curIndex--;
                 }
@@ -535,7 +535,7 @@ namespace IronPython.Compiler.Generation {
                     if (cabs == null) cabs = new CustomAttributeBuilder[typeArr.Length];
 
                     typeArr[curIndex] = typeof(object[]);
-                    cabs[curIndex] = new CustomAttributeBuilder(typeof(ParamArrayAttribute).GetConstructor(new Type[0]), new object[0]);
+                    cabs[curIndex] = new CustomAttributeBuilder(typeof(ParamArrayAttribute).GetConstructor(new Type[0]), Ops.EMPTY);
 
                     curIndex--;
                 }
