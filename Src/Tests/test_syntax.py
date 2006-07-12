@@ -369,14 +369,42 @@ def test_multiline_compound_stmts():
             Assert(False, "multiline_compound stmt test did not raise exception. test = " + test)
 
 test_multiline_compound_stmts()
-            
-# keep this at the end of the file, do not insert anything below this line
-
-def endoffile():
-    return "Hi" # and some comment here
-#***** Above code are from 'Syntax' *****
 
 # **** test for conditional operator **********
 
 result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_conditional.py"), ["-X:Python25"])
 AreEqual(result, 0)
+
+# compile function which returns from finally, but does not yield from finally.
+c = compile("def f():\n    try:\n        pass\n    finally:\n        return 1", "", "exec")
+
+def ret_from_finally():
+    try:
+        pass
+    finally:
+        return 1
+    return 2
+    
+AreEqual(ret_from_finally(), 1)
+
+def ret_from_finally2(x):
+    if x:
+        try:
+            pass
+        finally:
+            return 1
+    else:
+        return 2
+
+AreEqual(ret_from_finally2(True), 1)
+AreEqual(ret_from_finally2(False), 2)
+
+try:
+    pass
+finally:
+    pass
+
+# keep this at the end of the file, do not insert anything below this line
+
+def endoffile():
+    return "Hi" # and some comment here

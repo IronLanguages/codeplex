@@ -265,7 +265,7 @@ namespace IronPython.Compiler.Generation {
                         EnsureReturnBlock();
                         if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
                             returnBlock.returnValue.EmitSet(this);
-                        } 
+                        }
                         Emit(OpCodes.Ldc_I4_1);
                         t.finallyReturns.EmitSet(this);
                         Emit(OpCodes.Endfinally);
@@ -282,6 +282,13 @@ namespace IronPython.Compiler.Generation {
                     });
 
                     break;
+            }
+        }
+
+        internal void EmitReturnValue() {
+            EnsureReturnBlock();
+            if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
+                returnBlock.returnValue.EmitGet(this);
             }
         }
 

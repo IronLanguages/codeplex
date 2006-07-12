@@ -152,6 +152,7 @@ namespace IronPython.Compiler.Generation {
                 cg.EmitPosition(Location.None, Location.None);
                 cg.EmitReturn(null);
             }
+            cg.Finish();
 
             if (tg != null) tg.FinishType();
 

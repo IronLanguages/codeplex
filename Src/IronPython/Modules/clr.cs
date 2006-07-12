@@ -48,15 +48,6 @@ namespace IronPython.Modules {
 
         public object References = new ReferencesTuple();
 
-        public object Path {
-            get {
-                return List.MakeList("clr.Path has been deprecated and will be removed in the 1.0 Beta 7 release. Please use sys.path instead.");
-            }
-            set {
-                throw Ops.Warning("clr.Path has been deprecated and will be removed in the 1.0 Beta 7 release. Please use sys.path instead.");
-            }
-        }
-
         #region Public methods
 
         public void AddReference(params object[] references) {

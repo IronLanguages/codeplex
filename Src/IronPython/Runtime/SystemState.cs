@@ -376,16 +376,6 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        [PythonName("LoadAssemblyByName")]
-        public void LoadAssemblyByName(string name) {
-            throw Ops.Warning("sys.LoadAssemblyByName has been deprecated and will be removed in the next release. Please use clr.AddReference* methods instead.");
-        }
-
-        [PythonName("LoadAssemblyFromFile")]
-        public void LoadAssemblyFromFile(string filename) {
-            throw Ops.Warning("sys.LoadAssemblyFromFile has been deprecated and will be removed in the next release. Please use clr.AddReference* methods instead.");
-        }        
-
         internal TopReflectedPackage TopPackage {
             get {
                 if (topPackage == null) 

@@ -56,7 +56,7 @@ namespace IronPython.Hosting {
             this.endColumn = endColumn;
         }
 
-        public CodeSpan(IronPython.Compiler.Location start, IronPython.Compiler.Location end) {
+        internal CodeSpan(IronPython.Compiler.Location start, IronPython.Compiler.Location end) {
             this.startLine = start.Line;
             this.startColumn = start.Column;
             this.endLine = end.Line;

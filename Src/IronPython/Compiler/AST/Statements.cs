@@ -613,15 +613,15 @@ namespace IronPython.Compiler.Ast {
         internal override void Emit(CodeGen cg) {
             cg.EmitPosition(Start, header);
             Slot choiceVar = null;
-            Slot returnVar = null;
+            Slot returnVar = cg.GetLocalTmp(typeof(bool));
             Label endOfTry = new Label();
+
+            cg.EmitInt(0);
+            returnVar.EmitSet(cg);
 
             if (yieldTargets.Count > 0) {
                 Label startOfBlock = cg.DefineLabel();
                 choiceVar = cg.GetLocalTmp(typeof(int));
-                returnVar = cg.GetLocalTmp(typeof(bool));
-                cg.EmitInt(0);
-                returnVar.EmitSet(cg);
                 cg.EmitInt(-1);
                 choiceVar.EmitSet(cg);
                 cg.Emit(OpCodes.Br, startOfBlock);
@@ -673,14 +673,18 @@ namespace IronPython.Compiler.Ast {
             cg.EndExceptionBlock();
             cg.PopTargets();
 
+            Label noReturn = cg.DefineLabel();
+            returnVar.EmitGet(cg);
+            cg.Emit(OpCodes.Brfalse_S, noReturn);
             if (yieldTargets.Count > 0) {
-                Label noReturn = cg.DefineLabel();
-                returnVar.EmitGet(cg);
-                cg.Emit(OpCodes.Brfalse_S, noReturn);
+                // return true from the generator method
                 cg.Emit(OpCodes.Ldc_I4_1);
-                cg.EmitReturn();
-                cg.MarkLabel(noReturn);
+            } else {
+                // return the actual value
+                cg.EmitReturnValue();
             }
+            cg.EmitReturn();
+            cg.MarkLabel(noReturn);
 
             yieldTargets.Clear();
         }
