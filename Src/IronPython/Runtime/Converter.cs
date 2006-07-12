@@ -895,7 +895,9 @@ namespace IronPython.Runtime {
                 if (toType == CharType && fromType == StringType) return true;
                 if (toType == Int32Type && fromType == BooleanType) return true;
 
-                if (toType == BooleanType && IsPythonType(fromType)) return true;
+                // Everything can convert to Boolean in Python
+                if (toType == BooleanType) return true;
+
                 if (DelegateType.IsAssignableFrom(toType) && IsPythonType(fromType)) return true;
                 if (IEnumerableType == toType && IsPythonType(fromType)) return true;
 
