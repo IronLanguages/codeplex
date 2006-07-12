@@ -73,7 +73,6 @@ IronPythonTests = {
                 test_math
                 test_nt
                 test_operator
-                test_pickle
                 test_re
                 test_socket
                 test_struct
@@ -433,6 +432,7 @@ RegressionTests = {
     "test.test_itertools",
     "test.test_long",       # test_logs() - log of big int's unconvertible to floats
     "test.test_marshal",    # code not implemented, file() operations need to be explicitly closed
+    "test.test_pickle",     # long tests are disabled because they're really slow, and another test needs object.__base__
     "test.test_repr",       # repr for array module commentted out
     "test.test_richcmp",    # VectorTest disabled (due to __cast?), Also "False is False" == False(rarely)
     "test.test_pow",        # BUG# 884
