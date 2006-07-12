@@ -81,8 +81,6 @@ namespace IronPython.CodeDom {
 #endif
                 if (Options != null) {
                     Options.BlankLinesBetweenMembers = false;
-                    if(String.IsNullOrEmpty(Options.IndentString))
-                        Options.IndentString = "    ";
                 }
 
                 try {
@@ -1208,17 +1206,9 @@ namespace IronPython.CodeDom {
         }
 
         protected override void GenerateLinePragmaEnd(CodeLinePragma e) {
-            Output.WriteLine("");
-            Output.Write("#ExternalSource(\"");
-            Output.Write(e.FileName);
-            Output.Write("\",");
-            Output.Write(e.LineNumber);
-            Output.WriteLine(")");
         }
 
         protected override void GenerateLinePragmaStart(CodeLinePragma e) {
-            Output.WriteLine("");
-            Output.WriteLine("#End ExternalSource");
         }
         #endregion
 
