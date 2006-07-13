@@ -1103,21 +1103,24 @@
 	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; import pyevent</p>
 	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; hook,caller = pyevent.make_event()</p>
 	
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">This has returned back to us two objects.  The first object allows a user to hook a 
+		function up to the event.  The second object allows the owner of the event to cause the event to be raised.  
+		This allows for the separation of these abilities just like .NET.&nbsp; Now let's take this and put it into a class and 
+		see how it gets used.</p>
+	
 	<ol start="2">
 		<li>
-		<p class="Step">This has returned back to us two objects.  The first object allows a user to hook a 
-		function up to the event.  The second object allows the owner of the event to cause the event to be raised.  
-		This allows seperation of these abilities just like .NET.  Now let's take this and put it into a class and 
-		see how it gets used.</p>
+		<p class="Step">We'll define a class that has an event for</p>
 		</li>
 	</ol>
 
 	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; class MyClass(object):</p>
 	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;OnNewInstance,_NewInstance= pyevent.make_event()</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;def __new__(cls):</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;res = object.__new__(object)</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MyClass._NewInstance(res)</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return res</p>
+	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;def __new__(cls):</p>
+	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;res = object.__new__(object)</p>
+	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MyClass._NewInstance(res)</p>
+	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return res</p>
 	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; </p>
 	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; def NewInst(x): print 'new inst: ', x </p>
 	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; </p>
@@ -1137,12 +1140,11 @@
 
 	<h2><a name="T2.2">Exercise 2: Windows Forms</a></h2>
 	<p class="Body">To interactively develop Windows applications, IronPython must 
-	be initialized. By default, the Python console executes on one thread only. 
-	While this thread awaits text input in the console window, the Windows application 
-	being dynamically created from the console is not able to process Windows messages 
-	and therefore repaint itself etc.</p>
-	<p class="Body">The code to initialize IronPython for Windows Forms is provided 
-	and will be referenced in the subsequent tasks.</p>
+	be initialized for that purpose.&nbsp; By default, the Python console executes on one thread only.&nbsp; While this thread awaits text input in the console window, the Windows application 
+	being dynamically created from the console is not able to process Windows messages.&nbsp; 
+	Therefore, the application does not repaint itself or handle input to the UI.</p>
+	<p class="Body">We provide a .py file to initialize IronPython for Windows Forms 
+	development, see tasks below.</p>
 	<p class="Body">In this exercise, you will create simple Windows Forms applications 
 	dynamically from the IronPython interactive console.</p>
 	<h3><a name="T2.2.1">Task 1: Simple Windows Forms application</a></h3>
@@ -1156,7 +1158,8 @@
 		</li>
 	</ol>
 	<p class="TypedExample">import winforms</p>
-	<p class="Stepnonumbering">The Python modules get automatically initialized 
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">Python modules get automatically initialized 
 	(executed) upon import so the Windows Forms initialization code has executed 
 	as part of the import statement.</p>
 	<ol start="3">
@@ -1169,11 +1172,14 @@
 	<p class="TypedExample">from System.Drawing import *</p>
 	<ol start="4">
 		<li>
-		<p class="Step">Create instance of the Form class and display it:</p>
+		<p class="Step">Create an instance of the Form class and display it:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">f = Form()</p>
 	<p class="TypedExample">f.Show()</p>
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">You may need to alt-tab or look for the running 
+	application since it may not have popped to the top level on your desktop.</p>
 	<ol start="5">
 		<li>
 		<p class="Step">Now set the form Text property:</p>
@@ -1189,11 +1195,16 @@
 	</ol>
 	<p class="TypedExample">def click(*args): print args</p>
 	<p class="TypedExample">f.Click += click</p>
-	<p class="Stepnonumbering">Click on the form to receive the event</p>
-	<p class="TypedExample">f.Click -= click</p>
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">Click on the form to receive the event..</p>
 	<p class="Stepnonumbering">The output will be similar to:</p>
 	<p class="Code-Background">&gt;&gt;&gt; (System.Windows.Forms.Form, Text: My First Interactive 
 	Application, &lt;System.Windows.Forms.MouseEventArgs object at 0x02324551&gt;)</p>
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">Now remove the click handler because we're going 
+	to further develop it.</p>
+	<p class="TypedExample">f.Click -= click</p>
+	<p class="Stepnonumbering">&nbsp;</p>
 	<ol start="7">
 		<li>
 		<p class="Step">Use dir() function to explore the MouseEventArgs</p>
@@ -1203,7 +1214,7 @@
 	<ol start="8">
 		<li>
 		<p class="Step" style="page-break-after:avoid">Knowing the contents of the 
-		ouseEventArgs, create improved event handler for the Click event:</p>
+		MouseEventArgs, create an improved event handler for the Click event:</p>
 		</li>
 	</ol>
 	<p class="TypedExample" style="page-break-after:avoid">def click(f, a):<br>
@@ -1228,7 +1239,7 @@
 	<ol start="11">
 		<li>
 		<p class="Step">After a few moments of clicking, the form will get quite 
-		crowded, co we can clear it out:</p>
+		crowded, so we can clear it out:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">f.Controls.Clear()</p>
