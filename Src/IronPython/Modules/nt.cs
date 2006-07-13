@@ -148,7 +148,7 @@ namespace IronPython.Modules {
                 Directory.CreateDirectory(path);
             } catch (Exception e) {
                 throw ToPythonException(e);
-            }            
+            }
         }
         [PythonName("open")]
         public static object Open(ICallerContext context, string filename, int flag) {
@@ -541,13 +541,13 @@ namespace IronPython.Modules {
             #region Object overrides
 
             [PythonName("__eq__")]
-            public override bool  Equals(object obj) {
+            public override bool Equals(object obj) {
                 if (obj is StatResult) {
                     return MakeTuple().Equals(((StatResult)obj).MakeTuple());
                 } else {
                     return MakeTuple().Equals(obj);
                 }
- 	            
+
             }
 
             [PythonName("__hash__")]
@@ -729,7 +729,7 @@ namespace IronPython.Modules {
 
         #region Private implementation details
 
-        private static Exception ToPythonException(Exception e){
+        private static Exception ToPythonException(Exception e) {
             if (e is ArgumentException || e is ArgumentNullException || e is ArgumentTypeException) {
                 // rethrow reasonable exceptions
                 return ExceptionConverter.UpdateForRethrow(e);

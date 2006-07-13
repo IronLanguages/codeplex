@@ -26,7 +26,7 @@ namespace IronPython.CodeDom {
     /// </summary>
     class LocalReferences {
         RemoteReferences refs;
-        Dictionary<string, TypeReference> cachedTypes = new Dictionary<string,TypeReference>();
+        Dictionary<string, TypeReference> cachedTypes = new Dictionary<string, TypeReference>();
 
         /// <summary> Creates a new LocalReferences that gets it's data from a RemoteReferences </summary>
         public LocalReferences(RemoteReferences backing) {
@@ -40,7 +40,7 @@ namespace IronPython.CodeDom {
             }
 
             res = refs.GetType(name);
-            if(res != null) cachedTypes[name] = res;
+            if (res != null) cachedTypes[name] = res;
 
             return res;
         }
@@ -67,7 +67,7 @@ namespace IronPython.CodeDom {
             Instance = this;
         }
 
-       public TypeReference GetType(string name) {
+        public TypeReference GetType(string name) {
             for (int i = 0; i < refs.Count; i++) {
                 // try the raw type name first
                 Type t = refs[i].GetType(name);
@@ -111,7 +111,7 @@ namespace IronPython.CodeDom {
             return Assembly.Load(refType.Assembly).GetType(refType.FullName);
         }
 
-        private static Assembly LoadAssembly(string name) {                        
+        private static Assembly LoadAssembly(string name) {
             try {
                 return Assembly.Load(name);
             } catch {
@@ -122,7 +122,7 @@ namespace IronPython.CodeDom {
 #pragma warning disable
                         return Assembly.LoadWithPartialName(name);
 #pragma warning enable
-                    } catch {                        
+                    } catch {
                     }
                 }
             }
@@ -179,5 +179,5 @@ namespace IronPython.CodeDom {
             public TypeReference Type;
         }
     }
-    
+
 }

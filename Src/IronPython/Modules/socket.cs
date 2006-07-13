@@ -899,7 +899,7 @@ namespace IronPython.Modules {
             IPHostEntry hostEntry = null;
             try {
                 ips = Dns.GetHostAddresses(host);
-                hostEntry = Dns.GetHostEntry(host);                
+                hostEntry = Dns.GetHostEntry(host);
             } catch (Exception e) {
                 throw MakeException(e);
             }
@@ -969,7 +969,7 @@ namespace IronPython.Modules {
             } catch (IndexOutOfRangeException) {
                 throw MakeException(gaierror, "sockaddr resolved to zero addresses");
             }
-            
+
             if (hostEntry.AddressList.Length > 1) {
                 throw MakeException(error, "sockaddr resolved to multiple addresses");
             } else if (hostEntry.AddressList.Length < 1) {
@@ -1391,7 +1391,7 @@ namespace IronPython.Modules {
             for (int i = 0; i < words.Length; i++) {
                 for (int j = 0; j < bytesPerWord; j++) {
                     words[i] <<= bitsPerByte;
-                    words[i] += ipBytes[i*bytesPerWord + j];
+                    words[i] += ipBytes[i * bytesPerWord + j];
                 }
             }
 
@@ -1481,7 +1481,7 @@ namespace IronPython.Modules {
         /// Return fqdn, but with its domain removed if it's on the same domain as the local machine.
         /// </summary>
         private static string RemoveLocalDomain(string fqdn) {
-            char[] DNS_SEP = new char[]{'.'};
+            char[] DNS_SEP = new char[] { '.' };
             string[] myName = GetFQDN().Split(DNS_SEP, 2);
             string[] otherName = fqdn.Split(DNS_SEP, 2);
 
@@ -1493,7 +1493,7 @@ namespace IronPython.Modules {
                 return fqdn;
             }
         }
-        
+
         #endregion
 
     }

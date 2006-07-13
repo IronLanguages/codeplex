@@ -24,7 +24,7 @@ namespace IronPython.Runtime.Operations {
             string strOther;
             if (other is char) {
                 return Ops.Bool2Object(self == (char)other);
-            } else if ((strOther= other as string)!=null && strOther.Length == 1) {
+            } else if ((strOther = other as string) != null && strOther.Length == 1) {
                 return Ops.Bool2Object(strOther[0] == self);
             }
 
@@ -44,7 +44,7 @@ namespace IronPython.Runtime.Operations {
 
         public static object Compare(char self, object other) {
             string strOther;
-            
+
             if (other is char) {
                 int diff = self - (char)other;
                 return diff > 0 ? 1 : diff < 0 ? -1 : 0;

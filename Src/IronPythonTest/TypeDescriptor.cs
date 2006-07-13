@@ -28,7 +28,7 @@ namespace IronPythonTest {
     /// </summary>
     public class TypeDescTests {
         public object TestProperties(object totest, IList shouldContain, IList shouldntContain) {
-            if(shouldContain != null){
+            if (shouldContain != null) {
                 foreach (object o in shouldContain) {
                     bool fFound = false;
                     foreach (PropertyDescriptor pd in TypeDescriptor.GetProperties(totest)) {
@@ -41,12 +41,12 @@ namespace IronPythonTest {
                 }
             }
 
-            if(shouldntContain != null){
+            if (shouldntContain != null) {
                 foreach (object o in shouldntContain) {
                     bool fFound = false;
                     foreach (PropertyDescriptor pd in TypeDescriptor.GetProperties(totest)) {
                         if ((string)o == pd.Name) {
-                            fFound = true; 
+                            fFound = true;
                             break;
                         }
                     }
@@ -92,15 +92,15 @@ namespace IronPythonTest {
         public object GetEvents(object totest) {
             return TypeDescriptor.GetEvents(totest);
         }
-        public object GetEvents(object totest, Attribute[]attributes) {
-            return TypeDescriptor.GetEvents(totest,attributes);
+        public object GetEvents(object totest, Attribute[] attributes) {
+            return TypeDescriptor.GetEvents(totest, attributes);
         }
 
         public object GetProperties(object totest) {
             return TypeDescriptor.GetProperties(totest);
         }
 
-        public object GetProperties(object totest, Attribute[]attributes) {
+        public object GetProperties(object totest, Attribute[] attributes) {
             return TypeDescriptor.GetProperties(totest, attributes);
         }
 

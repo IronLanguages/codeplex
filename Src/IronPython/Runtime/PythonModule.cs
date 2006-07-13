@@ -141,7 +141,7 @@ namespace IronPython.Runtime {
         public SystemState SystemState {
             get {
                 Debug.Assert(systemState != null);
-                return systemState; 
+                return systemState;
             }
         }
 
@@ -217,7 +217,7 @@ namespace IronPython.Runtime {
                     }
                 } else
                     return String.Format("<module '{0}' (built-in)>", ModuleName);
-            } else 
+            } else
                 return String.Format("<module '{0}' from '{1}'>", ModuleName, Filename);
         }
 
@@ -235,9 +235,9 @@ namespace IronPython.Runtime {
             }
             if (name == SymbolTable.Dict) {
                 if (packageImported) value = innerMod.GetAttrDict(context);
-                else value = __dict__; 
-                
-                return true; 
+                else value = __dict__;
+
+                return true;
             }
             if (packageImported) return innerMod.TryGetAttr(context, name, out value);
             if (TypeCache.Module.TryGetAttr(context, this, name, out value)) return true;
@@ -255,10 +255,10 @@ namespace IronPython.Runtime {
                     innerMod.DeleteAttr(context, name);
                 return;
             }
-            
+
             if (packageImported) {
                 innerMod.DeleteAttr(context, name);
-            } else 
+            } else
                 throw Ops.AttributeErrorForMissingAttribute(ModuleName, name);
         }
 

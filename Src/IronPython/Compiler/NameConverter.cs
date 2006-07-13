@@ -55,7 +55,7 @@ namespace IronPython.Compiler {
                         name = name.Substring(lastDot + 1);
                     }
                 }
-            } 
+            }
 
             object[] attribute = mi.GetCustomAttributes(typeof(PythonNameAttribute), false);
 
@@ -64,7 +64,7 @@ namespace IronPython.Compiler {
                 if (attr.name != null && attr.name.Length > 0) {
                     if (attr is PythonClassMethodAttribute) res = NameType.ClassMethod;
                     else res = NameType.PythonMethod;
-                    name = attr.name;                    
+                    name = attr.name;
                 }
             }
 
@@ -94,8 +94,8 @@ namespace IronPython.Compiler {
                     namePrefix = "_" + dt.Name + "__";
                     nt = NameType.Field;
                 }
-            } 
-           
+            }
+
             name = namePrefix + fi.Name;
             return nt;
         }
@@ -105,7 +105,7 @@ namespace IronPython.Compiler {
 
             name = pi.Name;
             string namePrefix = null;
-            NameType res = dt.IsClsType ? NameType.PythonProperty : NameType.Property; 
+            NameType res = dt.IsClsType ? NameType.PythonProperty : NameType.Property;
 
             if (prop.IsPrivate || (prop.IsAssembly && !prop.IsFamilyOrAssembly)) {
                 // allow explicitly implemented interface
@@ -127,11 +127,11 @@ namespace IronPython.Compiler {
                         name = name.Substring(lastDot + 1);
                     }
                 }
-            } 
+            }
 
             object[] attribute = prop.GetCustomAttributes(typeof(PythonNameAttribute), false);
 
-            if(namePrefix != null) name = namePrefix + pi.Name; 
+            if (namePrefix != null) name = namePrefix + pi.Name;
             if (attribute.Length > 0) {
                 PythonNameAttribute attr = attribute[0] as PythonNameAttribute;
                 if (attr.name != null && attr.name.Length > 0) {
@@ -139,7 +139,7 @@ namespace IronPython.Compiler {
                     name = attr.name;
                 }
             }
-            
+
             return res;
         }
 

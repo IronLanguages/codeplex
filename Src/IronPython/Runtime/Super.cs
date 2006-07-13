@@ -63,7 +63,7 @@ namespace IronPython.Runtime {
         public object SelfClass {
             [PythonName("__self_class__")]
             get { return __self_class__; }
-        } 
+        }
 
         public override string ToString() {
             return string.Format("<super: {0}, {1}>", Ops.StringRepr(__thisclass__), Ops.StringRepr(__self__));
@@ -91,13 +91,13 @@ namespace IronPython.Runtime {
 
             int lookupType;
             for (lookupType = 0; lookupType < mro.Count; lookupType++) {
-                if (mro[lookupType] == __thisclass__) break;                
+                if (mro[lookupType] == __thisclass__) break;
             }
 
-            
+
             // then skip our class, and lookup in everything
             // above us until we get a hit.
-            lookupType++;   
+            lookupType++;
             while (lookupType < mro.Count) {
                 DynamicType pt = mro[lookupType] as DynamicType;
                 if (pt != null) {
@@ -122,7 +122,7 @@ namespace IronPython.Runtime {
 
                 lookupType++;
             }
-            
+
             return SuperType.TryGetAttr(context, this, name, out value);
         }
 

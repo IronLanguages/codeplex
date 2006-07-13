@@ -54,7 +54,7 @@ namespace IronPython.Compiler.Ast {
 
             // *** END GENERATED CODE ***
 
-            #endregion        
+            #endregion
 
             return envType;
         }

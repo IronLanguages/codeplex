@@ -57,11 +57,11 @@ namespace IronPython.Runtime.Types {
 
     class NoneTypeOps : EmptyTypeOps<NoneTypeOps> {
         public static ReflectedType MakeDynamicType() {
-            return MakeDynamicType(0x1e1a1dd0, 
-                null, 
-                "None", 
+            return MakeDynamicType(0x1e1a1dd0,
+                null,
+                "None",
                 "NoneType",
-                typeof(None), 
+                typeof(None),
                 typeof(NoneTypeOps));
         }
     }
@@ -69,11 +69,11 @@ namespace IronPython.Runtime.Types {
     class EllipsisTypeOps : EmptyTypeOps<EllipsisTypeOps> {
 
         public static ReflectedType MakeDynamicType() {
-            return MakeDynamicType(0x1e1a6208, 
+            return MakeDynamicType(0x1e1a6208,
                 new Ellipsis(),
-                "Ellipsis", 
+                "Ellipsis",
                 "ellipsis",
-                typeof(Ellipsis), 
+                typeof(Ellipsis),
                 typeof(EllipsisTypeOps));
         }
     }
@@ -83,9 +83,9 @@ namespace IronPython.Runtime.Types {
         public static ReflectedType MakeDynamicType() {
             return MakeDynamicType(0x1e1a1e98,
                 new NotImplemented(),
-                "NotImplemented", 
+                "NotImplemented",
                 "NotImplementedType",
-                typeof(NotImplemented), 
+                typeof(NotImplemented),
                 typeof(NotImplementedTypeOps));
         }
     }
@@ -104,15 +104,15 @@ namespace IronPython.Runtime.Types {
     /// <typeparam name="T"></typeparam>
     abstract class EmptyTypeOps<T> {
         private static ReflectedType typeInstance;
-        private static string name;        
+        private static string name;
         private static object instance;
         private static int hash;
 
-        protected static ReflectedType MakeDynamicType(int hashCode, 
-            object singletonInstance, 
-            string instanceName, 
+        protected static ReflectedType MakeDynamicType(int hashCode,
+            object singletonInstance,
+            string instanceName,
             string typeName,
-            Type baseType, 
+            Type baseType,
             Type opsType) {
             name = instanceName;
             instance = singletonInstance;

@@ -57,7 +57,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         #endregion
-        
+
         internal static object LeftShiftImpl(UInt32 left, UInt32 right) {
             // UInt32 fits into Int64
             return Int64Ops.LeftShift(left, right);

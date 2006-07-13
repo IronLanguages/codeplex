@@ -124,7 +124,7 @@ namespace IronPython.Compiler {
         public ParameterInfo[] GetParameters() {
             return sig;
         }
-        
+
         internal static bool IsOutParameter(ParameterInfo pi) {
             return pi.IsOut && !pi.IsIn;
         }

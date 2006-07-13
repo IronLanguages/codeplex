@@ -184,7 +184,7 @@ namespace IronPython.Runtime {
         }
 
         public int Count {
-            get { return self.Count;  }
+            get { return self.Count; }
         }
 
         public bool IsReadOnly {
@@ -504,7 +504,7 @@ namespace IronPython.Runtime {
             #endregion
         }
         public override IDictionaryEnumerator GetEnumerator() {
-            return new DictionaryEnumerator(((IEnumerable<KeyValuePair<object,object>>)dict).GetEnumerator());
+            return new DictionaryEnumerator(((IEnumerable<KeyValuePair<object, object>>)dict).GetEnumerator());
         }
 
         public override bool IsFixedSize {

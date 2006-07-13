@@ -27,15 +27,15 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Runtime {
 
     [PythonType("dict")]
-    public class Dict : IMapping, IDictionary<object, object>, IComparable, ICloneable, IRichComparable, 
+    public class Dict : IMapping, IDictionary<object, object>, IComparable, ICloneable, IRichComparable,
                         IDictionary, ICodeFormattable, IAttributesDictionary {
         internal static readonly IEqualityComparer<object> Comparer = new PythonObjectComparer();
         private static object DefaultGetItem;   // our cached __getitem__ method
 
         internal Dictionary<object, object> data;
 
-        internal static object MakeDict(DynamicType cls) {            
-            if(cls == TypeCache.Dict) return new Dict();
+        internal static object MakeDict(DynamicType cls) {
+            if (cls == TypeCache.Dict) return new Dict();
             return Ops.Call(cls);
         }
 
@@ -158,7 +158,7 @@ namespace IronPython.Runtime {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object,object>>.GetEnumerator() {            
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
             return new DictKeyValueEnumerator(data);
         }
 
@@ -550,7 +550,7 @@ namespace IronPython.Runtime {
             // CompareTo is allowed to throw (string, int, etc... all do it if they don't get a matching type)
             if (oth == null) {
                 object len, iteritems;
-                if(!Ops.TryGetAttr(other, SymbolTable.Length, out len) ||
+                if (!Ops.TryGetAttr(other, SymbolTable.Length, out len) ||
                     !Ops.TryGetAttr(other, SymbolTable.StringToId("iteritems"), out iteritems)) {
                     return Ops.NotImplemented;
                 }
@@ -706,7 +706,7 @@ namespace IronPython.Runtime {
                     try {
                         value = self[key];
                         return true;
-                    } catch(KeyNotFoundException) {
+                    } catch (KeyNotFoundException) {
                         value = null;
                         return false;
                     }
@@ -933,7 +933,7 @@ namespace IronPython.Runtime {
 
         public void CopyTo(object[] array, int arrayIndex) {
             int i = 0;
-            foreach(object o in items) {
+            foreach (object o in items) {
                 array[i + arrayIndex] = DictOps.ObjToNull(o);
                 i++;
             }

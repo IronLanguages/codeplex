@@ -64,11 +64,11 @@ namespace IronPython.Compiler.Generation {
 
         public Slot this[SymbolId name] {
             get {
-                Debug.Assert(slots.ContainsKey(name), "undefined slot: "+name.GetString());
+                Debug.Assert(slots.ContainsKey(name), "undefined slot: " + name.GetString());
                 return slots[name];
             }
             set {
-                Debug.Assert(!slots.ContainsKey(name), "slot override: "+name.GetString());
+                Debug.Assert(!slots.ContainsKey(name), "slot override: " + name.GetString());
                 slots[name] = value;
             }
         }

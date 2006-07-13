@@ -158,5 +158,5 @@ namespace IronPython.Runtime {
         }
 
         #endregion
-    }   
+    }
 }

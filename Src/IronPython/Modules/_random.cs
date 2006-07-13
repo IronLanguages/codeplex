@@ -24,7 +24,7 @@ namespace IronPython.Modules {
         [PythonType("Random")]
         public class Random {
             System.Random rnd;
-            
+
             public Random() {
                 this.Seed();
             }
@@ -109,8 +109,8 @@ namespace IronPython.Modules {
             [PythonName("setstate")]
             public void SetState(object state) {
                 System.Random random = state as System.Random;
-                if(random != null) rnd = random;
-                
+                if (random != null) rnd = random;
+
             }
         }
     }

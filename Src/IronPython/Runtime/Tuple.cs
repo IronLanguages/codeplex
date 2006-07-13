@@ -46,7 +46,7 @@ namespace IronPython.Runtime {
         [PythonName("__new__")]
         public static Tuple PythonNew(DynamicType cls, object sequence) {
             if (cls == TypeCache.Tuple) {
-                if(sequence.GetType() == typeof(Tuple)) return (Tuple)sequence;
+                if (sequence.GetType() == typeof(Tuple)) return (Tuple)sequence;
                 return new Tuple(MakeItems(sequence));
             } else {
                 Tuple tupObj = cls.ctor.Call(cls, sequence) as Tuple;
@@ -99,7 +99,7 @@ namespace IronPython.Runtime {
         private readonly bool expandable;
 
         public Tuple(object o) {
-            this.data = MakeItems(o); 
+            this.data = MakeItems(o);
         }
 
         private Tuple(params object[] items) {
@@ -139,9 +139,9 @@ namespace IronPython.Runtime {
         public virtual bool ContainsValue(object item) {
             return ArrayOps.Contains(data, data.Length, item);
         }
-        
-        public virtual object this[int index]{
-            get {                
+
+        public virtual object this[int index] {
+            get {
                 return data[Ops.FixIndex(index, data.Length)];
             }
         }

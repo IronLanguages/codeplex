@@ -27,9 +27,9 @@ namespace IronPython.Modules {
     [PythonType("struct")]
     public static class PythonStruct {
 
-        #region Public API Surface 
+        #region Public API Surface
         [PythonName("pack")]
-        public static object Pack(string fmt, params object [] values) {
+        public static object Pack(string fmt, params object[] values) {
             int count = 1;
             int curObj = 0;
             StringBuilder res = new StringBuilder();
@@ -42,7 +42,7 @@ namespace IronPython.Modules {
                         res.Append('\0');
                         break;
                     case 'c': // char
-                        for(int j = 0; j<count; j++) res.Append(GetCharValue(curObj++, values));
+                        for (int j = 0; j < count; j++) res.Append(GetCharValue(curObj++, values));
                         count = 1;
                         break;
                     case 'b': // signed char
@@ -68,7 +68,7 @@ namespace IronPython.Modules {
                         break;
                     case 'I': // unsigned int
                     case 'L': // unsigned long
-                        for (int j = 0; j < count; j++) WriteUInt(res, fLittleEndian, GetUIntValue(curObj++, values));                        
+                        for (int j = 0; j < count; j++) WriteUInt(res, fLittleEndian, GetUIntValue(curObj++, values));
                         count = 1;
                         break;
                     case 'q': // long long
@@ -80,7 +80,7 @@ namespace IronPython.Modules {
                         count = 1;
                         break;
                     case 'f': // float                        
-                        for (int j = 0; j < count; j++) WriteFloat(res, fLittleEndian, (float)GetDoubleValue(curObj++, values));                        
+                        for (int j = 0; j < count; j++) WriteFloat(res, fLittleEndian, (float)GetDoubleValue(curObj++, values));
                         count = 1;
                         break;
                     case 'd': // double
@@ -92,12 +92,12 @@ namespace IronPython.Modules {
                         count = 1;
                         break;
                     case 'p': // char[]
-                        WritePascalString(res, count-1, GetStringValue(curObj++, values));
+                        WritePascalString(res, count - 1, GetStringValue(curObj++, values));
                         count = 1;
                         break;
                     case 'P': // void *
                         if (IntPtr.Size == 4) goto case 'I';
-                        goto case 'Q';                        
+                        goto case 'Q';
                     case ' ':   // white space, ignore
                     case '\t':
                         break;
@@ -107,7 +107,7 @@ namespace IronPython.Modules {
                         break;
                     case '@': // native
                         if (i != 0) Error("unexpected byte order");
-                        break;                        
+                        break;
                     case '<': // little endian
                         if (i != 0) Error("unexpected byte order");
                         fLittleEndian = true;
@@ -137,8 +137,8 @@ namespace IronPython.Modules {
 
             if (curObj != values.Length) throw Error("not all arguments used");
 
-            if(fStandardized)
-            return res.ToString();
+            if (fStandardized)
+                return res.ToString();
             return res.ToString();
         }
 
@@ -188,7 +188,7 @@ namespace IronPython.Modules {
                         count = 1;
                         break;
                     case 'q': // long long
-                        for (int j = 0; j < count; j++) res.Add(BigInteger.Create(CreateLongValue(ref curIndex, fLittleEndian, data)));                        
+                        for (int j = 0; j < count; j++) res.Add(BigInteger.Create(CreateLongValue(ref curIndex, fLittleEndian, data)));
                         count = 1;
                         break;
                     case 'Q': // unsigned long long
@@ -208,7 +208,7 @@ namespace IronPython.Modules {
                         count = 1;
                         break;
                     case 'p': // char[]
-                        res.Add(CreatePascalString(ref curIndex, count-1, data));
+                        res.Add(CreatePascalString(ref curIndex, count - 1, data));
                         count = 1;
                         break;
                     case 'P': // void *
@@ -360,7 +360,7 @@ namespace IronPython.Modules {
                 res.Append((char)(val & 0xff));
                 res.Append((char)((val >> 8) & 0xff));
                 res.Append((char)((val >> 16) & 0xff));
-                res.Append((char)((val >> 24) & 0xff));                
+                res.Append((char)((val >> 24) & 0xff));
             } else {
                 res.Append((char)((val >> 24) & 0xff));
                 res.Append((char)((val >> 16) & 0xff));
@@ -400,7 +400,7 @@ namespace IronPython.Modules {
 
         private static void WriteLong(StringBuilder res, bool fLittleEndian, long val) {
             if (fLittleEndian) {
-                res.Append((char) (val & 0xff));
+                res.Append((char)(val & 0xff));
                 res.Append((char)((val >> 8) & 0xff));
                 res.Append((char)((val >> 16) & 0xff));
                 res.Append((char)((val >> 24) & 0xff));
@@ -416,7 +416,7 @@ namespace IronPython.Modules {
                 res.Append((char)((val >> 24) & 0xff));
                 res.Append((char)((val >> 16) & 0xff));
                 res.Append((char)((val >> 8) & 0xff));
-                res.Append((char) (val & 0xff));
+                res.Append((char)(val & 0xff));
             }
         }
 
@@ -475,10 +475,10 @@ namespace IronPython.Modules {
         }
 
         private static void WritePascalString(StringBuilder res, int len, string val) {
-            int lenByte= Math.Min(255, Math.Min(val.Length, len));
+            int lenByte = Math.Min(255, Math.Min(val.Length, len));
             res.Append((char)lenByte);
 
-            for (int i = 0; i < val.Length && i <len; i++) {
+            for (int i = 0; i < val.Length && i < len; i++) {
                 res.Append(val[i]);
             }
             for (int i = val.Length; i < len; i++) {
@@ -521,7 +521,7 @@ namespace IronPython.Modules {
         private static short GetShortValue(int index, object[] args) {
             object val = GetValue(index, args);
             short res;
-            if (Converter.TryConvertToInt16(val, out res)) return res; 
+            if (Converter.TryConvertToInt16(val, out res)) return res;
             throw Error("expected short value");
         }
 
@@ -549,7 +549,7 @@ namespace IronPython.Modules {
         private static long GetLongValue(int index, object[] args) {
             object val = GetValue(index, args);
             long res;
-            if (Converter.TryConvertToInt64(val, out res)) return res; 
+            if (Converter.TryConvertToInt64(val, out res)) return res;
             throw Error("expected long value");
         }
 
@@ -609,17 +609,17 @@ namespace IronPython.Modules {
         }
 
         private static float CreateFloatValue(ref int index, bool fLittleEndian, string data) {
-            byte [] bytes = new byte[4];
-            if(fLittleEndian){
-                bytes[0] = (byte)ReadData(ref index ,data);
-                bytes[1] = (byte)ReadData(ref index ,data);
-                bytes[2] = (byte)ReadData(ref index ,data);
-                bytes[3] = (byte)ReadData(ref index ,data);
-            }else{
-                bytes[3] = (byte)ReadData(ref index ,data);
-                bytes[2] = (byte)ReadData(ref index ,data);
-                bytes[1] = (byte)ReadData(ref index ,data);
-                bytes[0] = (byte)ReadData(ref index ,data);
+            byte[] bytes = new byte[4];
+            if (fLittleEndian) {
+                bytes[0] = (byte)ReadData(ref index, data);
+                bytes[1] = (byte)ReadData(ref index, data);
+                bytes[2] = (byte)ReadData(ref index, data);
+                bytes[3] = (byte)ReadData(ref index, data);
+            } else {
+                bytes[3] = (byte)ReadData(ref index, data);
+                bytes[2] = (byte)ReadData(ref index, data);
+                bytes[1] = (byte)ReadData(ref index, data);
+                bytes[0] = (byte)ReadData(ref index, data);
             }
             return BitConverter.ToSingle(bytes, 0);
         }
@@ -630,8 +630,8 @@ namespace IronPython.Modules {
             byte b3 = (byte)ReadData(ref index, data);
             byte b4 = (byte)ReadData(ref index, data);
 
-            if(fLittleEndian)
-                return (int) ((b4 << 24) | (b3 << 16) | (b2 << 8) | b1);
+            if (fLittleEndian)
+                return (int)((b4 << 24) | (b3 << 16) | (b2 << 8) | b1);
             else
                 return (int)((b1 << 24) | (b2 << 16) | (b3 << 8) | b4);
         }
@@ -657,8 +657,8 @@ namespace IronPython.Modules {
             long b6 = (byte)ReadData(ref index, data);
             long b7 = (byte)ReadData(ref index, data);
             long b8 = (byte)ReadData(ref index, data);
-            
-            if(fLittleEndian)
+
+            if (fLittleEndian)
                 return (long)((b8 << 56) | (b7 << 48) | (b6 << 40) | (b5 << 32) |
                                 (b4 << 24) | (b3 << 16) | (b2 << 8) | b1);
             else

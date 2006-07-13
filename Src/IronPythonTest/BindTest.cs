@@ -621,7 +621,7 @@ namespace IronPythonTest {
         public int M7(DispatchHelpers.D arg1, DispatchHelpers.B args) { return 3; }
         public int M7(DispatchHelpers.D arg1, DispatchHelpers.D args) { return 4; }
 
-        public int M8(int arg1, int arg2) { return 1;}
+        public int M8(int arg1, int arg2) { return 1; }
         public int M8(DispatchHelpers.B arg1, DispatchHelpers.B args) { return 2; }
         public int M8(object arg1, object arg2) { return 3; }
     }

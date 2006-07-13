@@ -446,7 +446,7 @@ namespace IronPython.CodeDom {
                             DeclareField(name, LastExpression);
                         }
                     } else throw CodeDomSerializerError(node, "Assignment in unexpected location");
-                    
+
 
                     lastObject = new CodeVariableDeclarationStatement(LastExpression, name, initStmt);
                     return false;
@@ -561,13 +561,13 @@ namespace IronPython.CodeDom {
             lastObject = cni;
             return false;
         }
-        
+
         public bool Walk(IfStatement node) {
             CodeConditionStatement startCcs;
 
             CodeConditionStatement ccs = startCcs = MarkForCodeDomStatement(node, new CodeConditionStatement(
                  (CodeExpression)RecursiveWalk(node.Tests[0].Test),
-                 IsPassStmt(node.Tests[0].Body) ? new CodeStatement[]{} : GetStatements(RecursiveWalk(node.Tests[0].Body))));
+                 IsPassStmt(node.Tests[0].Body) ? new CodeStatement[] { } : GetStatements(RecursiveWalk(node.Tests[0].Body))));
 
             for (int i = 1; i < node.Tests.Count; i++) {
                 CodeConditionStatement newCcs = MarkForCodeDomStatement(node, new CodeConditionStatement(
@@ -618,7 +618,7 @@ namespace IronPython.CodeDom {
         }
 
         public bool Walk(ReturnStatement node) {
-            lastObject = MarkForCodeDomStatement(node, 
+            lastObject = MarkForCodeDomStatement(node,
                 new CodeMethodReturnStatement((CodeExpression)RecursiveWalk(node.Expression)));
             return false;
         }
@@ -707,7 +707,7 @@ namespace IronPython.CodeDom {
         public bool Walk(PrintStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
-        
+
         public bool Walk(AssertStatement node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
@@ -783,7 +783,7 @@ namespace IronPython.CodeDom {
         public bool Walk(TryStatementHandler node) {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
-        
+
         //////////////////////////////////////////////////////////////////////////////////////
         // post-walkers, we do nothing w/ these.
 
@@ -875,7 +875,7 @@ namespace IronPython.CodeDom {
 
         public void PostWalk(ExecStatement node) {
         }
-        
+
         public void PostWalk(ExpressionStatement node) {
         }
 
@@ -891,7 +891,7 @@ namespace IronPython.CodeDom {
         public void PostWalk(GlobalSuite node) {
         }
 
-        public void PostWalk(IfStatement node) {            
+        public void PostWalk(IfStatement node) {
         }
 
         public void PostWalk(ImportStatement node) {
@@ -1310,7 +1310,7 @@ namespace IronPython.CodeDom {
 
         private bool WalkFieldInitializations(Statement body) {
             SuiteStatement suite = body as SuiteStatement;
-            if(suite != null){
+            if (suite != null) {
                 // first time through make sure we have a valid initialization func def
                 for (int i = 0; i < suite.Statements.Count; i++) {
                     AssignStatement assign = suite.Statements[i] as AssignStatement;
@@ -1322,7 +1322,7 @@ namespace IronPython.CodeDom {
                     if (fe == null) return false;
 
                     NameExpression ne = fe.Target as NameExpression;
-                    if(ne == null || ne.Name.GetString() != "self") return false;
+                    if (ne == null || ne.Name.GetString() != "self") return false;
                 }
 
                 // second time through set the member init expressions
@@ -1346,7 +1346,7 @@ namespace IronPython.CodeDom {
                 return true;
             }
             return false;
-            
+
         }
 
         private static bool IsPassStmt(Statement statement) {
@@ -1417,7 +1417,7 @@ namespace IronPython.CodeDom {
 
                         cn.Imports.Add((CodeNamespaceImport)co);
                     } else if ((ctm = co as CodeTypeMember) != null) {
-                        SaveCodeTypeMember(node, ctd, cn, ctm);                    
+                        SaveCodeTypeMember(node, ctd, cn, ctm);
                     } else {
                         throw CodeDomSerializerError(node, "bad code object for class member: {0}", co);
                     }
@@ -1576,7 +1576,7 @@ namespace IronPython.CodeDom {
 
             if (type != null) LastExpression = new CodeTypeReference(type.FullName);
             else LastExpression = new CodeTypeReference(typeof(object));
-            
+
             return mt;
         }
 

@@ -30,17 +30,17 @@ namespace IronPython.Compiler.Generation {
     class TypeGen {
         public readonly AssemblyGen myAssembly;
         public readonly TypeBuilder myType;
-        
+
         public Slot moduleSlot;
 
         private ConstructorBuilder initializer; // The .cctor() of the type
         private CodeGen initGen; // The IL generator for the .cctor()
-        private Dictionary<object, Slot> constants = new Dictionary<object,Slot>();
+        private Dictionary<object, Slot> constants = new Dictionary<object, Slot>();
         private Dictionary<SymbolId, Slot> indirectSymbolIds = new Dictionary<SymbolId, Slot>();
         private List<TypeGen> nestedTypeGens = new List<TypeGen>();
-        
+
         internal ConstructorBuilder DefaultConstructor;
-        
+
         public TypeGen(AssemblyGen myAssembly, TypeBuilder myType) {
             this.myAssembly = myAssembly;
             this.myType = myType;
@@ -75,7 +75,7 @@ namespace IronPython.Compiler.Generation {
             nestedTypeGens.Add(ret);
 
             ret.AddModuleField(typeof(PythonModule));
-            
+
             return ret;
         }
 
@@ -103,7 +103,7 @@ namespace IronPython.Compiler.Generation {
         public CodeGen DefineExplicitInterfaceImplementation(MethodInfo baseMethod) {
             MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
             attrs |= MethodAttributes.NewSlot | MethodAttributes.Final;
-            
+
             MethodBuilder mb = myType.DefineMethod(
                 baseMethod.DeclaringType.Name + "." + baseMethod.Name,
                 attrs,
@@ -150,7 +150,7 @@ namespace IronPython.Compiler.Generation {
             return DefineMethod(CompilerHelpers.PublicStatic, name, retType, paramTypes, paramNames, defaultVals, cabs);
         }
 
-        public CodeGen DefineMethod(MethodAttributes attrs, string name, Type retType, Type[] paramTypes, string[] paramNames, object [] defaultVals, CustomAttributeBuilder[]cabs) {
+        public CodeGen DefineMethod(MethodAttributes attrs, string name, Type retType, Type[] paramTypes, string[] paramNames, object[] defaultVals, CustomAttributeBuilder[] cabs) {
             MethodBuilder mb = myType.DefineMethod(name, attrs, retType, paramTypes);
             CodeGen res = new CodeGen(this, mb, mb.GetILGenerator(), paramTypes);
 
@@ -163,8 +163,8 @@ namespace IronPython.Compiler.Generation {
 
                 if (cabs != null && i < cabs.Length && cabs[i] != null) {
                     pb.SetCustomAttribute(cabs[i]);
-                }                
-            }            
+                }
+            }
             return res;
         }
 
@@ -188,14 +188,14 @@ namespace IronPython.Compiler.Generation {
             return new CodeGen(this, cb, cb.GetILGenerator(), new ParameterInfo[0]);
         }
 
-        public void SetCustomAttribute(Type t, object [] values) {
-            
+        public void SetCustomAttribute(Type t, object[] values) {
+
             Type[] types = new Type[values.Length];
-            for(int i = 0; i<types.Length;i++){
-                if(values[i] != null){
-                types[i] = values[i].GetType();
-                }else{
-                   types[i] = typeof(object);
+            for (int i = 0; i < types.Length; i++) {
+                if (values[i] != null) {
+                    types[i] = values[i].GetType();
+                } else {
+                    types[i] = typeof(object);
                 }
             }
             CustomAttributeBuilder cab = new CustomAttributeBuilder(t.GetConstructor(types), values);

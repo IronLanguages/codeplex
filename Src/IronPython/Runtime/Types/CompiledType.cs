@@ -27,10 +27,10 @@ namespace IronPython.Runtime.Types {
         }
 
         public CompiledType(Type t)
-            : base(t) {                      
+            : base(t) {
         }
 
-        protected override void RawSetSlot(SymbolId name, object value) {            
+        protected override void RawSetSlot(SymbolId name, object value) {
             dict[name] = value;
         }
 

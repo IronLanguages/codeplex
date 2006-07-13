@@ -60,16 +60,16 @@ namespace IronPython.Compiler.Generation {
 
                 compctx = codeGen.Context;
                 moduleInit = codeGen;
-                outerScope = codeGen.typeGen;                
+                outerScope = codeGen.typeGen;
                 namespaces = new List<string>();
 
                 //!!! need to get type names already declared...
                 PushNewType(codeGen.typeGen, codeGen, null, null);
 
                 assemblies = new List<Assembly>();
-                if(RemoteCompiler.Instance != null){
-                    StringCollection files =  RemoteCompiler.Instance.References;
-                    foreach(string file in files) {
+                if (RemoteCompiler.Instance != null) {
+                    StringCollection files = RemoteCompiler.Instance.References;
+                    foreach (string file in files) {
                         Assembly asm = IronPython.Hosting.PythonCompiler.LoadAssembly(file);
                         assemblies.Add(asm);
                     }
@@ -96,10 +96,10 @@ namespace IronPython.Compiler.Generation {
                 // class definition - could either by a real type, or
                 // a namespace.  If it only contains class defintions
                 // and no slots then it's a namespace.
-                if (IsNamespace(cd)) {  
+                if (IsNamespace(cd)) {
                     namespaces.Add(cd.Name.GetString());
                     return true;
-                } 
+                }
 
                 // - emit all class initialization inside of
                 // static ctor.                
@@ -128,7 +128,7 @@ namespace IronPython.Compiler.Generation {
 
                 // continue the walk on just the body (returning
                 // true would have us walk the bases & the body).
-                cd.Body.Walk(this);               
+                cd.Body.Walk(this);
                 return false;
             }
 
@@ -150,9 +150,9 @@ namespace IronPython.Compiler.Generation {
                         cg.EmitCallerContext();
                         cg.EmitCall(typeof(Assembly), "GetExecutingAssembly");
                         cg.EmitString(cd.Name.GetString());
-                        cg.EmitCall(typeof(Ops), "GetNamespace");                        
+                        cg.EmitCall(typeof(Ops), "GetNamespace");
                         cg.EmitSet(cd.Name);
-                    } 
+                    }
                     return;
                 }
 
@@ -186,7 +186,7 @@ namespace IronPython.Compiler.Generation {
                         cg.EmitCall(info.GetCompiledType.MethodInfo);
                         cg.EmitSet(cd.Name);
                     }
-                }                
+                }
             }
 
             public override bool Walk(FunctionDefinition node) {
@@ -230,9 +230,9 @@ namespace IronPython.Compiler.Generation {
                 return true;
             }
 
-            public override bool Walk(GlobalSuite node) { 
-                node.CreateGlobalSlots(stack.Peek().StaticConstructor); 
-                return true; 
+            public override bool Walk(GlobalSuite node) {
+                node.CreateGlobalSlots(stack.Peek().StaticConstructor);
+                return true;
             }
 
             // anything else gets emitted directly
@@ -251,7 +251,7 @@ namespace IronPython.Compiler.Generation {
                 if (rhsCall != null) {
                     bool fCantEmit = false;
                     NameExpression ne = rhsCall.Target as NameExpression;
-                    string get=null, set=null;
+                    string get = null, set = null;
                     if (ne != null) {
                         if (ne.Name.GetString() == "property") {
                             // property definition...
@@ -268,7 +268,7 @@ namespace IronPython.Compiler.Generation {
                             } else if (set != null && cg.methodInfo.Name == set) {
                                 pb.SetSetMethod((MethodBuilder)cg.methodInfo);
                             }
-                        }                        
+                        }
                         return false;
                     }
                 }
@@ -281,10 +281,10 @@ namespace IronPython.Compiler.Generation {
                     } else {
                         stack.Peek().Type.AddStaticField(typeof(object), ((NameExpression)node.Left[0]).Name.GetString());
                     }
-                } else if ((rhsName = node.Right as NameExpression)!=null && 
+                } else if ((rhsName = node.Right as NameExpression) != null &&
                     (rhsName.Name.GetString() == "True" || rhsName.Name.GetString() == "False")) {
                     stack.Peek().Type.AddStaticField(typeof(bool), ((NameExpression)node.Left[0]).Name.GetString());
-                }else{
+                } else {
                     Emit(node);
                 }
 
@@ -369,7 +369,7 @@ namespace IronPython.Compiler.Generation {
             private static bool IsNamespace(ClassDefinition cd) {
                 SlotFinder sf = new SlotFinder();
                 cd.Walk(sf);
-                if (sf.HasSubTypes && !sf.HasFunctions && !sf.FoundSlots && cd.Bases.Count == 0) {                    
+                if (sf.HasSubTypes && !sf.HasFunctions && !sf.FoundSlots && cd.Bases.Count == 0) {
                     return true;
                 }
                 return false;
@@ -423,7 +423,7 @@ namespace IronPython.Compiler.Generation {
                 icg.Context = compctx;
 
                 if (baseMethod != null) icg.methodToOverride = baseMethod;
-                
+
                 icg.Names = CodeGen.CreateLocalNamespace(icg);
                 for (int arg = offset; arg < sigInfo.ParamNames.Length; arg++) {
                     icg.Names.SetSlot(sigInfo.ParamNames[arg], icg.GetArgumentSlot(arg - offset));
@@ -434,7 +434,7 @@ namespace IronPython.Compiler.Generation {
                 }
 
                 icg.ContextSlot = stack.Peek().Type.moduleSlot;
-                
+
                 EmitArgsToTuple(node, icg, sigInfo, paramNames.Length);
                 return icg;
             }
@@ -482,7 +482,7 @@ namespace IronPython.Compiler.Generation {
                 return null;
             }
 
-            private static void EmitArgsToTuple(FunctionDefinition fd, CodeGen icg, SignatureInfo sigInfo, int cnt) {                
+            private static void EmitArgsToTuple(FunctionDefinition fd, CodeGen icg, SignatureInfo sigInfo, int cnt) {
                 if ((fd.Flags & FunctionAttributes.ArgumentList) != 0) {
                     // transform params object[] into tuple on call...
 
@@ -579,7 +579,7 @@ namespace IronPython.Compiler.Generation {
                 outerScope.moduleSlot.EmitGet(classInit);
                 classInit.Emit(OpCodes.Ldnull);
                 classInit.Emit(OpCodes.Beq, noModule);
-                
+
                 outerScope.moduleSlot.EmitGet(classInit);
                 newType.moduleSlot.EmitSet(classInit);
                 classInit.Emit(OpCodes.Br, done);
@@ -599,13 +599,13 @@ namespace IronPython.Compiler.Generation {
                         if (refName.ToLower().EndsWith(".dll"))
                             refName = refName.Substring(0, refName.Length - 4);
 
-                        if (refName.IndexOf('\\') != -1) {                            
-                            refs.Add(refName.Substring(refName.LastIndexOf('\\')+1));
+                        if (refName.IndexOf('\\') != -1) {
+                            refs.Add(refName.Substring(refName.LastIndexOf('\\') + 1));
                         } else
                             refs.Add(refName);
                     }
-                }                     
-                
+                }
+
                 OutputGenerator.EmitModuleConstruction(outerScope, classInit, outerScope.myType.Name, instance, refs);
                 // module ctor leaves PythonModule on the stack.
                 classInit.Emit(OpCodes.Dup);
@@ -625,7 +625,7 @@ namespace IronPython.Compiler.Generation {
             /// Creates the new type, sets PythonTypeAttribute on it, and sets the documentation string
             /// </summary>
             private TypeGen DefineNewType(ClassDefinition cd, List<Type> baseTypes) {
-                Debug.Assert(baseTypes.Count > 0, "type has no bases", String.Format("for class {0}",cd.Name.ToString()));
+                Debug.Assert(baseTypes.Count > 0, "type has no bases", String.Format("for class {0}", cd.Name.ToString()));
 
                 StringBuilder typeName = new StringBuilder();
                 for (int i = 0; i < namespaces.Count; i++) {
@@ -639,7 +639,7 @@ namespace IronPython.Compiler.Generation {
                 List<MethodInfo> overridden = new List<MethodInfo>();
                 List<CodeGen> overrides = new List<CodeGen>();
 
-                MethodInfo []methods = baseTypes[0].GetMethods(BindingFlags.Public  | BindingFlags.NonPublic | BindingFlags.Instance);
+                MethodInfo[] methods = baseTypes[0].GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
                 for (int i = 0; i < methods.Length; i++) {
                     if (methods[i].IsPrivate) continue;
@@ -648,19 +648,19 @@ namespace IronPython.Compiler.Generation {
                         overrides.Add(NewTypeMaker.CreateVirtualMethodHelper(newType, methods[i]));
                         overridden.Add(methods[i]);
                     }
-                } 
+                }
 
                 for (int i = 1; i < baseTypes.Count; i++) {
-                    Debug.Assert(baseTypes[i].IsInterface, "expected interface", String.Format("type is not an interface: {0}",baseTypes[i].FullName));
+                    Debug.Assert(baseTypes[i].IsInterface, "expected interface", String.Format("type is not an interface: {0}", baseTypes[i].FullName));
                     newType.myType.AddInterfaceImplementation(baseTypes[i]);
                 }
 
-                if(overridden.Count != 0){
+                if (overridden.Count != 0) {
                     newType.myType.AddInterfaceImplementation(typeof(ICustomBaseAccess));
 
                     CodeGen baseAccess = newType.DefineMethodOverride(typeof(ICustomBaseAccess).GetMethod("TryGetBaseAttr"));
                     Label next = baseAccess.DefineLabel();
-                    
+
                     for (int i = 0; i < overridden.Count; i++) {
                         baseAccess.EmitSymbolIdInt(overridden[i].Name);
                         baseAccess.EmitArgAddr(1);
@@ -669,18 +669,18 @@ namespace IronPython.Compiler.Generation {
 
                         // return a ReflectedMethod for this method...
                         baseAccess.EmitArgGet(2);
-                        
-                        
+
+
                         baseAccess.EmitString(overridden[i].Name);
                         baseAccess.Emit(OpCodes.Ldtoken, overrides[i].MethodInfo);
-                        baseAccess.EmitCall(typeof(MethodBase), "GetMethodFromHandle", new Type[]{typeof(RuntimeMethodHandle)});
+                        baseAccess.EmitCall(typeof(MethodBase), "GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
                         baseAccess.Emit(OpCodes.Castclass, typeof(MethodInfo));
                         baseAccess.EmitInt((int)FunctionType.Method);
 
-                        baseAccess.EmitCall(typeof(BuiltinFunction).GetMethod("MakeMethod", 
-                            new Type[]{typeof(string), typeof(MethodInfo), typeof(FunctionType)}));
+                        baseAccess.EmitCall(typeof(BuiltinFunction).GetMethod("MakeMethod",
+                            new Type[] { typeof(string), typeof(MethodInfo), typeof(FunctionType) }));
                         baseAccess.EmitCall(typeof(BuiltinFunction), "GetDescriptor");
-                        
+
                         baseAccess.Emit(OpCodes.Stind_Ref);
                         baseAccess.EmitRawConstant(true);
                         baseAccess.EmitReturn();
@@ -721,9 +721,9 @@ namespace IronPython.Compiler.Generation {
 
                 CodeGen gdtCg = newType.DefineMethodOverride(typeof(IDynamicObject).GetMethod("GetDynamicType"));
 
-                CodeGen cg = newType.DefineUserHiddenMethod(MethodAttributes.FamORAssem| MethodAttributes.Static,
+                CodeGen cg = newType.DefineUserHiddenMethod(MethodAttributes.FamORAssem | MethodAttributes.Static,
                     "$$GetOrMakeDynamicType", typeof(DynamicType), new Type[0]);
-                DoLazyInitCheck(cg, classSlot, 
+                DoLazyInitCheck(cg, classSlot,
                     delegate() {
                         // if not null, just return the value.
                         classSlot.EmitGet(cg);
@@ -818,10 +818,10 @@ namespace IronPython.Compiler.Generation {
                 initCode();
             }
 
-            private static CodeGen AddDefaultCtor(TypeGen newType, string []slots) {
+            private static CodeGen AddDefaultCtor(TypeGen newType, string[] slots) {
                 CodeGen cg = newType.DefineConstructor(new Type[0]);
                 if (slots != null) {
-                    
+
                     for (int i = 0; i < slots.Length; i++) {
                         Slot fld;
                         // getting other types would be nice here...
@@ -865,7 +865,7 @@ namespace IronPython.Compiler.Generation {
                     } else if ((fe = cd.Bases[i] as FieldExpression) != null) {
                         baseName = CodeDom.CodeWalker.GetFieldString(fe);
                     } else {
-                        throw new NotImplementedException(String.Format("non-name expr base type {0}",cd.Bases[i].GetType()));
+                        throw new NotImplementedException(String.Format("non-name expr base type {0}", cd.Bases[i].GetType()));
                     }
 
                     if (baseName == null) throw new InvalidOperationException("couldn't find basetype");
@@ -881,7 +881,7 @@ namespace IronPython.Compiler.Generation {
 
                         if (baseType == typeof(object) && RemoteCompiler.Instance != null) {
                             List<Assembly> assms = this.assemblies;
-                            
+
                             for (int j = 0; j < assms.Count; j++) {
                                 Debug.Assert(assms[j] != null);
                                 Type t = assms[j].GetType(baseName);
@@ -900,13 +900,13 @@ namespace IronPython.Compiler.Generation {
                                     break;
                                 }
                             }
-                        }     
+                        }
 
                         Debug.Assert(baseType != null, "Failed to find type for " + baseName);
 
                         if (baseType.IsInterface) {
                             types.Add(baseType);
-                        } else if(baseType != typeof(object)) {
+                        } else if (baseType != typeof(object)) {
                             Debug.Assert(types.Count == 0 || types[0].IsInterface, "adding multiple classes",
                                 String.Format("Had: {0}\r\nAdding{1} {2}", types.Count == 0 ? "" : types[0].FullName, baseType, baseName));
 
@@ -927,7 +927,7 @@ namespace IronPython.Compiler.Generation {
                 TypeGen type;
                 CodeGen cctor, ctor, getCompiledType;
                 List<Type> bases;
-                List<CodeGen> methods;                
+                List<CodeGen> methods;
 
                 public StackInfo(TypeGen typeGen, CodeGen classInit, CodeGen defaultCtor, List<Type> baseTypes) {
                     type = typeGen;
@@ -990,7 +990,7 @@ namespace IronPython.Compiler.Generation {
             private string[] slots;
 
             #region AstWalkerNonRecursive Method Overrides
-            
+
             public override bool Walk(AssignStatement node) {
                 if (!FoundSlots && node.Left.Count == 1) {
                     NameExpression ne = node.Left[0] as NameExpression;
@@ -1031,7 +1031,7 @@ namespace IronPython.Compiler.Generation {
             }
 
             public override void PostWalk(ClassDefinition node) {
-                depth--;                
+                depth--;
             }
 
             public override bool Walk(FunctionDefinition node) {

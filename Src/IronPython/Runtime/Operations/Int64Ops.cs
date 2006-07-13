@@ -322,7 +322,7 @@ namespace IronPython.Runtime.Operations {
                 }
             } else if (other is ExtensibleInt) {
                 return RightShift(x, ((ExtensibleInt)other).value);
-            } else if ((el = other as ExtensibleLong) != null) {                
+            } else if ((el = other as ExtensibleLong) != null) {
                 int y;
                 if (el.Value.AsInt32(out y)) {
                     return RightShift(x, y);

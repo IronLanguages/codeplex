@@ -21,7 +21,7 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     [PythonType("buffer")]
-    public class PythonBuffer : ICodeFormattable{
+    public class PythonBuffer : ICodeFormattable {
         private object @object;
         private int offset;
         private int size;

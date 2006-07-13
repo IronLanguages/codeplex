@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Calls {
         }
         #endregion
     }
-    
+
     [PythonType("classmethod")]
     public class ClassMethod : IDescriptor {
         internal object func;
@@ -134,7 +134,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         [PythonName("__delete__")]
-        public bool DeleteAttribute(object instance) {            
+        public bool DeleteAttribute(object instance) {
             if (fdel != null) {
                 Ops.Call(fdel, instance);
                 return true;

@@ -38,7 +38,7 @@ namespace IronPython.Runtime.Types {
     [PythonType("classobj")]
     public sealed class OldClass : IPythonType, ICallableWithCallerContext, IFancyCallable, IDynamicObject, ICustomTypeDescriptor, ICodeFormattable, ICustomAttributes {
         public Tuple __bases__;
-        public IAttributesDictionary __dict__; 
+        public IAttributesDictionary __dict__;
         bool hasFinalizer;
         public object __name__;
 
@@ -47,7 +47,7 @@ namespace IronPython.Runtime.Types {
             __name__ = name;
 
             __dict__ = (IAttributesDictionary)dict;
-            
+
             if (!__dict__.ContainsKey(SymbolTable.Doc)) {
                 __dict__[SymbolTable.Doc] = null;
             }
@@ -83,13 +83,13 @@ namespace IronPython.Runtime.Types {
 
             // bases only ever contains OldClasses (tuples are immutable, and when assigned
             // to we verify the types in the Tuple)
-            foreach (OldClass c in __bases__) { 
+            foreach (OldClass c in __bases__) {
                 if (c.TryLookupSlot(name, out ret)) return true;
             }
             ret = null;
             return false;
         }
-        
+
         internal string FullName {
             get { return __dict__[SymbolTable.Module].ToString() + '.' + __name__; }
         }
@@ -158,7 +158,7 @@ namespace IronPython.Runtime.Types {
         #region ICustomAttributes Members
 
         public bool TryGetAttr(ICallerContext context, SymbolId name, out object value) {
-            switch(name.Id){
+            switch (name.Id) {
                 case SymbolTable.BasesId: value = __bases__; return true;
                 case SymbolTable.NameId: value = __name__; return true;
                 case SymbolTable.DictId:
@@ -188,7 +188,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public void SetAttr(ICallerContext context, SymbolId name, object value) {
-            switch(name.Id){
+            switch (name.Id) {
                 case SymbolTable.BasesId: __bases__ = ValidateBases(value); break;
                 case SymbolTable.NameId:
                     string n = value as string;
@@ -197,7 +197,7 @@ namespace IronPython.Runtime.Types {
                     break;
                 case SymbolTable.DictId:
                     IAttributesDictionary d = value as IAttributesDictionary;
-                    if (d == null)  throw Ops.TypeError("__dict__ must be set to dictionary");                    
+                    if (d == null) throw Ops.TypeError("__dict__ must be set to dictionary");
                     __dict__ = d;
                     break;
                 case SymbolTable.UnassignId:
@@ -245,7 +245,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public IDictionary<object, object> GetAttrDict(ICallerContext context) {
-            return (IDictionary<object,object>)__dict__;
+            return (IDictionary<object, object>)__dict__;
         }
 
         #endregion
@@ -326,7 +326,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        
+
     }
 
     /// <summary>
@@ -359,20 +359,20 @@ namespace IronPython.Runtime.Types {
                 if (extraKeys[i].Id == key.Id) {
                     values[i] = value;
                     return true;
-                } 
-                
+                }
+
                 // no match, check for an unused slot, and replace it w/ ourselves in 
                 // a thread safe manner.  
-                
+
                 // Callers that get our ExtraKeys will need to check for < 0 and stop processing 
                 // when they see it. They will therefore see either a -1 (invalid) or -2 (object keys id)
                 // If they get -2 then there was a race and logically it's as if the assignment 
                 // happened before the read occured.
-                if(extraKeys[i].Id < 0) {
+                if (extraKeys[i].Id < 0) {
                     int prevVal;
-                    do{
-                        prevVal = Interlocked.CompareExchange(ref extraKeys[i].Id, 
-                            SymbolTable.ObjectKeysId, 
+                    do {
+                        prevVal = Interlocked.CompareExchange(ref extraKeys[i].Id,
+                            SymbolTable.ObjectKeysId,
                             SymbolTable.InvalidId);
 
                         if (prevVal == SymbolTable.InvalidId) {
@@ -382,18 +382,18 @@ namespace IronPython.Runtime.Types {
                             // key until we do the exchange after setting our value.
                             values[i] = value;
                             Interlocked.Exchange(ref extraKeys[i].Id, key.Id);
-                            return true;                        
+                            return true;
                         } else if (prevVal == key.Id) {
                             // we lost a race w/ another thread setting our
                             // id, we just update the value now.
                             values[i] = value;
                             return true;
-                        } 
+                        }
                         // otherwise id is ObjectKeysId (the slot is currently being updated)
                         //     spin & try again - it could be our ID or another ID
                         // or it's another ID (we lost the race to another thread), and need
                         // to continue to the next key.
-                    }while(prevVal == SymbolTable.ObjectKeysId);
+                    } while (prevVal == SymbolTable.ObjectKeysId);
                 }
             }
 
@@ -430,7 +430,7 @@ namespace IronPython.Runtime.Types {
 
         internal static void DoCoerce(ref object self, ref object other) {
             OldInstance ois = self as OldInstance;
-    
+
             if (ois != null) {
                 Tuple coerced = OldInstanceType.Instance.Coerce(ois, other) as Tuple;
                 if (coerced != null) {
@@ -441,7 +441,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        #region Object overrides 
+        #region Object overrides
 
         public override string ToString() {
             object ret;
@@ -484,8 +484,8 @@ namespace IronPython.Runtime.Types {
                 value = __dict__;
                 return true;
             } else if (name.Id == SymbolTable.Class.Id) {
-                value = __class__; 
-                return true;                
+                value = __class__;
+                return true;
             }
 
             if (TryRawGetAttr(name, out value)) return true;
@@ -539,7 +539,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public void DeleteAttr(ICallerContext context, SymbolId name) {
-            switch(name.Id){
+            switch (name.Id) {
                 case SymbolTable.ClassId: throw Ops.TypeError("__class__ must be set to class");
                 case SymbolTable.DictId: throw Ops.TypeError("__dict__ must be set to a dictionary");
                 default:
@@ -568,7 +568,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public IDictionary<object, object> GetAttrDict(ICallerContext context) {
-            return (IDictionary<object,object>)__dict__;
+            return (IDictionary<object, object>)__dict__;
         }
 
         #endregion
@@ -603,8 +603,8 @@ namespace IronPython.Runtime.Types {
             // next try equals, return 0 if we match.
             res = RichEquals(other);
             if (res != Ops.NotImplemented) {
-                if (Ops.IsTrue(res)) return 0;            
-            } else if(irc != null) {
+                if (Ops.IsTrue(res)) return 0;
+            } else if (irc != null) {
                 res = irc.RichEquals(this);
                 if (res != Ops.NotImplemented && Ops.IsTrue(res)) return 0;
             }
@@ -634,7 +634,7 @@ namespace IronPython.Runtime.Types {
 
                 // try the other side...
                 res = Ops.GetDynamicType(other).CompareTo(other, this);
-                if (res != Ops.NotImplemented) return ((int)res)*-1;
+                if (res != Ops.NotImplemented) return ((int)res) * -1;
             }
 
             return Ops.NotImplemented;

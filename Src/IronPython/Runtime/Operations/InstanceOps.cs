@@ -71,7 +71,7 @@ namespace IronPython.Runtime.Operations {
             // We create an OpsReflectedType so that the runtime can map back from the function to typeof(PythonType). 
             OpsReflectedType.OpsTypeToType[typeof(InstanceOps)] = new OpsReflectedType("InstanceOps", typeof(object), typeof(InstanceOps), null);
         }
-        
+
         internal static BuiltinFunction CreateNonDefaultNew() {
             return CreateFunction("__new__", "NonDefaultNew", "NonDefaultNewKW", "NonDefaultNewKWNoParams");
         }
@@ -99,10 +99,10 @@ namespace IronPython.Runtime.Operations {
             object res = DefaultNew(context, type, args);
 
             if (kwDict.Count > 0) {
-                foreach(KeyValuePair<object, object> kvp in (IDictionary<object,object>)kwDict){
-                    Ops.SetAttr(context, 
-                        res, 
-                        SymbolTable.StringToId(kvp.Key.ToString()), 
+                foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)kwDict) {
+                    Ops.SetAttr(context,
+                        res,
+                        SymbolTable.StringToId(kvp.Key.ToString()),
                         kvp.Value);
                 }
             }
@@ -147,12 +147,12 @@ namespace IronPython.Runtime.Operations {
         [PythonName("__init__")]
         public static void DefaultInitKW(ICallerContext context, object self, [ParamDict] Dict kwDict, params object[] args) {
         }
-        
+
         [PythonName("__new__")]
         public static object NonDefaultNew(ICallerContext context, DynamicType type, params object[] args) {
             if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
             if (args == null) args = new object[1];
-            return type.AllocateObject(args);                
+            return type.AllocateObject(args);
         }
 
         [PythonName("__new__")]
@@ -187,7 +187,7 @@ namespace IronPython.Runtime.Operations {
             DynamicType pt = (DynamicType)Ops.GetDynamicType(self);
             // we can't call ToString on a UserType because we'll stack overflow, so
             // only do FancyRepr for reflected types.
-            if (pt is ReflectedType) {                
+            if (pt is ReflectedType) {
                 string toStr = self.ToString();
 
                 // get the type name to display (CLI name or Python name)
@@ -206,7 +206,7 @@ namespace IronPython.Runtime.Operations {
                     typeName,
                     Ops.HexId(self),
                     toStr);
-            } 
+            }
             return SimpleRepr(self);
         }
 

@@ -45,11 +45,11 @@ namespace IronPython.Compiler.Ast {
         private Location header;
         private readonly SymbolId name;
         private readonly Expression[] parameters;
-        private readonly Expression[] defaults;        
-        private readonly FunctionAttributes flags;        
-        private Expression decorators;        
-        private string filename;        
-        private int yieldCount = 0;        
+        private readonly Expression[] defaults;
+        private readonly FunctionAttributes flags;
+        private Expression decorators;
+        private string filename;
+        private int yieldCount = 0;
 
         public FunctionDefinition(SymbolId name, Expression[] parameters, Expression[] defaults, FunctionAttributes flags, string sourceFile)
             : this(name, parameters, defaults, flags, null, sourceFile) {
@@ -209,7 +209,7 @@ namespace IronPython.Compiler.Ast {
             // Only codegen the call into SetFlags if there are flags to set.
             FunctionCode.FuncCodeFlags codeFlags = 0;
             if (cg.Context.TrueDivision) codeFlags |= FunctionCode.FuncCodeFlags.FutureDivision;
-            if (this.yieldCount > 0)  codeFlags |= FunctionCode.FuncCodeFlags.Generator;
+            if (this.yieldCount > 0) codeFlags |= FunctionCode.FuncCodeFlags.Generator;
             if (codeFlags != 0) {
                 functionCode.EmitGet(cg);
                 cg.EmitInt((int)codeFlags);
@@ -541,12 +541,12 @@ namespace IronPython.Compiler.Ast {
             get { return topBranchTarget; }
             set { topBranchTarget = value; }
         }
-        
+
         public Label TryBranchTarget {
             get { return tryBranchTarget; }
             set { tryBranchTarget = value; }
         }
-        
+
         public bool FinallyBranch {
             get { return finallyBranch; }
             set { finallyBranch = value; }

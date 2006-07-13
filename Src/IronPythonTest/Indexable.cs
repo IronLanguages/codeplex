@@ -443,7 +443,7 @@ namespace IronPythonTest {
             if (list.BinarySearch("5", new MyComparer()) == 5
                 && list.BinarySearch(0, 10, "a", new MyComparer()) == -1
                 && list.BinarySearch(0, 10, 5, new MyComparer()) == 5
-                ) 
+                )
                 flag += 10000;
             return flag;
         }

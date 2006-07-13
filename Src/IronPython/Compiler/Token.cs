@@ -28,7 +28,7 @@ namespace IronPython.Compiler {
         protected Token(TokenKind kind) {
             this.kind = kind;
         }
-        
+
         public TokenKind Kind {
             get { return kind; }
         }
@@ -104,7 +104,7 @@ namespace IronPython.Compiler {
         private bool quote;
         private bool isRaw;
         private bool isUni;
-        private bool isTri;       
+        private bool isTri;
 
         public IncompleteStringToken(object value, bool quote, bool isRaw, bool isUnicode, bool isTripleQuoted)
             : base(value) {
@@ -150,7 +150,8 @@ namespace IronPython.Compiler {
     public class CommentToken : SymbolToken {
         private readonly string comment;
 
-        public CommentToken(string value) : base(TokenKind.Comment, "<comment>") {
+        public CommentToken(string value)
+            : base(TokenKind.Comment, "<comment>") {
             comment = value;
         }
 

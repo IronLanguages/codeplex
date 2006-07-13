@@ -28,7 +28,7 @@ using IronPython.Compiler;
 using IronPython.Modules;
 using IronMath;
 
-namespace IronPython.Runtime.Types {  
+namespace IronPython.Runtime.Types {
     [PythonType("field#")]
     public class ReflectedField : IDataDescriptor, IContextAwareMember {
         public readonly FieldInfo info;
@@ -39,7 +39,8 @@ namespace IronPython.Runtime.Types {
             this.info = info;
         }
 
-        public ReflectedField(FieldInfo info) : this(info, NameType.PythonField) {
+        public ReflectedField(FieldInfo info)
+            : this(info, NameType.PythonField) {
         }
 
         [PythonName("__get__")]
@@ -105,27 +106,27 @@ namespace IronPython.Runtime.Types {
     /// sets the value, or wants to get a field from the value.
     /// </summary>
     [PythonType("field#")]
-    class OpsReflectedField<BaseType, ExtensibleType> : ReflectedField 
+    class OpsReflectedField<BaseType, ExtensibleType> : ReflectedField
         where ExtensibleType : IExtensible<BaseType> {
-        
+
         public OpsReflectedField(FieldInfo info, NameType nameType)
             : base(info, nameType) {
         }
 
         public override object GetAttribute(object instance, object context) {
-            if (instance is BaseType) 
+            if (instance is BaseType)
                 return base.GetAttribute(instance, context);
-            if(instance is ExtensibleType) 
+            if (instance is ExtensibleType)
                 return base.GetAttribute(((ExtensibleType)instance).Value, context);
 
             throw Ops.TypeErrorForTypeMismatch(Ops.GetDynamicTypeFromType(typeof(BaseType)).__name__.ToString(), instance);
         }
 
         public override bool SetAttribute(object instance, object value) {
-            if (instance is BaseType) 
+            if (instance is BaseType)
                 return base.SetAttribute(instance, value);
             if (instance is ExtensibleType)
-                return base.SetAttribute(((ExtensibleType)instance).Value, value);            
+                return base.SetAttribute(((ExtensibleType)instance).Value, value);
             if (instance == null)
                 return false;
 
@@ -138,8 +139,9 @@ namespace IronPython.Runtime.Types {
     /// Uninitialized.instance)
     /// </summary>
     public class ReflectedSlotProperty : ReflectedProperty {
-        
-        public ReflectedSlotProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) :
+
+        public ReflectedSlotProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt)
+            :
             base(info, getter, setter, nt) {
         }
 
@@ -206,9 +208,9 @@ namespace IronPython.Runtime.Types {
         [PythonName("__get__")]
         public object GetAttribute(object instance, object context) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
-            if (getter == null) 
-                throw Ops.AttributeError("attribute '{0}' of '{1}' object is write-only", 
-                    Name, 
+            if (getter == null)
+                throw Ops.AttributeError("attribute '{0}' of '{1}' object is write-only",
+                    Name,
                     Ops.GetDynamicTypeFromType(info.DeclaringType).Name);
 
             OptimizePropertyMethod(ref optGetter, getter);
@@ -221,14 +223,14 @@ namespace IronPython.Runtime.Types {
                 } else {
                     return optGetter.Call(instance);
                 }
-            } 
+            }
 
-            return DoGet(instance);            
+            return DoGet(instance);
         }
 
         [PythonName("__set__")]
         public bool SetAttribute(object instance, object value) {
-            if(setter != null) OptimizePropertyMethod(ref optSetter, setter);
+            if (setter != null) OptimizePropertyMethod(ref optSetter, setter);
 
             if (instance == null && (setter == null || !setter.IsStatic)) return false;
 
@@ -249,17 +251,17 @@ namespace IronPython.Runtime.Types {
         public virtual bool DeleteAttribute(object instance) {
             if (setter != null)
                 throw Ops.AttributeErrorForReadonlyAttribute(
-                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name, 
+                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name,
                     SymbolTable.StringToId(Name));
             else
                 throw Ops.AttributeErrorForBuiltinAttributeDeletion(
-                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name, 
+                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name,
                     SymbolTable.StringToId(Name));
         }
 
         [PythonName("__str__")]
         public override string ToString() {
-            return string.Format("<property# {0} on {1}>", Name, 
+            return string.Format("<property# {0} on {1}>", Name,
                 Ops.GetDynamicTypeFromType(info.DeclaringType).Name);
         }
 
@@ -272,7 +274,7 @@ namespace IronPython.Runtime.Types {
                     pnas = setter.GetCustomAttributes(typeof(PythonNameAttribute), true);
                 }
 
-                if(pnas != null && pnas.Length > 0)
+                if (pnas != null && pnas.Length > 0)
                     return ((PythonNameAttribute)pnas[0]).name;
 
                 return info.Name;
@@ -347,7 +349,7 @@ namespace IronPython.Runtime.Types {
         [PythonName("__isub__")]
         public object __isub__(object func) {
             GetDispatcher(instance).RemoveEvent(instance, func);
-            return this; 
+            return this;
         }
 
         [PythonName("__get__")]
@@ -364,7 +366,7 @@ namespace IronPython.Runtime.Types {
         [PythonName("__set__")]
         public bool SetAttribute(object instance, object value) {
             ReflectedEvent other = value as ReflectedEvent;
-            if (other == null || other.dispatcher.Info != this.dispatcher.Info) 
+            if (other == null || other.dispatcher.Info != this.dispatcher.Info)
                 throw Ops.AttributeErrorForReadonlyAttribute(dispatcher.Info.DeclaringType.Name, SymbolTable.StringToId(dispatcher.Info.Name));
             return true;
         }
@@ -390,7 +392,7 @@ namespace IronPython.Runtime.Types {
 
         private EventDispatcher GetDispatcher(object instance) {
             if (dispatchers == null) {
-                dispatchers = new WeakHash<object, EventDispatcher>();                
+                dispatchers = new WeakHash<object, EventDispatcher>();
             }
 
             if (instance == null) {
@@ -404,10 +406,10 @@ namespace IronPython.Runtime.Types {
                 return res;
             }
 
-            return dispatchers[instance] = new EventDispatcher(dispatcher.Info);            
+            return dispatchers[instance] = new EventDispatcher(dispatcher.Info);
         }
 
-        class EventDispatcher : ICallable{
+        class EventDispatcher : ICallable {
             List<object> events = new List<object>();
             EventInfo info;
 
@@ -457,7 +459,7 @@ namespace IronPython.Runtime.Types {
 
             private void Hook(object instance) {
                 Delegate handler = Ops.GetDelegate(this, info.EventHandlerType);
-                info.AddEventHandler(instance, handler); 
+                info.AddEventHandler(instance, handler);
             }
 
             private void Unhook(object instance) {

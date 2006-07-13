@@ -76,14 +76,14 @@ namespace IronPython.Hosting {
         public override int GetHashCode() {
             // 7 bits for each column (0-128), 9 bits for each row (0-512), xor helps if
             // we have a bigger file.
-            return (startColumn) ^ (endColumn << 7) ^ (startLine << 14) ^ (endLine << 23);            
+            return (startColumn) ^ (endColumn << 7) ^ (startLine << 14) ^ (endLine << 23);
         }
 
         public static bool operator ==(CodeSpan self, CodeSpan other) {
             return self.startColumn == other.startColumn &&
                     self.startLine == other.startLine &&
                     self.endColumn == other.endColumn &&
-                    self.endLine == other.endLine;            
+                    self.endLine == other.endLine;
         }
 
         public static bool operator !=(CodeSpan self, CodeSpan other) {
@@ -92,7 +92,7 @@ namespace IronPython.Hosting {
                     self.endColumn != other.endColumn ||
                     self.endLine != other.endLine;
         }
-        
+
         public int StartLine {
             get { return startLine; }
             set { startLine = value; }

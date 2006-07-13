@@ -319,7 +319,7 @@ namespace IronPython.Modules {
             if (errorHandlers.ContainsKey(name))
                 return errorHandlers[name];
             else
-                throw Ops.LookupError("unknown error handler name '{0}'",name);
+                throw Ops.LookupError("unknown error handler name '{0}'", name);
         }
 
         #region MBCS Functions

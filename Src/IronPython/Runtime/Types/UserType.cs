@@ -417,7 +417,7 @@ namespace IronPython.Runtime.Types {
 
         public override List GetAttrNames(ICallerContext context) {
             List res = base.GetAttrNames(context);
-            if (HasDictionary) {                
+            if (HasDictionary) {
                 res.AddNoLock("__dict__");
             }
             return res;
@@ -452,8 +452,8 @@ namespace IronPython.Runtime.Types {
 
             if (base.TryBaseGetAttr(context, o, name, out ret)) return true;
 
-            if (name == SymbolTable.WeakRef && !HasSlots) {                 
-                ret = null; return true; 
+            if (name == SymbolTable.WeakRef && !HasSlots) {
+                ret = null; return true;
             }
 
             if (!__getattr__F.IsObjectMethod()) {

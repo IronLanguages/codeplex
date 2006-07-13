@@ -454,7 +454,7 @@ namespace IronPython.Runtime.Calls {
 
     // *** END GENERATED CODE ***
 
-    #endregion   
+    #endregion
 
 
     public partial class FunctionN {

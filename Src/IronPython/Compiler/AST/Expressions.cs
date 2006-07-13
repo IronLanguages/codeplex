@@ -225,7 +225,7 @@ namespace IronPython.Compiler.Ast {
 
         public Expression Expression {
             get { return expr; }
-        } 
+        }
 
         public override void Walk(IAstWalker walker) {
             if (walker.Walk(this)) {
@@ -362,7 +362,7 @@ namespace IronPython.Compiler.Ast {
 
         public IList<Expression> Items {
             get { return items; }
-        } 
+        }
 
         internal override void Assign(object val, NameEnvironment environment) {
             // Disallow "[] = l", "[], a = l, l", "[[]] = [l]", etc
@@ -563,7 +563,7 @@ namespace IronPython.Compiler.Ast {
 
         public Expression SliceStart {
             get { return sliceStart; }
-        } 
+        }
 
         internal override object Evaluate(NameEnvironment environment) {
             object e1 = sliceStart.Evaluate(environment);
@@ -661,7 +661,7 @@ namespace IronPython.Compiler.Ast {
 
         public object Value {
             get { return this.value; }
-        } 
+        }
 
         internal override object Evaluate(NameEnvironment environment) {
             return value;
@@ -750,7 +750,7 @@ namespace IronPython.Compiler.Ast {
 
         public Expression Left {
             get { return left; }
-        }         
+        }
 
         internal override object Evaluate(NameEnvironment environment) {
             object ret = left.Evaluate(environment);
@@ -793,8 +793,8 @@ namespace IronPython.Compiler.Ast {
 
         public Expression Left {
             get { return left; }
-        } 
-      
+        }
+
         internal override object Evaluate(NameEnvironment environment) {
             object ret = left.Evaluate(environment);
             if (!Ops.IsTrue(ret)) return right.Evaluate(environment);
@@ -875,7 +875,7 @@ namespace IronPython.Compiler.Ast {
 
         public BinaryOperator Operator {
             get { return op; }
-        } 
+        }
 
         internal override object Evaluate(NameEnvironment environment) {
             object l = left.Evaluate(environment);

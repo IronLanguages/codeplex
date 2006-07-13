@@ -283,8 +283,8 @@ namespace IronPython.Modules {
                     });
 
                     return Tuple.MakeTuple(
-                        Ops.GetDynamicTypeFromType(GetType()), 
-                        Tuple.MakeTuple(new List(items)), 
+                        Ops.GetDynamicTypeFromType(GetType()),
+                        Tuple.MakeTuple(new List(items)),
                         null
                     );
                 }

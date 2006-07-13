@@ -93,7 +93,7 @@ namespace IronPython.Modules {
             throw Ops.NotImplementedError("gc.get_referents isn't implemented");
         }
 
-        
+
         public static List Garbage {
             [PythonName("garbage")]
             get {

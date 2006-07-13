@@ -57,9 +57,9 @@ namespace IronPython.Runtime.Calls {
 
         internal FunctionCode(CompiledCode code, IronPython.Modules.Builtin.CompileFlags compilerFlags)
             : this(code) {
-            
+
             if ((compilerFlags & IronPython.Modules.Builtin.CompileFlags.CO_FUTURE_DIVISION) != 0)
-                flags |= FuncCodeFlags.FutureDivision;            
+                flags |= FuncCodeFlags.FutureDivision;
         }
 
         #region Public constructors
@@ -313,9 +313,9 @@ namespace IronPython.Runtime.Calls {
             this.module = globals;
             this.FunctionCode = new FunctionCode(this);
         }
-       
+
         #region Public APIs
-        
+
         public string[] ArgNames {
             get { return argNames; }
         }
@@ -433,7 +433,7 @@ namespace IronPython.Runtime.Calls {
             Array.Copy(args, realArgs, args.Length);
 
             int index = 0;
-            foreach (KeyValuePair<object, object> kvp in (IDictionary<object,object>)dictArgs) {
+            foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dictArgs) {
                 argNames[index] = kvp.Key as string;
                 realArgs[index + args.Length] = kvp.Value;
                 index++;
@@ -462,7 +462,7 @@ namespace IronPython.Runtime.Calls {
 
         protected object[] Defaults {
             get { return defaults; }
-        } 
+        }
 
         protected void PushFrame() {
             // ManagedThreadId starts at 1 and increases as we get more threads.
@@ -975,7 +975,7 @@ namespace IronPython.Runtime.Calls {
             if (fc != null) {
                 if (inst != null) {
                     return fc.CallInstance(context, inst, args);
-                }  else {
+                } else {
                     if (args.Length > 0) CheckSelf(args[0]);
                     return fc.Call(context, args);
                 }
@@ -993,7 +993,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         [PythonName("__call__")]
-        public object Call(ICallerContext context, object []args, string []names){
+        public object Call(ICallerContext context, object[] args, string[] names) {
             return Ops.Call(context, func, AddInstToArgs(args), names);
         }
 
@@ -1009,7 +1009,7 @@ namespace IronPython.Runtime.Calls {
         public override string ToString() {
             if (inst != null) {
                 return string.Format("<bound method {0}.{1} of {2}>",
-                    DeclaringClassAsString(), 
+                    DeclaringClassAsString(),
                     Ops.GetAttr(DefaultContext.Default, func, SymbolTable.Name),
                     Ops.StringRepr(inst));
             } else {

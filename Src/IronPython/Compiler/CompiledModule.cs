@@ -57,7 +57,7 @@ namespace IronPython.Compiler {
         private PythonModule Module {
             get {
                 FieldInfo ti = this.GetType().GetField(ModuleFieldName);
-                return (PythonModule) ti.GetValue(this);
+                return (PythonModule)ti.GetValue(this);
             }
 
             set {

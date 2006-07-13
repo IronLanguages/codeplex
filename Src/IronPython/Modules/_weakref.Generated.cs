@@ -22,7 +22,7 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Modules {
-    public partial class ProxyDynamicType : ReflectedType{
+    public partial class ProxyDynamicType : ReflectedType {
 
         protected override void AddOps() {
             #region Generated WeakRef Operators Initialization
@@ -80,6 +80,6 @@ namespace IronPython.Modules {
 
             #endregion
 
-        }       
+        }
     }
 }

@@ -30,7 +30,7 @@ using IronPython.Compiler;
 namespace IronPython.Runtime.Types {
     public class ReflectedDelegateType : ReflectedType {
         private static BuiltinFunction DelegateNew = BuiltinFunction.MakeMethod("__new__", typeof(ReflectedDelegateType).GetMethod("MakeNew"), FunctionType.Function | FunctionType.PythonVisible);
-        
+
         public static Delegate MakeNew(DynamicType type, object from) {
             return Ops.GetDelegate(from, ((ReflectedType)type).type);
         }
@@ -49,7 +49,7 @@ namespace IronPython.Runtime.Types {
             if (invoker == null) {
                 CreateInvoker();
             }
-            
+
             Debug.Assert(func is Delegate);
 
             return invoker.CallInstance(DefaultContext.Default, func, args);
@@ -79,7 +79,7 @@ namespace IronPython.Runtime.Types {
             if (retType != dsi.retType) return false;
 
             for (int i = 0; i < pis.Length; i++) {
-                if(dsi.pis[i] != pis[i]) return false;
+                if (dsi.pis[i] != pis[i]) return false;
             }
 
             return true;
@@ -123,7 +123,7 @@ namespace IronPython.Runtime.Types {
 
             CodeGen cg = DefineDelegateMethod(delegateParams);
 
-            NewTypeMaker.EmitCallFromClrToPython(cg, cg.GetArgumentSlot(0), 1);          
+            NewTypeMaker.EmitCallFromClrToPython(cg, cg.GetArgumentSlot(0), 1);
 
             return cg.CreateDelegateMethodInfo();
         }

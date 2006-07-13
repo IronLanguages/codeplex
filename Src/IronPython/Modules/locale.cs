@@ -69,10 +69,10 @@ If locale is None then the current setting is returned.
         public static object SetLocale(object category, [DefaultParameterValue(null)]string locale) {
             if (locale == null) {
                 return currentLocale.GetLocale(category);
-            } 
+            }
 
             currentLocale.SetLocale(category, locale);
-            return null;            
+            return null;
         }
 
         [Documentation("compares two strings using the current locale")]
@@ -80,11 +80,11 @@ If locale is None then the current setting is returned.
         public static int StringCollate(string string1, string string2) {
             return String.Compare(string1, string2, false, currentLocale.Collate);
         }
-        
+
         [Documentation(@"returns a transformed string that can be compared using the built-in cmp.
         
 Currently returns the string unmodified")]
-        [PythonName("strxfrm")]        
+        [PythonName("strxfrm")]
         public static object StringTransform(string @string) {
             return @string;
         }
@@ -115,7 +115,7 @@ Currently returns the string unmodified")]
             public CultureInfo Numeric;
 
             private Dict conv;
-            
+
             public override string ToString() {
                 return base.ToString();
             }
@@ -148,7 +148,7 @@ Currently returns the string unmodified")]
                         break;
                     default:
                         throw ExceptionConverter.CreateThrowable(Error, "unknown locale category");
-                }                
+                }
             }
 
             public string GetLocale(object category) {
@@ -168,12 +168,12 @@ Currently returns the string unmodified")]
                             GetLocale(LC_CTYPE),
                             GetLocale(LC_MONETARY),
                             GetLocale(LC_NUMERIC),
-                            GetLocale(LC_TIME));                        
-                    case LocaleCategories.Collate:  return CultureToName(Collate);
-                    case LocaleCategories.CType:    return CultureToName(CType);
-                    case LocaleCategories.Time:     return CultureToName(Time);
+                            GetLocale(LC_TIME));
+                    case LocaleCategories.Collate: return CultureToName(Collate);
+                    case LocaleCategories.CType: return CultureToName(CType);
+                    case LocaleCategories.Time: return CultureToName(Time);
                     case LocaleCategories.Monetary: return CultureToName(Monetary);
-                    case LocaleCategories.Numeric:  return CultureToName(Numeric);
+                    case LocaleCategories.Numeric: return CultureToName(Numeric);
                     default:
                         throw ExceptionConverter.CreateThrowable(Error, "unknown locale category");
                 }
@@ -203,7 +203,7 @@ Currently returns the string unmodified")]
                 conv["decimal_point"] = Numeric.NumberFormat.NumberDecimalSeparator;
                 conv["grouping"] = GroupsToList(Numeric.NumberFormat.NumberGroupSizes);
                 conv["thousands_sep"] = Numeric.NumberFormat.NumberGroupSeparator;
-                
+
                 conv["mon_decimal_point"] = Monetary.NumberFormat.CurrencyDecimalSeparator;
                 conv["mon_thousands_sep"] = Monetary.NumberFormat.CurrencyGroupSeparator;
                 conv["mon_grouping"] = GroupsToList(Monetary.NumberFormat.CurrencyGroupSizes);

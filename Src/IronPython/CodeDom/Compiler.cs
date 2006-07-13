@@ -97,7 +97,7 @@ namespace IronPython.CodeDom {
             AppDomainSetup newDomainSetup = new AppDomainSetup();
             newDomainSetup.ApplicationBase = currentDomainSetup.ApplicationBase;
             newDomainSetup.PrivateBinPath = currentDomainSetup.PrivateBinPath;
-            
+
             AppDomain compileDomain = null;
             try {
                 compileDomain = AppDomain.CreateDomain("compilation domain", null, newDomainSetup);
@@ -110,8 +110,8 @@ namespace IronPython.CodeDom {
                 IReflect rc = (IReflect)compileDomain.CreateInstanceFromAndUnwrap(
                     Assembly.GetExecutingAssembly().Location,
                     "IronPython.CodeDom.RemoteCompiler",
-                    false, 
-                    BindingFlags.Public|BindingFlags.CreateInstance|BindingFlags.Instance, 
+                    false,
+                    BindingFlags.Public | BindingFlags.CreateInstance | BindingFlags.Instance,
                     null,
                     new object[] { files, options.OutputAssembly, options.IncludeDebugInformation, options.ReferencedAssemblies, targetKind },
                     null,
@@ -122,7 +122,7 @@ namespace IronPython.CodeDom {
 
                 InvokeCompiler(rc, "Compile");
 
-                res.NativeCompilerReturnValue = (int)InvokeCompiler(rc, "get_ErrorCount"); 
+                res.NativeCompilerReturnValue = (int)InvokeCompiler(rc, "get_ErrorCount");
                 List<CompilerError> errors = (List<CompilerError>)(InvokeCompiler(rc, "get_Errors"));
                 for (int i = 0; i < errors.Count; i++) {
                     res.Errors.Add(errors[i]);
@@ -135,7 +135,7 @@ namespace IronPython.CodeDom {
                 } catch {
                 }
             } finally {
-                if(compileDomain != null) AppDomain.Unload(compileDomain);
+                if (compileDomain != null) AppDomain.Unload(compileDomain);
             }
 
             return res;
@@ -252,7 +252,7 @@ namespace IronPython.CodeDom {
             } catch (CompilerException) {
                 // errors occured during compilation
                 errorCnt = Errors.Count;
-//                Errors.Add(new CompilerError("unknown", 0, 0, "unknown", ex.ToString()));
+                //                Errors.Add(new CompilerError("unknown", 0, 0, "unknown", ex.ToString()));
             } catch (Exception ex) {
                 errorCnt++;
                 Errors.Add(new CompilerError("unknown", 0, 0, "unknown", ex.ToString()));
@@ -284,7 +284,7 @@ namespace IronPython.CodeDom {
         }
 
         public IList<CompilerError> Errors {
-            
+
             get {
                 return errors;
             }
@@ -333,11 +333,11 @@ namespace IronPython.CodeDom {
         }
 
         public object InvokeMember(string name, BindingFlags invokeAttr, Binder binder, object target, object[] args, ParameterModifier[] modifiers, System.Globalization.CultureInfo culture, string[] namedParameters) {
-            switch(name){
-                case "Compile":        DoCompile(); break;
+            switch (name) {
+                case "Compile": DoCompile(); break;
                 case "get_ErrorCount": return ErrorCount;
-                case "get_Errors":     return Errors;
-                case "get_Assembly":   return CompiledAssembly;
+                case "get_Errors": return Errors;
+                case "get_Assembly": return CompiledAssembly;
             }
             return null;
         }

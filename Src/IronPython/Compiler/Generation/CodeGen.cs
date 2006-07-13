@@ -325,7 +325,7 @@ namespace IronPython.Compiler.Generation {
             }
             EmitExprOrNone(expr);
             EmitReturnFromObject();
-        }   
+        }
 
         public void EmitReturnFromObject() {
             EmitConvertFromObject(CompilerHelpers.GetReturnType(methodInfo));
@@ -512,7 +512,7 @@ namespace IronPython.Compiler.Generation {
         public void Finish() {
             if (returnBlockCreated) {
                 MarkLabel(returnBlock.returnStart);
-                if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) 
+                if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void))
                     returnBlock.returnValue.EmitGet(this);
                 Emit(OpCodes.Ret);
             }
@@ -854,7 +854,7 @@ namespace IronPython.Compiler.Generation {
                 Emit(OpCodes.Newobj, (ConstructorInfo)(delegateType.GetMember(".ctor")[0]));
             }
         }
-        
+
 
         public void EmitConvertFromObject(Type paramType) {
             if (paramType == typeof(object)) return;
@@ -898,12 +898,12 @@ namespace IronPython.Compiler.Generation {
             } else if (typeof(Delegate).IsAssignableFrom(paramType)) {
                 EmitType(paramType);
                 EmitCall(typeof(Converter), "ConvertToDelegate");
-                Emit(OpCodes.Castclass, paramType);                
+                Emit(OpCodes.Castclass, paramType);
             } else {
                 Label end = DefineLabel();
                 Emit(OpCodes.Dup);
                 Emit(OpCodes.Isinst, paramType);
-                
+
                 Emit(OpCodes.Brtrue_S, end);
                 Emit(OpCodes.Ldtoken, paramType);
                 if (paramType.IsValueType) {

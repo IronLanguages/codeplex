@@ -211,9 +211,9 @@ namespace IronPython.Modules {
             // assembly load because our assembly is not finished loading yet.  In that case we just 
             // return the assembly that is currently being loaded that we know about, but the loader
             // hasn't yet cached.
-            if (loading == null) loading = new Dictionary<string,Assembly>();
+            if (loading == null) loading = new Dictionary<string, Assembly>();
             if (loading.TryGetValue(an.Name, out res)) return res;
-            
+
             res = LoadAssemblyFromFile(an.Name);
 
             if (res != null) {
@@ -262,7 +262,7 @@ namespace IronPython.Modules {
             Assembly asm;
 
             asm = LoadAssemblyByName(name);
-            
+
             // note we don't explicit call to get the file version
             // here because the assembly resolve event will do it for us.
 
@@ -358,9 +358,9 @@ namespace IronPython.Modules {
 
             #endregion
 
-           
+
             [PythonType("checker")]
-            public class RuntimeChecker : ICallable, IDescriptor{
+            public class RuntimeChecker : ICallable, IDescriptor {
                 private object[] expected;
                 private object func;
                 private object inst;
@@ -370,7 +370,7 @@ namespace IronPython.Modules {
                     func = function;
                 }
 
-                public RuntimeChecker(object instance, object function, object[] expectedArgs) 
+                public RuntimeChecker(object instance, object function, object[] expectedArgs)
                     : this(function, expectedArgs) {
                     inst = instance;
                 }
@@ -491,7 +491,7 @@ namespace IronPython.Modules {
 
                 #endregion
             }
-            
+
         }
         #endregion
 
@@ -504,18 +504,19 @@ namespace IronPython.Modules {
         #endregion
     }
 
-        
+
     /// <summary>
     /// Special subclass of Tuple to provide improved formatting when outputting the Tuple.
     /// </summary>
-    [PythonType("references_tuple")]  
+    [PythonType("references_tuple")]
     class ReferencesTuple : Tuple {
 
         public ReferencesTuple()
             : base(Tuple.MakeTuple()) {
         }
 
-        public ReferencesTuple(object data) : base(data) { 
+        public ReferencesTuple(object data)
+            : base(data) {
         }
 
         [PythonName("__add__")]
@@ -536,7 +537,7 @@ namespace IronPython.Modules {
         public override string ToString() {
             StringBuilder buf = new StringBuilder();
             buf.Append("(");
-            for(int i = 0; i<this.GetLength(); i++){
+            for (int i = 0; i < this.GetLength(); i++) {
                 if (i != 0) buf.AppendLine(",");
                 buf.Append('<');
                 buf.Append(this[i].ToString());

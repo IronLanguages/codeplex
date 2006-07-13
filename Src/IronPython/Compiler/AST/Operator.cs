@@ -51,7 +51,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         #region Static Well-Known Operators
-        
+
         public static BinaryOperator Is {
             get {
                 return binIs;
@@ -96,7 +96,7 @@ namespace IronPython.Compiler.Ast {
 
         public static UnaryOperator Not {
             get {
-                return unNot;   
+                return unNot;
             }
         }
 
@@ -173,7 +173,7 @@ namespace IronPython.Compiler.Ast {
 
         public CallTarget2 InPlaceTargetTrue {
             get { return inPlaceTargetTrue; }
-        } 
+        }
 
 
         public DivisionOperator(string symbol, CallTarget2 target, CallTarget2 inPlaceTarget, CallTarget2 targetTrue, CallTarget2 inPlaceTargetTrue, int precedence)

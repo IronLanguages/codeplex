@@ -35,7 +35,7 @@ namespace IronPython.Runtime.Calls {
     /// All calls are made through the optimizedTarget which is created lazily.
     /// </summary>
     [PythonType("builtin_function_or_method")]
-    public partial class BuiltinFunction : 
+    public partial class BuiltinFunction :
         FastCallable, IFancyCallable, IContextAwareMember, IDynamicObject {
         private string name;
         private MethodBase[] targets;
@@ -71,11 +71,11 @@ namespace IronPython.Runtime.Calls {
         internal BuiltinFunction() { }
 
         private BuiltinFunction(string name, MethodBase[] originalTargets, FunctionType functionType) {
-            Debug.Assert(originalTargets!= null, "originalTargets array is null");
-            
-            MethodBase target=originalTargets[0];
+            Debug.Assert(originalTargets != null, "originalTargets array is null");
+
+            MethodBase target = originalTargets[0];
             Debug.Assert(target != null, "no targets passed to make BuiltinFunction");
-            Debug.Assert(name != null, String.Format("name is null for {0}",target.Name));
+            Debug.Assert(name != null, String.Format("name is null for {0}", target.Name));
 
             funcType = functionType;
             targets = originalTargets;
@@ -176,15 +176,15 @@ namespace IronPython.Runtime.Calls {
             KwArgBinder kwArgBinder = new KwArgBinder(context, args, names, targets[0].IsConstructor);
             MethodBinding bestBinding = new MethodBinding();
             List<UnboundArgument> bestUnboundArgs = null;
-            
-            for (int i = 0; i < targets.Length; i++) {                
+
+            for (int i = 0; i < targets.Length; i++) {
                 object[] realArgs = kwArgBinder.DoBind(targets[i], Name);
 
                 if (realArgs != null) {
                     MethodBinding mb = new MethodBinding();
                     mb.method = targets[i];
 
-                    if(!CompilerHelpers.IsStatic(targets[i])) {
+                    if (!CompilerHelpers.IsStatic(targets[i])) {
                         if (instance == null) {
                             if (realArgs.Length == 0) {
                                 throw Ops.TypeError("bad number of arguments for function {0}", targets[0].Name);
@@ -222,7 +222,7 @@ namespace IronPython.Runtime.Calls {
                 // optimized version of the calls.
                 object[] callArgs = bestBinding.arguments;
 
-                ParameterInfo[]pis = bestBinding.method.GetParameters();
+                ParameterInfo[] pis = bestBinding.method.GetParameters();
                 object[] dynamicArgs = new object[pis.Length];
                 for (int i = 0; i < pis.Length; i++) {
                     dynamicArgs[i] = Ops.GetDynamicTypeFromType(pis[i].ParameterType);
@@ -302,7 +302,7 @@ namespace IronPython.Runtime.Calls {
             Array.Copy(args, realArgs, args.Length);
 
             int index = 0;
-            foreach (KeyValuePair<object, object> kvp in (IDictionary<object,object>)dictArgs) {
+            foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dictArgs) {
                 argNames[index] = kvp.Key as string;
                 realArgs[index + args.Length] = kvp.Value;
                 index++;
@@ -498,7 +498,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                     throw Ops.TypeError(string.Format("bad type args to this generic method {0}", this));
 
                 rm.Name = Name;
-                rm.FunctionType = FunctionType|FunctionType.OptimizeChecked;    // don't want to optimize & whack our dictionary.
+                rm.FunctionType = FunctionType | FunctionType.OptimizeChecked;    // don't want to optimize & whack our dictionary.
 
                 return rm;
             }
@@ -537,18 +537,18 @@ Eg. The following will call the overload of WriteLine that takes an int argument
 
     [Flags]
     public enum FunctionType {
-        None                = 0x0000,   // No flags have been set
-        Function            = 0x0001,   // This is a function w/ no instance pointer
-        Method              = 0x0002,   // This is a method that requires an instance
-        FunctionMethodMask  = 0x0003,   // Built-in functions can encapsulate both methods & functions, in which case both bits are set
-        PythonVisible       = 0x0004,   // True is the function/method should be visible from pure-Python code
-        IsContextAware      = 0x0008,   // True if the function can receive the ICallerContext parameter.
-        SkipThisCheck       = 0x0010,   // we should skip the type check for the this pointer (due to base type, or an InstanceOps method).
-        OptimizeChecked     = 0x0020,   // True if we've checked if we could optimize the function, and we can't.
-        OpsFunction         = 0x0040,   // True if this is a function/method declared on an Ops type (StringOps, IntOps, etc...)
-        Params              = 0x0080,   // True if this is a params method, false otherwise.
-        ReversedOperator    = 0x0100,   // True if this is a __r*__ method for a CLS overloaded operator method
-        BinaryOperator      = 0x0200,   // This method represents a binary operator method for a CLS overloaded operator method
+        None = 0x0000,   // No flags have been set
+        Function = 0x0001,   // This is a function w/ no instance pointer
+        Method = 0x0002,   // This is a method that requires an instance
+        FunctionMethodMask = 0x0003,   // Built-in functions can encapsulate both methods & functions, in which case both bits are set
+        PythonVisible = 0x0004,   // True is the function/method should be visible from pure-Python code
+        IsContextAware = 0x0008,   // True if the function can receive the ICallerContext parameter.
+        SkipThisCheck = 0x0010,   // we should skip the type check for the this pointer (due to base type, or an InstanceOps method).
+        OptimizeChecked = 0x0020,   // True if we've checked if we could optimize the function, and we can't.
+        OpsFunction = 0x0040,   // True if this is a function/method declared on an Ops type (StringOps, IntOps, etc...)
+        Params = 0x0080,   // True if this is a params method, false otherwise.
+        ReversedOperator = 0x0100,   // True if this is a __r*__ method for a CLS overloaded operator method
+        BinaryOperator = 0x0200,   // This method represents a binary operator method for a CLS overloaded operator method
     }
 
     [PythonType("method_descriptor")]
@@ -698,8 +698,8 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             return template.IsVisible(context);
         }
 
-        #endregion        
-    
+        #endregion
+
     }
 
     [PythonType("classmethod_descriptor")]
@@ -741,7 +741,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             }
             if (instance != null)
                 BuiltinMethodDescriptor.CheckSelfWorker(instance, func);
-            
+
             return owner;
         }
         #endregion
@@ -996,7 +996,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             // return a function that's bound to the overloads, we'll
             // the user then calls this w/ the dynamic type, and the bound
             // function drops the class & calls the overload.
-            if(bf.Targets[0].DeclaringType != typeof(InstanceOps))
+            if (bf.Targets[0].DeclaringType != typeof(InstanceOps))
                 return new BoundBuiltinFunction(new ConstructorFunction(InstanceOps.OverloadedNew, bf.Targets), bf);
             return base.GetTargetFunction(bf);
         }
@@ -1005,7 +1005,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
     public class ConstructorFunction : BuiltinFunction {
         private MethodBase[] ctors;
 
-        public ConstructorFunction(BuiltinFunction realTarget, MethodBase []constructors)
+        public ConstructorFunction(BuiltinFunction realTarget, MethodBase[] constructors)
             : base() {
             base.Name = "__new__";
             base.Targets = realTarget.Targets;
@@ -1025,13 +1025,13 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                 MethodBase[] targets = ctors;
 
                 for (int i = 0; i < targets.Length; i++) {
-                    if(targets[i] != null) sb.AppendLine(ReflectionUtil.DocOneInfo(targets[i]));
+                    if (targets[i] != null) sb.AppendLine(ReflectionUtil.DocOneInfo(targets[i]));
                 }
                 return sb.ToString();
-               
+
             }
         }
-        
+
         internal MethodBase[] ConstructorTargets {
             get {
                 return ctors;

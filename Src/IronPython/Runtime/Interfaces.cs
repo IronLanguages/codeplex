@@ -73,7 +73,7 @@ namespace IronPython.Runtime {
         /// added using syntax like:
         ///     obj.__dict__[100] = someOtherObject
         /// </returns>
-        List GetAttrNames(ICallerContext context);  
+        List GetAttrNames(ICallerContext context);
         IDictionary<object, object> GetAttrDict(ICallerContext context);
     }
 

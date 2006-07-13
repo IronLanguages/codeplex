@@ -46,7 +46,8 @@ namespace IronPython.Runtime {
 
         public List<object> staticData;
 
-        internal ModuleScope(PythonModule mod) : this(mod, mod.__dict__, mod.__dict__) {
+        internal ModuleScope(PythonModule mod)
+            : this(mod, mod.__dict__, mod.__dict__) {
         }
 
         internal ModuleScope(PythonModule mod, IAttributesDictionary globals, object locals) {
@@ -56,7 +57,7 @@ namespace IronPython.Runtime {
             __builtin__ = TypeCache.Builtin;
         }
 
-        internal ModuleScope(PythonModule mod, IAttributesDictionary globals, object locals, ICallerContext context) 
+        internal ModuleScope(PythonModule mod, IAttributesDictionary globals, object locals, ICallerContext context)
             : this(mod, globals, locals) {
             trueDivision = context.TrueDivision;
         }

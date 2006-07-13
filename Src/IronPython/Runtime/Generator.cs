@@ -118,8 +118,8 @@ namespace IronPython.Runtime {
         public System.Collections.Generic.IDictionary<object, object> GetAttrDict(ICallerContext context) {
             return generatorType.GetAttrDict(context, this);
         }
-     
-        #endregion        
+
+        #endregion
     }
 
     [PythonType("enum_iter")]

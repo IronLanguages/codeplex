@@ -81,7 +81,7 @@ namespace IronPythonTest {
         }
         public static Cmplx operator /(Cmplx x, Cmplx y) {
             double div = y.r * y.r + y.i * y.i;
-            return new Cmplx((x.r * y.r + x.i * y.i) / div, (x.i*y.r - x.r*y.i) / div);
+            return new Cmplx((x.r * y.r + x.i * y.i) / div, (x.i * y.r - x.r * y.i) / div);
         }
         public static Cmplx operator +(double x, Cmplx y) {
             return new Cmplx(x + y.r, y.i);
@@ -112,7 +112,7 @@ namespace IronPythonTest {
             return x;
         }
         [System.Runtime.CompilerServices.SpecialName]
-        public static Cmplx op_MultiplicationAssignment(Cmplx x, Cmplx y){
+        public static Cmplx op_MultiplicationAssignment(Cmplx x, Cmplx y) {
             double r = x.r * y.r - x.i * y.i;
             double i = x.r * y.i + x.i * y.r;
             x.r = r;
@@ -156,7 +156,7 @@ namespace IronPythonTest {
             x.i = i;
             return x;
         }
-     }
+    }
 
     public class Cmplx2 {
         private double r;

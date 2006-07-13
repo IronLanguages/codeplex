@@ -267,7 +267,7 @@ namespace IronMath {
                 out result);
         }
 
-        public double ToFloat64() {            
+        public double ToFloat64() {
             return double.Parse(
                 ToString(10),
                 System.Globalization.CultureInfo.InvariantCulture.NumberFormat
@@ -413,7 +413,7 @@ namespace IronMath {
             // we can hold all double values, but not all double values
             // can hold BigInteger values, and we may lose precision.  Convert
             // the double to a big int, then compare.
-            
+
             if ((y % 1) != 0) return false;  // not a whole number, can't be equal
 
             return x == BigInteger.Create(y);
@@ -1242,7 +1242,7 @@ namespace IronMath {
             return checked((float)ToDouble(provider));
         }
 
-        public string ToString(IFormatProvider provider) {            
+        public string ToString(IFormatProvider provider) {
             return ToString();
         }
 
@@ -1284,7 +1284,7 @@ namespace IronMath {
         string IFormattable.ToString(string format, IFormatProvider formatProvider) {
             if (format == null) return this.ToString();
 
-            switch(format[0]){
+            switch (format[0]) {
                 case 'd':
                 case 'D':
                     if (format.Length > 1) {

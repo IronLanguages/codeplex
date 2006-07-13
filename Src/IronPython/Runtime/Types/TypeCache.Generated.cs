@@ -34,7 +34,7 @@ namespace IronPython.Runtime.Types {
         // *** END GENERATED CODE ***
 
         #endregion
-        
+
         #region Generated TypeCache Entries
 
         // *** BEGIN GENERATED CODE ***

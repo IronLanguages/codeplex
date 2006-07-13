@@ -31,7 +31,7 @@ namespace IronPython.Runtime.Calls {
     public delegate object CallTargetN(params object[] args);
     public delegate object CallTargetWithContextN(ICallerContext context, params object[] args);
 
-    public abstract partial class FastCallable:ICallable, ICallableWithCallerContext {
+    public abstract partial class FastCallable : ICallable, ICallableWithCallerContext {
 
         public static Delegate MakeDelegate(MethodInfo mi) {
             if (mi.ReturnType != typeof(object)) return null;
@@ -79,7 +79,7 @@ namespace IronPython.Runtime.Calls {
             throw new NotImplementedException();
         }
 
-        protected FastCallable() {}
+        protected FastCallable() { }
 
         public abstract object Call(ICallerContext context, params object[] args);
         public abstract object CallInstance(ICallerContext context, object instance, params object[] args);
@@ -95,12 +95,12 @@ namespace IronPython.Runtime.Calls {
             //It's possible that discontinuous sets of arg counts will produce a weird error message
             return PythonFunction.TypeErrorForIncorrectArgumentCount(name, maxArgs, maxArgs - minArgs, argCount);
         }
-   
+
         protected static object[] PrependInstance(object instance, object[] args) {
             object[] nargs = new object[args.Length + 1];
             nargs[0] = instance;
-            for (int i=0; i < args.Length; i++) {
-                nargs[i+1] = args[i];
+            for (int i = 0; i < args.Length; i++) {
+                nargs[i + 1] = args[i];
             }
             return nargs;
         }

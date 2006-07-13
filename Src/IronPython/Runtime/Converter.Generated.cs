@@ -473,7 +473,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static Byte ConvertToByte(object value) {
             if (value is Byte) {
-                 return (Byte)value;
+                return (Byte)value;
             } else if (value is Int32) {
                 return checked((Byte)(Int32)value);
             } else if (value is Boolean) {
@@ -508,7 +508,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static SByte ConvertToSByte(object value) {
             if (value is SByte) {
-                 return (SByte)value;
+                return (SByte)value;
             } else if (value is Int32) {
                 return checked((SByte)(Int32)value);
             } else if (value is Boolean) {
@@ -543,7 +543,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static Int16 ConvertToInt16(object value) {
             if (value is Int16) {
-                 return (Int16)value;
+                return (Int16)value;
             } else if (value is Int32) {
                 return checked((Int16)(Int32)value);
             } else if (value is Boolean) {
@@ -578,7 +578,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static UInt16 ConvertToUInt16(object value) {
             if (value is UInt16) {
-                 return (UInt16)value;
+                return (UInt16)value;
             } else if (value is Int32) {
                 return checked((UInt16)(Int32)value);
             } else if (value is Boolean) {
@@ -653,7 +653,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static UInt32 ConvertToUInt32(object value) {
             if (value is UInt32) {
-                 return (UInt32)value;
+                return (UInt32)value;
             } else if (value is Int32) {
                 return checked((UInt32)(Int32)value);
             } else if (value is Boolean) {
@@ -686,7 +686,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static Int64 ConvertToInt64(object value) {
             if (value is Int64) {
-                 return (Int64)value;
+                return (Int64)value;
             } else if (value is Int32) {
                 return (Int64)(Int32)value;
             } else if (value is Boolean) {
@@ -719,7 +719,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static UInt64 ConvertToUInt64(object value) {
             if (value is UInt64) {
-                 return (UInt64)value;
+                return (UInt64)value;
             } else if (value is Int32) {
                 return checked((UInt64)(Int32)value);
             } else if (value is Boolean) {
@@ -752,7 +752,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static Single ConvertToSingle(object value) {
             if (value is Single) {
-                 return (Single)value;
+                return (Single)value;
             } else if (value is Int32) {
                 return (Single)(Int32)value;
             } else if (value is Boolean) {
@@ -847,7 +847,7 @@ namespace IronPython.Runtime {
         /// </summary>
         public static Decimal ConvertToDecimal(object value) {
             if (value is Decimal) {
-                 return (Decimal)value;
+                return (Decimal)value;
             } else if (value is Int32) {
                 return (Decimal)(Int32)value;
             } else if (value is Boolean) {

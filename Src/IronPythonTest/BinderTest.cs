@@ -230,13 +230,13 @@ namespace IronPythonTest.BinderTest {
         public void M103(ref Int32 arg) { arg = 100; Flag.Value = 103; }
         public void M103(ref Byte arg) { arg = 10; Flag.Value = 203; }
 
-        public void M104(ref Int32 arg) { arg = 100;  Flag.Value = 104; }
+        public void M104(ref Int32 arg) { arg = 100; Flag.Value = 104; }
         public void M104(ref Object arg) { arg = typeof(int); Flag.Value = 204; }
 
         public void M105(ref Boolean arg) { arg = true; Flag.Value = 105; }
-        public void M105(ref Object arg) { arg = typeof(Type);  Flag.Value = 205; }
+        public void M105(ref Object arg) { arg = typeof(Type); Flag.Value = 205; }
 
-        public void M106(ref C1 arg) { arg = new C1();  Flag.Value = 106; }
+        public void M106(ref C1 arg) { arg = new C1(); Flag.Value = 106; }
         public void M106(ref C2 arg) { arg = new C2(); Flag.Value = 206; }
 
         public void M107(ref C1 arg) { arg = new C1(); Flag.Value = 107; }

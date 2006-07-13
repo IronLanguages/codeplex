@@ -103,7 +103,7 @@ namespace IronPython.Runtime {
                 }
 
             }
-            
+
             if (newmod == null) {
                 newmod = ImportTopAbsolute(mod, parts[0]);
                 if (newmod == null) return null;

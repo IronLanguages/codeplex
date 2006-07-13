@@ -29,7 +29,7 @@ namespace IronPython.Runtime {
             /// need to track multiple items, and if you want to keep it then create 
             /// a new Categories entry & rename all your temporary entries.
             /// </summary>
-            Temporary,                                   
+            Temporary,
             Exceptions,     // exceptions thrown
             Properties,     // properties got or set
             Fields,         // fields got or set
@@ -40,13 +40,13 @@ namespace IronPython.Runtime {
         }
 
         private static int totalEvents = 0;
-        private static Dictionary<string,int> events = new Dictionary<string,int>();
+        private static Dictionary<string, int> events = new Dictionary<string, int>();
         private static Dictionary<Categories, int> summaryStats = new Dictionary<Categories, int>();
 
         public static void PerfTest(BuiltinFunction o, int count) {
             Stopwatch s = new Stopwatch();
             s.Start();
-            for(int i = 0; i<count;i++){
+            for (int i = 0; i < count; i++) {
                 o.Call();
             }
             s.Stop();

@@ -110,8 +110,8 @@ namespace IronPython.Runtime.Types {
         #region Protected API Surface
 
         protected virtual void AddOps() {
-        }        
-       
+        }
+
         #endregion
 
         #region Internal API Surface
@@ -152,7 +152,7 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary> Generic helper for doing the different types of method stores. </summary>
-        internal void StoreMethod(string name, MethodInfo mi, FunctionType ft) {            
+        internal void StoreMethod(string name, MethodInfo mi, FunctionType ft) {
             object existingMember;
             BuiltinFunction rm = null;
             SymbolId methodId = SymbolTable.StringToId(name);
@@ -197,9 +197,9 @@ namespace IronPython.Runtime.Types {
             if (dict.TryGetValue(methodId, out existingMethod)) {
                 ClassMethodDescriptor cm = existingMethod as ClassMethodDescriptor;
 
-                Debug.Assert(cm != null, 
+                Debug.Assert(cm != null,
                     String.Format("Replacing existing method {0} on {1}", methodId, this));
-                
+
                 cm.func.AddMethod(mi);
             } else {
                 dict[methodId] = new ClassMethodDescriptor(BuiltinFunction.MakeMethod(name, mi, FunctionType.Function | FunctionType.PythonVisible));
@@ -227,8 +227,7 @@ namespace IronPython.Runtime.Types {
                 }
 
                 prependedAttrs = attrInjector;
-            }
-            else {
+            } else {
                 if (appendedAttrs != null) {
                     throw new InvalidOperationException("Attributes injector already registered");
                 }
@@ -249,12 +248,12 @@ namespace IronPython.Runtime.Types {
                 // We will set our allocator to be a bound-method that passes our type
                 // through, and we'll leave __new__ unchanged, other than making sure
                 // it's a function, not a method.
-    
+
                 BuiltinFunction bf = newFunc as BuiltinFunction;
                 Debug.Assert(bf != null);
 
                 ctor = bf;
-                
+
                 bf.FunctionType = (bf.FunctionType & ~FunctionType.FunctionMethodMask) | FunctionType.Function;
             } else {
                 CreateNewMethod();
@@ -263,7 +262,7 @@ namespace IronPython.Runtime.Types {
             // __init__
             if (!dict.ContainsKey(SymbolTable.Init)) {
                 dict[SymbolTable.Init] = InstanceOps.Init;
-            }               
+            }
         }
 
         /// <summary>
@@ -276,10 +275,10 @@ namespace IronPython.Runtime.Types {
                 if (reflectedCtors == null) return; // no ctors, no __new__
 
                 ctor = reflectedCtors;
-                if (reflectedCtors.Targets.Length == 1 && 
+                if (reflectedCtors.Targets.Length == 1 &&
                     reflectedCtors.Targets[0].GetParameters().Length == 0) {
                     if (IsPythonType) {
-                        dict[SymbolTable.NewInst] = InstanceOps.New; 
+                        dict[SymbolTable.NewInst] = InstanceOps.New;
                     } else {
                         dict[SymbolTable.NewInst] = InstanceOps.NewCls;
                     }
@@ -287,7 +286,7 @@ namespace IronPython.Runtime.Types {
                     dict[SymbolTable.NewInst] = new ConstructorFunction(InstanceOps.CreateNonDefaultNew(), reflectedCtors.Targets);
                 }
             }
-        }        
+        }
 
         private BuiltinFunction GetConstructors() {
             BuiltinFunction reflectedCtors = null;
@@ -419,7 +418,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private PropertyInfo GetPropertyFromMethod(MethodInfo mi, MemberInfo[] defaultMembers) {
-            
+
             foreach (MemberInfo member in defaultMembers) {
                 if (member.MemberType == MemberTypes.Property) {
                     PropertyInfo property = member as PropertyInfo;
@@ -448,7 +447,7 @@ namespace IronPython.Runtime.Types {
         private static PropertyInfo SearchTypeForProperty(MethodInfo mi, Type type) {
             foreach (PropertyInfo prop in type.GetProperties(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)) {
                 if ((prop.GetGetMethod(true) == mi) ||
-                    (prop.GetSetMethod(true) == mi)){
+                    (prop.GetSetMethod(true) == mi)) {
                     return prop;
                 }
             }
@@ -584,7 +583,7 @@ namespace IronPython.Runtime.Types {
                     if (!dict.ContainsKey(SymbolTable.StringToId(name))) {
                         // no collision, store the interface method.
                         StoreReflectedMethod(name, mi, nt);
-                    } 
+                    }
                     break;
                 default: Debug.Assert(false, "Unexpected name type for reflected method"); break;
             }
@@ -655,10 +654,10 @@ namespace IronPython.Runtime.Types {
             switch (nt) {
                 case NameType.None: break;
                 case NameType.PythonMethod:
-                    StoreReflectedMethod(name, mi, nt); 
+                    StoreReflectedMethod(name, mi, nt);
                     break;
-                case NameType.Method: 
-                    StoreReflectedMethod(name, mi, nt); 
+                case NameType.Method:
+                    StoreReflectedMethod(name, mi, nt);
                     break;
                 case NameType.ClassMethod: StoreClassMethod(name, mi); break;
                 default: Debug.Assert(false, "Unexpected name type for reflected method"); break;
@@ -718,7 +717,7 @@ namespace IronPython.Runtime.Types {
                 } else if (setter != null && IsExplicitInterfaceImpl(setter)) {
                     return;
                 }
-                
+
                 NameType getterNt = NameType.None, setterNt = NameType.None;
 
                 if (getter != null) getterNt = NameConverter.TryGetName(this, info, getter, out getName);
@@ -786,13 +785,13 @@ namespace IronPython.Runtime.Types {
 
         protected override Tuple CalculateMro(Tuple baseClasses) {
             // should always be the same for ReflectedTypes
-            Debug.Assert(baseClasses.Equals(BaseClasses));   
+            Debug.Assert(baseClasses.Equals(BaseClasses));
 
             if (effectivePythonType != null) {
                 return effectivePythonType.MethodResolutionOrder;
             } else {
                 return base.CalculateMro(baseClasses);
-            }            
+            }
         }
 
         public override Tuple BaseClasses {
@@ -947,7 +946,7 @@ namespace IronPython.Runtime.Types {
                         }
                     }
                 }
-            }            
+            }
         }
 
         #endregion
@@ -1030,8 +1029,7 @@ namespace IronPython.Runtime.Types {
             if (prependedAttrs != null) {
                 ret = prependedAttrs.GetAttrNames(self);
                 ret.AppendListNoLockNoDups(base.GetAttrNames(context, self));
-            }
-            else {
+            } else {
                 ret = base.GetAttrNames(context, self);
             }
 
@@ -1098,7 +1096,7 @@ namespace IronPython.Runtime.Types {
 
             // Add the attributes from the type
             Dict typeDict = base.GetAttrDict(context, self);
-            foreach (KeyValuePair<object, object> pair in (IDictionary<object,object>)typeDict) {
+            foreach (KeyValuePair<object, object> pair in (IDictionary<object, object>)typeDict) {
                 res.Add(pair);
             }
 
@@ -1188,7 +1186,7 @@ namespace IronPython.Runtime.Types {
             if (type.IsGenericTypeDefinition) {
                 StringBuilder res = new StringBuilder(__name__.ToString());
                 res.Append('[');
-                Type [] generics = type.GetGenericArguments();
+                Type[] generics = type.GetGenericArguments();
                 string comma = "";
                 for (int i = 0; i < generics.Length; i++) {
                     res.Append(comma);
@@ -1310,7 +1308,7 @@ namespace IronPython.Runtime.Types {
         public override string ToString() {
             StringBuilder sb = new StringBuilder("<types ");
             sb.Append(Ops.StringRepr(__name__));
-            for (int i = 0; i < types.Count; i++) {                
+            for (int i = 0; i < types.Count; i++) {
                 sb.Append(", ");
                 sb.Append(Ops.StringRepr(types[i].GetTypeDisplayName()));
             }

@@ -60,8 +60,7 @@ namespace IronPythonTest {
                     if (n is XmlElement && string.CompareOrdinal(n.Name, name) == 0) {
                         if (n.HasChildNodes && n.FirstChild == n.LastChild && n.FirstChild is XmlText) {
                             value = n.InnerText;
-                        }
-                        else {
+                        } else {
                             value = n;
                         }
 

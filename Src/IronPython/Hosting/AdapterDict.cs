@@ -26,7 +26,7 @@ namespace IronPython.Hosting {
     /// in terms of IAttributesDictionary.
     /// </summary>
     [PythonType(typeof(Dict))]
-    internal class StringDictionaryAdapterDict : SymbolIdDictBase, 
+    internal class StringDictionaryAdapterDict : SymbolIdDictBase,
         IDictionary, IDictionary<object, object>, IAttributesDictionary {
 
         IDictionary<string, object> dict; // the underlying dictionary
@@ -89,7 +89,7 @@ namespace IronPython.Hosting {
             }
         }
 
-        public IDictionary<SymbolId, object> SymbolAttributes {            
+        public IDictionary<SymbolId, object> SymbolAttributes {
             get {
                 Dictionary<SymbolId, object> symbolIdDict = new Dictionary<SymbolId, object>();
                 lock (this) {
@@ -97,7 +97,7 @@ namespace IronPython.Hosting {
                         symbolIdDict[SymbolTable.StringToId(kvp.Key)] = kvp.Value;
                     }
                 }
-                return symbolIdDict; 
+                return symbolIdDict;
             }
         }
 
@@ -419,7 +419,7 @@ namespace IronPython.Hosting {
 
         #region IEnumerable<KeyValuePair<string,object>> Members
 
-        class DictionaryEnumerator : CheckedDictionaryEnumerator, IEnumerator<KeyValuePair<string,object>> {
+        class DictionaryEnumerator : CheckedDictionaryEnumerator, IEnumerator<KeyValuePair<string, object>> {
             IEnumerator<KeyValuePair<SymbolId, object>> enumerator;
 
             internal DictionaryEnumerator(IEnumerator<KeyValuePair<SymbolId, object>> e) {
@@ -444,10 +444,10 @@ namespace IronPython.Hosting {
 
             #region IEnumerator<KeyValuePair<string,object>> Members
 
-            KeyValuePair<string, object> IEnumerator<KeyValuePair<string,object>>.Current {
-                get { 
+            KeyValuePair<string, object> IEnumerator<KeyValuePair<string, object>>.Current {
+                get {
                     string key = SymbolTable.IdToString(enumerator.Current.Key);
-                    return new KeyValuePair<string,object>(key, enumerator.Current.Value); 
+                    return new KeyValuePair<string, object>(key, enumerator.Current.Value);
                 }
             }
 

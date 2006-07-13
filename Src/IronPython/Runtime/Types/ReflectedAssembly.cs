@@ -31,7 +31,7 @@ namespace IronPython.Runtime.Types {
         internal static ReflectedType MakeDynamicType() {
             if (AssemblyType == null) {
                 ReflectedAssemblyType rat = new ReflectedAssemblyType();
-                if(Interlocked.CompareExchange<ReflectedAssemblyType>(ref AssemblyType, rat, null)==null)
+                if (Interlocked.CompareExchange<ReflectedAssemblyType>(ref AssemblyType, rat, null) == null)
                     return rat;
             }
             return AssemblyType;

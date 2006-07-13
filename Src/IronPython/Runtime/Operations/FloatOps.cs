@@ -253,7 +253,7 @@ namespace IronPython.Runtime.Operations {
             else if (other is Complex64) return Ops.Bool2Object(x == (Complex64)other);
             else if (other is float) return Ops.Bool2Object(x == (float)other);
             else if (other is ExtensibleFloat) return Ops.Bool2Object(x == ((ExtensibleFloat)other).value);
-            else if ((el = other as ExtensibleLong)!=null) return Ops.Bool2Object(x == el.Value);
+            else if ((el = other as ExtensibleLong) != null) return Ops.Bool2Object(x == el.Value);
             else if (other is bool) return Ops.Bool2Object((bool)other ? x == 1 : x == 0);
             else if (other is decimal) return Ops.Bool2Object(x == (double)(decimal)other);
 
@@ -317,7 +317,7 @@ namespace IronPython.Runtime.Operations {
             return x;
         }
 
-        
+
         #region ToString
 
         public static string ToString(double x) {
@@ -372,8 +372,8 @@ namespace IronPython.Runtime.Operations {
             if (other is BigInteger) return Power(x, ((BigInteger)other));
             if (other is bool) return Power(x, (bool)other ? 1 : 0);
             if (other is float) return Power(x, ((float)other));
-            if ((num = other as INumber) !=null) return num.ReversePower(x);
-            if ((ec = other as ExtensibleComplex)!=null) return ComplexOps.ReversePower(ec.value, x);
+            if ((num = other as INumber) != null) return num.ReversePower(x);
+            if ((ec = other as ExtensibleComplex) != null) return ComplexOps.ReversePower(ec.value, x);
             if (other is byte) return Power(x, (int)((byte)other));
             return Ops.NotImplemented;
         }
@@ -408,10 +408,10 @@ namespace IronPython.Runtime.Operations {
                 if (y == BigInteger.Zero) throw Ops.ZeroDivisionError();
                 return Math.Floor(x / y);
             }
-            if ((num = other as INumber)!=null) {
+            if ((num = other as INumber) != null) {
                 return num.ReverseFloorDivide(x);
             }
-            if ((ec = other as ExtensibleComplex)!=null) {
+            if ((ec = other as ExtensibleComplex) != null) {
                 ComplexOps.FloorDivide((Complex64)x, ec.value);
             }
 
@@ -460,7 +460,7 @@ namespace IronPython.Runtime.Operations {
                 if (x == 0) throw Ops.ZeroDivisionError();
                 return ComplexOps.FloorDivide(((ExtensibleComplex)other).value, Complex64.MakeReal(x));
             }
-            if ((el = other as ExtensibleLong)!=null) {
+            if ((el = other as ExtensibleLong) != null) {
                 if (x == 0) throw Ops.ZeroDivisionError();
                 return Math.Floor(el.Value / x);
             }
@@ -514,7 +514,7 @@ namespace IronPython.Runtime.Operations {
             if ((num = other as INumber) != null) {
                 return num.ReverseMod(x);
             }
-            if ((ec = other as ExtensibleComplex) !=null) {
+            if ((ec = other as ExtensibleComplex) != null) {
                 return ComplexOps.Mod((Complex64)x, ec.value);
             }
             if (other is IConvertible) {
@@ -566,7 +566,7 @@ namespace IronPython.Runtime.Operations {
                 if (x == 0) throw Ops.ZeroDivisionError();
                 return Modulo(el.Value, x);
             }
-            if (other is IConvertible) {                
+            if (other is IConvertible) {
                 if (x == 0) throw Ops.ZeroDivisionError();
                 return Modulo(((IConvertible)other).ToDouble(null), x);
             }
@@ -578,7 +578,7 @@ namespace IronPython.Runtime.Operations {
         public static object ReversePower(double x, object other) {
             INumber num;
             ExtensibleComplex ec;
-            
+
             if (other is int) return IntOps.Power((int)other, x);
             if (other is long) return Int64Ops.Power(((long)other), x);
             if (other is Complex64) return ComplexOps.Power(((Complex64)other), x);

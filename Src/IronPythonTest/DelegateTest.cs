@@ -31,7 +31,7 @@ namespace IronPythonTest {
     public delegate object SimpleReturnDelegateArg2(object arg1, object arg2);
     public delegate object IntArgDelegate(int arg1, int arg2);
     public delegate object StringArgDelegate(string arg1, string arg2);
-    
+
     public class DelegateTest {
         // custom delegates used for various event handlers...        
         public static event EventHandler StaticEvent;
@@ -57,7 +57,7 @@ namespace IronPythonTest {
         public static void SimpleMethod() {
         }
 
-        public static void InvokeUntypedDelegate(Delegate d, params object [] args) {
+        public static void InvokeUntypedDelegate(Delegate d, params object[] args) {
             d.DynamicInvoke(args);
         }
 
@@ -69,7 +69,7 @@ namespace IronPythonTest {
             StaticGenericEvent(sender, e);
         }
 
-        public static void FireParamsStatic(object sender, params object [] args) {
+        public static void FireParamsStatic(object sender, params object[] args) {
             StaticParamsEvent(sender, args);
         }
 

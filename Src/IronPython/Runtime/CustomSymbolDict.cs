@@ -307,7 +307,7 @@ namespace IronPython.Runtime {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object,object>>.GetEnumerator() {
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
             if (data != null) {
                 foreach (KeyValuePair<SymbolId, object> o in data) {
                     if (o.Key == SymbolTable.Invalid) break;
@@ -407,7 +407,7 @@ namespace IronPython.Runtime {
                         if (name.Key == SymbolTable.ObjectKeys) continue;
                         d.Add(name.Key, name.Value);
                     }
-                    foreach(SymbolId extraKey in ExtraKeys) {
+                    foreach (SymbolId extraKey in ExtraKeys) {
                         object value;
                         if (TryGetExtraValue(extraKey, out value) && !(value is Uninitialized))
                             d.Add(extraKey, value);
@@ -552,8 +552,8 @@ namespace IronPython.Runtime {
         #region IDictionaryEnumerator Members
         public DictionaryEntry Entry {
             get {
-                CheckEnumeratorState(); 
-                return new DictionaryEntry(Key, Value); 
+                CheckEnumeratorState();
+                return new DictionaryEntry(Key, Value);
             }
         }
 
@@ -596,14 +596,14 @@ namespace IronPython.Runtime {
         #region IEnumerator<KeyValuePair<object,object>> Members
 
         KeyValuePair<object, object> IEnumerator<KeyValuePair<object, object>>.Current {
-            get { return new KeyValuePair<object,object>(Key, Value); }
+            get { return new KeyValuePair<object, object>(Key, Value); }
         }
 
         #endregion
 
         #region IDisposable Members
 
-        public void Dispose() {}
+        public void Dispose() { }
 
         #endregion
 

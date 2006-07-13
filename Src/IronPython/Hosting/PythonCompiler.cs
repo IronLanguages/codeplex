@@ -73,8 +73,8 @@ namespace IronPython.Hosting {
         }
 
         public override void AddError(string path, string message, string lineText, CodeSpan span, int errorCode, Severity severity) {
-            if(severity >= Severity.Error) errors++;
-            else if(severity >= Severity.Warning) warnings++;
+            if (severity >= Severity.Error) errors++;
+            else if (severity >= Severity.Warning) warnings++;
             else messages++;
 
             if (sink != null) {

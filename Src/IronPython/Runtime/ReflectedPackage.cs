@@ -38,14 +38,16 @@ namespace IronPython.Runtime {
         private bool isolated;
         internal static Dictionary<Type, string> builtinModuleNames = new Dictionary<Type, string>();
 
-        internal TopReflectedPackage() : base(String.Empty) {
+        internal TopReflectedPackage()
+            : base(String.Empty) {
         }
 
         /// <summary>
         /// Creates a top reflected package that is optionally isolated
         /// from all other packages in the system.
         /// </summary>
-        internal TopReflectedPackage(bool isolated) : base(String.Empty) {
+        internal TopReflectedPackage(bool isolated)
+            : base(String.Empty) {
             this.isolated = isolated;
         }
 
@@ -66,7 +68,7 @@ namespace IronPython.Runtime {
 
         public object TryGetPackageAny(SystemState state, string name) {
             Initialize(state);
-            object ret;            
+            object ret;
             if (__dict__.TryGetValue(SymbolTable.StringToId(name), out ret)) {
                 return ret;
             }
@@ -185,7 +187,7 @@ namespace IronPython.Runtime {
                 builtins.Remove("nt");
             }
 
-            state.builtin_module_names = Tuple.Make(builtins.Keys);            
+            state.builtin_module_names = Tuple.Make(builtins.Keys);
         }
 
         #endregion
@@ -213,7 +215,8 @@ namespace IronPython.Runtime {
             loadLevels = new Dictionary<SymbolId, int>();
         }
 
-        protected ReflectedPackage(string name) : this() {
+        protected ReflectedPackage(string name)
+            : this() {
             fullName = name;
         }
 
@@ -288,7 +291,7 @@ namespace IronPython.Runtime {
                 // import System will result in the namespace being visible.
                 PythonModule pm = ret as PythonModule;
                 ReflectedPackage res;
-                do{
+                do {
                     res = pm.InnerModule as ReflectedPackage;
                     if (res != null) return res;
 
@@ -348,7 +351,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        #endregion        
+        #endregion
 
         #region ICustomAttributes Members
 
@@ -384,7 +387,7 @@ namespace IronPython.Runtime {
 
                 // try and find the type name...
                 for (int i = 0; i < packageAssemblies.Count; i++) {
-                    string arityName = typeName + ReflectionUtil.GenericArityDelimiter;  
+                    string arityName = typeName + ReflectionUtil.GenericArityDelimiter;
                     Type[] allTypes = packageAssemblies[i].GetTypes();
 
                     for (int j = 0; j < allTypes.Length; j++) {
@@ -392,8 +395,8 @@ namespace IronPython.Runtime {
                         int nested = t.FullName.IndexOf('+');
                         if (nested != -1) continue;
 
-                        object [] attrs = t.GetCustomAttributes(typeof(PythonTypeAttribute), false);
-                        if ((attrs.Length>0 && ((PythonTypeAttribute)attrs[0]).name == typeName) ||
+                        object[] attrs = t.GetCustomAttributes(typeof(PythonTypeAttribute), false);
+                        if ((attrs.Length > 0 && ((PythonTypeAttribute)attrs[0]).name == typeName) ||
                             t.FullName == typeName ||
                             String.Compare(t.FullName, 0, arityName, 0, arityName.Length) == 0) {
 
@@ -429,7 +432,7 @@ namespace IronPython.Runtime {
                     }
                     value = res;
                 }
-                return true;   
+                return true;
             }
 
             value = null;
@@ -440,7 +443,7 @@ namespace IronPython.Runtime {
             __dict__[name] = value;
         }
 
-        public void DeleteAttr(ICallerContext context, SymbolId name) {            
+        public void DeleteAttr(ICallerContext context, SymbolId name) {
             if (!__dict__.ContainsKey(name)) throw Ops.AttributeErrorForMissingAttribute(ToString(), name);
 
             __dict__[name] = Uninitialized.instance;
@@ -448,7 +451,7 @@ namespace IronPython.Runtime {
 
         public List GetAttrNames(ICallerContext context) {
             LoadAllTypes();
-            
+
             List res = new List(((IDictionary<object, object>)__dict__).Keys);
             res.Sort();
             return res;
@@ -474,5 +477,5 @@ namespace IronPython.Runtime {
         }
 
         #endregion
-    }    
+    }
 }

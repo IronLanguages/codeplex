@@ -231,7 +231,7 @@ x_from_published_scope_test = sys.modules['published_scope_test'].x
                     value = customSymbolValue;
                     return true;
                 }
-                    
+
                 return dict.TryGetValue(key, out value);
             }
 
@@ -632,7 +632,7 @@ global_variable = 300", standardEngine.DefaultModule, locals);
 
             // Ensure that the global code picked up the value of "x" that was pumped into the module
             AreEqual(101, pe.EvaluateAs<int>("x", engineModule));
-            AreEqual(2,   pe.EvaluateAs<int>("y", engineModule));
+            AreEqual(2, pe.EvaluateAs<int>("y", engineModule));
         }
 
         public void ScenarioCreateOptimizedModule_ScriptThrows() {
@@ -664,7 +664,7 @@ global_variable = 300", standardEngine.DefaultModule, locals);
             AreEqual(10, clsPart.Field);
             compiledCode.Execute();
             AreEqual(20, clsPart.Field);
-            
+
         }
 
         public void Scenario12() {

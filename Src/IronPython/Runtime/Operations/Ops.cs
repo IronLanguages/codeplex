@@ -309,7 +309,7 @@ namespace IronPython.Runtime.Operations {
                 });
 
             return CodeGen.CreateDelegate(methodInfo, delegateType, o);
-        }        
+        }
 
         public static object ConvertTo(object o, Type toType) {
             return Converter.Convert(o, toType);
@@ -345,7 +345,7 @@ namespace IronPython.Runtime.Operations {
             else if (o is long) return o;
             else if (o is float) return o;
             else if (o is bool) return Int2Object((bool)o ? 1 : 0);
-            else if(Ops.TryInvokeSpecialMethod(o, SymbolTable.Positive, out ret)) return ret;
+            else if (Ops.TryInvokeSpecialMethod(o, SymbolTable.Positive, out ret)) return ret;
 
             ret = GetDynamicType(o).Positive(o);
             if (ret != Ops.NotImplemented) return ret;
@@ -385,7 +385,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object Is(object x, object y) {
-            return x == y ? TRUE: FALSE;
+            return x == y ? TRUE : FALSE;
         }
 
         public static bool IsRetBool(object x, object y) {
@@ -419,7 +419,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             object contains;
-            if(Ops.TryInvokeSpecialMethod(y, SymbolTable.Contains, out contains, x)) {
+            if (Ops.TryInvokeSpecialMethod(y, SymbolTable.Contains, out contains, x)) {
                 return Ops.IsTrue(contains) ? TRUE : FALSE;
             }
 
@@ -527,7 +527,7 @@ namespace IronPython.Runtime.Operations {
             ret[typeof(void)] = NoneTypeOps.MakeDynamicType();
             ret[typeof(Ellipsis)] = EllipsisTypeOps.MakeDynamicType();
             ret[typeof(NotImplemented)] = NotImplementedTypeOps.MakeDynamicType();
-            
+
             return ret;
         }
 
@@ -538,7 +538,7 @@ namespace IronPython.Runtime.Operations {
             ret = ReflectedType.FromClsOnlyType(ty);
 
             SaveDynamicType(ty, ret);
-            
+
             return ret;
         }
 
@@ -628,7 +628,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             throw Ops.TypeError("can't multiply sequence by non-int");
-        }        
+        }
 
         public static object Equal(object x, object y) {
             ExtensibleString es;
@@ -651,7 +651,7 @@ namespace IronPython.Runtime.Operations {
                 ret = BoolOps.Equals((bool)x, y);
             } else if (x is ExtensibleInt) {
                 ret = IntOps.Equals(((ExtensibleInt)x).value, y);
-            } else if ((es = x as ExtensibleString)!=null) {
+            } else if ((es = x as ExtensibleString) != null) {
                 ret = es.RichEquals(y);
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Equals(((ExtensibleFloat)x).value, y);
@@ -698,7 +698,7 @@ namespace IronPython.Runtime.Operations {
             if (x == null) {
                 return y != null ? Ops.FALSE : Ops.TRUE;
             }
-            
+
             return Bool2Object(x.Equals(y));
         }
 
@@ -724,7 +724,7 @@ namespace IronPython.Runtime.Operations {
                 return IntOps.EqualsRetBool(((ExtensibleInt)x).value, y);
             } else if ((es = x as ExtensibleString) != null) {
                 object res = es.RichEquals(y);
-                if(res != Ops.NotImplemented) return (bool)res;
+                if (res != Ops.NotImplemented) return (bool)res;
             } else if (x is ExtensibleFloat) {
                 return FloatOps.EqualsRetBool(((ExtensibleFloat)x).value, y);
             } else if (x is byte) {
@@ -798,7 +798,7 @@ namespace IronPython.Runtime.Operations {
                 ret = BoolOps.Equals((bool)x, y);
             } else if (x is ExtensibleInt) {
                 ret = IntOps.Equals(((ExtensibleInt)x).value, y);
-            } else if ((es = x as ExtensibleString)!=null) {
+            } else if ((es = x as ExtensibleString) != null) {
                 ret = es.RichEquals(y);
             } else if (x is ExtensibleFloat) {
                 ret = FloatOps.Equals(((ExtensibleFloat)x).value, y);
@@ -869,7 +869,7 @@ namespace IronPython.Runtime.Operations {
                 return !BoolOps.EqualsRetBool((bool)x, y);
             } else if (x is ExtensibleInt) {
                 return !IntOps.EqualsRetBool(((ExtensibleInt)x).value, y);
-            } else if ((es = x as ExtensibleString)!=null) {
+            } else if ((es = x as ExtensibleString) != null) {
                 object ret = es.RichEquals(y);
                 if (ret != Ops.NotImplemented) return (bool)Not(ret);
             } else if (x is ExtensibleFloat) {
@@ -998,7 +998,7 @@ namespace IronPython.Runtime.Operations {
             if (ret != Ops.NotImplemented) return ConvertToCompareInt(ret);
 
             Type xType = (x == null) ? null : x.GetType(), yType = (y == null) ? null : y.GetType();
-            
+
             IComparable c = x as IComparable;
             if (c != null) {
                 if (xType != null && xType != yType) {
@@ -1032,7 +1032,7 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            return CompareTypes(x, y);            
+            return CompareTypes(x, y);
         }
 
         private static int CompareTypes(object x, object y) {
@@ -1062,11 +1062,11 @@ namespace IronPython.Runtime.Operations {
             } else {
                 diff = (int)(IdDispenser.GetId(x) - IdDispenser.GetId(y));
             }
-            
+
             if (diff < 0) return -1;
             if (diff == 0) return 0;
             return 1;
-        }       
+        }
 
         /// <summary>
         /// Attempts a Python rich comparison (see PEP 207)
@@ -1079,7 +1079,7 @@ namespace IronPython.Runtime.Operations {
                 if ((ret = rc1.CompareTo(y)) != Ops.NotImplemented) {
                     return ret;
                 }
-            } 
+            }
 
             IRichComparable rc2 = y as IRichComparable;
             if (rc2 != null) {
@@ -1093,7 +1093,7 @@ namespace IronPython.Runtime.Operations {
                 // no need to try it via the slow types path...
                 return Ops.NotImplemented;
             }
-            
+
             // try the slow path...
 
             DynamicType dt1 = x != null ? null : GetDynamicType(x);
@@ -1109,7 +1109,7 @@ namespace IronPython.Runtime.Operations {
                 if ((ret = dt2.GreaterThan(y, x)) != Ops.NotImplemented) { if (IsTrue(ret)) return -1; }
                 if ((ret = dt2.LessThan(y, x)) != Ops.NotImplemented) { if (IsTrue(ret)) return 1; }
                 if ((ret = dt2.Equal(y, x)) != Ops.NotImplemented) { if (IsTrue(ret)) return 0; }
-            } 
+            }
 
             if (dt1 != null && (ret = dt1.CompareTo(x, y)) != Ops.NotImplemented) return Ops.CompareToZero(ret);
             if (dt2 != null && (ret = dt2.CompareTo(y, x)) != Ops.NotImplemented) return -1 * Ops.CompareToZero(ret);
@@ -1178,7 +1178,7 @@ namespace IronPython.Runtime.Operations {
         public static IEnumerator GetEnumeratorForUnpack(object enumerable) {
             IEnumerator ie;
             if (!Converter.TryConvertToIEnumerator(enumerable, out ie)) {
-                throw Ops.TypeError("unpack non-sequence of type {0}", 
+                throw Ops.TypeError("unpack non-sequence of type {0}",
                     StringRepr(Ops.GetDynamicType(enumerable)));
             }
             return ie;
@@ -1260,7 +1260,7 @@ namespace IronPython.Runtime.Operations {
             else if (o is BigInteger) return LongOps.Hex((BigInteger)o);
 
             object hex;
-            if(TryInvokeSpecialMethod(o, SymbolTable.ConvertToHex, out hex)) {
+            if (TryInvokeSpecialMethod(o, SymbolTable.ConvertToHex, out hex)) {
                 if (!(hex is string) && !(hex is ExtensibleString))
                     throw Ops.TypeError("hex expected string type as return, got {0}", Ops.StringRepr(Ops.GetDynamicType(hex)));
 
@@ -1302,7 +1302,7 @@ namespace IronPython.Runtime.Operations {
             if (res < 0) {
                 throw Ops.ValueError("__len__ should return >= 0, got {0}", res);
             }
-            return res;    
+            return res;
         }
 
         public static object CallWithContext(ICallerContext context, object func, params object[] args) {
@@ -1364,8 +1364,8 @@ namespace IronPython.Runtime.Operations {
 
                 if (argsTuple != null && args.Length == names.Length) {
                     Tuple tuple = argsTuple as Tuple;
-                    if (tuple == null) tuple = new Tuple(argsTuple);                    
-                    
+                    if (tuple == null) tuple = new Tuple(argsTuple);
+
                     largs = new List<object>(tuple);
                     largs.AddRange(args);
                 } else {
@@ -1398,7 +1398,7 @@ namespace IronPython.Runtime.Operations {
 
             return GetDynamicType(func).CallOnInstance(func, args);
         }
-       
+
         public static object Call(ICallerContext context, object func, object[] args, string[] names) {
             IFancyCallable ic = func as IFancyCallable;
             if (ic != null) return ic.Call(context, args, names);
@@ -1427,13 +1427,13 @@ namespace IronPython.Runtime.Operations {
             if (seq != null) {
                 Slice slice;
                 if (index is int) return seq[(int)index];
-                else if ((slice = index as Slice)!=null) {
+                else if ((slice = index as Slice) != null) {
                     if (slice.step == null) {
                         int start, stop;
                         slice.DeprecatedFixed(o, out start, out stop);
 
                         return seq.GetSlice(start, stop);
-                    }                    
+                    }
 
                     return seq[slice];
                 }
@@ -1490,7 +1490,7 @@ namespace IronPython.Runtime.Operations {
                 if (index is int) {
                     seq[(int)index] = value;
                     return;
-                } else if ((slice = index as Slice)!=null) {
+                } else if ((slice = index as Slice) != null) {
                     if (slice.step == null) {
                         int start, stop;
                         slice.DeprecatedFixed(o, out start, out stop);
@@ -1539,13 +1539,13 @@ namespace IronPython.Runtime.Operations {
                 if (index is int) {
                     seq.DeleteItem((int)index);
                     return;
-                } else if ((slice = index as Slice)!=null) {
+                } else if ((slice = index as Slice) != null) {
                     if (slice.step == null) {
                         int start, stop;
                         slice.DeprecatedFixed(o, out start, out stop);
 
                         seq.DeleteSlice(start, stop);
-                    } else 
+                    } else
                         seq.DeleteItem((Slice)index);
 
                     return;
@@ -1562,7 +1562,7 @@ namespace IronPython.Runtime.Operations {
             GetDynamicType(o).DelIndex(o, index);
         }
 
-        public static object GetNamespace(ICallerContext context, Assembly asm, string nameSpace){
+        public static object GetNamespace(ICallerContext context, Assembly asm, string nameSpace) {
             object res;
             if (!Ops.GetDynamicTypeFromType(typeof(Assembly)).TryGetAttr(context, asm, SymbolTable.StringToId(nameSpace), out res)) {
                 throw new InvalidOperationException("bad assembly");
@@ -1661,8 +1661,8 @@ namespace IronPython.Runtime.Operations {
 
         public static void CheckInitializedAttribute(object o, object self, string name) {
             if (o == Uninitialized.instance) {
-                throw Ops.AttributeError("'{0}' object has no attribute '{1}'", 
-                    Ops.GetDynamicType(self), 
+                throw Ops.AttributeError("'{0}' object has no attribute '{1}'",
+                    Ops.GetDynamicType(self),
                     name);
             }
         }
@@ -2307,7 +2307,7 @@ namespace IronPython.Runtime.Operations {
             if (message == null) {
                 return AssertionError(String.Empty, Ops.EMPTY);
             } else {
-                return AssertionError("{0}", new object[]{message});
+                return AssertionError("{0}", new object[] { message });
             }
         }
 

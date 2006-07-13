@@ -60,7 +60,7 @@ namespace IronPython.Compiler.Generation {
     }
 
     class StaticFieldSlotFactory : SlotFactory {
-        Dictionary<SymbolId, StaticFieldSlot> fields = new Dictionary<SymbolId,StaticFieldSlot>();
+        Dictionary<SymbolId, StaticFieldSlot> fields = new Dictionary<SymbolId, StaticFieldSlot>();
         private TypeGen typeGen;
 
         public StaticFieldSlotFactory(TypeGen typeGen) {
@@ -88,7 +88,7 @@ namespace IronPython.Compiler.Generation {
                     // not.
 
                     FieldBuilder fb = typeGen.myType.DefineField(name.GetString(), typeof(BuiltinWrapper), FieldAttributes.Public | FieldAttributes.Static);
-                    fs = new StaticFieldBuiltinSlot(fb);                   
+                    fs = new StaticFieldBuiltinSlot(fb);
                 }
                 fields[name] = fs;
             }

@@ -103,7 +103,7 @@ namespace IronPython.Modules {
                 throw Ops.TypeError(message);
             }
         }
-        
+
         [Documentation("pickle_complex(complex_number) -> (<type 'complex'>, (real, imag))\n\n"
             + "Reduction function for pickling complex numbers.")]
         [PythonName("pickle_complex")]

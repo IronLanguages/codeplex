@@ -259,7 +259,7 @@ namespace IronPython.Compiler.Generation {
                 fileName = "__stdin__";
             } else {
                 fullPath = Path.GetFullPath(sourceFileName);
-                outDir = Options.BinariesDirectory == null? Path.GetDirectoryName(fullPath) : Options.BinariesDirectory;
+                outDir = Options.BinariesDirectory == null ? Path.GetDirectoryName(fullPath) : Options.BinariesDirectory;
                 fileName = Path.GetFileNameWithoutExtension(sourceFileName);
             }
 
@@ -336,18 +336,18 @@ namespace IronPython.Compiler.Generation {
             main.SetCustomAttribute(new CustomAttributeBuilder(typeof(STAThreadAttribute).GetConstructor(Type.EmptyTypes), Ops.EMPTY));
 
             // leaves our module instance on the stack, we save it to create the delegate.
-            Slot instance = new LocalSlot(main.DeclareLocal(tg.myType), main);            
+            Slot instance = new LocalSlot(main.DeclareLocal(tg.myType), main);
             // notify the PythonEngine of the module.
             EmitModuleConstruction(tg, main, moduleName, instance, referencedAssemblies);
-            
+
             main.Emit(OpCodes.Pop); // we don't care about the PythonModule.
 
             // Emit the delegate to the init method (init)
-            main.EmitDelegate(init, typeof(InitializeModule), instance);    
+            main.EmitDelegate(init, typeof(InitializeModule), instance);
 
             // Call ExecuteCompiled
             main.EmitCall(typeof(Ops), "ExecuteCompiled", ExecuteCompiledSignature);
-            
+
             main.EmitReturn();
 
             return main;
@@ -364,7 +364,7 @@ namespace IronPython.Compiler.Generation {
 
             initialize.EmitSet(main);
             initialize.EmitGet(main);
-            
+
             main.EmitString(moduleName);         // emit module name (fullName)
 
             // emit the references assemblies

@@ -148,7 +148,7 @@ namespace IronPython.Modules {
                     else if (o is Complex64) WriteComplex((Complex64)o);
                     else if (o is PythonBuffer) WriteBuffer((PythonBuffer)o);
                     else if (o == ExceptionConverter.GetPythonException("StopIteration")) WriteStopIteration();
-                    else throw Ops.ValueError("unmarshallable object");                    
+                    else throw Ops.ValueError("unmarshallable object");
                 } finally {
                     infinite.RemoveAt(index);
                 }
@@ -562,9 +562,9 @@ namespace IronPython.Modules {
                 if (len + curIndex > myBytes.Length) throw Ops.ValueError("bad marshal data");
 
                 string res = Encoding.UTF8.GetString(myBytes, curIndex, len);
-                
+
                 curIndex += len;
-                
+
                 return res;
             }
 

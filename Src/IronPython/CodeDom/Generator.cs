@@ -74,7 +74,7 @@ namespace IronPython.CodeDom {
             public Nullable<bool> NeedsFieldInit;
         }
 
-        static string[] keywords = new string[]{ "and", "assert", "break", "class", "continue", "def", "del", "elif", "else", "except", "exec", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "not", "or", "pass", "print", "raise", "return", "try", "while", "yield"};
+        static string[] keywords = new string[] { "and", "assert", "break", "class", "continue", "def", "del", "elif", "else", "except", "exec", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "not", "or", "pass", "print", "raise", "return", "try", "while", "yield" };
         protected override void GenerateCompileUnit(CodeCompileUnit e) {
 #if DEBUG
             try {
@@ -108,7 +108,7 @@ namespace IronPython.CodeDom {
                         // suppressed it (this occurs when user code is at the
                         // end of the code compile unit).
                         suppressFlush = false;
-                        DoFlush(-1, -1);  
+                        DoFlush(-1, -1);
 
                         Output.Write(merger.FinalizeMerge());
                         Output.NewLine = oldNewline;
@@ -145,7 +145,7 @@ namespace IronPython.CodeDom {
         }
 
         protected override string CreateValidIdentifier(string value) {
-            if(IsValidIdentifier(value)) return value;
+            if (IsValidIdentifier(value)) return value;
 
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < value.Length; i++) {
@@ -257,7 +257,7 @@ namespace IronPython.CodeDom {
 
         protected override void GenerateComment(CodeComment e) {
             string[] lines = e.Text.Split('\n');
-            foreach(string line in lines){
+            foreach (string line in lines) {
                 Write("# ");
                 WriteLine(line);
             }
@@ -304,7 +304,7 @@ namespace IronPython.CodeDom {
 
         protected override void GenerateConstructor(CodeConstructor e, CodeTypeDeclaration c) {
             FlushOutput(e);
-            
+
             Write("def __init__(self");
             if (e.Parameters.Count > 0) {
                 Write(", ");
@@ -340,7 +340,7 @@ namespace IronPython.CodeDom {
             }
 
             Indent--;
-            WriteLine();            
+            WriteLine();
         }
 
         protected override void GenerateDelegateCreateExpression(CodeDelegateCreateExpression e) {
@@ -348,7 +348,7 @@ namespace IronPython.CodeDom {
                 GenerateExpression(e.TargetObject);
                 Write(".");
             }
-            if(e.TargetObject is CodeThisReferenceExpression) WritePrivatePrefix(e.MethodName);
+            if (e.TargetObject is CodeThisReferenceExpression) WritePrivatePrefix(e.MethodName);
             Write(e.MethodName);
         }
 
@@ -356,7 +356,7 @@ namespace IronPython.CodeDom {
             GenerateExpression(e.TargetObject);
 
             string comma = "";
-            foreach(CodeExpression ce in e.Parameters){
+            foreach (CodeExpression ce in e.Parameters) {
                 Write(comma);
                 GenerateExpression(ce);
                 comma = ", ";
@@ -379,9 +379,9 @@ namespace IronPython.CodeDom {
                 GenerateExpression(e.TargetObject);
                 if (!String.IsNullOrEmpty(e.EventName)) Write(".");
             }
-            
+
             if (!String.IsNullOrEmpty(e.EventName)) {
-                if (e.TargetObject is CodeThisReferenceExpression)  WritePrivatePrefix(e.EventName);
+                if (e.TargetObject is CodeThisReferenceExpression) WritePrivatePrefix(e.EventName);
                 Write(e.EventName);
             }
         }
@@ -420,7 +420,7 @@ namespace IronPython.CodeDom {
             }
 
             if (e.TargetObject is CodeThisReferenceExpression) WritePrivatePrefix(e.FieldName);
-            else if (e.TargetObject is CodeTypeReferenceExpression) WritePrivatePrefix(e.FieldName); 
+            else if (e.TargetObject is CodeTypeReferenceExpression) WritePrivatePrefix(e.FieldName);
 
             Write(e.FieldName);
         }
@@ -440,7 +440,7 @@ namespace IronPython.CodeDom {
         protected override void GenerateIterationStatement(CodeIterationStatement e) {
             AdvanceOutput(e);
 
-            if(e.InitStatement!=null)
+            if (e.InitStatement != null)
                 GenerateStatement(e.InitStatement);
             Write("while ");
             GenerateExpression(e.TestExpression);
@@ -451,35 +451,35 @@ namespace IronPython.CodeDom {
                     WriteLine("pass");
             } else
                 GenerateStatements(e.Statements);
-            if(e.IncrementStatement!=null)
+            if (e.IncrementStatement != null)
                 GenerateStatement(e.IncrementStatement);
             Indent--;
         }
 
-        
-        protected override void GenerateMethod(CodeMemberMethod e, CodeTypeDeclaration c) {            
+
+        protected override void GenerateMethod(CodeMemberMethod e, CodeTypeDeclaration c) {
             FlushOutput(e);
             if (merger != null && e.UserData["MergeOnly"] != null) {
                 MarkMergeOnly(e);
                 return;
             }
 
-            if((e.Attributes & MemberAttributes.ScopeMask) == MemberAttributes.Static) 
+            if ((e.Attributes & MemberAttributes.ScopeMask) == MemberAttributes.Static)
                 WriteLine("@staticmethod");
-            
+
             string thisName = null;
-            if((e.Attributes & MemberAttributes.ScopeMask) != MemberAttributes.Static)
-                thisName= UserDataString(e.UserData, "ThisArg", "self");
+            if ((e.Attributes & MemberAttributes.ScopeMask) != MemberAttributes.Static)
+                thisName = UserDataString(e.UserData, "ThisArg", "self");
 
             string name = e.Name;
             if ((e.Attributes & MemberAttributes.AccessMask) == MemberAttributes.Private) name = "_" + e.Name;
 
-            GenerateMethodWorker(thisName, 
+            GenerateMethodWorker(thisName,
                 UserDataString(e.UserData, "ThisType", null),
-                name, 
-                e.Parameters, 
+                name,
+                e.Parameters,
                 e.Statements,
-                e.ReturnType, 
+                e.ReturnType,
                 e.UserData);
 
         }
@@ -493,8 +493,8 @@ namespace IronPython.CodeDom {
                     Write(")");
                 } else if (chVal == '\'') {
                     Write("'\\''");
-                } else if(chVal == '\\'){
-                    Write("'\\\\'");                
+                } else if (chVal == '\\') {
+                    Write("'\\\\'");
                 } else {
                     Write("System.Convert.ToChar('");
                     Write(chVal.ToString());
@@ -504,8 +504,8 @@ namespace IronPython.CodeDom {
             }
 
             string strVal = e.Value as string;
-            if(strVal != null) {
-                for(int i = 0; i<strVal.Length;i++){
+            if (strVal != null) {
+                for (int i = 0; i < strVal.Length; i++) {
                     if (strVal[i] > 0xFF) {
                         // possibly un-encodable unicode characters,
                         // write unicode characters specially...
@@ -513,9 +513,9 @@ namespace IronPython.CodeDom {
                         for (i = 0; i < strVal.Length; i++) {
                             if (strVal[i] > 0xFF) {
                                 Write(String.Format("\\u{0:X}", (int)strVal[i]));
-                            } else if(strVal[i] < 32) {
+                            } else if (strVal[i] < 32) {
                                 Write(String.Format("\\x{0:X}", (int)strVal[i]));
-                            } else if(strVal[i] == '\'') {
+                            } else if (strVal[i] == '\'') {
                                 Write("\\'");
                             } else if (strVal[i] == '\\') {
                                 Write("\\");
@@ -527,14 +527,14 @@ namespace IronPython.CodeDom {
                         return;
                     }
                 }
-            } 
+            }
 
-            Write(Ops.Repr(e.Value));           
+            Write(Ops.Repr(e.Value));
         }
         protected override void GenerateMethodInvokeExpression(CodeMethodInvokeExpression e) {
             if (e.Method.TargetObject != null) {
                 GenerateExpression(e.Method.TargetObject);
-                if(!String.IsNullOrEmpty(e.Method.MethodName)) Write(".");
+                if (!String.IsNullOrEmpty(e.Method.MethodName)) Write(".");
             }
 
             if (e.Method.MethodName != null) {
@@ -631,10 +631,10 @@ namespace IronPython.CodeDom {
                 if (UserDataFalse(e.UserData, "PreImport")) {
                     GenerateNamespaceImportsWorker(e);
                 }
-            }            
+            }
         }
 
-        private void GenerateNamespaceImportsWorker(CodeNamespace e){
+        private void GenerateNamespaceImportsWorker(CodeNamespace e) {
             bool fHasClr = false;
             foreach (CodeNamespaceImport cni in e.Imports) {
                 RealGenerateNamespaceImport(cni);
@@ -669,7 +669,7 @@ namespace IronPython.CodeDom {
 
         protected override void GenerateProperty(CodeMemberProperty e, CodeTypeDeclaration c) {
             FlushOutput(e);
-            
+
             string priv = String.Empty;
             if ((e.Attributes & MemberAttributes.AccessMask) == MemberAttributes.Private) priv = "_";
 
@@ -680,12 +680,12 @@ namespace IronPython.CodeDom {
             if (e.HasGet) {
                 //WriteLine(String.Format("#this name {0} {1}", thisName,e.Attributes));
                 string getterName = UserDataString(e.UserData, "GetName", priv + "get_" + e.Name);
-                
+
                 GenerateMethodWorker(
                     thisName,
                     UserDataString(e.UserData, "ThisType", null),
-                    getterName, 
-                    new CodeParameterDeclarationExpressionCollection(), 
+                    getterName,
+                    new CodeParameterDeclarationExpressionCollection(),
                     e.GetStatements,
                     e.Type,
                     e.UserData);
@@ -697,10 +697,10 @@ namespace IronPython.CodeDom {
                 GenerateMethodWorker(
                     thisName,
                     UserDataString(e.UserData, "ThisType", null),
-                    setterName, 
+                    setterName,
                     new CodeParameterDeclarationExpressionCollection(
                         new CodeParameterDeclarationExpression[] { 
-                            new CodeParameterDeclarationExpression(e.Type, "value") }), 
+                            new CodeParameterDeclarationExpression(e.Type, "value") }),
                     e.SetStatements,
                     null,
                     e.UserData);
@@ -745,10 +745,10 @@ namespace IronPython.CodeDom {
             Write(e.PropertyName);
         }
 
-        protected override void GeneratePropertySetValueReferenceExpression(CodePropertySetValueReferenceExpression e) {            
+        protected override void GeneratePropertySetValueReferenceExpression(CodePropertySetValueReferenceExpression e) {
             Write("value");
         }
-        
+
         protected override void GenerateRemoveEventStatement(CodeRemoveEventStatement e) {
             AdvanceOutput(e);
 
@@ -768,16 +768,16 @@ namespace IronPython.CodeDom {
             // the codedom base trys to generate w/o indentation, but
             // we need to generate with indentation due to the signficigance
             // of white space.
-            
+
             int oldIndent = Indent;
             Indent = lastIndent;
 
             FlushOutput(e);
-            
-            WriteLine("# begin snippet member "+Indent.ToString()+CurrentTypeName);
+
+            WriteLine("# begin snippet member " + Indent.ToString() + CurrentTypeName);
 
             string[] lines = e.Text.Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            foreach(string line in lines) {
+            foreach (string line in lines) {
                 WriteLine(line);
             }
             WriteLine("# end snippet member");
@@ -802,7 +802,7 @@ namespace IronPython.CodeDom {
 
             Indent = oldIndent;
         }
-        
+
 
 
         protected override void GenerateThisReferenceExpression(CodeThisReferenceExpression e) {
@@ -877,7 +877,7 @@ namespace IronPython.CodeDom {
 
             for (int i = 0; i < CurrentClass.Members.Count; i++) {
                 CodeMemberField e = CurrentClass.Members[i] as CodeMemberField;
-                if(e == null) continue;
+                if (e == null) continue;
 
                 if (e.InitExpression != null) {
                     //!!! non-static init expression should be moved to constructor
@@ -895,7 +895,7 @@ namespace IronPython.CodeDom {
                     if ((e.Attributes & MemberAttributes.AccessMask) == MemberAttributes.Private) Write("_");
                     Write(e.Name);
                     Write(" = ");
-                    switch(e.Type.BaseType){
+                    switch (e.Type.BaseType) {
                         case "bool":
                         case "System.Boolean":
                             Write("False"); break;
@@ -905,17 +905,17 @@ namespace IronPython.CodeDom {
                         default:
                             Write("None"); break;
                     }
-                
-                    WriteLine();                
+
+                    WriteLine();
                 }
             }
-            
+
             Indent--;
         }
 
         protected override void GenerateTypeEnd(CodeTypeDeclaration e) {
             if (e.Name != "__top__" || !UserDataFalse(e.UserData, "IsTopType")) {
-                
+
                 if (NeedFieldInit()) {
                     GenerateFieldInit();
                 }
@@ -959,7 +959,7 @@ namespace IronPython.CodeDom {
             FlushOutput(e);
             if (e.UserData["MergeOnly"] != null) {
                 MarkMergeOnly(e);
-                return; 
+                return;
             }
 
             if (e.Name != "__top__" || !UserDataFalse(e.UserData, "IsTopType")) {
@@ -999,19 +999,19 @@ namespace IronPython.CodeDom {
 
                         List<string> slots = new List<string>();
                         string comma = "";
-                        for (int i = 0; i < e.Members.Count; i++) {                            
+                        for (int i = 0; i < e.Members.Count; i++) {
                             CodeMemberField cmf = e.Members[i] as CodeMemberField;
-                            if (cmf != null && (cmf.Attributes & MemberAttributes.ScopeMask) != MemberAttributes.Static) {                                
+                            if (cmf != null && (cmf.Attributes & MemberAttributes.ScopeMask) != MemberAttributes.Static) {
                                 if (!fOpenedQuote) { Write("\"\"\""); fOpenedQuote = true; }
 
                                 string name;
-                                
+
                                 if ((cmf.Attributes & MemberAttributes.AccessMask) == MemberAttributes.Private) {
                                     name = "_" + cmf.Name;
                                 } else {
                                     name = cmf.Name;
                                 }
-                                
+
                                 Write(comma);
                                 Write("type(");
                                 Write(name);
@@ -1109,7 +1109,7 @@ namespace IronPython.CodeDom {
                     comma = ", ";
                 }
                 baseName.Append(']');
-                return baseName.ToString();                
+                return baseName.ToString();
             }
 
             return PythonizeType(value.BaseType);
@@ -1118,10 +1118,10 @@ namespace IronPython.CodeDom {
         private static string PythonizeType(string baseType) {
             if (baseType == "Boolean" || baseType == "System.Boolean") {
                 return "bool";
-            /*} else if (baseType == "System.Int32") {
-                return "int";
-            } else if (baseType == "System.String") {
-                return "str";*/
+                /*} else if (baseType == "System.Int32") {
+                    return "int";
+                } else if (baseType == "System.String") {
+                    return "str";*/
             } else if (baseType == "Void" || baseType == "System.Void" || baseType == "void") {
                 return "None";
             }
@@ -1227,8 +1227,8 @@ namespace IronPython.CodeDom {
             if (e.Type.BaseType == this.typeStack.Peek().Declaration.Name) {
                 CodeMemberMethod curMeth = CurrentMember as CodeMemberMethod;
                 if (curMeth != null) {
-                    if((curMeth.Attributes & MemberAttributes.ScopeMask) == MemberAttributes.Static)
-                        throw new InvalidOperationException("can't access current type in static scope");                    
+                    if ((curMeth.Attributes & MemberAttributes.ScopeMask) == MemberAttributes.Static)
+                        throw new InvalidOperationException("can't access current type in static scope");
                 }
                 Write("self.__class__");
             } else {
@@ -1272,7 +1272,7 @@ namespace IronPython.CodeDom {
         public override void GenerateCodeFromMember(CodeTypeMember member, System.IO.TextWriter writer, CodeGeneratorOptions options) {
             CodeGeneratorOptions opts = (options == null) ? new CodeGeneratorOptions() : options;
             opts.BlankLinesBetweenMembers = false;
-            
+
             base.GenerateCodeFromMember(member, writer, opts);
         }
         protected override void OutputAttributeDeclarations(CodeAttributeDeclarationCollection attributes) {
@@ -1315,7 +1315,7 @@ namespace IronPython.CodeDom {
 
         protected override void OutputExpressionList(CodeExpressionCollection expressions, bool newlineBetweenItems) {
             bool first = true;
-            IEnumerator en = expressions.GetEnumerator();            
+            IEnumerator en = expressions.GetEnumerator();
             Indent++;
             while (en.MoveNext()) {
                 if (first) {
@@ -1331,7 +1331,7 @@ namespace IronPython.CodeDom {
 
         protected override void OutputOperator(CodeBinaryOperatorType op) {
             switch (op) {
-                case CodeBinaryOperatorType.Add:  Write("+"); break;
+                case CodeBinaryOperatorType.Add: Write("+"); break;
                 case CodeBinaryOperatorType.Subtract: Write("-"); break;
                 case CodeBinaryOperatorType.Multiply: Write("*"); break;
                 case CodeBinaryOperatorType.Divide: Write("/"); break;
@@ -1389,9 +1389,9 @@ namespace IronPython.CodeDom {
         }
 
         protected override void GenerateTypeReferenceExpression(CodeTypeReferenceExpression e) {
-            if(e.Type.BaseType == "void"){
+            if (e.Type.BaseType == "void") {
                 Write("System.Void");
-            }else{
+            } else {
                 base.GenerateTypeReferenceExpression(e);
             }
 
@@ -1405,7 +1405,7 @@ namespace IronPython.CodeDom {
                 if (instanceType != null) {
                     Write("Self()");
                     comma = ", ";
-                } else if(instanceName != null) {
+                } else if (instanceName != null) {
                     Write("Self()");
                     comma = ", ";
                 }
@@ -1469,10 +1469,10 @@ namespace IronPython.CodeDom {
                 userData[name] == null ||
                 ((bool)userData[name]) == false;
         }
-        
+
         private static bool UserDataTrue(IDictionary userData, string name) {
-            return userData == null || 
-                userData[name] == null || 
+            return userData == null ||
+                userData[name] == null ||
                 ((bool)userData[name]) == true;
         }
 
@@ -1564,13 +1564,13 @@ namespace IronPython.CodeDom {
 
             lastRow = line;
             lastCol = column;
-        }        
+        }
 
         private void Write(object val) {
             Write(val.ToString());
         }
-        
-        private void Write(int val) {            
+
+        private void Write(int val) {
             Write(val.ToString());
         }
 
@@ -1579,9 +1579,9 @@ namespace IronPython.CodeDom {
         }
 
         private void Write(string txt) {
-            if(merger != null){
+            if (merger != null) {
                 string[] lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-                
+
                 for (int i = 0; i < lines.Length; i++) {
                     if (i != 0) {
                         writeCache.AppendLine();
@@ -1595,8 +1595,8 @@ namespace IronPython.CodeDom {
 
                     writeCache.Append(lines[i]);
                     col += lines[i].Length;
-                }                
-            }else{
+                }
+            } else {
                 Output.Write(txt);
             }
         }

@@ -218,7 +218,7 @@ namespace IronPython.Runtime.Exceptions {
                 Ops.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("code"), code);
                 Ops.SetAttr(DefaultContext.Default, self, SymbolTable.Arguments, args);
             }
-    
+
             return null;
         }
 

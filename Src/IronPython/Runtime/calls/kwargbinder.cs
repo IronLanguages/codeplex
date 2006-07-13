@@ -40,7 +40,7 @@ namespace IronPython.Runtime.Calls {
         private int paramArrayIndex = -1;
         private bool targetsCls;       // true if we target a CLS method, false if we target a Python function
         private string methodName = "unknown";
-        private bool fAllowUnboundArgs; 
+        private bool fAllowUnboundArgs;
         private List<UnboundArgument> unboundArgs;
         private Exception error;
         private ICallerContext ctx;
@@ -75,7 +75,7 @@ namespace IronPython.Runtime.Calls {
             methodName = target.Name;
             targetsCls = true;
             int kwDict = -1, paramsArray = -1;
-           
+
             if (pis.Length > 0) {
                 // populate argument information
                 for (int i = 0; i < pis.Length; i++) {
@@ -89,9 +89,9 @@ namespace IronPython.Runtime.Calls {
                         pis[pis.Length - 2].IsDefined(typeof(ParamDictAttribute), false)) {
                         kwDict = pis.Length - 2;
                     }
-                }else if (pis[pis.Length - 1].IsDefined(typeof(ParamDictAttribute), false)) {
+                } else if (pis[pis.Length - 1].IsDefined(typeof(ParamDictAttribute), false)) {
                     kwDict = pis.Length - 1;
-                }  
+                }
             }
 
             return DoBind(name, argNames, defaultVals, kwDict, paramsArray);
@@ -238,7 +238,7 @@ namespace IronPython.Runtime.Calls {
                         haveArg[i] = true;
                     } else {
                         int realDefaultsCount = 0;
-                        for (int d = 0; d < GetNormalArgumentsCount(); d++ ) {
+                        for (int d = 0; d < GetNormalArgumentsCount(); d++) {
                             if (defaultVals[d] != DBNull.Value) realDefaultsCount++;
                         }
 

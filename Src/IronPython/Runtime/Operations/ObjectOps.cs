@@ -194,9 +194,9 @@ namespace IronPython.Runtime.Operations {
                 funcArgs[0] = myType;
                 for (int i = 0; i < newArgs.Count; i++) funcArgs[i + 1] = newArgs[i];
             } else {
-                funcArgs = new object[]{myType};
+                funcArgs = new object[] { myType };
             }
-            
+
             if (!Ops.TryInvokeSpecialMethod(self, SymbolTable.GetState, out state)) {
                 object dict;
                 if (Ops.TryGetAttr(self, SymbolTable.Dict, out dict)) {
@@ -212,10 +212,10 @@ namespace IronPython.Runtime.Operations {
                     initializedSlotValues = null;
                 }
 
-                if      (dict == null && initializedSlotValues == null) state = null;
+                if (dict == null && initializedSlotValues == null) state = null;
                 else if (dict != null && initializedSlotValues == null) state = dict;
                 else if (dict != null && initializedSlotValues != null) state = Tuple.MakeTuple(dict, initializedSlotValues);
-                else   /*dict == null && initializedSlotValues != null*/state = Tuple.MakeTuple(null, initializedSlotValues);
+                else   /*dict == null && initializedSlotValues != null*/ state = Tuple.MakeTuple(null, initializedSlotValues);
             }
 
             listIterator = null;

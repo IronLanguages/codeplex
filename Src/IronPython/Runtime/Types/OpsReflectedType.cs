@@ -65,7 +65,7 @@ namespace IronPython.Runtime.Types {
 
             lock (OpsTypeToType) {
                 if (baseType.IsArray) {
-                    if(baseType == typeof(Array)) OpsTypeToType[opsType] = this;
+                    if (baseType == typeof(Array)) OpsTypeToType[opsType] = this;
                 } else {
                     Type curType = opsType;
                     do {
@@ -106,7 +106,7 @@ namespace IronPython.Runtime.Types {
                 foreach (MethodInfo mi in curType.GetMethods()) {
                     AddReflectedUnboundMethod(mi);
                 }
-                curType = curType.BaseType;                
+                curType = curType.BaseType;
             } while (curType != typeof(object));
         }
 
@@ -139,7 +139,7 @@ namespace IronPython.Runtime.Types {
             // store CLR version, if different and we don't have a clash (if we do
             // have a clash our version is still available under the python name)
             if (name != mi.Name && !ContainsNonOps(SymbolTable.StringToId(mi.Name))) {
-                StoreMethod(mi.Name, mi, (funcType & ~FunctionType.PythonVisible)| FunctionType.OpsFunction);
+                StoreMethod(mi.Name, mi, (funcType & ~FunctionType.PythonVisible) | FunctionType.OpsFunction);
             }
         }
 
@@ -187,7 +187,7 @@ namespace IronPython.Runtime.Types {
                     null) {
         }
 
-        public override object this[object index] {            
+        public override object this[object index] {
             get {
                 Type[] types = GetTypesFromTuple(index);
                 if (types.Length != 1) throw Ops.TypeError("expected single type");
@@ -195,7 +195,7 @@ namespace IronPython.Runtime.Types {
                 return Ops.GetDynamicTypeFromType(types[0].MakeArrayType());
             }
         }
-        
+
         public override object Call(ICallerContext context, object[] args) {
             if (args.Length != 1) throw Ops.TypeError("array expects one and only 1 argument");
             if (this.type == typeof(Array)) throw Ops.TypeError("general array type is not callable");

@@ -128,7 +128,7 @@ namespace IronPython.Runtime.Operations {
         #region ICodeFormattable Members
 
         [PythonName("__repr__")]
-        public string ToCodeString() {            
+        public string ToCodeString() {
             return (string)Ops.Repr(value);
         }
 
@@ -140,8 +140,8 @@ namespace IronPython.Runtime.Operations {
         public static ReflectedType MakeDynamicType() {
             if (LongType == null) {
                 ReflectedType res = new OpsReflectedType("long",
-                    typeof(BigInteger), 
-                    typeof(LongOps), 
+                    typeof(BigInteger),
+                    typeof(LongOps),
                     typeof(ExtensibleLong));
 
                 if (Interlocked.CompareExchange<ReflectedType>(ref LongType, res, null) == null)
@@ -508,27 +508,27 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-//        [PythonName("__div__")]
+        //        [PythonName("__div__")]
         public static object Divide(BigInteger x, int y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
-//        [PythonName("__div__")]
+        //        [PythonName("__div__")]
         public static object Divide(BigInteger x, long y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
-//        [PythonName("__div__")]
+        //        [PythonName("__div__")]
         public static object Divide(BigInteger x, uint y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
-//        [PythonName("__div__")]
+        //        [PythonName("__div__")]
         public static object Divide(BigInteger x, ulong y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
-//        [PythonName("__div__")]
+        //        [PythonName("__div__")]
         public static object Divide(BigInteger x, BigInteger y) {
             BigInteger r;
             return DivMod(x, y, out r);
@@ -630,7 +630,7 @@ namespace IronPython.Runtime.Operations {
         public static object Invert(BigInteger x) {
             return ~x;
         }
-        
+
         [PythonName("__lshift__")]
         public static object LeftShift(BigInteger x, object other) {
             ExtensibleLong el;
@@ -647,7 +647,7 @@ namespace IronPython.Runtime.Operations {
                 }
             } else if (other is bool) {
                 return LeftShift(x, (bool)other ? 1 : 0);
-            } else if ((ei = other as ExtensibleInt)!= null) {
+            } else if ((ei = other as ExtensibleInt) != null) {
                 return ei.ReverseLeftShift(x);
             } else if ((el = other as ExtensibleLong) != null) {
                 return el.ReverseLeftShift(x);
@@ -710,7 +710,7 @@ namespace IronPython.Runtime.Operations {
                 }
             } else if (other is bool) {
                 return RightShift(x, (bool)other ? 1 : 0);
-            } else if ((ei = other as ExtensibleInt)!=null) {
+            } else if ((ei = other as ExtensibleInt) != null) {
                 return ei.ReverseRightShift(x);
             } else if ((el = other as ExtensibleLong) != null) {
                 return el.ReverseRightShift(x);

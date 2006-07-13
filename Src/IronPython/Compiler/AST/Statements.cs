@@ -52,7 +52,7 @@ namespace IronPython.Compiler.Ast {
 
         public IList<Statement> Statements {
             get { return stmts; }
-        } 
+        }
 
         public SuiteStatement(Statement[] statements) {
             this.stmts = statements;
@@ -66,7 +66,7 @@ namespace IronPython.Compiler.Ast {
             }
             return ret;
         }
-       
+
         internal override void Emit(CodeGen cg) {
             // Should emit nop for the colon?
             foreach (Statement stmt in stmts) {
@@ -164,7 +164,7 @@ namespace IronPython.Compiler.Ast {
             get { return header; }
             set { header = value; }
         }
-        
+
         public Expression Test {
             get { return test; }
         }
@@ -208,7 +208,7 @@ namespace IronPython.Compiler.Ast {
 
         public Statement ElseStatement {
             get { return elseStmt; }
-        } 
+        }
 
         public override object Execute(NameEnvironment environment) {
             object ret = NextStatement;
@@ -247,7 +247,7 @@ namespace IronPython.Compiler.Ast {
             }
             cg.MarkLabel(breakTarget);
         }
-        
+
         public override void Walk(IAstWalker walker) {
             if (walker.Walk(this)) {
                 test.Walk(walker);
@@ -571,7 +571,7 @@ namespace IronPython.Compiler.Ast {
 
         public Statement Body {
             get { return body; }
-        } 
+        }
 
         public override void Walk(IAstWalker walker) {
             if (walker.Walk(this)) {
@@ -642,7 +642,7 @@ namespace IronPython.Compiler.Ast {
 
             if (yieldTargets.Count > 0) {
                 endOfTry = cg.DefineLabel();
-                for (int index = 0; index < yieldTargets.Count; index ++) {
+                for (int index = 0; index < yieldTargets.Count; index++) {
                     choiceVar.EmitGet(cg);
                     cg.EmitInt(index);
                     cg.Emit(OpCodes.Beq, endOfTry);
@@ -738,7 +738,7 @@ namespace IronPython.Compiler.Ast {
                 // expression needs to be emitted incase it has side-effects.
                 expr.Emit(cg);
                 cg.Emit(OpCodes.Pop);
-            }            
+            }
         }
 
         public override void Walk(IAstWalker walker) {
@@ -765,9 +765,9 @@ namespace IronPython.Compiler.Ast {
         private readonly Expression[] lhs;
         private readonly Expression rhs;
 
-        public AssignStatement(Expression[] leftSide, Expression rightSide) { 
+        public AssignStatement(Expression[] leftSide, Expression rightSide) {
             this.lhs = leftSide;
-            this.rhs = rightSide; 
+            this.rhs = rightSide;
         }
 
         public IList<Expression> Left {
@@ -776,8 +776,8 @@ namespace IronPython.Compiler.Ast {
 
         public Expression Right {
             get { return rhs; }
-        } 
-        
+        }
+
         public override object Execute(NameEnvironment environment) {
             object v = rhs.Evaluate(environment);
             foreach (Expression e in lhs) {
@@ -831,7 +831,7 @@ namespace IronPython.Compiler.Ast {
 
             // if lhs is a complex expression (eg foo[x] or foo.bar)
             // then it's EmitSet needs to do the right thing.
-            lhs.Emit(cg);  
+            lhs.Emit(cg);
             rhs.Emit(cg);
 
             op.EmitInPlace(cg);
@@ -1209,7 +1209,7 @@ namespace IronPython.Compiler.Ast {
     }
 
 
-    
+
     public class ExecStatement : Statement {
         private readonly Expression code, locals, globals;
 

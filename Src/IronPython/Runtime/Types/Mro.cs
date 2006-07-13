@@ -57,7 +57,7 @@ namespace IronPython.Runtime.Types {
     /// and use that.
     /// </summary>
     class Mro {
-        public Mro(){
+        public Mro() {
         }
 
         public static Tuple Calculate(IPythonType startingType, Tuple bases) {
@@ -130,9 +130,9 @@ namespace IronPython.Runtime.Types {
                             }
                             removed = true;
                             break;
-                        } 
+                        }
                     }
-                    
+
                     if (!sawNonZero) break;
 
                     if (!removed) {
@@ -149,7 +149,7 @@ namespace IronPython.Runtime.Types {
 
         private static List<IPythonType> TupleToList(Tuple t) {
             List<IPythonType> innerList = new List<IPythonType>();
-            foreach(IPythonType ipt in t) innerList.Add(ipt);
+            foreach (IPythonType ipt in t) innerList.Add(ipt);
             return innerList;
         }
 
@@ -162,7 +162,7 @@ namespace IronPython.Runtime.Types {
         private static void GetOldStyleMroWorker(IPythonType curType, List<IPythonType> res) {
             if (!res.Contains(curType)) {
                 res.Add(curType);
-            
+
                 foreach (IPythonType dt in curType.BaseClasses) {
                     GetOldStyleMroWorker(dt, res);
                 }

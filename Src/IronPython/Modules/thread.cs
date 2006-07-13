@@ -39,7 +39,7 @@ namespace IronPython.Modules {
         public static object StartNewThread(ICallerContext context, object function, object args, [ParamDict]object kwDict) {
             Tuple tupArgs = args as Tuple;
             if (tupArgs == null) throw Ops.TypeError("2nd arg must be a tuple");
-            
+
             Thread t = new Thread(new ThreadObj(context, function, tupArgs, kwDict).Start);
             t.Start();
 
@@ -166,7 +166,7 @@ namespace IronPython.Modules {
             public ThreadObj(ICallerContext context, object function, Tuple args, object kwargs) {
                 Debug.Assert(args != null);
                 func = function;
-                this.kwargs = kwargs;                
+                this.kwargs = kwargs;
                 this.args = args;
                 this.context = context;
             }

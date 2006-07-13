@@ -49,7 +49,7 @@ namespace IronPython.Compiler.Ast {
             get { return header; }
             set { header = value; }
         }
-        
+
         public SymbolId Name {
             get { return name; }
             set { name = value; }

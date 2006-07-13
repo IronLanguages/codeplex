@@ -66,7 +66,7 @@ namespace IronPython.Compiler {
         private MethodBinder(string name, MethodTracker[] methods, bool isBinaryOperator) {
             this.name = name;
             this.isBinaryOperator = isBinaryOperator;
-            foreach (MethodTracker method in methods) {                
+            foreach (MethodTracker method in methods) {
                 if (IsUnsupported(method)) continue;
                 if (methods.Length > 1 && IsKwDictMethod(method)) continue;
                 AddBasicMethodTargets(method);
@@ -82,9 +82,9 @@ namespace IronPython.Compiler {
 
         public string Name { get { return name; } }
         public int MaximumArgs {
-            get { 
-                int minArgs, maxArgs;  
-                GetMinAndMaxArgs(out minArgs, out maxArgs); 
+            get {
+                int minArgs, maxArgs;
+                GetMinAndMaxArgs(out minArgs, out maxArgs);
                 return maxArgs;
             }
         }
@@ -161,7 +161,7 @@ namespace IronPython.Compiler {
             }
         }
 
-        private Exception BadArgumentCount(CallType callType, int argCount) {            
+        private Exception BadArgumentCount(CallType callType, int argCount) {
             if (targetSets.Count == 0) return Ops.TypeError("no callable targets, if this is a generic method make sure specify the type parameters");
             int minArgs, maxArgs;
             GetMinAndMaxArgs(out minArgs, out maxArgs);
@@ -174,7 +174,7 @@ namespace IronPython.Compiler {
 
             // This generates Python style error messages assuming that all arg counts in between min and max are allowed
             //It's possible that discontinuous sets of arg counts will produce a weird error message
-            return PythonFunction.TypeErrorForIncorrectArgumentCount(name, maxArgs, maxArgs-minArgs, argCount);
+            return PythonFunction.TypeErrorForIncorrectArgumentCount(name, maxArgs, maxArgs - minArgs, argCount);
         }
 
 
@@ -240,7 +240,7 @@ namespace IronPython.Compiler {
             List<ArgBuilder> argBuilders = new List<ArgBuilder>();
             List<ArgBuilder> defaultBuilders = new List<ArgBuilder>();
             bool hasByRef = false;
-            
+
             foreach (ParameterInfo pi in method.GetParameters()) {
                 if (pi.ParameterType == typeof(ICallerContext)) {
                     argBuilders.Add(new ContextArgBuilder());
@@ -270,8 +270,8 @@ namespace IronPython.Compiler {
 
             for (int i = 1; i < defaultBuilders.Count + 1; i++) {
                 List<ArgBuilder> defaultArgBuilders = argBuilders.GetRange(0, argBuilders.Count - i);
-                defaultArgBuilders.AddRange(defaultBuilders.GetRange(defaultBuilders.Count-i, i));
-                AddTarget(new MethodTarget(method, parameters.GetRange(0, parameters.Count-i), 
+                defaultArgBuilders.AddRange(defaultBuilders.GetRange(defaultBuilders.Count - i, i));
+                AddTarget(new MethodTarget(method, parameters.GetRange(0, parameters.Count - i),
                     instanceBuilder, defaultArgBuilders, returnBuilder));
             }
 
@@ -307,7 +307,7 @@ namespace IronPython.Compiler {
                         newArgBuilders.Add(new NullArgBuilder());
                         outParams++;
                     } else {
-                        newArgBuilders.Add(new SimpleArgBuilder(rab.index-outParams, ((ByRefParameter)rab.parameter).MakeInParameter()));
+                        newArgBuilders.Add(new SimpleArgBuilder(rab.index - outParams, ((ByRefParameter)rab.parameter).MakeInParameter()));
                     }
                 } else {
                     SimpleArgBuilder asb = ab as SimpleArgBuilder;
@@ -320,7 +320,7 @@ namespace IronPython.Compiler {
                 index++;
             }
 
-            return new MethodTarget(method, newParameters, instanceBuilder, newArgBuilders, 
+            return new MethodTarget(method, newParameters, instanceBuilder, newArgBuilders,
                 new ByRefReturnBuilder(CompilerHelpers.GetReturnType(method.Method), returnArgs));
         }
 
@@ -333,12 +333,12 @@ namespace IronPython.Compiler {
 
             public MethodTarget MakeTarget(int count) {
                 // The method with baseMethodTarget.ParameterCount-1 params has already been added
-                if (count < baseTarget.ParameterCount-1) return null;
+                if (count < baseTarget.ParameterCount - 1) return null;
 
                 List<Parameter> newParameters = baseTarget.parameters.GetRange(0, baseTarget.parameters.Count - 1);
                 List<ArgBuilder> newArgBuilders = baseTarget.argBuilders.GetRange(0, baseTarget.argBuilders.Count - 1);
 
-                Type elementType = baseTarget.parameters[baseTarget.parameters.Count-1].Type.GetElementType();
+                Type elementType = baseTarget.parameters[baseTarget.parameters.Count - 1].Type.GetElementType();
 
                 int start = newParameters.Count;
                 while (newParameters.Count < count) {
@@ -512,7 +512,8 @@ namespace IronPython.Compiler {
         }
 
         class ReferenceArgBuilder : SimpleArgBuilder {
-            public ReferenceArgBuilder(int index, Parameter parameter) : base(index, parameter) {
+            public ReferenceArgBuilder(int index, Parameter parameter)
+                : base(index, parameter) {
             }
 
             public override int Priority {
@@ -615,7 +616,7 @@ namespace IronPython.Compiler {
                 for (int i = 0; i < count; i++) {
                     cg.Emit(OpCodes.Dup);
                     cg.EmitInt(i);
-                    argSlots[start+i].EmitGet(cg);
+                    argSlots[start + i].EmitGet(cg);
                     cg.EmitConvertFromObject(parameter.Type);
                     cg.EmitStelem(parameter.Type);
                 }
@@ -624,7 +625,7 @@ namespace IronPython.Compiler {
 
         class ReturnBuilder {
             protected Type returnType;
-            public ReturnBuilder(Type returnType) { this.returnType = returnType;  }
+            public ReturnBuilder(Type returnType) { this.returnType = returnType; }
 
             public virtual object Build(ICallerContext context, object[] args, object ret) {
                 return ret;
@@ -646,7 +647,8 @@ namespace IronPython.Compiler {
 
         class ByRefReturnBuilder : ReturnBuilder {
             private IList<int> returnArgs;
-            public ByRefReturnBuilder(Type returnType, IList<int> returnArgs):base(returnType) {
+            public ByRefReturnBuilder(Type returnType, IList<int> returnArgs)
+                : base(returnType) {
                 this.returnArgs = returnArgs;
             }
 
@@ -689,7 +691,7 @@ namespace IronPython.Compiler {
             public List<ArgBuilder> argBuilders;
             public ArgBuilder instanceBuilder;
             public ReturnBuilder returnBuilder;
-            
+
 
             private FastCallable fastCallable;
 
@@ -833,8 +835,8 @@ namespace IronPython.Compiler {
 
                 Slot contextSlot = needsContext ? cg.argumentSlots[0] : null;
                 Slot[] argSlots = new Slot[parameters.Count];
-                for (int i=0; i < argSlots.Length; i++) {
-                    argSlots[i] = cg.argumentSlots[i+contextOffset];
+                for (int i = 0; i < argSlots.Length; i++) {
+                    argSlots[i] = cg.argumentSlots[i + contextOffset];
                 }
 
 
@@ -946,7 +948,7 @@ namespace IronPython.Compiler {
                 StringBuilder buf = new StringBuilder(name);
                 buf.Append("(");
                 bool isFirstArg = true;
-                int i=0;
+                int i = 0;
                 if (callType == CallType.ImplicitInstance) i = 1;
                 for (; i < parameters.Count; i++) {
                     if (isFirstArg) isFirstArg = false;
@@ -971,7 +973,7 @@ namespace IronPython.Compiler {
                 targets = new List<MethodTarget>();
             }
 
-            
+
             public bool HasConflict {
                 get { return hasConflict || binder.isBinaryOperator; }
             }
@@ -1094,7 +1096,7 @@ namespace IronPython.Compiler {
                 foreach (MethodTarget candidate in applicableTargets) {
                     if (IsBest(candidate, applicableTargets, callType)) return candidate;
                 }
-                return null;    
+                return null;
             }
 
             private Exception NoApplicableTarget(ICallerContext context, CallType callType, object[] args) {
@@ -1111,7 +1113,7 @@ namespace IronPython.Compiler {
                 bool isFirstArg = true;
                 int i = 0;
                 if (callType == CallType.ImplicitInstance) i = 1;
-                for (; i < args.Length; i++ ) {
+                for (; i < args.Length; i++) {
                     if (isFirstArg) isFirstArg = false;
                     else buf.Append(", ");
                     buf.Append(Ops.GetPythonTypeName(args[i]));
@@ -1128,11 +1130,11 @@ namespace IronPython.Compiler {
                     buf.Append("  ");
                     buf.AppendLine(target.ToSignatureString(binder.name, callType));
                 }
-                return Ops.TypeError(buf.ToString());                
+                return Ops.TypeError(buf.ToString());
             }
 
             public void Add(MethodTarget target) {
-                for (int i=0; i < targets.Count; i++) {
+                for (int i = 0; i < targets.Count; i++) {
                     if (CompareParameters(targets[i].parameters, target.parameters) == 0) {
                         switch (targets[i].CompareEqualParameters(target)) {
                             case -1:

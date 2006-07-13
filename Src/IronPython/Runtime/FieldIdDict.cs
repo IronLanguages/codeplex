@@ -281,7 +281,7 @@ namespace IronPython.Runtime {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object,object>>.GetEnumerator() {
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
             foreach (KeyValuePair<SymbolId, object> o in data) {
                 if (o.Key == SymbolTable.ObjectKeys) continue;
                 yield return new KeyValuePair<object, object>(SymbolTable.IdToString(o.Key), o.Value);

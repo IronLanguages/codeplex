@@ -63,7 +63,7 @@ namespace IronPython.CodeDom {
             }
 
 #if DEBUG
-            Debug.Assert(startRow >= lastLine, String.Format("Start line is less than or equal to last line start: {0} last: {1}",startRow,lastLine), text);
+            Debug.Assert(startRow >= lastLine, String.Format("Start line is less than or equal to last line start: {0} last: {1}", startRow, lastLine), text);
             lastLine = startRow;
 #endif
 
@@ -95,10 +95,10 @@ namespace IronPython.CodeDom {
             // from our CodeDOM tree.  This data will be reset when we finalize
             // the merge and return the resulting text.
 
-            lines.RemoveRange(startRow+lineDelta, lineRange);
-            lines.InsertRange(startRow+lineDelta, newLines);
+            lines.RemoveRange(startRow + lineDelta, lineRange);
+            lines.InsertRange(startRow + lineDelta, newLines);
 
-            int newLineDelta = newLines.Count-lineRange;
+            int newLineDelta = newLines.Count - lineRange;
             lineDelta += newLineDelta;
         }
 

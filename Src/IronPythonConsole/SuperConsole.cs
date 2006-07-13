@@ -224,7 +224,7 @@ namespace IronPythonConsole {
             options.Clear();
 
             int len;
-            for (len = input.Length; len > 0; len --) {
+            for (len = input.Length; len > 0; len--) {
                 char c = input[len - 1];
                 if (Char.IsLetterOrDigit(c)) {
                     continue;

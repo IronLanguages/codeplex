@@ -27,13 +27,13 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Operations {
     public partial class ExtensibleComplex : IRichComparable, IExtensible<Complex64> {
         public Complex64 value;
-        
+
         public ExtensibleComplex() { this.value = new Complex64(0, 0); }
         public ExtensibleComplex(double real) { value = new Complex64(real); }
         public ExtensibleComplex(double real, double imag) {
             value = new Complex64(real, imag);
         }
-        
+
         public override string ToString() {
             return value.ToString();
         }
@@ -175,7 +175,7 @@ namespace IronPython.Runtime.Operations {
                     real2 = LiteralParser.ParseComplex64((string)real);
                 else if (real is Complex64) {
                     if (imag == null && cls == ComplexType) return real;
-                    else real2 = (Complex64)real;                
+                    else real2 = (Complex64)real;
                 } else {
                     real2 = Converter.ConvertToComplex64(real);
                 }
@@ -189,7 +189,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        private static object ReversePower(Complex64 x, Complex64 y){
+        private static object ReversePower(Complex64 x, Complex64 y) {
             return Power(y, x);
         }
 
@@ -332,7 +332,7 @@ namespace IronPython.Runtime.Operations {
         public static object Coerce(object x, object y) {
             if (!(x is Complex64)) throw Ops.TypeError("__coerce__ requires a complex object, but got {0}", Ops.StringRepr(Ops.GetDynamicType(x)));
             Complex64 right;
-            if(Converter.TryConvertToComplex64(y, out right)) return Tuple.MakeTuple(x, right);
+            if (Converter.TryConvertToComplex64(y, out right)) return Tuple.MakeTuple(x, right);
 
             if (y is BigInteger || y is ExtensibleLong) throw Ops.OverflowError("long too large to convert");
 
@@ -347,7 +347,7 @@ namespace IronPython.Runtime.Operations {
         public static bool EqualsRetBool(Complex64 x, object other) {
             bool res;
             if (TryEquals(x, other, out res)) return res;
-            
+
             return Ops.DynamicEqualRetBool(x, other);
         }
 

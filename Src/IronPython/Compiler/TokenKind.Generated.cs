@@ -25,15 +25,15 @@ namespace IronPython.Compiler {
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Dedent")]
     public enum TokenKind {
-    	EndOfFile = -1,
-    	Error = 0,
-    	NewLine = 1,
-    	Indent = 2,
-    	Dedent = 3,
-    	Comment = 4,
-    	Name = 8,
-    	Constant = 9,
-    	Dot = 31,
+        EndOfFile = -1,
+        Error = 0,
+        NewLine = 1,
+        Indent = 2,
+        Dedent = 3,
+        Comment = 4,
+        Name = 8,
+        Constant = 9,
+        Dot = 31,
 
         #region Generated Token Kinds
 

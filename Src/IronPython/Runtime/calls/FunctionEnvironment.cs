@@ -24,12 +24,15 @@ namespace IronPython.Runtime.Calls {
             this.index = index;
         }
     }
-    
+
     [PythonType(typeof(Dict))]
     public abstract class FunctionEnvironmentDictionary : CustomSymbolDict, IModuleEnvironment {
-        [PythonHiddenField] public FunctionEnvironmentDictionary parent;
-        [PythonHiddenField] public IModuleEnvironment context;
-        [PythonHiddenField] protected SymbolId[] names;
+        [PythonHiddenField]
+        public FunctionEnvironmentDictionary parent;
+        [PythonHiddenField]
+        public IModuleEnvironment context;
+        [PythonHiddenField]
+        protected SymbolId[] names;
         private SymbolId[] outer;       // outer scopes
         private SymbolId[] extra;       // extra keys
 
@@ -56,7 +59,7 @@ namespace IronPython.Runtime.Calls {
         public override SymbolId[] GetExtraKeys() {
             return extra;
         }
-        
+
         protected static Exception OutOfRange(int index) {
             string msg = string.Format("FunctionEnvironment - index out of range: {0}", index);
             Debug.Fail(msg);
@@ -163,7 +166,8 @@ namespace IronPython.Runtime.Calls {
     [PythonType(typeof(Dict))]
     public sealed class FunctionEnvironmentNDictionary : FunctionEnvironmentDictionary, ICloneable {
         // Array of the variables in the environment
-        [PythonHiddenField]public object[] environmentValues;
+        [PythonHiddenField]
+        public object[] environmentValues;
 
         public FunctionEnvironmentNDictionary() {
         }

@@ -243,7 +243,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object Make(ICallerContext context, DynamicType cls, 
+        public static object Make(ICallerContext context, DynamicType cls,
             string @string,
             [DefaultParameterValue(null)] string encoding,
             [DefaultParameterValue("strict")]string errors) {
@@ -629,7 +629,7 @@ namespace IronPython.Runtime.Operations {
 
         [PythonName("isunicode")]
         public static object IsUnicode(string self) {
-            foreach(char c in self) {
+            foreach (char c in self) {
                 if (c >= LowestUnicodeValue) return Ops.TRUE;
             }
             return Ops.FALSE;
@@ -771,7 +771,7 @@ namespace IronPython.Runtime.Operations {
             if (start > end) return -1;     // can't possibly match anything, not even an empty string
             if (sub.Length == 0) return end;    // match at the end
             if (end == 0) return -1;    // can't possibly find anything
-            
+
             return self.LastIndexOf(sub, end - 1, end - start);
         }
 
@@ -1867,7 +1867,7 @@ namespace IronPython.Runtime.Operations {
 
                 // call the user function...
                 object res = Ops.Call(function, exObj);
-                
+
                 string replacement = CheckReplacementTuple(res, "decoding");
 
                 // finally process the user's request.

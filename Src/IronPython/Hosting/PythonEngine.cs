@@ -733,7 +733,7 @@ namespace IronPython.Hosting {
         /// Creates a strongly typed delegate bound to an expression.
         /// </summary>
         public ModuleBinder<DelegateType> CreateMethodUnscoped<DelegateType>(string statements) where DelegateType : class {
-            return CreateMethodUnscoped<DelegateType>(statements,null);
+            return CreateMethodUnscoped<DelegateType>(statements, null);
         }
 
         public ModuleBinder<DelegateType> CreateLambdaUnscoped<DelegateType>(string expression) where DelegateType : class {
@@ -866,7 +866,7 @@ namespace IronPython.Hosting {
 #if DEBUG
             if (Options.SaveAndReloadBinaries) {
                 TypeGen delegateGen = OutputGenerator.Snippets.DefinePublicType("DelegateGen$" + Interlocked.Increment(ref methodIndex).ToString(), typeof(object));
-                
+
                 cg = delegateGen.DefineUserHiddenMethod(MethodAttributes.Public | MethodAttributes.Static,
                     "pythonFunc" + Interlocked.Increment(ref methodIndex).ToString(),
                     mi.ReturnType,

@@ -258,7 +258,7 @@ namespace IronPython.Runtime {
 
                     checked {
                         // include sign here so that System.Int32.MinValue won't overflow
-                        ret = ret * b + sign*digit;
+                        ret = ret * b + sign * digit;
                     }
                     start++;
                 }
@@ -416,7 +416,7 @@ namespace IronPython.Runtime {
                 int len = text.Length;
 
                 char lastChar = text[len - 1];
-                if (lastChar != 'j' &&  lastChar != 'J')
+                if (lastChar != 'j' && lastChar != 'J')
                     return Complex64.MakeReal(ParseFloatNoCatch(text));
 
                 // search for sign char for the imaginary part

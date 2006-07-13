@@ -28,7 +28,7 @@ using IronPython.Runtime;
 using System.Diagnostics;
 
 namespace IronPython.CodeDom {
-    class PythonParser : CodeParser  {
+    class PythonParser : CodeParser {
         private List<string> references = new List<string>();
         private SystemState state = new SystemState();
 
@@ -60,7 +60,7 @@ namespace IronPython.CodeDom {
             // get a better filename if we can
             string name = "<unknown>";
             StreamReader sw = codeStream as StreamReader;
-            if (sw != null) {                
+            if (sw != null) {
                 FileStream fs = sw.BaseStream as FileStream;
                 if (fs != null) name = fs.Name;
             }
@@ -85,7 +85,7 @@ namespace IronPython.CodeDom {
         /// </summary>
         /// <param name="p"></param>
         private CodeCompileUnit Parse(Parser p, string filename) {
-            
+
             Statement s = p.ParseFileInput();
             CodeCompileUnit res = new CodeCompileUnit();
             CodeNamespace defaultNamespace = new CodeNamespace();
@@ -96,9 +96,9 @@ namespace IronPython.CodeDom {
             //AppDomain ad = AppDomain.CreateDomain("ParserReferenceDomain",null,ads);
             try {
                 RemoteReferences rc = new RemoteReferences();
-                    /*(RemoteReferences)ad.CreateInstanceAndUnwrap(
-                                    Assembly.GetExecutingAssembly().FullName,
-                                    "IronPython.CodeDom.RemoteReferences");*/
+                /*(RemoteReferences)ad.CreateInstanceAndUnwrap(
+                                Assembly.GetExecutingAssembly().FullName,
+                                "IronPython.CodeDom.RemoteReferences");*/
                 rc.Initialize(references);
 
 
@@ -125,7 +125,7 @@ namespace IronPython.CodeDom {
             } finally {
                 //AppDomain.Unload(ad);
             }
-            
+
             return res;
         }
 
@@ -135,8 +135,8 @@ namespace IronPython.CodeDom {
             } else if (cur is CodeTypeDeclaration) {
                 CodeTypeDeclaration ctd = cur as CodeTypeDeclaration;
                 bool fRealClass = false;
-                foreach(CodeTypeMember mem in ctd.Members) {
-                    if (mem is CodeTypeDeclaration) 
+                foreach (CodeTypeMember mem in ctd.Members) {
+                    if (mem is CodeTypeDeclaration)
                         continue;
 
                     fRealClass = true;
@@ -218,7 +218,7 @@ namespace IronPython.CodeDom {
         }
     }
 
-    
+
     class CodeObjectSuite : CodeObject {
         List<CodeObject> objects = new List<CodeObject>();
 

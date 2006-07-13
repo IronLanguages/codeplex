@@ -359,7 +359,7 @@ namespace IronPython.Modules {
             string ICodeFormattable.ToCodeString() {
                 object obj = target.Target;
                 GC.KeepAlive(this);
-                return String.Format("<weakproxy at {0} to {1} at {2}>", 
+                return String.Format("<weakproxy at {0} to {1} at {2}>",
                     IdDispenser.GetId(this),
                     Ops.GetPythonTypeName(obj),
                     IdDispenser.GetId(obj));
@@ -390,7 +390,7 @@ namespace IronPython.Modules {
                     // if we've been disconnected return an empty list
                     return new List();
                 }
-                
+
                 return Ops.GetAttrNames(context, o);
             }
 
@@ -400,7 +400,7 @@ namespace IronPython.Modules {
             }
 
             #endregion
-            
+
             #region IProxyObject Members
 
             object IProxyObject.Target {
@@ -427,7 +427,7 @@ namespace IronPython.Modules {
 
                 return Ops.NotEqual(GetObject(), other);
             }
-            #endregion            
+            #endregion
         }
 
         [PythonType("weakcallableproxy")]
@@ -626,7 +626,7 @@ namespace IronPython.Modules {
 
                 return Ops.NotEqual(GetObject(), other);
             }
-            #endregion            
+            #endregion
         }
 
         static class WeakRefHelpers {
@@ -654,15 +654,15 @@ namespace IronPython.Modules {
             : base(type) {
         }
 
-        internal override bool TryLookupBoundSlot(ICallerContext context, object inst, SymbolId name, out object ret) {            
+        internal override bool TryLookupBoundSlot(ICallerContext context, object inst, SymbolId name, out object ret) {
             IProxyObject po = inst as IProxyObject;
             Debug.Assert(po != null);
 
             object target = po.Target;
             return Ops.GetDynamicType(target).TryLookupBoundSlot(context, target, name, out ret);
-        }        
+        }
     }
-    
+
     class SlotWrapper : IDescriptor, ICodeFormattable {
         SymbolId name;
         ProxyDynamicType type;
@@ -684,7 +684,7 @@ namespace IronPython.Modules {
                     Ops.StringRepr(type.Name),
                     Ops.StringRepr(Ops.GetDynamicType(instance).Name));
 
-            return new GenericMethodWrapper(name, proxy);            
+            return new GenericMethodWrapper(name, proxy);
         }
 
         #endregion
@@ -715,9 +715,9 @@ namespace IronPython.Modules {
         [PythonName("__call__")]
         public object Call(params object[] args) {
             object ret;
-            if(!Ops.TryInvokeSpecialMethod(target.Target, name, out ret, args))
-                throw Ops.AttributeError("type {0} has no attribute {1}", 
-                    Ops.GetDynamicType(target.Target), 
+            if (!Ops.TryInvokeSpecialMethod(target.Target, name, out ret, args))
+                throw Ops.AttributeError("type {0} has no attribute {1}",
+                    Ops.GetDynamicType(target.Target),
                     name.ToString());
 
             return ret;
@@ -730,7 +730,7 @@ namespace IronPython.Modules {
         [PythonName("__call__")]
         public object Call(ICallerContext context, object[] args, string[] names) {
             object targetMethod;
-            if(!Ops.GetDynamicType(target).TryLookupBoundSlot(context, target, name, out targetMethod))
+            if (!Ops.GetDynamicType(target).TryLookupBoundSlot(context, target, name, out targetMethod))
                 throw Ops.AttributeError("type {0} has no attribute {1}",
                     Ops.GetDynamicType(target.Target),
                     name.ToString());

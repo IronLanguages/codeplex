@@ -27,14 +27,23 @@ namespace IronPython.Compiler.Ast {
 
         [Flags]
         public enum ScopeAttributes {
-            ContainsImportStar = 0x01,              // from module import *
-            ContainsUnqualifiedExec = 0x02,         // exec "code"
-            ContainsNestedFreeVariables = 0x04,     // nested function with free variable
+            // from module import *
+            ContainsImportStar = 0x01,
+
+            // exec "code"
+            ContainsUnqualifiedExec = 0x02,
+
+            // nested function with free variable
+            ContainsNestedFreeVariables = 0x04,
+
             ContainsFreeVariables = 0x08,
 
-            IsClosure = 0x10,                       // Is a closure (receives environment as parameter)
-            HasEnvironment = 0x20,                  // Defines its own environment for lexically nested scopes
-                                                    // (or passes environment through for access across scopes)
+            // Is a closure (receives environment as parameter)
+            IsClosure = 0x10,
+
+            // Defines its own environment for lexically nested scopes
+            // (or passes environment through for access across scopes)
+            HasEnvironment = 0x20,
         }
 
         private ScopeStatement parent;
@@ -82,7 +91,7 @@ namespace IronPython.Compiler.Ast {
         public Dictionary<SymbolId, Binding> Bindings {
             get { return names; }
         }
-        
+
         public ScopeStatement Parent {
             get { return parent; }
             set { parent = value; }

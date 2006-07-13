@@ -47,7 +47,8 @@ namespace IronPython.Runtime {
         // See _socket.cs for details
         internal bool isSocketRefCountHookInstalled;
 
-        public SystemState() : this(new EngineOptions()) {
+        public SystemState()
+            : this(new EngineOptions()) {
         }
 
         public SystemState(EngineOptions options) {
@@ -87,27 +88,27 @@ namespace IronPython.Runtime {
                 ps2 = "... ";
                 isSocketRefCountHookInstalled = false;
                 __stdin__ = new PythonFile(Console.OpenStandardInput(),
-                                            Console.InputEncoding, 
-                                            "<stdin>", 
+                                            Console.InputEncoding,
+                                            "<stdin>",
                                             "r");
                 __stdout__ = new PythonFile(Options.BufferedStandardOutAndError ? Console.OpenStandardOutput() : Console.OpenStandardOutput(0),
-                                            Console.OutputEncoding, 
-                                            "<stdout>", 
+                                            Console.OutputEncoding,
+                                            "<stdout>",
                                             "w");
-                __stderr__ = new PythonFile(Options.BufferedStandardOutAndError ? Console.OpenStandardError() : Console.OpenStandardError(0) , 
-                                            Console.OutputEncoding, 
-                                            "<stderr>", 
+                __stderr__ = new PythonFile(Options.BufferedStandardOutAndError ? Console.OpenStandardError() : Console.OpenStandardError(0),
+                                            Console.OutputEncoding,
+                                            "<stderr>",
                                             "w");
             }
 
-            __dict__[SymbolTable.Name] = "sys";            
+            __dict__[SymbolTable.Name] = "sys";
 
             stdin = __stdin__;
             stdout = __stdout__;
             stderr = __stderr__;
 
             // removed from dictionary after the first call to set it.
-            MethodInfo mi = typeof(SystemState).GetMethod("setdefaultencodingImpl", 
+            MethodInfo mi = typeof(SystemState).GetMethod("setdefaultencodingImpl",
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 
             BuiltinMethodDescriptor descr = (BuiltinMethodDescriptor)BuiltinFunction.MakeMethod(
@@ -202,7 +203,7 @@ namespace IronPython.Runtime {
 
         [PythonName("exc_info")]
         public Tuple exc_info() {
-            if (RawException == null)  return Tuple.MakeTuple(null, null, null);
+            if (RawException == null) return Tuple.MakeTuple(null, null, null);
             object pyExcep = ExceptionConverter.ToPython(RawException);
 
             exc_traceback = RawTraceBack;
@@ -216,7 +217,7 @@ namespace IronPython.Runtime {
 
                 exc_type = pyExcep;
                 exc_value = se.Value;
-                
+
                 return Ops.MakeTuple(
                     pyExcep,
                     se.Value,
@@ -230,7 +231,7 @@ namespace IronPython.Runtime {
                     excType,
                     pyExcep,
                     RawTraceBack);
-            }            
+            }
         }
 
         [PythonName("exec_prefix")]
@@ -251,7 +252,7 @@ namespace IronPython.Runtime {
 
         [PythonName("getdefaultencoding")]
         public string getdefaultencoding() {
-            return DefaultEncoding.WebName.ToLower().Replace('-','_');
+            return DefaultEncoding.WebName.ToLower().Replace('-', '_');
         }
 
         [PythonName("getfilesystemencoding")]
@@ -295,20 +296,20 @@ namespace IronPython.Runtime {
         public object ps2;
 
         public object setdefaultencodingImpl(object name) {
-            if(name == null) throw Ops.TypeError("name cannot be None");
+            if (name == null) throw Ops.TypeError("name cannot be None");
             string strName = name as string;
             if (strName == null) throw Ops.TypeError("name must be a string");
 
             Encoding enc;
-            if(!StringOps.TryGetEncoding(this, strName, out enc)){
+            if (!StringOps.TryGetEncoding(this, strName, out enc)) {
                 throw Ops.LookupError("'{0}' does not match any available encodings", strName);
             }
 
             DefaultEncoding = enc;
-            __dict__.Remove(SymbolTable.SetDefaultEncoding); 
+            __dict__.Remove(SymbolTable.SetDefaultEncoding);
             return null;
         }
-        
+
         [PythonName("setrecursionlimit")]
         public void SetRecursionLimit(int limit) {
             if (limit < 0) throw Ops.ValueError("recursion limit must be positive");
@@ -363,9 +364,9 @@ namespace IronPython.Runtime {
         public void DeleteAttr(ICallerContext context, SymbolId name) {
             TypeCache.SystemState.DeleteAttrWithCustomDict(context, this, __dict__, name);
         }
-                
+
         public List GetAttrNames(ICallerContext context) {
-            List ret = new List(((IDictionary<object,object>)__dict__).Keys);
+            List ret = new List(((IDictionary<object, object>)__dict__).Keys);
             ret.Extend(TypeCache.SystemState.GetAttrNames(context, this));
             return ret;
         }
@@ -378,9 +379,9 @@ namespace IronPython.Runtime {
 
         internal TopReflectedPackage TopPackage {
             get {
-                if (topPackage == null) 
+                if (topPackage == null)
                     Interlocked.CompareExchange<TopReflectedPackage>(ref topPackage, new TopReflectedPackage(), null);
-                
+
                 return topPackage;
             }
         }

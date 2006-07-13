@@ -61,7 +61,7 @@ namespace IronPythonTest {
     public class Derived2 {
         public int value;
 
-        public Derived2(int value){
+        public Derived2(int value) {
             this.value = value;
         }
     }

@@ -48,7 +48,7 @@ namespace IronPython.Compiler {
 
         public static bool IsParamsMethod(MethodBase method) {
             ParameterInfo[] pis = method.GetParameters();
-            return pis.Length > 0 && (pis[pis.Length-1].GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0);
+            return pis.Length > 0 && (pis[pis.Length - 1].GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0);
 
         }
 

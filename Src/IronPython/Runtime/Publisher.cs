@@ -29,7 +29,7 @@ namespace IronPython.Runtime {
     /// once for each key.  
     /// </summary>
     class Publisher<TKey, TValue> {
-        Dictionary<TKey, PublishInfo<TValue>> data = new Dictionary<TKey,PublishInfo<TValue>>();
+        Dictionary<TKey, PublishInfo<TValue>> data = new Dictionary<TKey, PublishInfo<TValue>>();
 
         public delegate TValue CreateValue();
 
@@ -60,7 +60,7 @@ namespace IronPython.Runtime {
                 // release our lock while we create the new value
                 // then re-acquire the lock and publish the info.
                 Monitor.Exit(data);
-                try{
+                try {
                     try {
                         ret = create();
                         Debug.Assert(ret != null, "Can't publish a null value");

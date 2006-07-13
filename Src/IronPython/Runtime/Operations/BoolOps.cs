@@ -30,7 +30,7 @@ namespace IronPython.Runtime.Operations {
 
         public static ReflectedType MakeDynamicType(ReflectedType type) {
             if (BoolType == null) {
-                OpsReflectedType ret = new OpsReflectedType("bool", typeof(bool), typeof(BoolOps), null, new CallTarget1(FastNew)); 
+                OpsReflectedType ret = new OpsReflectedType("bool", typeof(bool), typeof(BoolOps), null, new CallTarget1(FastNew));
                 if (Interlocked.CompareExchange<ReflectedType>(ref BoolType, ret, null) == null)
                     return ret;
             }
@@ -39,13 +39,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static object FastNew(object value) {
-            if(value is bool) return Ops.Bool2Object((bool)value);
+            if (value is bool) return Ops.Bool2Object((bool)value);
             return Ops.Bool2Object(Ops.IsTrue(value));
         }
 
         [PythonName("__add__")]
-        public static object Add(bool x, object other)
-        {
+        public static object Add(bool x, object other) {
             if (other is bool) {
                 return (x ? 1 : 0) + ((bool)other ? 1 : 0);
             } else {
@@ -139,7 +138,7 @@ namespace IronPython.Runtime.Operations {
 
             return (IntOps.Xor(x ? 1 : 0, other));
         }
-       
+
         [PythonName("__and__")]
         public static object BitwiseAnd(bool x, object other) {
             if (other is bool) {
@@ -190,7 +189,7 @@ namespace IronPython.Runtime.Operations {
 
         public static object Equals(bool x, object other) {
             // common case is bool vs bool
-            if (other is bool)  return Ops.Bool2Object(x == (bool)other);
+            if (other is bool) return Ops.Bool2Object(x == (bool)other);
 
             // otherwise convert other to a bool, and compare
             int otherInt;
@@ -221,7 +220,7 @@ namespace IronPython.Runtime.Operations {
                 // any precision and we're equal
                 if (EqualsTruncation(x, other)) return true;
             }
-            return Ops.DynamicEqualRetBool(x, other);             
+            return Ops.DynamicEqualRetBool(x, other);
         }
 
         private static bool EqualsTruncation(bool x, object other) {
@@ -243,5 +242,5 @@ namespace IronPython.Runtime.Operations {
             }
             return false;
         }
-    }    
+    }
 }

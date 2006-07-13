@@ -232,7 +232,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static object GetIndex(Array a, object index) {
-            int iindex;;
+            int iindex; ;
             if (Converter.TryConvertToInt32(index, out iindex)) {
                 return a.GetValue(Ops.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
             }

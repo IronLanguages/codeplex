@@ -120,7 +120,7 @@ namespace IronPython.Runtime.Types {
             return Ops.GetDynamicType(o);
         }
 
-        public virtual object AllocateObject(params object []args) {
+        public virtual object AllocateObject(params object[] args) {
             Initialize();
             if (ctor == null) throw Ops.TypeError("Cannot create instances of {0}", this);
             return ctor.Call(args);
@@ -142,7 +142,7 @@ namespace IronPython.Runtime.Types {
             Array.Copy(args, finalArgs, args.Length);
             names = new string[dict.Count];
             int i = 0;
-            foreach (KeyValuePair<object, object> kvp in (IDictionary<object,object>)dict) {
+            foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dict) {
                 names[i] = (string)kvp.Key;
                 finalArgs[i + args.Length] = kvp.Value;
                 i++;
@@ -179,7 +179,7 @@ namespace IronPython.Runtime.Types {
 
         protected void AddModule() {
             if (!dict.ContainsKey(SymbolTable.Module)) {
-                if (type.Assembly == typeof(DynamicType).Assembly || 
+                if (type.Assembly == typeof(DynamicType).Assembly ||
                     type.Assembly == typeof(IronMath.BigInteger).Assembly ||
                     this is OpsReflectedType) {
                     string moduleName = null;
@@ -822,7 +822,7 @@ namespace IronPython.Runtime.Types {
             Slice slice = index as Slice;
             if (slice != null && slice.step == null) {
                 object getSlice;
-                if (Ops.TryGetAttr(DefaultContext.Default, self, SymbolTable.GetSlice, out getSlice)) {     
+                if (Ops.TryGetAttr(DefaultContext.Default, self, SymbolTable.GetSlice, out getSlice)) {
                     int start, stop;
                     slice.DeprecatedFixed(self, out start, out stop);
                     return Ops.Call(getSlice, start, stop);
@@ -867,7 +867,7 @@ namespace IronPython.Runtime.Types {
                     Ops.Call(delSlice, start, stop);
                     return;
                 }
-            } 
+            }
 
             Ops.Invoke(self, SymbolTable.DelItem, index);
         }

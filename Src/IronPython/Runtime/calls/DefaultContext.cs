@@ -19,12 +19,12 @@ using System.Text;
 using IronPython.Compiler;
 
 namespace IronPython.Runtime.Calls {
-    class DefaultContext : ICallerContext{
+    class DefaultContext : ICallerContext {
         public static DefaultContext Default = new DefaultContext(CallerContextAttributes.None);
         public static DefaultContext DefaultCLS = new DefaultContext(CallerContextAttributes.ShowCls);
 
         CallerContextAttributes flags;
-        
+
         public DefaultContext(CallerContextAttributes contextFlags) {
             flags = contextFlags;
         }

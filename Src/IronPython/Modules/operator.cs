@@ -131,7 +131,7 @@ namespace IronPython.Modules {
         public static object Truth(object o) {
             return Ops.Bool2Object(Ops.IsTrue(o));
         }
-        
+
         [PythonName("is_")]
         public static object Is(object a, object b) {
             return Ops.Is(a, b);

@@ -57,7 +57,8 @@ namespace IronPython.Runtime.Types {
         internal readonly static string comObjectTypeName = "System.__ComObject";
         internal readonly static Type comObjectType = Type.GetType(comObjectTypeName);
 
-        private ComType() : base(comObjectType) {
+        private ComType()
+            : base(comObjectType) {
         }
 
         internal static ReflectedType MakeDynamicType() {
@@ -70,7 +71,7 @@ namespace IronPython.Runtime.Types {
         }
 
         #region DynamicType overrides
-        
+
         public override string Repr(object self) {
             ComObject com = ComObject.ObjectToComObject(self);
             return com.ToString();
@@ -81,7 +82,7 @@ namespace IronPython.Runtime.Types {
                 return true;
 
             ComObject com = ComObject.ObjectToComObject(self);
-            return com.TryGetAttr(context, name, out ret);           
+            return com.TryGetAttr(context, name, out ret);
         }
 
         public override object GetAttr(ICallerContext context, object self, SymbolId name) {
@@ -136,8 +137,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public static ComObject ObjectToComObject(object rcw)
-        {
+        public static ComObject ObjectToComObject(object rcw) {
             Debug.Assert(ComObject.IsGenericRuntimeCallableWrapper(rcw));
             ComObject res;
             if (ComObjectHash.TryGetValue(rcw, out res)) {
@@ -404,11 +404,11 @@ namespace IronPython.Runtime.Types {
             TypeLibConverter tlc = new TypeLibConverter();
             string asmName = null, asmCodeBase = null;
             if (tlc.GetPrimaryInteropAssembly(
-                    typeInfoGuid, 
-                    typeInfoAttr.wMajorVerNum, 
-                    typeInfoAttr.wMinorVerNum, 
-                    0, 
-                    out asmName, 
+                    typeInfoGuid,
+                    typeInfoAttr.wMajorVerNum,
+                    typeInfoAttr.wMinorVerNum,
+                    0,
+                    out asmName,
                     out asmCodeBase)) {
                 try {
                     Assembly interopAssembly = Assembly.Load(asmName);
@@ -541,7 +541,7 @@ namespace IronPython.Runtime.Types {
 
             return null;
         }
-#endif 
+#endif
 
         public void AddInterface(Type type) {
             interfaces.Add(Ops.GetDynamicTypeFromType(type));
@@ -554,7 +554,7 @@ namespace IronPython.Runtime.Types {
                     ComTypeCache[guid] = type;
                 }
             }
-        }        
+        }
     }
 
     /// <summary>

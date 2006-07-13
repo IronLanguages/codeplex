@@ -27,10 +27,10 @@ namespace IronPythonTest {
 
 
         public static object GetTrue() {
-                return true;
+            return true;
         }
         public static object GetFalse() {
-                return false;
+            return false;
         }
         public static event EventTestDelegate StaticTest;
         public event EventTestDelegate InstanceTest;

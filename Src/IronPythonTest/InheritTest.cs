@@ -41,7 +41,7 @@ namespace IronPythonTest {
         public string MethodOverridden() { return "OverrideTestDerivedClass.MethodOverridden() invoked"; }
 
         object IOverrideTestInterface.this[int index] {
-            get{
+            get {
                 return "abc";
             }
             set {
@@ -672,7 +672,7 @@ namespace IronPythonTest {
     }
 
     public class BigVirtualClass {
-        public virtual int M0() { return 0;  }
+        public virtual int M0() { return 0; }
         public virtual int M1() { return 1; }
         public virtual int M2() { return 2; }
         public virtual int M3() { return 3; }

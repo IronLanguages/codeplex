@@ -49,7 +49,7 @@ namespace IronPython.Compiler {
         private static bool generateModulesAsSnippets;
         private static int maximumRecursion = Int32.MaxValue;
         private static bool bufferedStdOutAndError = true;
-        private static bool warningOnIndentationInconsistency ;
+        private static bool warningOnIndentationInconsistency;
         private static bool errorOnIndentationInconsistency;
         private static List<string> warningFilters;
         private static DivisionOption division = DivisionOption.Old;

@@ -79,7 +79,7 @@ namespace IronPython.Runtime {
                 newStop = Int32.MaxValue;
             }
 
-        }        
+        }
 
         #region Object overrides
 
@@ -95,7 +95,7 @@ namespace IronPython.Runtime {
         public override int GetHashCode() {
             int hash = 0;
             if (start != null) hash ^= start.GetHashCode();
-            if (stop !=null) hash ^= stop.GetHashCode();
+            if (stop != null) hash ^= stop.GetHashCode();
             if (step != null) hash ^= step.GetHashCode();
             return hash;
         }
@@ -142,7 +142,7 @@ namespace IronPython.Runtime {
 
             if (this.step == null) throw Ops.ValueError("cannot do slice assignment w/ no step");
 
-            DoSliceAssign(assign, ostart, ostop, ostep, value);            
+            DoSliceAssign(assign, ostart, ostop, ostep, value);
         }
 
         private static void DoSliceAssign(SliceAssign assign, int start, int stop, int step, object value) {
@@ -159,7 +159,7 @@ namespace IronPython.Runtime {
         }
 
         private static void ListSliceAssign(SliceAssign assign, int start, int n, int step, IList lst) {
-            if (lst.Count < n) throw Ops.ValueError("too few items in the enumerator. need {0} have {1}", n,lst.Count);
+            if (lst.Count < n) throw Ops.ValueError("too few items in the enumerator. need {0} have {1}", n, lst.Count);
             else if (lst.Count != n) throw Ops.ValueError("too many items in the enumerator need {0} have {1}", n, lst.Count);
 
             for (int i = 0, index = start; i < n; i++, index += step) {

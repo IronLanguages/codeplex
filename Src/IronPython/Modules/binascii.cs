@@ -234,7 +234,7 @@ namespace IronPython.Modules {
                 char curChar = data[index++];
                 if (curChar == empty) return EmptyChar;
 
-                res = decFunc(curChar);                
+                res = decFunc(curChar);
             } while (res == NoMoreData);
             if (res < 0 && empty != Char.MinValue) throw Ops.TypeError("Incorrect padding");
             return res;
@@ -243,8 +243,8 @@ namespace IronPython.Modules {
         private static StringBuilder DecodeWorker(string data, char empty, DecodeByte decFunc) {
             StringBuilder res = new StringBuilder();
 
-            int i =0;
-            while(i<data.Length) {
+            int i = 0;
+            while (i < data.Length) {
                 int intVal;
 
                 int val1 = GetVal(decFunc, empty, data, ref i);
@@ -254,7 +254,7 @@ namespace IronPython.Modules {
                 if (val1 < 0) break;  // no more bytes...
 
                 int val3 = GetVal(decFunc, empty, data, ref i);
-                if (val3 <0) {
+                if (val3 < 0) {
                     // 2 byte partial
                     intVal = (val1 << 18) | (val2 << 12);
 

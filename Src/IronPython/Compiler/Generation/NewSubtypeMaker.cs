@@ -33,10 +33,10 @@ namespace IronPython.Compiler.Generation {
         }
 
         protected override string GetName() {
-            return base.GetName().Substring(TypePrefix.Length);            
+            return base.GetName().Substring(TypePrefix.Length);
         }
 
-        protected override void ImplementInterfaces(){
+        protected override void ImplementInterfaces() {
             // only implement interfaces defined in our newly derived type
             IList<Type> baseInterfaces = baseType.GetInterfaces();
             foreach (Type interfaceType in interfaceTypes) {
@@ -73,7 +73,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         private bool NeedsNewWeakRef() {
-            foreach(DynamicType dt in baseClasses){
+            foreach (DynamicType dt in baseClasses) {
                 UserType ut = dt as UserType;
                 if (ut == null) continue;
 
@@ -83,7 +83,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         protected override void ImplementWeakReference() {
-            if (NeedsNewWeakRef() 
+            if (NeedsNewWeakRef()
                 && (slots == null || slots.Contains("__weakref__"))) {
                 // base type didn't have slots, but it's there now...
                 base.ImplementWeakReference();
