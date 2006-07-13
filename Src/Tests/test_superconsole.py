@@ -92,8 +92,7 @@ if doRun:
 
 # Test Case #4: auto-indent
 ######################################################################################################
-# TODO: remove last {ENTER} when IP#840 is fixed
-    superConsole.SendKeys("def f{(}{)}:{ENTER}print 'f!'{ENTER}{ENTER}{ENTER}")
+    superConsole.SendKeys("def f{(}{)}:{ENTER}print 'f!'{ENTER}{ENTER}")
     superConsole.SendKeys('f{(}{)}{ENTER}')
     testRegex += 'f!'
 
@@ -111,24 +110,22 @@ if doRun:
 
 # Test Case #6: cursor keys
 ######################################################################################################
-# BLOCKED ON BUG 837
-#superConsole.SendKeys("print 'up'{ENTER}")
-#testRegex += 'up'
-#superConsole.SendKeys("print 'down'{ENTER}")
-#testRegex += 'down'
-#superConsole.SendKeys("{UP}{UP}{ENTER}") 
-#testRegex += 'up'
-#superConsole.SendKeys("{DOWN}{ENTER}")
-#testRegex += 'down'
+    # BLOCKED ON BUG 837
+    #superConsole.SendKeys("print 'up'{ENTER}")
+    #testRegex += 'up'
+    #superConsole.SendKeys("print 'down'{ENTER}")
+    #testRegex += 'down'
+    #superConsole.SendKeys("{UP}{UP}{ENTER}") 
+    #testRegex += 'up'
+    #superConsole.SendKeys("{DOWN}{ENTER}")
+    #testRegex += 'down'
+
     superConsole.SendKeys("print 'up'{ENTER}{UP}{ENTER}")
     testRegex += 'upup'
-
     superConsole.SendKeys("print 'awy{LEFT}{LEFT}{RIGHT}a{RIGHT}'{ENTER}")
     testRegex += 'away'
-
     superConsole.SendKeys("print 'bad'{ESC}print 'good'{ENTER}")
     testRegex += 'good'
-
     superConsole.SendKeys("rint 'hom'{HOME}p{END}{LEFT}e{ENTER}")
     testRegex += 'home'
 

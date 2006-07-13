@@ -579,11 +579,107 @@ def test_other_concern():
     AssertError(TypeError, target.M100, 'abc')
     AssertError(OverflowError, target.M100, 12345678901234)
     
+def test_iterator_sequence():
+    class C: 
+        def __init__(self):  self.x = 0
+        def __iter__(self):  return self
+        def next(self): 
+            if self.x < 10: 
+                y = self.x
+                self.x += 1
+                return y
+            else: 
+                self.x = 0
+                raise StopIteration
+        def __len__(self): return 10
+        
+    # different size
+    c = C()
+    list1 = [1, 2, 3]
+    tuple1 = [4, 5, 6, 7]
+    str1 = "890123"    
+    all = (list1, tuple1, str1, c)
+    
+    target = COtherConcern()
+    
+    for x in all:
+        # IEnumerable / IEnumerator
+        target.M620(x)
+        AreEqual(Flag.Value, len(x)); Flag.Value = 0
+        AssertError(TypeError, target.M621, x)
+
+        # IEnumerable<char> / IEnumerator<char>
+        target.M630(x)
+        AreEqual(Flag.Value, len(x)); Flag.Value = 0
+        AssertError(TypeError, target.M631, x)
+
+        # IEnumerable<int> / IEnumerator<int>
+        target.M640(x)
+        AreEqual(Flag.Value, len(x)); Flag.Value = 0
+        AssertError(TypeError, target.M641, x)
+
+    # IList / IList<char> / IList<int>
+    for x in (list1, tuple1):
+        target.M622(x)
+        AreEqual(Flag.Value, len(x))                
+
+        target.M632(x)
+        AreEqual(Flag.Value, len(x))                
+
+        target.M642(x)
+        AreEqual(Flag.Value, len(x))
+
+    for x in (str1, c):
+        AssertError(TypeError, target.M622, x)
+        AssertError(TypeError, target.M632, x)
+        AssertError(TypeError, target.M642, x)
+       
+def test_explicit_inheritance():
+    target = CInheritMany1()
+    target.M(); AreEqual(Flag.Value, 100); Flag.Value = 0
+    I1.M(target); AreEqual(Flag.Value, 100); Flag.Value = 0
+    
+    target = CInheritMany2()
+    target.M(); AreEqual(Flag.Value, 201)
+    I1.M(target); AreEqual(Flag.Value, 200)
+    
+    target = CInheritMany3()
+    target.M(); AreEqual(Flag.Value, 301) #bug 1129: choose the first one
+    I1.M(target); AreEqual(Flag.Value, 300)
+    I2.M(target); AreEqual(Flag.Value, 301)
+    
+    target = CInheritMany4()
+    target.M(); AreEqual(Flag.Value, 401)
+    I3[object].M(target); AreEqual(Flag.Value, 400)
+    AssertError(TypeError, I3[int].M, target)
+    
+    target = CInheritMany5()
+    I1.M(target); AreEqual(Flag.Value, 500)
+    I2.M(target); AreEqual(Flag.Value, 501)
+    I3[object].M(target); AreEqual(Flag.Value, 502)
+    target.M(); AreEqual(Flag.Value, 503)
+    
+    target = CInheritMany6[int]()
+    target.M(); AreEqual(Flag.Value, 601)
+    I3[int].M(target); AreEqual(Flag.Value, 600)
+    AssertError(TypeError, I3[object].M, target)
+
+    target = CInheritMany7[int]()
+    target.M(); AreEqual(Flag.Value, 700); Flag.Value = 0
+    I3[int].M(target); AreEqual(Flag.Value, 700)
+    
+    target = CInheritMany8()
+    target.M(); AreEqual(Flag.Value, 800); Flag.Value = 0
+    I1.M(target); AreEqual(Flag.Value, 800); Flag.Value = 0
+    I4.M(target, 100); AreEqual(Flag.Value, 801)
+    # target.M(100) ????
+    
+    # original repro
+    from System.Collections.Generic import Dictionary
+    d = Dictionary[object,object]()
+    d.GetEnumerator() # not throw
+        
 print '>>>> methods in reference type'
 target = CNoOverloads()
 run_test(__name__)
-
-#print '>>>> methods in value type'
-#target = SNoOverloads()
-#run_test(__name__)
 

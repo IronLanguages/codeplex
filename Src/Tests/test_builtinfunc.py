@@ -219,6 +219,9 @@ def test_len():
     class foo(object): pass
     
     AssertError(TypeError, len, foo())
-
+    
+def test_help():
+    help(len)  # only check for not throwing
+    
 run_test(__name__)
 

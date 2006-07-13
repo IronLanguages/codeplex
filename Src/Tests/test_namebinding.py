@@ -38,7 +38,6 @@ def delSimple():
     del(a)
     Assert(locals() == {})
 
-inactive = """
 def iteratorFunc():
     for i in range(1):
         Assert(locals() == {'i' : 0})
@@ -68,7 +67,6 @@ def delIter():
     del(a)
     yield 3
     Assert(locals() == {})
-"""
 
 def execAdd():
     exec('a=2')
@@ -99,7 +97,6 @@ def reassignLocals():
     locals = 2
     Assert(locals == 2)
 
-inactive = """
 def unassignedIter():
     yield 1
     Assert(locals() == {})
@@ -114,7 +111,6 @@ def reassignLocalsIter():
     locals = 2
     yield 2
     Assert(locals == 2)
- """
 
 # we used to include _ which got defined during codegen.  Make sure
 # we don't crash
@@ -125,8 +121,8 @@ def localsAfterExpr():
 
 nolocals()
 singleLocal()
-#for a in iteratorFunc(): pass
-#for a in iteratorFuncLocals(): pass
+for a in iteratorFunc(): pass
+for a in iteratorFuncLocals(): pass
 
 
 nolocalsWithArg(5)
@@ -141,8 +137,8 @@ def modifyingLocal(a):
 modifyingLocal(10)
 
 
-#for a in iteratorFuncWithArg(5): pass
-#for a in iteratorFuncLocalsWithArg(5): pass
+for a in iteratorFuncWithArg(5): pass
+for a in iteratorFuncLocalsWithArg(5): pass
 
 execAdd()
 execAddExisting()
@@ -150,13 +146,13 @@ execAddExistingArgs(7)
 execDel()
 
 delSimple()
-#for a in delIter(): pass
+for a in delIter(): pass
 
 unassigned()
-#for a in unassignedIter(): pass
+for a in unassignedIter(): pass
 
 reassignLocals()
-#for a in reassignLocalsIter(): pass
+for a in reassignLocalsIter(): pass
 
 Assert(locals().has_key('__builtins__'))
 a = 5
@@ -417,9 +413,8 @@ def NoFinAddToInstanceAndRemove():
 
 
 SimpleTest()
-# Bug 156
-# DelBuiltin()
-# EnclosingFunction()
+DelBuiltin()
+Assert(UnboundLocalError, EnclosingFunction)
 DelUndefinedGlobal()
 glb = 100
 DelDefinedGlobal()
@@ -804,3 +799,18 @@ try:
     a = xyz
 except NameError: pass
 
+## delete builtin func
+import __builtin__
+
+try: del pow
+except NameError: pass
+else: print "fail"
+
+try:
+    del __builtin__.pow
+
+    # bug 1127
+    #AssertError(NameError, lambda: pow)
+    AssertError(AttributeError, lambda: __builtin__.pow)
+finally: 
+    reload(__builtin__)

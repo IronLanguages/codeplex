@@ -42,6 +42,10 @@ namespace IronPythonTest.BinderTest {
 
     /// <summary>
     /// all methods here have no overloads. 
+    /// 
+    /// !!! Adding methods to this class could cause "many" updates in test_methodbinder1.py !!!
+    /// you can always add other non-overload related methods to COtherConcern/GOtherConcern`1
+    /// 
     /// </summary>
     public class CNoOverloads {
         // no args
@@ -125,13 +129,6 @@ namespace IronPythonTest.BinderTest {
     }
 
     /// <summary>
-    /// Same as CNoOverloads
-    /// </summary>
-    public struct SNoOverloads {
-
-    }
-
-    /// <summary>
     /// Other concerns when there is no overloads
     /// </summary>
     public class COtherConcern {
@@ -169,6 +166,19 @@ namespace IronPythonTest.BinderTest {
         public void M600(Hashtable arg) { Flag.Value = 600; }
         public void M601(ArrayList arg) { Flag.Value = 601; }
         public void M602(List<int> arg) { Flag.Value = 602; }
+
+        // iterator support ??
+        public void M620(IEnumerable arg) { IEnumerator ienum = arg.GetEnumerator(); int i = 0; while (ienum.MoveNext()) i++; Flag.Value = i; }
+        public void M621(IEnumerator arg) { int i = 0; while (arg.MoveNext()) i++; Flag.Value = i; }
+        public void M622(IList arg) { Flag.Value = arg.Count; }
+
+        public void M630(IEnumerable<Char> arg) { IEnumerator ienum = arg.GetEnumerator(); int i = 0; while (ienum.MoveNext()) i++; Flag.Value = i; }
+        public void M631(IEnumerator<Char> arg) { int i = 0; while (arg.MoveNext()) i++; Flag.Value = i; }
+        public void M632(IList<Char> arg) { Flag.Value = arg.Count; }
+
+        public void M640(IEnumerable<Int32> arg) { IEnumerator ienum = arg.GetEnumerator(); int i = 0; while (ienum.MoveNext()) i++; Flag.Value = i; }
+        public void M641(IEnumerator<Int32> arg) { int i = 0; while (arg.MoveNext()) i++; Flag.Value = i; }
+        public void M642(IList<Int32> arg) { Flag.Value = arg.Count; }
 
         // delegate 
         public void M700(Delegate arg) {
@@ -215,6 +225,48 @@ namespace IronPythonTest.BinderTest {
         // generics
         public void M130(Int32 arg) { Flag.Value = 130; }
         public void M130<T>(T arg) { Flag.Value = 230; }
+    }
+
+    public interface I1 { void M(); }
+    public interface I2 { void M(); }
+    public interface I3<T> { void M(); }
+    public interface I4 { void M(int arg); }
+
+    public class CInheritMany1 : I1 {
+        void I1.M() { Flag.Value = 100; }
+    }
+
+    public class CInheritMany2 : I1 {
+        void I1.M() { Flag.Value = 200; }
+        public void M() { Flag.Value = 201; }
+    }
+
+    public class CInheritMany3 : I2, I1 {
+        void I1.M() { Flag.Value = 300; }
+        void I2.M() { Flag.Value = 301; }
+    }
+
+    public class CInheritMany4 : I3<object> {
+        void I3<object>.M() { Flag.Value = 400; }
+        public void M() { Flag.Value = 401; }
+    }
+    public class CInheritMany5 : I1, I2, I3<object> {
+        void I1.M() { Flag.Value = 500; }
+        void I2.M() { Flag.Value = 501; }
+        void I3<object>.M() { Flag.Value = 502; }
+        public void M() { Flag.Value = 503; }
+    }
+    public class CInheritMany6<T> : I3<T> {
+        void I3<T>.M() { Flag.Value = 600; }
+        public void M() { Flag.Value = 601; }
+    }
+    public class CInheritMany7<T> : I3<T> {
+        void I3<T>.M() { Flag.Value = 700; }
+    }
+
+    public class CInheritMany8 : I1, I4 {
+        void I1.M() { Flag.Value = 800; }
+        void I4.M(int arg) { Flag.Value = 801; }
     }
 
     public class COverloads_ClrReference {
