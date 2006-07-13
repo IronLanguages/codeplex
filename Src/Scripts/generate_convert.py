@@ -183,7 +183,7 @@ direct_conversions = [ byte_type, sbyte_type, int16_type, int64_type, uint16_typ
 # The code generator runs on these tuples, only right before the emit will
 # it call get_code to choose the right element from the tuple for given type.
 identity_conversion = ("result = (%(to_type)s)%(value)s; return true;",
-                       " return (%(to_type)s)%(value)s;")
+                       "return (%(to_type)s)%(value)s;")
 unchecked_cast      = ("result = (%(to_type)s)(%(from_type)s)%(value)s; return true;",
                        "return (%(to_type)s)(%(from_type)s)%(value)s;")
 checked_cast        = ("result = checked((%(to_type)s)(%(from_type)s)%(value)s); return true;",

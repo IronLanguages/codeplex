@@ -122,12 +122,12 @@ class Operator(Symbol):
         cw.write(template, clrName=self.clrName, name=self.name, rname=self.rname, symbol=self.symbol)
     
     def genSymbolTableValues(self, cw, x):
-        cw.writeline("public const int %-24s = %3d;" % (self.symbol_name()+"Id",x))
+        cw.writeline("public const int %-24s = %3d;  // \"__%s__\"" % (self.symbol_name()+"Id",x,self.name))
 
         if self.isCompare(): return 1
 
-        cw.writeline("public const int %-24s = %3d;" % (self.reverse_symbol_name()+"Id",x+1))
-        cw.writeline("public const int %-24s = %3d;" % (self.inplace_symbol_name()+"Id",x+2))
+        cw.writeline("public const int %-24s = %3d;  // \"__%s__\"" % (self.reverse_symbol_name()+"Id",x+1,self.rname))
+        cw.writeline("public const int %-24s = %3d;  // \"__i%s__\"" % (self.inplace_symbol_name()+"Id",x+2,self.name))
         
         return 3
     
@@ -207,13 +207,13 @@ class DivisionOperator(Operator):
         cw.write(template, clrName=self.tclrName, name=self.tname, rname=self.trname, symbol=self.symbol)
 
     def genSymbolTableValues(self, cw, x):
-        cw.writeline("public const int %-24s = %3d;" % (self.symbol_name()+"Id", x))
-        cw.writeline("public const int %-24s = %3d;" % (self.reverse_symbol_name()+"Id", x+1))
-        cw.writeline("public const int %-24s = %3d;" % (self.inplace_symbol_name()+"Id", x+2))
+        cw.writeline("public const int %-24s = %3d;  // \"__%s__\"" % (self.symbol_name()+"Id", x,self.name))
+        cw.writeline("public const int %-24s = %3d;  // \"__%s__\"" % (self.reverse_symbol_name()+"Id", x+1,self.rname))
+        cw.writeline("public const int %-24s = %3d;  // \"__i%s__\"" % (self.inplace_symbol_name()+"Id", x+2,self.name))
 
-        cw.writeline("public const int %-24s = %3d;" % (self.true_symbol_name()+"Id",x+3))
-        cw.writeline("public const int %-24s = %3d;" % (self.reverse_true_symbol_name()+"Id",x+4))
-        cw.writeline("public const int %-24s = %3d;" % (self.inplace_true_symbol_name()+"Id",x+5))
+        cw.writeline("public const int %-24s = %3d;  // \"__%s__\"" % (self.true_symbol_name()+"Id",x+3,self.tname))
+        cw.writeline("public const int %-24s = %3d;  // \"__%s__\"" % (self.reverse_true_symbol_name()+"Id",x+4,self.trname))
+        cw.writeline("public const int %-24s = %3d;  // \"__i%s__\"" % (self.inplace_true_symbol_name()+"Id",x+5,self.tname))
         
         return 6
     
