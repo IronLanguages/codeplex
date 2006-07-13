@@ -51,7 +51,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         protected override bool ShouldOverrideVirtual(MethodInfo mi) {
-            return mi.DeclaringType != baseType;
+            return !IsInstanceType(mi.DeclaringType);
         }
 
         protected override void ImplementPythonObject() {

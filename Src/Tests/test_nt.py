@@ -71,8 +71,8 @@ AreEqual(currdir+'\\tsd', nt.getcwd())
 nt.chdir(currdir)
 AreEqual(currdir, nt.getcwd())
 nt.rmdir('tsd')
-AssertError(ValueError, lambda:nt.chdir(''))
-AssertError(IOError, lambda:nt.chdir('tsd'))
+AssertError(OSError, lambda:nt.chdir(''))
+AssertError(OSError, lambda:nt.chdir('tsd'))
 
 # chmod tests:
 # BUG 828,830

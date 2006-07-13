@@ -39,7 +39,13 @@ namespace IronPython.Modules {
 
         [PythonName("chdir")]
         public static void ChangeDirectory(string path) {
-            Directory.SetCurrentDirectory(path);
+            if(String.IsNullOrEmpty(path)) throw ExceptionConverter.CreateThrowable(error, "Invalid argument");
+
+            try {
+                Directory.SetCurrentDirectory(path);
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonName("chmod")]

@@ -263,7 +263,7 @@ namespace IronPython.Modules {
             public RE_Match Match(object text, int pos, int endpos) {
                 string input = ValidateString(text, "text");
                 return RE_Match.makeMatch(
-                    re.Match(input, pos, Math.Max(0, endpos - pos)),
+                    re.Match(input.Substring(0, endpos), pos),
                     this,
                     input,
                     pos);

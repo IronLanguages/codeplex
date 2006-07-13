@@ -1194,6 +1194,24 @@ def test_slots():
     a = C()
     a.__dict__ = {'b':1}
     AreEqual(a.b, 1)
+    
+    
+    # base, child define slots, grand-child doesn't
+    
+    class foo(object): __slots__ = ['fooSlot']
+    
+    class bar(foo): __slots__ = ['barSlot']
+    
+    class baz(bar): pass   # shouldn't throw
+    
+    a = baz()
+    a.barSlot = 'xyz'
+    a.fooSlot = 'bar'
+    a.dictEntry = 'foo'
+    
+    AreEqual(a.barSlot, 'xyz')
+    AreEqual(a.fooSlot, 'bar')
+    AreEqual(a.dictEntry, 'foo')
 
 ############################################################
 def test_inheritance_cycle():

@@ -711,4 +711,15 @@ def test_same_but_different():
     AreEqual({-10:0, -10L:1}, {-10:1})
 
 
+def test_eval_locals_simple():
+    class Locals(dict):
+        def __getitem__(self, key):
+            try:
+                return dict.__getitem__(self, key)
+            except KeyError, e:
+                return 'abc'
+    
+    locs = Locals()
+    AreEqual(eval("unknownvariable", globals(), locs), 'abc')
+
 run_test(__name__)

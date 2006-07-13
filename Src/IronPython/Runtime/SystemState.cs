@@ -35,7 +35,7 @@ using ClrModule = IronPython.Modules.ClrModule;
 namespace IronPython.Runtime {
 
     [PythonType(typeof(PythonModule))]
-    public class SystemState : ICustomAttributes {
+    public class SystemState : ICustomAttributes, IDisposable {
         public Encoding DefaultEncoding;
 
         private IAttributesDictionary __dict__;
@@ -399,5 +399,24 @@ namespace IronPython.Runtime {
         }
 
         internal EngineOptions EngineOptions { get { return engineOptions; } }
+
+        ~SystemState() {
+            Dispose(true);
+        }
+        #region IDisposable Members
+
+        public void Dispose() {
+            Dispose(false);
+        }
+
+        #endregion
+
+        private void Dispose(bool finalizing) {
+            if (!finalizing) {
+                if (clrModule != null) {
+                    clrModule.Dispose();
+                }
+            }
+        }
     }
 }

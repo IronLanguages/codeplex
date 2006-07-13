@@ -508,7 +508,7 @@ namespace IronPython.Runtime {
         }
 
         bool IAttributesDictionary.TryGetValue(SymbolId key, out object value) {
-            return TryGetValue(SymbolTable.IdToString(key), out value);
+            return ((IMapping)this).TryGetValue(SymbolTable.IdToString(key), out value);
         }
 
         object IAttributesDictionary.this[SymbolId key] {

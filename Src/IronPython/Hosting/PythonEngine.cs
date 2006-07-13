@@ -1001,10 +1001,20 @@ namespace IronPython.Hosting {
         }
 
         private void Dispose(bool finalizing) {
+            // if we're finalizing we shouldn't access other managed objects, as
+            // their finalizers may have already run            
             if (!finalizing) {
                 if (stdIn != null) stdIn.Dispose();
                 if (stdErr != null) stdErr.Dispose();
-                if (stdOut != null) stdOut.Dispose();
+                if (stdOut != null) stdOut.Dispose();                
+            }
+
+            if (!finalizing || !AppDomain.CurrentDomain.IsFinalizingForUnload()) {
+                // ClrModule holds onto SystemState, SystemState holds onto ClrModule...
+                // no problem, right?  But there's a reference from AppDomain.CurrentDomain.AssemblyResolve
+                // to ClrModule, which gives them both a static root.  Threfore it's safe
+                // to dispose of systemState unless the domain is unloading.                
+                systemState.Dispose();
             }
         }
 

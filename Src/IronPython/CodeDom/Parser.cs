@@ -28,7 +28,7 @@ using IronPython.Runtime;
 using System.Diagnostics;
 
 namespace IronPython.CodeDom {
-    class PythonParser : CodeParser {
+    class PythonParser : CodeParser, IDisposable {
         private List<string> references = new List<string>();
         private SystemState state = new SystemState();
 
@@ -214,6 +214,26 @@ namespace IronPython.CodeDom {
                 // otherwise we want to ignore the statement.
             } else {
                 throw new NotImplementedException("arbitrary expressions at the top-level");
+            }
+        }
+
+        ~PythonParser(){
+            Dispose(true);
+        }
+
+        #region IDisposable Members
+
+        public void Dispose() {
+            Dispose(false);
+        }
+
+        #endregion
+
+        private void Dispose(bool finalizing){
+            // if we're finalizing we shouldn't access other managed objects, as
+            // their finalizers may have already run            
+            if (!finalizing) {
+                state.Dispose();
             }
         }
     }

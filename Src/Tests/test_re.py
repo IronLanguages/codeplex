@@ -342,4 +342,10 @@ def test_end():
     Assert (m.end(0) == 8)
 
 
+def test_lone_hat():
+    """Single ^ reg-ex shouldn't match w/ a sub-set of a string"""
+    sol = re.compile('^')
+
+    AreEqual(sol.match('foobar', 1, 2), None)
+
 run_test(__name__)

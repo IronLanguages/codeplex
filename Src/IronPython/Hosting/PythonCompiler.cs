@@ -87,7 +87,7 @@ namespace IronPython.Hosting {
     }
 
 
-    public class PythonCompiler {
+    public class PythonCompiler : IDisposable {
         private IList<string> sourceFiles;
         private SystemState state;
 
@@ -343,6 +343,26 @@ namespace IronPython.Hosting {
 #pragma warning disable
                 return Assembly.LoadWithPartialName(name);
 #pragma warning enable
+            }
+        }
+
+        ~PythonCompiler() {
+            Dispose(true);
+        }
+
+        #region IDisposable Members
+
+        public void Dispose() {
+            Dispose(false);
+        }
+
+        #endregion
+
+        private void Dispose(bool finalizing) {
+            // if we're finalizing we shouldn't access other managed objects, as
+            // their finalizers may have already run            
+            if (!finalizing) {
+                state.Dispose();
             }
         }
     }
