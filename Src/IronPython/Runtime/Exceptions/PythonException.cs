@@ -111,18 +111,22 @@ namespace IronPython.Runtime.Exceptions {
         }
 
         public int Line {
+            [PythonName("lineno")]
             get { return lineNo; }
         }
-
+       
         public int Column {
+            [PythonName("offset")]
             get { return columnNo; }
         }
 
         public string FileName {
+            [PythonName("filename")]
             get { return file; }
         }
 
         public string LineText {
+            [PythonName("text")]
             get { return lineText; }
         }
 

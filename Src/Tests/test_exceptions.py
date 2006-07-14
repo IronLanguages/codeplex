@@ -410,3 +410,59 @@ except AssertionError, e:
     Assert(e.args[0] == "Failed message 2")
 else: 
     Fail("should have thrown")
+
+def test_methsonexcepobject():
+	try:
+		compile("if 2==2: x=2\nelse:y=", "Error", "exec") 
+	except SyntaxError, se:
+		l1 = dir(se)
+		Assert('lineno' in l1)
+		Assert('offset' in l1)
+		Assert('filename' in l1)
+		Assert('text' in l1)
+		if( sys.platform == 'cli' ):
+			l2 = dir(se.clsException)
+			Assert('lineno' in l2)
+			Assert('offset' in l2)
+			Assert('filename' in l2)
+			Assert('text' in l2)
+		AreEqual(se.lineno, 2)
+		# Bug 1132
+		#AreEqual(se.offset, 7)
+		AreEqual(se.filename, "Error") 
+		AreEqual(se.text, "else:y=")
+		AreEqual(se.clsException.lineno, 2)
+		# Bug 1132
+		#AreEqual(se.clsException.offset, 7)
+		AreEqual(se.clsException.filename, "Error") 
+		AreEqual(se.clsException.text, "else:y=")
+	
+	try:
+		compile("if 2==2: x=", "Error", "exec") 
+	except SyntaxError, se:
+		AreEqual(se.lineno, 1)
+		# Bug 1132
+		#AreEqual(se.offset, 11)
+		AreEqual(se.filename, "Error")
+		AreEqual(se.text, "if 2==2: x=")
+		AreEqual(se.clsException.lineno, 1)
+		# Bug 1132
+		#AreEqual(se.clsException.offset, 11)
+		AreEqual(se.clsException.filename, "Error")
+		AreEqual(se.clsException.text, "if 2==2: x=")
+		
+	try:
+		compile("if 2==2: x=", "Error", "eval")
+	except SyntaxError, se:
+		AreEqual(se.lineno, 1)
+		# Bug 1132
+		#AreEqual(se.offset, 2)
+		AreEqual(se.filename, "Error")
+		AreEqual(se.text, "if 2==2: x=")
+		AreEqual(se.clsException.lineno, 1)
+		# Bug 1132
+		#AreEqual(se.clsException.offset, 2)
+		AreEqual(se.clsException.filename, "Error")
+		AreEqual(se.clsException.text, "if 2==2: x=")
+		
+test_methsonexcepobject()
