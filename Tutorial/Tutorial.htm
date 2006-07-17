@@ -1252,8 +1252,7 @@
 	<p class="Body">The standalone version of this script is located in wfdemo.py 
 	in the Tutorial directory.</p>
 	<h2><a name="T2.3">Exercise 3: Windows Presentation Foundation (Avalon)</a></h2>
-	<p class="Body">This exercise requires Windows Presentation Foundation installed. 
-	Please see <a href="#Avalon">prerequisites</a> for more information.</p>
+	<p class="Body">This exercise requires Windows Presentation Foundation installed.&nbsp; Please see <a href="#Avalon">prerequisites</a> for more information.</p>
 	<p class="Body">Just like Windows Forms, the Windows Presentation Foundation 
 	also requires initialization to support interactive development. The initialization 
 	code is available in the &quot;Tutorial\avalon.py&quot; file.</p>
@@ -1272,17 +1271,24 @@
 	<p class="TypedExample">from avalon import *</p>
 	<ol start="3">
 		<li>
-		<p class="Step">Create Avalon window, display it and set some of its properties:</p>
+		<p class="Step">Create Avalon window, display it, and set some of its properties:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">w = Window()</p>
 	<p class="TypedExample">w.Show()</p>
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">You may need to alt-tab or look for the running 
+	application since it may not have popped to the top level on your desktop.&nbsp; 
+	Now, let's do more.</p>
+	<p class="TypedExample">&nbsp;</p>
 	<p class="TypedExample">w.Title = &quot;My Avalon Application&quot;</p>
 	<p class="TypedExample">w.SizeToContent = SizeToContent.WidthAndHeight</p>
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">By setting the window property to &quot;size to 
+	content&quot;, the window shrinks.</p>
 	<ol start="4">
 		<li>
-		<p class="Step">By setting the window property to &quot;size to content&quot;, the 
-		window shrinks. Let&#39;s add the content now:</p>
+		<p class="Step">Let&#39;s add the content now:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">w.Content = TextBlock()</p>
@@ -1297,19 +1303,23 @@
 	<h3><a name="T2.3.2">Task 2: Avalon calculator</a></h3>
 	<ol>
 		<li>
-		<p class="Step">If you are continuing from the Task 1, proceed to step 2. 
-		Otherwise, please follow the <a href="#T2.3.1">steps 1-3</a> from the Task 
+		<p class="Step">If you are continuing from the Task 1, proceed to step 2.&nbsp; Otherwise, please follow the <a href="#T2.3.1">steps 1-3</a> from the Task 
 		1. </p>
 		</li>
 		<li>
-		<p class="Step">Windows Presentation Foundation uses XAML format to describe 
-		the graphical layout. Load the &quot;calc.xaml&quot; and display the resulting content:</p>
+		<p class="Step">Windows Presentation Foundation uses the XAML format to describe 
+		the graphical layout and basic behaviors of UI. Load the &quot;calc.xaml&quot; and display the resulting content:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">w.Content = LoadXaml(&quot;calc.xaml&quot;)</p>
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">If you flowed into this task from Task 1, then 
+	w.SizeToContent may have been reset to manual, but in either case, you may 
+	need to manually drag the window's border down and to the right to see the 
+	calculator UI.</p>
 	<ol start="3">
 		<li>
-		<p class="Step">Now we can walk the calculator&#39;s object model (function 
+		<p class="Step">Let's walk the calculator&#39;s object model (function 
 		Walk is defined in the avalon.py file)</p>
 		</li>
 	</ol>
@@ -1321,9 +1331,11 @@
 		</li>
 	</ol>
 	<p class="TypedExample">[ n for n in Walk(w) if isinstance(n, Button) ]</p>
-	<p class="Stepnonumbering">The list of all buttons was printed on the console. 
-	To capture the button list in the variable, use the &quot;_&quot; (result of the last 
-	operation) identifier:</p>
+	<p class="Stepnonumbering">&nbsp;</p>
+	<p class="Stepnonumbering">The console printed the list of all buttons.&nbsp; To 
+	save the button list object in a variable, use the interpreter's &quot;_&quot; 
+	variable, which always holds the last non-None value result printed by the 
+	console:</p>
 	<p class="TypedExample">buttons = _</p>
 	<ol start="5">
 		<li>
@@ -1336,8 +1348,8 @@
 	<ol start="6">
 		<li>
 		<p class="Step" style="page-break-after:avoid">To bring the calculator alive, 
-		we need to provide event handlers for each button. These can be imported 
-		from the calculator.py file. Import the calculator.py:</p>
+		we need to provide event handlers for each button.&nbsp; These can be imported 
+		from the calculator.py file:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">import calculator</p>
@@ -1345,8 +1357,8 @@
 		<li>
 		<p class="Step">The calculator module contains the Calculator class that 
 		will be responsible for tracking the expression as it is being built by 
-		the calculator. To bring the calculator alive (register the proper event 
-		handlers), enter:</p>
+		the calculator.&nbsp; To bring the calculator alive (that is, register event 
+		handlers for the UI), enter:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">calculator.enliven(w)</p>
@@ -1357,7 +1369,7 @@
 		</li>
 		<li>
 		<p class="Step">Feel free to explore the calculator.py script file (located 
-		in Tutorial directory). The point of interest is the Calculator.__init__ 
+		in Tutorial directory).&nbsp; The point of interest is the Calculator.__init__ 
 		method:</p>
 		</li>
 	</ol>
@@ -1388,20 +1400,21 @@
 &nbsp;&nbsp;&nbsp; self.result.Text = self.expression&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
 	(11)</p>
 	<p class="Stepnonumbering"><br />
-	The &quot;controls&quot; argument for the method is list of buttons and text boxes, very 
-	similar to the list of buttons created in steps 3 and 4 of this task. The initialization 
-	code enumerates the list (line 4), identifies buttons (line 5) and uses the 
-	name of the button (&quot;One&quot;, &quot;Multiply&quot;, &quot; Equals&quot; ...) to find the attribute 
-	(method) with the name &quot;on_One&quot;, &quot;on_Multiply&quot;, &quot;on_Equals&quot; respectively (line 
-	6). If such attribute (event handler) is available, the event is registered 
-	via the code on the line 7.</p>
+	The &quot;controls&quot; argument for the method is the list of buttons and text boxes, very 
+	similar to the list of buttons created in steps 3 and 4 of this task.&nbsp; The initialization 
+	code enumerates the list (line 4), identifies buttons (line 5), and uses the 
+	name of the button (&quot;One&quot;, &quot;Multiply&quot;, &quot; Equals&quot;, ...) to find the 
+	calculator attribute 
+	(method) with the corresponding name (for example, &quot;on_One&quot;, &quot;on_Multiply&quot;, 
+	and &quot;on_Equals&quot;, respectively).&nbsp; If such an attribute (method) is available, 
+	we hook the Click event event, using the name to fetch the attribute (line 7).</p>
 	<ol start="10">
 		<li>
-		<p class="Step">Second point of interest is on_Equals method, especially 
-		the highlighted line. Python has a built-in function &quot;eval&quot; which evaluates 
-		expression passed as string and returns the value. Calculator uses &quot;eval&quot; 
-		to evaluate the expressions. &quot;str&quot; function will then convert the value 
-		into string for display.</p>
+		<p class="Step">The second point of interest is the on_Equals method, especially 
+		the highlighted line.&nbsp; Python has a built-in function, &quot;eval&quot;, which evaluates 
+		an expression passed as a string and returns the resulting value.&nbsp; Calculator uses &quot;eval&quot; 
+		to evaluate the calculator expressions.&nbsp; The &quot;str&quot; function will then convert the value 
+		into a string for display.</p>
 		</li>
 	</ol>
 	<p class="Code-Background">def on_Equals(self, b, e):<br />
@@ -1461,12 +1474,12 @@
 		</li>
 	</ul>
 	<h2><a name="T3.1">Exercise 1: Merlin the Wizard</a></h2>
-	<p class="Body">This exercise consists of two tasks. In the first one we will 
+	<p class="Body">This exercise consists of two tasks.&nbsp; In the first one we will 
 	create an interop assembly for a COM object library and explore it using the 
-	.NET reflection tools. In the second task we will use the COM object library 
+	.NET reflection tools.&nbsp; In the second task we will use the COM object library 
 	from IronPython.</p>
 	<p class="Body">In this exercise, you will create a COM interop assembly and 
-	use it to drive COM object from IronPython.</p>
+	use it to drive the COM object from IronPython.</p>
 	<h3><a name="T3.1.1">Task 1: Creating COM interop assemblies</a></h3>
 	<ol>
 		<li>
@@ -1474,11 +1487,11 @@
 		Prompt&quot; from the start menu.</p>
 		</li>
 		<li>
-		<p class="Step">.NET Frameworks SDK comes with the &quot;tlbimp&quot; tool which converts 
-		the COM type library into the .NET metadata information - the interop assembly. 
-		The COM object library we want to use from IronPython is the msagent, located 
-		in %SystemRoot%\msagent\agentsvr.exe. Use the tlbimp tool to generate the 
-		interop assembly for msagent:</p>
+		<p class="Step">The .NET Frameworks SDK comes with the &quot;tlbimp&quot; tool which converts 
+		a COM type library into .NET metadata information -- the interop assembly.&nbsp; The COM object library we want to use from IronPython 
+		is msagent, located 
+		in %SystemRoot%\msagent\agentsvr.exe.&nbsp; Use the tlbimp tool to generate the 
+		interop assembly for msagent (tlbimp writes to the current directory):</p>
 		</li>
 	</ol>
 	<p class="TypedExample">tlbimp %SystemRoot%\msagent\agentsvr.exe</p>
@@ -1489,22 +1502,22 @@
 	<p class="Code-Highlighted">Type library imported to AgentServerObjects.dll</p>
 	<ol start="3">
 		<li>
-		<p class="Step">The .NET metadata information was saved in AgentServerObjects.dll. 
-		Use the ildasm tool to explore the generated DLL:</p>
+		<p class="Step">The .NET metadata information was saved in AgentServerObjects.dll.&nbsp; Use the ildasm tool to explore the generated DLL:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">ildasm AgentServerObjects.dll</p>
 	<ol start="4">
 		<li>
 		<p class="Step">As you browse the metadata tree, notice that at the root 
-		of the hierarchy there is the &quot;AgentServerObjects&quot; namespace. The namespace 
-		contains many interfaces and a single class - AgentServerClass. Explore 
-		the methods on the class. Calling some of its methods will be the subject 
+		of the hierarchy there is the &quot;AgentServerObjects&quot; namespace.&nbsp; The namespace 
+		contains many interfaces and a single class - AgentServerClass.&nbsp; Explore 
+		the methods on the class.&nbsp; Calling some of its methods will be the subject 
 		of the next task.</p>
 		</li>
 		<li>
 		<p class="Step">When you are done exploring the AgentServerObjects.dll, 
-		close the ildasm tool and the Windows command prompt.</p>
+		close the ildasm tool.&nbsp; Copy AgentServerObjects.dll to the tutorial 
+		directory, and then close the Windows command prompt.</p>
 		</li>
 	</ol>
 	<h3><a name="T3.1.2">Task 2: Using COM objects from IronPython</a></h3>
@@ -1514,8 +1527,9 @@
 		(see <a href="#Intro">Introduction</a> for details).</p>
 		</li>
 		<li>
-		<p class="Step">Using the &quot;AddReferenceToFile&quot; function in the sys module, 
-		load the AgentServerObjects.dll:</p>
+		<p class="Step">Using the &quot;AddReferenceToFile&quot; function in the 
+		clr module, 
+		add a reference to the AgentServerObjects.dll:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">import clr</p>
@@ -1541,7 +1555,8 @@
 	&gt;&gt;&gt; dir(a)</p>
 	<p class="Code-Background">[&#39;CreateObjRef&#39;, &#39;Equals&#39;, &#39;GetCharacter&#39;, &#39;GetHashCode&#39;, 
 	&#39;GetLifetimeService&#39;, &#39;GetSuspended&#39;, &#39;GetType&#39;, &#39;InitializeLifetimeService&#39;, 
-	&#39;Load&#39;, &#39;Register&#39;, &#39;ToString&#39;, &#39;Unload&#39;, &#39;Unregister&#39;, &#39;__new__&#39;]</p>
+	&#39;Load&#39;, 'MemberwiseClone', &#39;Register&#39;, &#39;ToString&#39;, &#39;Unload&#39;, &#39;Unregister&#39;, &#39;__class__', 
+	'__init__', '__module__', '__new__']</p>
 	<ol start="5">
 		<li>
 		<p class="Step">Explore the parameters of the Load method on AgentServerClass:</p>
@@ -1550,11 +1565,11 @@
 	<p class="TypedExample">a.Load.__doc__<br />
 &nbsp;</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; a.Load.__doc__</p>
-	<p class="Code-Background">&#39;System.Void Load(object, System.Int32&amp;, System.Int32&amp;)&#39;</p>
+	<p class="Code-Background">&#39;(int, int) Load(object, vLoadKey)\r\n&#39;</p>
 	<p class="Normal">&nbsp;</p>
-	<p class="Stepnonumbering">The Load methods has an input parameter (name of 
-	the character to load) and two output parameters. When calling this method, 
-	IronPython will turn the two output parameters into return values.</p>
+	<p class="Stepnonumbering">The Load methods have an input parameter (name of 
+	the character to load) and two output parameters.&nbsp; When calling this method, IronPython will turn the two output parameters into 
+	multiple return values.</p>
 	<ol start="6">
 		<li>
 		<p class="Step">Load &quot;Merlin the Wizard&quot; character. (The character data 
@@ -1576,38 +1591,37 @@
 	<p class="TypedExample">c.Think(&quot;IronPython Tutorial&quot;)</p>
 	<ol start="8">
 		<li>
-		<p class="Step">Merlin has a lot of animations he can play. Get list of 
-		all the animations by caling GetAnimationNames method. Play one of the animations 
-		- Read - by calling Play method:</p>
+		<p class="Step">Merlin has a lot of animations he can play.&nbsp; Get list of 
+		all the animations by calling the GetAnimationNames method. Play one of the animations, 
+		&quot;Read&quot;, by calling the Play method:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">for n in c.GetAnimationNames(): print n</p>
 	<p class="TypedExample">c.Play(&quot;Read&quot;)</p>
 	<ol start="9">
 		<li>
-		<p class="Step">(Optional) To call series of animations, we could call c.Play(animation_name) 
-		for each animation. Python&#39;s lamda functions can simplify this process. 
-		We can create global functions and assign them names based on the animation 
+		<p class="Step">(Optional) To call a series of animations, we could call c.Play(animation_name) 
+		for each animation.&nbsp; Python&#39;s lamda functions can simplify this process.&nbsp; We can create global functions and assign them names based on the animation 
 		name:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">for n in c.GetAnimationNames(): globals()[n] = lambda 
 	name=n: c.Play(name)</p>
+	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Stepnonumbering">At this point we can have Merlin play animations 
 	simply by<br />
 	calling a function from global namespace:</p>
 	<p class="TypedExample">Congratulate()</p>
 	<ol start="10">
 		<li>
-		<p class="Step">Stop Merlin&#39;s animations, hide him and exit IronPython console</p>
+		<p class="Step">Stop Merlin&#39;s animations, hide him, and exit IronPython console</p>
 		</li>
 	</ol>
 	<p class="TypedExample">c.StopAll(0)</p>
 	<p class="TypedExample">c.Hide(0)</p>
 	<p class="LabSummary">Tutorial Summary</p>
 	<p class="Body">This tutorial was focused on using COM interop assemblies generated 
-	via tlbimp tool (part of .NET Framework SDK) to control COM objects from the 
-	IronPython environment.</p>
+	via tlbimp tool (in the .NET Framework SDK) to control COM objects from the IronPython environment.</p>
 	<p class="Body">In this tutorial you performed the following exercises.</p>
 	<ul>
 		<li>
@@ -1615,10 +1629,11 @@
 		</li>
 	</ul>
 	<p class="Body">In this tutorial, you created a COM interop assembly for the 
-	msagent COM object. You used tlbimp tool which is part of the .NET Framework 
-	SDK. Using ildasm tool you explored contents of the interop assembly.</p>
+	msagent COM object.&nbsp; You used the tlbimp tool which is part of the .NET Framework 
+	SDK.&nbsp; Using the ildasm tool, you explored contents of the interop assembly.</p>
 	<p class="Normal">Then, from IronPython you loaded the interop assembly, created 
-	instance of the COM object and instructed Merlin to play different animations.</p>
+	an instance of the COM object, and instructed Merlin to play different animations.</p>
+	<p class="Normal">&nbsp;</p>
 	<h1><a name="T4">Tutorial 4: Debugging IronPython program</a></h1>
 	<p class="Body">This tutorial will walk you through very simple debug session, 
 	debugging a Python script using Microsoft CLR Debugger.</p>
@@ -1701,6 +1716,7 @@
 	<p class="Body">In this tutorial, you walked through the simple debug session 
 	of IronPython program. You used Microsoft CLR Debugger, placed breakpoints and 
 	stepped through the Python program execution.</p>
+	<p class="Body">&nbsp;</p>
 	<h1><a name="T5">Tutorial 5: Extending IronPython</a></h1>
 	<p class="Body">Estimated time to complete this tutorial: <b>25- 60 minutes</b></p>
 	<p class="Body">The objective of this tutorial is to implement the class which 
