@@ -57,7 +57,7 @@ AreEqual(BigInteger(-1212321.3213).ToBoolean(p) , True )
 AreEqual(BigInteger(1212321384892342394723947L).ToBoolean(p) , True )
 
 AreEqual(BigInteger(0L).ToChar(p) , Char.MinValue)
-AreEqual(BigInteger(65L).ToChar(p) , 'A'.ToChar(p))
+AreEqual(BigInteger(65L).ToChar(p) , System.IConvertible.ToChar('A', p))
 AreEqual(BigInteger(0xffff).ToChar(p) , Char.MaxValue)
 AssertError(OverflowError, BigInteger(-1).ToChar, p)
 

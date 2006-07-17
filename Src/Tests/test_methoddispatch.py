@@ -1211,3 +1211,44 @@ except TypeError:
 System.Array.Resize[System.Byte](x, 2048)
 
 AssertError(TypeError, System.Collections.Generic.List)
+
+# verify calls to explicit interface implementations
+
+x = ExplicitTest()
+Assert(not hasattr(x, "A"))
+try:
+    x.A()
+except AttributeError:
+    pass
+else:
+    Fail("Expected AttributeError, got none")
+    
+AreEqual(x.B(), "ExplicitTest.B")
+
+Assert(not hasattr(x, "C"))
+try:
+    x.C()
+except AttributeError:
+    pass
+else:
+    Fail("Expected AttributeError, got none")
+
+AreEqual(x.D(), "ExplicitTest.D")
+
+AreEqual(IExplicitTest1.A(x), "ExplicitTest.IExplicitTest1.A")
+AreEqual(IExplicitTest1.B(x), "ExplicitTest.IExplicitTest1.B")
+AreEqual(IExplicitTest1.C(x), "ExplicitTest.IExplicitTest1.C")
+AreEqual(IExplicitTest1.D(x), "ExplicitTest.D")
+AreEqual(IExplicitTest2.A(x), "ExplicitTest.IExplicitTest2.A")
+AreEqual(IExplicitTest2.B(x), "ExplicitTest.B")
+
+x = ExplicitTestArg()
+try:
+    x.M()
+except AttributeError:
+    pass
+else:
+    Fail("Expected AttributeError, got none")
+
+AreEqual(IExplicitTest3.M(x), 3)
+AreEqual(IExplicitTest4.M(x, 7), 4)

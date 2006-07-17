@@ -346,12 +346,12 @@ def test_explicit_interfaces():
     AreEqual(otdc.MethodOverridden(), "OverrideTestDerivedClass.MethodOverridden() invoked")
     AreEqual(IOverrideTestInterface.MethodOverridden(otdc), 'IOverrideTestInterface.MethodOverridden() invoked')
 
-    AreEqual(otdc.x, 'IOverrideTestInterface.x invoked')
+    AreEqual(IOverrideTestInterface.x.GetValue(otdc), 'IOverrideTestInterface.x invoked')
     AreEqual(IOverrideTestInterface.y.GetValue(otdc), 'IOverrideTestInterface.y invoked')
     
     AreEqual(otdc.y, 'OverrideTestDerivedClass.y invoked')
 
-    AreEqual(otdc.Method(), "IOverrideTestInterface.method() invoked")
+    AreEqual(IOverrideTestInterface.Method(otdc), "IOverrideTestInterface.method() invoked")
     
     AreEqual(hasattr(otdc, 'IronPythonTest_IOverrideTestInterface_x'), False)
     
@@ -360,11 +360,11 @@ def test_explicit_interfaces():
     AreEqual(IOverrideTestInterface.x.__get__(otdc, OverrideTestDerivedClass), 'IOverrideTestInterface.x invoked')
     AreEqual(IOverrideTestInterface.y.__get__(otdc, OverrideTestDerivedClass), 'IOverrideTestInterface.y invoked')
 
-    AreEqual(otdc.__getitem__(2), 'abc')
-    AreEqual(otdc[2], 'abc')
-    AssertError(NotImplementedError, otdc.__setitem__, 2, 3)
+    AreEqual(IOverrideTestInterface.__getitem__(otdc, 2), 'abc')
+    AreEqual(IOverrideTestInterface.__getitem__(otdc, 2), 'abc')
+    AssertError(NotImplementedError, IOverrideTestInterface.__setitem__, otdc, 2, 3)
     try:
-        otdc[2] = 3
+        IOverrideTestInterface.__setitem__(otdc, 2, 3)
     except NotImplementedError: pass
     else: AssertUnreachable()
 

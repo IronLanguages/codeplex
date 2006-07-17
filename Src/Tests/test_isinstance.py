@@ -17,9 +17,6 @@ from lib.assert_util import *
 
 import sys
 
-
-
-
 def verify_file(ff):
     cnt = 0
     for i in ff:
@@ -750,7 +747,7 @@ AssertErrorWithMessage(TypeError, "vars() argument must have __dict__ attribute"
 
 
 import System
-AreEqual('32'.ToDouble(None), 32.0)
+AreEqual(System.IConvertible.ToDouble('32', None), 32.0)
 
 
 #################################################################    

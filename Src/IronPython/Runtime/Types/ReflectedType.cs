@@ -558,74 +558,6 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
-        private void AddExplicitInterfaceMethod(Type interfaceType, MethodInfo mi, MemberInfo[] defaultMembers) {
-            // we only add explicit interface methods if there are no collisions.  If there
-            // are collisions the user needs to call via the interface type and pass the
-            // instance in explicitly.  For properties this becomes:
-            //      IFoo.x.GetValue(somefoo)
-            //      IFoo.x.SetValue(somefoo, value)
-            //
-            // For methods this becomes:
-            //      IFoo.x(somefoo)
-
-            if (mi.IsSpecialName) {
-                AddExplicitInterfaceProperty(mi, defaultMembers);
-                return;
-            }
-
-            // method
-            string name;
-            NameType nt = NameConverter.TryGetName(this, mi, out name);
-            switch (nt) {
-                case NameType.None: break;
-                case NameType.PythonMethod:
-                case NameType.Method:
-                    if (!dict.ContainsKey(SymbolTable.StringToId(name))) {
-                        // no collision, store the interface method.
-                        StoreReflectedMethod(name, mi, nt);
-                    }
-                    break;
-                default: Debug.Assert(false, "Unexpected name type for reflected method"); break;
-            }
-        }
-
-        private void AddExplicitInterfaceProperty(MethodInfo mi, MemberInfo[] defaultMembers) {
-            string name;
-            NameType nt;
-
-            // property
-            PropertyInfo pi = GetPropertyFromMethod(mi, defaultMembers);
-            if (pi != null) {
-                if (pi.GetIndexParameters().Length > 0) {
-                    AddExplicitInterfaceIndexer(pi);
-                    return;
-                }
-
-                nt = NameConverter.TryGetName(this, pi, mi, out name);
-                switch (nt) {
-                    case NameType.None: break;
-                    case NameType.PythonProperty:
-                    case NameType.Property:
-                        if (!dict.ContainsKey(SymbolTable.StringToId(name))) {
-                            dict[SymbolTable.StringToId(name)] = new ReflectedProperty(pi, pi.GetGetMethod(true), pi.GetSetMethod(true), nt);
-                        }
-                        break;
-                    default: Debug.Assert(false, "Unexpected name type for explicitly implemented reflected property"); break;
-                }
-            }
-        }
-
-        private void AddExplicitInterfaceIndexer(PropertyInfo pi) {
-            MethodInfo method = pi.GetGetMethod(true);
-            if (method != null && !dict.ContainsKey(SymbolTable.GetItem)) {
-                StoreReflectedMethod("__getitem__", method, NameType.PythonMethod);
-            }
-            method = pi.GetSetMethod(true);
-            if (method != null && !dict.ContainsKey(SymbolTable.SetItem)) {
-                StoreReflectedMethod("__setitem__", method, NameType.PythonMethod);
-            }
-        }
-
         private void AddReflectedMethod(MethodInfo mi, MemberInfo[] defaultMembers) {
             string name;
 
@@ -890,7 +822,7 @@ namespace IronPython.Runtime.Types {
                         AddNestedType(ty);
                     }
 
-                    AddExplicitInterfaceMethods(defaultMembers);
+                    AddComInterfaceMethods();
 
                     AddEnumOperators();
 
@@ -914,7 +846,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private void AddExplicitInterfaceMethods(MemberInfo[] defaultMembers) {
+        private void AddComInterfaceMethods() {
             // interfaces can't have explicitly implemented interfaces
             if (type.IsInterface) return;
 
@@ -938,18 +870,13 @@ namespace IronPython.Runtime.Types {
                                 NameType.PythonMethod);
                             continue;
                         }
-
-                        if (IsExplicitInterfaceImpl(mi)) {
-                            // explicitly implemented, add it now (otherwise it should
-                            // have already been added).
-                            AddExplicitInterfaceMethod(ty, mi, defaultMembers);
-                        }
                     }
                 }
             }
         }
 
         #endregion
+
 
         #region DynamicType overrides
 

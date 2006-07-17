@@ -636,7 +636,10 @@ def test_iterator_sequence():
        
 def test_explicit_inheritance():
     target = CInheritMany1()
-    target.M(); AreEqual(Flag.Value, 100); Flag.Value = 0
+    Assert(not hasattr(target, "M"))
+    try: target.M()
+    except AttributeError: pass
+    else: Fail("Expected AttributeError, got none")
     I1.M(target); AreEqual(Flag.Value, 100); Flag.Value = 0
     
     target = CInheritMany2()
@@ -644,7 +647,10 @@ def test_explicit_inheritance():
     I1.M(target); AreEqual(Flag.Value, 200)
     
     target = CInheritMany3()
-    target.M(); AreEqual(Flag.Value, 301) #bug 1129: choose the first one
+    Assert(not hasattr(target, "M"))
+    try: target.M()
+    except AttributeError: pass
+    else: Fail("Expected AttributeError, got none")
     I1.M(target); AreEqual(Flag.Value, 300)
     I2.M(target); AreEqual(Flag.Value, 301)
     
@@ -665,11 +671,17 @@ def test_explicit_inheritance():
     AssertError(TypeError, I3[object].M, target)
 
     target = CInheritMany7[int]()
-    target.M(); AreEqual(Flag.Value, 700); Flag.Value = 0
+    Assert(not hasattr(target, "M"))
+    try: target.M()
+    except AttributeError: pass
+    else: Fail("Expected AttributeError, got none")
     I3[int].M(target); AreEqual(Flag.Value, 700)
     
     target = CInheritMany8()
-    target.M(); AreEqual(Flag.Value, 800); Flag.Value = 0
+    Assert(not hasattr(target, "M"))
+    try: target.M()
+    except AttributeError: pass
+    else: Fail("Expected AttributeError, got none")
     I1.M(target); AreEqual(Flag.Value, 800); Flag.Value = 0
     I4.M(target, 100); AreEqual(Flag.Value, 801)
     # target.M(100) ????

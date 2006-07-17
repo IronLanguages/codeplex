@@ -66,6 +66,7 @@
     <Compile Include="Events.cs" />
     <Compile Include="ExceptionConverter.cs" />
     <Compile Include="Exceptions.cs" />
+    <Compile Include="Explicit.cs" />
     <Compile Include="GenMeth.cs" />
     <Compile Include="Indexable.cs" />
     <Compile Include="InheritTest.cs" />
