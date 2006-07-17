@@ -97,8 +97,8 @@ def get_mode_list(modes):
 shortcuts = {
     'a1': 'iron misc regress library',
     'a2': 'compat',
-    'b1': 'iron misc',
-    'b2': 'regress library',
+    'b1': 'iron',
+    'b2': 'regress library misc',
 }
 
 def test_exit_code():

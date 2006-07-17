@@ -39,9 +39,6 @@ namespace IronPython.Modules {
             state = systemState;
         }
 
-        [ThreadStatic]
-        private static Dictionary<string, Assembly> loading;    // list of assemblies currently loading on this thread
-
         public override string ToString() {
             return "<module 'clr' (built-in)>";
         }
@@ -51,39 +48,50 @@ namespace IronPython.Modules {
         #region Public methods
 
         public void AddReference(params object[] references) {
+            if (references == null) throw Ops.TypeError("Expected string or Assembly, got NoneType");
+
             foreach (object reference in references) {
                 AddReference(reference);
             }
         }
 
         public void AddReferenceToFile(params string[] files) {
+            if (files == null) throw Ops.TypeError("Expected string, got NoneType");
+
             foreach (string file in files) {
                 AddReferenceToFile(file);
             }
         }
 
         public void AddReferenceToFileAndPath(params string[] files) {
+            if (files == null) throw Ops.TypeError("Expected string, got NoneType");
+
             foreach (string file in files) {
                 AddReferenceToFileAndPath(file);
             }
         }
 
         public void AddReferenceByName(params string[] names) {
+            if (names == null) throw Ops.TypeError("Expected string, got NoneType");
+
             foreach (string name in names) {
                 AddReferenceByName(name);
             }
         }
 
         public void AddReferenceByPartialName(params string[] names) {
+            if (names == null) throw Ops.TypeError("Expected string, got NoneType");
+
             foreach (string name in names) {
                 AddReferenceByPartialName(name);
             }
         }
 
         public Assembly LoadAssemblyFromFileWithPath(string file) {
+            if (file == null) throw Ops.TypeError("Expected string, got NoneType");
+
             Assembly asm = null;
             try {
-
                 asm = Assembly.LoadFile(file);
             } catch (Exception) {
             }
@@ -91,6 +99,8 @@ namespace IronPython.Modules {
         }
 
         public Assembly LoadAssemblyFromFile(string file) {
+            if (file == null) throw Ops.TypeError("Expected string, got NoneType");
+
             if (file.IndexOf(System.IO.Path.DirectorySeparatorChar) != -1) {
                 throw Ops.ValueError("filenames must not contain full paths, first add the path to sys.path");
             }
@@ -126,6 +136,8 @@ namespace IronPython.Modules {
         }
 
         public Assembly LoadAssemblyByName(string name) {
+            if (name == null) throw Ops.TypeError("Expected string, got NoneType");
+
             Assembly asm = null;
             try {
                 asm = Assembly.Load(name);
@@ -135,6 +147,8 @@ namespace IronPython.Modules {
         }
 
         public Assembly LoadAssemblyByPartialName(string name) {
+            if (name == null) throw Ops.TypeError("Expected string, got NoneType");
+
             Assembly asm = null;
             try {
 #pragma warning disable 618
@@ -202,30 +216,7 @@ namespace IronPython.Modules {
 
         private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args) {
             AssemblyName an = new AssemblyName(args.Name);
-            Assembly res;
-
-            // check to see if we're currently adding a reference to this assembly.  If we
-            // are we don't want to try loading it again.  This occurs w/ assemblies that have
-            // PythonModuleAttribute because when we create an instace of the attribute we also need 
-            // to create the corresponding Type associated w/ the module. That triggers another 
-            // assembly load because our assembly is not finished loading yet.  In that case we just 
-            // return the assembly that is currently being loaded that we know about, but the loader
-            // hasn't yet cached.
-            if (loading == null) loading = new Dictionary<string, Assembly>();
-            if (loading.TryGetValue(an.Name, out res)) return res;
-
-            res = LoadAssemblyFromFile(an.Name);
-
-            if (res != null) {
-                loading[an.Name] = res;
-                try {
-                    AddReference(res);
-                } finally {
-                    loading.Remove(an.Name);
-                }
-            }
-
-            return res;
+            return LoadAssemblyFromFile(an.Name);
         }
 
         private void AddReference(object reference) {
@@ -241,7 +232,7 @@ namespace IronPython.Modules {
                 return;
             }
 
-            throw Ops.TypeError("invalid assembly type.  expected string or Assembly, got {0}", Ops.GetPythonTypeName(reference));
+            throw Ops.TypeError("invalid assembly type. expected string or Assembly, got {0}", Ops.GetPythonTypeName(reference));
         }
 
         private void AddReference(Assembly assembly) {
@@ -259,9 +250,9 @@ namespace IronPython.Modules {
         }
 
         private void AddReference(string name) {
-            Assembly asm;
+            if (name == null) throw Ops.TypeError("Expected string, got NoneType");
 
-            asm = LoadAssemblyByName(name);
+            Assembly asm = LoadAssemblyByName(name);
 
             // note we don't explicit call to get the file version
             // here because the assembly resolve event will do it for us.
@@ -276,6 +267,8 @@ namespace IronPython.Modules {
         }
 
         private void AddReferenceToFileAndPath(string file) {
+            if (file == null) throw Ops.TypeError("Expected string, got NoneType");
+
             // update our path w/ the path of this file...
             string path = System.IO.Path.GetDirectoryName(file);
             List list = state.path;
@@ -288,6 +281,8 @@ namespace IronPython.Modules {
         }
 
         private void AddReferenceToFile(string file) {
+            if (file == null) throw Ops.TypeError("Expected string, got NoneType");
+
             Assembly asm = LoadAssemblyFromFile(file);
             if (asm == null) {
                 throw Ops.RuntimeError("Could not add reference to assembly {0}", file);
@@ -297,6 +292,8 @@ namespace IronPython.Modules {
         }
 
         private void AddReferenceByName(string name) {
+            if (name == null) throw Ops.TypeError("Expected string, got NoneType");
+
             Assembly asm = LoadAssemblyByName(name);
 
             if (asm == null) {
@@ -307,6 +304,8 @@ namespace IronPython.Modules {
         }
 
         private void AddReferenceByPartialName(string name) {
+            if (name == null) throw Ops.TypeError("Expected string, got NoneType"); 
+            
             Assembly asm = LoadAssemblyByPartialName(name);
             if (asm == null) {
                 throw Ops.RuntimeError("Could not add reference to assembly {0}", name);
@@ -546,7 +545,5 @@ namespace IronPython.Modules {
             buf.AppendLine(")");
             return buf.ToString();
         }
-
-
     }
 }

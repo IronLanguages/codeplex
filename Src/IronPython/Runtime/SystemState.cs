@@ -131,11 +131,16 @@ namespace IronPython.Runtime {
                 warnoptions = List.Make();
                 executable = "";
             }
-
         }
 
         public override string ToString() {
             return "<module 'sys' (built-in)>";
+        }
+
+        public object api_version {
+            [PythonName("api_version")]
+            get { return "IronPython does not support the C APIs, the api_version is not supported"; }
+            set { throw Ops.NotImplementedError("IronPython does not support the C APIs, the api_version is not supported"); }
         }
 
         [PythonName("argv")]
@@ -148,6 +153,30 @@ namespace IronPython.Runtime {
 
         [PythonName("copyright")]
         public string copyright;
+
+        public object displayhook {
+            [PythonName("displayhook")]
+            get { return "IronPython does not support sys.displayhook"; }
+            [PythonName("displayhook")]
+            set { throw Ops.NotImplementedError("IronPython does not support sys.displayhook"); }
+        }
+
+        public object excepthook {
+            [PythonName("excepthook")]
+            get { return "IronPython does not support sys.excepthook"; }
+            [PythonName("excepthook")]
+            set { throw Ops.NotImplementedError("IronPython does not support sys.excepthook"); }
+        }
+
+        [PythonName("getcheckinterval")]
+        public int GetCheckInterval() {
+            throw Ops.NotImplementedError("IronPython does not support sys.getcheckinterval");
+        }
+
+        [PythonName("setcheckinterval")]
+        public void SetCheckInterval(int value) {
+            throw Ops.NotImplementedError("IronPython does not support sys.setcheckinterval");
+        }
 
         [PythonName("warnoptions")]
         public List warnoptions;
@@ -196,7 +225,8 @@ namespace IronPython.Runtime {
             exc_info();
         }
 
-        internal void ClearException() {
+        [PythonName("exc_clear")]
+        public void ClearException() {
             SystemState.RawException = null;
             SystemState.RawTraceBack = null;
         }
@@ -310,6 +340,11 @@ namespace IronPython.Runtime {
             return null;
         }
 
+        [PythonName("settrace")]
+        public void SetTrace(object o) {
+            throw Ops.NotImplementedError("sys.settrace is not yet supported by IronPython");
+        }
+
         [PythonName("setrecursionlimit")]
         public void SetRecursionLimit(int limit) {
             if (limit < 0) throw Ops.ValueError("recursion limit must be positive");
@@ -320,6 +355,11 @@ namespace IronPython.Runtime {
         [PythonName("getrecursionlimit")]
         public object GetRecursionLimit() {
             return Ops.Int2Object(PythonFunction.MaximumDepth);
+        }
+
+        [PythonName("getrefcount")]
+        public int GetReferenceCount(object o) {
+            throw Ops.NotImplementedError("IronPython uses mark and sweep garbage collector, getrefcount is not supported");
         }
 
         [PythonName("stdin")]

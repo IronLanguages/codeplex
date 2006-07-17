@@ -429,7 +429,7 @@ namespace IronPython.Compiler {
                 if (ch == EOF) {
                     if (verbatim) { complete = !isTriple; break; }
                     SetEnd();
-                    UnexpectedEndOfString(isTriple);
+                    UnexpectedEndOfString(isTriple, isTriple);
                     return new ErrorToken("<eof> while reading string");
                 } else if (ch == quote) {
                     if (isTriple) {
@@ -446,12 +446,17 @@ namespace IronPython.Compiler {
                         case '\n':
                         case '\r':
                             NextChar();
+                            if (PeekChar() == EOF) {
+                                // incomplete string in the form "abc\
+                                UnexpectedEndOfString(isTriple, true);
+                                return new ErrorToken("<eof> while reading string");
+                            }
                             continue;
                         case EOF:
                             if (verbatim) { complete = false; break; }
                             SetEnd();
-                            UnexpectedEndOfString(isTriple);
-                            return new ErrorToken("EOF in single-quoted string");
+                            UnexpectedEndOfString(isTriple, isTriple);
+                            return new ErrorToken("<eof> while reading string");
                         default:
                             if (peek == quote) {
                                 NextChar();
@@ -463,7 +468,7 @@ namespace IronPython.Compiler {
                     if (!isTriple) {
                         if (verbatim) { complete = false; break; }
                         SetEnd();
-                        UnexpectedEndOfString(isTriple);
+                        UnexpectedEndOfString(isTriple, false);
                         return new ErrorToken("NEWLINE in single-quoted string");
                     }
                 }
@@ -486,12 +491,11 @@ namespace IronPython.Compiler {
             }
         }
 
-        private void UnexpectedEndOfString(bool isTriple) {
-            if (isTriple) {
-                ReportSyntaxError("EOF while scanning triple-quoted string", ErrorCodes.SyntaxError | ErrorCodes.IncompleteToken);
-            } else {
-                ReportSyntaxError("EOL while scanning single-quoted string");
-            }
+        private void UnexpectedEndOfString(bool isTriple, bool isIncomplete) {
+            string message = isTriple ? "EOF while scanning triple-quoted string" : "EOL while scanning single-quoted string";
+            int error = isIncomplete ? ErrorCodes.SyntaxError | ErrorCodes.IncompleteToken : ErrorCodes.SyntaxError;
+
+            ReportSyntaxError(message, error);
         }
 
         private Token ReadNumber(char start) {

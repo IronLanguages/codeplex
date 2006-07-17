@@ -265,5 +265,10 @@ def test_CreateLambda_Negative():
         Assert(False)
     except ArgumentException: 
         pass
-        
+
+def test_interactive_input():
+    x = pe.ParseInteractiveInput("""x = "abc\\
+""", True)
+    AreEqual(x, False)
+
 run_test(__name__)

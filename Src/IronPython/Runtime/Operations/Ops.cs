@@ -550,6 +550,8 @@ namespace IronPython.Runtime.Operations {
             }
         }
         public static DynamicType GetDynamicTypeFromType(Type ty) {
+            if (ty == null) throw Ops.TypeError("Expected type, got NoneType");
+
             PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "TypeLookup " + ty.FullName);
 
             DynamicType ret;

@@ -493,7 +493,9 @@ namespace IronPython.Hosting {
             return VerifyInteractiveInput(p, allowIncompleteStatement);
         }
 
-        public static bool VerifyInteractiveInput(Parser parser, bool allowIncompleteStatement) {
+        #endregion
+
+        private static bool VerifyInteractiveInput(Parser parser, bool allowIncompleteStatement) {
             bool isEmptyStmt;
             Statement s = parser.ParseInteractiveInput(allowIncompleteStatement, out isEmptyStmt);
 
@@ -502,7 +504,6 @@ namespace IronPython.Hosting {
 
             return true;
         }
-        #endregion
 
         public SystemState Sys {
             get {

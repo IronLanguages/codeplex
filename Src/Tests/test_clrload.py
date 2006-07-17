@@ -28,6 +28,32 @@ AssertError(RuntimeError, clr.AddReferenceToFileAndPath, path_combine(testpath.p
 AssertError(RuntimeError, clr.AddReferenceToFileAndPath, path_combine(testpath.public_testdir, 'this_file_does_not_exist.dll'))
 AssertError(RuntimeError, clr.AddReferenceToFileAndPath, path_combine(testpath.public_testdir, 'this_file_does_not_exist.dll'))
 
+for method in [
+    clr.AddReference,
+    clr.AddReferenceToFile,
+    clr.AddReferenceToFileAndPath,
+    clr.AddReferenceByName,
+    clr.AddReferenceByPartialName,
+    clr.LoadAssemblyFromFileWithPath,
+    clr.LoadAssemblyFromFile,
+    clr.LoadAssemblyByName,
+    clr.LoadAssemblyByPartialName,
+    ]:
+
+    AssertError(TypeError, method, None)
+
+for method in [
+    clr.AddReference,
+    clr.AddReferenceToFile,
+    clr.AddReferenceToFileAndPath,
+    clr.AddReferenceByName,
+    clr.AddReferenceByPartialName,
+    ]:
+    
+    AssertError(TypeError, method, None, None)
+
+AreEqual(clr.GetClrType(None), None)
+AssertError(TypeError, clr.GetPythonType, None)
 
 # load iron python test under an alias...
 IPTestAlias = load_iron_python_test(True)
@@ -144,7 +170,6 @@ try:
             break
     AreEqual(foundTest1, True)
     
-    
     # test 2 shouldn't be loaded yet...
     foundTest2 = False
     for x in clr.References:
@@ -166,7 +191,7 @@ try:
         if x.FullName.startswith('test2'):
             foundTest2 = True
             break
-    AreEqual(foundTest2, True)
+    AreEqual(foundTest2, False)
     
 finally:
     sys.path.Remove(tmp)
