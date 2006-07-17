@@ -1387,6 +1387,29 @@ def test_property():
     except TypeError: pass
     else: AssertUnreachable()
     
+def test_override_mro():
+    try:
+        class C(object):
+            def __mro__(self): pass
+    except NotImplementedError: pass
+    else: Fail("Expected NotImplementedError, got none")
+    
+    class C(object):
+        def mro(self): pass
+
+    try:
+        class C(type):
+            def mro(self): pass
+    except NotImplementedError: pass
+    else: Fail("Expected NotImplementedError, got none")
+
+    class D(type): pass
+    
+    try:
+        class E(D):
+            def mro(self): pass
+    except NotImplementedError: pass
+    else: Fail("Expected NotImplementedError, got none")
     
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals

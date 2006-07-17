@@ -644,6 +644,8 @@ namespace IronPython.Modules {
 
         [PythonName("isinstance")]
         public static bool IsInstance(object o, object typeinfo) {
+            if( typeinfo == null) throw Ops.TypeError("isinstance: arg 2 must be a class, type, or tuple of classes and types");
+
             Tuple tt = typeinfo as Tuple;
             if (tt != null) {
                 foreach (object type in tt) {
@@ -675,8 +677,8 @@ namespace IronPython.Modules {
         }
 
         private static bool IsSubclassSlow(object cls, object typeinfo) {
-            Debug.Assert(cls != null);
             Debug.Assert(typeinfo != null);
+            if (cls == null) return false;
 
             // Same type
             if (cls.Equals(typeinfo)) {
@@ -702,9 +704,8 @@ namespace IronPython.Modules {
 
         [PythonName("issubclass")]
         public static bool IsSubClass(IPythonType c, object typeinfo) {
-            if (c == null) {
-                throw Ops.TypeError("issubclass: arg 1 must be a class");
-            }
+            if (c == null) throw Ops.TypeError("issubclass: arg 1 must be a class");
+            if (typeinfo == null) throw Ops.TypeError("issubclass: arg 2 must be a class");
 
             Tuple pt = typeinfo as Tuple;
             if (pt != null) {

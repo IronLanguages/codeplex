@@ -499,7 +499,7 @@ namespace IronPython.Runtime.Types {
 
         [PythonName("mro")]
         public static object GetMethodResolutionOrder(object type) {
-            throw new NotSupportedException("type.mro() is not yet supported");
+            throw new NotImplementedException("type.mro() is not yet supported");
         }
 
         // What kind of a class is it? Built-in, CLI, etc?

@@ -59,13 +59,10 @@ if is_cli:
     AreEqual(ms.GetBuffer()[4], ord('o'))
     ms.Close()
 
-
 # more tests for 'open'
 AssertError(TypeError, open, None) # arg must be string
 AssertError(TypeError, open, [])
 AssertError(TypeError, open, 1)
-
-
 
 def max(a,b):
     if a>b: return a
@@ -119,10 +116,6 @@ f = file("testfile.tmp", "r")
 l = f.readlines()
 Assert(l == ["1\n", "2\n", "2\n", "3\n", "4\n", "5\n", "6\n", "7\n", "8\n", "9\n", "0\n"])
 f.close()
-
-
-
-
 
 # file newline handling test
 
@@ -1033,3 +1026,17 @@ class D(object):
 
 AreEqual(isinstance(D(), E()), False)
 AreEqual(call_tracker, ['E.getbases', 'D.getclass', 'C.getbases'])
+
+class I(object):
+    def getclass(self):
+        return None
+    __class__ = property(getclass)
+
+class C(object):
+    def getbases(self):
+        return ()
+    __bases__ = property(getbases)
+
+AssertError(TypeError, isinstance, I(), None)
+AssertError(TypeError, isinstance, 3, None)
+AssertError(TypeError, issubclass, int, None)

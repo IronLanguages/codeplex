@@ -104,7 +104,7 @@ namespace IronPython.Runtime.Types {
             : base(NewTypeMaker.GetNewType(name, bases, dict)) {
             ctor = BuiltinFunction.MakeMethod(name, type.GetConstructors(), FunctionType.Function);
 
-            ValidateSupportedInheritance(dict);
+            ValidateSupportedInheritance(bases, dict);
 
             IAttributesDictionary fastDict = (IAttributesDictionary)dict;
 
@@ -139,7 +139,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private void ValidateSupportedInheritance(IDictionary<object, object> dict) {
+        private void ValidateSupportedInheritance(Tuple bases, IDictionary<object, object> dict) {
             if (type.GetInterface("ICustomAttributes") == typeof(ICustomAttributes)) {
                 // ICustomAttributes is a well-known type. Ops.GetAttr etc first check for it, and dispatch to the
                 // ICustomAttributes implementation. At the same time, built-in types like PythonModule, DynamicType, 
@@ -157,6 +157,16 @@ namespace IronPython.Runtime.Types {
             // we don't support overriding __mro__
             if (dict.ContainsKey(SymbolTable.MethodResolutionOrder.ToString()))
                 throw new NotImplementedException("Overriding __mro__ of built-in types is not implemented");
+
+            // cannot override mro when inheriting from type
+            if (dict.ContainsKey("mro")) {
+                foreach (object o in bases) {
+                    DynamicType dt = o as DynamicType;
+                    if (dt != null && dt.IsSubclassOf(TypeCache.DynamicType)) {
+                        throw new NotImplementedException("Overriding type.mro is not implemented");
+                    }
+                }
+            }
         }
 
         /// <summary>
