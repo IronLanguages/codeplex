@@ -26,9 +26,11 @@ AreEqual(lt.Name2.Value, lt.Values.GlobalName2)
 AreEqual(lt.Nested.Name1.Value, lt.Values.NestedName1)
 AreEqual(lt.Nested.Name2.Value, lt.Values.NestedName2)
 
-AssertError(RuntimeError, clr.AddReferenceToFileAndPath, path_combine(testpath.public_testdir, 'this_file_does_not_exist.dll'))
-AssertError(RuntimeError, clr.AddReferenceToFileAndPath, path_combine(testpath.public_testdir, 'this_file_does_not_exist.dll'))
-AssertError(RuntimeError, clr.AddReferenceToFileAndPath, path_combine(testpath.public_testdir, 'this_file_does_not_exist.dll'))
+AssertError(IOError, clr.AddReferenceToFileAndPath, path_combine(testpath.public_testdir, 'this_file_does_not_exist.dll'))
+AssertError(IOError, clr.AddReferenceToFileAndPath, path_combine(testpath.public_testdir, 'this_file_does_not_exist.dll'))
+AssertError(IOError, clr.AddReferenceToFileAndPath, path_combine(testpath.public_testdir, 'this_file_does_not_exist.dll'))
+AssertError(IOError, clr.AddReferenceByName, 'bad assembly name', 'WellFormed.But.Nonexistent, Version=9.9.9.9, Culture=neutral, PublicKeyToken=deadbeefdeadbeef, processorArchitecture=6502')
+AssertError(IOError, clr.AddReference, 'this_assembly_does_not_exist_neither_by_file_name_nor_by_strong_name')
 
 for method in [
     clr.AddReference,
@@ -95,7 +97,6 @@ def get_gac():
                 return []
         return []
 
-AssertError(RuntimeError, clr.AddReferenceByName, 'bad assembly name', 'WellFormed.But.Nonexistent, Version=9.9.9.9, Culture=neutral, PublicKeyToken=deadbeefdeadbeef, processorArchitecture=6502')
 gaclist = get_gac()
 if (len(gaclist) > 0):
 	clr.AddReferenceByName(gaclist[-1])

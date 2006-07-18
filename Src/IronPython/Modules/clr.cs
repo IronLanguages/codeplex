@@ -88,14 +88,8 @@ namespace IronPython.Modules {
         }
 
         public Assembly LoadAssemblyFromFileWithPath(string file) {
-            if (file == null) throw Ops.TypeError("Expected string, got NoneType");
-
-            Assembly asm = null;
-            try {
-                asm = Assembly.LoadFile(file);
-            } catch (Exception) {
-            }
-            return asm;
+            if (file == null) throw Ops.TypeError("LoadAssemblyFromFileWithPath: arg 1 must be a string.");
+            return Assembly.LoadFile(file);
         }
 
         public Assembly LoadAssemblyFromFile(string file) {
@@ -113,22 +107,9 @@ namespace IronPython.Modules {
                     string fullName = System.IO.Path.Combine(str, file);
                     Assembly res;
 
-                    if (File.Exists(fullName)) {
-                        res = LoadAssemblyFromFileWithPath(fullName);
-                        if (res != null) return res;
-                    }
-
-                    string trying = fullName + ".EXE";
-                    if (File.Exists(trying)) {
-                        res = LoadAssemblyFromFileWithPath(trying);
-                        if (res != null) return res;
-                    }
-
-                    trying = fullName + ".DLL";
-                    if (File.Exists(trying)) {
-                        res = LoadAssemblyFromFileWithPath(trying);
-                        if (res != null) return res;
-                    }
+                    if (TryLoadAssemblyFromFileWithPath(fullName, out res)) return res;
+                    if (TryLoadAssemblyFromFileWithPath(fullName + ".EXE", out res)) return res;
+                    if (TryLoadAssemblyFromFileWithPath(fullName + ".DLL", out res)) return res;
                 }
             }
 
@@ -136,27 +117,15 @@ namespace IronPython.Modules {
         }
 
         public Assembly LoadAssemblyByName(string name) {
-            if (name == null) throw Ops.TypeError("Expected string, got NoneType");
-
-            Assembly asm = null;
-            try {
-                asm = Assembly.Load(name);
-            } catch (Exception) {
-            }
-            return asm;
+            if (name == null) throw Ops.TypeError("LoadAssemblyByName: arg 1 must be a string");
+            return Assembly.Load(name);
         }
 
         public Assembly LoadAssemblyByPartialName(string name) {
-            if (name == null) throw Ops.TypeError("Expected string, got NoneType");
-
-            Assembly asm = null;
-            try {
+            if (name == null) throw Ops.TypeError("LoadAssemblyByPartialName: arg 1 must be a string");
 #pragma warning disable 618
-                asm = Assembly.LoadWithPartialName(name);
+            return Assembly.LoadWithPartialName(name);
 #pragma warning restore 618
-            } catch (Exception) {
-            }
-            return asm;
         }
 
         public Type GetClrType(Type type) {
@@ -252,7 +221,11 @@ namespace IronPython.Modules {
         private void AddReference(string name) {
             if (name == null) throw Ops.TypeError("Expected string, got NoneType");
 
-            Assembly asm = LoadAssemblyByName(name);
+            Assembly asm = null;
+
+            try {
+                asm = LoadAssemblyByName(name);
+            } catch { }
 
             // note we don't explicit call to get the file version
             // here because the assembly resolve event will do it for us.
@@ -260,8 +233,9 @@ namespace IronPython.Modules {
             if (asm == null) {
                 asm = LoadAssemblyByPartialName(name);
             }
+
             if (asm == null) {
-                throw Ops.RuntimeError("Could not add reference to assembly {0}", name);
+                throw Ops.IOError("Could not add reference to assembly {0}", name);
             }
             AddReference(asm);
         }
@@ -285,7 +259,7 @@ namespace IronPython.Modules {
 
             Assembly asm = LoadAssemblyFromFile(file);
             if (asm == null) {
-                throw Ops.RuntimeError("Could not add reference to assembly {0}", file);
+                throw Ops.IOError("Could not add reference to assembly {0}", file);
             }
 
             AddReference(asm);
@@ -297,21 +271,32 @@ namespace IronPython.Modules {
             Assembly asm = LoadAssemblyByName(name);
 
             if (asm == null) {
-                throw Ops.RuntimeError("Could not add reference to assembly {0}", name);
+                throw Ops.IOError("Could not add reference to assembly {0}", name);
             }
 
             AddReference(asm);
         }
 
         private void AddReferenceByPartialName(string name) {
-            if (name == null) throw Ops.TypeError("Expected string, got NoneType"); 
-            
+            if (name == null) throw Ops.TypeError("Expected string, got NoneType");
+
             Assembly asm = LoadAssemblyByPartialName(name);
             if (asm == null) {
-                throw Ops.RuntimeError("Could not add reference to assembly {0}", name);
+                throw Ops.IOError("Could not add reference to assembly {0}", name);
             }
 
             AddReference(asm);
+        }
+
+        private bool TryLoadAssemblyFromFileWithPath(string path, out Assembly res) {
+            if (File.Exists(path)) {
+                try {
+                    res = LoadAssemblyFromFileWithPath(path);
+                    if (res != null) return true;
+                } catch { }
+            }
+            res = null;
+            return false;
         }
 
         #endregion
