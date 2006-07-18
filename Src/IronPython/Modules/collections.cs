@@ -314,10 +314,9 @@ namespace IronPython.Modules {
                     return 0;
                 }
 
-                ArrayList infinite = Ops.GetCmpInfinite();
-                if (infinite.Contains(this)) return 0;
+                if (CompareUtil.Check(this)) return 0;
 
-                int index = infinite.Add(this);
+                CompareUtil.Push(this);
                 try {
                     int otherIndex = otherDeque.head, ourIndex = head;
 
@@ -351,8 +350,7 @@ namespace IronPython.Modules {
 
                     return itemCnt > otherDeque.itemCnt ? 1 : -1;
                 } finally {
-                    System.Diagnostics.Debug.Assert(infinite.Count == index + 1);
-                    infinite.RemoveAt(index);
+                    CompareUtil.Pop(this);
                 }
             }
             #endregion

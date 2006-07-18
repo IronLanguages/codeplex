@@ -561,11 +561,15 @@ namespace IronPython.Runtime {
 
                 if (lcnt != rcnt) return lcnt > rcnt ? 1 : -1;
 
-
                 return DictOps.CompareToWorker(this, rcnt, new List(Ops.Call(iteritems)));
             }
 
-            return DictOps.CompareTo(this, oth);
+            CompareUtil.Push(this, oth);
+            try {
+                return DictOps.CompareTo(this, oth);
+            } finally {
+                CompareUtil.Pop(this, oth);
+            }
         }
 
         public object GreaterThan(object other) {

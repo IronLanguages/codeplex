@@ -46,8 +46,6 @@ namespace IronPython.Runtime.Operations {
         private const int MAX_CACHE = 1000;
 
         [ThreadStatic]
-        private static ArrayList InfiniteCmp;
-        [ThreadStatic]
         private static ArrayList InfiniteRepr;
 
         private static Dictionary<Type, DynamicType> dynamicTypes = MakeDynamicTypesTable();
@@ -113,13 +111,6 @@ namespace IronPython.Runtime.Operations {
                 InfiniteRepr = new ArrayList();
             }
             return InfiniteRepr;
-        }
-
-        public static ArrayList GetCmpInfinite() {
-            if (InfiniteCmp == null) {
-                InfiniteCmp = new ArrayList();
-            }
-            return InfiniteCmp;
         }
 
         //!!! Temporarily left in so this checkin won't collide with Converter changes

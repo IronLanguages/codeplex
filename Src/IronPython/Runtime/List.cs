@@ -858,40 +858,16 @@ namespace IronPython.Runtime {
             lock (this) return Array.BinarySearch(data, index, count, value, comparer);
         }
 
-        private class TwoLists {
-            object list1;
-            object list2;
-            public TwoLists(object list1, object list2) {
-                this.list1 = list1;
-                this.list2 = list2;
-            }
-            public override int GetHashCode() {
-                throw new NotSupportedException();
-            }
-            public override bool Equals(object other) {
-                TwoLists o = other as TwoLists;
-                if (o == null) return false;
-                return o.list1 == list1 && o.list2 == list2;
-            }
-        }
-
         public int CompareTo(object obj) {
             List l = obj as List;
             if (l == null) throw new ArgumentException("expected list");
 
-            ArrayList infinite = Ops.GetCmpInfinite();
-            TwoLists tl = new TwoLists(this, obj);
-            if (infinite.Contains(tl)) throw Ops.RuntimeError("maximum recursion depth exceeded in cmp");
-
-            int result;
-            int index = infinite.Add(tl);
+            CompareUtil.Push(this, obj);
             try {
-                result = CompareToWorker(l);
+                return CompareToWorker(l);
             } finally {
-                Debug.Assert(infinite.Count == index + 1);
-                infinite.RemoveAt(index);
+                CompareUtil.Pop(this, obj);
             }
-            return result;
         }
 
         private int CompareToWorker(List l) {

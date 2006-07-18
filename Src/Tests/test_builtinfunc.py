@@ -25,6 +25,13 @@ def test_callable():
     Assert(callable(C))
     Assert(not callable(C.x))
 
+def test_cmp():
+    x = {}
+    x['foo'] = x
+    y = {}
+    y['foo'] = y
+
+    AssertError(RuntimeError, cmp, x, y)
 
 def test_reversed():
     class ToReverse:

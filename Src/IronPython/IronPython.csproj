@@ -141,6 +141,7 @@
     <Compile Include="Runtime\Calls\FastCallable.cs" />
     <Compile Include="Runtime\Calls\FastCallable.Generated.cs" />
     <Compile Include="Runtime\Calls\Interfaces.cs" />
+    <Compile Include="Runtime\CompareUtil.cs" />
     <Compile Include="Runtime\CustomSymbolDict.cs" />
     <Compile Include="Runtime\FieldIdDict.cs" />
     <Compile Include="Runtime\Operations\ByteOps.cs" />
