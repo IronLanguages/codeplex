@@ -205,6 +205,12 @@ try:
 except TypeError:
     pass
 
+def f(x, *args):
+    return (x, args)
+
+AreEqual(f(1, *[2]), (1, (2,)))
+AreEqual(f(7, *(i for i in range(3))), (7, (0, 1, 2,)))
+AreEqual(f(9, *range(11, 13)), (9, (11, 12)))
 
 #verify we can call sorted w/ keyword args
 
@@ -682,6 +688,5 @@ if is_cli:
 def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)
     Assert((x.co_flags & 8192) == 8192)
- 
- 
+
 test_compile()

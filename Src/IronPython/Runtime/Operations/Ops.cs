@@ -1342,6 +1342,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             List allArgs = List.MakeEmptyList(args.Length + 10);
+            allArgs.AddRange(args);
             IEnumerator e = Ops.GetEnumerator(argsTuple);
             while (e.MoveNext()) allArgs.AddNoLock(e.Current);
 
@@ -1418,6 +1419,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             List allArgs = List.MakeEmptyList(args.Length + 10);
+            allArgs.AddRange(args);
             IEnumerator e = Ops.GetEnumerator(argsTuple);
             while (e.MoveNext()) allArgs.AddNoLock(e.Current);
 
