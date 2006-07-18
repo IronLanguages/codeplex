@@ -505,6 +505,17 @@ def test_metaclass():
     # clean up __metaclass__ for other tests
     del(__metaclass__)
 
+def test_metaclass_call_override():
+	"""overriding __call__ on a metaclass should work"""
+	class mytype(type):
+		def __call__(self, *args):
+			return args
+	
+	class myclass(object):
+		__metaclass__ = mytype
+		
+	AreEqual(myclass(1,2,3), (1,2,3))
+
 ############################################################
 def text_mixed_inheritance():
     """inheritance from both old & new style classes..."""

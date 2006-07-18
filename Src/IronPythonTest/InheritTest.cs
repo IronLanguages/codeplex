@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace IronPythonTest {
 
@@ -70,6 +71,10 @@ namespace IronPythonTest {
             get {
                 return value;
             }
+        }
+
+        public override string ToString() {
+            return "HelloWorld\r\nGoodBye";
         }
     }
 
@@ -142,6 +147,10 @@ namespace IronPythonTest {
         protected string ProtectedMethod() {
             return "BaseClass.Protected";
         }
+
+        public override string ToString() {
+            return "HelloWorld\rGoodBye";
+        }
     }
 
     public class UnaryClass {
@@ -159,6 +168,10 @@ namespace IronPythonTest {
         [SpecialName]
         public UnaryClass op_OnesComplement() {
             return new UnaryClass(~value);
+        }
+
+        public override string ToString() {
+            return "HelloWorld\nGoodBye";
         }
     }
 
@@ -772,6 +785,35 @@ namespace IronPythonTest {
         public int CallM47() { return M47(); }
         public int CallM48() { return M48(); }
         public int CallM49() { return M49(); }
+    }
+
+    public class StrangeOverrides {
+        public virtual object SomeMethodWithContext(IronPython.Runtime.Calls.ICallerContext context, object arg) {
+            Debug.Assert(this != null && this is StrangeOverrides);
+            return arg;
+        }
+
+        public virtual object ParamsMethodWithContext(IronPython.Runtime.Calls.ICallerContext context, params object[] args) {
+            Debug.Assert(this != null && this is StrangeOverrides);
+            return args;
+        }
+
+        public virtual object ParamsIntMethodWithContext(IronPython.Runtime.Calls.ICallerContext context, params int[] args) {
+            Debug.Assert(this != null && this is StrangeOverrides);
+            return args;
+        }
+
+        public object CallWithContext(IronPython.Runtime.Calls.ICallerContext context, object arg) {
+            return SomeMethodWithContext(context, arg);
+        }
+
+        public object CallParamsWithContext(IronPython.Runtime.Calls.ICallerContext context, params object[] arg) {
+            return ParamsMethodWithContext(context, arg);
+        }
+
+        public object CallIntParamsWithContext(IronPython.Runtime.Calls.ICallerContext context, params int[] arg) {
+            return ParamsIntMethodWithContext(context, arg);
+        }
     }
 }
 

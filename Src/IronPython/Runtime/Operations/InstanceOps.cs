@@ -197,10 +197,14 @@ namespace IronPython.Runtime.Operations {
                 // Get the underlying .ToString() representation.  Truncate multiple
                 // lines, and don't display it if it's object's default representation (type name)
 
-                string[] strForm = toStr.Split(new char[] { '\n' });
+                string[] strForm = toStr.Split(new string[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
 
                 if (strForm.Length > 1) toStr = strForm[0] + "...";
-                else toStr = strForm[0];
+                else if (strForm.Length != 0) toStr = strForm[0];
+                else
+                    return String.Format("<{0} object at {1}>",
+                        typeName,
+                        Ops.HexId(self));
 
                 return String.Format("<{0} object at {1} [{2}]>",
                     typeName,

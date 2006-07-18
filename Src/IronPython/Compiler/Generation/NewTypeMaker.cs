@@ -905,30 +905,46 @@ namespace IronPython.Compiler.Generation {
         }
 
         public static void EmitCallFromClrToPython(CodeGen cg, Slot callTarget, int firstArg) {
+            EmitCallFromClrToPython(cg, callTarget, firstArg, IronPython.Compiler.Ast.FunctionAttributes.None);
+        }
+
+        public static void EmitCallFromClrToPython(CodeGen cg, Slot callTarget, int firstArg, Ast.FunctionAttributes functionAttributes) {
             callTarget.EmitGet(cg);
 
             List<ReturnFixer> fixers = new List<ReturnFixer>(0);
             Slot[] args = cg.argumentSlots;
             int nargs = args.Length - firstArg;
-            if (nargs <= Ops.MaximumCallArgs) {
+            if (nargs <= Ops.MaximumCallArgs && (functionAttributes & IronPython.Compiler.Ast.FunctionAttributes.ArgumentList) == 0) {
                 for (int i = firstArg; i < args.Length; i++) {
                     ReturnFixer rf = CompilerHelpers.EmitArgument(cg, args[i]);
                     if (rf != null) fixers.Add(rf);
                 }
+
                 cg.EmitCall(typeof(Ops), "Call", CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 1));
-            } else {
+            } else if ((functionAttributes & IronPython.Compiler.Ast.FunctionAttributes.ArgumentList) == 0) {
                 cg.EmitObjectArray(nargs, delegate(int index) {
                     ReturnFixer rf = CompilerHelpers.EmitArgument(cg, args[index + firstArg]);
                     if (rf != null) fixers.Add(rf);
                 });
+
                 cg.EmitCall(typeof(Ops), "Call", new Type[] { typeof(object), typeof(object[]) });
+            } else {
+                cg.EmitObjectArray(nargs - 1, delegate(int index) {
+                    ReturnFixer rf = CompilerHelpers.EmitArgument(cg, args[index + firstArg]);
+                    if (rf != null) fixers.Add(rf);
+                });
+
+                args[args.Length - 1].EmitGet(cg);
+                cg.EmitCall(typeof(Tuple), "Make");
+
+                cg.EmitCall(typeof(Ops), "CallWithArgsTuple");
             }
+
             foreach (ReturnFixer rf in fixers) {
                 rf.FixReturn(cg);
             }
             cg.EmitReturnFromObject();
         }
-
 
         private void CreateVTableMethodOverride(MethodInfo mi, VTableEntry methField) {
             CodeGen cg = tg.DefineMethodOverride(mi);
@@ -941,6 +957,7 @@ namespace IronPython.Compiler.Generation {
             cg.EmitSymbolId(methField.name);
             cg.EmitInt(methField.index);
             callTarget.EmitGetAddr(cg);
+            // out param populated w/ bound method on success
             cg.EmitCall(typeof(UserType), "TryGetNonInheritedMethodHelper");
             cg.Emit(OpCodes.Brtrue, instanceCall);
 
@@ -948,7 +965,19 @@ namespace IronPython.Compiler.Generation {
 
             cg.MarkLabel(instanceCall);
 
-            EmitCallFromClrToPython(cg, callTarget, 0);
+            int argStart = 0;
+            Ast.FunctionAttributes attrs = Ast.FunctionAttributes.None;
+
+            ParameterInfo[] pis = mi.GetParameters();
+            if (pis.Length > 0) {
+                if (pis[0].ParameterType == typeof(ICallerContext))
+                    argStart = 1;
+                if (pis[pis.Length - 1].IsDefined(typeof(ParamArrayAttribute), false)) {
+                    attrs |= Ast.FunctionAttributes.ArgumentList;
+                }
+            }
+
+            EmitCallFromClrToPython(cg, callTarget, argStart, attrs);
 
             cg.Finish();
         }

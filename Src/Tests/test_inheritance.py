@@ -184,9 +184,9 @@ class MetaClass2(type):
 
 #########################################################
 class OverrideParamTesting(MoreOverridding):
-    def Test1(self, args):
+    def Test1(self, *args):
         return "xx" + args[0] + args[1]
-    def Test2(self, x, args):
+    def Test2(self, x, *args):
         return "xx" + x + args[0] + args[1]
     def Test3(self, xr):
         xr.Value += "xx"

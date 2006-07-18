@@ -340,6 +340,22 @@ def test_repr():
     AreEqual(repr(Point(1,2)).startswith('<System.Drawing.Point object'), True)
     AreEqual(repr(Point(1,2)).endswith('[{X=1,Y=2}]>'),True)
     
+    # these 3 classes define the same repr w/ different \r, \r\n, \n versions
+    a = UnaryClass(3)
+    b = BaseClass()
+    c = BaseClassStaticConstructor()
+    
+    ra = repr(a)
+    rb = repr(b)
+    rc = repr(c)
+    
+    sa = ra.find('HelloWorld')
+    sb = rb.find('HelloWorld')
+    sc = rc.find('HelloWorld')
+    
+    AreEqual(ra[sa:sa+13], rb[sb:sb+13])
+    AreEqual(rb[sb:sb+13], rc[sc:sc+13])
+    AreEqual(ra[sa:sa+13], 'HelloWorld...')	# \r\n should be removed, replaced with ...    
 
 def test_explicit_interfaces():
     otdc = OverrideTestDerivedClass()
@@ -374,5 +390,22 @@ def test_array():
     AreEqual(repr(arr), str(arr))
     AreEqual(repr(System.Array[int]([0, 1])), 'System.Int32[](0, 1)')
 
+
+def test_strange_inheritance():
+	"""verify that overriding strange methods (such as those that take caller context) doesn't
+	   flow caller context through"""
+	class m(StrangeOverrides):
+		def SomeMethodWithContext(self, arg):
+			AreEqual(arg, 'abc')
+		def ParamsMethodWithContext(self, *arg):
+			AreEqual(arg, ('abc', 'def'))
+		def ParamsIntMethodWithContext(self, *arg):
+			AreEqual(arg, (2,3))
+
+	a = m()	
+	a.CallWithContext('abc')
+	a.CallParamsWithContext('abc', 'def')
+	a.CallIntParamsWithContext(2, 3)
+	
 if is_cli: 
     run_test(__name__)
