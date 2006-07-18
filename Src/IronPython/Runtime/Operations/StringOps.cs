@@ -47,9 +47,11 @@ namespace IronPython.Runtime.Operations {
             get { return self; }
         }
 
+        [PythonName("__str__")]
         public override string ToString() {
             return self;
         }
+
 
         public override int GetHashCode() {
             return self.GetHashCode();
@@ -57,6 +59,7 @@ namespace IronPython.Runtime.Operations {
 
         #region ICodeFormattable Members
 
+        [PythonName("__repr__")]
         public virtual string ToCodeString() {
             return StringOps.Quote(self);
         }
@@ -126,13 +129,15 @@ namespace IronPython.Runtime.Operations {
 
         #region ISequence Members
 
-        public object AddSequence(object other) {
+        [PythonName("__add__")]
+        public virtual object AddSequence(object other) {
             if (other is string) return self + (string)other;
             else if (other is ExtensibleString) return self + ((ExtensibleString)other).self;
 
             throw Ops.TypeErrorForBadInstance("cannot add string and {0}", other);
         }
 
+        [PythonName("__mul__")]
         public virtual object MultiplySequence(object count) {
             return Ops.MultiplySequence<string>(StringOps.Multiply, self, count);
         }
@@ -153,11 +158,13 @@ namespace IronPython.Runtime.Operations {
 
         #region IPythonContainer Members
 
-        public int GetLength() {
+        [PythonName("__len__")]
+        public virtual int GetLength() {
             return self.Length;
         }
 
-        public bool ContainsValue(object value) {
+        [PythonName("__contains__")]
+        public virtual bool ContainsValue(object value) {
             if (value is string) return self.Contains((string)value);
             else if (value is ExtensibleString) return self.Contains(((ExtensibleString)value).self);
 

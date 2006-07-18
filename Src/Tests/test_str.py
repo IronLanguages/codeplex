@@ -154,4 +154,24 @@ def test_string_escape_trailing_slash():
         ok = True
     Assert(ok, "string that ends in trailing slash should fail string decode")
 
+def test_str_subclass():
+    import binascii
+    class customstring(str):
+        def __str__(self): return self.swapcase()
+        def __repr__(self): return '<' + self + '>'
+        def __hash__(self): return 42
+        def __mul__(self, count): return 'multiplied'
+        def __add__(self, other): return 23
+        def __len__(self): return 2300
+        def __contains__(self, value): return False
+    
+    o = customstring('abc')
+    AreEqual(str(o), 'ABC')
+    AreEqual(repr(o), '<abc>')
+    AreEqual(hash(o), 42)
+    AreEqual(o * 3, 'multiplied')
+    AreEqual(o + 'abc', 23)
+    AreEqual(len(o), 2300)
+    AreEqual('a' in o, False)
+
 run_test(__name__)

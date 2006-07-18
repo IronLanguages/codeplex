@@ -29,7 +29,7 @@ namespace IronPython.Runtime.Types {
 
         // *** BEGIN GENERATED CODE ***
 
-        private static ReflectedType array, builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, obj, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, pythonmodule, method, enumerate, intType, doubleType, biginteger, complex64, dynamictype;
+        private static ReflectedType array, builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, obj, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, pythonmodule, method, enumerate, intType, doubleType, biginteger, complex64, dynamictype, super;
 
         // *** END GENERATED CODE ***
 
@@ -218,6 +218,13 @@ namespace IronPython.Runtime.Types {
             get {
                 if (dynamictype == null) dynamictype = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(DynamicType));
                 return dynamictype;
+            }
+        }
+
+        public static ReflectedType Super {
+            get {
+                if (super == null) super = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(Super));
+                return super;
             }
         }
 
