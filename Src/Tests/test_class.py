@@ -1410,6 +1410,13 @@ def test_override_mro():
             def mro(self): pass
     except NotImplementedError: pass
     else: Fail("Expected NotImplementedError, got none")
+
+
+def test_new_old_slots():
+    class N(object): pass
+    class O: pass
+    class C(N, O):
+        __slots__ = ['a','b']
     
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals

@@ -518,8 +518,8 @@ namespace IronPython.Compiler.Generation {
                 if (slots == null) return true;
                 if (slots.Contains("__dict__")) return true;
 
-                foreach (DynamicType dt in baseClasses) {
-                    if (dt is UserType) return true;
+                foreach (IPythonType pt in baseClasses) {
+                    if (pt is UserType) return true;
                 }
 
                 return false;
@@ -621,13 +621,13 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        internal bool BaseHasWeakRef(DynamicType curType) {
+        internal bool BaseHasWeakRef(IPythonType curType) {
             UserType ut = curType as UserType;
             if (ut != null && ut.HasSlots && ut.HasWeakRef) {
                 return true;
             }
 
-            foreach (DynamicType baseType in curType.BaseClasses) {
+            foreach (IPythonType baseType in curType.BaseClasses) {
                 if (BaseHasWeakRef(baseType)) return true;
             }
             return false;
@@ -640,8 +640,8 @@ namespace IronPython.Compiler.Generation {
                 // always define the field, only implement the interface
                 // if we are slotless or the user defined __weakref__ in slots
                 bool baseHasWeakRef = false;
-                foreach (DynamicType dt in baseClasses) {
-                    if (BaseHasWeakRef(dt)) {
+                foreach (IPythonType pt in baseClasses) {
+                    if (BaseHasWeakRef(pt)) {
                         baseHasWeakRef = true;
                         break;
                     }

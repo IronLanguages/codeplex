@@ -73,8 +73,8 @@ namespace IronPython.Compiler.Generation {
         }
 
         private bool NeedsNewWeakRef() {
-            foreach (DynamicType dt in baseClasses) {
-                UserType ut = dt as UserType;
+            foreach (IPythonType pt in baseClasses) {
+                UserType ut = pt as UserType;
                 if (ut == null) continue;
 
                 if (ut.HasWeakRef) return false;
