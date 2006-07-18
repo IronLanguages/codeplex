@@ -105,8 +105,7 @@ namespace HostingApp {
 
             engine.Execute("n = dateentries.Count");
             int nEntries = engine.EvaluateAs<int>("n");
-            MessageBox.Show("There are now " + nEntries.ToString() + " entries in the dictionary.");
-
+            label.Text = "There are now " + nEntries.ToString() + " entries in the dictionary.";
         }
     }
 }

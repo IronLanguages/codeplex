@@ -2559,7 +2559,8 @@ void InitializePythonEngine()<br>
 	</ol>
 	<p class="Code-Highlighted">engine.Execute("n = dateentries.Count");<br>
 int nEntries = engine.Evaluate&lt;int&gt;("n");<br>
-MessageBox.Show("There are now "+nEntries.ToString()+" entries in the dictionary.");<br>
+	label.Text = &quot;There are now &quot; + nEntries.ToString() + &quot; entries in the 
+	dictionary.&quot;;<br>
 </p>
 	<ol start="6">
 		<li>
@@ -2584,7 +2585,7 @@ by attempting to reference an undefined variable, so:
 </ol>
 <p class="Stepnonumbering">
 Compile and run <b>App.exe</b>; again, the prepared source-file for this step is available, as <b>MonthAtAGlance.2.1.cs</b>. At once, you will see an exception dialog:<br><br>
-<img src="../../../ip/ip/IronPython/Public/Tutorial/dialog1.jpg"/><br><br>
+<img src="dialog1.jpg"/><br><br>
 This dialogue appears because the default UncaughtExceptionHandler for the current AppDomain is invoked. By adding a new UncaughtExceptionHandler, you can perform various clean-up and reporting tasks before this dialogue appears. However, ideally you would like to handle the situation a little better than that. At the very least, your application can catch exceptions raised inside the PythonEngine and display the stack-trace to the user.
 </p>
 	<ol start="2">
@@ -2620,7 +2621,7 @@ can interact with the application normally.</p>
 	<ol start="4">
 		<li>
 		<p class="Step">Compile and run again; note the different message-box that appears:<br><br>
-		<img src="../../../ip/ip/IronPython/Public/Tutorial/dialog2.jpg"></p>
+		<img src="dialog2.jpg"></p>
 		</li>
 	</ol>
 	<h3><a name="T6.2.3">Task 3: Redirect the engine’s output streams</a></h3>

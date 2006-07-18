@@ -17,9 +17,6 @@ using System.Collections.Generic;
 
 namespace HostingApp {
     partial class MonthAtAGlance {
-
-
-
         /// <summary>
         /// Required designer variable.
         /// </summary>
@@ -45,6 +42,7 @@ namespace HostingApp {
         private void InitializeComponent() {
             this.monthCalendar = new System.Windows.Forms.MonthCalendar();
             this.textBox = new System.Windows.Forms.TextBox();
+            this.label = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // monthCalendar
@@ -62,11 +60,20 @@ namespace HostingApp {
             this.textBox.Size = new System.Drawing.Size(178, 69);
             this.textBox.TabIndex = 1;
             // 
+            // label
+            // 
+            this.label.Location = new System.Drawing.Point(12, 262);
+            this.label.Name = "label";
+            this.label.Size = new System.Drawing.Size(258, 20);
+            this.label.TabIndex = 2;
+            this.label.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
             // MonthAtAGlance
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(282, 266);
+            this.ClientSize = new System.Drawing.Size(282, 291);
+            this.Controls.Add(this.label);
             this.Controls.Add(this.textBox);
             this.Controls.Add(this.monthCalendar);
             this.Name = "MonthAtAGlance";
@@ -80,6 +87,7 @@ namespace HostingApp {
 
         private System.Windows.Forms.MonthCalendar monthCalendar;
         private System.Windows.Forms.TextBox textBox;
+        private System.Windows.Forms.Label label;
     }
 }
 
