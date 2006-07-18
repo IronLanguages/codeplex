@@ -13,5 +13,35 @@
 #
 ######################################################################################
 
+from lib.assert_util import *
 
-# to be written
+# adding some negative test case coverage for the sys module; we currently don't implement
+# some methods---there is a CodePlex work item 1042 to track the real implementation of 
+# these methods
+
+import sys
+
+def test_negative():
+	# api_version
+	AreEqual(sys.api_version, 'IronPython does not support the C APIs, the api_version is not supported')
+	try:
+		sys.api_version = 2
+	except NotImplementedError:
+		pass
+	else:
+		Assert(False, "Setting sys.api_version did not throw NotImplementedError---ERROR!")
+	# displayhook
+	AreEqual(sys.displayhook, 'IronPython does not support sys.displayhook')
+	try:
+		sys.displayhook = 2
+	except NotImplementedError:
+		pass
+	else:
+		Assert(False, "Setting sys.displayhook did not throw NotImplementedError---ERROR!")
+	# settrace
+	AssertError(NotImplementedError, sys.settrace, None)
+	# getrefcount
+	AssertError(NotImplementedError, sys.getrefcount, None)
+		
+run_test(__name__)
+
