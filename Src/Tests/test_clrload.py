@@ -15,6 +15,8 @@
 
 import sys
 from lib.assert_util import *
+from lib.process_util import *
+
 load_iron_python_test()
 import IronPythonTest.LoadTest as lt
 import clr

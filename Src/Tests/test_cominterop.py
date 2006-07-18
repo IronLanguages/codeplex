@@ -14,117 +14,92 @@
 ######################################################################################
 
 # COM Interop tests for IronPython
-from lib.assert_util import *
-from System import Type, Activator, Environment, IntPtr, Array, Object, Int32
-from System.Runtime.InteropServices import RuntimeEnvironment as RTEnv
-from System.Reflection import BindingFlags
+
 import nt
 import clr
 import sys
 
-windir = Environment.GetEnvironmentVariable("windir") or ""
-runtimeDir = RTEnv.GetRuntimeDirectory()
-sys.path.append(nt.getcwd())
+from lib.assert_util import *
+from lib.file_util import *
+from lib.process_util import *
 
-# find path to tlb
-tlbImpHome = ''
-try:
-    if 'TlbImp.exe' in nt.listdir(Environment.GetEnvironmentVariable("ProgramFiles")+"\\Microsoft.NET\\SDK\\v2.0\\bin"):
-        tlbImpHome = Environment.GetEnvironmentVariable("ProgramFiles")+"\\Microsoft.NET\\SDK\\v2.0\\bin"
-except IOError:
-    pass
+from System import Type, Activator, Environment, IntPtr, Array, Object, Int32
+from System.Reflection import BindingFlags
 
-if 'TlbImp.exe' in nt.listdir(runtimeDir):
-   tlbImpHome= runtimeDir
+windir = nt.environ["windir"] or ""
+scriptpw_path = path_combine(windir, r"system32\scriptpw.dll")
+agentsvr_path = path_combine(windir, r"msagent\agentsvr.exe")
 
-for direc in Environment.GetEnvironmentVariable("PATH").split(';'):
-    if 'TlbImp.exe' in nt.listdir(direc):
-        tlbImpHome = direc
-    
-# convert a typelib/dll to a .NET assembly
-def call_tlbimp(pathToTypeLib, outputName):
-    from System.Diagnostics import Process, ProcessStartInfo
-    psi = ProcessStartInfo(tlbImpHome+"\\tlbimp.exe", pathToTypeLib+" /out:"+outputName)
-    psi.UseShellExecute = False;
-    psi.RedirectStandardOutput = True;
-    p = Process.Start(psi)
-    p.WaitForExit()
-    return p.ExitCode
-
-def register_com_component(pathToDll):
-    from System.Diagnostics import Process, ProcessStartInfo
-    psi = ProcessStartInfo("regsvr32.exe",  "/s "+pathToDll)
-    psi.UseShellExecute = False
-    psi.RedirectStandardOutput = True
-    p = Process.Start(psi)
-    p.WaitForExit()
-    return p.ExitCode
-
-def unregister_com_component(pathToDll):
-    from System.Diagnostics import Process, ProcessStartInfo
-    psi = ProcessStartInfo("regsvr32.exe", "/s /u "+pathToDll)
-    psi.UseShellExecute = False
-    psi.RedirectStandardOutput = True
-    p = Process.Start(psi)
-    p.WaitForExit()
-    return p.ExitCode
-
-
-# Test matrix: X means 'not covered'
+# TEST MATRIX:
 #
-#                    (PIA)           (No PIA)
+#                    (PIA)                  (No PIA)
 # (Registered)
-# (Not Registered)     X                
+# (Not Registered)   excel/merlin
 
-def EnsureSpwLibIsNotImported():
-    try:
-        from spwLib import *
-        raise "spwLib is already registered"
-    except ImportError:
-        pass
+def _test_common(o):
+    for x in ['GetHashCode', 'GetPassword', '__repr__', 'ToString']:
+        Assert(x in dir(o))
 
-def registered_nopia():
+    Assert(o.GetHashCode()) # not zero
+    try: del o.GetHashCode
+    except AttributeError: pass
+    else: Fail("attribute 'GetHashCode' of 'xxx' object is read-only")
+
+    try: o[3] = "something"
+    except AttributeError: pass
+    else: Fail("__setitem__")
+    try: something = o[3]
+    except AttributeError: pass
+    else: Fail("__getitem__")
+
+    AssertError(TypeError, (lambda:o+3))
+    AssertError(TypeError, (lambda:o-3))
+    AssertError(TypeError, (lambda:o*3))
+    AssertError(TypeError, (lambda:o/3))
+    AssertError(TypeError, (lambda:o >> 3))
+    AssertError(TypeError, (lambda:o << 3))
+
+def test__1_registered_nopia():
     # Check to see that namespace 'spwLib' isn't accessible
-    print "running register_nopia"
-    EnsureSpwLibIsNotImported()
-    register_com_component(windir+"\\system32\\scriptpw.dll")
+    Assert('spwLib' not in dir(), "spwLib is already registered")
+
+    run_register_com_component(scriptpw_path)
+    
     pwcType = Type.GetTypeFromProgID('ScriptPW.Password.1')
     pwcInst = Activator.CreateInstance(pwcType)
+    
     Assert('__ComObject' in repr(pwcInst))
-    Assert('ToString' in dir(pwcInst))
-    Assert('GetPassword' in dir(pwcInst))
-    try:
-        pwcInst[3] = "something"
-        Assert(False)
-    except AttributeError:
-        pass
-    try:
-        something = pwcInst[3]
-        Assert(False)
-    except AttributeError:
-        pass
-    try:
-        del pwcInst.GetPassword
-        Assert(False)
-    except Exception:
-        pass                      
-    # should be TypeError, is SystemError
-    AssertError(TypeError, (lambda:pwcInst+3))
-    AssertError(TypeError, (lambda:pwcInst-3))
-    AssertError(TypeError, (lambda:pwcInst*3))
-    AssertError(TypeError, (lambda:pwcInst/3))
-    AssertError(TypeError, (lambda:pwcInst >> 3))
-    AssertError(TypeError, (lambda:pwcInst << 3))
+    AreEqual('System.__ComObject', pwcInst.ToString())
+    
+    try: del pwcInst.GetPassword
+    except AttributeError: pass
+    else: Fail("'__ComObject' object has no attribute 'GetPassword'")
+    
+    _test_common(pwcInst)
 
-def unregistered_nopia():
-    print "running unregistered_nopia"
+def test__3_registered_with_pia():
+    run_tlbimp(scriptpw_path, "spwLib")
+    run_register_com_component(scriptpw_path)
+    clr.AddReference("spwLib.dll")
+
+    from spwLib import PasswordClass    
+    pc = PasswordClass()
+    
+    Assert('PasswordClass' in repr(pc))
+    Assert('spwLib.PasswordClass' in pc.ToString())
+    AreEqual(pc.__class__, PasswordClass)
+    
+    try: del pc.GetPassword
+    except AttributeError: pass
+    else: Fail("attribute 'GetPassword' of 'PasswordClass' object is read-only")
+    
+    _test_common(pc)
+    
+def test__2_unregistered_nopia():
     # Check to see that namespace 'spwLib' isn't accessible
-    try:
-        from spwLib import *
-        return None
-    except ImportError:
-        pass
-    unregister_com_component(windir+"\\system32\\scriptpw.dll")
+    Assert('spwLib' not in dir(), "spwLib is already registered")
+
+    run_unregister_com_component(scriptpw_path)
     pwcType = Type.GetTypeFromProgID('ScriptPW.Password.1')
     AreEqual(pwcType, None)
     
@@ -134,68 +109,103 @@ def unregistered_nopia():
     password = IronPythonTest.ScriptPW.CreatePassword()
     AreEqual('System.__ComObject', password.ToString())
 
-def with_pia():
-    print "running with_pia"
-    call_tlbimp(windir+"\\system32\\scriptpw.dll", "spwLib")
-    register_com_component(windir+"\\system32\\scriptpw.dll")
-    clr.AddReference("spwLib.dll")
-    from spwLib import PasswordClass as PC
-    password = PC()
-    Assert('ToString' in str(password.ToString))
-    Assert('GetPassword' in str(password.GetPassword))
+def test_merlin():
+    run_tlbimp(agentsvr_path)
+    Assert(file_exists("AgentServerObjects.dll"))
+    
+    import clr
+    clr.AddReference("AgentServerObjects.dll")
 
-def ppt_test():
-    from Microsoft.Win32 import Registry, RegistryKey
-    hkeyCurrentUser = Registry.CurrentUser
-    if hkeyCurrentUser.OpenSubKey("Software\\Microsoft\\Office\\11.0\\PowerPoint"):
-        print "running ppt_test"
-        powerPtType = Type.GetTypeFromProgID("PowerPoint.Application.11")
-        powerPtInst = Activator.CreateInstance(powerPtType)
-        # test that late-binding call to Name works the same as the one from the typeinfo
-        ppName = powerPtType.InvokeMember("Name", BindingFlags.GetProperty, None, powerPtInst, None)
-        Assert (ppName == "Microsoft PowerPoint", "Late-bound Name property should be 'Microsoft PowerPoint'")
-        Assert (ppName == powerPtInst.Name)
-        # test that we can change the caption from IronPython
-        if powerPtInst.Caption == "PowerPoint Controlled By Iron Python":
-            Fail("Kill PowerPnt.exe and try again")
-        Assert (powerPtInst.Caption == "Microsoft PowerPoint")
-        powerPtInst.Caption = "PowerPoint Controlled By Iron Python"
-        Assert (powerPtInst.Caption == "PowerPoint Controlled By Iron Python", "Setting caption should work")
-        # make it visible, just for kicks
-        args = Array.CreateInstance(Object, 1)
-        args[0] = Int32(-1) # literal value of msoTrue in MsoTriState enum, gacked from Office PIA by ILDASM
-        powerPtType.InvokeMember("Visible", BindingFlags.SetProperty, None, powerPtInst, args)
-        Assert (powerPtInst.Visible)
-        try:
-            for i in powerPtInst: pass
-            Assert(False, "PPT instance should not be enumerable")
-        except TypeError:
-            pass
-        for i in powerPtInst.Windows:
-            pass
-        Assert('ToString' in dir(powerPtInst))
-        Assert('ActiveWindow' in dir(powerPtInst))
-        powerPtInst.Quit()
-#        powerPtType.InvokeMember("Quit", BindingFlags.InvokeMethod, None, powerPtInst, None)
-    else:
-        print "Warning: ppt_test() vacuously true, PowerPoint not installed.. please run on a machine with Office 11"
+    from AgentServerObjects import * 
+    a = AgentServerClass()    
+    Assert('Equals' in dir(a))
+    cid = a.Load('Merlin.acs')[0]
+    
+    c = a.GetCharacter(cid)
+    #c.Show(0)
+    c.Think('IronPython...')
+    c.Play('Read')
+    c.GestureAt(True, False)
+    c.GestureAt(100, 200)
+    AssertError(TypeError, c.GestureAt, 11.34, 32) # Cannot convert float(11.34) to Int16
+    
+    c.Speak('hello world', None)
+    
+    c.StopAll(0)
+    c.Hide(0)
+    
+    delete_files("AgentServerObjects.dll")
 
-# !! do not run on 64-bit
-if IntPtr.Size < 8:
-    # Check to see that scriptpw.dll is in %windir%\System32
-    if 'scriptpw.dll' in nt.listdir(windir+'\\system32'):
-        # Run before registered_nopia() to ensure that the COM types were not previously loaded
-        unregistered_nopia()
+from Microsoft.Win32 import Registry
+
+if Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\11.0\\Excel"):
+    def test_excel():
+        import clr
+        clr.AddReferenceByName('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
+
+        try: import Microsoft.Office.Interop.Excel as Excel
+        except ImportError: 
+            print "Warning: VSTO is not installed"
+            return
         
-        registered_nopia()
+        saved = number_of_process('excel.exe')
+        ex = None
+        try: 
+            ex = Excel.ApplicationClass() 
+            ex.DisplayAlerts = False 
+            #ex.Visible = True
+            nb = ex.Workbooks.Add()
+            ws = nb.Worksheets[1]
+            
+            AreEqual('Sheet1', ws.Name)
+            AssertError(EnvironmentError, lambda: ws.Rows[0])
+            
+            for i in range(1, 10):
+                for j in range(1, 10):
+                    ws.Cells[i, j] = i * j
+            
+            #add more here related to get_Range, chart after fix
+            #rng = ws.get_Range('A1', '')
+        finally:    
+            if ex: ex.Quit()
+            else: print "ex is %s" % ex
 
-        if tlbImpHome != '':
-            with_pia()
-        else:
-            print "Warning: Skipping Interop tests since tlbimp.exe was not found"
-    else:
-        print "Warning: Skipping Interop tests since scriptpw.dll was not found"
+if Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\11.0\\PowerPoint"):
+    def test_powerpoint():
+        pp = None   
+        try:
+            ppt = Type.GetTypeFromProgID("PowerPoint.Application.11")
+            pp = Activator.CreateInstance(ppt)
+            # test that late-binding call to Name works the same as the one from the typeinfo
+            ppName = ppt.InvokeMember("Name", BindingFlags.GetProperty, None, pp, None)
+            Assert (ppName == "Microsoft PowerPoint", "Late-bound Name property should be 'Microsoft PowerPoint'")
+            Assert (ppName == pp.Name)
+            # test that we can change the caption from IronPython
+            if pp.Caption == "PowerPoint Controlled By Iron Python":
+                Fail("Kill PowerPnt.exe and try again")
+            Assert (pp.Caption == "Microsoft PowerPoint")
+            pp.Caption = "PowerPoint Controlled By Iron Python"
+            Assert (pp.Caption == "PowerPoint Controlled By Iron Python", "Setting caption should work")
+            # make it visible, just for kicks
+            args = Array.CreateInstance(Object, 1)
+            args[0] = Int32(-1) # literal value of msoTrue in MsoTriState enum, gacked from Office PIA by ILDASM
+            ppt.InvokeMember("Visible", BindingFlags.SetProperty, None, pp, args)
+            Assert (pp.Visible)
+            try:
+                for i in pp: pass
+                Assert(False, "PPT instance should not be enumerable")
+            except TypeError:
+                pass
+            for i in pp.Windows: pass
+            
+            Assert('ToString' in dir(pp))
+            Assert('ActiveWindow' in dir(pp))
+        finally:
+            if pp: pp.Quit()
+            else: print "ex is %s" % ex
 
-    ppt_test()
-else:
+if is_cli32:
+    run_test(__name__)
+
+if is_cli64: 
     print "Warning: Skipping Interop tests on 64-bit machines"

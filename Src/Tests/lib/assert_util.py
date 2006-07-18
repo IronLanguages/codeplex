@@ -186,29 +186,6 @@ def GetTotalMemory():
         System.GC.WaitForPendingFinalizers()
     return System.GC.GetTotalMemory(True)
 
-def run_csc(args=""):
-    return run_tool("csc.exe", args)
-
-def run_tool(cmd, args=""):
-    import System
-    process = System.Diagnostics.Process()
-    process.StartInfo.FileName = cmd
-    process.StartInfo.Arguments = args
-    process.StartInfo.CreateNoWindow = True
-    process.StartInfo.UseShellExecute = False
-    process.StartInfo.RedirectStandardInput = True
-    process.StartInfo.RedirectStandardOutput = True
-    process.StartInfo.RedirectStandardError = True
-    process.Start()
-    output = process.StandardOutput.ReadToEnd()
-    output = process.StandardError.ReadToEnd()
-    process.WaitForExit()
-    return process.ExitCode
-
-def has_csc():
-    try:   run_csc("/?")
-    except WindowsError: return False
-    else:  return True
 
 def run_test(mod_name, noOutputPlease=False):
     import sys

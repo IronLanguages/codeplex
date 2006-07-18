@@ -80,3 +80,45 @@ def launch_ironpython_changing_extensions(test, add=[], remove=[]):
     params += (test,)
     
     return nt.spawnl(0, sys.executable, *params)
+
+def run_tool(cmd, args=""):
+    import System
+    process = System.Diagnostics.Process()
+    process.StartInfo.FileName = cmd
+    process.StartInfo.Arguments = args
+    process.StartInfo.CreateNoWindow = True
+    process.StartInfo.UseShellExecute = False
+    process.StartInfo.RedirectStandardInput = True
+    process.StartInfo.RedirectStandardOutput = True
+    process.StartInfo.RedirectStandardError = True
+    process.Start()
+    output = process.StandardOutput.ReadToEnd()
+    output = process.StandardError.ReadToEnd()
+    process.WaitForExit()
+    return process.ExitCode
+
+def has_csc():
+    try:   run_csc("/?")
+    except WindowsError: return False
+    else:  return True
+
+def run_tlbimp(pathToTypeLib, outputName=None):
+    if outputName:
+        return run_tool("tlbimp.exe", pathToTypeLib+" /out:"+outputName)
+    else: 
+        return run_tool("tlbimp.exe", pathToTypeLib)
+
+def run_register_com_component(pathToDll):
+    return run_tool("regsvr32.exe",  "/s "+pathToDll)
+
+def run_unregister_com_component(pathToDll):
+    return run_tool("regsvr32.exe",  "/s /u "+pathToDll)
+
+def run_csc(args):
+    return run_tool("csc.exe", args)
+
+def number_of_process(arg):
+    return len([x for x in nt.popen('tasklist.exe').readlines() if x.lower().startswith(arg.lower()) ])
+
+def kill_process(arg):
+    return run_tool("taskkill.exe", '/F /IM %s' % arg)

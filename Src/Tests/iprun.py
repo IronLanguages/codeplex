@@ -304,7 +304,6 @@ class RedirectTestRunner(TestRunner):
 class TestConfig: 
     def __init__(self):
         self.notRunList = [ 
-            'test_cominterop', 
         ]        
         self.name       = 'IronPythonTests'
         self.shortcut   = 'ip iron ironpython'
@@ -463,9 +462,7 @@ class CompatTestConfig(TestConfig):
         if sl in self.notRunList: return False
         return sl.startswith("sbs_") and sl.endswith(".py")
             
-    def xgetAllTests(self):
-        return ['sbs_builtin']
-        
+       
 def getAllConfigs(exclude=[]):
     _module = sys.modules[__name__]
     return [ getattr(_module, x)() for x in dir(_module) if x.endswith("TestConfig") and not exclude.count(x[:-10])]
@@ -494,6 +491,11 @@ def getAllConfigs2():
 
 logfile = getNextResultLog()
 logstream = MyFileStream(logfile)
+
+#if is_cli: 
+    #from System.Diagnostics import Debug
+    #Debug.Listeners.Clear()
+    #Debug.Listeners.Add(
 
 def main(args):
     unknown = [x for x in args if x.startswith('-') and not x.startswith('-T:') and not x.startswith('-O:')]
