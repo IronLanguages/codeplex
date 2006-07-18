@@ -715,6 +715,29 @@ namespace IronPython.Runtime.Types {
 
         #region DynamicType overrides
 
+        [PythonName("__getitem__")]
+        public override object GetIndex(object self, object index) {
+            Tuple ituple = index as Tuple;
+            if (ituple != null && ituple.IsExpandable) {
+                object[] idx = ituple.Expand(null);
+                return Ops.Invoke(self, SymbolTable.GetItem, idx);
+            }
+
+            return base.GetIndex(self, index);
+        }
+
+        [PythonName("__setitem__")]
+        public override void SetIndex(object self, object index, object value) {
+            Tuple ituple = index as Tuple;
+            if (ituple != null && ituple.IsExpandable) {
+                object[] idx = ituple.Expand(value);
+                Ops.Invoke(self, SymbolTable.SetItem, idx);
+                return;
+            }
+
+            base.SetIndex(self, index, value);
+        }
+
         protected override Tuple CalculateMro(Tuple baseClasses) {
             // should always be the same for ReflectedTypes
             Debug.Assert(baseClasses.Equals(BaseClasses));

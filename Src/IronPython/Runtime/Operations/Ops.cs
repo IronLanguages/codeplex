@@ -1521,8 +1521,11 @@ namespace IronPython.Runtime.Operations {
 
             IList list = o as IList;
             if (list != null) {
-                list[Converter.ConvertToInt32(index)] = value;
-                return;
+                int val;
+                if (Converter.TryConvertToInt32(index, out val)) {
+                    list[val] = value;
+                    return;
+                }
             }
 
             GetDynamicType(o).SetIndex(o, index, value);

@@ -232,8 +232,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static object GetIndex(Array a, object index) {
-            int iindex; ;
-            if (Converter.TryConvertToInt32(index, out iindex)) {
+            int iindex;
+
+            if (index is int) {
+                iindex = (int)index;
                 return a.GetValue(Ops.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
             }
 
@@ -250,6 +252,11 @@ namespace IronPython.Runtime.Operations {
                 return GetSlice(a, a.Length, slice);
             }
 
+            // last-ditch effort, try it as a a converted int (this can throw & catch an exception)
+            if (Converter.TryConvertToInt32(index, out iindex)) {
+                return a.GetValue(Ops.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
+            }
+
             throw Ops.TypeErrorForBadInstance("bad array index: {0}", index);
         }
 
@@ -260,9 +267,9 @@ namespace IronPython.Runtime.Operations {
             Type elm = t.GetElementType();
 
             int iindex;
-            if (Converter.TryConvertToInt32(index, out iindex)) {
+            if (index is int) {
+                iindex = (int)index;
                 a.SetValue(Ops.ConvertTo(value, elm), Ops.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
-                return;
             }
 
             Tuple ituple = index as Tuple;
@@ -285,6 +292,12 @@ namespace IronPython.Runtime.Operations {
                     },
                     a.Length,
                     value);
+                return;
+            }
+
+            // last-ditch effort, try it as a a converted int (this can throw & catch an exception)
+            if (Converter.TryConvertToInt32(index, out iindex)) {
+                a.SetValue(Ops.ConvertTo(value, elm), Ops.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
                 return;
             }
 

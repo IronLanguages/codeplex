@@ -789,7 +789,7 @@ namespace IronPython.CodeDom {
             AdvanceOutput(e);
             int oldIndent = Indent;
             Indent = lastIndent;
-
+            
 
             WriteLine("# Snippet Statement");
 
@@ -1205,10 +1205,18 @@ namespace IronPython.CodeDom {
             throw new NotImplementedException("The method or operation is not implemented.");
         }
 
-        protected override void GenerateLinePragmaEnd(CodeLinePragma e) {
+        protected override void GenerateLinePragmaEnd(CodeLinePragma e) {            
+            WriteLine("");
+            WriteLine("#End ExternalSource");
         }
 
-        protected override void GenerateLinePragmaStart(CodeLinePragma e) {
+        protected override void GenerateLinePragmaStart(CodeLinePragma e) {            
+            WriteLine("");
+            Write("#ExternalSource(\"");
+            Write(e.FileName);
+            Write("\",");
+            Write(e.LineNumber);
+            WriteLine(")");
         }
         #endregion
 
@@ -1481,7 +1489,7 @@ namespace IronPython.CodeDom {
 
             ctm.UserData["IPCreated"] = true;
             ctm.UserData["Column"] = col;
-            ctm.LinePragma.LineNumber = row;
+            ctm.UserData["Line"] = row;
         }
 
         private void AdvanceOutput(CodeStatement co) {
@@ -1502,8 +1510,8 @@ namespace IronPython.CodeDom {
         }
 
         private void FlushOutput(CodeTypeMember ctm) {
-            if (ctm.UserData["IPCreated"] != null && ctm.LinePragma != null) {
-                int line = ctm.LinePragma.LineNumber;
+            if (ctm.UserData["IPCreated"] != null) {
+                int line = (int)ctm.UserData["Line"];
                 int column = (int)ctm.UserData["Column"];
 
                 DoFlush(line, column);
@@ -1511,10 +1519,8 @@ namespace IronPython.CodeDom {
 
             if (merger != null) {
                 // update line information for round-tripping
-                if (ctm.LinePragma == null) ctm.LinePragma = new CodeLinePragma();
-
                 ctm.UserData["IPCreated"] = true;
-                ctm.LinePragma.LineNumber = row;
+                ctm.UserData["Line"] = row;
                 ctm.UserData["Column"] = col;
             }
         }
@@ -1579,45 +1585,67 @@ namespace IronPython.CodeDom {
         }
 
         private void Write(string txt) {
-            if (merger != null) {
-                string[] lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+            // enforce consistent indenting - we always use 4 spaces for indentation
+            // regardless of what the user provided as this guarantees the code compiles.  The
+            // user could provide String.Empty for Indent which breaks Python code.
+            int prevIndent = Indent;
+            Indent = 0;
+            string[] lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
 
-                for (int i = 0; i < lines.Length; i++) {
-                    if (i != 0) {
-                        writeCache.AppendLine();
-                        for (int j = 0; j < Indent; j++) writeCache.Append("    ");
-                        col = Indent * 4;
-                        row++;
-                    } else if (col == 0) {
-                        for (int j = 0; j < Indent; j++) writeCache.Append("    ");
-                        col = Indent * 4;
-                    }
-
-                    writeCache.Append(lines[i]);
-                    col += lines[i].Length;
+            for (int i = 0; i < lines.Length; i++) {
+                if (i != 0) {
+                    WriteLineTargetBuffer(String.Empty);
+                    for (int j = 0; j < prevIndent; j++) WriteTargetBuffer(IndentString);
+                    col = prevIndent * 4;
+                    row++;
+                } else if (col == 0) {
+                    for (int j = 0; j < prevIndent; j++) WriteTargetBuffer(IndentString);
+                    col = prevIndent * 4;
                 }
-            } else {
-                Output.Write(txt);
+
+                WriteTargetBuffer(lines[i]);
+                col += lines[i].Length;
             }
+            Indent = prevIndent;
         }
 
         private void WriteLine(string txt) {
-            if (merger != null) {
-                string[] lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+            // enforce consistent indenting - we always use 4 spaces for indentation
+            // regardless of what the user provided as this guarantees the code compiles.  The
+            // user could provide String.Empty for Indent which breaks Python code.
 
-                for (int i = 0; i < lines.Length; i++) {
-                    if (col == 0) {
-                        for (int j = 0; j < Indent; j++) writeCache.Append("    ");
-                    }
-
-                    writeCache.AppendLine(lines[i]);
-                    col = 0;
-                    row++;
+            int prevIndent = Indent;
+            Indent = 0;
+            string[] lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+            for (int i = 0; i < lines.Length; i++) {
+                if (col == 0) {
+                    for (int j = 0; j < prevIndent; j++) WriteTargetBuffer(IndentString);
                 }
-            } else {
-                Output.WriteLine(txt);
+
+                WriteLineTargetBuffer(lines[i]);
+                col = 0;
+                row++;
             }
+            Indent = prevIndent;
         }
 
+        private string IndentString {
+            get {
+                if (String.IsNullOrEmpty(Options.IndentString)) return "    ";
+                
+                return Options.IndentString;
+            }
+        }
+        private void WriteTargetBuffer(string text) {
+            if(merger != null) writeCache.Append(text);
+            else Output.Write(text);
+        }
+
+        private void WriteLineTargetBuffer(string text) {
+            if (merger != null) writeCache.AppendLine(text);
+            else Output.WriteLine(text);
+        }
     }
+
+
 }

@@ -137,8 +137,8 @@ namespace IronPython.Runtime.Operations {
             return Ops.MultiplySequence<string>(StringOps.Multiply, self, count);
         }
 
-        public object this[int index] {
-            get { return self[index]; }
+        public virtual object this[int index] {
+            get { return Ops.Char2String(self[index]); }
         }
 
         public object this[Slice slice] {

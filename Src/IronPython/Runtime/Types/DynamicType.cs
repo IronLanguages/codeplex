@@ -812,13 +812,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [PythonName("__getitem__")]
-        public object GetIndex(object self, object index) {
-            Tuple ituple = index as Tuple;
-            if (ituple != null && ituple.IsExpandable) {
-                object[] idx = ituple.Expand(null);
-                return Ops.Invoke(self, SymbolTable.GetItem, idx);
-            }
-
+        public virtual object GetIndex(object self, object index) {
             Slice slice = index as Slice;
             if (slice != null && slice.step == null) {
                 object getSlice;
@@ -833,14 +827,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [PythonName("__setitem__")]
-        public void SetIndex(object self, object index, object value) {
-            Tuple ituple = index as Tuple;
-            if (ituple != null && ituple.IsExpandable) {
-                object[] idx = ituple.Expand(value);
-                Ops.Invoke(self, SymbolTable.SetItem, idx);
-                return;
-            }
-
+        public virtual void SetIndex(object self, object index, object value) {
             Slice slice = index as Slice;
             if (slice != null && slice.step == null) {
                 object setSlice;

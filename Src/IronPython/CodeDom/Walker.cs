@@ -81,8 +81,8 @@ namespace IronPython.CodeDom {
             }
 
             // method starts at decorators, if they're available.
-            if (node.Decorators != null && node.Decorators.Start.Line != -1) MarkForCodeDomMember(node.Decorators, method);
-            else MarkForCodeDomMember(node, method);
+            if (node.Decorators != null && node.Decorators.Start.Line != -1) MarkForCodeDom(node.Decorators, method);
+            else MarkForCodeDom(node, method);
 
             // process the method...
             try {
@@ -117,7 +117,7 @@ namespace IronPython.CodeDom {
 
         public bool Walk(ClassDefinition node) {
             CodeTypeDeclaration ctd;
-            CodeObject res = ctd = MarkForCodeDomMember(node, new CodeTypeDeclaration(node.Name.GetString()));
+            CodeObject res = ctd = MarkForCodeDom(node, new CodeTypeDeclaration(node.Name.GetString()));
 
             // first scan all of the methods defined in the class...
 
@@ -452,7 +452,7 @@ namespace IronPython.CodeDom {
                     return false;
                 }
             }
-            lastObject = MarkForCodeDomStatement(node,
+            lastObject = MarkForCodeDom(node,
                 new CodeAssignStatement(
                     (CodeExpression)RecursiveWalk(node.Left[0]),
                     (CodeExpression)RecursiveWalk(node.Right)));
@@ -529,7 +529,7 @@ namespace IronPython.CodeDom {
             if (codeEvent == null) throw CodeDomSerializerError(node, "left hand side must be event");
             CodeTypeReference eventType = LastExpression;
 
-            lastObject = MarkForCodeDomStatement(node,
+            lastObject = MarkForCodeDom(node,
                 new CodeAttachEventStatement(
                     new CodeEventReferenceExpression(codeEvent.TargetObject, codeEvent.EventName),
                     new CodeDelegateCreateExpression(eventType, cm.TargetObject, cm.MethodName)
@@ -538,7 +538,7 @@ namespace IronPython.CodeDom {
         }
 
         public bool Walk(ExpressionStatement node) {
-            lastObject = MarkForCodeDomStatement(node,
+            lastObject = MarkForCodeDom(node,
                 new CodeExpressionStatement((CodeExpression)RecursiveWalk(node.Expression)));
             return false;
         }
@@ -565,12 +565,12 @@ namespace IronPython.CodeDom {
         public bool Walk(IfStatement node) {
             CodeConditionStatement startCcs;
 
-            CodeConditionStatement ccs = startCcs = MarkForCodeDomStatement(node, new CodeConditionStatement(
+            CodeConditionStatement ccs = startCcs = MarkForCodeDom(node, new CodeConditionStatement(
                  (CodeExpression)RecursiveWalk(node.Tests[0].Test),
                  IsPassStmt(node.Tests[0].Body) ? new CodeStatement[] { } : GetStatements(RecursiveWalk(node.Tests[0].Body))));
 
             for (int i = 1; i < node.Tests.Count; i++) {
-                CodeConditionStatement newCcs = MarkForCodeDomStatement(node, new CodeConditionStatement(
+                CodeConditionStatement newCcs = MarkForCodeDom(node, new CodeConditionStatement(
                     (CodeExpression)RecursiveWalk(node.Tests[i].Test),
                     IsPassStmt(node.Tests[i].Body) ? new CodeStatement[] { } : GetStatements(RecursiveWalk(node.Tests[i].Body))));
 
@@ -613,12 +613,12 @@ namespace IronPython.CodeDom {
         }
 
         public bool Walk(PassStatement node) {
-            lastObject = MarkForCodeDomStatement(node, new CodeSnippetStatement("pass"));
+            lastObject = MarkForCodeDom(node, new CodeSnippetStatement("pass"));
             return false;
         }
 
         public bool Walk(ReturnStatement node) {
-            lastObject = MarkForCodeDomStatement(node,
+            lastObject = MarkForCodeDom(node,
                 new CodeMethodReturnStatement((CodeExpression)RecursiveWalk(node.Expression)));
             return false;
         }
@@ -655,7 +655,7 @@ namespace IronPython.CodeDom {
                 }
             }
 
-            lastObject = MarkForCodeDomStatement(node,
+            lastObject = MarkForCodeDom(node,
                 new CodeIterationStatement(
                     null,
                     (CodeExpression)RecursiveWalk(node.Test),
@@ -1650,29 +1650,10 @@ namespace IronPython.CodeDom {
             codeObject.UserData["IPCreated"] = true;
             codeObject.UserData["Line"] = node.Start.Line;
             codeObject.UserData["Column"] = node.Start.Column;
+            codeObject.UserData["EndLine"] = node.End.Line;
+            codeObject.UserData["EndColumn"] = node.End.Column;
             return codeObject;
         }
-
-        /// <summary>
-        /// Updates user data & line pragma w/ common information on the node
-        /// so we can correctly round trip & VS can get good line number info
-        /// </summary>
-        public T MarkForCodeDomStatement<T>(Node node, T codeObject) where T : CodeStatement {
-            codeObject.UserData["IPCreated"] = true;
-            codeObject.UserData["Column"] = node.Start.Column;
-            codeObject.LinePragma = new CodeLinePragma(Filename, node.Start.Line);
-
-            return codeObject;
-        }
-
-        public T MarkForCodeDomMember<T>(Node node, T codeMember) where T : CodeTypeMember {
-            codeMember.UserData["IPCreated"] = true;
-            codeMember.UserData["Column"] = node.Start.Column;
-            codeMember.LinePragma = new CodeLinePragma(Filename, node.Start.Line);
-
-            return codeMember;
-        }
-
         #endregion
     }
 }
