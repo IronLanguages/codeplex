@@ -1428,6 +1428,81 @@ def test_new_old_slots():
     class O: pass
     class C(N, O):
         __slots__ = ['a','b']
+
+
+def test_slots_identifiers1():
+    # Validate only identifiers are accepted as __slots__
+    try:
+        class C(object):
+            __slots__ = [None]
+    except TypeError: pass
+    else: Fail("__slots__ allow [None]")
+
+    try:
+        class C(object):
+            __slots__ = ["foo bar"]
+    except TypeError: pass
+    else: Fail("__slots__ allow ['foo bar']")
+    try:
+        class C(object):
+            __slots__ = ["1"]
+    except TypeError: pass
+    else: Fail("__slots__ allow ['1']")
+
+def test_slots_counter():
+    import gc
+    class Counter(object):
+        c = 0
+        def __init__(self):
+            Counter.c += 1
+        def __del__(self):
+            Counter.c -= 1
+
+    class C(object):
+        __slots__ = ['a', 'b', 'c']
+
+    x = C()
+    x.a = Counter()
+    x.b = Counter()
+    x.c = Counter()
+
+    AreEqual(Counter.c, 3)
+    del x
+    gc.collect()
+    AreEqual(Counter.c, 0)
+
+def test_slots_inherit():
+    class C(object):
+        __slots__ = ['a', 'b', 'c']
+
+    class D(C):
+        pass
+
+    x = D()
+    x.z = 32   # validate z can still be set
+
+    class E(D):
+        __slots__ = ['e']
+
+    x = E()
+    x.a = 1
+    x.z = 2
+    x.e = 3
+
+def test_slots_weakref():
+    class D(object):
+        __slots__ = ["__dict__"]
+    a = D()
+    Assert(not hasattr(a, "__weakref__"))
+
+def test_slots_multiple():
+    class A(object):
+        __slots__=()
+    class B(object):
+        pass
+    class C(A,B) :
+        __slots__=()
+    C().x = "hello"
     
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals

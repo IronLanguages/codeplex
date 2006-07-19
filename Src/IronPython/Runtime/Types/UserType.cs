@@ -111,12 +111,16 @@ namespace IronPython.Runtime.Types {
             this.__name__ = name;
             this.__module__ = fastDict[SymbolTable.Module];   // should always be present...
 
-            PopulateDefaultDictionary(fastDict);
-
             if (fastDict.ContainsKey(SymbolTable.Slots)) {
                 HasSlots = true;
                 if (dict.ContainsKey("__dict__")) HasDictionary = true;
-            } else HasDictionary = true;
+                if (dict.ContainsKey("__weakref__")) HasWeakRef = true;
+            } else {
+                HasDictionary = true;
+                HasWeakRef = true;
+            }
+
+            PopulateDefaultDictionary(fastDict);
 
             InitializeUserType(bases, fastDict, false);
 
@@ -130,7 +134,7 @@ namespace IronPython.Runtime.Types {
                 fastDict[SymbolTable.Doc] = null;
             }
 
-            if (!fastDict.ContainsKey(SymbolTable.WeakRef)) {
+            if (HasWeakRef && !fastDict.ContainsKey(SymbolTable.WeakRef)) {
                 fastDict[SymbolTable.WeakRef] = new WeakRefWrapper(this);
             }
 

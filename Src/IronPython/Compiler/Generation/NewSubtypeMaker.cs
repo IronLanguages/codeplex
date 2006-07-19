@@ -55,7 +55,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         protected override void ImplementPythonObject() {
-            if (slots == null) {
+            if (NeedsDictionary) {
                 // override our bases slots implementation w/ one that
                 // can use dicts
                 CodeGen cg = tg.DefineMethodOverride(baseType.GetMethod("GetDict"));

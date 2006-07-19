@@ -513,7 +513,7 @@ namespace IronPython.Compiler.Generation {
             cg.Finish();
         }
 
-        private bool NeedsDictionary {
+        protected bool NeedsDictionary {
             get {
                 if (slots == null) return true;
                 if (slots.Contains("__dict__")) return true;
