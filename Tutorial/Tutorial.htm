@@ -1472,6 +1472,9 @@
 		<li>
 		<p class="ExerciseList"><a href="#T3.1">Merlin the Wizard</a></p>
 		</li>
+		<li>
+		<p class="ExerciseList"><a href="#T3.2">Word Spell Checking</a></p>
+		</li>
 	</ul>
 	<h2><a name="T3.1">Exercise 1: Merlin the Wizard</a></h2>
 	<p class="Body">This exercise consists of two tasks.&nbsp; In the first one we will 
@@ -1619,6 +1622,105 @@
 	</ol>
 	<p class="TypedExample">c.StopAll(0)</p>
 	<p class="TypedExample">c.Hide(0)</p>
+	<h2><a name="T3.2">Exercise 2: Use Word for Spell Checking</a></h2>
+	<p class="Body">In this exercise you will create an instance of Microsoft 
+	Word and use it to check word spellings.</p>
+	<h3><a name="T3.2.1">Task 1: Accessing Word and Checking Spelling</a></h3>
+	<ol>
+		<li>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
+		</li>
+		<li>
+		<p class="Step">Import clr module and add a reference to the Word COM 
+		interop assembly.&nbsp; Also, import System so that we can use a special 
+		value from it later.</p>
+		</li>
+	</ol>
+	<p class="TypedExample">import clr</p>
+	<p class="TypedExample">
+	clr.AddReferenceByPartialName(&quot;Microsoft.Office.Interop.Word&quot;)<br>
+	from Microsoft.Office.Interop.Word import ApplicationClass<br>
+	<br>
+	import System</p>
+	<ol start="3">
+		<li>
+		<p class="Step">Start an instance of Word as a COM server running.&nbsp; 
+		You won't see it show up since it is hidden, but you can see it in the 
+		Windows Task Manager by typing ctrl-shift-escape and looking for the 
+		WINWORD.EXE process.</p></li>
+	</ol>
+	<p class="TypedExample">w = ApplicationClass()</p>
+	<ol start="4">
+		<li>
+		<p class="Step">Define the following function to check the spelling.&nbsp; 
+		We have to build up an argument list so that we can supply the 12 
+		optional arguments we do not care about (System.Type.Missing).&nbsp; We 
+		get the answer by taking the first (at index zero) of a few return 
+		values (out parameters in COM interop).&nbsp; Remember to indent the 
+		lines of the function's body extra spaces, and you have to hit an extra 
+		return or enter to complete the function's definition.</p></li>
+	</ol>
+	<p class="TypedExample">def check_word (word):<br>
+&nbsp;&nbsp; args = [word] + [System.Type.Missing]*12<br>
+&nbsp;&nbsp; return w.CheckSpelling(*args)[0]</p>
+	<ol start="5">
+		<li>
+		<p class="Step">You can try that out on a couple of words, but now lets 
+		define a function that will suggest corrections for us.&nbsp; This 
+		function builds an argument list just like the last function did to 
+		supply several unneeded optional arguments.&nbsp; The first result of 
+		several return values from GetSpellingSuggestions is a collection of 
+		items, each of which is a correction suggestion.&nbsp; We use a Python 
+		list comprehension to iterate through the COM collection object and call 
+		the Name property on each item object in the collection.&nbsp; The Name 
+		property is the string that Word is suggesting might be a correct 
+		spelling.</p></li>
+	</ol>
+	<p class="TypedExample">def suggestions (word):<br>
+&nbsp;&nbsp; args = [word] + [System.Type.Missing]*13<br>
+&nbsp;&nbsp; res_objects = w.GetSpellingSuggestions(*args)[0]<br>
+&nbsp;&nbsp; return [x.Name for x in res_objects]</p>
+	<ol start="6">
+		<li>
+		<p class="Step">Now, let's shut down Word and exit the IronPython 
+		console.&nbsp; When you enter the next line and hit return, if you are 
+		watching the Windows Task Manager, you will see the WINWORD.EXE process 
+		go away.</p></li>
+	</ol>
+	<p class="TypedExample">w.Quit(*[System.Type.Missing]*3)</p>
+	<p class="Body">&nbsp;</p>
+	<h3><a name="T3.2.2">Task 2: Use Windows Form Dialog to Correct Spelling</a></h3>
+	<p class="Body">In this task you will use an example already written that is 
+	very similar to what you did in Task 1, but it demonstrates two additional 
+	features.&nbsp; It uses a Python standard module to register a clean up 
+	function so that when the IronPython console terminates, the Word process is 
+	closed.&nbsp; The example also has a function, correct_word, that uses a 
+	Windows Form as a dialog to let users select a correct word to return.</p>
+	<ol>
+		<li>
+		<p class="Step">Start the IronPython console from the tutorial directory 
+		(see <a href="#Intro">Introduction</a> for details).</p>
+		</li>
+		<li>
+		<p class="Step">Import spellcheck.</p>
+		</li>
+		<li>
+		<p class="Step">Call spellcheck.correct_word on a correctly spelled 
+		word, and you'll see the function returns the word.</p>
+		</li>
+		<li>
+		<p class="Step">Call spellcheck.correct_word on a misspelled word, and a 
+		Windows Form similar to Word's spelling correction dialog appears.</p>
+		</li>
+		<li>
+		<p class="Step">a</p>
+		</li>
+		<li>
+		<p class="Step"></p>
+		</li>
+	</ol>
+	<p class="Body">&nbsp;</p>
 	<p class="LabSummary">Tutorial Summary</p>
 	<p class="Body">This tutorial was focused on using COM interop assemblies generated 
 	via tlbimp tool (in the .NET Framework SDK) to control COM objects from the IronPython environment.</p>
@@ -1627,16 +1729,25 @@
 		<li>
 		<p class="ExerciseList"><a href="#T3.1">Merlin the Wizard</a></p>
 		</li>
+		<li>
+		<p class="ExerciseList"><a href="#T3.2">Word Spell Checking</a></p>
+		</li>
 	</ul>
+	<p class="Body">&nbsp;</p>
 	<p class="Body">In this tutorial, you created a COM interop assembly for the 
 	msagent COM object.&nbsp; You used the tlbimp tool which is part of the .NET Framework 
 	SDK.&nbsp; Using the ildasm tool, you explored contents of the interop assembly.</p>
-	<p class="Normal">Then, from IronPython you loaded the interop assembly, created 
+	<p class="Body">Then, from IronPython you loaded the interop assembly, created 
 	an instance of the COM object, and instructed Merlin to play different animations.</p>
+	<p class="Body">You also used Word to check the spelling of words, learned 
+	how to supply missing optional arguments, and learned how to ensure you 
+	shutdown objects when your program ends.</p>
 	<p class="Normal">&nbsp;</p>
 	<h1><a name="T4">Tutorial 4: Debugging IronPython program</a></h1>
 	<p class="Body">This tutorial will walk you through very simple debug session, 
-	debugging a Python script using Microsoft CLR Debugger.</p>
+	debugging a Python script using Microsoft CLR Debugger.&nbsp; See
+	<a href="#T7">using Visual Studio</a> if you have a Visual Studio SKU and 
+	consider skipping this exercise.</p>
 	<p class="Body">Estimated time to complete this tutorial: <b>10 minutes</b></p>
 	<p class="Body">The objective of this tutorial is debugging simple Python script 
 	using Microsoft CLR Debugger.</p>
