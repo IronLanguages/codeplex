@@ -323,7 +323,6 @@ namespace IronPython.Runtime.Calls {
                 for (int i = 0; i < targets.Length; i++) {
                     if (targets[i] != null) AddDocumentation(sb, ref needNewLine, targets[i]);
                 }
-                sb.AppendLine();
                 return sb.ToString();
             }
         }

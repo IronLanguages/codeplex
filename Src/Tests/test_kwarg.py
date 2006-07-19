@@ -560,11 +560,12 @@ a = ListSubcls(a='abc')
 # set properties.
 
 def builtInTest():
-    import clr
-    clr.AddReferenceByPartialName('System.Windows.Forms')
-    import System.Windows.Forms as WinForms
-    a = WinForms.Button(Text='abc')
-    Assert(a.Text, 'abc')
+	if is_cli:
+		import clr
+		clr.AddReferenceByPartialName('System.Windows.Forms')
+		import System.Windows.Forms as WinForms
+		a = WinForms.Button(Text='abc')
+		Assert(a.Text, 'abc')
 
 builtInTest()	
 ########################################################
@@ -651,10 +652,11 @@ AreEqual(f.__call__(a='abc'), 'abc')
 
 
 # built-in function
-
-a = []
-a.append.__call__(item='abc')
-AreEqual(a, ['abc'])
+# we are a more lenient and allow kwargs to append
+if is_cli:
+	a = []
+	a.append.__call__(item='abc')
+	AreEqual(a, ['abc'])
 
 # types
 

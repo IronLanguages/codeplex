@@ -74,11 +74,12 @@ def test_tuple_hash():
     AreEqual(test[2].hashcalls, 1)
     
 def test_tuple_cli_interactions():
-    # verify you can call ToString on a tuple after importing clr
-    import clr
-    a = (0,)
-    
-    AreEqual(str(a), a.ToString())
+	if is_cli:
+		# verify you can call ToString on a tuple after importing clr
+		import clr
+		a = (0,)
+		
+		AreEqual(str(a), a.ToString())
     
 
 def test_sequence_assign():
@@ -86,7 +87,7 @@ def test_sequence_assign():
         a, b = None
         AssertUnreachable()
     except TypeError, e:
-        AreEqual(e.msg.startswith('unpack non-sequence'), True)
+        Assert(str(e).find('unpack non-sequence') != -1)
     
 run_test(__name__)
 

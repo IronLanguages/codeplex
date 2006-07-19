@@ -16,39 +16,41 @@
 #
 # test assert
 #
-
-import System.Environment
 from lib.assert_util import *
-from lib.process_util import *
-
-def test_positive():
-    ok = True
-    try:
-        assert True, 'this should always pass'
-    except AssertionError:
-        ok = False
-    Assert(ok)
-    
-def test_negative():
-    ok = False
-    try:
-        assert False, 'this should never pass'
-    except AssertionError:
-        ok = True
-    Assert(ok)
-    
-def test_doesnt_fail_on_curly():
-    """Ensures that asserting a string with a curly brace doesn't choke up the
-    string formatter."""
-
-    ok = False
-    try:
-        assert False, '}'
-    except AssertionError:
-        ok = True
-    Assert(ok)
-    
-if '-O' in System.Environment.GetCommandLineArgs():
-    AreEqual(0, launch_ironpython_changing_extensions(__file__, remove=["-O"]))
-else:
-    run_test(__name__, noOutputPlease=True)
+import sys
+if is_cli:
+	import System.Environment
+	from lib.assert_util import *
+	from lib.process_util import *
+	
+	def test_positive():
+		ok = True
+		try:
+			assert True, 'this should always pass'
+		except AssertionError:
+			ok = False
+		Assert(ok)
+		
+	def test_negative():
+		ok = False
+		try:
+			assert False, 'this should never pass'
+		except AssertionError:
+			ok = True
+		Assert(ok)
+		
+	def test_doesnt_fail_on_curly():
+		"""Ensures that asserting a string with a curly brace doesn't choke up the
+		string formatter."""
+	
+		ok = False
+		try:
+			assert False, '}'
+		except AssertionError:
+			ok = True
+		Assert(ok)
+		
+	if '-O' in System.Environment.GetCommandLineArgs():
+		AreEqual(0, launch_ironpython_changing_extensions(__file__, remove=["-O"]))
+	else:
+		run_test(__name__, noOutputPlease=True)

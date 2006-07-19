@@ -2346,7 +2346,7 @@ namespace IronPython.Runtime.Operations {
 
         public static Exception TypeErrorForUnboundMethodCall(string methodName, DynamicType methodType, object instance) {
             string message = string.Format("unbound method {0}() must be called with {1} instance as first argument (got {2} instead)",
-                                           methodName, methodType, GetDynamicType(instance));
+                                           methodName, methodType.__name__, GetDynamicType(instance).__name__);
             return TypeError(message);
         }
 

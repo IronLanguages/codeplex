@@ -186,254 +186,263 @@ if is_cli:
 #####################################################################
 ## coverage for CustomFieldIdDict
 
+
 def contains(d, *attrs):
-    for attr in attrs:
-        Assert(attr in d)
-        Assert(d.__contains__(attr))
+	for attr in attrs:
+		Assert(attr in d)
+		Assert(d.__contains__(attr))
 
-def repeat_on_class(C):
-    c = C()
-    d = C.__dict__
-    contains(d, '__doc__', 'x1', 'f1')
-
-    ## recursive entries & repr
-    d['abc'] = d
-    x = repr(d) # shouldn't stack overflow
-    Assert(x.find("'abc'") != -1)
-    Assert(x.find("{...}") != -1)
-    del d['abc']
-    
-    keys, values = d.keys(), d.values()
-    AreEqual(len(keys), len(values))
-    contains(keys, '__doc__', 'x1', 'f1')
-
-    ## initial length
-    l = len(d)
-    Assert(l > 3)
-
-    # add more attributes
-    def f2(self): return 22
-    def f3(self): return 33
-
-    d['f2'] = f2
-    d['x2'] = 20
-
-    AreEqual(len(d), l + 2)
-    AreEqual(d.__len__(), l + 2)
-
-    contains(d, '__doc__', 'x1', 'x2', 'f1', 'f2')
-    contains(d.keys(), '__doc__', 'x1', 'x2', 'f1', 'f2')
-
-    AreEqual(d['x1'], 10)
-    AreEqual(d['x2'], 20)
-    AreEqual(d['f1'](c), 11)
-    AreEqual(d['f2'](c), 22)
-    AssertError(KeyError, lambda : d['x3'])
-    AssertError(KeyError, lambda : d['f3'])
-
-    ## get
-    AreEqual(d.get('x1'), 10)
-    AreEqual(d.get('x2'), 20)
-    AreEqual(d.get('f1')(c), 11)
-    AreEqual(d.get('f2')(c), 22)
-
-    AreEqual(d.get('x3'), None)
-    AreEqual(d.get('x3', 30), 30)
-    AreEqual(d.get('f3'), None)
-    AreEqual(d.get('f3', f3)(c), 33)
-    
-
-    ## setdefault
-    AreEqual(d.setdefault('x1'), 10)
-    AreEqual(d.setdefault('x1', 30), 10)
-    AreEqual(d.setdefault('f1')(c), 11)
-    AreEqual(d.setdefault('f1', f3)(c), 11)
-    AreEqual(d.setdefault('x2'), 20)
-    AreEqual(d.setdefault('x2', 30), 20)
-    AreEqual(d.setdefault('f2')(c), 22)
-    AreEqual(d.setdefault('f2', f3)(c), 22)
-    AreEqual(d.setdefault('x3', 30), 30)
-    AreEqual(d.setdefault('f3', f3)(c), 33)
-
-    ## pop
-    l1 = len(d); AreEqual(d.pop('x1', 30), 10)
-    AreEqual(len(d), l1-1)
-    l1 = len(d); AreEqual(d.pop('x2', 30), 20)
-    AreEqual(len(d), l1-1)
-    l1 = len(d); AreEqual(d.pop("xx", 70), 70)
-    AreEqual(len(d), l1)
-
-    ## has_key
-    Assert(d.has_key('f1'))
-    Assert(d.has_key('f2'))
-    Assert(d.has_key('f3'))
-    Assert(d.has_key('fx') == False)
-    
-    # subclassing, overriding __getitem__, and passing to 
-    # eval    
-    dictType = type(d)
-    
-    try:
-        class newDict(dictType):
-            def __getitem__(self, key):
-                if self.key == 'abc':
-                    return 'def'
-                return super(self, dictType).__getitem__(key)
-    except TypeError, ex:
-        Assert(ex.msg.find('cannot derive from sealed or value types') != -1)
-    else:           
-        try:
-            nd = newDict()
-        except TypeError:
-            # can't construct an instance of this dictionary
-            pass
-        else:
-            AreEqual(eval('abc', {}, nd), 'def')
-
-    ############### IN THIS POINT, d LOOKS LIKE ###############
-    ##  {'f1': f1, 'f2': f2, 'f3': f3, 'x3': 30, '__doc__': 'This is comment', '__module__': '??'}
-
-    ## iteritems
-    lk = []
-    for (k, v) in d.iteritems():
-        lk.append(k)
-        exp = None
-        if k == 'f1': exp = 11
-        elif k == 'f2': exp == 22
-        elif k == 'f3': exp == 33
-        
-        if exp <> None:
-            AreEqual(v(c), exp)
-
-    contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
-
-    # iterkeys
-    lk = []
-    for k in d.iterkeys():
-        lk.append(k)
-
-    contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
-
-    # itervalues
-    for v in d.itervalues():
-        if callable(v):
-            exp = v(c)
-            Assert(exp in [11, 22, 33])
-        elif v is str: 
-            Assert(v == 'This is comment')
-        elif v is int:
-            Assert(v == 30)
-            
-    ## something fun before destorying it
-    l1 = len(d); d[dict] = 3    # object as key
-    AreEqual(len(d), l1+1)
-   
-    l1 = len(d); d[int] = 4     # object as key
-    AreEqual(len(d), l1+1)
-
-    l1 = len(d); del d[int]
-    AreEqual(len(d), l1-1)
-
-    l1 = len(d); del d[dict]
-    AreEqual(len(d), l1-1)
-   
-    l1 = len(d); del d['x3']
-    AreEqual(len(d), l1-1)
-
-    l1 = len(d); d.popitem()
-    AreEqual(len(d), l1-1)
-
-    ## object as key
-    d[int] = int
-    d[str] = "str"
-
-    AreEqual(d[int], int)
-    AreEqual(d[str], "str")
-
-    d.clear()
-    AreEqual(len(d), 0)
-    AreEqual(d.__len__(), 0)
-
-
-class C:
-    '''This is comment'''
-    x1 = 10
-    def f1(self): return 11
-repeat_on_class(C)
-
-class C(object):
-    '''This is comment'''
-    x1 = 10
-    def f1(self): return 11
-repeat_on_class(C)
-
-## fromkeys
-def repeat_on_class(C):
-    d1 = C.__dict__
-    l1 = len(d1)
-    d2 = dict.fromkeys(d1)
-    l2 = len(d2)
-    AreEqual(l1, l2)
-    AreEqual(d2['x'], None)
-    AreEqual(d2['f'], None)
-
-    d2 = dict.fromkeys(d1, 10)
-    l2 = len(d2)
-    AreEqual(l1, l2)
-    AreEqual(d2['x'], 10)
-    AreEqual(d2['f'], 10)
-    
-class C: 
-    x = 10
-    def f(self): pass
-repeat_on_class(C)
-
-class C(object): 
-    x = 10
-    def f(self): pass
-repeat_on_class(C)
-
-## compare 
-def repeat_on_class(C1, C2):
-    d1 = C1.__dict__
-    d2 = C2.__dict__
-        
-    # object as key
-    d1[int] = int
-    d2[int] = int
-    Assert(d1 <> d2)
-
-    d2['f'] = d1['f']
-    Assert([x for x in d1] == [x for x in d2])
-
-    Assert(d1.fromkeys([x for x in d1]) >= d2.fromkeys([x for x in d2]))
-    Assert(d1.fromkeys([x for x in d1]) <= d2.fromkeys([x for x in d2]))
-
-    d1['y'] = 20
-    d1[int] = int
-
-    Assert(d1.fromkeys([x for x in d1]) > d2.fromkeys([x for x in d2]))
-    Assert(d1.fromkeys([x for x in d1]) >= d2.fromkeys([x for x in d2]))
-    Assert(d2.fromkeys([x for x in d2]) < d1.fromkeys([x for x in d1]))
-    Assert(d2.fromkeys([x for x in d2]) <= d1.fromkeys([x for x in d1]))
-
-class C1: 
-    x = 10
-    def f(self): pass
-class C2:
-    x = 10
-    def f(self): pass
-
-repeat_on_class(C1, C2) 
-
-class C1(object): 
-    x = 10
-    def f(self): pass
-class C2(object):
-    x = 10
-    def f(self): pass   
-    
-repeat_on_class(C1, C2) 
+if is_cli:	
+	def repeat_on_class(C):
+		c = C()
+		d = C.__dict__
+		contains(d, '__doc__', 'x1', 'f1')
+	
+		## recursive entries & repr
+		d['abc'] = d
+		x = repr(d) # shouldn't stack overflow
+		Assert(x.find("'abc'") != -1)
+		Assert(x.find("{...}") != -1)
+		del d['abc']
+		
+		keys, values = d.keys(), d.values()
+		AreEqual(len(keys), len(values))
+		contains(keys, '__doc__', 'x1', 'f1')
+	
+		## initial length
+		l = len(d)
+		Assert(l > 3)
+	
+		# add more attributes
+		def f2(self): return 22
+		def f3(self): return 33
+	
+		d['f2'] = f2
+		d['x2'] = 20
+	
+		AreEqual(len(d), l + 2)
+		AreEqual(d.__len__(), l + 2)
+	
+		contains(d, '__doc__', 'x1', 'x2', 'f1', 'f2')
+		contains(d.keys(), '__doc__', 'x1', 'x2', 'f1', 'f2')
+	
+		AreEqual(d['x1'], 10)
+		AreEqual(d['x2'], 20)
+		AreEqual(d['f1'](c), 11)
+		AreEqual(d['f2'](c), 22)
+		AssertError(KeyError, lambda : d['x3'])
+		AssertError(KeyError, lambda : d['f3'])
+	
+		## get
+		AreEqual(d.get('x1'), 10)
+		AreEqual(d.get('x2'), 20)
+		AreEqual(d.get('f1')(c), 11)
+		AreEqual(d.get('f2')(c), 22)
+	
+		AreEqual(d.get('x3'), None)
+		AreEqual(d.get('x3', 30), 30)
+		AreEqual(d.get('f3'), None)
+		AreEqual(d.get('f3', f3)(c), 33)
+		
+	
+		## setdefault
+		AreEqual(d.setdefault('x1'), 10)
+		AreEqual(d.setdefault('x1', 30), 10)
+		AreEqual(d.setdefault('f1')(c), 11)
+		AreEqual(d.setdefault('f1', f3)(c), 11)
+		AreEqual(d.setdefault('x2'), 20)
+		AreEqual(d.setdefault('x2', 30), 20)
+		AreEqual(d.setdefault('f2')(c), 22)
+		AreEqual(d.setdefault('f2', f3)(c), 22)
+		AreEqual(d.setdefault('x3', 30), 30)
+		AreEqual(d.setdefault('f3', f3)(c), 33)
+	
+		## pop
+		l1 = len(d); AreEqual(d.pop('x1', 30), 10)
+		AreEqual(len(d), l1-1)
+		l1 = len(d); AreEqual(d.pop('x2', 30), 20)
+		AreEqual(len(d), l1-1)
+		l1 = len(d); AreEqual(d.pop("xx", 70), 70)
+		AreEqual(len(d), l1)
+	
+		## has_key
+		Assert(d.has_key('f1'))
+		Assert(d.has_key('f2'))
+		Assert(d.has_key('f3'))
+		Assert(d.has_key('fx') == False)
+		
+		# subclassing, overriding __getitem__, and passing to 
+		# eval    
+		dictType = type(d)
+		
+		try:
+			class newDict(dictType):
+				def __getitem__(self, key):
+					if key == 'abc':
+						return 'def'
+					return super(self, dictType).__getitem__(key)
+		except TypeError, ex:
+			Assert(ex.msg.find('cannot derive from sealed or value types') != -1)
+		else:
+			try:
+				nd = newDict()
+			except TypeError, e:
+				
+				# bug 1137: we currently cannot derive from NamespaceDictionary but should be able to
+				#if sys.platform == 'cli':
+				#	import clr
+				#	if clr.GetClrType(dictType).ToString() == 'IronPython.Runtime.Types.NamespaceDictionary':
+				#		Fail("Error! Threw TypeError when creating newDict deriving from NamespaceDictionary")
+				
+				# can't construct an instance of this dictionary
+				pass
+			else:
+				AreEqual(eval('abc', {}, nd), 'def')
+	
+		############### IN THIS POINT, d LOOKS LIKE ###############
+		##  {'f1': f1, 'f2': f2, 'f3': f3, 'x3': 30, '__doc__': 'This is comment', '__module__': '??'}
+	
+		## iteritems
+		lk = []
+		for (k, v) in d.iteritems():
+			lk.append(k)
+			exp = None
+			if k == 'f1': exp = 11
+			elif k == 'f2': exp == 22
+			elif k == 'f3': exp == 33
+			
+			if exp <> None:
+				AreEqual(v(c), exp)
+	
+		contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
+	
+		# iterkeys
+		lk = []
+		for k in d.iterkeys():
+			lk.append(k)
+	
+		contains(lk, 'f1', 'f2', 'f3', 'x3', '__doc__')
+	
+		# itervalues
+		for v in d.itervalues():
+			if callable(v):
+				exp = v(c)
+				Assert(exp in [11, 22, 33])
+			elif v is str: 
+				Assert(v == 'This is comment')
+			elif v is int:
+				Assert(v == 30)
+				
+		## something fun before destorying it
+		l1 = len(d); d[dict] = 3    # object as key
+		AreEqual(len(d), l1+1)
+	   
+		l1 = len(d); d[int] = 4     # object as key
+		AreEqual(len(d), l1+1)
+	
+		l1 = len(d); del d[int]
+		AreEqual(len(d), l1-1)
+	
+		l1 = len(d); del d[dict]
+		AreEqual(len(d), l1-1)
+	   
+		l1 = len(d); del d['x3']
+		AreEqual(len(d), l1-1)
+	
+		l1 = len(d); d.popitem()
+		AreEqual(len(d), l1-1)
+	
+		## object as key
+		d[int] = int
+		d[str] = "str"
+	
+		AreEqual(d[int], int)
+		AreEqual(d[str], "str")
+	
+		d.clear()
+		AreEqual(len(d), 0)
+		AreEqual(d.__len__(), 0)
+	
+	
+	class C:
+		'''This is comment'''
+		x1 = 10
+		def f1(self): return 11
+	repeat_on_class(C)
+	
+	class C(object):
+		'''This is comment'''
+		x1 = 10
+		def f1(self): return 11
+	repeat_on_class(C)
+	
+	## fromkeys
+	def repeat_on_class(C):
+		d1 = C.__dict__
+		l1 = len(d1)
+		d2 = dict.fromkeys(d1)
+		l2 = len(d2)
+		AreEqual(l1, l2)
+		AreEqual(d2['x'], None)
+		AreEqual(d2['f'], None)
+	
+		d2 = dict.fromkeys(d1, 10)
+		l2 = len(d2)
+		AreEqual(l1, l2)
+		AreEqual(d2['x'], 10)
+		AreEqual(d2['f'], 10)
+		
+	class C: 
+		x = 10
+		def f(self): pass
+	repeat_on_class(C)
+	
+	class C(object): 
+		x = 10
+		def f(self): pass
+	repeat_on_class(C)
+	
+	## compare 
+	def repeat_on_class(C1, C2):
+		d1 = C1.__dict__
+		d2 = C2.__dict__
+			
+		# object as key
+		d1[int] = int
+		d2[int] = int
+		Assert(d1 <> d2)
+	
+		d2['f'] = d1['f']
+		Assert([x for x in d1] == [x for x in d2])
+	
+		Assert(d1.fromkeys([x for x in d1]) >= d2.fromkeys([x for x in d2]))
+		Assert(d1.fromkeys([x for x in d1]) <= d2.fromkeys([x for x in d2]))
+	
+		d1['y'] = 20
+		d1[int] = int
+	
+		Assert(d1.fromkeys([x for x in d1]) > d2.fromkeys([x for x in d2]))
+		Assert(d1.fromkeys([x for x in d1]) >= d2.fromkeys([x for x in d2]))
+		Assert(d2.fromkeys([x for x in d2]) < d1.fromkeys([x for x in d1]))
+		Assert(d2.fromkeys([x for x in d2]) <= d1.fromkeys([x for x in d1]))
+	
+	class C1: 
+		x = 10
+		def f(self): pass
+	class C2:
+		x = 10
+		def f(self): pass
+	
+	repeat_on_class(C1, C2) 
+	
+	class C1(object): 
+		x = 10
+		def f(self): pass
+	class C2(object):
+		x = 10
+		def f(self): pass   
+		
+	repeat_on_class(C1, C2) 
 
 
 #####################################################################

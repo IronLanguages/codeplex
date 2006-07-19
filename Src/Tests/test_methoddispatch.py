@@ -1187,7 +1187,7 @@ x = a.M98('1', '2', '3', '4', a)
 AreEqual(x[0], 10)
 AreEqual(x[1], a)
 # doc for this method should have the out & ref params as return values
-AreEqual(a.M98.__doc__, '(int, Dispatch) M98(str a, str b, str c, str d, Dispatch di)\r\n')
+AreEqual(a.M98.__doc__, '(int, Dispatch) M98(str a, str b, str c, str d, Dispatch di)')
 
 # call type.InvokeMember on String.ToString - all methods have more arguments than max args.
 res = clr.GetClrType(str).InvokeMember('ToString', System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.InvokeMethod, None, 'abc', ())
