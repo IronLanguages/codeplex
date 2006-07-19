@@ -1465,7 +1465,7 @@
 	how the interop assemblies can be created (in the case they are not provided 
 	by the creators of the COM object) and will demonstrate the ease with which 
 	COM objects can be used from IronPython.</p>
-	<p class="Body">Estimated time to complete this tutorial: <b>15 minutes</b></p>
+	<p class="Body">Estimated time to complete this tutorial: <b>20 minutes</b></p>
 	<p class="Body">The objective of this tutorial is to explore COM interoperability 
 	from IronPython.</p>
 	<ul>
@@ -1664,24 +1664,35 @@
 	<p class="TypedExample">def check_word (word):<br>
 &nbsp;&nbsp; args = [word] + [System.Type.Missing]*12<br>
 &nbsp;&nbsp; return w.CheckSpelling(*args)[0]</p>
+	<p class="TypedExample">&nbsp;</p>
+	<p class="TypedExample">check_word(&quot;foo&quot;)</p>
+	<p class="TypedExample">check_word(&quot;food&quot;)</p>
 	<ol start="5">
 		<li>
 		<p class="Step">You can try that out on a couple of words, but now lets 
-		define a function that will suggest corrections for us.&nbsp; This 
-		function builds an argument list just like the last function did to 
+		define a function that will suggest corrections for us.&nbsp; First, we 
+		need to add a document so that we can call GetSpellingSuggestions(), 
+		which gives a nice error message if you try to call it with no documents 
+		opened.</p></li>
+	</ol>
+	<p class="TypedExample">w.Documents.Add(*[System.Type.Missing]*4)</p>
+	<ol start="6">
+		<li>
+		<p class="Step">The 
+		function we'll define builds an argument list just like check_word() did to 
 		supply several unneeded optional arguments.&nbsp; The first result of 
-		several return values from GetSpellingSuggestions is a collection of 
+		several return values from GetSpellingSuggestions() is a collection of 
 		items, each of which is a correction suggestion.&nbsp; We use a Python 
 		list comprehension to iterate through the COM collection object and call 
-		the Name property on each item object in the collection.&nbsp; The Name 
-		property is the string that Word is suggesting might be a correct 
+		the Name property on each item object in the collection.&nbsp; Each 
+		item's Name property is a string that Word is suggesting as a correct 
 		spelling.</p></li>
 	</ol>
 	<p class="TypedExample">def suggestions (word):<br>
 &nbsp;&nbsp; args = [word] + [System.Type.Missing]*13<br>
 &nbsp;&nbsp; res_objects = w.GetSpellingSuggestions(*args)[0]<br>
 &nbsp;&nbsp; return [x.Name for x in res_objects]</p>
-	<ol start="6">
+	<ol start="7">
 		<li>
 		<p class="Step">Now, let's shut down Word and exit the IronPython 
 		console.&nbsp; When you enter the next line and hit return, if you are 
@@ -1711,14 +1722,14 @@
 		</li>
 		<li>
 		<p class="Step">Call spellcheck.correct_word on a misspelled word, and a 
-		Windows Form similar to Word's spelling correction dialog appears.</p>
+		Windows Form similar to Word's spelling correction dialog appears.&nbsp; 
+		You can pick from the list and click the Replace button, double click a 
+		word in the suggestions list, enter custom text and click the Use Custom 
+		button, click an Ignore button to return the misspelled word, and so on. </p>
 		</li>
 		<li>
-		<p class="Step">a</p>
-		</li>
-		<li>
-		<p class="Step"></p>
-		</li>
+		<p class="Step">Open the spellcheck.py file to see the code for the the 
+		Windows Form as well as the functions.</li>
 	</ol>
 	<p class="Body">&nbsp;</p>
 	<p class="LabSummary">Tutorial Summary</p>
@@ -1740,8 +1751,8 @@
 	<p class="Body">Then, from IronPython you loaded the interop assembly, created 
 	an instance of the COM object, and instructed Merlin to play different animations.</p>
 	<p class="Body">You also used Word to check the spelling of words, learned 
-	how to supply missing optional arguments, and learned how to ensure you 
-	shutdown objects when your program ends.</p>
+	how to supply missing optional arguments, and inspected code that builds a 
+	Windows Form and uses it as a dialog.</p>
 	<p class="Normal">&nbsp;</p>
 	<h1><a name="T4">Tutorial 4: Debugging IronPython program</a></h1>
 	<p class="Body">This tutorial will walk you through very simple debug session, 
