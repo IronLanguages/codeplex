@@ -141,7 +141,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            return TypeCache.Super.TryGetAttr(context, this, name, out value);
+            return GetDynamicType().TryGetAttr(context, this, name, out value);
         }
 
         private bool TryLookupInBase(ICallerContext context, object type, SymbolId name, object self, out object value) {
@@ -180,19 +180,19 @@ namespace IronPython.Runtime {
             }
         }
         public void SetAttr(ICallerContext context, SymbolId name, object value) {
-            TypeCache.Super.SetAttr(context, this, name, value);
+            GetDynamicType().SetAttr(context, this, name, value);            
         }
 
         public void DeleteAttr(ICallerContext context, SymbolId name) {
-            TypeCache.Super.DelAttr(context, this, name);
+            GetDynamicType().DelAttr(context, this, name);
         }
 
         public List GetAttrNames(ICallerContext context) {
-            return TypeCache.Super.GetAttrNames(context, this);
+            return GetDynamicType().GetAttrNames(context, this);
         }
 
         public IDictionary<object, object> GetAttrDict(ICallerContext context) {
-            return TypeCache.Super.GetAttrDict(context, this);
+            return GetDynamicType().GetAttrDict(context, this);
         }
 
         #endregion
@@ -202,6 +202,7 @@ namespace IronPython.Runtime {
         [PythonName("__get__")]
         public object GetAttribute(object instance, object owner) {
             DynamicType selfType = GetDynamicType();
+
             if (selfType == TypeCache.Super) {
                 Super res = new Super();
                 res.Initialize(__thisclass__, instance);

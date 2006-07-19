@@ -878,13 +878,17 @@ namespace IronPython.Hosting {
                     mi.ReturnType,
                     PrependScope(mi.GetParameters()));
 
+            // argument 0 is a ModuleScope, set these to a slot
+            // which pulls it's module.
             cg.ContextSlot = cg.GetArgumentSlot(0);
-            cg.ModuleSlot = cg.ContextSlot;
+            
+            cg.ModuleSlot = new FieldSlot(cg.GetArgumentSlot(0), typeof(ModuleScope).GetField("__module__"));
             // setup the namespace for the method - get the arguments &
             // bind any globals into the module scope or ensure we have
             // a local slot for them.
             cg.Names = CodeGen.CreateLocalNamespace(cg);
-            cg.Names.Globals = new GlobalEnvironmentNamespace(new EnvironmentNamespace(new GlobalEnvironmentFactory()), cg.ModuleSlot);
+            cg.Names.Globals = new GlobalEnvironmentNamespace(
+                new EnvironmentNamespace(new GlobalEnvironmentFactory()), cg.ContextSlot);
             cg.doNotCacheConstants = true;
 
             return cg;

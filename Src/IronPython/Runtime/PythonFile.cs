@@ -92,6 +92,7 @@ namespace IronPython.Runtime {
 
         public abstract long Position {
             get;
+            internal set; // update position bookkeeping
         }
     }
 
@@ -185,6 +186,8 @@ namespace IronPython.Runtime {
             get {
                 return stream.Position;
             }
+            internal set {
+            }
         }
 
         // Convert a byte array into a string by casting each byte into a character.
@@ -204,10 +207,11 @@ namespace IronPython.Runtime {
         // We read the stream through a StreamReader to take advantage of stream buffering and encoding to
         // translate incoming bytes into characters.  This requires us to keep track of our own position.
         private StreamReader reader;
-        private int position;
+        private long position;
 
         public PythonTextCRLFReader(Stream stream, Encoding encoding)
             : base(stream, encoding) {
+            if (stream.CanSeek) position = stream.Position;
             reader = new StreamReader(stream, encoding);
         }
 
@@ -297,6 +301,9 @@ namespace IronPython.Runtime {
             get {
                 return position;
             }
+            internal set {
+                position = value;
+            }
         }
 
         // Discard any data we may have buffered based on the current stream position. Called after seeking in
@@ -313,10 +320,11 @@ namespace IronPython.Runtime {
         // We read the stream through a StreamReader to take advantage of stream buffering and encoding to
         // translate incoming bytes into characters.  This requires us to keep control of our own position.
         private StreamReader reader;
-        private int position;
+        private long position;
 
         public PythonTextCRReader(Stream stream, Encoding encoding)
             : base(stream, encoding) {
+            if (stream.CanSeek) position = stream.Position;
             reader = new StreamReader(stream, encoding);
         }
 
@@ -398,6 +406,9 @@ namespace IronPython.Runtime {
             get {
                 return position;
             }
+            internal set {
+                position = value;
+            }
         }
 
         // Discard any data we may have buffered based on the current stream position. Called after seeking in
@@ -413,10 +424,11 @@ namespace IronPython.Runtime {
         // We read the stream through a StreamReader to take advantage of stream buffering and encoding to
         // translate incoming bytes into characters.  This requires us to keep track of our own position.
         private StreamReader reader;
-        private int position;
+        private long position;
 
         public PythonTextLFReader(Stream stream, Encoding encoding)
             : base(stream, encoding) {
+            if (stream.CanSeek) position = stream.Position;
             reader = new StreamReader(stream, encoding);
         }
 
@@ -480,6 +492,9 @@ namespace IronPython.Runtime {
             get {
                 return position;
             }
+            internal set {
+                position = value;
+            }
         }
 
         // Discard any data we may have buffered based on the current stream position. Called after seeking in
@@ -506,10 +521,11 @@ namespace IronPython.Runtime {
         // translate incoming bytes into characters.  This requires that we keep track of our own position.
         private StreamReader reader;
         private TerminatorStyles terminators;
-        private int position;
+        private long position;
 
         public PythonUniversalReader(Stream stream, Encoding encoding)
             : base(stream, encoding) {
+            if (stream.CanSeek) position = stream.Position;
             reader = new StreamReader(stream, encoding);
             terminators = TerminatorStyles.None;
         }
@@ -604,6 +620,9 @@ namespace IronPython.Runtime {
             get {
                 return position;
             }
+            internal set {
+                position = value;
+            }
         }
 
         // PythonUniversalReader specific property that returns a bitmask of all the newline termination
@@ -625,11 +644,15 @@ namespace IronPython.Runtime {
         }
 
         // Write the data in the input string to the output stream, converting line terminators ('\n') into
-        // the output format as necessary.
-        public abstract void Write(String data);
+        // the output format as necessary.  Returns the number of bytes written
+        public abstract int Write(String data);
 
         // Flush any buffered data to the file.
         public abstract void Flush();
+
+        public void Seek(long index) {
+            stream.Seek(index, SeekOrigin.Begin);
+        }
     }
 
     // Write binary data embedded in the low-order byte of each string character to the output stream with no
@@ -640,10 +663,11 @@ namespace IronPython.Runtime {
         }
 
         // Write the data in the input string to the output stream. No newline conversion is performed.
-        public override void Write(String data) {
+        public override int Write(String data) {
             int count = data.Length;
             for (int i = 0; i < count; i++)
                 stream.WriteByte((byte)data[i]);
+            return count;
         }
 
         // Flush any buffered data to the file.
@@ -666,8 +690,10 @@ namespace IronPython.Runtime {
 
         // Write the data in the input string to the output stream, converting line terminators ('\n') into
         // '\r\n' as necessary.
-        public override void Write(String data) {
-            writer.Write(data.Replace("\n", "\r\n"));
+        public override int Write(String data) {
+            string writeData = data.Replace("\n", "\r\n");
+            writer.Write(writeData);
+            return writeData.Length;
         }
 
         // Flush any buffered data to the file.
@@ -690,8 +716,10 @@ namespace IronPython.Runtime {
 
         // Write the data in the input string to the output stream, converting line terminators ('\n') into
         // '\r' as necessary.
-        public override void Write(String data) {
-            writer.Write(data.Replace("\n", "\r"));
+        public override int Write(String data) {
+            string writeData = data.Replace("\n", "\r");
+            writer.Write(writeData);
+            return writeData.Length;
         }
 
         // Flush any buffered data to the file.
@@ -714,8 +742,9 @@ namespace IronPython.Runtime {
 
         // Write the data in the input string to the output stream. No conversion of newline terminators is
         // necessary.
-        public override void Write(String data) {
+        public override int Write(String data) {
             writer.Write(data);
+            return data.Length;
         }
 
         // Flush any buffered data to the file.
@@ -867,10 +896,11 @@ namespace IronPython.Runtime {
         private readonly PythonStreamReader reader;
         private readonly PythonStreamWriter writer;
         private bool isclosed = false;
+        private Nullable<long> reseekPosition;
 
         public bool softspace = false;
 
-        public PythonFile(Stream stream, Encoding encoding, string mode)
+        public PythonFile(Stream stream, Encoding encoding, string mode )
             : this(stream, encoding, mode, true) {
         }
 
@@ -927,11 +957,11 @@ namespace IronPython.Runtime {
                 PythonFileManager.AddToWeakMapping(this);
         }
 
-        public PythonFile(Stream stream, Encoding encoding, string name, string mode)
+        public PythonFile(Stream stream, Encoding encoding, string name, string mode )
             : this(stream, encoding, name, mode, true) {
         }
 
-        internal PythonFile(Stream stream, Encoding encoding, string name, string mode, bool weakMapping)
+        internal PythonFile(Stream stream, Encoding encoding, string name, string mode, bool weakMapping )
             : this(stream, encoding, mode, weakMapping) {
             this.name = name;
         }
@@ -1069,11 +1099,16 @@ namespace IronPython.Runtime {
 
         [PythonName("seek")]
         public void Seek(long offset, int whence) {
+            if (mode == "a") return;    // nop when seeking on stream's opened for append.
+
             ThrowIfClosed();
 
             if (!stream.CanSeek) {
                 throw Ops.IOError("Can not seek on file " + name);
             }
+
+            SavePositionPreSeek();
+
             SeekOrigin origin;
             switch (whence) {
                 default:
@@ -1088,8 +1123,11 @@ namespace IronPython.Runtime {
                     break;
             }
             Flush();
-            stream.Seek(offset, origin);
-            if (reader != null) reader.DiscardBufferedData();
+            long newPos = stream.Seek(offset, origin);
+            if (reader != null) {
+                reader.DiscardBufferedData();
+                reader.Position = newPos;
+            }
         }
 
         [PythonName("tell")]
@@ -1104,7 +1142,11 @@ namespace IronPython.Runtime {
             ThrowIfClosed();
 
             if (writer != null) {
-                writer.Write(s);
+                ResetForWrite();
+
+                int bytesWritten = writer.Write(s);
+                if (reader != null)
+                    reader.Position += bytesWritten;
                 Flush();
             } else {
                 throw Ops.IOError("Can not write to " + this.name);
@@ -1157,6 +1199,18 @@ namespace IronPython.Runtime {
             }
         }
 
+        private void SavePositionPreSeek() {
+            if (mode == "a+") {
+                reseekPosition = stream.Position;
+            }
+        }
+        private void ResetForWrite() {
+            if (reseekPosition != null) {
+                writer.Seek(reseekPosition.Value);
+                reader.Position = reseekPosition.Value;
+                reseekPosition = null;
+            }
+        }
         [PythonName("next")]
         public object Next() {
             string line = ReadLine();

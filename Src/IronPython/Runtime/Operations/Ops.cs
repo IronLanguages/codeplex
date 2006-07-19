@@ -1816,21 +1816,29 @@ namespace IronPython.Runtime.Operations {
 
         // import spam.eggs
         public static object Import(PythonModule mod, string fullName) {
+            Debug.Assert(typeof(PythonModule).IsAssignableFrom(mod.GetType()), "Got non-PythonModule passed to Ops");           
+            
             return Importer.Import(mod, fullName, List.Make());
         }
 
         // import spam as ham
         public static object ImportAs(PythonModule mod, string fullName, string asName) {
+            Debug.Assert(typeof(PythonModule).IsAssignableFrom(mod.GetType()), "Got non-PythonModule passed to Ops");
+
             return Importer.Import(mod, fullName, List.MakeList(asName));
         }
 
         // from spam import eggs1, eggs2
         public static object ImportFrom(PythonModule mod, string fullName, string[] names) {
+            Debug.Assert(typeof(PythonModule).IsAssignableFrom(mod.GetType()), "Got non-PythonModule passed to Ops");
+
             return ImportFromAs(mod, fullName, names, names);
         }
 
         // from spam import eggs1 as ham1, eggs2 as ham2
         public static object ImportFromAs(PythonModule mod, string fullName, string[] names, string[] asNames) {
+            Debug.Assert(typeof(PythonModule).IsAssignableFrom(mod.GetType()), "Got non-PythonModule passed to Ops");
+
             return Importer.Import(mod, fullName, List.Make(asNames));
         }
 
@@ -1840,6 +1848,8 @@ namespace IronPython.Runtime.Operations {
 
         // from spam import *
         public static void ImportStar(PythonModule mod, string fullName) {
+            Debug.Assert(typeof(PythonModule).IsAssignableFrom(mod.GetType()), "Got non-PythonModule passed to Ops");
+
             object newmod = Importer.Import(mod, fullName, List.MakeList("*"));
 
             if (newmod is PythonModule) {

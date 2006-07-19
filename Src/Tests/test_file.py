@@ -20,25 +20,26 @@ import sys
 # read(size), readline() and write() for binary, text and universal newline modes.
 def test_sanity():
     for i in range(5):
-	    ### general file robustness tests
-	    f = file("onlyread.tmp", "w")
-	    f.write("will only be read")
-	    f.flush()
-	    f.close()
-	    sin = file("onlyread.tmp", "r")
-	    sout = file("onlywrite.tmp", "w")
-
+        ### general file robustness tests
+        f = file("onlyread.tmp", "w")
+        f.write("will only be read")
+        f.flush()
+        f.close()
+        sin = file("onlyread.tmp", "r")
+        sout = file("onlywrite.tmp", "w")
+        
 	    # writer is null for sin
-	    AssertError(IOError, sin.write, "abc")
-	    AssertError(IOError, sin.writelines, ["abc","def"])
+        AssertError(IOError, sin.write, "abc")
+        AssertError(IOError, sin.writelines, ["abc","def"])
 
 	    # reader is null for sout
-	    AssertError(IOError, sout.read)
-	    AssertError(IOError, sout.read, 10)
-	    AssertError(IOError, sout.readline)
-	    AssertError(IOError, sout.readline, 10)
-	    AssertError(IOError, sout.readlines)
-	    AssertError(IOError, sout.readlines, 10)
+        if is_cli:
+            AssertError(IOError, sout.read)
+            AssertError(IOError, sout.read, 10)
+            AssertError(IOError, sout.readline)
+            AssertError(IOError, sout.readline, 10)
+            AssertError(IOError, sout.readlines)
+            AssertError(IOError, sout.readlines, 10)
     	
 	    sin.close()
 	    sout.close()
@@ -239,6 +240,8 @@ def test_read_size():
                                             ("H\r", "e\n", "\nl", "lo"), (2,4,7, 9),
                                             ("H\n", "e\n", "\nl", "lo"), (2,4,7, 9)))
 
+    if not is_cli: return
+    
     for test in read_size_tests:
         # Write the test pattern to disk in binary mode.
         f = file(temp_file, "wb")
@@ -333,6 +336,8 @@ def test_newlines_attribute():
                       ("1\r2\r3\r", ("\r", "\r", "\r")),
                       ("1\n2\n3\n", ("\n", "\n", "\n")))
 
+    if not is_cli: return False
+    
     for test in newlines_tests:
         # Write the test pattern to disk in binary mode.
         f = file(temp_file, "wb")
@@ -394,9 +399,9 @@ def test_coverage():
     f = file(temp_file, 'r+', 512)
     f.seek(-1 * pos - 2, 2)
 
-    AreEqual(f.readline(), '\n')
+    AreEqual(f.readline(), 'e\n')
     AreEqual(f.readline(5), 'third')
-    AreEqual(f.read(-1), 'line\n\n')
+    AreEqual(f.read(-1), 'line\n')
     AreEqual(f.read(-1), '')
     f.close()
 
@@ -404,9 +409,9 @@ def test_coverage():
     f = file(temp_file, 'rb', 512)
     f.seek(-1 * pos - 2, 2)
 
-    AreEqual(f.readline(), '\r\n')
+    AreEqual(f.readline(), 'e\r\n')
     AreEqual(f.readline(5), 'third')
-    AreEqual(f.read(-1), 'line\r\n\n')
+    AreEqual(f.read(-1), 'line\r\n')
     AreEqual(f.read(-1), '')
     f.close()
 
@@ -432,6 +437,8 @@ def test_encoding():
     #verify we start w/ ASCII
     import sys
 
+    if not is_cli: return
+    
     f = file(temp_file, 'w')
     f.write(u'\u6211')
     f.close()
@@ -445,8 +452,9 @@ def test_encoding():
     #and verify UTF8 round trips correctly
     saved = sys.getdefaultencoding()
     
+    
     try:
-        setenc = sys.setdefaultencoding
+        setenc = sys.setdefaultencoding       
         setenc('utf8')
 
         f = file(temp_file, 'w')

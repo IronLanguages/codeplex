@@ -266,6 +266,19 @@ def test_CreateLambda_Negative():
     except ArgumentException: 
         pass
 
+
+def test_CreateMethod_ImportSys():
+    script = "import sys\nreturn sys.version"
+    
+    pe = IronPython.Hosting.PythonEngine(CreateOptions())
+    
+    load_iron_python_test()
+    from IronPythonTest import SimpleReturnDelegate	
+    
+    method = pe.CreateMethod[SimpleReturnDelegate](script)
+    import sys
+    AreEqual(method(), sys.version)
+
 def test_interactive_input():
     x = pe.ParseInteractiveInput("""x = "abc\\
 """, True)

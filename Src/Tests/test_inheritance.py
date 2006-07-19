@@ -1133,8 +1133,12 @@ def test_super_inheritance():
             return super(foo, self).__init__(*args)
     
     
-    class bar(object): pass
+    class bar(object): pass    
     
+    # when lookup comes from super's class it should
+    # be from it's type, not from the super base type
+    AreEqual(foo(bar).__class__, foo)
+
     bar.x = foo(bar)
     AreEqual(type(bar().x), foo)        # once via .
     x = foo(bar)
