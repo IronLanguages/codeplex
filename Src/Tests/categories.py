@@ -100,6 +100,7 @@ IronPythonTests = {
                 test_methodbinder1
                 test_methodbinder2
                 test_methoddispatch
+                test_missing
                 test_namespace
                 test_privateBinding
                 test_protected
