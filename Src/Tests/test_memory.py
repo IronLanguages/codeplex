@@ -88,10 +88,10 @@ if is_cli:
     AreEqual(names['f'](), 42)
     
     code = """
-    x=2
-    def f(y):
-        return x+y
-    z = f(3)
+x=2
+def f(y):
+    return x+y
+z = f(3)
     """
     e = compile(code, "", "exec")
     names = {}
