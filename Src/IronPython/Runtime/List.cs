@@ -328,7 +328,7 @@ namespace IronPython.Runtime {
             set {
                 if (slice == null) throw Ops.TypeError("list indicies must be integer or slice, not None");
 
-                if (slice.step != null) {
+                if (slice.Step != null) {
                     // try to assign back to self: make a copy first
                     if (this == value) value = new List(value);
 

@@ -84,6 +84,7 @@
     <Compile Include="Complex64.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ISlice.cs" />
     <Compile Include="IronMath.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -124,6 +125,6 @@ copy /y "$(SolutionDir)IronPythonKey.snk" "$(ProjectDir)"
 "$(FrameworkSDKDir)Bin\sn" -Vr "$(TargetPath)" "$(SolutionDir)PublicKeyOnly.pk"
 if exist "%25ProgramFiles%25\Microsoft.NET\SDK\v2.0 64bit\Bin\sn.exe"  "%25ProgramFiles%25\Microsoft.NET\SDK\v2.0 64bit\Bin\sn.exe" -Vr "$(TargetPath)" "$(SolutionDir)PublicKeyOnly.pk"
 del /q "$(SolutionDir)PublicKeyOnly.pk"
-    </PostBuildEvent>  
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>

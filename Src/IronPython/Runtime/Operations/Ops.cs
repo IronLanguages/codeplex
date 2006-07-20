@@ -1423,7 +1423,7 @@ namespace IronPython.Runtime.Operations {
                 Slice slice;
                 if (index is int) return seq[(int)index];
                 else if ((slice = index as Slice) != null) {
-                    if (slice.step == null) {
+                    if (slice.Step == null) {
                         int start, stop;
                         slice.DeprecatedFixed(o, out start, out stop);
 
@@ -1486,7 +1486,7 @@ namespace IronPython.Runtime.Operations {
                     seq[(int)index] = value;
                     return;
                 } else if ((slice = index as Slice) != null) {
-                    if (slice.step == null) {
+                    if (slice.Step == null) {
                         int start, stop;
                         slice.DeprecatedFixed(o, out start, out stop);
 
@@ -1538,7 +1538,7 @@ namespace IronPython.Runtime.Operations {
                     seq.DeleteItem((int)index);
                     return;
                 } else if ((slice = index as Slice) != null) {
-                    if (slice.step == null) {
+                    if (slice.Step == null) {
                         int start, stop;
                         slice.DeprecatedFixed(o, out start, out stop);
 
@@ -1548,7 +1548,6 @@ namespace IronPython.Runtime.Operations {
 
                     return;
                 }
-                //???
             }
 
             IMapping map = o as IMapping;

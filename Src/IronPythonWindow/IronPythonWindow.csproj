@@ -113,6 +113,10 @@
     <Reference Include="System">
       <Name>System</Name>
     </Reference>
+    <ProjectReference Include="..\IronMath\IronMath.csproj">
+      <Project>{23392B2F-6141-418B-A442-E4D7ABE15774}</Project>
+      <Name>IronMath</Name>
+    </ProjectReference>
     <ProjectReference Include="..\IronPython\IronPython.csproj">
       <Name>IronPython</Name>
       <Project>{16ED1884-8B08-4787-B598-7C9D60519075}</Project>

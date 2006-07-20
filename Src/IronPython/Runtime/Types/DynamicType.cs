@@ -814,7 +814,7 @@ namespace IronPython.Runtime.Types {
         [PythonName("__getitem__")]
         public virtual object GetIndex(object self, object index) {
             Slice slice = index as Slice;
-            if (slice != null && slice.step == null) {
+            if (slice != null && slice.Step == null) {
                 object getSlice;
                 if (Ops.TryGetAttr(DefaultContext.Default, self, SymbolTable.GetSlice, out getSlice)) {
                     int start, stop;
@@ -829,7 +829,7 @@ namespace IronPython.Runtime.Types {
         [PythonName("__setitem__")]
         public virtual void SetIndex(object self, object index, object value) {
             Slice slice = index as Slice;
-            if (slice != null && slice.step == null) {
+            if (slice != null && slice.Step == null) {
                 object setSlice;
                 if (Ops.TryGetAttr(DefaultContext.Default, self, SymbolTable.SetSlice, out setSlice)) {
                     int start, stop;
@@ -845,7 +845,7 @@ namespace IronPython.Runtime.Types {
         [PythonName("__delitem__")]
         public void DelIndex(object self, object index) {
             Slice slice = index as Slice;
-            if (slice != null && slice.step == null) {
+            if (slice != null && slice.Step == null) {
                 object delSlice;
                 if (Ops.TryGetAttr(DefaultContext.Default, self, SymbolTable.DeleteSlice, out delSlice)) {
                     int start, stop;

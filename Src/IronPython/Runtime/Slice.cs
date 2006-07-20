@@ -18,17 +18,37 @@ using System.Text;
 using System.Collections;
 
 using IronPython.Runtime.Operations;
+using IronMath;
 
 namespace IronPython.Runtime {
     [PythonType("slice")]
-    public sealed class Slice : IComparable, IRichEquality {
-        public readonly object start, stop, step;
+    public sealed class Slice : IComparable, IRichEquality, ISlice {
+        private readonly object start, stop, step;
 
         public Slice(object stop) : this(null, stop, null) { }
         public Slice(object start, object stop) : this(start, stop, null) { }
         public Slice(object start, object stop, object step) {
             this.start = start; this.stop = stop; this.step = step;
         }
+
+        #region ISlice Members
+
+        public object Start {
+            [PythonName("start")]
+            get { return start; }
+        }
+
+        public object Stop {
+            [PythonName("stop")]
+            get { return stop; }
+        }
+
+        public object Step {
+            [PythonName("step")]
+            get { return step; }
+        }
+
+        #endregion
 
         [PythonName("indices")]
         public Tuple indices(int len) {
