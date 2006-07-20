@@ -139,7 +139,18 @@ AreEqual(stderr.close(), None)
 #    AreEqual(stderr.read(), '')
 #    AreEqual(stderr.close(), None)
     
-
+# bug 1148
+#tmpfile = 'tmpfile.tmp'
+#f = open(tmpfile, 'w')
+#f.close()
+#nt.unlink(tmpfile)
+#try:
+#    nt.chmod('tmpfile.tmp', 256)
+#except Exception:
+#    pass #should throw when trying to access file deleted by unlink
+#else:
+#    Assert(False,"Error! Trying to access file deleted by unlink should have thrown.")
+#
 
 # verify that nt.stat reports times in seconds, not ticks...
 
@@ -148,17 +159,14 @@ tmpfile = 'tmpfile.tmp'
 f = open(tmpfile, 'w')
 f.close()
 t = time.time()
-
 mt = nt.stat(tmpfile).st_mtime
-
-nt.unlink(tmpfile)
-
+nt.unlink(tmpfile) # this deletes the file
 Assert(abs(t-mt) < 60)
 
-
-import nt
+tmpfile = 'tmpfile.tmp' # need to open it again since we deleted it with 'unlink'
+f = open(tmpfile, 'w')
+f.close()
 nt.chmod('tmpfile.tmp', 256)
 nt.chmod('tmpfile.tmp', 128)
 nt.unlink('tmpfile.tmp')
-
 

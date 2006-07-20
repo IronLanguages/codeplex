@@ -373,9 +373,9 @@ def test_multiline_compound_stmts():
 test_multiline_compound_stmts()
 
 # **** test for conditional operator **********
-
-result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_conditional.py"), ["-X:Python25"])
-AreEqual(result, 0)
+if is_cli:
+    result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_conditional.py"), ["-X:Python25"])
+    AreEqual(result, 0)
 
 # compile function which returns from finally, but does not yield from finally.
 c = compile("def f():\n    try:\n        pass\n    finally:\n        return 1", "", "exec")

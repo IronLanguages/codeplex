@@ -23,8 +23,10 @@ import binascii
 
 # verify extra characters are ignored, and that we require padding.
 def test_negative():
-    for x in ('A', 'AB', '%%%A', 'A%%%', '%A%%', '%AA%' ):
-        AssertError(TypeError, binascii.a2b_base64, x)     # Type Error , incorrect padding
+    # the native implementation throws a binascii.Error---we throw a TypeError
+    if is_cli:
+        for x in ('A', 'AB', '%%%A', 'A%%%', '%A%%', '%AA%' ):
+            AssertError(TypeError, binascii.a2b_base64, x)     # Type Error , incorrect padding
 
 def test_positive():
     AreEqual(binascii.a2b_base64(''), '')
