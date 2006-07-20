@@ -396,3 +396,27 @@ s = TestSink()
 CompileWithSink(source1, assembly, s)
 Assert(len(s.errors) > 0)
 
+
+
+FileRemoval(source1, assembly)
+write_to_file(source1, """
+name, = (1,0)
+
+""")
+s = TestSink()
+CompileWithSink(source1, assembly, s)
+Assert(len(s.errors) == 0)
+
+
+
+FileRemoval(source1, assembly)
+write_to_file(source1, """
+d = {}
+for x in d.keys()
+	pass
+
+""")
+s = TestSink()
+CompileWithSink(source1, assembly, s)
+Assert(len(s.errors) > 0)
+

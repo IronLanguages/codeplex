@@ -31,5 +31,15 @@ def test_sanity():
 
     AssertError(ValueError, datetime.date, 2005, 4,31)
     AssertError(ValueError, datetime.date, 2005, 3,32)
+    
+    x = datetime.datetime(2006,4,11,2,28,3,99,datetime.tzinfo())
+    AreEqual(x.year, 2006)
+    AreEqual(x.month, 4)
+    AreEqual(x.day, 11)
+    AreEqual(x.hour, 2)
+    AreEqual(x.minute, 28)
+    AreEqual(x.second, 3)
+    AreEqual(x.microsecond, 99)
+    
 
 run_test(__name__)

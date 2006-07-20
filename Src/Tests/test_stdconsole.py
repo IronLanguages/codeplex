@@ -13,6 +13,7 @@
 #
 ######################################################################################
 
+from lib.console_util import IronPythonInstance
 from lib.assert_util import *
 import sys
 import nt
@@ -77,6 +78,17 @@ def TestCommandLine(args, expected_output, expected_exitcode = 0):
                 Assert(False, "Invalid type for expected_output")
         else:
             Assert(False, "Invalid type for expected_output")
+
+# Runs the console with the given argument string with the expectation that it should enter interactive mode.
+# Meaning, for one, no -c parameter.  This is useful for catching certain argument parsing errors.
+def TestInteractive(args, expected_exitcode = 0):
+    ipi = IronPythonInstance(sys.executable, sys.exec_prefix, args)
+    AreEqual(ipi.Start(), True)
+    
+    #Verify basic behavior
+    AreEqual("4", ipi.ExecuteLine("2+2"))
+    
+    ipi.End()
 
 # regexp for the output of PrintUsage
 usageRegex = "IronPython console:(.+)Usage.*"
@@ -178,6 +190,7 @@ TestCommandLine(("-?",), ("regexp", usageRegex))
 
 # Test -X:MTA
 TestCommandLine(("-X:MTA", "-c", "print 'OK'"), "OK\n")
+TestInteractive("-X:MTA")
 
 # Test -X:NoOptimize
 TestCommandLine(("-X:NoOptimize", "-c", "from System import Console; Console.WriteLine('System')"), "System\n")

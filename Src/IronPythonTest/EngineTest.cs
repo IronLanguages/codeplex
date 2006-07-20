@@ -39,6 +39,9 @@ namespace IronPythonTest {
     }
 
     public delegate int IntIntDelegate(int arg);
+    public delegate string RefStrDelegate(ref string arg);
+    public delegate int RefIntDelegate(ref int arg);
+    public delegate T GenericDelegate<T,U,V>(U arg1, V arg2);
 
     public class ClsPart {
         public int Field;
@@ -664,7 +667,248 @@ global_variable = 300", standardEngine.DefaultModule, locals);
             AreEqual(10, clsPart.Field);
             compiledCode.Execute();
             AreEqual(20, clsPart.Field);
+        }
 
+        public void ScenarioStreamRedirect() {
+            MemoryStream stdout = new MemoryStream();
+            MemoryStream stdin = new MemoryStream();
+            MemoryStream stderr = new MemoryStream();
+            ASCIIEncoding encoding = new ASCIIEncoding();
+            byte[] buffer = new byte[15];
+
+            PythonEngine pe = new PythonEngine();
+            pe.SetStandardError(stderr);
+            pe.SetStandardInput(stdin);
+            pe.SetStandardOutput(stdout);
+            pe.Execute("import sys");
+
+            stdin.Write(encoding.GetBytes("This is stdout"), 0, 14);
+            stdin.Position = 0;
+            pe.Execute("output = sys.__stdin__.readline()");
+            AreEqual("This is stdout",pe.EvaluateAs<string>("output"));
+            pe.Execute("sys.__stdout__.write(output)");
+            stdout.Flush();
+            stdout.Position = 0;
+            int len = stdout.Read(buffer, 0, 14);
+            AreEqual(14, len);
+            AreEqual("This is stdout",encoding.GetString(buffer,0,len));
+
+            pe.Execute("sys.__stderr__.write(\"This is stderr\")");
+            stderr.Flush();
+            stderr.Position = 0;
+            len = stderr.Read(buffer, 0, 14);
+            AreEqual(14, len);
+            AreEqual("This is stderr", encoding.GetString(buffer,0,len));        
+        }
+
+        public void ScenarioCreateMethodAndLambda() {
+            PythonEngine pe = new PythonEngine();
+            
+            //Generic delegate types
+            GenericDelegate<int,int,int> del = pe.CreateLambda<GenericDelegate<int,int,int>>("arg1+arg2");
+            AreEqual(9, del(6, 3));
+            del = pe.CreateMethod<GenericDelegate<int, int, int>>("return arg1+arg2");
+            AreEqual(12, del(8, 4));
+
+            //ByRef reference type arguments
+            string arg = "Hello";
+            RefStrDelegate rsdel = null;
+            rsdel = pe.CreateLambda<RefStrDelegate>("'%s World!' % arg.Value");
+            AreEqual("Hello World!", rsdel(ref arg));
+
+            arg = "Hello";
+            rsdel = pe.CreateMethod<RefStrDelegate>("arg.Value = '%s World!' % arg.Value\nreturn arg.Value");
+            AreEqual("Hello World!", rsdel(ref arg));
+            AreEqual("Hello World!", arg);
+
+            //ByRef value type arguments
+            int argi = 323;
+            RefIntDelegate ridel = null;
+            ridel = pe.CreateLambda<RefIntDelegate>("arg.Value+27");
+            AreEqual(350, ridel(ref argi));
+
+            argi = 323;
+            ridel = pe.CreateMethod<RefIntDelegate>("arg.Value+=127\nreturn arg.Value+1");
+            AreEqual(451, ridel(ref argi));
+            AreEqual(450, argi);
+
+            //Specify our own parameter names
+            List<string> args = new List<string>(new string[] { "dir","secondarg"});
+            del = pe.CreateLambda<GenericDelegate<int, int, int>>("dir+secondarg", args);
+            AreEqual(6, del(3, 3));
+            del = pe.CreateMethod<GenericDelegate<int, int, int>>("return dir+secondarg", args);
+            AreEqual(6,del(3,3));
+        }
+
+        public void ScenarioCoverage() {
+            PythonEngine pe = new PythonEngine();
+            CompiledCode compiledCode = pe.Compile("arg1+arg2","MyNewSourceFile");
+            AreEqual("<code MyNewSourceFile>", compiledCode.ToString());
+        }
+
+        public void ScenarioNullArguments() {
+            PythonEngine pe = new PythonEngine();
+            string tempFile1 = Path.GetTempFileName();
+
+            try {
+                pe.Compile(null, tempFile1);
+                throw new Exception();
+            } catch (ArgumentNullException) {
+                //Pass
+            }
+
+            try {
+                pe.CompileFile(null);
+                throw new Exception();
+            } catch (ArgumentNullException) {
+                //Pass
+            }
+
+            try {
+                pe.CreateLambda<IntIntDelegate>("x=2",null,null);
+                throw new Exception();
+            } catch (ArgumentNullException) {
+                //Pass
+            }
+
+            try {
+                pe.CreateMethod<IntIntDelegate>("x=2", null, null);
+                throw new Exception();
+            } catch (ArgumentNullException) {
+                //Pass
+            }
+
+            try {
+                pe.CreateModule(null, new Dictionary<string,object>(), false);
+                throw new Exception();
+            } catch (ArgumentNullException) {
+                //Pass
+            }
+
+            try {
+                pe.CreateModule("moduleName", null, false);
+                throw new Exception();
+            } catch (ArgumentNullException) {
+                //Pass
+            }
+
+            try {
+                pe.CreateOptimizedModule(null, "moduleName", false);
+                throw new Exception();
+            } catch (ArgumentNullException) {
+                //Pass
+            }
+
+            try {
+                pe.CreateOptimizedModule(tempFile1, null, false);
+                throw new Exception();
+            } catch (ArgumentNullException) {
+                //Pass
+            }
+
+            try {
+                pe = new PythonEngine(null);
+                throw new Exception();
+            } catch (ArgumentNullException) {
+                //Pass
+            }
+        }
+
+        private static void ExecuteAndVerify(PythonEngine pe, EngineModule module, IDictionary<string, object> locals, string text, string expectedText) {
+            MemoryStream output = new MemoryStream();
+            pe.SetStandardOutput(output);
+            pe.Execute(text, module, locals);
+            output.Flush();
+            output.Position = 0;
+            AreEqual((new StreamReader(output)).ReadToEnd(), expectedText);
+        }
+
+        public void ScenarioVariableScoping() {
+            PythonEngine pe = new PythonEngine();
+
+            string tempFile1 = Path.GetTempFileName();
+
+            try {
+                Dictionary<string, object> globals = new Dictionary<string, object>();
+                Dictionary<string, object> locals = new Dictionary<string, object>();
+                EngineModule module1 = pe.CreateModule("module1", globals, true);
+
+                //Set variables in each scope
+                globals["x"] = 1;
+                File.WriteAllText(tempFile1, "y = 2");
+                pe.ExecuteFile(tempFile1, module1, locals);
+                locals["z"] = 3;
+
+                //Query for a variable from each scope
+                AreEqual((int)pe.Evaluate("x", module1, locals), 1);
+                AreEqual((int)pe.Evaluate("y", module1, locals), 2);
+                AreEqual((int)pe.Evaluate("z", module1, locals), 3);
+
+                AreEqual(pe.EvaluateAs<int>("x", module1, locals), 1);
+                AreEqual(pe.EvaluateAs<int>("y", module1, locals), 2);
+                AreEqual(pe.EvaluateAs<int>("z", module1, locals), 3);
+
+                ExecuteAndVerify(pe, module1, locals, "print x", "1" + Environment.NewLine);
+                ExecuteAndVerify(pe, module1, locals, "print y", "2" + Environment.NewLine);
+                ExecuteAndVerify(pe, module1, locals, "print z", "3" + Environment.NewLine);
+
+                //Set conflicting variables in each scope and verify resolution
+                module1.Globals["scope"] = "module";
+                AreEqual("module", pe.EvaluateAs<string>("scope", module1, locals));
+                locals["scope"] = "local";
+                AreEqual("local", pe.EvaluateAs<string>("scope", module1, locals));
+                pe.Execute("scope='also local'", module1, locals);
+                AreEqual("also local", pe.EvaluateAs<string>("scope", module1, locals));
+                AreEqual("also local", (string)locals["scope"]);
+
+                //Validate that the module dict hasn't changed in an unexpected way
+                AreEqual(false, module1.Globals.ContainsKey("y"));
+                AreEqual(false, module1.Globals.ContainsKey("z"));
+
+                //Remove the conflicting variables from each scope and verify resolution
+                pe.Execute("del(scope)", module1, locals);
+                AreEqual(false, locals.ContainsKey("scope"));
+                AreEqual("module", pe.EvaluateAs<string>("scope", module1, locals));
+                module1.Globals.Remove("scope");
+                try {
+                    AreEqual("module", pe.EvaluateAs<string>("scope", module1, locals));
+                    Console.WriteLine("All references to scope have been removed, we should get an error when looking up this name");
+                    throw new Exception();
+                } catch (PythonNameErrorException) {
+                    //Pass
+                }
+
+                //Change an existing variable in each scope
+                locals["z"]  = 6;
+                pe.Execute("y = 5", module1, locals);
+                globals["x"] = 4;
+
+                //Verify that the engine gets the updated values
+                AreEqual(4, (int)pe.Evaluate("x", module1, locals));
+                AreEqual(5, (int)pe.Evaluate("y", module1, locals));
+                AreEqual(6, (int)pe.Evaluate("z", module1, locals));
+
+                AreEqual(4, pe.EvaluateAs<int>("x", module1, locals));
+                AreEqual(5, pe.EvaluateAs<int>("y", module1, locals));
+                AreEqual(6, pe.EvaluateAs<int>("z", module1, locals));
+
+                ExecuteAndVerify(pe, module1, locals, "print x", "4" + Environment.NewLine);
+                ExecuteAndVerify(pe, module1, locals, "print y", "5" + Environment.NewLine);
+                ExecuteAndVerify(pe, module1, locals, "print z", "6" + Environment.NewLine);
+
+                //Hide a builtin from each scope and verify we can recover it
+                globals["dir"] = "overriden in module";
+                AreEqual("overriden in module",pe.EvaluateAs<string>("dir", module1, locals));
+                globals.Remove("dir");
+                AreEqual(true, pe.Evaluate("dir", module1, locals) is IronPython.Runtime.Calls.BuiltinFunction);
+
+                locals["dir"] = "overriden in locals";
+                AreEqual("overriden in locals", pe.EvaluateAs<string>("dir", module1, locals));
+                locals.Remove("dir");
+                AreEqual(true, pe.Evaluate("dir", module1, locals) is IronPython.Runtime.Calls.BuiltinFunction);
+            } finally {
+                File.Delete(tempFile1);
+            }
         }
 
         public void Scenario12() {

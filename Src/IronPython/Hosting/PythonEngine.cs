@@ -137,8 +137,8 @@ namespace IronPython.Hosting {
         }
 
         public PythonEngine(EngineOptions engineOptions) {
-            if (options == null)
-                throw new ArgumentNullException("options", "No options specified for PythonEngine");
+            if (engineOptions == null)
+                throw new ArgumentNullException("engineOptions", "No options specified for PythonEngine");
             // Clone it first to prevent the client from unexpectedly mutating it
             engineOptions = engineOptions.Clone();
             Initialize(engineOptions);
@@ -408,8 +408,8 @@ namespace IronPython.Hosting {
         /// with the module will be reclaimed after that.
         /// </param>
         public EngineModule CreateModule(string moduleName, IDictionary<string, object> globals, bool publishModule) {
-            if (moduleName == null) throw new ArgumentException("moduleName");
-            if (globals == null) throw new ArgumentException("globals");
+            if (moduleName == null) throw new ArgumentNullException("moduleName");
+            if (globals == null) throw new ArgumentNullException("globals");
 
             EngineModule engineModule = new EngineModule(moduleName, globals, Sys);
             if (publishModule) {
@@ -423,8 +423,8 @@ namespace IronPython.Hosting {
         /// dictionary of her liking.
         /// </summary>
         public OptimizedEngineModule CreateOptimizedModule(string fileName, string moduleName, bool publishModule) {
-            if (fileName == null) throw new ArgumentException("fileName");
-            if (moduleName == null) throw new ArgumentException("moduleName");
+            if (fileName == null) throw new ArgumentNullException("fileName");
+            if (moduleName == null) throw new ArgumentNullException("moduleName");
 
             CompilerContext context = this.compilerContext.CopyWithNewSourceFile(fileName);
             Parser p = Parser.FromFile(Sys, context, Sys.EngineOptions.SkipFirstLine, false);
@@ -947,7 +947,7 @@ namespace IronPython.Hosting {
         }
 
         public CompiledCode CompileFile(string fileName) {
-            if (fileName == null) throw new ArgumentException("fileName");
+            if (fileName == null) throw new ArgumentNullException("fileName");
             Parser p = Parser.FromFile(Sys, compilerContext.CopyWithNewSourceFile(fileName));
             return Compile(p);
         }
@@ -1018,8 +1018,8 @@ namespace IronPython.Hosting {
                 // ClrModule holds onto SystemState, SystemState holds onto ClrModule...
                 // no problem, right?  But there's a reference from AppDomain.CurrentDomain.AssemblyResolve
                 // to ClrModule, which gives them both a static root.  Threfore it's safe
-                // to dispose of systemState unless the domain is unloading.                
-                systemState.Dispose();
+                // to dispose of systemState unless the domain is unloading.
+                if(systemState != null) systemState.Dispose();
             }
         }
 

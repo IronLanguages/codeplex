@@ -22,7 +22,7 @@ import sys
 import IronPython
 pe = IronPython.Hosting.PythonEngine()
 
-def test_trival():
+def test_trivial():
     Assert(IronPython.Hosting.PythonEngine.Version != "")
 
 def test_coverage():
@@ -35,7 +35,7 @@ def test_coverage():
     
     # 2. ...
 
-# verify no interferece between PythonEngine used in IronPython console and user created one
+# verify no interference between PythonEngine used in IronPython console and user created one
 def test_no_interference(): 
     # 1. path
     oldpath = sys.path
@@ -78,6 +78,7 @@ def test_CreateMethod():
     from IronPythonTest import IntArgDelegate, StringArgDelegate, RefReturnDelegate, OutReturnDelegate
     
     AreEqual(pe.CreateMethod[IntArgDelegate]('arg1 = "abc"\narg2="def"\nreturn arg1')(2, 3), 'abc')
+    AreEqual(pe.CreateMethod[IntArgDelegate]('return (arg1+1,arg2+1)')(5,10), (6,11))
     AreEqual(pe.CreateMethod[StringArgDelegate]('arg1 = 2\narg2=3\nreturn arg1')('abc', 'def'), 2)
     y = Reference[object]()
     AreEqual(pe.CreateMethod[RefReturnDelegate]('sender = 2\nres.Value = 3\nreturn sender')('abc', y), 2)

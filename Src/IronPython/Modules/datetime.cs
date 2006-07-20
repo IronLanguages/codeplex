@@ -437,6 +437,7 @@ namespace IronPython.Modules {
                [DefaultParameterValue(null)]PythonTimeZoneInformation tzinfo) {
 
                 dateTime = new DateTime(year, month, day, hour, minute, second, microsecond / 1000);
+                lostMicroseconds = microsecond % 1000;
                 tz = tzinfo;
             }
 
