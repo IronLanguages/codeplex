@@ -470,7 +470,8 @@ namespace IronPython.Compiler.Ast {
             cg.BeginCatchBlock(typeof(Exception));
             // Extract state from the carrier exception
             cg.EmitCallerContext();
-            cg.EmitCall(typeof(Ops), "ExtractException");
+            cg.EmitCall(typeof(Ops), "ExtractException",
+                new Type[] { typeof(Exception), typeof(ICallerContext) });
             Slot pyExc = cg.GetLocalTmp(typeof(object));
             Slot tmpExc = cg.GetLocalTmp(typeof(object));
             pyExc.EmitSet(cg);
@@ -504,7 +505,7 @@ namespace IronPython.Compiler.Ast {
 
                 handler.Body.Emit(cg);
                 cg.EmitCallerContext();
-                cg.EmitCall(typeof(Ops), "ClearException");
+                cg.EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
 
                 cg.PopTargets();
 

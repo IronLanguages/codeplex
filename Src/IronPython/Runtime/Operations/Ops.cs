@@ -2092,7 +2092,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object ExtractException(Exception e, ICallerContext context) {
-            context.SystemState.SetRawException(e);
+            return ExtractException(e, context.SystemState);
+        }
+
+        public static object ExtractException(Exception e, SystemState systemState) {
+            systemState.SetRawException(e);
             object res = ExceptionConverter.ToPython(e);
             System.Diagnostics.Debug.Assert(res != null);
             return res;
@@ -2100,6 +2104,10 @@ namespace IronPython.Runtime.Operations {
 
         public static void ClearException(ICallerContext context) {
             context.SystemState.ClearException();
+        }
+
+        public static void ClearException(SystemState systemState) {
+            systemState.ClearException();
         }
 
         public static void UpdateTraceBack(ICallerContext context, string funcName, string filename, int line) {

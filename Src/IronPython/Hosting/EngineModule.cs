@@ -55,7 +55,7 @@ namespace IronPython.Hosting {
 
         internal IAttributesDictionary GlobalsAdapter { get { return globalsAdapter; } }
 
-        public ICallerContext CallerContext { get { return defaultModuleScope; } }
+        internal ICallerContext CallerContext { get { return defaultModuleScope; } }
 
         internal ModuleScope GetModuleScope(IDictionary<string, object> locals) {
             if (locals == null) {

@@ -275,7 +275,7 @@ namespace IronPython.Compiler.Generation {
                     EmitFlowControlInCatch(delegate() {
                         // clear the current exception
                         EmitCallerContext();
-                        EmitCall(typeof(Ops), "ClearException");
+                        EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
 
                         // emit the real return
                         EmitReturn();
