@@ -42,6 +42,7 @@ def test_negative():
 	AssertError(NotImplementedError, sys.settrace, None)
 	# getrefcount
 	AssertError(NotImplementedError, sys.getrefcount, None)
-		
-run_test(__name__)
+
+if is_cli:
+    run_test(__name__)
 

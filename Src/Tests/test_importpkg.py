@@ -187,10 +187,11 @@ def get_local_filename(base):
         return base
 
 def compileAndRef(name, filename, *args):
-    import clr
-    sys.path.append(sys.exec_prefix)
-    AreEqual(run_csc("/nologo /t:library " + ' '.join(args) + " /out:\"" + sys.exec_prefix + "\"\\" + name +".dll \"" + filename + "\""), 0)
-    clr.AddReference(name)
+    if is_cli:
+        import clr
+        sys.path.append(sys.exec_prefix)
+        AreEqual(run_csc("/nologo /t:library " + ' '.join(args) + " /out:\"" + sys.exec_prefix + "\"\\" + name +".dll \"" + filename + "\""), 0)
+        clr.AddReference(name)
 
 
 def test_c1cs():
@@ -429,20 +430,21 @@ AreEqual(dir(test).count('cmp'), 0)     # used, assigned to, deleted, shouldn't 
 AreEqual(dir(test).count('del'), 0)     # assigned to, deleted, never used
 
 #########################################################################################
-
-import clr
-clr.AddReferenceByPartialName("System.Windows.Forms")
-import System.Windows.Forms as TestWinForms
-form = TestWinForms.Form()
-form.Text = "Hello"
-Assert(form.Text == "Hello")
+if is_cli:
+    import clr
+    clr.AddReferenceByPartialName("System.Windows.Forms")
+    import System.Windows.Forms as TestWinForms
+    form = TestWinForms.Form()
+    form.Text = "Hello"
+    Assert(form.Text == "Hello")
 
 #***** Copying from 'Packages' *****
 
-_f_pkg1 = path_combine(testpath.public_testdir, 'StandAlone\\Packages1.py')
-_f_pkg2 = path_combine(testpath.public_testdir, 'StandAlone\\Packages2.py')
-_f_mod  = path_combine(testpath.public_testdir, 'StandAlone\\ModPath\\IronPythonTest.py')
-write_to_file(_f_pkg1, '''
+def test_copyfrompackages():
+    _f_pkg1 = path_combine(testpath.public_testdir, 'StandAlone\\Packages1.py')
+    _f_pkg2 = path_combine(testpath.public_testdir, 'StandAlone\\Packages2.py')
+    _f_mod  = path_combine(testpath.public_testdir, 'StandAlone\\ModPath\\IronPythonTest.py')
+    write_to_file(_f_pkg1, '''
 import sys
 sys.path.append(sys.path[0] + '\\..')
 
@@ -470,8 +472,8 @@ id3 = id(sys.modules['IronPythonTest'])
 
 AreEqual(id1, id2)
 AreEqual(id2, id3)
-''')
-write_to_file(_f_pkg2, '''
+    ''')
+    write_to_file(_f_pkg2, '''
 import sys
 sys.path.append(sys.path[0] + '\\..')
 from lib.assert_util import *
@@ -499,43 +501,47 @@ id3 = id(sys.modules['IronPythonTest'])
 
 AreEqual(id1, id2)
 AreEqual(id2, id3)
-''')
-
-write_to_file(_f_mod, 'def PythonFunc(): pass')
-
-AreEqual(launch_ironpython_changing_extensions(_f_pkg1), 0)
-AreEqual(launch_ironpython_changing_extensions(_f_pkg2), 0)
-
-
-_imfp    = 'impmodfrmpkg'
-_f_imfp_init = path_combine(testpath.public_testdir, _imfp, "__init__.py")
-_f_imfp_mod  = path_combine(testpath.public_testdir, _imfp, "mod.py")
-_f_imfp_start = path_combine(testpath.public_testdir, "imfpstart.tpy")
-
-write_to_file(_f_imfp_init, "")
-write_to_file(_f_imfp_mod, "")
-write_to_file(_f_imfp_start, """try:
+    ''')
+    
+    write_to_file(_f_mod, 'def PythonFunc(): pass')
+    
+    AreEqual(launch_ironpython_changing_extensions(_f_pkg1), 0)
+    AreEqual(launch_ironpython_changing_extensions(_f_pkg2), 0)
+    
+    
+    _imfp    = 'impmodfrmpkg'
+    _f_imfp_init = path_combine(testpath.public_testdir, _imfp, "__init__.py")
+    _f_imfp_mod  = path_combine(testpath.public_testdir, _imfp, "mod.py")
+    _f_imfp_start = path_combine(testpath.public_testdir, "imfpstart.tpy")
+    
+    write_to_file(_f_imfp_init, "")
+    write_to_file(_f_imfp_mod, "")
+    write_to_file(_f_imfp_start, """
+try:
     from impmodfrmpkg.mod import mod
 except ImportError, e:
     pass
 else:
     raise AssertionError("Import of mod from pkg.mod unexpectedly succeeded")
-""")
+    """)
+    
+    AreEqual(launch_ironpython(_f_imfp_start), 0)
+    
+    _recimp = 'recimp'
+    _f_recimp_init = path_combine(testpath.public_testdir, _recimp, "__init__.py")
+    _f_recimp_a = path_combine(testpath.public_testdir, _recimp, "a.py")
+    _f_recimp_b = path_combine(testpath.public_testdir, _recimp, "b.py")
+    _f_recimp_start = path_combine(testpath.public_testdir, "recimpstart.tpy")
+    
+    write_to_file(_f_recimp_init, "from a import *")
+    write_to_file(_f_recimp_a, "import b")
+    write_to_file(_f_recimp_b, "import a")
+    write_to_file(_f_recimp_start, "import recimp")
+    
+    AreEqual(launch_ironpython(_f_recimp_start), 0)
 
-AreEqual(launch_ironpython(_f_imfp_start), 0)
-
-_recimp = 'recimp'
-_f_recimp_init = path_combine(testpath.public_testdir, _recimp, "__init__.py")
-_f_recimp_a = path_combine(testpath.public_testdir, _recimp, "a.py")
-_f_recimp_b = path_combine(testpath.public_testdir, _recimp, "b.py")
-_f_recimp_start = path_combine(testpath.public_testdir, "recimpstart.tpy")
-
-write_to_file(_f_recimp_init, "from a import *")
-write_to_file(_f_recimp_a, "import b")
-write_to_file(_f_recimp_b, "import a")
-write_to_file(_f_recimp_start, "import recimp")
-
-AreEqual(launch_ironpython(_f_recimp_start), 0)
+if is_cli:
+    test_copyfrompackages()
 
 # remove all test files
 

@@ -644,8 +644,9 @@ run_test(__name__)
 
 if not isPython25: 
     from lib.process_util import *
-    result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_python25.py"), ["-X:Python25"])
-    AreEqual(result, 0)
+    if is_cli:
+        result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_python25.py"), ["-X:Python25"])
+        AreEqual(result, 0)
     
     
 

@@ -18,16 +18,17 @@
 #
 
 from lib.assert_util import *
-import sys
-import socket
-import clr
-
-def test_HandleToSocket():
-    s = socket.socket()
-
-    system_socket = socket.socket.HandleToSocket(s.fileno())
-    AreEqual(s.fileno(), system_socket.Handle.ToInt64())
-
-    s.close()
-
-run_test(__name__)
+if is_cli:
+    import sys
+    import socket
+    import clr
+    
+    def test_HandleToSocket():
+        s = socket.socket()
+    
+        system_socket = socket.socket.HandleToSocket(s.fileno())
+        AreEqual(s.fileno(), system_socket.Handle.ToInt64())
+    
+        s.close()
+    
+    run_test(__name__)

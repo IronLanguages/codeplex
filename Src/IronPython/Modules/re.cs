@@ -420,6 +420,8 @@ namespace IronPython.Modules {
             [PythonName("subn")]
             public object SubGetCount(object repl, object @string, int count) {
                 if (repl == null) throw Ops.TypeError("NoneType is not valid repl");
+                //  if 'count' is omitted or 0, all occurrences are replaced
+                if (count == 0) count = Int32.MaxValue;
 
                 int totalCount = 0;
                 string res;

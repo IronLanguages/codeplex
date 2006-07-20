@@ -14,57 +14,58 @@
 ######################################################################################
 
 from lib.assert_util import *
-from System import *
-from System.Threading import *
-
-class Sync:
-    hit = 0
-
-def ThreadProcParm(parm):
-    parm.hit = 1
-
-def ThreadProcNoParm():
-    pass
-
-def Main():
-    sync = Sync()
-    t = Thread(ParameterizedThreadStart(ThreadProcParm))
-    t.Start(sync)
-    t.Join()
-    Assert(sync.hit == 1)
-
-    t = Thread(ThreadStart(ThreadProcNoParm))
+if is_cli:
+    from System import *
+    from System.Threading import *
+    
+    class Sync:
+        hit = 0
+    
+    def ThreadProcParm(parm):
+        parm.hit = 1
+    
+    def ThreadProcNoParm():
+        pass
+    
+    def Main():
+        sync = Sync()
+        t = Thread(ParameterizedThreadStart(ThreadProcParm))
+        t.Start(sync)
+        t.Join()
+        Assert(sync.hit == 1)
+    
+        t = Thread(ThreadStart(ThreadProcNoParm))
+        t.Start()
+        t.Join()
+    
+    Main()
+    
+    
+    def import_sys():
+        import sys
+        Assert(sys != None)
+    
+    t = Thread(ThreadStart(import_sys))
     t.Start()
+    
     t.Join()
-
-Main()
-
-
-def import_sys():
-    import sys
-    Assert(sys != None)
-
-t = Thread(ThreadStart(import_sys))
-t.Start()
-
-t.Join()
-
-so = sys.stdout
-se = sys.stderr
-class myStdOut:
-    def write(self, text): pass
-
-
-sys.stdout = myStdOut()
-sys.stderr = myStdOut()
-
-import thread
-
-def raises(*p):
-    raise Exception
-
-id = thread.start_new_thread(raises, ())
-Thread.Sleep(1000)  # wait a bit and make sure we don't get ripped.
-
-sys.stdout = so
-sys.stderr = se
+    
+    so = sys.stdout
+    se = sys.stderr
+    class myStdOut:
+        def write(self, text): pass
+    
+    
+    sys.stdout = myStdOut()
+    sys.stderr = myStdOut()
+    
+    import thread
+    
+    def raises(*p):
+        raise Exception
+    
+    id = thread.start_new_thread(raises, ())
+    Thread.Sleep(1000)  # wait a bit and make sure we don't get ripped.
+    
+    sys.stdout = so
+    sys.stderr = se

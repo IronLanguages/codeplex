@@ -297,13 +297,15 @@ AssertError(NameError, eval, c)
 
 # global following definition test
 
-AssertError(SyntaxWarning, compile, "def f():\n    a = 1\n    global a\n", "", "exec")
-AssertError(SyntaxWarning, compile, "def f():\n    def a(): pass\n    global a\n", "", "exec")
-AssertError(SyntaxWarning, compile, "def f():\n    for a in []: pass\n    global a\n", "", "exec")
-AssertError(SyntaxWarning, compile, "def f():\n    global a\n    a = 1\n    global a\n", "", "exec")
-AssertError(SyntaxWarning, compile, "def f():\n    print a\n    global a\n", "", "exec")
-AssertError(SyntaxWarning, compile, "def f():\n    a = 1\n    global a\n    global a\n    a = 1", "", "exec")
-AssertError(SyntaxWarning, compile, "x = 10\nglobal x\n", "", "exec")
+# affected by bug# 1145
+if is_cli:
+    AssertError(SyntaxWarning, compile, "def f():\n    a = 1\n    global a\n", "", "exec")
+    AssertError(SyntaxWarning, compile, "def f():\n    def a(): pass\n    global a\n", "", "exec")
+    AssertError(SyntaxWarning, compile, "def f():\n    for a in []: pass\n    global a\n", "", "exec")
+    AssertError(SyntaxWarning, compile, "def f():\n    global a\n    a = 1\n    global a\n", "", "exec")
+    AssertError(SyntaxWarning, compile, "def f():\n    print a\n    global a\n", "", "exec")
+    AssertError(SyntaxWarning, compile, "def f():\n    a = 1\n    global a\n    global a\n    a = 1", "", "exec")
+    AssertError(SyntaxWarning, compile, "x = 10\nglobal x\n", "", "exec")
 
 c = compile("def f():\n    global a\n    global a\n    a = 1\n", "", "exec")
 

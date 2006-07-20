@@ -80,7 +80,10 @@ def test_sub():
     AreEqual(re.sub(r'(?P<id>b)', '\g<id>\g<id>yadayada', 'bb'), 'bbyadayadabbyadayada')
     AreEqual(re.sub(r'(?P<id>b)', '\g<1>\g<id>yadayada', 'bb'), 'bbyadayadabbyadayada')
     AssertError(IndexError, re.sub, r'(?P<id>b)', '\g<1>\g<i2>yadayada', 'bb')
-    AssertError(IndexError, re.sub, r'(?P<id>b)', '\g<1>\g<30>yadayada', 'bb')
+    # the native implementation just gives a sre_constants.error instead indicating an invalid
+    # group reference
+    if is_cli:
+        AssertError(IndexError, re.sub, r'(?P<id>b)', '\g<1>\g<30>yadayada', 'bb')
     
     AreEqual(re.sub('x*', '-', 'abc'), '-a-b-c-')
     AreEqual(re.subn('x*', '-', 'abc'), ('-a-b-c-', 4))
@@ -236,21 +239,21 @@ def test_match_groups():
 
 def test_options():
     # coverage for ?iLmsux options in re.compile path
-    c = re.compile("(?i:foo)") # ignorecase
-    l = c.findall("fooFoo FOO fOo fo oFO O\n\t\nFo ofO O")
-    Assert(l == ['foo', 'Foo', 'FOO', 'fOo'])
     
-    c = re.compile("(?im:^foo)") # ignorecase, multiline (matches at beginning of string and at each newline)
-    l = c.findall("fooFoo FOO fOo\n\t\nFoo\nFOO")
-    Assert(l == ['foo', 'Foo', 'FOO'])
-    
-    c = re.compile("(?s:foo.*bar)") # dotall (make "." match any chr, including a newline)
-    l = c.findall("foo yadayadayada\nyadayadayada bar")
-    Assert(l == ['foo yadayadayada\nyadayadayada bar'])
-    
-    c = re.compile("(?x:foo  bar)") #verbose (ignore whitespace)
-    l = c.findall("foobar foo bar      foobar \n\n\tfoobar")
-    Assert(l == ['foobar', 'foobar', 'foobar'])
+    # native implementation does not handle extensions specified in this way
+    if is_cli:
+        c = re.compile("(?i:foo)") # ignorecase
+        l = c.findall("fooFoo FOO fOo fo oFO O\n\t\nFo ofO O")
+        Assert(l == ['foo', 'Foo', 'FOO', 'fOo'])
+        c = re.compile("(?im:^foo)") # ignorecase, multiline (matches at beginning of string and at each newline)
+        l = c.findall("fooFoo FOO fOo\n\t\nFoo\nFOO")
+        Assert(l == ['foo', 'Foo', 'FOO'])
+        c = re.compile("(?s:foo.*bar)") # dotall (make "." match any chr, including a newline)
+        l = c.findall("foo yadayadayada\nyadayadayada bar")
+        Assert(l == ['foo yadayadayada\nyadayadayada bar'])
+        c = re.compile("(?x:foo  bar)") #verbose (ignore whitespace)
+        l = c.findall("foobar foo bar      foobar \n\n\tfoobar")
+        Assert(l == ['foobar', 'foobar', 'foobar'])
     
     pattern = "t(?=s)"
     c = re.compile(pattern)
@@ -307,7 +310,7 @@ def test_subn():
     tup = re.subn("ab", "cd", "abababababab")
     Assert(tup == ('cdcdcdcdcdcd', 6))
     tup = re.subn("ab", "cd", "abababababab", 0)
-    Assert(tup == ('abababababab', 0))
+    Assert(tup == ('cdcdcdcdcdcd', 6))
     tup = re.subn("ab", "cd", "abababababab", 1)
     Assert(tup == ('cdababababab', 1))
     tup = re.subn("ab", "cd", "abababababab", 10)
