@@ -503,6 +503,130 @@ namespace IronPythonTest {
         public ulong Test_ULong([DefaultParameterValue(ulong.MaxValue)] ulong param) {
             return param;
         }
+
+        public string Test_ByRef_Object([In, Optional] ref object o1, [In, Optional] ref object o2, [In, Optional] ref object o3) {
+            return (o1 == null ? "(null)" : o1.ToString()) + "; " +
+                   (o2 == null ? "(null)" : o2.ToString()) + "; " +
+                   (o3 == null ? "(null)" : o3.ToString());
+        }
+
+        public string Test_Default_ValueType([DefaultParameterValue(1)] object o) {
+            return o == null ? "(null)" : o.ToString();
+        }
+
+        public string Test_Default_Cast([Optional, DefaultParameterValue(1)]ref object o) {
+            return o == null ? "(null)" : o.ToString();
+        }
+    }
+
+    public struct Structure {
+        public int a;
+        public float b;
+        public double c;
+        public decimal d;
+        public string e;
+        public Hashtable f;
+    }
+
+    public class MissingValueTest {
+        public static string Test_1([In, Optional] bool o) { return "(bool)" + o.ToString(); }
+        public static string Test_2([In, Optional] ref bool o) { return "(bool)" + o.ToString(); }
+
+        public static string Test_3([In, Optional] sbyte o) { return "(sbyte)" + o.ToString(); }
+        public static string Test_4([In, Optional] ref sbyte o) { return "(sbyte)" + o.ToString(); }
+
+        public static string Test_5([In, Optional] byte o) { return "(byte)" + o.ToString(); }
+        public static string Test_6([In, Optional] ref byte o) { return "(byte)" + o.ToString(); }
+
+        public static string Test_7([In, Optional] short o) { return "(short)" + o.ToString(); }
+        public static string Test_8([In, Optional] ref short o) { return "(short)" + o.ToString(); }
+
+        public static string Test_9([In, Optional] ushort o) { return "(ushort)" + o.ToString(); }
+        public static string Test_10([In, Optional] ref ushort o) { return "(ushort)" + o.ToString(); }
+
+        public static string Test_11([In, Optional] int o) { return "(int)" + o.ToString(); }
+        public static string Test_12([In, Optional] ref int o) { return "(int)" + o.ToString(); }
+
+        public static string Test_13([In, Optional] uint o) { return "(uint)" + o.ToString(); }
+        public static string Test_14([In, Optional] ref uint o) { return "(uint)" + o.ToString(); }
+
+        public static string Test_15([In, Optional] long o) { return "(long)" + o.ToString(); }
+        public static string Test_16([In, Optional] ref long o) { return "(long)" + o.ToString(); }
+
+        public static string Test_17([In, Optional] ulong o) { return "(ulong)" + o.ToString(); }
+        public static string Test_18([In, Optional] ref ulong o) { return "(ulong)" + o.ToString(); }
+
+        public static string Test_19([In, Optional] decimal o) { return "(decimal)" + o.ToString(); }
+        public static string Test_20([In, Optional] ref decimal o) { return "(decimal)" + o.ToString(); }
+
+        public static string Test_21([In, Optional] float o) { return "(float)" + o.ToString(); }
+        public static string Test_22([In, Optional] ref float o) { return "(float)" + o.ToString(); }
+
+        public static string Test_23([In, Optional] double o) { return "(double)" + o.ToString(); }
+        public static string Test_24([In, Optional] ref double o) { return "(double)" + o.ToString(); }
+
+        public static string Test_25([In, Optional] DaysByte o) { return "(DaysByte)" + o.ToString(); }
+        public static string Test_26([In, Optional] ref DaysByte o) { return "(DaysByte)" + o.ToString(); }
+
+        public static string Test_27([In, Optional] DaysSByte o) { return "(DaysSByte)" + o.ToString(); }
+        public static string Test_28([In, Optional] ref DaysSByte o) { return "(DaysSByte)" + o.ToString(); }
+
+        public static string Test_29([In, Optional] DaysShort o) { return "(DaysShort)" + o.ToString(); }
+        public static string Test_30([In, Optional] ref DaysShort o) { return "(DaysShort)" + o.ToString(); }
+
+        public static string Test_31([In, Optional] DaysUShort o) { return "(DaysUShort)" + o.ToString(); }
+        public static string Test_32([In, Optional] ref DaysUShort o) { return "(DaysUShort)" + o.ToString(); }
+
+        public static string Test_33([In, Optional] DaysInt o) { return "(DaysInt)" + o.ToString(); }
+        public static string Test_34([In, Optional] ref DaysInt o) { return "(DaysInt)" + o.ToString(); }
+
+        public static string Test_35([In, Optional] DaysUInt o) { return "(DaysUInt)" + o.ToString(); }
+        public static string Test_36([In, Optional] ref DaysUInt o) { return "(DaysUInt)" + o.ToString(); }
+
+        public static string Test_37([In, Optional] DaysLong o) { return "(DaysLong)" + o.ToString(); }
+        public static string Test_38([In, Optional] ref DaysLong o) { return "(DaysLong)" + o.ToString(); }
+
+        public static string Test_39([In, Optional] DaysULong o) { return "(DaysULong)" + o.ToString(); }
+        public static string Test_40([In, Optional] ref DaysULong o) { return "(DaysULong)" + o.ToString(); }
+
+        public static string Test_41([In, Optional] char o) { return "(char)" + o.ToString(); }
+        public static string Test_42([In, Optional] ref char o) { return "(char)" + o.ToString(); }
+
+        public static string Test_43([In, Optional] Structure o) { return "(Structure)" + o.ToString(); }
+        public static string Test_44([In, Optional] ref Structure o) { return "(Structure)" + o.ToString(); }
+
+        public static string Test_45([In, Optional] EnumSByte o) { return "(EnumSByte)" + o.ToString(); }
+        public static string Test_46([In, Optional] ref EnumSByte o) { return "(EnumSByte)" + o.ToString(); }
+
+        public static string Test_47([In, Optional] EnumByte o) { return "(EnumByte)" + o.ToString(); }
+        public static string Test_48([In, Optional] ref EnumByte o) { return "(EnumByte)" + o.ToString(); }
+
+        public static string Test_49([In, Optional] EnumShort o) { return "(EnumShort)" + o.ToString(); }
+        public static string Test_50([In, Optional] ref EnumShort o) { return "(EnumShort)" + o.ToString(); }
+
+        public static string Test_51([In, Optional] EnumUShort o) { return "(EnumUShort)" + o.ToString(); }
+        public static string Test_52([In, Optional] ref EnumUShort o) { return "(EnumUShort)" + o.ToString(); }
+
+        public static string Test_53([In, Optional] EnumInt o) { return "(EnumInt)" + o.ToString(); }
+        public static string Test_54([In, Optional] ref EnumInt o) { return "(EnumInt)" + o.ToString(); }
+
+        public static string Test_55([In, Optional] EnumUInt o) { return "(EnumUInt)" + o.ToString(); }
+        public static string Test_56([In, Optional] ref EnumUInt o) { return "(EnumUInt)" + o.ToString(); }
+
+        public static string Test_57([In, Optional] EnumLong o) { return "(EnumLong)" + o.ToString(); }
+        public static string Test_58([In, Optional] ref EnumLong o) { return "(EnumLong)" + o.ToString(); }
+
+        public static string Test_59([In, Optional] EnumULong o) { return "(EnumULong)" + o.ToString(); }
+        public static string Test_60([In, Optional] ref EnumULong o) { return "(EnumULong)" + o.ToString(); }
+
+        public static string Test_61([In, Optional] string o) { return "(string)" + (o == null ? "(null)" : o); }
+        public static string Test_62([In, Optional] ref string o) { return "(string)" + (o == null ? "(null)" : o); }
+
+        public static string Test_63([In, Optional] object o) { return "(object)" + (o == null ? "(null)" : o.ToString()); }
+        public static string Test_64([In, Optional] ref object o) { return "(object)" + (o == null ? "(null)" : o.ToString()); }
+
+        public static string Test_65([In, Optional] MissingValueTest o) { return "(MissingValueTest)" + (o == null ? "(null)" : o.ToString()); }
+        public static string Test_66([In, Optional] ref MissingValueTest o) { return "(MissingValueTest)" + (o == null ? "(null)" : o.ToString()); }
     }
 
     public class DispatchAgain {

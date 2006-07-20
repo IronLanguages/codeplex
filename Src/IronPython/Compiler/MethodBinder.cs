@@ -248,7 +248,7 @@ namespace IronPython.Compiler {
                 }
 
                 if (pi.DefaultValue != DBNull.Value) {
-                    defaultBuilders.Add(new DefaultArgBuilder(pi.DefaultValue));
+                    defaultBuilders.Add(new DefaultArgBuilder(pi.ParameterType, pi.DefaultValue));
                 } else if (defaultBuilders.Count > 0) {
                     // If we get a bad method with non-contiguous default values, then just use the contiguous list
                     defaultBuilders.Clear();
@@ -566,8 +566,10 @@ namespace IronPython.Compiler {
         }
 
         class DefaultArgBuilder : ArgBuilder {
+            private Type argumentType;
             private object defaultValue;
-            public DefaultArgBuilder(object defaultValue) {
+            public DefaultArgBuilder(Type argumentType, object defaultValue) {
+                this.argumentType = argumentType;
                 this.defaultValue = defaultValue;
             }
 
@@ -580,7 +582,111 @@ namespace IronPython.Compiler {
             }
 
             public override void Generate(CodeGen cg, Slot contextSlot, Slot[] argSlots) {
-                cg.EmitRawConstant(defaultValue);
+                if (argumentType.IsByRef) {
+                    Type baseType = argumentType.GetElementType();
+                    Slot tmp = cg.GetLocalTmp(baseType);
+                    // Emit the default value as the base type
+                    EmitDefaultValue(cg, defaultValue, baseType);
+                    tmp.EmitSet(cg);
+                    // And pass the reference to the callee
+                    tmp.EmitGetAddr(cg);
+                } else {
+                    // Emit the default value directly as the argument type
+                    EmitDefaultValue(cg, defaultValue, argumentType);
+                }
+            }
+
+            private static void EmitDefaultValue(CodeGen cg, object value, Type type) {
+                if (value is Missing) {
+                    EmitMissingValue(cg, type);
+                } else {
+                    cg.EmitRawConstant(value);
+                    if (type.IsValueType) {
+                        if (value == null) EmitException(cg, "Cannot cast None to {0}", type);
+                        else if (value.GetType() != type) EmitException(cg, "Cannot cast {0} to {1}", value, type);
+                    } else {
+                        // null is any reference type
+                        if (value != null) {
+                            Type from = value.GetType();
+                            if (!type.IsAssignableFrom(from)) {
+                                EmitException(cg, "Cannot cast {0} to {1}", value, type);
+                            } else {
+                                if (from.IsValueType) {
+                                    cg.Emit(OpCodes.Box, from);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            private static void EmitMissingValue(CodeGen cg, Type type) {
+                switch (Type.GetTypeCode(type)) {
+                    default:
+                    case TypeCode.Object:
+                        // struct
+                        if (type.IsSealed && type.IsValueType && !type.IsEnum) {
+                            Slot s = cg.GetLocalTmp(type);
+                            s.EmitGetAddr(cg);
+                            cg.Emit(OpCodes.Initobj, type);
+                            s.EmitGet(cg);
+                        } else if (type == typeof(object)) {
+                            // parameter of type object receives the actual Missing value
+                            cg.Emit(OpCodes.Ldsfld, typeof(Missing).GetField("Value"));
+                        } else if (!type.IsValueType) {
+                            cg.Emit(OpCodes.Ldnull);
+                        } else {
+                            EmitException(cg, "Cannot create default value for type {0}", type);
+                        }
+                        break;
+
+                    case TypeCode.Empty:
+                    case TypeCode.DBNull:
+                        cg.Emit(OpCodes.Ldnull);
+                        break;
+
+                    case TypeCode.Boolean:
+                    case TypeCode.Char:
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                        cg.Emit(OpCodes.Ldc_I4_0); break;
+
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        cg.Emit(OpCodes.Ldc_I4_0);
+                        cg.Emit(OpCodes.Conv_I8);
+                        break;
+
+                    case TypeCode.Single:
+                        cg.Emit(OpCodes.Ldc_R4, default(Single));
+                        break;
+                    case TypeCode.Double:
+                        cg.Emit(OpCodes.Ldc_R8, default(Double));
+                        break;
+                    case TypeCode.Decimal:
+                        cg.Emit(OpCodes.Ldc_I4_0);
+                        cg.EmitNew(typeof(Decimal).GetConstructor(new Type[] { typeof(int) }));
+                        break;
+                    case TypeCode.DateTime:
+                        Slot dt = cg.GetLocalTmp(typeof(DateTime));
+                        dt.EmitGetAddr(cg);
+                        cg.Emit(OpCodes.Initobj, typeof(DateTime));
+                        dt.EmitGet(cg);
+                        break;
+                    case TypeCode.String:
+                        cg.Emit(OpCodes.Ldnull); break;
+                }
+            }
+
+            private static void EmitException(CodeGen cg, string format, params object[] args) {
+                string message = String.Format(format, args);
+                cg.Emit(OpCodes.Ldstr, message);
+                cg.EmitCall(typeof(Ops), "TypeErrorForDefaultArgument");
+                cg.Emit(OpCodes.Throw);
             }
         }
 

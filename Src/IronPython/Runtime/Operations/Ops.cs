@@ -2390,6 +2390,10 @@ namespace IronPython.Runtime.Operations {
                                 opSymbol, GetPythonTypeName(x), GetPythonTypeName(y));
         }
 
+        public static Exception TypeErrorForDefaultArgument(string message) {
+            return Ops.TypeError(message);
+        }
+
         public static Exception AttributeErrorForReadonlyAttribute(string typeName, SymbolId attributeName) {
             // CPython uses AttributeError for all attributes except "__class__"
             if (attributeName == SymbolTable.Class)
