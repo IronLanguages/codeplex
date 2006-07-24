@@ -74,6 +74,7 @@ IronPythonTests = {
                 test_math
                 test_nt
                 test_operator
+                test_random
                 test_re
                 test_socket
                 test_struct
