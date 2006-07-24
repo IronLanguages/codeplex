@@ -919,6 +919,12 @@ namespace IronPython.Compiler.Generation {
                     }
                     baseType = typeof(object);
                 }
+
+                // if we only got interfaces object is our base
+                if (types[0].IsInterface) {
+                    types.Insert(0, typeof(object));
+                }
+
                 return types;
             }
             #endregion

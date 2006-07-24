@@ -42,4 +42,10 @@ def test_sanity():
     AreEqual(x.microsecond, 99)
     
 
+def test_month():
+    from datetime import date
+    import time
+    d=date(2006,3,12)    
+    AreEqual(d.strftime("%Y%m%d"), '20060312')
+
 run_test(__name__)

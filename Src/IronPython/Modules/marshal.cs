@@ -181,6 +181,12 @@ namespace IronPython.Modules {
             }
 
             void WriteInteger(BigInteger val) {
+                if (val == BigInteger.Zero) {
+                    bytes.Add((byte)'l');
+                    for(int i = 0; i<4; i++) bytes.Add(0);
+                    return;
+                }
+
                 BigInteger mask = BigInteger.Create(short.MaxValue);
                 uint startLen = (uint)val.Length;
                 val = new BigInteger(val);
@@ -202,7 +208,6 @@ namespace IronPython.Modules {
                 // write out length
                 if (fNeg) {
                     WriteUInt32(uint.MaxValue - byteLen + 1);
-                    val = (val * -1);
                 } else {
                     WriteUInt32(byteLen);
                 }
@@ -362,6 +367,27 @@ namespace IronPython.Modules {
                         if (stack.Count == 0) {
                             break;
                         }
+                        continue;
+                    }
+
+                    // handle empty lists/tuples...
+                    if (stack != null && stack.Count > 0 && stack.Peek().StackCount == 0) {
+                        ProcStack ps = stack.Pop();
+                        res = ps.StackObj;
+                        List<object> listRes = res as List<object>;
+                        if (listRes != null)
+                            res = new Tuple(listRes);
+
+                        if (stack.Count > 0) {
+                            // empty list/tuple
+                            do {
+                                res = UpdateStack(res);
+                            } while (res != null && stack.Count > 0);
+                            if (stack.Count == 0) break;
+                        } else {
+                            result = res;
+                            break;
+                        }
                     }
                 }
 
@@ -376,6 +402,14 @@ namespace IronPython.Modules {
                 switch (type) {
                     case StackType.Dict:
                         newStack.StackObj = new Dict();
+
+                        if (curIndex == myBytes.Length) throw Ops.EofError("EOF read where object expected");
+
+                        if (myBytes[curIndex] == '0')
+                            newStack.StackCount = 0;
+                        else 
+                            newStack.StackCount = -1;
+
                         break;
                     case StackType.List:
                         newStack.StackObj = new List();

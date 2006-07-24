@@ -79,29 +79,9 @@ namespace IronPython.Modules {
                 get { return _value.Day; }
             }
 
-            private static Hashtable strftimeMap;
-
-            static PythonDate() {
-                strftimeMap = new Hashtable();
-                strftimeMap["%A"] = "dddd";
-                strftimeMap["%a"] = "ddd";
-                strftimeMap["%B"] = "MMMM";
-                strftimeMap["%b"] = "MMM";
-                strftimeMap["%Y"] = "yyyy";
-                strftimeMap["%y"] = "yy";
-            }
-
-            static string ReplaceFormat(Match m) {
-                string ret = (string)strftimeMap[m.Value];
-                if (ret != null) return ret;
-                else return m.Value;
-            }
-
             [PythonName("strftime")]
             public string Format(string dateFormat) {
-                Regex r = new Regex("%[a-zA-Z]");
-                string mappedFormat = r.Replace(dateFormat, ReplaceFormat);
-                return _value.ToString(mappedFormat);
+                return PythonTime.FormatTime(dateFormat, _value);
             }
 
             [PythonName("__str__")]

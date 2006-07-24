@@ -25,7 +25,7 @@ using System.Threading;
 namespace IronPython.Runtime {
 
     [Serializable]
-    public struct SymbolId : ISerializable, IComparable {
+    public struct SymbolId : ISerializable, IComparable, IEquatable<SymbolId> {
         public int Id;
 
         public SymbolId(int value) {

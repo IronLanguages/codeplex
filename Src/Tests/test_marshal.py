@@ -31,13 +31,16 @@ def test_functionality():
                 65534, 65535, -65536,                
                 3.1415926,
                 
-                #0L, 
-                #-1234567890123456789,
-                #[], 
+                0L, 
+                -1234567890123456789,
+                [], 
+                [ [] ], [ [], [] ],
                 ['abc'], [1, 2],
-                #tuple(), 
+                tuple(), 
+                (), ( (), (), ),
                 (1,), (1,2,3),
-                #{}, 
+                {}, 
+                { 'abc' : {} },
                 {1:2}, {1:2, 4:'4', 5:None},
                 0+1j, 2-3.23j,
               ]
@@ -45,7 +48,7 @@ def test_functionality():
         import System
         objects.extend(
             [ 
-            #System.Single.Parse('-3.1415'),
+            System.Single.Parse('-2345678'),
             System.Int64.Parse('2345678'), 
             
             ])

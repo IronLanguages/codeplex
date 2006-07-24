@@ -855,19 +855,24 @@ namespace IronPython.Runtime {
                 throw new NotImplementedException("bad mode: " + mode);
             }
 
-            Stream stream;
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT && name == "nul") {
-                stream = Stream.Null;
-            } else if (bufsize <= 0) {
-                stream = new FileStream(name, fmode, faccess, fshare);
-            } else {
-                stream = new FileStream(name, fmode, faccess, fshare, bufsize);
+            try {
+                Stream stream;
+                if (Environment.OSVersion.Platform == PlatformID.Win32NT && name == "nul") {
+                    stream = Stream.Null;
+                } else if (bufsize <= 0) {
+                    stream = new FileStream(name, fmode, faccess, fshare);
+                } else {
+                    stream = new FileStream(name, fmode, faccess, fshare, bufsize);
+                }
+
+                if (seekEnd) stream.Seek(0, SeekOrigin.End);
+
+                if (cls == TypeCache.PythonFile) return new PythonFile(stream, context.SystemState.DefaultEncoding, name, inMode);
+
+                return cls.ctor.Call(cls, stream, context.SystemState.DefaultEncoding, name, inMode) as PythonFile;
+            } catch (UnauthorizedAccessException e) {
+                throw new IOException(e.Message, e);
             }
-            if (seekEnd) stream.Seek(0, SeekOrigin.End);
-
-            if (cls == TypeCache.PythonFile) return new PythonFile(stream, context.SystemState.DefaultEncoding, name, inMode);
-
-            return cls.ctor.Call(cls, stream, context.SystemState.DefaultEncoding, name, inMode) as PythonFile;
         }
 
         [PythonName("__new__")]

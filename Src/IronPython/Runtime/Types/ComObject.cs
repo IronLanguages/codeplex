@@ -125,7 +125,10 @@ namespace IronPython.Runtime.Types {
 
             if (self != null) {
                 ComObject com = ComObject.ObjectToComObject(self);
-                ret = ret.AddList(com.GetAttrNames(context));
+                List subAttrNames = com.GetAttrNames(context);
+                foreach(object name in subAttrNames){
+                    if(!ret.Contains(name)) ret.Add(name);
+                }                
             }
 
             return ret;

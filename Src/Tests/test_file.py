@@ -507,5 +507,23 @@ if is_cli:
         f.close()
         AssertError(OSError, nt.fdopen, fd)
 
+def test_overwrite_readonly():
+    import nt
+    filename = "tmp.txt"
+    f = file(filename, "w+")
+    f.write("I am read-only")
+    f.close()
+    nt.chmod(filename, 256)
+    try:
+        try:
+            f = file(filename, "w+") # FAIL
+        finally:
+            nt.chmod(filename, 128)
+            nt.unlink(filename)
+    except IOError, e:
+        pass
+    else:
+        AssertUnreachable() # should throw
+    #any other exceptions fail
 
 run_test(__name__)
