@@ -47,7 +47,7 @@ namespace IronPython.Modules {
             + " - s.accept(), s.connect(), and s.connect_ex() do not support timeouts.\n"
             + " - Timeouts in s.sendall() don't work correctly.\n"
             + " - makefile() and s.dup() are not implemented.\n"
-            + " - getaddrinfo(), getservbyname(), and getservbyport() are not implemented.\n"
+            + " - getservbyname() and getservbyport() are not implemented.\n"
             + " - SSL support is not implemented."
             + "\n"
             + "An Extra IronPython-specific function is exposed only if the clr module is\n"
@@ -661,81 +661,6 @@ namespace IronPython.Modules {
                 }
             }
 
-            /// <summary>
-            /// Convert a (host, port) tuple [IPv4] (host, port, flowinfo, scopeid) tuple [IPv6]
-            /// to its corresponding IPEndPoint.
-            /// 
-            /// Throws gaierror if host is not a valid address.
-            /// Throws ArgumentTypeException if any of the following are true:
-            ///  - address does not have exactly two elements
-            ///  - address[0] is not a string
-            ///  - address[1] is not an int
-            /// </summary>
-            private IPEndPoint TupleToEndPoint(Tuple address) {
-                if (address.Count != 2 && address.Count != 4) {
-                    throw Ops.TypeError("address tuple must have exactly 2 (IPv4) or exactly 4 (IPv6) elements");
-                }
-
-                string host;
-                try {
-                    host = Converter.ConvertToString(address[0]);
-                } catch (ArgumentTypeException) {
-                    throw Ops.TypeError("host must be string");
-                }
-
-                int port;
-                try {
-                    port = Converter.ConvertToInt32(address[1]);
-                } catch (ArgumentTypeException) {
-                    throw Ops.TypeError("port must be integer");
-                }
-
-                IPAddress ip = HostToAddress(host, null);
-
-                if (address.Count == 2) {
-                    return new IPEndPoint(ip, port);
-                } else {
-                    long flowInfo;
-                    try {
-                        flowInfo = Converter.ConvertToInt64(address[2]);
-                    } catch (ArgumentTypeException) {
-                        throw Ops.TypeError("flowinfo must be integer");
-                    }
-                    // We don't actually do anything with flowinfo right now, but we validate it
-                    // in case we want to do something in the future.
-
-                    long scopeId;
-                    try {
-                        scopeId = Converter.ConvertToInt64(address[3]);
-                    } catch (ArgumentTypeException) {
-                        throw Ops.TypeError("scopeid must be integer");
-                    }
-
-                    IPEndPoint endPoint = new IPEndPoint(ip, port);
-                    endPoint.Address.ScopeId = scopeId;
-                    return endPoint;
-                }
-            }
-
-            /// <summary>
-            /// Convert an IPEndPoint to its corresponding (host, port) [IPv4] or (host, port, flowinfo, scopeid) [IPv6] tuple.
-            /// Throws SocketException if the address family is other than IPv4 or IPv6.
-            /// </summary>
-            private Tuple EndPointToTuple(IPEndPoint endPoint) {
-                string ip = endPoint.Address.ToString();
-                int port = endPoint.Port;
-                switch (endPoint.Address.AddressFamily) {
-                    case AddressFamily.InterNetwork:
-                        return Tuple.MakeTuple(ip, port);
-                    case AddressFamily.InterNetworkV6:
-                        long flowInfo = 0; // RFC 3493 p. 7 
-                        long scopeId = endPoint.Address.ScopeId;
-                        return Tuple.MakeTuple(ip, port, flowInfo, scopeId);
-                    default:
-                        throw new SocketException((int)SocketError.AddressFamilyNotSupported);
-                }
-            }
-
             #endregion
 
         }
@@ -764,15 +689,67 @@ namespace IronPython.Modules {
 
         [Documentation("")]
         [PythonName("getaddrinfo")]
-        public static Tuple GetAddrInfo(
+        public static List GetAddrInfo(
             string host,
             object port,
             [DefaultParameterValue((int)AddressFamily.InterNetwork)] int family,
             [DefaultParameterValue(0)] int socktype,
             [DefaultParameterValue((int)ProtocolType.IP)] int proto,
-            [DefaultParameterValue(0)] int flags
+            [DefaultParameterValue((int)SocketFlags.None)] int flags
         ) {
-            return null;
+            int numericPort;
+            /* Disabled because GetServiceByName is not implemented
+            string serviceName;
+            if (port == null) {
+                numericPort = 0;
+            } else if (Converter.TryConvertToInt32(port, out numericPort)) {
+                // nop
+            } else if (Converter.TryConvertToString(port, out serviceName)) {
+                numericPort = GetServiceByName(serviceName, null);
+            }
+            */
+
+            if (!Converter.TryConvertToInt32(port, out numericPort)) {
+                numericPort = 0;
+            }
+
+            if (socktype != 0) {
+                // we just use this to validate; socketType isn't actually used
+                System.Net.Sockets.SocketType socketType = (System.Net.Sockets.SocketType)Enum.ToObject(typeof(System.Net.Sockets.SocketType), socktype);
+                if (!Enum.IsDefined(typeof(System.Net.Sockets.SocketType), socketType)) {
+                    throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.SocketNotSupported, "getaddrinfo failed"));
+                }
+            }
+
+            AddressFamily addressFamily = (AddressFamily)Enum.ToObject(typeof(AddressFamily), family);
+            if (!Enum.IsDefined(typeof(AddressFamily), addressFamily)) {
+                throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.AddressFamilyNotSupported, "getaddrinfo failed"));
+            }
+            if (addressFamily == AddressFamily.Unspecified) {
+                addressFamily = AddressFamily.InterNetwork;
+            }
+
+            // Again, we just validate, but don't actually use protocolType
+            ProtocolType protocolType = (ProtocolType)Enum.ToObject(typeof(ProtocolType), proto);
+            if (!Enum.IsDefined(typeof(ProtocolType), protocolType)) {
+                throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.ProtocolNotSupported, "getaddrinfo failed"));
+            }
+
+            IPAddress[] ips = HostToAddresses(host, addressFamily);
+
+            List results = new List();
+
+            foreach (IPAddress ip in ips) {
+                results.Add(Tuple.MakeTuple(
+                    (int)addressFamily,
+                    socktype,
+                    proto,
+                    "",
+                    EndPointToTuple(new IPEndPoint(ip, numericPort))
+                ));
+            }
+
+            return results;
         }
 
         [Documentation("getfqdn([hostname_or_ip]) -> hostname\n\n"
@@ -1012,11 +989,11 @@ namespace IronPython.Modules {
 
         [Documentation("getservbyname(service_name[, protocol_name]) -> port\n\n"
             + "Not implemented."
-            //+ "Given a service name (e.g. 'domain') return the associated protocol name (e.g.\n"
+            //+ "Given a service name (e.g. 'domain') return the associated protocol number (e.g.\n"
             //+ "53). The protocol name (if specified) must be either 'tcp' or 'udp'."
             )]
         [PythonName("getservbyname")]
-        public static string GetServiceByName(string serviceName, string protocolName) {
+        public static int GetServiceByName(string serviceName, [DefaultParameterValue(null)] string protocolName) {
             // !!! .NET networking libraries don't support this, so we don't either
             throw Ops.NotImplementedError("name to service conversion not supported");
         }
@@ -1027,7 +1004,7 @@ namespace IronPython.Modules {
             //+ "'domain'). The protocol name (if specified) must be either 'tcp' or 'udp'."
             )]
         [PythonName("getservbyport")]
-        public static string GetServiceByPort(int port, string protocolName) {
+        public static string GetServiceByPort(int port, [DefaultParameterValue(null)] string protocolName) {
             // !!! .NET networking libraries don't support this, so we don't either
             throw Ops.NotImplementedError("service to name conversion not supported");
         }
@@ -1442,25 +1419,39 @@ namespace IronPython.Modules {
         /// converted to an IP address (e.g. through a name lookup failure).
         /// </summary>
         private static IPAddress HostToAddress(string host, AddressFamily? family) {
+            return HostToAddresses(host, family)[0];
+        }
+
+        /// <summary>
+        /// Return the IP address associated with host, with optional address family checking.
+        /// host may be either a name or an IP address (in string form).
+        /// 
+        /// If family is non-null, a gaierror will be thrown if the host's address family is
+        /// not the same as the specified family. gaierror is also raised if the hostname cannot be
+        /// converted to an IP address (e.g. through a name lookup failure).
+        /// </summary>
+        private static IPAddress[] HostToAddresses(string host, AddressFamily? family) {
             host = ConvertSpecialAddresses(host);
             IPAddress addr;
             try {
                 if (IPAddress.TryParse(host, out addr)) {
                     if (family == null || addr.AddressFamily == family.Value) {
-                        return addr;
+                        return new IPAddress[]{ addr };
                     }
                     // Incorrect family will raise exception below
                 } else {
                     IPHostEntry hostEntry = Dns.GetHostEntry(host);
+                    List<IPAddress> addrs = new List<IPAddress>();
                     foreach (IPAddress ip in hostEntry.AddressList) {
                         if (family == null || ip.AddressFamily == family.Value) {
-                            return ip;
+                            addrs.Add(ip);
                         }
                     }
+                    if (addrs.Count > 0) return addrs.ToArray();
                 }
                 throw new SocketException((int)SocketError.HostNotFound);
             } catch (SocketException e) {
-                throw MakeException(gaierror, e.ErrorCode, "no IPv4 addresses associated with host");
+                throw MakeException(gaierror, e.ErrorCode, "no addresses of the specified family associated with host");
             }
         }
 
@@ -1478,6 +1469,81 @@ namespace IronPython.Modules {
                 return otherName[0];
             } else {
                 return fqdn;
+            }
+        }
+
+        /// <summary>
+        /// Convert a (host, port) tuple [IPv4] (host, port, flowinfo, scopeid) tuple [IPv6]
+        /// to its corresponding IPEndPoint.
+        /// 
+        /// Throws gaierror if host is not a valid address.
+        /// Throws ArgumentTypeException if any of the following are true:
+        ///  - address does not have exactly two elements
+        ///  - address[0] is not a string
+        ///  - address[1] is not an int
+        /// </summary>
+        private static IPEndPoint TupleToEndPoint(Tuple address) {
+            if (address.Count != 2 && address.Count != 4) {
+                throw Ops.TypeError("address tuple must have exactly 2 (IPv4) or exactly 4 (IPv6) elements");
+            }
+
+            string host;
+            try {
+                host = Converter.ConvertToString(address[0]);
+            } catch (ArgumentTypeException) {
+                throw Ops.TypeError("host must be string");
+            }
+
+            int port;
+            try {
+                port = Converter.ConvertToInt32(address[1]);
+            } catch (ArgumentTypeException) {
+                throw Ops.TypeError("port must be integer");
+            }
+
+            IPAddress ip = HostToAddress(host, null);
+
+            if (address.Count == 2) {
+                return new IPEndPoint(ip, port);
+            } else {
+                long flowInfo;
+                try {
+                    flowInfo = Converter.ConvertToInt64(address[2]);
+                } catch (ArgumentTypeException) {
+                    throw Ops.TypeError("flowinfo must be integer");
+                }
+                // We don't actually do anything with flowinfo right now, but we validate it
+                // in case we want to do something in the future.
+
+                long scopeId;
+                try {
+                    scopeId = Converter.ConvertToInt64(address[3]);
+                } catch (ArgumentTypeException) {
+                    throw Ops.TypeError("scopeid must be integer");
+                }
+
+                IPEndPoint endPoint = new IPEndPoint(ip, port);
+                endPoint.Address.ScopeId = scopeId;
+                return endPoint;
+            }
+        }
+
+        /// <summary>
+        /// Convert an IPEndPoint to its corresponding (host, port) [IPv4] or (host, port, flowinfo, scopeid) [IPv6] tuple.
+        /// Throws SocketException if the address family is other than IPv4 or IPv6.
+        /// </summary>
+        private static Tuple EndPointToTuple(IPEndPoint endPoint) {
+            string ip = endPoint.Address.ToString();
+            int port = endPoint.Port;
+            switch (endPoint.Address.AddressFamily) {
+                case AddressFamily.InterNetwork:
+                    return Tuple.MakeTuple(ip, port);
+                case AddressFamily.InterNetworkV6:
+                    long flowInfo = 0; // RFC 3493 p. 7 
+                    long scopeId = endPoint.Address.ScopeId;
+                    return Tuple.MakeTuple(ip, port, flowInfo, scopeId);
+                default:
+                    throw new SocketException((int)SocketError.AddressFamilyNotSupported);
             }
         }
 
