@@ -407,7 +407,7 @@ namespace IronPython.Compiler.Generation {
             if (doneTypes.ContainsKey(interfaceType)) return;
             doneTypes.Add(interfaceType, true);
             OverrideVirtualMethods(interfaceType, specialNames);
-            
+
             foreach (Type t in interfaceType.GetInterfaces()) {
                 DoInterfaceType(t, doneTypes, specialNames);
             }
@@ -739,7 +739,7 @@ namespace IronPython.Compiler.Generation {
                     }
                 }
             }
-        }        
+        }
 
         private static string[] SkipMethodNames = new string[] { "GetDynamicType", };
 
@@ -784,7 +784,7 @@ namespace IronPython.Compiler.Generation {
                     if (NameConverter.TryGetName((ReflectedType)Ops.GetDynamicTypeFromType(mi.DeclaringType), ei, mi, out name) == NameType.None) return;
                     CreateVTableEventOverride(ei, mi, GetOrMakeVTableEntry(mi.Name));
                     return;
-                } 
+                }
             }
         }
 
@@ -932,7 +932,7 @@ namespace IronPython.Compiler.Generation {
             cg.EmitArgGet(0);
             cg.EmitConvertToObject(mi.GetParameters()[0].ParameterType);
             cg.EmitSymbolId(methField.name);
-            cg.EmitCall(typeof(UserType), "AddRemoveEventHelper"); 
+            cg.EmitCall(typeof(UserType), "AddRemoveEventHelper");
 
             cg.EmitReturn();
             cg.Finish();

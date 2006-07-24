@@ -109,7 +109,7 @@ namespace IronPython.Runtime {
 
             if (mroType != null) { // can be null if the user does super.__new__
                 Tuple mro = mroType.MethodResolutionOrder;
-                
+
                 int lookupType;
                 bool foundThis = false;
                 for (lookupType = 0; lookupType < mro.Count; lookupType++) {
@@ -145,7 +145,7 @@ namespace IronPython.Runtime {
         }
 
         private bool TryLookupInBase(ICallerContext context, object type, SymbolId name, object self, out object value) {
-            DynamicType pt = type as DynamicType;           
+            DynamicType pt = type as DynamicType;
 
             if (pt != null) {
                 // new-style class, or reflected type, lookup slot
@@ -172,7 +172,7 @@ namespace IronPython.Runtime {
 
         private object DescriptorContext {
             get {
-                if(!Ops.GetDynamicType(__self__).IsSubclassOf(__thisclass__)) {
+                if (!Ops.GetDynamicType(__self__).IsSubclassOf(__thisclass__)) {
                     return __thisclass__;
                 }
 
@@ -180,7 +180,7 @@ namespace IronPython.Runtime {
             }
         }
         public void SetAttr(ICallerContext context, SymbolId name, object value) {
-            GetDynamicType().SetAttr(context, this, name, value);            
+            GetDynamicType().SetAttr(context, this, name, value);
         }
 
         public void DeleteAttr(ICallerContext context, SymbolId name) {

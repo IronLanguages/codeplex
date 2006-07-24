@@ -82,7 +82,7 @@ namespace IronPython.Runtime.Exceptions {
             if (t == null || t.Count == 0) return 0;
 
             if (TypeCache.Int32.IsInstanceOfType(t[0]))
-                 return Converter.ConvertToInt32(t[0]);
+                return Converter.ConvertToInt32(t[0]);
 
             nonIntegerCode = t[0];
             return 1;
@@ -117,7 +117,7 @@ namespace IronPython.Runtime.Exceptions {
             [PythonName("lineno")]
             get { return lineNo; }
         }
-       
+
         public int Column {
             [PythonName("offset")]
             get { return columnNo; }

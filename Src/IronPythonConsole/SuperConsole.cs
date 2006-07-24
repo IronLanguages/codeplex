@@ -492,7 +492,7 @@ namespace IronPythonConsole {
             for (; ; ) {
                 ConsoleKeyInfo key = Console.ReadKey(true);
 
-                switch (key.Key) {                    
+                switch (key.Key) {
                     case ConsoleKey.Backspace:
                         Backspace();
                         break;
@@ -532,7 +532,7 @@ namespace IronPythonConsole {
                     case ConsoleKey.DownArrow:
                         SetInput(history.Next());
                         break;
-                    case ConsoleKey.RightArrow:                        
+                    case ConsoleKey.RightArrow:
                         MoveRight(key.Modifiers);
                         break;
                     case ConsoleKey.LeftArrow:
@@ -546,7 +546,7 @@ namespace IronPythonConsole {
                         break;
                     case ConsoleKey.End:
                         MoveEnd();
-                        break;                        
+                        break;
                     case ConsoleKey.LeftWindows:
                     case ConsoleKey.RightWindows:
                         // ignore these

@@ -1397,7 +1397,7 @@ namespace IronPython.Compiler {
         }
 
         //suite: simple_stmt NEWLINE | Newline INDENT stmt+ DEDENT
-        private Statement ParseSuite() {            
+        private Statement ParseSuite() {
             EatNoEof(TokenKind.Colon);
             Location start = GetStart();
             List<Statement> l = new List<Statement>();
@@ -1647,7 +1647,7 @@ namespace IronPython.Compiler {
                     ret = new ConstantExpression(cv);
                     ret.SetLoc(start, GetEnd());
                     return ret;
-                default:                    
+                default:
                     ReportSyntaxError(t, ErrorCodes.SyntaxError, false);
 
                     // error node

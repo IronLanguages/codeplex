@@ -900,7 +900,7 @@ namespace IronPython.Runtime {
 
         public bool softspace = false;
 
-        public PythonFile(Stream stream, Encoding encoding, string mode )
+        public PythonFile(Stream stream, Encoding encoding, string mode)
             : this(stream, encoding, mode, true) {
         }
 
@@ -957,11 +957,11 @@ namespace IronPython.Runtime {
                 PythonFileManager.AddToWeakMapping(this);
         }
 
-        public PythonFile(Stream stream, Encoding encoding, string name, string mode )
+        public PythonFile(Stream stream, Encoding encoding, string name, string mode)
             : this(stream, encoding, name, mode, true) {
         }
 
-        internal PythonFile(Stream stream, Encoding encoding, string name, string mode, bool weakMapping )
+        internal PythonFile(Stream stream, Encoding encoding, string name, string mode, bool weakMapping)
             : this(stream, encoding, mode, weakMapping) {
             this.name = name;
         }

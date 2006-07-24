@@ -217,7 +217,7 @@ namespace IronPython.CodeDom {
             }
         }
 
-        ~PythonParser(){
+        ~PythonParser() {
             Dispose(true);
         }
 
@@ -229,7 +229,7 @@ namespace IronPython.CodeDom {
 
         #endregion
 
-        private void Dispose(bool finalizing){
+        private void Dispose(bool finalizing) {
             // if we're finalizing we shouldn't access other managed objects, as
             // their finalizers may have already run            
             if (!finalizing) {

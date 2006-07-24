@@ -217,18 +217,18 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        protected object CallGetter(object instance, object []args) {
+        protected object CallGetter(object instance, object[] args) {
             if (instance == null && (Getter == null || !Getter.IsStatic)) return this;
 
             CreateGetter();
 
-            if(instance != null)
+            if (instance != null)
                 return fcGetter.CallInstance(DefaultContext.Default, instance, args);
 
             return fcGetter.Call(args);
         }
 
-        protected bool CallSetter(object instance, object []args, object value) {
+        protected bool CallSetter(object instance, object[] args, object value) {
             if (instance == null && (Setter == null || !Setter.IsStatic)) return false;
 
             CreateSetter();
@@ -265,8 +265,7 @@ namespace IronPython.Runtime.Types {
     public class ReflectedSlotProperty : ReflectedProperty, ICodeFormattable {
 
         public ReflectedSlotProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt)
-            :
-            base(info, getter, setter, nt) {
+            : base(info, getter, setter, nt) {
         }
 
         [PythonName("__delete__")]
@@ -304,11 +303,12 @@ namespace IronPython.Runtime.Types {
     public sealed class ReflectedIndexer : ReflectedGetterSetter, IDescriptor, IMapping {
         private object instance;
 
-        public ReflectedIndexer(PropertyInfo info, NameType nt) : 
-            base(info, info.GetGetMethod(), info.GetSetMethod(), nt) {
+        public ReflectedIndexer(PropertyInfo info, NameType nt)
+            : base(info, info.GetGetMethod(), info.GetSetMethod(), nt) {
         }
 
-        public ReflectedIndexer(ReflectedIndexer from, object instance) : base(from) {
+        public ReflectedIndexer(ReflectedIndexer from, object instance)
+            : base(from) {
             this.instance = instance;
         }
 
@@ -327,7 +327,7 @@ namespace IronPython.Runtime.Types {
 
 
         public bool TryGetValue(object key, out object value) {
-            if (Getter == null) 
+            if (Getter == null)
                 throw Ops.AttributeError("attribute '{0}' of '{1}' object is write-only",
                      Name,
                      Ops.GetDynamicTypeFromType(Info.DeclaringType).Name);
@@ -340,7 +340,7 @@ namespace IronPython.Runtime.Types {
                 return false;
             }
         }
-        
+
         public object this[object key] {
             [PythonName("__getitem__")]
             get {
@@ -412,8 +412,8 @@ namespace IronPython.Runtime.Types {
 
     [PythonType("property#")]
     public class ReflectedProperty : ReflectedGetterSetter, IDataDescriptor {
-        public ReflectedProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) :
-            base(info, getter, setter, nt) {
+        public ReflectedProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt)
+            : base(info, getter, setter, nt) {
         }
 
         public object GetValue(object instance) {
@@ -627,23 +627,23 @@ namespace IronPython.Runtime.Types {
 
     [Flags]
     public enum NameType {
-        None         = 0x0000,
-        Python       = 0x0001,
+        None = 0x0000,
+        Python = 0x0001,
 
-        Method          = 0x0002,
-        Field           = 0x0004,
-        Property        = 0x0008, 
-        Event           = 0x0010,
-        Type            = 0x0020,
+        Method = 0x0002,
+        Field = 0x0004,
+        Property = 0x0008,
+        Event = 0x0010,
+        Type = 0x0020,
 
-        PythonMethod    = Method | Python,
-        PythonField     = Field | Python,
-        PythonProperty  = Property | Python,
-        PythonEvent     = Event | Python,
-        PythonType      = Type | Python,
+        PythonMethod = Method | Python,
+        PythonField = Field | Python,
+        PythonProperty = Property | Python,
+        PythonEvent = Event | Python,
+        PythonType = Type | Python,
 
-        ClassMember   = 0x0040,
-        ClassMethod   = ClassMember | PythonMethod,
+        ClassMember = 0x0040,
+        ClassMethod = ClassMember | PythonMethod,
     }
 
 

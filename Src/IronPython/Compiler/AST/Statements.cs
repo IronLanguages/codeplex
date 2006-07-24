@@ -1243,7 +1243,7 @@ namespace IronPython.Compiler.Ast {
         private static readonly SymbolId[] star = new SymbolId[1];
         private readonly DottedName root;
         private readonly IList<SymbolId> names;
-        private readonly IList<SymbolId> asNames ;
+        private readonly IList<SymbolId> asNames;
         private readonly bool fromFuture;
 
         public FromImportStatement(DottedName root, IList<SymbolId> names, SymbolId[] asNames)

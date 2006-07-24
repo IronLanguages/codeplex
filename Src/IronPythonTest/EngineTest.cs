@@ -41,7 +41,7 @@ namespace IronPythonTest {
     public delegate int IntIntDelegate(int arg);
     public delegate string RefStrDelegate(ref string arg);
     public delegate int RefIntDelegate(ref int arg);
-    public delegate T GenericDelegate<T,U,V>(U arg1, V arg2);
+    public delegate T GenericDelegate<T, U, V>(U arg1, V arg2);
 
     public class ClsPart {
         public int Field;
@@ -89,7 +89,7 @@ namespace IronPythonTest {
         }
     }
 
-    public class EngineTest :MarshalByRefObject {
+    public class EngineTest : MarshalByRefObject {
 
         PythonEngine standardEngine = new PythonEngine();
 
@@ -97,7 +97,7 @@ namespace IronPythonTest {
             // Load a script with all the utility functions that are required
             // standardEngine.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
         }
-        
+
         // Used to test exception thrown in another domain can be shown correctly.
         public void Run(string script) {
             standardEngine.Execute(script);
@@ -701,27 +701,27 @@ global_variable = 300", standardEngine.DefaultModule, locals);
             stdin.Write(encoding.GetBytes("This is stdout"), 0, 14);
             stdin.Position = 0;
             pe.Execute("output = sys.__stdin__.readline()");
-            AreEqual("This is stdout",pe.EvaluateAs<string>("output"));
+            AreEqual("This is stdout", pe.EvaluateAs<string>("output"));
             pe.Execute("sys.__stdout__.write(output)");
             stdout.Flush();
             stdout.Position = 0;
             int len = stdout.Read(buffer, 0, 14);
             AreEqual(14, len);
-            AreEqual("This is stdout",encoding.GetString(buffer,0,len));
+            AreEqual("This is stdout", encoding.GetString(buffer, 0, len));
 
             pe.Execute("sys.__stderr__.write(\"This is stderr\")");
             stderr.Flush();
             stderr.Position = 0;
             len = stderr.Read(buffer, 0, 14);
             AreEqual(14, len);
-            AreEqual("This is stderr", encoding.GetString(buffer,0,len));        
+            AreEqual("This is stderr", encoding.GetString(buffer, 0, len));
         }
 
         public void ScenarioCreateMethodAndLambda() {
             PythonEngine pe = new PythonEngine();
-            
+
             //Generic delegate types
-            GenericDelegate<int,int,int> del = pe.CreateLambda<GenericDelegate<int,int,int>>("arg1+arg2");
+            GenericDelegate<int, int, int> del = pe.CreateLambda<GenericDelegate<int, int, int>>("arg1+arg2");
             AreEqual(9, del(6, 3));
             del = pe.CreateMethod<GenericDelegate<int, int, int>>("return arg1+arg2");
             AreEqual(12, del(8, 4));
@@ -749,16 +749,16 @@ global_variable = 300", standardEngine.DefaultModule, locals);
             AreEqual(450, argi);
 
             //Specify our own parameter names
-            List<string> args = new List<string>(new string[] { "dir","secondarg"});
+            List<string> args = new List<string>(new string[] { "dir", "secondarg" });
             del = pe.CreateLambda<GenericDelegate<int, int, int>>("dir+secondarg", args);
             AreEqual(6, del(3, 3));
             del = pe.CreateMethod<GenericDelegate<int, int, int>>("return dir+secondarg", args);
-            AreEqual(6,del(3,3));
+            AreEqual(6, del(3, 3));
         }
 
         public void ScenarioCoverage() {
             PythonEngine pe = new PythonEngine();
-            CompiledCode compiledCode = pe.Compile("arg1+arg2","MyNewSourceFile");
+            CompiledCode compiledCode = pe.Compile("arg1+arg2", "MyNewSourceFile");
             AreEqual("<code MyNewSourceFile>", compiledCode.ToString());
         }
 
@@ -781,7 +781,7 @@ global_variable = 300", standardEngine.DefaultModule, locals);
             }
 
             try {
-                pe.CreateLambda<IntIntDelegate>("x=2",null,null);
+                pe.CreateLambda<IntIntDelegate>("x=2", null, null);
                 throw new Exception();
             } catch (ArgumentNullException) {
                 //Pass
@@ -795,7 +795,7 @@ global_variable = 300", standardEngine.DefaultModule, locals);
             }
 
             try {
-                pe.CreateModule(null, new Dictionary<string,object>(), false);
+                pe.CreateModule(null, new Dictionary<string, object>(), false);
                 throw new Exception();
             } catch (ArgumentNullException) {
                 //Pass
@@ -895,7 +895,7 @@ global_variable = 300", standardEngine.DefaultModule, locals);
                 }
 
                 //Change an existing variable in each scope
-                locals["z"]  = 6;
+                locals["z"] = 6;
                 pe.Execute("y = 5", module1, locals);
                 globals["x"] = 4;
 
@@ -914,7 +914,7 @@ global_variable = 300", standardEngine.DefaultModule, locals);
 
                 //Hide a builtin from each scope and verify we can recover it
                 globals["dir"] = "overriden in module";
-                AreEqual("overriden in module",pe.EvaluateAs<string>("dir", module1, locals));
+                AreEqual("overriden in module", pe.EvaluateAs<string>("dir", module1, locals));
                 globals.Remove("dir");
                 AreEqual(true, pe.Evaluate("dir", module1, locals) is IronPython.Runtime.Calls.BuiltinFunction);
 

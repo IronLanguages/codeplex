@@ -789,7 +789,7 @@ namespace IronPython.CodeDom {
             AdvanceOutput(e);
             int oldIndent = Indent;
             Indent = lastIndent;
-            
+
 
             WriteLine("# Snippet Statement");
 
@@ -1205,12 +1205,12 @@ namespace IronPython.CodeDom {
             throw new NotImplementedException("The method or operation is not implemented.");
         }
 
-        protected override void GenerateLinePragmaEnd(CodeLinePragma e) {            
+        protected override void GenerateLinePragmaEnd(CodeLinePragma e) {
             WriteLine("");
             WriteLine("#End ExternalSource");
         }
 
-        protected override void GenerateLinePragmaStart(CodeLinePragma e) {            
+        protected override void GenerateLinePragmaStart(CodeLinePragma e) {
             WriteLine("");
             Write("#ExternalSource(\"");
             Write(e.FileName);
@@ -1632,12 +1632,12 @@ namespace IronPython.CodeDom {
         private string IndentString {
             get {
                 if (String.IsNullOrEmpty(Options.IndentString)) return "    ";
-                
+
                 return Options.IndentString;
             }
         }
         private void WriteTargetBuffer(string text) {
-            if(merger != null) writeCache.Append(text);
+            if (merger != null) writeCache.Append(text);
             else Output.Write(text);
         }
 

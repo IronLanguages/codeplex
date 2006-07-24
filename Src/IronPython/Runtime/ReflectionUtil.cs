@@ -176,7 +176,7 @@ namespace IronPython.Runtime {
             }
 
             ParameterInfo[] pis = info.GetParameters();
-            for(int i = 0; i<pis.Length - endParamSkip; i++) {
+            for (int i = 0; i < pis.Length - endParamSkip; i++) {
                 ParameterInfo pi = pis[i];
                 if (pi.IsOut || pi.ParameterType.IsByRef) {
                     if (returnCount == 1) {

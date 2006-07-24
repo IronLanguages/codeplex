@@ -645,7 +645,7 @@ namespace IronPython.Hosting {
         /// 
         /// The delegate's parameter names will be available within the function as argument names.
         /// </summary>
-        public TDelegate CreateMethod<TDelegate>(string statements)  {
+        public TDelegate CreateMethod<TDelegate>(string statements) {
             return CreateMethod<TDelegate>(statements, null, defaultModule);
         }
 
@@ -656,7 +656,7 @@ namespace IronPython.Hosting {
         /// is null the parameter names are taken from the delegate, otherwise the provided parameter
         /// names are used. 
         /// </summary>
-        public TDelegate CreateMethod<TDelegate>(string statements, IList<string> parameters)  {
+        public TDelegate CreateMethod<TDelegate>(string statements, IList<string> parameters) {
             return CreateMethod<TDelegate>(statements, parameters, defaultModule);
         }
 
@@ -667,7 +667,7 @@ namespace IronPython.Hosting {
         /// 
         /// Variable's that aren't locals will be retrived at run-time from the provided EngineModule.
         /// </summary>
-        public TDelegate CreateMethod<TDelegate>(string statements, EngineModule engineModule)  {
+        public TDelegate CreateMethod<TDelegate>(string statements, EngineModule engineModule) {
             return CreateMethod<TDelegate>(statements, null, engineModule);
         }
 
@@ -680,7 +680,7 @@ namespace IronPython.Hosting {
         /// 
         /// Variables that aren't locals will be retrieved at run-time from the provided EngineModule.
         /// </summary>
-        public TDelegate CreateMethod<TDelegate>(string statements, IList<string> parameters, EngineModule engineModule)  {
+        public TDelegate CreateMethod<TDelegate>(string statements, IList<string> parameters, EngineModule engineModule) {
             if (engineModule == null) throw new ArgumentNullException("engineModule");
 
             return CreateMethodUnscoped<TDelegate>(statements, parameters)(engineModule);
@@ -691,7 +691,7 @@ namespace IronPython.Hosting {
         /// 
         /// The delegate's parameter names will be available within the function as locals
         /// </summary>
-        public TDelegate CreateLambda<TDelegate>(string expression)  {
+        public TDelegate CreateLambda<TDelegate>(string expression) {
             return CreateLambda<TDelegate>(expression, null, defaultModule);
         }
 
@@ -713,7 +713,7 @@ namespace IronPython.Hosting {
         /// 
         /// Variable's that aren't localed will be retrieved at run-time from the provided EngineModule.
         /// </summary>
-        public TDelegate CreateLambda<TDelegate>(string expression, EngineModule engineModule)  {
+        public TDelegate CreateLambda<TDelegate>(string expression, EngineModule engineModule) {
             return CreateLambda<TDelegate>(expression, null, engineModule);
         }
 
@@ -726,7 +726,7 @@ namespace IronPython.Hosting {
         /// 
         /// Variable's that aren't localed will be retrieved at run-time from the provided EngineModule.
         /// </summary>
-        public TDelegate CreateLambda<TDelegate>(string expression, IList<string> parameters, EngineModule engineModule)  {
+        public TDelegate CreateLambda<TDelegate>(string expression, IList<string> parameters, EngineModule engineModule) {
             if (engineModule == null) throw new ArgumentNullException("engineModule");
 
             return CreateLambdaUnscoped<TDelegate>(expression, parameters)(engineModule);
@@ -735,11 +735,11 @@ namespace IronPython.Hosting {
         /// <summary>
         /// Creates a strongly typed delegate bound to an expression.
         /// </summary>
-        public ModuleBinder<TDelegate> CreateMethodUnscoped<TDelegate>(string statements)  {
+        public ModuleBinder<TDelegate> CreateMethodUnscoped<TDelegate>(string statements) {
             return CreateMethodUnscoped<TDelegate>(statements, null);
         }
 
-        public ModuleBinder<TDelegate> CreateLambdaUnscoped<TDelegate>(string expression)  {
+        public ModuleBinder<TDelegate> CreateLambdaUnscoped<TDelegate>(string expression) {
             return CreateLambdaUnscoped<TDelegate>(expression, null);
         }
 
@@ -752,7 +752,7 @@ namespace IronPython.Hosting {
         /// is null the parameter names are taken from the delegate, otherwise the provided parameter
         /// names are used. 
         /// </summary>
-        public ModuleBinder<TDelegate> CreateMethodUnscoped<TDelegate>(string statements, IList<string> parameters)  {
+        public ModuleBinder<TDelegate> CreateMethodUnscoped<TDelegate>(string statements, IList<string> parameters) {
             ValidateCreationParameters<TDelegate>();
 
             Parser p = Parser.FromString(Sys, compilerContext, statements);
@@ -776,7 +776,7 @@ namespace IronPython.Hosting {
         /// the delegate's parameter names are used for available locals, otherwise the given parameter
         /// names are used.
         /// </summary>
-        public ModuleBinder<TDelegate> CreateLambdaUnscoped<TDelegate>(string expression, IList<string> parameters)  {
+        public ModuleBinder<TDelegate> CreateLambdaUnscoped<TDelegate>(string expression, IList<string> parameters) {
             ValidateCreationParameters<TDelegate>();
 
             Parser p = Parser.FromString(Sys, compilerContext, expression.TrimStart(' ', '\t'));
@@ -799,7 +799,7 @@ namespace IronPython.Hosting {
                 throw new ArgumentException("T must be a subclass of Delegate");
         }
 
-        private CodeGen CreateDelegateWorker<TDelegate>(Statement s, IList<string> parameters)  {
+        private CodeGen CreateDelegateWorker<TDelegate>(Statement s, IList<string> parameters) {
             NameExpression[] paramExpr = GetParameterExpressions<TDelegate>(parameters);
             FunctionDefinition fd = new FunctionDefinition(SymbolTable.Text, paramExpr, new Expression[0], FunctionAttributes.None, "<engine>");
             fd.Body = s;
@@ -884,7 +884,7 @@ namespace IronPython.Hosting {
             // which pulls it's module.
             cg.ContextSlot = cg.GetArgumentSlot(0);
             cg.Context = compilerContext.CopyWithNewSourceFile("<methodOrLambda>");
-            
+
             cg.ModuleSlot = new FieldSlot(cg.GetArgumentSlot(0), typeof(ModuleScope).GetField("__module__"));
             // setup the namespace for the method - get the arguments &
             // bind any globals into the module scope or ensure we have
@@ -1014,7 +1014,7 @@ namespace IronPython.Hosting {
             if (!finalizing) {
                 if (stdIn != null) stdIn.Dispose();
                 if (stdErr != null) stdErr.Dispose();
-                if (stdOut != null) stdOut.Dispose();                
+                if (stdOut != null) stdOut.Dispose();
             }
 
             if (!finalizing || !AppDomain.CurrentDomain.IsFinalizingForUnload()) {
@@ -1022,7 +1022,7 @@ namespace IronPython.Hosting {
                 // no problem, right?  But there's a reference from AppDomain.CurrentDomain.AssemblyResolve
                 // to ClrModule, which gives them both a static root.  Threfore it's safe
                 // to dispose of systemState unless the domain is unloading.
-                if(systemState != null) systemState.Dispose();
+                if (systemState != null) systemState.Dispose();
             }
         }
 

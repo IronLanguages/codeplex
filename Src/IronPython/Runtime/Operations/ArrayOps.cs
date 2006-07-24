@@ -207,7 +207,7 @@ namespace IronPython.Runtime.Operations {
         internal static object[] GetSlice(object[] data, int start, int stop) {
             if (stop <= start) return Ops.EMPTY;
 
-            object[] ret = new object[stop-start];
+            object[] ret = new object[stop - start];
             int index = 0;
             for (int i = start; i < stop; i++) {
                 ret[index++] = data[i];

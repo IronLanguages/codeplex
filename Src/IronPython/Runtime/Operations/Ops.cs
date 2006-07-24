@@ -402,7 +402,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             string ys;
-            if ((ys = y as string)!=null) {
+            if ((ys = y as string) != null) {
                 string s = x as string;
                 if (s == null) {
                     if (x is char) {
@@ -1246,7 +1246,7 @@ namespace IronPython.Runtime.Operations {
             if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
             if (o is double) return (int)(double)o;
             if (o == null) return NoneTypeOps.HashCode;
-            if (o is char) return new String((char)o, 1).GetHashCode();            
+            if (o is char) return new String((char)o, 1).GetHashCode();
 
             IRichEquality ipe = o as IRichEquality;
             if (ipe != null) {

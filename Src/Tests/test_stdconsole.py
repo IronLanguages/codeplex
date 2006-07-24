@@ -111,7 +111,7 @@ def test_exit():
     TestScript((), "import sys\nclass C(int): pass\nc = C(200)\nsys.exit(c)\n", "", 200)
 
     # Test exit code with sys.exit(non-int)
-    TestCommandLine(("-c", "import sys; sys.exit(None)"),       "",         1)
+    TestCommandLine(("-c", "import sys; sys.exit(None)"),       "",         0)
     TestCommandLine(("-c", "import sys; sys.exit('goodbye')"),  "goodbye\n",1)
     TestCommandLine(("-c", "import sys; sys.exit(200L)"),       "200\n",    1)
 

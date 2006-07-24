@@ -865,19 +865,19 @@ namespace IronPythonTest {
             add {
                 LastCall = "Add";
             }
-            remove{
+            remove {
                 LastCall = "Remove";
-            }            
+            }
         }
         public string LastCall;
 
         public virtual void FireEvent() {
             SimpleDelegate simple = MyEvent;
-            if(simple != null)
+            if (simple != null)
                 simple();
         }
     }
- 
+
     public class OverrideVirtualEvent : VirtualEvent {
         public override event SimpleDelegate MyEvent;
         public override event SimpleDelegate MyCustomEvent {

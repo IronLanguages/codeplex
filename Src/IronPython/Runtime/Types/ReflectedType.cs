@@ -199,7 +199,7 @@ namespace IronPython.Runtime.Types {
 
                 Debug.Assert(cm != null,
                     String.Format("Replacing existing method {0} on {1}", methodId, this),
-                    String.Format("Existing Method: {0}",existingMethod));
+                    String.Format("Existing Method: {0}", existingMethod));
 
                 cm.func.AddMethod(mi);
             } else {
@@ -592,7 +592,7 @@ namespace IronPython.Runtime.Types {
                     StoreReflectedMethod(name, mi, nt);
                     break;
                 case NameType.ClassMethod: StoreClassMethod(name, mi); break;
-                default: Debug.Assert(false, String.Format("Unexpected name type for reflected method {0}",nt)); break;
+                default: Debug.Assert(false, String.Format("Unexpected name type for reflected method {0}", nt)); break;
             }
 
             if (name != mi.Name) {
@@ -636,7 +636,7 @@ namespace IronPython.Runtime.Types {
             return mi.IsFinal && mi.IsHideBySig && mi.IsPrivate && mi.IsVirtual;
         }
 
-        private void AddReflectedProperty(PropertyInfo info, MemberInfo[] defaultMembers) {            
+        private void AddReflectedProperty(PropertyInfo info, MemberInfo[] defaultMembers) {
             if (info.GetIndexParameters().Length > 0) {
                 foreach (MemberInfo member in defaultMembers) {
                     if (member == info) {

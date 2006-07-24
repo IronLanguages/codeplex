@@ -170,16 +170,16 @@ namespace IronPython.Modules {
             } else {
                 string[] formats = new string[formatInfo.Count];
                 for (int i = 0; i < formatInfo.Count; i++) {
-                    switch(formatInfo[i].Type){
+                    switch (formatInfo[i].Type) {
                         case FormatInfoType.UserText: formats[i] = "'" + formatInfo[i].Text + "'"; break;
                         case FormatInfoType.SimpleFormat: formats[i] = formatInfo[i].Text; break;
-                        case FormatInfoType.CustomFormat: formats[i] = "%" + formatInfo[i].Text; break;                            
+                        case FormatInfoType.CustomFormat: formats[i] = "%" + formatInfo[i].Text; break;
                     }
                 }
 
                 try {
                     if (!DateTime.TryParseExact(@string,
-                        String.Join("",formats),
+                        String.Join("", formats),
                         PythonLocale.currentLocale.Time.DateTimeFormat,
                         DateTimeStyles.AllowWhiteSpaces,
                         out res)) {
@@ -187,7 +187,7 @@ namespace IronPython.Modules {
                         res = DateTime.Parse(@string, PythonLocale.currentLocale.Time.DateTimeFormat);
                     }
                 } catch (FormatException e) {
-                    throw Ops.ValueError(e.Message + Environment.NewLine + "data=" + @string + ", fmt=" + format + ", to: "+String.Join("",formats));
+                    throw Ops.ValueError(e.Message + Environment.NewLine + "data=" + @string + ", fmt=" + format + ", to: " + String.Join("", formats));
                 }
             }
 
@@ -205,7 +205,7 @@ namespace IronPython.Modules {
                     case FormatInfoType.SimpleFormat: res.Append(dt.ToString(formatInfo[i].Text, PythonLocale.currentLocale.Time.DateTimeFormat)); break;
                     case FormatInfoType.CustomFormat:
                         // custom format strings need to be at least 2 characters long                        
-                        res.Append(dt.ToString("%"+formatInfo[i].Text, PythonLocale.currentLocale.Time.DateTimeFormat));
+                        res.Append(dt.ToString("%" + formatInfo[i].Text, PythonLocale.currentLocale.Time.DateTimeFormat));
                         break;
                 }
             }
@@ -238,15 +238,15 @@ namespace IronPython.Modules {
             int intSeconds;
             if (Converter.TryConvertToInt32(seconds, out intSeconds)) {
                 return intSeconds;
-            } 
+            }
 
             double dblVal;
             if (Converter.TryConvertToDouble(seconds, out dblVal)) {
                 if (dblVal > Int64.MaxValue || dblVal < Int64.MinValue) throw Ops.ValueError("unreasonable date/time");
                 return (long)dblVal;
             }
-            
-            throw Ops.TypeError("expected int, got {0}", Ops.GetDynamicType(seconds));            
+
+            throw Ops.TypeError("expected int, got {0}", Ops.GetDynamicType(seconds));
         }
 
         enum FormatInfoType {
@@ -284,7 +284,7 @@ namespace IronPython.Modules {
                         case 'b': newFormat.Add(new FormatInfo("MMM")); break;
                         case 'B': newFormat.Add(new FormatInfo("MMMM")); break;
                         case 'c': newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, "f")); break;
-                        case 'd': 
+                        case 'd':
                             // if we're parsing we want to use the less-strict
                             // d format and which doesn't require both digits.
                             if (forParse) newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, "d"));
@@ -312,7 +312,7 @@ namespace IronPython.Modules {
                         default: throw Ops.ValueError("invalid formatting character: {0}", format[i]);
                     }
                 } else {
-                    if (newFormat.Count == 0 || newFormat[newFormat.Count - 1].Type != FormatInfoType.UserText)                        
+                    if (newFormat.Count == 0 || newFormat[newFormat.Count - 1].Type != FormatInfoType.UserText)
                         newFormat.Add(new FormatInfo(FormatInfoType.UserText, format[i].ToString()));
                     else
                         newFormat[newFormat.Count - 1].Text = newFormat[newFormat.Count - 1].Text + format[i];
@@ -331,7 +331,7 @@ namespace IronPython.Modules {
                 doy = 6;
             else
                 doy = (int)(dt.DayOfWeek - 1);
-            
+
             return Tuple.MakeTuple(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, doy, dt.DayOfYear, dt.IsDaylightSavingTime() ? 1 : 0);
         }
 

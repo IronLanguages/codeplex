@@ -144,8 +144,10 @@ try:
     sys.exit(None)
     Assert(False)
 except Exception, e:
-	AreEqual(e[0], None)
-	pass
+    AreEqual(e.args, ())
+
+AreEqual(SystemExit(None).args, (None,))
+
 try:
     sys.exit(-10)
 except Exception, e:
