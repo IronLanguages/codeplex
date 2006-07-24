@@ -227,20 +227,25 @@ namespace IronPython.Runtime {
 
         public bool TryGetAttr(ICallerContext context, SymbolId name, out object value) {
             if (__dict__.TryGetValue(name, out value)) {
+                if (value == Uninitialized.instance) return false;
+
                 IContextAwareMember icaa = value as IContextAwareMember;
                 if (icaa == null || icaa.IsVisible(context)) {
                     return true;
                 }
                 value = null;
             }
+
             if (name == SymbolTable.Dict) {
                 if (packageImported) value = innerMod.GetAttrDict(context);
                 else value = __dict__;
 
                 return true;
             }
+
             if (packageImported) return innerMod.TryGetAttr(context, name, out value);
             if (TypeCache.Module.TryGetAttr(context, this, name, out value)) return true;
+
             return false;
         }
 

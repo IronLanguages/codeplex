@@ -6,8 +6,7 @@
     <ProjectGuid>{81DA19C7-4FEC-47E7-981B-D9310D549F95}</ProjectGuid>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ApplicationIcon>
-    </ApplicationIcon>
+    <ApplicationIcon>ipyw.ico</ApplicationIcon>
     <AssemblyKeyContainerName>
     </AssemblyKeyContainerName>
     <AssemblyName>ipyw</AssemblyName>
@@ -140,6 +139,9 @@
     <Compile Include="..\IronPythonConsole\PythonCommandLine.cs">
       <Link>PythonCommandLine.cs</Link>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ipyw.ico" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

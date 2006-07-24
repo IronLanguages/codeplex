@@ -6,8 +6,7 @@
     <ProjectGuid>{811AC32C-11F3-4ED8-92A7-A7E39C2BB704}</ProjectGuid>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ApplicationIcon>
-    </ApplicationIcon>
+    <ApplicationIcon>ipy.ico</ApplicationIcon>
     <AssemblyKeyContainerName>
     </AssemblyKeyContainerName>
     <AssemblyName>ipy</AssemblyName>
@@ -139,6 +138,9 @@
     <Compile Include="SuperConsole.cs">
       <SubType>Code</SubType>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ipy.ico" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

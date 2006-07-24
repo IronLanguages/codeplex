@@ -394,8 +394,10 @@ namespace IronPython.Runtime {
                 return true;
             }
 
-            if (__dict__.ContainsKey(name))
-                return __dict__.TryGetValue(name, out value);
+            if (__dict__.TryGetValue(name, out value)) {
+                return value != Uninitialized.instance;
+            }
+
             if (TypeCache.SystemState.TryGetAttr(context, this, name, out value)) return true;
 
             return false;
@@ -406,7 +408,9 @@ namespace IronPython.Runtime {
         }
 
         public void DeleteAttr(ICallerContext context, SymbolId name) {
-            TypeCache.SystemState.DeleteAttrWithCustomDict(context, this, __dict__, name);
+            if (!TypeCache.SystemState.DeleteAttrWithCustomDict(context, this, __dict__, name)) {
+                throw Ops.AttributeErrorForMissingAttribute("sys", name);
+            }
         }
 
         public List GetAttrNames(ICallerContext context) {

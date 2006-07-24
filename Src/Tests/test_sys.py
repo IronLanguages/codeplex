@@ -14,12 +14,34 @@
 ######################################################################################
 
 from lib.assert_util import *
+from lib.process_util import launch_ironpython_changing_extensions
 
 # adding some negative test case coverage for the sys module; we currently don't implement
 # some methods---there is a CodePlex work item 1042 to track the real implementation of 
 # these methods
 
 import sys
+
+def test_del_getframe():
+    # This is a destructive test, run it in separate instance of IronPython.
+    # Currently, there is no way to restore sys back to its original state.
+    global testDelGetFrame
+    if not testDelGetFrame:
+        return
+
+    del sys._getframe
+    
+    try:
+        # try access again
+        x = sys._getframe
+    except AttributeError: pass
+    else: raise AssertionError("Deletion of sys._getframe didn't take effect")
+    
+    try:
+        # try deletion again
+        del sys._getframe
+    except AttributeError: pass
+    else: raise AssertionError("Deletion of sys._getframe didn't take effect")
 
 def test_negative():
 	# api_version
@@ -43,6 +65,12 @@ def test_negative():
 	# getrefcount
 	AssertError(NotImplementedError, sys.getrefcount, None)
 
-if is_cli:
-    run_test(__name__)
 
+if is_cli:
+    testDelGetFrame = "Test_Del_GetFrame" in sys.argv
+    if testDelGetFrame:
+        test_del_getframe()
+    else:
+        run_test(__name__)
+        # this is a destructive test, run it in separate instance of IronPython
+        launch_ironpython_changing_extensions(__file__, [], [], ("Test_Del_GetFrame",))

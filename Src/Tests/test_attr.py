@@ -51,6 +51,8 @@ def CheckDictionary(mod):
     # add non-string index into the class and instance dictionary
     mod.__dict__[1] = '1'
     CheckObjectKeys(mod)
+    # Remove the non-string key since it causes problems later on
+    del mod.__dict__[1]
     
     # Try to replace __dict__
     if is_cli: # CPython does not consistently use TypeError/AttributeError for read-only attributes
@@ -127,21 +129,51 @@ AssertError(TypeError, getattr, object(), None)
 
 ##########################################################################
 # test attribute access checks
-class C(object): pass
-c = C()
 
-def del1():
+class OldStyleClass:
+    classAttribute = 1
+    def __init__(self):
+        self.instanceAttribute = 2
+
+class C(object):
+    classAttribute = 1
+    def __init__(self):
+        self.instanceAttribute = 2
+
+def del_class(c):
 	del c.__class__
 
-def del2():
+def del_doc(c):
 	del c.__doc__
 
-def del3():
+def del_module(c):
 	del c.__module__
-	
+
+def del_classAttribute(c):
+    del c.classAttribute
+
+def del_instanceAttribute(c):
+    del c.instanceAttribute
+
+def del_nonExistantAttribute(c):
+    del c.nonExistantAttribute
+
+def attr_access(c): 
+    AssertError(TypeError, del_class, c)
+    AssertError(AttributeError, del_doc, c)
+    AssertError(AttributeError, del_module, c)
+    AssertError(AttributeError, del_classAttribute, c)
+    del c.instanceAttribute
+    AssertError(AttributeError, del_instanceAttribute, c)
+    AssertError(AttributeError, del_nonExistantAttribute, c)
+
+    klass = c.__class__
+    del klass.classAttribute
+    AssertError(AttributeError, del_classAttribute, klass)
+    AssertError(AttributeError, del_nonExistantAttribute, klass)
+
 def test_attraccess(): 
-	AssertError(TypeError, del1)
-	AssertError(AttributeError, del2)
-	AssertError(AttributeError, del3)
-	
-test_attraccess()
+    attr_access(OldStyleClass())
+    attr_access(C())
+
+run_test(__name__)

@@ -62,7 +62,7 @@ def _get_ip_testmode():
             lastConsumesNext = False
     return switches
 
-def launch_ironpython_changing_extensions(test, add=[], remove=[]):
+def launch_ironpython_changing_extensions(test, add=[], remove=[], additionalScriptParams=()):
     final = _get_ip_testmode()
     for param in add:
         if param not in final: final.append(param)
@@ -78,6 +78,7 @@ def launch_ironpython_changing_extensions(test, add=[], remove=[]):
         
     params = tuple(final)
     params += (test,)
+    params += additionalScriptParams
     
     return nt.spawnl(0, sys.executable, *params)
 

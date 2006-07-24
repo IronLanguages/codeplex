@@ -364,7 +364,11 @@ namespace IronPython.Runtime {
         }
 
         public bool Remove(SymbolId key) {
-            if (TrySetExtraValue(key, Uninitialized.instance)) return true;
+            object value;
+            if (TryGetExtraValue(key, out value)) {
+                if (value == Uninitialized.instance) return false;
+                if (TrySetExtraValue(key, Uninitialized.instance)) return true;
+            }
 
             if (data == null) return false;
 

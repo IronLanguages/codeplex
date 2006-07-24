@@ -1010,7 +1010,10 @@ namespace IronPython.Runtime.Types {
             if (name == SymbolTable.Dict)
                 throw Ops.AttributeErrorForReadonlyAttribute(__name__.ToString(), name);
 
-            if (selfDict.ContainsKey(name)) {
+            object value;
+            if (selfDict.TryGetValue(name, out value)) {
+                if (value == Uninitialized.instance) return false;
+
                 selfDict.Remove(name);
                 return true;
             }
