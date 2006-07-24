@@ -280,6 +280,17 @@ def test_CreateMethod_ImportSys():
     import sys
     AreEqual(method(), sys.version)
 
+
+def test_CreateLambda_Division():
+    pe = IronPython.Hosting.PythonEngine(CreateOptions())
+    load_iron_python_test()
+    from IronPythonTest import SimpleReturnDelegateArg1	
+    
+    ex = pe.CreateLambda[SimpleReturnDelegateArg1]("1.0 / arg1")
+    result = ex(100000)
+    Assert(result < 1)
+
+    
 def test_interactive_input():
     x = pe.ParseInteractiveInput("""x = "abc\\
 """, True)

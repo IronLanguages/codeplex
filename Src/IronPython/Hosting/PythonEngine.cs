@@ -645,8 +645,8 @@ namespace IronPython.Hosting {
         /// 
         /// The delegate's parameter names will be available within the function as argument names.
         /// </summary>
-        public DelegateType CreateMethod<DelegateType>(string statements) where DelegateType : class {
-            return CreateMethod<DelegateType>(statements, null, defaultModule);
+        public TDelegate CreateMethod<TDelegate>(string statements)  {
+            return CreateMethod<TDelegate>(statements, null, defaultModule);
         }
 
         /// <summary>
@@ -656,8 +656,8 @@ namespace IronPython.Hosting {
         /// is null the parameter names are taken from the delegate, otherwise the provided parameter
         /// names are used. 
         /// </summary>
-        public DelegateType CreateMethod<DelegateType>(string statements, IList<string> parameters) where DelegateType : class {
-            return CreateMethod<DelegateType>(statements, parameters, defaultModule);
+        public TDelegate CreateMethod<TDelegate>(string statements, IList<string> parameters)  {
+            return CreateMethod<TDelegate>(statements, parameters, defaultModule);
         }
 
         /// <summary>
@@ -667,8 +667,8 @@ namespace IronPython.Hosting {
         /// 
         /// Variable's that aren't locals will be retrived at run-time from the provided EngineModule.
         /// </summary>
-        public DelegateType CreateMethod<DelegateType>(string statements, EngineModule engineModule) where DelegateType : class {
-            return CreateMethod<DelegateType>(statements, null, engineModule);
+        public TDelegate CreateMethod<TDelegate>(string statements, EngineModule engineModule)  {
+            return CreateMethod<TDelegate>(statements, null, engineModule);
         }
 
         /// <summary>
@@ -680,10 +680,10 @@ namespace IronPython.Hosting {
         /// 
         /// Variables that aren't locals will be retrieved at run-time from the provided EngineModule.
         /// </summary>
-        public DelegateType CreateMethod<DelegateType>(string statements, IList<string> parameters, EngineModule engineModule) where DelegateType : class {
+        public TDelegate CreateMethod<TDelegate>(string statements, IList<string> parameters, EngineModule engineModule)  {
             if (engineModule == null) throw new ArgumentNullException("engineModule");
 
-            return CreateMethodUnscoped<DelegateType>(statements, parameters)(engineModule);
+            return CreateMethodUnscoped<TDelegate>(statements, parameters)(engineModule);
         }
 
         /// <summary>
@@ -691,8 +691,8 @@ namespace IronPython.Hosting {
         /// 
         /// The delegate's parameter names will be available within the function as locals
         /// </summary>
-        public DelegateType CreateLambda<DelegateType>(string expression) where DelegateType : class {
-            return CreateLambda<DelegateType>(expression, null, defaultModule);
+        public TDelegate CreateLambda<TDelegate>(string expression)  {
+            return CreateLambda<TDelegate>(expression, null, defaultModule);
         }
 
         /// <summary>
@@ -702,8 +702,8 @@ namespace IronPython.Hosting {
         /// the delegate's parameter names are used for available locals, otherwise the given parameter
         /// names are used.
         /// </summary>
-        public DelegateType CreateLambda<DelegateType>(string expression, IList<string> parameters) where DelegateType : class {
-            return CreateLambda<DelegateType>(expression, parameters, defaultModule);
+        public TDelegate CreateLambda<TDelegate>(string expression, IList<string> parameters) {
+            return CreateLambda<TDelegate>(expression, parameters, defaultModule);
         }
 
         /// <summary>
@@ -713,8 +713,8 @@ namespace IronPython.Hosting {
         /// 
         /// Variable's that aren't localed will be retrieved at run-time from the provided EngineModule.
         /// </summary>
-        public DelegateType CreateLambda<DelegateType>(string expression, EngineModule engineModule) where DelegateType : class {
-            return CreateLambda<DelegateType>(expression, null, engineModule);
+        public TDelegate CreateLambda<TDelegate>(string expression, EngineModule engineModule)  {
+            return CreateLambda<TDelegate>(expression, null, engineModule);
         }
 
         /// <summary>
@@ -726,21 +726,21 @@ namespace IronPython.Hosting {
         /// 
         /// Variable's that aren't localed will be retrieved at run-time from the provided EngineModule.
         /// </summary>
-        public DelegateType CreateLambda<DelegateType>(string expression, IList<string> parameters, EngineModule engineModule) where DelegateType : class {
+        public TDelegate CreateLambda<TDelegate>(string expression, IList<string> parameters, EngineModule engineModule)  {
             if (engineModule == null) throw new ArgumentNullException("engineModule");
 
-            return CreateLambdaUnscoped<DelegateType>(expression, parameters)(engineModule);
+            return CreateLambdaUnscoped<TDelegate>(expression, parameters)(engineModule);
         }
 
         /// <summary>
         /// Creates a strongly typed delegate bound to an expression.
         /// </summary>
-        public ModuleBinder<DelegateType> CreateMethodUnscoped<DelegateType>(string statements) where DelegateType : class {
-            return CreateMethodUnscoped<DelegateType>(statements, null);
+        public ModuleBinder<TDelegate> CreateMethodUnscoped<TDelegate>(string statements)  {
+            return CreateMethodUnscoped<TDelegate>(statements, null);
         }
 
-        public ModuleBinder<DelegateType> CreateLambdaUnscoped<DelegateType>(string expression) where DelegateType : class {
-            return CreateLambdaUnscoped<DelegateType>(expression, null);
+        public ModuleBinder<TDelegate> CreateLambdaUnscoped<TDelegate>(string expression)  {
+            return CreateLambdaUnscoped<TDelegate>(expression, null);
         }
 
         /// <summary>
@@ -752,15 +752,15 @@ namespace IronPython.Hosting {
         /// is null the parameter names are taken from the delegate, otherwise the provided parameter
         /// names are used. 
         /// </summary>
-        public ModuleBinder<DelegateType> CreateMethodUnscoped<DelegateType>(string statements, IList<string> parameters) where DelegateType : class {
-            ValidateCreationParameters<DelegateType>();
+        public ModuleBinder<TDelegate> CreateMethodUnscoped<TDelegate>(string statements, IList<string> parameters)  {
+            ValidateCreationParameters<TDelegate>();
 
             Parser p = Parser.FromString(Sys, compilerContext, statements);
-            CodeGen cg = CreateDelegateWorker<DelegateType>(p.ParseFunction(), parameters);
+            CodeGen cg = CreateDelegateWorker<TDelegate>(p.ParseFunction(), parameters);
 
             return delegate(EngineModule engineModule) {
                 ModuleScope scope = GetModuleScope(engineModule, null);
-                return cg.CreateDelegate(typeof(DelegateType), scope) as DelegateType;
+                return (TDelegate)(object)cg.CreateDelegate(typeof(TDelegate), scope);
             };
         }
 
@@ -776,37 +776,37 @@ namespace IronPython.Hosting {
         /// the delegate's parameter names are used for available locals, otherwise the given parameter
         /// names are used.
         /// </summary>
-        public ModuleBinder<DelegateType> CreateLambdaUnscoped<DelegateType>(string expression, IList<string> parameters) where DelegateType : class {
-            ValidateCreationParameters<DelegateType>();
+        public ModuleBinder<TDelegate> CreateLambdaUnscoped<TDelegate>(string expression, IList<string> parameters)  {
+            ValidateCreationParameters<TDelegate>();
 
             Parser p = Parser.FromString(Sys, compilerContext, expression.TrimStart(' ', '\t'));
             Expression e = p.ParseTestListAsExpression();
             ReturnStatement ret = new ReturnStatement(e);
             int lineCnt = expression.Split('\n').Length;
             ret.SetLoc(new Location(lineCnt, 0), new Location(lineCnt, 10));
-            CodeGen cg = CreateDelegateWorker<DelegateType>(ret, parameters);
+            CodeGen cg = CreateDelegateWorker<TDelegate>(ret, parameters);
 
             return delegate(EngineModule engineModule) {
                 ModuleScope scope = GetModuleScope(engineModule, null);
-                return cg.CreateDelegate(typeof(DelegateType), scope) as DelegateType;
+                return (TDelegate)(object)cg.CreateDelegate(typeof(TDelegate), scope);
             };
         }
 
-        private static void ValidateCreationParameters<T>() where T : class {
+        private static void ValidateCreationParameters<T>() {
             if (typeof(T) == typeof(MulticastDelegate) || typeof(T) == typeof(Delegate))
                 throw new ArgumentException("T must be a concrete delegate, not MulticastDelegate or Delegate");
             if (!typeof(T).IsSubclassOf(typeof(Delegate)))
                 throw new ArgumentException("T must be a subclass of Delegate");
         }
 
-        private CodeGen CreateDelegateWorker<DelegateType>(Statement s, IList<string> parameters) where DelegateType : class {
-            NameExpression[] paramExpr = GetParameterExpressions<DelegateType>(parameters);
+        private CodeGen CreateDelegateWorker<TDelegate>(Statement s, IList<string> parameters)  {
+            NameExpression[] paramExpr = GetParameterExpressions<TDelegate>(parameters);
             FunctionDefinition fd = new FunctionDefinition(SymbolTable.Text, paramExpr, new Expression[0], FunctionAttributes.None, "<engine>");
             fd.Body = s;
             // create a method that corresponds w/ the delegate's signature - we also
             // add a 1st parameter which is the module scope, and we bind the method
             // against that.
-            MethodInfo mi = typeof(DelegateType).GetMethod("Invoke");
+            MethodInfo mi = typeof(TDelegate).GetMethod("Invoke");
             CodeGen cg = CreateTargetMethod(mi);
             List<ReturnFixer> fixers = PromoteArgumentsToLocals(paramExpr, cg);
 
@@ -883,6 +883,7 @@ namespace IronPython.Hosting {
             // argument 0 is a ModuleScope, set these to a slot
             // which pulls it's module.
             cg.ContextSlot = cg.GetArgumentSlot(0);
+            cg.Context = compilerContext.CopyWithNewSourceFile("<methodOrLambda>");
             
             cg.ModuleSlot = new FieldSlot(cg.GetArgumentSlot(0), typeof(ModuleScope).GetField("__module__"));
             // setup the namespace for the method - get the arguments &
