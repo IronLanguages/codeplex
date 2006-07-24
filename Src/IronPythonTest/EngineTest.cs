@@ -89,13 +89,18 @@ namespace IronPythonTest {
         }
     }
 
-    public class EngineTest {
+    public class EngineTest :MarshalByRefObject {
 
         PythonEngine standardEngine = new PythonEngine();
 
         public EngineTest() {
             // Load a script with all the utility functions that are required
             // standardEngine.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
+        }
+        
+        // Used to test exception thrown in another domain can be shown correctly.
+        public void Run(string script) {
+            standardEngine.Execute(script);
         }
 
         static readonly string clspartName = "clsPart";

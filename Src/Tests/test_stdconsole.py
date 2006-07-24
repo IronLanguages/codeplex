@@ -206,6 +206,9 @@ TestCommandLine(("-X:TrackPerformance", "-c", "2+2"), "4\n")
 # Test -X:Frames
 TestCommandLine(("-X:Frames", "-c", "2+2"), "4\n")
 
+# Test -u (Unbuffered stdout & stderr): only test this can be passed in 
+TestCommandLine(('-u', '-c', 'print 2+2'), "4\n")
+
 # Test -X:MaxRecursion
 TestCommandLine(("-X:MaxRecursion", "2", "-c", "2+2"), "4\n")
 TestCommandLine(("-X:MaxRecursion", "3.14159265", "-c", "2+2"), ("regexp", usageRegex))
@@ -240,4 +243,5 @@ TestCommandLine(("-Q", "new", "-c", "3/2"), "1.5\n")
 TestCommandLine(("-Q", "old", "-c", "3/2"), "1\n")
 TestCommandLine(("-Q", "warn", "-c", "3/2"), "1\n")
 TestCommandLine(("-Q", "warnall", "-c", "3/2"), "1\n")
+
 

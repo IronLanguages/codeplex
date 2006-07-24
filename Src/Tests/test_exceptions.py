@@ -469,5 +469,21 @@ def test_methsonexcepobject():
 			#AreEqual(se.clsException.offset, 2)
 			AreEqual(se.clsException.filename, "Error")
 			AreEqual(se.clsException.text, "if 2==2: x=")
-		
-test_methsonexcepobject()
+
+def test_bug893_clionly():
+    def bar(): return 1 + 'abc'
+    unique_string = "<this is unique string>"
+    c = compile('bar()', unique_string, 'single')
+    
+    try:    eval(c)
+    except: x= sys.exc_info()
+    Assert(unique_string in str(x[1].clsException))
+
+def test_serializable_clionly():
+    import clr        
+    import System
+    path = clr.GetClrType(ExceptionsTest).Assembly.Location
+    mbro = System.AppDomain.CurrentDomain.CreateInstanceFromAndUnwrap(path, "IronPythonTest.EngineTest")
+    AssertError(AssertionError, mbro.Run, 'raise AssertionError')      
+        
+run_test(__name__)

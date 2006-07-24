@@ -36,7 +36,7 @@ agentsvr_path = path_combine(windir, r"msagent\agentsvr.exe")
 # (Registered)
 # (Not Registered)   excel/merlin
 
-def _test_common(o):
+def _test_common_on_object(o):
     for x in ['GetHashCode', 'GetPassword', '__repr__', 'ToString']:
         Assert(x in dir(o))
 
@@ -66,16 +66,23 @@ def test__1_registered_nopia():
     run_register_com_component(scriptpw_path)
     
     pwcType = Type.GetTypeFromProgID('ScriptPW.Password.1')
-    pwcInst = Activator.CreateInstance(pwcType)
     
-    Assert('__ComObject' in repr(pwcInst))
+    pwcInst = Activator.CreateInstance(pwcType)
+
+    # looks like: <System.__ComObject  uninitialized>
+    for x in ['__ComObject', 'uninitialized']:
+        Assert(x in repr(pwcInst))
     AreEqual('System.__ComObject', pwcInst.ToString())
     
     try: del pwcInst.GetPassword
     except AttributeError: pass
     else: Fail("'__ComObject' object has no attribute 'GetPassword'")
     
-    _test_common(pwcInst)
+    _test_common_on_object(pwcInst)
+    
+    # looks like: <System.__ComObject  with interfaces [<type 'Password'> <type 'IPassword'>]>
+    for x in ['__ComObject', 'Password', 'IPassword']:
+        Assert(x in repr(pwcInst))
 
 def test__3_registered_with_pia():
     run_tlbimp(scriptpw_path, "spwLib")
@@ -93,7 +100,7 @@ def test__3_registered_with_pia():
     except AttributeError: pass
     else: Fail("attribute 'GetPassword' of 'PasswordClass' object is read-only")
     
-    _test_common(pc)
+    _test_common_on_object(pc)
     
 def test__2_unregistered_nopia():
     # Check to see that namespace 'spwLib' isn't accessible
@@ -138,17 +145,27 @@ def test_merlin():
 
 from Microsoft.Win32 import Registry
 
-if Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\11.0\\Excel"):
-    def test_excel():
-        import clr
-        clr.AddReferenceByName('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
+def IsOfficeInstalled(product):
+    return Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\11.0\\%s" % product) or Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\12.0\\%s" % product)
 
+def TryGetTypeFromProgId(product): 
+    return Type.GetTypeFromProgID("%s.Application.11" % product) or Type.GetTypeFromProgID("%s.Application.12" % product)
+
+def TryLoadInteropAssembly(product):
+    try:    clr.AddReferenceByName('Microsoft.Office.Interop.%s, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c' % product)
+    except: 
+        try: clr.AddReferenceByName('Microsoft.Office.Interop.%s, Version=12.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c' % product)
+        except: pass
+    
+if IsOfficeInstalled("Excel"):
+    def test_excel():
+        TryLoadInteropAssembly("Excel")
+        
         try: import Microsoft.Office.Interop.Excel as Excel
         except ImportError: 
-            print "Warning: VSTO is not installed"
+            print "Skip: VSTO/Excel is not installed"
             return
         
-        saved = number_of_process('excel.exe')
         ex = None
         try: 
             ex = Excel.ApplicationClass() 
@@ -164,17 +181,21 @@ if Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\11.0\\Excel"):
                 for j in range(1, 10):
                     ws.Cells[i, j] = i * j
             
-            #add more here related to get_Range, chart after fix
-            #rng = ws.get_Range('A1', '')
+            rng = ws.Range['A1', 'B3']
+            AreEqual(6, rng.Count)
+
+            co = ws.ChartObjects()
+            graph = co.Add(100, 100, 200, 200)
+            graph.Chart.ChartWizard(rng, Excel.XlChartType.xl3DColumn)                        
         finally:    
             if ex: ex.Quit()
             else: print "ex is %s" % ex
 
-if Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\11.0\\PowerPoint"):
+if IsOfficeInstalled("PowerPoint"):
     def test_powerpoint():
         pp = None   
         try:
-            ppt = Type.GetTypeFromProgID("PowerPoint.Application.11")
+            ppt = TryGetTypeFromProgId("PowerPoint")
             pp = Activator.CreateInstance(ppt)
             # test that late-binding call to Name works the same as the one from the typeinfo
             ppName = ppt.InvokeMember("Name", BindingFlags.GetProperty, None, pp, None)
@@ -200,6 +221,7 @@ if Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\11.0\\PowerPoin
             
             Assert('ToString' in dir(pp))
             Assert('ActiveWindow' in dir(pp))
+           
         finally:
             if pp: pp.Quit()
             else: print "ex is %s" % ex

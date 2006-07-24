@@ -186,16 +186,16 @@ def GetTotalMemory():
         System.GC.WaitForPendingFinalizers()
     return System.GC.GetTotalMemory(True)
 
-
 def run_test(mod_name, noOutputPlease=False):
     import sys
     module = sys.modules[mod_name]
     for name in dir(module): 
         obj = getattr(module, name)
-        if isinstance(obj, types.functionType) and name.startswith("test_"): 
-            if not noOutputPlease and (mod_name == '__main__'): 
-                print "Testing %s" % name
-            obj()
+        if isinstance(obj, types.functionType):
+            if name.startswith("test_"): 
+                if name.endswith("_clionly") and not is_cli: continue
+                if not noOutputPlease and (mod_name == '__main__'): print "Testing %s" % name
+                obj()
 
 def run_class(mod_name, verbose=False): 
     pass

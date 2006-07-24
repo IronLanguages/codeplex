@@ -86,7 +86,8 @@ IronPythonTests = {
                 '''
                 test_array
                 test_assembly
-                test_callback
+                test_callback 
+                test_cliclass
                 test_clrexception
                 test_clrload
                 test_clrload2
@@ -113,7 +114,6 @@ IronPythonTests = {
                 test_assert
                 test_attr
                 test_class
-                test_cliclass
                 test_closure
                 test_decorator
                 test_doc
