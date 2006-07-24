@@ -432,14 +432,16 @@ test = r"""class WindowsApplicationPY: # namespace
 runTextTest(test, False)
 
 # verify we can handle imports defined outside the namespace, and round-trip that correctly
-test = r"""from System import *
+test = r"""import System
 from System.Windows.Forms import *
 from System.ComponentModel import *
 from System.Drawing import *
 from clr import *
-class WindowsApplicationPY: # namespace
+class WindowsApplication1: # namespace
     
-    class Form1(Form):
+    class Form1(System.Windows.Forms.Form):
+        """'"""type(_button2) == System.Windows.Forms.Button, type(_button1) == System.Windows.Forms.Button"""'"""
+        __slots__ = ['_button2', '_button1']
         def __init__(self):
             self.InitializeComponent()
         
@@ -450,14 +452,27 @@ class WindowsApplicationPY: # namespace
         
         @returns(None)
         def InitializeComponent(self):
+            self._button1 = System.Windows.Forms.Button()
+            self._button2 = System.Windows.Forms.Button()
             self.SuspendLayout()
-            self.AutoScaleDimensions = SizeF(6.0, 13.0)
-            self.AutoScaleMode = AutoScaleMode.Font
-            self.ClientSize = Size(292, 266)
+            self._button1.Location = System.Drawing.Point(12, 22)
+            self._button1.Name = 'button1'
+            self._button1.Size = System.Drawing.Size(75, 23)
+            self._button1.TabIndex = 0
+            self._button1.Text = 'button1'
+            self._button1.UseVisualStyleBackColor = True
+            self._button2.Location = System.Drawing.Point(107, 22)
+            self._button2.Name = 'button2'
+            self._button2.Size = System.Drawing.Size(75, 23)
+            self._button2.TabIndex = 1
+            self._button2.Text = 'button2'
+            self._button2.UseVisualStyleBackColor = True
+            self.ClientSize = System.Drawing.Size(195, 68)
+            self.Controls.Add(self._button2)
+            self.Controls.Add(self._button1)
             self.Name = 'Form1'
-            self.Text = 'Form1'
+            self.Text = 'SampleForm'
             self.ResumeLayout(False)
-            self.PerformLayout()
         
     
 
@@ -609,3 +624,39 @@ Assert(not prov.Supports(SCC.GeneratorSupport.Win32Resources))
 
 AreEqual(prov.FileExtension, 'py')
 
+def test_indentation():
+    def compile_indented(indent, text):
+        parsed = parser.Parse(text)
+        
+        res = SIO.StringWriter()
+        opts = SCC.CodeGeneratorOptions()
+        opts.BlankLinesBetweenMembers = False
+        opts.IndentString = indent
+        
+        prov.GenerateCodeFromCompileUnit(parsed, res, opts)
+        AreEqual(str(res), text)
+
+    text = """import sys
+
+class Test(object):
+    def Method(arg):
+        return 30
+    
+
+""".replace('\n','\r\n')
+
+    for indent in [None, '', '    ']:
+        compile_indented(indent, text) #All of these should become indented 4 spaces
+
+    text = """import sys
+
+class Test(object):
+  def Method(arg):
+    return 30
+  
+
+""".replace('\n','\r\n')
+    compile_indented('  ', text) #Should maintain a 2 space indent
+
+
+run_test(__name__)
