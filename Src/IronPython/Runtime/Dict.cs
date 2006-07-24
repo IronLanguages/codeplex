@@ -190,6 +190,8 @@ namespace IronPython.Runtime {
                 object realKey = DictOps.NullToObj(key);
                 object ret;
                 lock (this) if (TryGetValue(realKey, out ret)) return ret;
+                if (Options.Python25 && Ops.TryInvokeSpecialMethod(this, SymbolTable.Missing, out ret, key))
+                    return ret;
                 throw Ops.KeyError("'{0}'", key);
             }
             set {

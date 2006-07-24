@@ -639,6 +639,67 @@ if isPython25:
 		except AttributeError:pass
 		else: Fail("Expected AttributeError, but found None")
 
+	def test_missing():
+		# dict base class should not have __missing__
+		AreEqual(hasattr(dict, "__missing__"), False)
+		# positive cases
+		class A(dict):
+			def __missing__(self,key):
+				return 100
+		a = A({1:1, "hi":"bye"})
+		def fun():pass
+		AreEqual(hasattr(A, "__missing__"), True)
+		AreEqual( (a["hi"],a[23112],a["das"], a[None],a[fun],getattr(a,"__missing__")("IP")),("bye",100,100,100,100,100))
+		
+		# negative case
+		try: a[not_a_name]
+		except NameError: pass
+		except: Fail("Expected NameError, but found", sys.exc_info())
+		else: Fail("Expected NameError, but found None")
+		# extra paramaters
+		AssertError(TypeError,a.__missing__,300,400)
+		# less paramaters
+		AssertError(TypeError,a.__missing__)
+
+		AssertError(TypeError,a.__getitem__,A())
+		
+		#invalid __missing__ methods
+		
+		A.__missing__ = "dont call me!"
+		AssertError(TypeError,a.__getitem__,300)
+		
+		# set missing to with new function 
+		def newmissing(self,key): return key/2
+		A.__missing__ = newmissing
+		AreEqual( a[999], 999/2);
+		AssertError(TypeError,a.__getitem__,"sometext")
+		
+		del A.__missing__
+		AreEqual( a[1], 1);
+		AssertError(KeyError,a.__getitem__,"sometext")
+		
+		# inheritance scenarios
+			#basic inheritance	
+		class M(dict):
+			def __missing__(self,key): return 99
+		class N(M):pass
+		AreEqual(N({"hi":"bye"})["none"], 99)
+			
+		class C:
+			def __missing__(self,key): return 100
+		class D(C,dict):pass
+		
+		AreEqual(D({"hi":"bye"})["none"], 100)
+	
+			# inheritance -> override __missing__
+		class E(dict):
+			def __missing__(self,key): return 100
+		class F(E,dict):
+			def __missing__(self,key): return 50
+
+		AreEqual(F({"hi":"bye"})["none"], 50)
+		
+
 
 run_test(__name__)
 

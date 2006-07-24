@@ -135,6 +135,7 @@ fieldList = [
     ('iteritems', 'IterItems'),
     ('real', 'RealPart'),
     ('imag', 'ImaginaryPart'),
+    ('__missing__', 'Missing'),
 
     ('LastWellKnown', 'LastWellKnown')
     ]
