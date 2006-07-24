@@ -51,11 +51,18 @@ def my_format_exc():
         return None
 
 def getNextResultLog():
-    for x in range(1, 20):
-        fn = 'result%i.log' % x
-        if not file_exists(fn): 
-            return fn
-    raise AssertionError, 'reached 20 result log files'
+    import _random
+    r = _random.Random()
+
+    for x in xrange(1, 100):
+        for y in xrange(10):
+            fn = 'result_%i_%i.log' % (x, int(r.random() * 100))
+            try:
+                return fn, file(fn, 'w+')
+            except:
+                pass    # try next name
+
+    raise AssertionError, 'cannot create log file'
 
 # result related classes
 class TestResultSet:
@@ -225,7 +232,7 @@ class NullStream:
 
 
 class MyFileStream(NullStream):
-    def __init__(self, filename): self.sw = file(filename, 'w+')
+    def __init__(self, sw): self.sw = sw
     def close(self):    self.sw.close()
     def write(self, s):
         self.sw.write(s)
@@ -481,7 +488,7 @@ def getAllConfigs2():
 
     return l
 
-logfile = getNextResultLog()
+logname, logfile = getNextResultLog()
 logstream = MyFileStream(logfile)
 
 #if is_cli: 
@@ -571,9 +578,14 @@ def main(args):
 
     TestResultSet.PrintSummary()
     TestResultSet.SaveSummaryToFile()
+
+    if TestResultSet.FailCnt:
+        import nt
+        nt.chmod(logname, 256)
+
     logstream.close()
     
-    print '>>>> Log saved as', fullpath(logfile)    
+    print '>>>> Log saved as', fullpath(logname)    
     sys.exit(TestResultSet.FailCnt)
 
 if __name__ == "__main__": 

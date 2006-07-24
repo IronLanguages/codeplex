@@ -111,16 +111,18 @@ def test_getattr():
         def __getattr__(self, name):
             return getattr(self.f, name)
     
-    c=C("x.txt", "w")
+    tmpfile = "tmpfile.txt"
+    
+    c=C(tmpfile, "w")
     c.write("Hello\n")
     c.close()
-    c=C("x.txt", "r")
+    c=C(tmpfile, "r")
     Assert(c.readline() == "Hello\n")
     c.close()
 
     try:
         import nt
-        nt.unlink("x.txt")
+        nt.unlink(tmpfile)
     except:
         pass
             

@@ -139,18 +139,33 @@ AreEqual(stderr.close(), None)
 #    AreEqual(stderr.read(), '')
 #    AreEqual(stderr.close(), None)
     
-# bug 1148
-#tmpfile = 'tmpfile.tmp'
-#f = open(tmpfile, 'w')
-#f.close()
-#nt.unlink(tmpfile)
-#try:
-#    nt.chmod('tmpfile.tmp', 256)
-#except Exception:
-#    pass #should throw when trying to access file deleted by unlink
-#else:
-#    Assert(False,"Error! Trying to access file deleted by unlink should have thrown.")
-#
+tmpfile = 'tmpfile.tmp'
+f = open(tmpfile, 'w')
+f.close()
+nt.unlink(tmpfile)
+try:
+    nt.chmod('tmpfile.tmp', 256)
+except Exception:
+    pass #should throw when trying to access file deleted by unlink
+else:
+    Assert(False,"Error! Trying to access file deleted by unlink should have thrown.")
+
+try:
+    tmpfile = "tmpfile2.tmp"
+    f = open(tmpfile, "w")
+    f.write("testing chmod")
+    f.close()
+    nt.chmod(tmpfile, 256)
+    AssertError(OSError, nt.unlink, tmpfile)
+    nt.chmod(tmpfile, 128)
+    nt.unlink(tmpfile)
+    AssertError(IOError, file, tmpfile)
+finally:
+    try:
+        nt.chmod(tmpfile, 128)
+        nt.unlink(tmpfile)
+    except:
+        print "exc"
 
 # verify that nt.stat reports times in seconds, not ticks...
 

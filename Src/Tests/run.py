@@ -60,6 +60,7 @@ To leverage your dual-proc machine, you may open two IP windows, and type
 
 import nt
 import sys
+import re
 
 from lib.assert_util import * 
 from lib.file_util import *
@@ -116,8 +117,16 @@ def clean_log_files():
     try:
         ipys = [x for x in nt.popen('tasklist.exe').readlines() if x.lower().startswith('ipy.exe')]
         if len(ipys) == 1:
-            for x in range(1, 20): 
-                delete_files('result%i.log' % x)
+            class matcher:
+                def __init__(self):
+                    self.pattern = re.compile("result.*\.log")
+                def __call__(self, value):
+                    result = re.match(self.pattern, value)
+                    return result and result.endpos == len(value)
+            f = nt.listdir(".")
+            f = filter(matcher(), f)
+            delete_files(*f)
+
     except: pass
 
 def main(args):

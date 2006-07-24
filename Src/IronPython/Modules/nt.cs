@@ -751,8 +751,8 @@ namespace IronPython.Modules {
             return ExceptionConverter.CreateThrowable(error, e.Message);
         }
 
-        private const int S_IWRITE = 0x200;
-        private const int S_IREAD = 0x400;
+        private const int S_IWRITE = 0x80;
+        private const int S_IREAD = 0x100;
 
         private static void addBase(string[] files, List ret) {
             foreach (string file in files) {
