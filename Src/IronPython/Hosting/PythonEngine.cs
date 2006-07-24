@@ -43,7 +43,7 @@ namespace IronPython.Hosting {
         #region Public accessors
 
         /// <summary>
-        /// Skip the first line of the code to execute. This is useful for Unix scripts which
+        /// Skip the first line of the code to execute. This is useful for executing Unix scripts which
         /// have the command to execute specified in the first line.
         /// This only apply to the script code executed by the PythonEngine APIs, but not for other script code 
         /// that happens to get called as a result of the execution.
@@ -54,11 +54,12 @@ namespace IronPython.Hosting {
         }
 
         /// <summary>
-        /// Enable CLI debugging. This allows debugging the script with a CLI debugger. Also, CLI exceptions
-        /// will have line numbers in the stack-trace.
+        /// Enable CLR debugging of script files. This allows debugging the script with a CLR debugger.
+        /// It does not apply to the PythonEngine.Evaluate set of APIs since it is not possible to step
+        /// through the script code using a debugger.
         /// Note that this is independent of the "traceback" Python module.
-        /// Also, the generated code will not be reclaimed, and so this should only be used for bounded number 
-        /// of executions.
+        /// Also, the generated code will not be garbage-collected, and so this should only be used for
+        /// bounded number of executions.
         /// </summary>
         public bool ClrDebuggingEnabled {
             get { return clrDebuggingEnabled; }
@@ -102,7 +103,7 @@ namespace IronPython.Hosting {
         public static string VersionString {
             get {
                 Version pythonVersion = Version;
-                string version = String.Format("IronPython {0}.{1}.{2} (Beta) on .NET {3}",
+                string version = String.Format("IronPython {0}.{1}.{2} on .NET {3}",
                                   pythonVersion.Major, pythonVersion.Minor, pythonVersion.Build,
                                   Environment.Version);
                 return version;
@@ -369,10 +370,11 @@ namespace IronPython.Hosting {
             compiledCode.Run(moduleScope);
         }
 
-        private CompiledCode Compile(Parser p) {
+        private CompiledCode Compile(Parser p, bool debuggingPossible) {
             Statement s = p.ParseFileInput();
 
-            CompiledCode compiledCode = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, Sys.EngineOptions.ClrDebuggingEnabled);
+            bool generateDebugInfo = debuggingPossible & Sys.EngineOptions.ClrDebuggingEnabled;
+            CompiledCode compiledCode = OutputGenerator.GenerateSnippet(p.CompilerContext, s, false, generateDebugInfo);
             compiledCode.engine = this;
             return compiledCode;
         }
@@ -528,13 +530,7 @@ namespace IronPython.Hosting {
 
         public object Import(string moduleName) {
             EnsureValidModule(defaultModule);
-
-            object mod = Importer.ImportModule(defaultModule.CallerContext, moduleName, true);
-            if (mod != null) {
-                string[] names = moduleName.Split('.');
-                defaultModule.CallerContext.Globals[SymbolTable.StringToId(names[names.Length - 1])] = mod;
-            }
-            return mod;
+            return defaultModule.Import(moduleName);
         }
         #endregion
 
@@ -949,13 +945,13 @@ namespace IronPython.Hosting {
                 context = compilerContext.CopyWithNewSourceFile(sourceFileName);
 
             Parser p = Parser.FromString(Sys, context, scriptCode);
-            return Compile(p);
+            return Compile(p, sourceFileName != null);
         }
 
         public CompiledCode CompileFile(string fileName) {
             if (fileName == null) throw new ArgumentNullException("fileName");
             Parser p = Parser.FromFile(Sys, compilerContext.CopyWithNewSourceFile(fileName));
-            return Compile(p);
+            return Compile(p, true);
         }
 
         #endregion

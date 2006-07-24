@@ -24,18 +24,20 @@ from System import *
 
 # Get a temporary directory in which the tests can scribble.
 tmpdir = Environment.GetEnvironmentVariable("TEMP")
+tmpdir = IO.Path.Combine(tmpdir, "IronPython")
 
 # Name of a temporary file used to capture console output.
-tmpfile = tmpdir + "\\tmp_output.txt"
+tmpfile = IO.Path.Combine(tmpdir, "tmp_output.txt")
 
 # Name of a batch file used to execute the console to workaround the fact we have no way to redirect stdout
 # from nt.spawnl.
-batfile = tmpdir + "\\__runconsole.bat"
+batfile = IO.Path.Combine(tmpdir, "__runconsole.bat")
 
 f = file(batfile, "w")
 f.write("@" + sys.executable + " >" + tmpfile + " 2>&1 %*\n")
 f.close()
 
+############################################################
 # Runs the console with the given tuple of arguments and verifies that the output and exit code are as
 # specified. The expected_output argument can be specified in various ways:
 #   None        : No output comparison is performed
@@ -79,6 +81,7 @@ def TestCommandLine(args, expected_output, expected_exitcode = 0):
         else:
             Assert(False, "Invalid type for expected_output")
 
+############################################################
 # Runs the console with the given argument string with the expectation that it should enter interactive mode.
 # Meaning, for one, no -c parameter.  This is useful for catching certain argument parsing errors.
 def TestInteractive(args, expected_exitcode = 0):
@@ -90,16 +93,41 @@ def TestInteractive(args, expected_exitcode = 0):
     
     ipi.End()
 
+############################################################
+def TestScript(commandLineArgs, script, expected_output, expected_exitcode = 0):
+    scriptFileName = "script_" + str(hash(script)) + ".py"
+    tmpscript = IO.Path.Combine(tmpdir, scriptFileName)
+    f = file(tmpscript, "w")
+    f.write(script)
+    f.close()
+    args = commandLineArgs + (tmpscript,)
+    TestCommandLine(args, expected_output, expected_exitcode)
+
+############################################################
+def test_exit():
+    # Test exit code with sys.exit(int)
+    TestCommandLine(("-c", "import sys; sys.exit(0)"),          "",         0)
+    TestCommandLine(("-c", "import sys; sys.exit(200)"),        "",         200)
+    TestScript((), "import sys\nclass C(int): pass\nc = C(200)\nsys.exit(c)\n", "", 200)
+
+    # Test exit code with sys.exit(non-int)
+    TestCommandLine(("-c", "import sys; sys.exit(None)"),       "",         1)
+    TestCommandLine(("-c", "import sys; sys.exit('goodbye')"),  "goodbye\n",1)
+    TestCommandLine(("-c", "import sys; sys.exit(200L)"),       "200\n",    1)
+
+############################################################
+# Test the -c (command as string) option.
+
 # regexp for the output of PrintUsage
 usageRegex = "IronPython console:(.+)Usage.*"
 
-# Test the -c (command as string) option.
 TestCommandLine(("-c", "print 'foo'"), "foo\n")
 TestCommandLine(("-c", "raise 'foo'"), ("lastline", "foo\n"), 1)
 TestCommandLine(("-c", "import sys; sys.exit(123)"), "", 123)
 TestCommandLine(("-c", "import sys; print sys.argv", "foo", "bar", "baz"), "['-c', 'foo', 'bar', 'baz']\n")
 TestCommandLine(("-c",), ("regexp", usageRegex))
 
+############################################################
 # Test the -S (suppress site initialization) option.
 
 # Create a local site.py that sets some global context. Do this in a temporary directory to avoid accidently
@@ -119,20 +147,14 @@ TestCommandLine(("-S", "-c", "import sys; print sys.foo"), ("lastline", "Attribu
 # Test the -V (print version and exit) option.
 TestCommandLine(("-V",), ("regexp", "IronPython ([0-9.]+)(.*) on .NET ([0-9.]+)\n"))
 
+############################################################
 # Test the -OO (suppress doc string optimization) option.
+def test_OO():
+    foo_doc = "def foo():\n\t'OK'\nprint foo.__doc__\n"
+    TestScript((),       foo_doc, "OK\n")
+    TestScript(("-OO",), foo_doc, "None\n")
 
-# Write a script which defines a function with a doc string and then attempts to read it back (it's
-# essentially impossible to do this from a -c command line since there's no way to terminate the function
-# suite).
-tmpscript = tmpdir + "\\doc.py"
-f = file(tmpscript, "w")
-f.write("def foo():\n\t'OK'\nprint foo.__doc__\n")
-f.close()
-
-TestCommandLine((tmpscript, ), "OK\n")
-TestCommandLine(("-OO", tmpscript), "None\n")
-
-
+############################################################
 # Test the -t and -tt (warnings/errors on inconsistent tab usage) options.
 
 # Write a script containing inconsistent use fo tabs.
@@ -180,10 +202,11 @@ nt.unlink(tmpscript2)
 nt.unlink(tmpscript3)
 
 # Test -W (set warning filters) option.
-TestCommandLine(("-c", "import sys; print sys.warnoptions"), "[]\n")
-TestCommandLine(("-W", "foo", "-c", "import sys; print sys.warnoptions"), "['foo']\n")
-TestCommandLine(("-W", "foo", "-W", "bar", "-c", "import sys; print sys.warnoptions"), "['foo', 'bar']\n")
-TestCommandLine(("-W",), ("regexp", usageRegex))
+def test_W():
+    TestCommandLine(("-c", "import sys; print sys.warnoptions"), "[]\n")
+    TestCommandLine(("-W", "foo", "-c", "import sys; print sys.warnoptions"), "['foo']\n")
+    TestCommandLine(("-W", "foo", "-W", "bar", "-c", "import sys; print sys.warnoptions"), "['foo', 'bar']\n")
+    TestCommandLine(("-W",), ("regexp", usageRegex))
 
 # Test -?
 TestCommandLine(("-?",), ("regexp", usageRegex))
@@ -235,13 +258,15 @@ nt.unlink("nonexistent.py")
 TestCommandLine(("nonexistent.py",), "File nonexistent.py does not exist\n", 1)
 
 # Test -Q
-TestCommandLine(("-Qnew", "-c", "3/2"), "1.5\n")
-TestCommandLine(("-Qold", "-c", "3/2"), "1\n")
-TestCommandLine(("-Qwarn", "-c", "3/2"), "1\n")
-TestCommandLine(("-Qwarnall", "-c", "3/2"), "1\n")
-TestCommandLine(("-Q", "new", "-c", "3/2"), "1.5\n")
-TestCommandLine(("-Q", "old", "-c", "3/2"), "1\n")
-TestCommandLine(("-Q", "warn", "-c", "3/2"), "1\n")
-TestCommandLine(("-Q", "warnall", "-c", "3/2"), "1\n")
+def test_Q():
+    TestCommandLine(("-Qnew", "-c", "3/2"), "1.5\n")
+    TestCommandLine(("-Qold", "-c", "3/2"), "1\n")
+    TestCommandLine(("-Qwarn", "-c", "3/2"), "1\n")
+    TestCommandLine(("-Qwarnall", "-c", "3/2"), "1\n")
+    TestCommandLine(("-Q", "new", "-c", "3/2"), "1.5\n")
+    TestCommandLine(("-Q", "old", "-c", "3/2"), "1\n")
+    TestCommandLine(("-Q", "warn", "-c", "3/2"), "1\n")
+    TestCommandLine(("-Q", "warnall", "-c", "3/2"), "1\n")
 
+run_test(__name__)
 

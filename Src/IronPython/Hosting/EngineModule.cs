@@ -51,6 +51,21 @@ namespace IronPython.Hosting {
             if (name == String.Empty) name = "<Empty Name>";
             return base.ToString() + ":" + name;
         }
+
+        /// <summary>
+        /// Usage:
+        ///     engineModule.Import("sys")
+        ///     engineModule.Import("foo.bar")
+        /// </summary>
+        public object Import(string moduleName) {
+            object module = Importer.ImportModule(CallerContext, moduleName, true);
+            if (module != null) {
+                string[] names = moduleName.Split('.');
+                string terminalName = names[names.Length - 1];
+                globalsAdapter[SymbolTable.StringToId(terminalName)] = module;
+            }
+            return module;
+        }
         #endregion
 
         internal IAttributesDictionary GlobalsAdapter { get { return globalsAdapter; } }

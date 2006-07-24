@@ -47,17 +47,17 @@ namespace IronPython.Hosting {
 
         #region SymbolIdDictBase abstract methods
 
-        internal override IDictionary<object, object> AsObjectKeyedDictionary() {
+        public override IDictionary<object, object> AsObjectKeyedDictionary() {
             return this;
         }
 
         [PythonName("clear")]
-        public override void Clear() {
+        public void Clear() {
             dict.Clear();
         }
 
         [PythonName("__iter__")]
-        public override IEnumerator GetEnumerator() {
+        public IEnumerator GetEnumerator() {
             return dict.GetEnumerator();
         }
         #endregion
@@ -139,10 +139,6 @@ namespace IronPython.Hosting {
                 }
                 return result;
             }
-        }
-
-        IDictionary<object, object> IAttributesDictionary.AsObjectKeyedDictionary() {
-            return AsObjectKeyedDictionary();
         }
 
         #endregion

@@ -1931,7 +1931,11 @@ namespace IronPython.Runtime.Operations {
             try {
                 init();
             } catch (PythonSystemExitException x) {
-                return x.GetExitCode(compiledEngine.DefaultModule.CallerContext);
+                object nonIntegerCode;
+                int exitCode = x.GetExitCode(out nonIntegerCode);
+                if (nonIntegerCode != null)
+                    Ops.Write(compiledEngine.Sys, compiledEngine.Sys.stderr, nonIntegerCode.ToString());
+                return exitCode;
             } catch (Exception e) {
                 Ops.Write(compiledEngine.Sys, compiledEngine.Sys.stderr, compiledEngine.FormatException(e));
                 return -1;

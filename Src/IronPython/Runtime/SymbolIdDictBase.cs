@@ -27,11 +27,7 @@ namespace IronPython.Runtime {
     public abstract class SymbolIdDictBase : IMapping, ICloneable, IRichEquality, IRichComparable, ICodeFormattable {
         private static object DefaultGetItem;
         #region Abstract Members
-        abstract internal IDictionary<object, object> AsObjectKeyedDictionary();
-        [PythonName("clear")] // The CustomAttribute needs to be copied down to the override
-        public abstract void Clear();
-        [PythonName("__iter__")] // The CustomAttribute needs to be copied down to the override
-        public abstract System.Collections.IEnumerator GetEnumerator();
+        abstract public IDictionary<object, object> AsObjectKeyedDictionary();
         #endregion
 
         #region IMapping Members

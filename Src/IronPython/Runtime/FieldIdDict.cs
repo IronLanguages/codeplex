@@ -231,7 +231,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("clear")]
-        public override void Clear() {
+        public void Clear() {
             lock (this) data.Clear();
         }
 
@@ -300,7 +300,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         [PythonName("__iter__")]
-        public override System.Collections.IEnumerator GetEnumerator() {
+        public System.Collections.IEnumerator GetEnumerator() {
             foreach (KeyValuePair<SymbolId, object> o in data) {
                 if (o.Key == SymbolTable.ObjectKeys) continue;
                 yield return SymbolTable.IdToString(o.Key);
@@ -375,11 +375,7 @@ namespace IronPython.Runtime {
 
         public ICollection<object> Keys { get { return AsObjectKeyedDictionary().Keys; } }
 
-        IDictionary<object, object> IAttributesDictionary.AsObjectKeyedDictionary() {
-            return AsObjectKeyedDictionary();
-        }
-
-        internal override IDictionary<object, object> AsObjectKeyedDictionary() {
+        public override IDictionary<object, object> AsObjectKeyedDictionary() {
             return this;
         }
 

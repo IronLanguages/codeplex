@@ -144,8 +144,7 @@ try:
     sys.exit(None)
     Assert(False)
 except Exception, e:
-	# bug 1100
-	#AreEqual(e[0], None)
+	AreEqual(e[0], None)
 	pass
 try:
     sys.exit(-10)

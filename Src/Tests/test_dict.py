@@ -719,6 +719,16 @@ def test_same_but_different():
     
     AreEqual({-10:0, -10L:1}, {-10:1})
 
+#####################################################################
+def test_module_dict():
+    me = sys.modules[__name__]
+    moduleDict = me.__dict__
+    AreEqual(isinstance(moduleDict, dict), True)
+    AreEqual(moduleDict.__contains__("test_module_dict"), True)
+    AreEqual(moduleDict["test_module_dict"], test_module_dict)
+    # !!! 
+    if not is_cli:
+        AreEqual(moduleDict.keys().__contains__("test_module_dict"), True)
 
 def test_eval_locals_simple():
     class Locals(dict):

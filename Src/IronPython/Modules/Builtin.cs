@@ -352,8 +352,7 @@ namespace IronPython.Modules {
                 return e.Evaluate(new NameEnvironment(moduleScope.Module, ((ICallerContext)moduleScope).Locals));
             } else {
                 Statement s = new ReturnStatement(e);
-                bool enableDebugging = moduleScope.SystemState.EngineOptions.ClrDebuggingEnabled;
-                CompiledCode compiledCode = OutputGenerator.GenerateSnippet(cc, s, false, enableDebugging);
+                CompiledCode compiledCode = OutputGenerator.GenerateSnippet(cc, s);
                 return compiledCode.Run(moduleScope);
             }
         }

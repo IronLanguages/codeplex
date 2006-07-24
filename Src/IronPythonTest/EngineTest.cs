@@ -193,10 +193,8 @@ namespace IronPythonTest {
             AreEqual(1, standardEngine.EvaluateAs<int>("x", publishedScope));
 
             // Ensure that the published scope is accessible from other scopes using sys.modules
-            standardEngine.Execute(@"
-import sys
-x_from_published_scope_test = sys.modules['published_scope_test'].x
-");
+            standardEngine.Import("sys");
+            standardEngine.Execute("x_from_published_scope_test = sys.modules['published_scope_test'].x");
             AreEqual(1, standardEngine.EvaluateAs<int>("x_from_published_scope_test"));
         }
 
@@ -354,6 +352,12 @@ del customSymbol", customModule);
             // vars()
             IDictionary vars = standardEngine.EvaluateAs<IDictionary>("vars()", customModule);
             AreEqual(true, vars.Contains("customSymbol"));
+
+            // Miscellaneous APIs
+            customModule.Import("sys");
+            AreEqual(standardEngine.EvaluateAs<string>("sys.ps1", customModule), ">>> ");
+            IntIntDelegate d = standardEngine.CreateLambda<IntIntDelegate>("customSymbol + arg", customModule);
+            AreEqual(d(1), CustomDictionary.customSymbolValue + 1);
         }
 
         public void ScenarioModuleWithLocals() {
@@ -615,6 +619,13 @@ global_variable = 300", standardEngine.DefaultModule, locals);
                 if (e2.StackTrace.Contains(lineNumber1) || e2.StackTrace.Contains(lineNumber2))
                     throw new Exception("Debugging is enabled even though Options.ClrDebuggingEnabled is not specified");
             }
+
+            // Ensure that all APIs work
+            AreEqual(debuggableEngine.EvaluateAs<int>("x"), 1);
+            IntIntDelegate d = debuggableEngine.CreateLambda<IntIntDelegate>("arg + x");
+            AreEqual(d(100), 101);
+            d = debuggableEngine.CreateMethod<IntIntDelegate>("var = arg + x\nreturn var");
+            AreEqual(d(100), 101);
         }
 
         public void ScenarioExecuteFileOptimized() {
@@ -685,7 +696,7 @@ global_variable = 300", standardEngine.DefaultModule, locals);
             pe.SetStandardError(stderr);
             pe.SetStandardInput(stdin);
             pe.SetStandardOutput(stdout);
-            pe.Execute("import sys");
+            pe.Import("sys");
 
             stdin.Write(encoding.GetBytes("This is stdout"), 0, 14);
             stdin.Position = 0;

@@ -1398,11 +1398,14 @@ namespace IronPython.Compiler.Generation {
             foreach (char ch in System.IO.Path.GetInvalidFileNameChars()) {
                 mname = mname.Replace(ch, '_');
             }
-            string filename = Environment.GetEnvironmentVariable("TEMP") + "\\gen_" + mname + "_" + System.Threading.Interlocked.Increment(ref count) + ".il";
-            ilOut = new StreamWriter(filename);
+            string tempFolder = Environment.GetEnvironmentVariable("TEMP");
+            tempFolder = Path.Combine(tempFolder, "IronPython");
+            string filename = "gen_" + mname + "_" + System.Threading.Interlocked.Increment(ref count) + ".il";
+            string fullFileName = Path.Combine(tempFolder, filename);
+            ilOut = new StreamWriter(fullFileName);
 
             debugSymbolWriter = typeGen.myAssembly.myModule.DefineDocument(
-                filename,
+                fullFileName,
                 SymLanguageType.ILAssembly,
                 SymLanguageVendor.Microsoft,
                 SymDocumentType.Text);

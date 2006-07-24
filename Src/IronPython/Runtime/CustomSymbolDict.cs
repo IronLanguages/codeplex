@@ -249,7 +249,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("clear")]
-        public override void Clear() {
+        public void Clear() {
             lock (this) {
                 foreach (SymbolId key in ExtraKeys) {
                     if (key.Id < 0) break;
@@ -338,7 +338,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         [PythonName("__iter__")]
-        public override System.Collections.IEnumerator GetEnumerator() {
+        public System.Collections.IEnumerator GetEnumerator() {
             return keys().GetEnumerator();
         }
 
@@ -435,11 +435,7 @@ namespace IronPython.Runtime {
 
         public ICollection<object> Keys { get { return AsObjectKeyedDictionary().Keys; } }
 
-        IDictionary<object, object> IAttributesDictionary.AsObjectKeyedDictionary() {
-            return AsObjectKeyedDictionary();
-        }
-
-        internal override IDictionary<object, object> AsObjectKeyedDictionary() {
+        public override IDictionary<object, object> AsObjectKeyedDictionary() {
             return this;
         }
 

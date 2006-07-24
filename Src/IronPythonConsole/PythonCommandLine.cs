@@ -392,6 +392,15 @@ namespace IronPythonConsole {
             return version;
         }
 
+        private static int GetEffectiveExitCode(PythonSystemExitException e) {
+            object nonIntegerCode;
+            int exitCode = e.GetExitCode(out nonIntegerCode);
+            if (nonIntegerCode != null) {
+                MyConsole.WriteLine(nonIntegerCode.ToString(), Style.Error);
+            }
+            return exitCode;
+        }
+
         private static void ImportSite(PythonEngine engine) {
             if (!ConsoleOptions.ImportSite)
                 return;
@@ -461,7 +470,7 @@ namespace IronPythonConsole {
 #endif
                     result = 0;
                 } catch (PythonSystemExitException pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode();
+                    result = GetEffectiveExitCode(pythonSystemExit);
                 } catch (Exception e) {
                     MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
@@ -482,7 +491,7 @@ namespace IronPythonConsole {
 #endif
                     result = 0;
                 } catch (PythonSystemExitException pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode();
+                    result = GetEffectiveExitCode(pythonSystemExit);
                 } finally {
                     PythonEngine.DumpDebugInfo();
                 }
@@ -506,7 +515,7 @@ namespace IronPythonConsole {
                     engine.ExecuteToConsole(command);
                     result = 0;
                 } catch (PythonSystemExitException pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode();
+                    result = GetEffectiveExitCode(pythonSystemExit);
                 } catch (Exception e) {
                     MyConsole.Write(engine.FormatException(e), Style.Error);
                 } finally {
@@ -517,7 +526,7 @@ namespace IronPythonConsole {
                     engine.ExecuteToConsole(command);
                     result = 0;
                 } catch (PythonSystemExitException pythonSystemExit) {
-                    result = pythonSystemExit.GetExitCode();
+                    result = GetEffectiveExitCode(pythonSystemExit);
                 } finally {
                     PythonEngine.DumpDebugInfo();
                 }
@@ -592,7 +601,7 @@ namespace IronPythonConsole {
             try {
                 result = interactiveAction(out continueInteraction);
             } catch (PythonSystemExitException se) {
-                return se.GetExitCode();
+                return GetEffectiveExitCode(se);
             } catch (ThreadAbortException tae) {
                 PythonKeyboardInterruptException pki = tae.ExceptionState as PythonKeyboardInterruptException;
                 if (pki != null) {
@@ -711,7 +720,7 @@ namespace IronPythonConsole {
                 RunStartup(engine);
                 result = 0;
             } catch (PythonSystemExitException pythonSystemExit) {
-                return pythonSystemExit.GetExitCode();
+                return GetEffectiveExitCode(pythonSystemExit);
             } catch (Exception) {
             }
 

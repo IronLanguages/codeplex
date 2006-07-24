@@ -59,11 +59,20 @@ namespace IronPython.Runtime.Exceptions {
         }
         public PythonSystemExitException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 
-        public int GetExitCode() {
-            return GetExitCode(DefaultContext.Default);
-        }
-
-        public int GetExitCode(ICallerContext context) {
+        /// <summary>
+        /// Result of sys.exit(n)
+        /// </summary>
+        /// <param name="nonIntegerCode">
+        /// null if the script exited using "sys.exit(int_value)"
+        /// null if the script exited using "sys.exit(None)"
+        /// x    if the script exited using "sys.exit(x)" where isinstance(x, int) == False
+        /// </param>
+        /// <returns>
+        /// int_value if the script exited using "sys.exit(int_value)"
+        /// 1 otherwise
+        /// </returns>
+        public int GetExitCode(out object nonIntegerCode) {
+            nonIntegerCode = null;
             object pyObj = ExceptionConverter.ToPython(this);
 
             object args;
@@ -72,16 +81,10 @@ namespace IronPython.Runtime.Exceptions {
 
             if (t == null || t.Count == 0) return 0;
 
-            try {
-                return Converter.ConvertToInt32(t[0]);
-            } catch {
-            }
+            if (TypeCache.Int32.IsInstanceOfType(t[0]))
+                 return Converter.ConvertToInt32(t[0]);
 
-            try {
-                Ops.PrintWithDest(context.SystemState, context.SystemState.stderr, t[0]);
-            } catch {
-            }
-
+            nonIntegerCode = t[0];
             return 1;
         }
     }
