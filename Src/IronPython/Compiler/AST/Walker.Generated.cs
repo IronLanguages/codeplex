@@ -158,6 +158,9 @@ namespace IronPython.Compiler.Ast {
         bool Walk(WhileStatement node);
         void PostWalk(WhileStatement node);
 
+        bool Walk(WithStatement node);
+        void PostWalk(WithStatement node);
+
         bool Walk(YieldStatement node);
         void PostWalk(YieldStatement node);
 
@@ -360,6 +363,10 @@ namespace IronPython.Compiler.Ast {
         // WhileStatement
         public virtual bool Walk(WhileStatement node) { return true; }
         public virtual void PostWalk(WhileStatement node) { }
+
+        // WithStatement
+        public virtual bool Walk(WithStatement node) { return true; }
+        public virtual void PostWalk(WithStatement node) { }
 
         // YieldStatement
         public virtual bool Walk(YieldStatement node) { return true; }
@@ -570,6 +577,10 @@ namespace IronPython.Compiler.Ast {
         // WhileStatement
         public virtual bool Walk(WhileStatement node) { return false; }
         public virtual void PostWalk(WhileStatement node) { }
+
+        // WithStatement
+        public virtual bool Walk(WithStatement node) { return false; }
+        public virtual void PostWalk(WithStatement node) { }
 
         // YieldStatement
         public virtual bool Walk(YieldStatement node) { return false; }

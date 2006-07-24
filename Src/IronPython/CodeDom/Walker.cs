@@ -784,6 +784,10 @@ namespace IronPython.CodeDom {
             throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
         }
 
+        public bool Walk(WithStatement node) {
+            throw CodeDomSerializerError(node, "cannot generate {0} for {1}", node, node.GetType());
+        }
+
         //////////////////////////////////////////////////////////////////////////////////////
         // post-walkers, we do nothing w/ these.
 
@@ -943,6 +947,10 @@ namespace IronPython.CodeDom {
         }
         public void PostWalk(FunctionDefinition node) {
         }
+
+        public void PostWalk(WithStatement node) {
+        }
+
         #endregion
 
         #region Parser state

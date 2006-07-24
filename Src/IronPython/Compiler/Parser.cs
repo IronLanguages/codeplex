@@ -171,6 +171,13 @@ namespace IronPython.Compiler {
             return PeekToken() == check;
         }
 
+        private bool PeekName(SymbolId id) {
+            NameToken t = PeekToken() as NameToken;
+            if (t != null && t.Name == id)
+                return true;
+            return false;
+        }
+
         private Token NextToken() {
             if (peekedToken != null) {
                 Token ret = peekedToken;
@@ -206,6 +213,12 @@ namespace IronPython.Compiler {
             } else {
                 return false;
             }
+        }
+
+        private void EatName(SymbolId id) {
+            if (!PeekName(id))
+                ReportSyntaxError(String.Concat("Unexpected Symbol Id :", id));
+            NextToken();
         }
 
         private Location GetStart() {
@@ -449,11 +462,19 @@ namespace IronPython.Compiler {
                 case TokenKind.At:
                 case TokenKind.KeywordDef:
                 case TokenKind.KeywordClass:
+                    //              case TokenKind.KeywordWith: Provisioning for Python 2.6 
                     parsingMultiLineCmpdStmt = true;
                     s = ParseStmt();
                     EatEndOfInput();
                     break;
                 default:
+                    if (context.AllowWithStatement && PeekName(SymbolTable.With)) {
+                        parsingMultiLineCmpdStmt = true;
+                        s = ParseStmt();
+                        EatEndOfInput();
+                        break;
+                    }
+
                     //  parseSimpleStmt takes care of one or more simple_stmts and the Newline
                     s = ParseSimpleStmt();
                     EatOptionalNewlines();
@@ -517,8 +538,10 @@ namespace IronPython.Compiler {
                     return ParseFuncDef();
                 case TokenKind.KeywordClass:
                     return ParseClassDef();
-
                 default:
+                    if (context.AllowWithStatement && PeekName(SymbolTable.With)) {
+                        return ParseWithStmt();
+                    }
                     return ParseSimpleStmt();
             }
         }
@@ -769,6 +792,8 @@ namespace IronPython.Compiler {
                 foreach (SymbolId name in names) {
                     if (name == SymbolTable.Division) {
                         context.TrueDivision = true;
+                    } else if (Options.Python25 && name == SymbolTable.WithStmt) {
+                        context.AllowWithStatement = true;
                     } else if (name == SymbolTable.NestedScopes) {
                     } else if (name == SymbolTable.Generators) {
                     } else {
@@ -941,7 +966,7 @@ namespace IronPython.Compiler {
             Expression[] bases = new Expression[0];
             if (MaybeEat(TokenKind.LeftParenthesis)) {
                 List<Expression> l = ParseTestList();
-                if (l.Count == 0) {
+                if (!Options.Python25 && l.Count == 0) {
                     ReportSyntaxError(PeekToken());
                 }
                 bases = l.ToArray();
@@ -1232,6 +1257,25 @@ namespace IronPython.Compiler {
             }
             WhileStatement ret = new WhileStatement(test, body, else_);
             ret.SetLoc(start, mid, GetEnd());
+            return ret;
+        }
+
+        //with_stmt: 'with' test [ 'as' with_var ] ':' suite
+        private WithStatement ParseWithStmt() {
+            EatName(SymbolTable.With);
+            Location start = GetStart();
+            Expression contextManager = ParseTest();
+            Expression var = null;
+            if (PeekName(SymbolTable.As)) {
+                EatName(SymbolTable.As);
+                var = ParseTest();
+            }
+
+            Location header = GetEnd();
+            Statement body = ParseSuite();
+            WithStatement ret = new WithStatement(contextManager, var, body);
+            ret.Header = header;
+            ret.SetLoc(start, GetEnd());
             return ret;
         }
 

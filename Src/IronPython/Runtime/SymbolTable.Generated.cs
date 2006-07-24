@@ -318,6 +318,10 @@ namespace IronPython.Runtime {
         public static readonly SymbolId ImaginaryPart = new SymbolId(ImaginaryPartId);
         ///<summary>Symbol for '__missing__'</summary> 
         public static readonly SymbolId Missing = new SymbolId(MissingId);
+        ///<summary>Symbol for 'with'</summary> 
+        public static readonly SymbolId With = new SymbolId(WithId);
+        ///<summary>Symbol for 'with_statement'</summary> 
+        public static readonly SymbolId WithStmt = new SymbolId(WithStmtId);
 
         // *** END GENERATED CODE ***
 
@@ -480,7 +484,9 @@ namespace IronPython.Runtime {
         public const int RealPartId               = 141; // "real"
         public const int ImaginaryPartId          = 142; // "imag"
         public const int MissingId                = 143; // "__missing__"
-        public const int LastWellKnownId          = 144; // "LastWellKnown"
+        public const int WithId                   = 144; // "with"
+        public const int WithStmtId               = 145; // "with_statement"
+        public const int LastWellKnownId          = 146; // "LastWellKnown"
 
         // *** END GENERATED CODE ***
 
@@ -643,6 +649,8 @@ namespace IronPython.Runtime {
             PublishWellKnownSymbol("real", RealPart);  // 141
             PublishWellKnownSymbol("imag", ImaginaryPart);  // 142
             PublishWellKnownSymbol("__missing__", Missing);  // 143
+            PublishWellKnownSymbol("with", With);  // 144
+            PublishWellKnownSymbol("with_statement", WithStmt);  // 145
 
             // *** END GENERATED CODE ***
 

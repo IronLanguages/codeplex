@@ -388,6 +388,24 @@ namespace IronPython.Compiler.Ast {
 
         public override void PostWalk(ReturnStatement node) { }
 
+        // WithStmt
+        public override bool Walk(WithStatement node) {
+            // Walk the expression
+            node.ContextManager.Walk(this);
+            BitArray save = bits;
+            bits = new BitArray(bits);
+
+            // Define the Rhs
+            if (node.Variable != null)
+                node.Variable.Walk(fdef);
+
+            // Flow the body
+            node.Body.Walk(this);
+
+            bits = save;
+            return false;
+        }
+
         // TryFinallyStmt
         public override bool Walk(TryFinallyStatement node) {
             BitArray save = bits;

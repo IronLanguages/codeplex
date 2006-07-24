@@ -381,6 +381,257 @@ namespace IronPython.Compiler.Ast {
         }
     }
 
+    public class WithStatement : Statement {
+        private Location header;
+        private Expression contextManager;
+        private Expression var;
+        private Statement body;
+        private List<YieldTarget> yieldTargets;// = new List<YieldTarget>();
+
+        public WithStatement(Expression contextManager, Expression var, Statement body) {
+            this.contextManager = contextManager;
+            this.var = var;
+            this.body = body;
+        }
+
+
+        public Expression Variable {
+            get { return var; }
+        }
+
+        public Expression ContextManager {
+            get { return contextManager; }
+        }
+
+        public Statement Body {
+            get { return body; }
+        }
+
+        public Location Header {
+            get { return header; }
+            set { header = value; }
+        }
+
+        public IList<YieldTarget> YieldTargets {
+            get { return yieldTargets; }
+        }
+
+        internal void AddYieldTarget(YieldTarget target) {
+            if (yieldTargets == null)
+                yieldTargets = new List<YieldTarget>();
+            yieldTargets.Add(target);
+        }
+
+        // With uses 3 local slots 
+        internal static int LocalSlots {
+            get {
+                return 3;
+            }
+        }
+
+
+        // ***WITH STATEMENT CODE GENERATION ALGORITHM*** 
+        //
+        //GRAMMAR :=
+        //with EXPR as VAR:
+        //    BLOCK
+        //
+        //CODE GEN :=
+        //
+        //mgr = (EXPR)
+        //exit = mgr.__exit__  # Not calling it yet
+        //value = mgr.__enter__()
+        //exc = True
+        //isTryYielded = False
+        //try:
+        //
+        //   VAR = value  # Only if "as VAR" is present
+        //   BLOCK 
+        //   // if yield happens in the Block, 
+        //   // then isTryYielded is set to True by Yield's Code Gen
+        //except:
+        //   # The exceptional case is handled here
+        //   exc = False
+        //   if not exit(*sys.exc_info()):
+        //        raise
+        //   # The exception is consumed if exit() returns true
+        //finally:
+        //    # The normal and non-local-goto cases are handled here
+        //    if  isTryYielded = False && exc == True :
+        //        exit(None, None, None)
+
+
+
+        internal override void Emit(CodeGen cg) {
+
+            Slot exc = null;
+            Slot isTryYielded = null;
+            Slot exit = null;
+
+            if (cg.IsGenerator()) {
+                exc = cg.Names.GetTempSlot("with", typeof(object));
+                isTryYielded = cg.Names.GetTempSlot("with", typeof(object));
+                exit = cg.Names.GetTempSlot("with", typeof(object));
+            } else {
+                exc = cg.GetLocalTmp(typeof(object));
+                isTryYielded = cg.GetLocalTmp(typeof(object));
+                exit = cg.GetLocalTmp(typeof(object));
+            }
+
+            // mgr = (EXPR)
+            Slot mgr = cg.GetLocalTmp(typeof(object));
+            contextManager.Emit(cg);
+            mgr.EmitSet(cg);
+
+            // exit = mgr.__exit__ # not calling it yet
+            cg.EmitCallerContext();
+            mgr.EmitGet(cg);
+            cg.EmitSymbolId("__exit__");
+            cg.EmitCall(typeof(Ops), "GetAttr");
+            exit.EmitSet(cg);
+
+            mgr.EmitGet(cg);
+            cg.FreeLocalTmp(mgr);
+            cg.EmitSymbolId("__enter__");
+            cg.EmitObjectArray(new Expression[0]);
+            cg.EmitCall(typeof(Ops), "Invoke", new Type[] { typeof(object), typeof(SymbolId), typeof(object[]) });
+            Slot value = cg.GetLocalTmp(typeof(object));
+            value.EmitSet(cg);
+
+
+            // exc = True
+            cg.EmitConstantBoxed(true);
+            exc.EmitSet(cg);
+
+            Slot choiceVar = null;
+
+            if (yieldTargets != null && yieldTargets.Count > 0) {
+                Label startOfBlock = cg.DefineLabel();
+                choiceVar = cg.GetLocalTmp(typeof(int));
+                cg.EmitInt(-1);
+                choiceVar.EmitSet(cg);
+                cg.Emit(OpCodes.Br, startOfBlock);
+
+                int index = 0;
+                foreach (YieldTarget yt in yieldTargets) {
+                    cg.MarkLabel(yt.TopBranchTarget);
+                    cg.EmitInt(index++);
+                    choiceVar.EmitSet(cg);
+                    cg.Emit(OpCodes.Br, startOfBlock);
+                }
+
+                cg.MarkLabel(startOfBlock);
+            }
+
+            cg.EmitConstantBoxed(false);
+            isTryYielded.EmitSet(cg);
+
+            Label beforeFinally = cg.DefineLabel();
+
+            cg.PushWithTryBlock(isTryYielded);
+            cg.BeginExceptionBlock();
+
+            if (yieldTargets != null && yieldTargets.Count > 0) {
+                int index = 0;
+                foreach (YieldTarget yt in yieldTargets) {
+                    choiceVar.EmitGet(cg);
+                    cg.EmitInt(index);
+                    cg.Emit(OpCodes.Beq, yt.TryBranchTarget);
+                    index++;
+                }
+                cg.FreeLocalTmp(choiceVar);
+            }
+
+            if (var != null) {
+                value.EmitGet(cg);
+                var.EmitSet(cg);
+            }
+
+            body.Emit(cg);
+
+            EmitWithCatchBlock(cg, exc, exit);
+            EmitWithFinallyBlock(cg, exc, exit, isTryYielded);
+            cg.EndExceptionBlock();
+            cg.PopTargets();
+            if (yieldTargets != null)
+                yieldTargets.Clear();
+
+        }
+
+        private void EmitWithCatchBlock(CodeGen cg, Slot exc, Slot exit) {
+            cg.BeginCatchBlock(typeof(Exception));
+            // Extract state from the carrier exception
+            cg.EmitCallerContext();
+            cg.EmitCall(typeof(Ops), "ExtractException",
+                new Type[] { typeof(Exception), typeof(ICallerContext) });
+            cg.Emit(OpCodes.Pop);
+
+            // except body 
+            cg.PushExceptionBlock(Targets.TargetBlockType.Catch, null, null);
+            cg.EmitConstantBoxed(false);
+            exc.EmitSet(cg);
+
+            cg.EmitCallerContext();
+            exit.EmitGet(cg);
+            cg.EmitObjectArray(new Expression[0]);
+            cg.EmitCallerContext();
+            cg.EmitCall(typeof(Ops), "ExtractSysExcInfo");
+            cg.EmitCall(typeof(Ops), "CallWithArgsTupleAndContext", new Type[] { typeof(ICallerContext), typeof(object), typeof(object[]), typeof(object) });
+
+            Label afterRaise = cg.DefineLabel();
+
+            cg.EmitTestTrue();
+            cg.Emit(OpCodes.Brtrue, afterRaise);
+            cg.EmitCall(typeof(Ops), "Raise", new Type[0]); //, new Type[] { typeof(object), typeof(SymbolId) });
+            cg.MarkLabel(afterRaise);
+            cg.EmitCallerContext();
+            cg.EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
+        }
+
+        private void EmitWithFinallyBlock(CodeGen cg, Slot exc, Slot exit, Slot isTryYielded) {
+            cg.PushFinallyBlock(null);
+            cg.BeginFinallyBlock();
+
+            //finally body
+            Label endOfFinally = cg.DefineLabel();
+
+            // isTryYielded == True ?
+            isTryYielded.EmitGet(cg);
+            cg.EmitTestTrue();
+            cg.Emit(OpCodes.Brtrue, endOfFinally);
+
+            // exc == False ?
+            exc.EmitGet(cg);
+            cg.EmitTestTrue();
+            cg.Emit(OpCodes.Brfalse, endOfFinally);
+
+
+            //exit(None, None, None)
+            cg.EmitCallerContext();
+            exit.EmitGet(cg);
+            cg.Emit(OpCodes.Ldnull);
+            cg.Emit(OpCodes.Ldnull);
+            cg.Emit(OpCodes.Ldnull);
+            cg.EmitCall(typeof(Ops), "CallWithContext", new Type[] { typeof(ICallerContext), typeof(object), typeof(object), typeof(object), typeof(object) });
+            cg.Emit(OpCodes.Pop);
+
+            cg.MarkLabel(endOfFinally);
+
+            // finally end
+
+        }
+
+        public override void Walk(IAstWalker walker) {
+            if (walker.Walk(this)) {
+                contextManager.Walk(walker);
+                if (var != null) var.Walk(walker);
+                body.Walk(walker);
+            }
+            walker.PostWalk(this);
+        }
+
+    }
+
     public class TryStatement : Statement {
         private Location header;
         private readonly Statement body;
@@ -501,7 +752,7 @@ namespace IronPython.Compiler.Ast {
                     handler.Target.EmitSet(cg);
                 }
 
-                cg.PushExceptionBlock(Targets.TargetBlockType.Catch, null);
+                cg.PushExceptionBlock(Targets.TargetBlockType.Catch, null, null);
 
                 handler.Body.Emit(cg);
                 cg.EmitCallerContext();
@@ -992,7 +1243,7 @@ namespace IronPython.Compiler.Ast {
         private static readonly SymbolId[] star = new SymbolId[1];
         private readonly DottedName root;
         private readonly IList<SymbolId> names;
-        private readonly IList<SymbolId> asNames;
+        private readonly IList<SymbolId> asNames ;
         private readonly bool fromFuture;
 
         public FromImportStatement(DottedName root, IList<SymbolId> names, SymbolId[] asNames)

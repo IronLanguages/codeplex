@@ -1825,8 +1825,8 @@ namespace IronPython.Runtime.Operations {
 
         // import spam.eggs
         public static object Import(PythonModule mod, string fullName) {
-            Debug.Assert(typeof(PythonModule).IsAssignableFrom(mod.GetType()), "Got non-PythonModule passed to Ops");           
-            
+            Debug.Assert(typeof(PythonModule).IsAssignableFrom(mod.GetType()), "Got non-PythonModule passed to Ops");
+
             return Importer.Import(mod, fullName, List.Make());
         }
 
@@ -2114,6 +2114,11 @@ namespace IronPython.Runtime.Operations {
             object res = ExceptionConverter.ToPython(e);
             System.Diagnostics.Debug.Assert(res != null);
             return res;
+        }
+
+        // ExtractExcInfo is so named because it extracts from sys.exc_info
+        public static Tuple ExtractSysExcInfo(ICallerContext context) {
+            return context.SystemState.exc_info();
         }
 
         public static void ClearException(ICallerContext context) {

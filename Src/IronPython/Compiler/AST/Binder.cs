@@ -264,6 +264,18 @@ namespace IronPython.Compiler.Ast {
             return true;
         }
 
+        // WithStmt
+        public override bool Walk(WithStatement node) {
+            if (node.Variable != null) {
+                node.Variable.Walk(define);
+            }
+
+            // Add locals
+            Debug.Assert(current != null);
+            current.TempsCount += WithStatement.LocalSlots;
+            return true;
+        }
+
         // FromImportStmt
         public override bool Walk(FromImportStatement node) {
             if (node.Names != FromImportStatement.Star) {

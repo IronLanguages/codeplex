@@ -27,6 +27,7 @@ namespace IronPython.Compiler {
         /// from __future__ import division
         /// </summary>
         private bool trueDivision = Options.Division == DivisionOption.New;
+        private bool allowWithStatement = false;
 
         /// <summary>
         /// store name of current file being compiled in the CompilerContext
@@ -47,6 +48,15 @@ namespace IronPython.Compiler {
             }
             internal set {
                 trueDivision = value;
+            }
+        }
+
+        public bool AllowWithStatement {
+            get {
+                return allowWithStatement;
+            }
+            internal set {
+                allowWithStatement = value;
             }
         }
 
@@ -79,6 +89,7 @@ namespace IronPython.Compiler {
         public void AddError(string message, Node node) {
             AddError(message, node, Severity.Error);
         }
+
 
         public void AddError(string message, Node node, Severity severity) {
             sink.AddError(sourceFile, message, null, node.Span, DefaultErrorCode, severity);

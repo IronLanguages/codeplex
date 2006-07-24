@@ -136,6 +136,9 @@ fieldList = [
     ('real', 'RealPart'),
     ('imag', 'ImaginaryPart'),
     ('__missing__', 'Missing'),
+    ('with', 'With'),
+    ('with_statement','WithStmt'),
+
 
     ('LastWellKnown', 'LastWellKnown')
     ]

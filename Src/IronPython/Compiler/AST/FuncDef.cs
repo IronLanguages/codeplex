@@ -580,6 +580,25 @@ namespace IronPython.Compiler.Ast {
             public abstract void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg);
         }
 
+        public sealed class WithBlock : ExceptionBlock {
+            private WithStatement stmt;
+
+            public WithBlock(WithStatement stmt)
+                : this(stmt, State.Try) {
+                // With is essentially a Try-Catch-Finally, hence reuse the Try state
+            }
+
+            public WithBlock(WithStatement stmt, State state)
+                : base(state) {
+                this.stmt = stmt;
+            }
+
+            public override void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg) {
+                stmt.AddYieldTarget(yt.FixForTry(cg));
+                ys.Label = yt.TryBranchTarget;
+            }
+        }
+
         public sealed class TryBlock : ExceptionBlock {
             private TryStatement stmt;
 
@@ -653,6 +672,18 @@ namespace IronPython.Compiler.Ast {
             return node == func;
         }
 
+        public override bool Walk(WithStatement node) {
+            WithBlock wb = new WithBlock(node);
+            // With is essentially a Try-Catch-Finally, hence Push Try Block for With Statement
+            tryBlocks.Push(wb);
+            node.Body.Walk(this);
+
+            ExceptionBlock eb = tryBlocks.Pop();
+            Debug.Assert((object)wb == (object)eb);
+
+            return false;
+        }
+
         public override bool Walk(TryFinallyStatement node) {
             TryFinallyBlock tfb = new TryFinallyBlock(node);
             tryBlocks.Push(tfb);
@@ -693,7 +724,16 @@ namespace IronPython.Compiler.Ast {
                 ExceptionBlock eb = tryBlocks.Peek();
                 eb.AddYieldTarget(node, topYields[node.Index], cg);
             } else {
-                cg.Context.AddError("yield in more than one try block", node);
+                bool isYieldInNestedWith = false;
+                foreach (ExceptionBlock e in tryBlocks) {
+                    if (e is WithBlock)
+                        isYieldInNestedWith = true;
+                }
+
+                if (Options.Python25 && isYieldInNestedWith)
+                    cg.Context.AddError("yield in nested Try and/or With blocks", node);
+                else
+                    cg.Context.AddError("yield in more than one try blocks", node);
             }
         }
 

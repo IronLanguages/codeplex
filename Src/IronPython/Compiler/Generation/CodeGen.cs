@@ -47,7 +47,8 @@ namespace IronPython.Compiler.Generation {
             Normal,
             Try,
             Finally,
-            Catch
+            Catch,
+            With
         }
 
         public static readonly Label NoLabel = new Label();
@@ -55,6 +56,7 @@ namespace IronPython.Compiler.Generation {
         public readonly Label continueLabel;
         private TargetBlockType blockType;
         public readonly Slot finallyReturns;
+        public Slot isTryYielded;
 
         public TargetBlockType BlockType {
             get {
@@ -63,14 +65,15 @@ namespace IronPython.Compiler.Generation {
         }
 
         public Targets(Label breakLabel, Label continueLabel)
-            : this(breakLabel, continueLabel, TargetBlockType.Normal, null) {
+            : this(breakLabel, continueLabel, TargetBlockType.Normal, null, null) {
         }
 
-        public Targets(Label breakLabel, Label continueLabel, TargetBlockType blockType, Slot finallyReturns) {
+        public Targets(Label breakLabel, Label continueLabel, TargetBlockType blockType, Slot finallyReturns, Slot isTryYielded) {
             this.breakLabel = breakLabel;
             this.continueLabel = continueLabel;
             this.blockType = blockType;
             this.finallyReturns = finallyReturns;
+            this.isTryYielded = isTryYielded;
         }
     }
 
@@ -180,25 +183,29 @@ namespace IronPython.Compiler.Generation {
                 (targets.Peek()).breakLabel != Targets.NoLabel);
         }
 
-        public void PushExceptionBlock(Targets.TargetBlockType type, Slot returnFlag) {
+        public void PushExceptionBlock(Targets.TargetBlockType type, Slot returnFlag, Slot isTryYielded) {
             if (targets.Count == 0) {
-                targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag));
+                targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag, isTryYielded));
             } else {
                 Targets t = targets.Peek();
-                targets.Push(new Targets(t.breakLabel, t.continueLabel, type, returnFlag));
+                targets.Push(new Targets(t.breakLabel, t.continueLabel, type, returnFlag, isTryYielded));
             }
         }
 
+        public void PushWithTryBlock(Slot isTryYielded) {
+            PushExceptionBlock(Targets.TargetBlockType.With, null, isTryYielded);
+        }
+
         public void PushTryBlock() {
-            PushExceptionBlock(Targets.TargetBlockType.Try, null);
+            PushExceptionBlock(Targets.TargetBlockType.Try, null, null);
         }
 
         public void PushFinallyBlock(Slot returnFlag) {
-            PushExceptionBlock(Targets.TargetBlockType.Finally, returnFlag);
+            PushExceptionBlock(Targets.TargetBlockType.Finally, returnFlag, null);
         }
 
         public void PushTargets(Label breakTarget, Label continueTarget) {
-            targets.Push(new Targets(breakTarget, continueTarget, BlockType, null));
+            targets.Push(new Targets(breakTarget, continueTarget, BlockType, null, null));
         }
 
         public void PopTargets() {
@@ -213,6 +220,7 @@ namespace IronPython.Compiler.Generation {
                     Emit(OpCodes.Br, t.breakLabel);
                     break;
                 case Targets.TargetBlockType.Try:
+                case Targets.TargetBlockType.With:
                     Emit(OpCodes.Leave, t.breakLabel);
                     break;
                 case Targets.TargetBlockType.Finally:
@@ -234,6 +242,7 @@ namespace IronPython.Compiler.Generation {
                     Emit(OpCodes.Br, t.continueLabel);
                     break;
                 case Targets.TargetBlockType.Try:
+                case Targets.TargetBlockType.With:
                     Emit(OpCodes.Leave, t.continueLabel);
                     break;
                 case Targets.TargetBlockType.Finally:
@@ -254,6 +263,7 @@ namespace IronPython.Compiler.Generation {
                     Emit(OpCodes.Ret);
                     break;
                 case Targets.TargetBlockType.Try:
+                case Targets.TargetBlockType.With:
                     EnsureReturnBlock();
                     if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
                         returnBlock.returnValue.EmitSet(this);
@@ -313,7 +323,7 @@ namespace IronPython.Compiler.Generation {
 
             // push catch blocks back on.
             while (popCount > 0) {
-                PushExceptionBlock(Targets.TargetBlockType.Catch, null);
+                PushExceptionBlock(Targets.TargetBlockType.Catch, null, null);
                 popCount--;
             }
         }
@@ -343,6 +353,12 @@ namespace IronPython.Compiler.Generation {
         }
 
         public void EmitYield(Expression expr, int index, Label label) {
+            if (BlockType == Targets.TargetBlockType.With) {
+                Targets t = targets.Peek();
+                EmitConstantBoxed(true);
+                t.isTryYielded.EmitSet(this);
+            }
+
             Emit(OpCodes.Ldarg_1);
             expr.Emit(this);
             Emit(OpCodes.Stind_Ref);
