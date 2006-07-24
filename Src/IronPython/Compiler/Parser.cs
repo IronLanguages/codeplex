@@ -189,6 +189,15 @@ namespace IronPython.Compiler {
             return true;
         }
 
+        private bool EatNoEof(TokenKind kind) {
+            Token t = NextToken();
+            if (t.Kind != kind) {
+                ReportSyntaxError(t, ErrorCodes.SyntaxError, false);
+                return false;
+            }
+            return true;
+        }
+
         private bool MaybeEat(TokenKind kind) {
             Token t = PeekToken();
             if (t.Kind == kind) {
@@ -222,13 +231,17 @@ namespace IronPython.Compiler {
         }
 
         private void ReportSyntaxError(Token t, int errorCode) {
+            ReportSyntaxError(t, errorCode, true);
+        }
+
+        private void ReportSyntaxError(Token t, int errorCode, bool allowIncomplete) {
             Location start = GetStart();
             if (t.Kind == TokenKind.NewLine || t.Kind == TokenKind.Dedent) {
                 if (tokenizer.IsEndOfFile) {
                     t = EatEndOfInput();
                 }
             }
-            if (t.Kind == TokenKind.EndOfFile) {
+            if (allowIncomplete && t.Kind == TokenKind.EndOfFile) {
                 errorCode |= ErrorCodes.IncompleteStatement;
             }
             ReportSyntaxError(start, tokenizer.EndLocation, String.Format("unexpected token {0}", t.Image), errorCode);
@@ -1340,8 +1353,8 @@ namespace IronPython.Compiler {
         }
 
         //suite: simple_stmt NEWLINE | Newline INDENT stmt+ DEDENT
-        private Statement ParseSuite() {
-            Eat(TokenKind.Colon);
+        private Statement ParseSuite() {            
+            EatNoEof(TokenKind.Colon);
             Location start = GetStart();
             List<Statement> l = new List<Statement>();
             if (MaybeEat(TokenKind.NewLine)) {
@@ -1590,8 +1603,8 @@ namespace IronPython.Compiler {
                     ret = new ConstantExpression(cv);
                     ret.SetLoc(start, GetEnd());
                     return ret;
-                default:
-                    ReportSyntaxError(t);
+                default:                    
+                    ReportSyntaxError(t, ErrorCodes.SyntaxError, false);
 
                     // error node
                     ret = new ErrorExpression();

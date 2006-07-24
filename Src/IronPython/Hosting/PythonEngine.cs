@@ -191,7 +191,7 @@ namespace IronPython.Hosting {
             return engineModule.GetModuleScope(locals);
         }
 
-        private static string FormatPythonException(object python) {
+        internal static string FormatPythonException(object python) {
             string result = "";
 
             // dump the python exception.
@@ -273,22 +273,28 @@ namespace IronPython.Hosting {
                 result += e.StackTrace.ToString() + Environment.NewLine;
                 if (e.InnerException != null) result += FormatStackTraces(e.InnerException, ref printedHeader);
             } else {
-                // dump inner most exception first, followed by outer most.
-                if (e.InnerException != null) result += FormatStackTraces(e.InnerException, ref printedHeader);
-
-                if (!printedHeader) {
-                    result += "Traceback (most recent call last):" + Environment.NewLine;
-                    printedHeader = true;
-                }
-                result += FormatStackTrace(new StackTrace(e, true), fsf);
-                IList<StackTrace> traces = ExceptionConverter.GetExceptionStackTraces(e);
-                if (traces != null && traces.Count > 0) {
-                    for (int i = 0; i < traces.Count; i++) {
-                        result += FormatStackTrace(traces[i], fsf);
-                    }
-                }
+                result = FormatStackTraceNoDetail(e, fsf, ref printedHeader);
             }
 
+            return result;
+        }
+
+        internal static string FormatStackTraceNoDetail(Exception e, FilterStackFrame fsf, ref bool printedHeader) {
+            string result = String.Empty;
+            // dump inner most exception first, followed by outer most.
+            if (e.InnerException != null) result += FormatStackTraceNoDetail(e.InnerException, fsf, ref printedHeader);
+
+            if (!printedHeader) {
+                result += "Traceback (most recent call last):" + Environment.NewLine;
+                printedHeader = true;
+            }
+            result += FormatStackTrace(new StackTrace(e, true), fsf);
+            IList<StackTrace> traces = ExceptionConverter.GetExceptionStackTraces(e);
+            if (traces != null && traces.Count > 0) {
+                for (int i = 0; i < traces.Count; i++) {
+                    result += FormatStackTrace(traces[i], fsf);
+                }
+            }
             return result;
         }
 

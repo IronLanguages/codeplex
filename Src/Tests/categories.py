@@ -24,6 +24,7 @@ IronPythonTests = {
                 test_builtinfunc
                 test_isinstance
                 test_execfile
+                test_help
                 ''',
             'builtintypes':
                 '''

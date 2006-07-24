@@ -102,15 +102,17 @@ namespace IronPython.Runtime {
 
             // Look for methods tagged with [PythonName("wellKnownMethodName")]
             attrs = info.GetCustomAttributes(typeof(PythonNameAttribute), false);
+            string name = null;
             if (attrs.Length > 0) {
                 Debug.Assert(attrs.Length == 1);
                 PythonNameAttribute pythonNameAttribute = attrs[0] as PythonNameAttribute;
                 string defaultDoc = GetDefaultDocumentation(pythonNameAttribute.name);
                 if (defaultDoc != null)
                     return defaultDoc;
+                name = pythonNameAttribute.name;
             }
 
-            return CreateAutoDoc(info);
+            return CreateAutoDoc(info, name, 0);
         }
 
         public static string CreateAutoDoc(MethodBase info) {
@@ -168,6 +170,9 @@ namespace IronPython.Runtime {
                 // constructor, auto-insert cls
                 ret.Append("cls");
                 needComma = true;
+            } else if (!mi.IsStatic) {
+                ret.Append("self");
+                needComma = true;
             }
 
             ParameterInfo[] pis = info.GetParameters();
@@ -198,9 +203,6 @@ namespace IronPython.Runtime {
             if (returnCount > 1) {
                 retType.Append(')');
             }
-
-            if (mi != null && mi.IsStatic)
-                retType.Insert(0, "static ");
 
             if (retType.Length != 0) retType.Append(' ');
 

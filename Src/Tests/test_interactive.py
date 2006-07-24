@@ -148,6 +148,33 @@ def test_incomplate_syntax():
     Assert("IndentationError:" in response)
     ipi.End()
 
+###########################################################
+# if , while, try, for and then EOF.
+def test_missing_test():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    response = ipi.ExecuteLine("if")
+    Assert("SyntaxError:" in response)
+    ipi.End()
+
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    response = ipi.ExecuteLine("while")
+    Assert("SyntaxError:" in response)
+    ipi.End()
+
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    response = ipi.ExecuteLine("for")
+    Assert("SyntaxError:" in response)
+    ipi.End()
+
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    response = ipi.ExecuteLine("try")
+    Assert("SyntaxError:" in response)
+    ipi.End()
+
 ##########################################################
 # Support multiple-levels of indentation
 def test_indentation_levels():

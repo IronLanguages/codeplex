@@ -145,6 +145,10 @@ def test_startandend():
     AssertError(IndexError, m.end, "-1")
     AssertError(IndexError, m.end, -1)
 
+    match = re.match(r'(?P<test>test)', 'test')
+    AreEqual(match.start('test'), 0)
+    AreEqual(match.end('test'), 4)
+    
 def test_start_of_str():
     startOfStr = re.compile('^')
     AreEqual(startOfStr.match('foobar', 1), None)

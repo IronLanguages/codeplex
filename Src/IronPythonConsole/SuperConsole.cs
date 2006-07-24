@@ -17,6 +17,7 @@ using System;
 using System.Text;
 using System.Collections;
 using System.Threading;
+using System.Diagnostics;
 
 using IronPython.Hosting;
 using IronPython.Runtime.Exceptions;
@@ -324,7 +325,9 @@ namespace IronPythonConsole {
         private void Insert(ConsoleKeyInfo key) {
             char c;
             if (key.Key == ConsoleKey.F6) {
-                c = '\x1A';
+                Debug.Assert(FinalLineText.Length == 1);
+
+                c = FinalLineText[0];
             } else {
                 c = key.KeyChar;
             }
@@ -353,10 +356,10 @@ namespace IronPythonConsole {
         }
 
         private string MapCharacter(char c) {
-            switch (c) {
-                case '\x1A': return "^Z";
-                default: return "^?";
-            }
+            if (c == 13) return "\r\n";
+            if (c <= 26) return "^" + ((char)(c + 'A' - 1)).ToString();
+
+            return "^?";
         }
 
         private int GetCharacterSize(char c) {
@@ -395,6 +398,55 @@ namespace IronPythonConsole {
             }
             rendered = text.Length;
             cursor.Place(position);
+        }
+
+        private void MoveLeft(ConsoleModifiers keyModifiers) {
+            if ((keyModifiers & ConsoleModifiers.Control) != 0) {
+                // move back to the start of the previous word
+                if (input.Length > 0 && current != 0) {
+                    bool nonLetter = IsSeperator(input[current - 1]);
+                    while (current > 0 && (current - 1 < input.Length)) {
+                        MoveLeft();
+
+                        if (IsSeperator(input[current]) != nonLetter) {
+                            if (!nonLetter) {
+                                MoveRight();
+                                break;
+                            }
+
+                            nonLetter = false;
+                        }
+                    }
+                }
+            } else {
+                MoveLeft();
+            }
+        }
+
+        private bool IsSeperator(char ch) {
+            return !Char.IsLetter(ch);
+        }
+
+        private void MoveRight(ConsoleModifiers keyModifiers) {
+            if ((keyModifiers & ConsoleModifiers.Control) != 0) {
+                // move to the next word
+                if (input.Length != 0 && current < input.Length) {
+                    bool nonLetter = IsSeperator(input[current]);
+                    while (current < input.Length) {
+                        MoveRight();
+
+                        if (current == input.Length) break;
+                        if (IsSeperator(input[current]) != nonLetter) {
+                            if (nonLetter)
+                                break;
+
+                            nonLetter = true;
+                        }
+                    }
+                }
+            } else {
+                MoveRight();
+            }
         }
 
         private void MoveRight() {
@@ -440,7 +492,7 @@ namespace IronPythonConsole {
             for (; ; ) {
                 ConsoleKeyInfo key = Console.ReadKey(true);
 
-                switch (key.Key) {
+                switch (key.Key) {                    
                     case ConsoleKey.Backspace:
                         Backspace();
                         break;
@@ -450,7 +502,7 @@ namespace IronPythonConsole {
                     case ConsoleKey.Enter:
                         Console.Write("\n");
                         string line = input.ToString();
-                        if (line == "\x1A") return null;
+                        if (line == FinalLineText) return null;
                         if (line.Length > 0) {
                             history.AddLast(line);
                         }
@@ -480,11 +532,11 @@ namespace IronPythonConsole {
                     case ConsoleKey.DownArrow:
                         SetInput(history.Next());
                         break;
-                    case ConsoleKey.RightArrow:
-                        MoveRight();
+                    case ConsoleKey.RightArrow:                        
+                        MoveRight(key.Modifiers);
                         break;
                     case ConsoleKey.LeftArrow:
-                        MoveLeft();
+                        MoveLeft(key.Modifiers);
                         break;
                     case ConsoleKey.Escape:
                         SetInput(String.Empty);
@@ -494,12 +546,24 @@ namespace IronPythonConsole {
                         break;
                     case ConsoleKey.End:
                         MoveEnd();
+                        break;                        
+                    case ConsoleKey.LeftWindows:
+                    case ConsoleKey.RightWindows:
+                        // ignore these
                         break;
                     default:
+                        if (key.KeyChar == '\x0D') goto case ConsoleKey.Enter;      // Ctrl-M
+                        if (key.KeyChar == '\x08') goto case ConsoleKey.Backspace;  // Ctrl-H
                         Insert(key);
                         break;
                 }
                 changed = true;
+            }
+        }
+
+        string FinalLineText {
+            get {
+                return Environment.OSVersion.Platform != PlatformID.Unix ? "\x1A" : "\x04";
             }
         }
 

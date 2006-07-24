@@ -163,10 +163,9 @@ if is_cli:
         import System
         Assert(System.Collections.ArrayList.__new__.__doc__[:11] == "__new__(cls")
         Assert(System.Collections.ArrayList.__doc__[:11] == "ArrayList()")
-        Assert(System.Collections.ArrayList.Repeat.__doc__.startswith("static "))
 
         # static (bool, float) TryParse(str s)
-        Assert(System.Double.TryParse.__doc__.index('(bool, float)') > 0)
-        Assert(System.Double.TryParse.__doc__.index('(str s)') > 0)
+        Assert(System.Double.TryParse.__doc__.index('(bool, float)') >= 0)
+        Assert(System.Double.TryParse.__doc__.index('(str s)') >= 0)
 
 run_test(__name__)

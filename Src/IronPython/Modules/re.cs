@@ -551,7 +551,7 @@ namespace IronPython.Modules {
             }
 
             [PythonName("start")]
-            public int Start(int group) {
+            public int Start(object group) {
                 int grpIndex = GetGroupIndex(group);
                 if (!m.Groups[grpIndex].Success) {
                     return -1;

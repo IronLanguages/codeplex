@@ -28,7 +28,7 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Modules {
     [PythonType("_locale")]
     public static class PythonLocale {
-        private static LocaleInfo currentLocale = new LocaleInfo();
+        internal static LocaleInfo currentLocale = new LocaleInfo();
 
         public static object CHAR_MAX = 127;
         public static object Error = ExceptionConverter.CreatePythonException("Error", "_locale");
@@ -98,7 +98,7 @@ Currently returns the string unmodified")]
             Time = 5,
         }
 
-        private class LocaleInfo {
+        internal class LocaleInfo {
             public LocaleInfo() {
                 Collate = CultureInfo.CurrentCulture;
                 CType = CultureInfo.CurrentCulture;

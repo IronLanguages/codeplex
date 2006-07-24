@@ -895,6 +895,17 @@ namespace IronPythonTest {
                 simple();
         }
     }
+
+    public class WriteOnly {
+        public object Value;
+
+        public object Writer {
+            set {
+                Value = value;
+            }
+        }
+    }
+
 }
 
 

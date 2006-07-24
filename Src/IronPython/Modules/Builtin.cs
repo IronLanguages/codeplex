@@ -512,22 +512,27 @@ namespace IronPython.Modules {
             PythonFunction pf;
             BuiltinMethodDescriptor methodDesc;
             string strVal;
+            PythonModule pm;
+            OldClass oc;
 
             if (doced.Contains(o)) return;  // document things only once
             doced.Add(o);
 
             if ((strVal = o as string) != null) {
+                if (indent != 0) return;
+
                 // try and find things that string could refer to,
                 // then call help on them.
                 foreach (KeyValuePair<object, object> kvp in context.SystemState.modules) {
-                    object pm = kvp.Value;
+                    object module = kvp.Value;
 
-                    List attrs = Ops.GetAttrNames(context, pm);
+                    List attrs = Ops.GetAttrNames(context, module);
+                    DynamicType modType = Ops.GetDynamicType(module);
                     List candidates = new List();
                     foreach (string s in attrs) {
                         if (s == strVal) {
                             object modVal;
-                            if (!Ops.TryGetAttr(context, pm, SymbolTable.StringToId(strVal), out modVal))
+                            if (!Ops.TryGetAttr(context, module, SymbolTable.StringToId(strVal), out modVal))
                                 continue;
 
                             candidates.Add(modVal);
@@ -557,15 +562,26 @@ namespace IronPython.Modules {
                 }
             } else if ((dt = o as DynamicType) != null) {
                 // find all the functions, and display their 
-                // documentation
+                // documentation                
+                if (TypeCache.Builtin == dt && indent != 0) return;
                 if (indent == 0) doc.AppendFormat("Help on {0} in module {1}\n\n", dt.Name, Ops.GetAttr(context, dt, SymbolTable.Module));
+                object docText;
+                if (dt.TryGetSlot(context, SymbolTable.Doc, out docText) && docText != null) {
+                    AppendMultiLine(doc, docText.ToString() + Environment.NewLine, indent);
+                    AppendIndent(doc, indent);
+                    doc.AppendLine("Data and other attributes defined here:");
+                    AppendIndent(doc, indent);
+                    doc.AppendLine();
+                }
+
                 List names = dt.GetAttrNames(context, null);
                 names.Sort();
                 foreach (string name in names) {
                     if (name == "__class__") continue;
 
                     object value;
-                    if (Ops.TryGetAttr(context, o, SymbolTable.StringToId(name), out value))
+
+                    if (dt.TryGetSlot(context, SymbolTable.StringToId(name), out value))
                         Help(context, doced, doc, indent + 1, value);
                 }
             } else if ((methodDesc = o as BuiltinMethodDescriptor) != null) {
@@ -591,8 +607,38 @@ namespace IronPython.Modules {
                 if (!String.IsNullOrEmpty(pfDoc)) {
                     AppendMultiLine(doc, pfDoc, indent);
                 }
-            } else if (o is PythonModule) {
+            } else if ((pm = o as PythonModule) != null) {
+                List names = pm.GetAttrNames(context);
 
+                foreach (string name in names) {
+                    if (name == "__class__") continue;
+
+                    object value;
+                    if (pm.TryGetAttr(context, SymbolTable.StringToId(name), out value))
+                        Help(context, doced, doc, indent + 1, value);
+                }
+            } else if ((oc = o as OldClass) != null) {
+                if (indent == 0) doc.AppendFormat("Help on {0} in module {1}\n\n",
+                    oc.Name, Ops.GetAttr(context, oc, SymbolTable.Module));
+                object docText;
+                if (oc.TryLookupSlot(SymbolTable.Doc, out docText) && docText != null) {
+                    AppendMultiLine(doc, docText.ToString() + Environment.NewLine, indent);
+                    AppendIndent(doc, indent);
+                    doc.AppendLine("Data and other attributes defined here:");
+                    AppendIndent(doc, indent);
+                    doc.AppendLine();
+                }
+
+                List names = oc.GetAttrNames(context);
+                names.Sort();
+                foreach (string name in names) {
+                    if (name == "__class__") continue;
+
+                    object value;
+
+                    if (oc.TryLookupSlot(SymbolTable.StringToId(name), out value))
+                        Help(context, doced, doc, indent + 1, value);
+                }
             }
         }
 
@@ -644,7 +690,7 @@ namespace IronPython.Modules {
 
         [PythonName("isinstance")]
         public static bool IsInstance(object o, object typeinfo) {
-            if( typeinfo == null) throw Ops.TypeError("isinstance: arg 2 must be a class, type, or tuple of classes and types");
+            if (typeinfo == null) throw Ops.TypeError("isinstance: arg 2 must be a class, type, or tuple of classes and types");
 
             Tuple tt = typeinfo as Tuple;
             if (tt != null) {
