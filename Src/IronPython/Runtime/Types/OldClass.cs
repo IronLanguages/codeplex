@@ -55,27 +55,10 @@ namespace IronPython.Runtime.Types {
             if (__dict__.ContainsKey(SymbolTable.Unassign)) {
                 hasFinalizer = true;
             }
-
-            PromoteFunctionsToMethods();
         }
 
         public string Name {
             get { return __name__.ToString(); }
-        }
-
-        private void PromoteFunctionsToMethods() {
-            List<KeyValuePair<SymbolId, object>> updates = new List<KeyValuePair<SymbolId, object>>(__dict__.Count);
-            foreach (KeyValuePair<object, object> item in __dict__) {
-                PythonFunction func = item.Value as PythonFunction;
-                if (func != null) {
-                    SymbolId key = SymbolTable.StringToId(item.Key as string);
-                    updates.Add(new KeyValuePair<SymbolId, object>(key, new Method(func, null, this)));
-                }
-            }
-
-            for (int i = 0; i < updates.Count; i++) {
-                __dict__[updates[i].Key] = updates[i].Value;
-            }
         }
 
         public bool TryLookupSlot(SymbolId name, out object ret) {

@@ -559,13 +559,7 @@ namespace IronPython.Runtime.Calls {
 
         [PythonName("__get__")]
         public virtual object GetAttribute(object instance, object owner) {
-
-            if (instance != null) return new Method(this, instance, owner);
-            else {
-                PythonFunction res = Clone() as PythonFunction;
-                res.doc = FunctionDoc;
-                return res;
-            }
+            return new Method(this, instance, owner);
         }
         #endregion
 

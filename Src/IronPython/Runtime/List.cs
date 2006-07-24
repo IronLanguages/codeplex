@@ -266,11 +266,9 @@ namespace IronPython.Runtime {
         public virtual object GetSlice(int start, int stop) {
             if (start < 0) start = 0;
             if (stop > GetLength()) stop = GetLength();
-            if (start > stop) return List.MakeEmptyList(0);
 
-            int n = Math.Max(0, stop - start);
-            object[] ret = new object[n];
-            lock (this) Array.Copy(data, start, ret, 0, n);
+            object[] ret;
+            lock (this) ret = ArrayOps.GetSlice(data, start, stop);
             return new List(ret);
         }
 
@@ -307,9 +305,8 @@ namespace IronPython.Runtime {
                 if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) return new List();
 
                 if (step == 1) {
-                    int n = Math.Max(0, stop - start);
-                    object[] ret = new object[n];
-                    lock (this) Array.Copy(data, start, ret, 0, n);
+                    object[] ret;
+                    lock (this) ret = ArrayOps.GetSlice(data, start, stop);
                     return new List(ret);
                 } else {
                     // start/stop/step could be near Int32.MaxValue, and simply addition could cause overflow

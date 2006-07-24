@@ -102,7 +102,7 @@ namespace IronPython.Runtime {
             this.data = MakeItems(o);
         }
 
-        private Tuple(params object[] items) {
+        private Tuple(object[] items) {
             this.data = items;
         }
 
@@ -178,7 +178,7 @@ namespace IronPython.Runtime {
             if (start < 0) start = 0;
             if (stop > GetLength()) stop = GetLength();
 
-            return Make(ArrayOps.GetSlice(data, data.Length, new Slice(start, stop)));
+            return MakeTuple(ArrayOps.GetSlice(data, start, stop));
         }
 
         public object this[Slice slice] {

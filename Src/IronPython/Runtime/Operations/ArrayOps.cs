@@ -204,6 +204,17 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
+        internal static object[] GetSlice(object[] data, int start, int stop) {
+            if (stop <= start) return Ops.EMPTY;
+
+            object[] ret = new object[stop-start];
+            int index = 0;
+            for (int i = start; i < stop; i++) {
+                ret[index++] = data[i];
+            }
+            return ret;
+        }
+
 
         internal static Array GetSlice(Array data, int size, Slice slice) {
             if (data.Rank != 1) throw Ops.NotImplementedError("slice on multi-dimensional array");

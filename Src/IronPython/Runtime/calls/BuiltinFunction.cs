@@ -558,13 +558,18 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             template = function;
         }
 
+        internal object UncheckedGetAttribute(object instance) {
+            if (instance == null) return this;
+            return new BoundBuiltinFunction(template, instance);
+        }
+
         #region IDescriptor Members
 
         [PythonName("__get__")]
         public object GetAttribute(object instance, object owner) {
             if (instance != null) {
                 CheckSelf(instance);
-                return new BoundBuiltinFunction(template, instance);
+                return UncheckedGetAttribute(instance);
             }
             return this;
         }

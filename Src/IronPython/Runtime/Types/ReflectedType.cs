@@ -878,6 +878,8 @@ namespace IronPython.Runtime.Types {
                     initialized = true;
 
                     AddModule();
+
+                    dict = new ProxyDictionary(dict.SymbolAttributes);
                 }
             }
         }
@@ -1249,6 +1251,77 @@ namespace IronPython.Runtime.Types {
             sb.Append(">");
 
             return sb.ToString();
+        }
+    }
+
+    /// <summary>
+    /// An immutable dictionary that holds the members of builtin and clr types.  A simple
+    /// hashtable from SymbolId's to objects.  Hashing collisions are resolved by searching
+    /// linearly for an empty bucket.  The table is 2x larger than needed to minimize
+    /// collisions.  This particular subtype of CustomSymbolDict will never use the 
+    /// backing Hashtable as it is immutable and all keys are in ExtraKeys.
+    /// </summary>
+    [PythonType(typeof(Dict))]
+    public class ProxyDictionary : CustomSymbolDict {
+        private const int EXPANSION = 2;
+
+        private int[] symbols;
+        private object[] data;
+
+        private void SetItem(SymbolId key, object value) {
+            int index = key.Id % symbols.Length;
+            /* This apparently infinite loop is acutally just a modular loop that will
+             * go less than once around all the symbols and data.  In fact, it can never
+             * go around more than 1/EXPANSION times around the loop because we are
+             * guaranteed to have EXPANSION* as many slots as keys.
+             */
+            while (true) {
+                if (symbols[index] == SymbolTable.EmptyId) {
+                    symbols[index] = key.Id;
+                    data[index] = value;
+                    return;
+                }
+                index += 1;
+                if (index >= symbols.Length) index = 0;
+            }
+        }
+
+        public ProxyDictionary(IDictionary<SymbolId, object> d) {
+            symbols = new int[d.Count * EXPANSION];
+            for (int i = 0; i < symbols.Length; i++) symbols[i] = SymbolTable.EmptyId;
+            data = new object[symbols.Length];
+
+            foreach (KeyValuePair<SymbolId, object> kv in d) {
+                SetItem(kv.Key, kv.Value);
+            }
+        }
+
+        public override bool TryGetExtraValue(SymbolId key, out object value) {
+            int index = key.Id % symbols.Length;
+            // See comment on loop in SetItem
+            while (true) {
+                if (symbols[index] == key.Id) {
+                    value = data[index];
+                    return true;
+                } else if (symbols[index] == SymbolTable.EmptyId) {
+                    value = null;
+                    return false;
+                }
+                index += 1;
+                if (index >= symbols.Length) index = 0;
+            }
+        }
+
+        public override SymbolId[] GetExtraKeys() {
+            List<SymbolId> ret = new List<SymbolId>();
+            for (int i = 0; i < symbols.Length; i++) {
+                if (symbols[i] != SymbolTable.EmptyId) ret.Add(new SymbolId(symbols[i]));
+            }
+            return ret.ToArray();
+        }
+
+        public override bool TrySetExtraValue(SymbolId key, object value) {
+            throw Ops.TypeError("can't set items in dictproxy");
         }
     }
 }

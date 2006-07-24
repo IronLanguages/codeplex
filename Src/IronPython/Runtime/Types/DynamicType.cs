@@ -376,7 +376,7 @@ namespace IronPython.Runtime.Types {
 
         internal virtual bool TryLookupBoundSlot(ICallerContext context, object inst, SymbolId name, out object ret) {
             if (TryLookupSlot(context, name, out ret)) {
-                ret = Ops.GetDescriptor(ret, inst, this);
+                ret = UncheckedGetDescriptor(ret, inst, this);
                 return true;
             }
             return false;
@@ -604,10 +604,8 @@ namespace IronPython.Runtime.Types {
                     value = new BoundBuiltinFunction(rm, this);
                     return true;
                 case SymbolTable.CallId:
-                    Initialize();
-                    MethodWrapper mw = new MethodWrapper(this, SymbolTable.Call);
-                    mw.SetDeclaredMethod(this);
-                    value = mw;
+                    //@todo We should provide a method wrapper object rather than directly returning ourselves
+                    value = this;
                     return true;
                 default:
                     if (TryLookupSlot(context, name, out value)) {
@@ -877,6 +875,13 @@ namespace IronPython.Runtime.Types {
             BaseDelAttr(context, self, name);
         }
 
+        internal object UncheckedGetDescriptor(object o, object instance, object context) {
+            BuiltinMethodDescriptor md = o as BuiltinMethodDescriptor;
+            if (md != null) return md.UncheckedGetAttribute(instance);
+
+            return Ops.GetDescriptor(o, instance, context);
+        }
+
         // These are the default base implementations of attribute-access.
         internal virtual bool TryBaseGetAttr(ICallerContext context, object self, SymbolId name, out object ret) {
             if (name == SymbolTable.Dict) {
@@ -886,7 +891,7 @@ namespace IronPython.Runtime.Types {
             }
 
             if (TryLookupSlot(context, name, out ret)) {
-                ret = Ops.GetDescriptor(ret, self, this);
+                ret = UncheckedGetDescriptor(ret, self, this);
                 return true;
             }
 
