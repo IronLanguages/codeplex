@@ -223,14 +223,6 @@ class NullStream:
     def readline(self): return "\n"
     def write(self, s): pass
 
-# not used
-class MyFileStreamNet(NullStream):
-    import System
-    def __init__(self, filename): self.sw = System.IO.StreamWriter(filename)
-    def close(self):    self.sw.Close()
-    def write(self, s):
-        self.sw.Write(s)
-        self.sw.Flush()
 
 class MyFileStream(NullStream):
     def __init__(self, filename): self.sw = file(filename, 'w+')

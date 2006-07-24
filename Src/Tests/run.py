@@ -152,14 +152,25 @@ def main(args):
     # find iprun.py
     iprunfile = path_combine(get_directory_name(fullpath(sys.argv[0])), 'iprun.py')
     
-    # other switchs will be carried on to iprun.py
+    # run ironpython tests with cpython (we don't run the netinterop or hosting categories)
+    # command: cpy iprun.py -O:max builtinfuncs builtintypes standard modules stress
+    results = []
+    sumretval = 0
+    if (not tests) or ('irononcpy' in tests):
+        print "\nRUNNING CPYTHON ON IRONPYTHON TESTS"
+        sumretval += launch_cpython(iprunfile, '-O:max', 'builtinfuncs', 'builtintypes', 'standard', 'modules', 'stress')
+    
+    # other switches will be carried on to iprun.py
     carryon = [x for x in args if not x.startswith('-M:') and x.lower() not in shortcuts.keys() ]
     for x in tests: 
         if x not in carryon : carryon.append(x)
     
+    # remove 'irononcpy' from tests since it is not needed any further
+    if 'irononcpy' in tests: 
+        tests.remove('irononcpy')
+        carryon.remove('irononcpy')
+    
     # launch iprun.py with different modes
-    results = []
-    sumretval = 0
     rawModes = [ x[3:] for x in args if x.startswith('-M:') ]
     for style in get_mode_list(rawModes):
         sstyle = str(style)
