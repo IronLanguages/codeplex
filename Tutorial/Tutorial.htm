@@ -1041,8 +1041,9 @@
 	<p class="Stepnonumbering" style="page-break-after:avoid">The output in the 
 	console window will be:</p>
 	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; dir(FileSystemEventArgs)</p>
-	<p class="Code-Background">[&#39;ChangeType&#39;, &#39;Equals&#39;, &#39;FullPath&#39;, &#39;GetHashCode&#39;, 
-	&#39;GetType&#39;, &#39;Name&#39;, &#39;ToString&#39;, &#39;__new__&#39;]</p>
+	<p class="Code-Background">[&#39;ChangeType&#39;, &#39;Empty&#39;, &#39;Equals&#39;, &#39;Finalize&#39;, &#39;FullPath&#39;, &#39;GetHashCode&#39;, 
+	&#39;GetType&#39;, &#39;MakeDynamicType&#39;, &#39;MemberwiseClone&#39;, &#39;Name&#39;, &#39;Reduce&#39;, &#39;ReferenceEquals&#39;, &#39;ToString&#39;, 
+	&#39;__class__&#39;, &#39;__doc__&#39;, &#39;__init__&#39;, &#39;__module__&#39;, &#39;__new__&#39;, &#39;__reduce__&#39;, &#39;__reduce_ex__&#39;, &#39;__repr__&#39;]
 	<ol start="2">
 		<li>
 		<p class="Step">Now with more knowledge of the event argument properties, 
@@ -1103,12 +1104,12 @@
 	<p class="Stepnonumbering">pyevent - a module providing Python event support</p>
 	<p class="Stepnonumbering">make_event - a function that returns an event tuple containing both the callable object and the object 
 	that allows connecting and unconnecting to the event.</p>
-	<p class="Stepnonumbering"></p>
+	<br/>
 	<p class="Stepnonumbering" style="page-break-after:avoid">To create an event:</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; import pyevent</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; hook,caller = pyevent.make_event()</p>
-	
-	<p class="Stepnonumbering">&nbsp;</p>
+	<br/>
+	<p class="TypedExample">import pyevent</p>
+	<p class="TypedExample">hook,caller = pyevent.make_event()</p>
+	<br/>
 	<p class="Stepnonumbering">This has returned back to us two objects.  The first object allows a user to hook a 
 		function up to the event.  The second object allows the owner of the event to cause the event to be raised.  
 		This allows for the separation of these abilities just like .NET.&nbsp; Now let's take this and put it into a class and 
@@ -1120,20 +1121,17 @@
 		</li>
 	</ol>
 
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; class MyClass(object):</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;OnNewInstance,_NewInstance= pyevent.make_event()</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;def __new__(cls):</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;res = object.__new__(object)</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MyClass._NewInstance(res)</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return res</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; </p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; def NewInst(x): print 'new inst: ', x </p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; </p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; MyClass.OnNewInstance += NewInst</p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; </p>
-	<p class="Code-Highlighted" style="page-break-after:avoid">&gt;&gt;&gt; a = MyClass()</p>
-    <p class="Code-Background">new inst:  (&lt;object object at 0x000000000000002B&gt;,)</p>
-	
+	<p class="TypedExample">class MyClass(object):<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;OnNewInstance,_NewInstance= pyevent.make_event()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;def __new__(cls):<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;res = object.__new__(object)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MyClass._NewInstance(res)<br>
+	</p>
+	<p class="TypedExample">def NewInst(x): print 'new inst: ', x </p>
+	<p class="TypedExample">MyClass.OnNewInstance += NewInst</p>
+	<p class="TypedExample">a = MyClass()</p>
+
+
 	
 	<ol start="3">
 		<li>
@@ -2658,8 +2656,8 @@ private System.DateTime lastDate;<br>
 void InitializePythonEngine()<br>
 {<br>
 &nbsp;   engine = new PythonEngine();<br>
-&nbsp;   engine.ImportSite();<br>
-&nbsp;   engine.SetVariable("dateentries", dateEntries);<br>
+&nbsp;   engine.Import("Site");<br>
+&nbsp;   engine.Globals["dateentries"] = dateEntries;<br>
 }<br>
 </p>
 	<ol start="4">
@@ -2685,7 +2683,7 @@ void InitializePythonEngine()<br>
 		</li>
 	</ol>
 	<p class="Code-Highlighted">engine.Execute("n = dateentries.Count");<br>
-int nEntries = engine.Evaluate&lt;int&gt;("n");<br>
+int nEntries = engine.EvaluateAs&lt;int&gt;("n");<br>
 	label.Text = &quot;There are now &quot; + nEntries.ToString() + &quot; entries in the 
 	dictionary.&quot;;<br>
 </p>
@@ -2776,7 +2774,7 @@ straightforward to redirect to a file so that all interactions with the engine a
 engine.SetStdout(fs);<br>
 engine.SetStderr(fs);<br></p>
 <p class="Code-Background">
-engine.SetVariable("dateentries", dateEntries);
+engine.Globals["dateentries"] = dateEntries;
 </p><br>
 <p class="Stepnonumbering">Now compile and run.Look in the home directory of the executable for <b>scripting-log.txt</b>; it should contain the text ‘Hello, world!'. </p>
 	<ol start="3">
