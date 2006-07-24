@@ -135,134 +135,45 @@ namespace IronPython.Runtime.Types {
     }
 
     /// <summary>
-    /// Just like a reflected property, but we also allow deleting of values (setting them to
-    /// Uninitialized.instance)
+    /// Base class for properties backed by methods.  These include our slot properties,
+    /// indexers, and normal properties.  This class provides the storage of these as well
+    /// as the storage of our optimized getter/setter methods, documentation for the property,
+    /// etc...
     /// </summary>
-    public class ReflectedSlotProperty : ReflectedProperty {
-
-        public ReflectedSlotProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt)
-            :
-            base(info, getter, setter, nt) {
-        }
-
-        [PythonName("__delete__")]
-        public override bool DeleteAttribute(object instance) {
-            if (instance != null) {
-                SetAttribute(instance, Uninitialized.instance);
-                return true;
-            }
-            return false;
-        }
-    }
-
-    [PythonType("property#")]
-    public class ReflectedProperty : IDataDescriptor, IContextAwareMember {
+    public class ReflectedGetterSetter : IContextAwareMember {
         private readonly MethodInfo getter, setter;
         private readonly PropertyInfo info;
-
+        private FastCallable fcGetter, fcSetter;
         private NameType nameType;
-        private BuiltinFunction optGetter, optSetter;
 
-        public ReflectedProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) {
+        public ReflectedGetterSetter(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) {
             this.info = info;
             this.getter = getter;
             this.setter = setter;
             this.nameType = nt;
         }
 
-        public MethodInfo Setter {
-            get { return setter; }
+        protected ReflectedGetterSetter(ReflectedGetterSetter from) {
+            this.info = from.info;
+            this.getter = from.getter;
+            this.setter = from.setter;
+            from.CreateGetter();
+            from.CreateSetter();
+            this.fcGetter = from.fcGetter;
+            this.fcSetter = from.fcSetter;
+            this.nameType = from.nameType;
         }
 
-        public MethodInfo Getter {
-            get { return getter; }
+        private void CreateGetter() {
+            if (fcGetter != null) return;
+
+            if (getter != null) this.fcGetter = MethodBinder.MakeFastCallable(getter.Name, getter, false);
         }
 
-        public PropertyInfo Info {
-            get { return info; }
-        }
+        private void CreateSetter() {
+            if (fcSetter != null) return;
 
-        public string Documentation {
-            [PythonName("__doc__")]
-            get {
-                object[] attrs = info.GetCustomAttributes(typeof(DocumentationAttribute), false);
-                if (attrs.Length == 0) return null;
-
-                StringBuilder docStr = new StringBuilder();
-                for (int i = 0; i < attrs.Length; i++) {
-                    docStr.Append(((DocumentationAttribute)attrs[i]).Value);
-                    docStr.Append(Environment.NewLine);
-                }
-                return docStr.ToString();
-            }
-        }
-
-        public object GetValue(object instance) {
-            return GetAttribute(instance, null);
-        }
-
-        public void SetValue(object instance, object value) {
-            SetAttribute(instance, value);
-        }
-
-        [PythonName("__get__")]
-        public object GetAttribute(object instance, object context) {
-            PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
-            if (getter == null)
-                throw Ops.AttributeError("attribute '{0}' of '{1}' object is write-only",
-                    Name,
-                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name);
-
-            OptimizePropertyMethod(ref optGetter, getter);
-
-            if (instance == null && !getter.IsStatic) return this;
-
-            if (optGetter != null) {
-                if (instance == null) {
-                    return optGetter.Call();
-                } else {
-                    return optGetter.Call(instance);
-                }
-            }
-
-            return DoGet(instance);
-        }
-
-        [PythonName("__set__")]
-        public bool SetAttribute(object instance, object value) {
-            if (setter != null) OptimizePropertyMethod(ref optSetter, setter);
-
-            if (instance == null && (setter == null || !setter.IsStatic)) return false;
-
-            if (optSetter != null) {
-                if (instance == null) {
-                    optSetter.Call(value);
-                } else {
-                    optSetter.Call(instance, value);
-                }
-                return true;
-            }
-
-            DoSet(instance, value);
-            return true;
-        }
-
-        [PythonName("__delete__")]
-        public virtual bool DeleteAttribute(object instance) {
-            if (setter != null)
-                throw Ops.AttributeErrorForReadonlyAttribute(
-                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name,
-                    SymbolTable.StringToId(Name));
-            else
-                throw Ops.AttributeErrorForBuiltinAttributeDeletion(
-                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name,
-                    SymbolTable.StringToId(Name));
-        }
-
-        [PythonName("__str__")]
-        public override string ToString() {
-            return string.Format("<property# {0} on {1}>", Name,
-                Ops.GetDynamicTypeFromType(info.DeclaringType).Name);
+            if (setter != null) this.fcSetter = MethodBinder.MakeFastCallable(setter.Name, setter, false);
         }
 
         internal string Name {
@@ -280,34 +191,61 @@ namespace IronPython.Runtime.Types {
                 return info.Name;
             }
         }
-        private void OptimizePropertyMethod(ref BuiltinFunction bf, MethodInfo method) {
-            if (Options.OptimizeReflectCalls && bf == null) {
-                FunctionType ft = FunctionType.Method;
-                if (method.IsStatic) ft = FunctionType.Function;
-                bf = BuiltinFunction.MakeMethod(info.Name, method, ft);
+
+        protected MethodInfo Getter {
+            get {
+                return getter;
             }
         }
 
-        private void DoSet(object instance, object val) {
-            PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
-            if (setter == null) {
-                throw Ops.AttributeErrorForReadonlyAttribute(
-                    Ops.GetDynamicTypeFromType(info.DeclaringType).Name,
-                    SymbolTable.StringToId(Name));
-            }
-            try {
-                setter.Invoke(instance, new object[] { Ops.ConvertTo(val, info.PropertyType) });
-            } catch (TargetInvocationException tie) {
-                throw ExceptionConverter.UpdateForRethrow(tie.InnerException);
+        protected MethodInfo Setter {
+            get {
+                return setter;
             }
         }
 
-        private object DoGet(object instance) {
-            try {
-                return getter.Invoke(instance, Ops.EMPTY);
-            } catch (TargetInvocationException tie) {
-                throw ExceptionConverter.UpdateForRethrow(tie.InnerException);
+        protected PropertyInfo Info {
+            get {
+                return info;
             }
+        }
+
+        public string Documentation {
+            [PythonName("__doc__")]
+            get {
+                return ReflectionUtil.DocOneInfo(Info);
+            }
+        }
+
+        protected object CallGetter(object instance, object []args) {
+            if (instance == null && (Getter == null || !Getter.IsStatic)) return this;
+
+            CreateGetter();
+
+            if(instance != null)
+                return fcGetter.CallInstance(DefaultContext.Default, instance, args);
+
+            return fcGetter.Call(args);
+        }
+
+        protected bool CallSetter(object instance, object []args, object value) {
+            if (instance == null && (Setter == null || !Setter.IsStatic)) return false;
+
+            CreateSetter();
+
+            if (args.Length == 0) {
+                if (instance != null) fcSetter.CallInstance(DefaultContext.Default, instance, value);
+                else fcSetter.Call(value);
+            } else {
+                object[] nargs = new object[args.Length + 1];
+                Array.Copy(args, 0, nargs, 0, args.Length);
+                nargs[args.Length] = value;
+
+                if (instance != null) fcSetter.CallInstance(DefaultContext.Default, instance, nargs);
+                else fcSetter.Call(nargs);
+            }
+
+            return true;
         }
 
         #region IContextAwareMember Members
@@ -317,6 +255,210 @@ namespace IronPython.Runtime.Types {
         }
 
         #endregion
+    }
+
+    /// <summary>
+    /// Just like a reflected property, but we also allow deleting of values (setting them to
+    /// Uninitialized.instance)
+    /// </summary>
+    [PythonType("member_descriptor")]
+    public class ReflectedSlotProperty : ReflectedProperty, ICodeFormattable {
+
+        public ReflectedSlotProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt)
+            :
+            base(info, getter, setter, nt) {
+        }
+
+        [PythonName("__delete__")]
+        public override bool DeleteAttribute(object instance) {
+            if (instance != null) {
+                SetAttribute(instance, Uninitialized.instance);
+                return true;
+            }
+            return false;
+        }
+
+        public override string ToString() {
+            return String.Format("<member '{0}'>", Info.Name); // <member '{0}' of '{1}' objects> - but we don't know our type name
+        }
+
+        #region ICodeFormattable Members
+
+        public string ToCodeString() {
+            return ToString();
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Provides access to non-default .NET indexers (aka properties w/ parameters).
+    /// 
+    /// C# doesn't support these, but both COM and VB.NET do.  The types dictionary
+    /// gets populated w/a ReflectedGetterSetter indexer which is a descriptor.  Getting
+    /// the descriptor returns a bound indexer.  The bound indexer is an IMapping which
+    /// supports accessing the index value.  We support multiple indexer parameters
+    /// via expandable tuples.
+    /// </summary>
+    [PythonType("indexer#")]
+    public sealed class ReflectedIndexer : ReflectedGetterSetter, IDescriptor, IMapping {
+        private object instance;
+
+        public ReflectedIndexer(PropertyInfo info, NameType nt) : 
+            base(info, info.GetGetMethod(), info.GetSetMethod(), nt) {
+        }
+
+        public ReflectedIndexer(ReflectedIndexer from, object instance) : base(from) {
+            this.instance = instance;
+        }
+
+        #region IMapping Members
+
+        public object GetValue(object key) {
+            return this[key];
+        }
+
+        public object GetValue(object key, object defaultValue) {
+            object res;
+            if (TryGetValue(key, out res)) return res;
+
+            return defaultValue;
+        }
+
+
+        public bool TryGetValue(object key, out object value) {
+            if (Getter == null) 
+                throw Ops.AttributeError("attribute '{0}' of '{1}' object is write-only",
+                     Name,
+                     Ops.GetDynamicTypeFromType(Info.DeclaringType).Name);
+
+            try {
+                value = this[key];
+                return true;
+            } catch (MissingMemberException) {
+                value = null;
+                return false;
+            }
+        }
+        
+        public object this[object key] {
+            [PythonName("__getitem__")]
+            get {
+                Tuple tupleKey = key as Tuple;
+                if (tupleKey != null && tupleKey.IsExpandable) {
+                    return CallGetter(instance, tupleKey.Expand(null));
+                }
+
+                return CallGetter(instance, new object[] { key });
+            }
+            [PythonName("__setitem__")]
+            set {
+                Tuple tupleKey = key as Tuple;
+                if (tupleKey != null && tupleKey.IsExpandable) {
+                    if (!CallSetter(instance, tupleKey.Expand(null), value)) {
+                        throw new Exception("The method or operation is not implemented.");
+                    }
+                    return;
+                }
+
+                if (!CallSetter(instance, new object[] { key }, value)) {
+                    throw new Exception("The method or operation is not implemented.");
+                }
+            }
+        }
+
+        [PythonName("__delitem__")]
+        public void DeleteItem(object key) {
+            if (Setter != null)
+                throw Ops.AttributeErrorForReadonlyAttribute(
+                    Ops.GetDynamicTypeFromType(Info.DeclaringType).Name,
+                    SymbolTable.StringToId(Name));
+            else
+                throw Ops.AttributeErrorForBuiltinAttributeDeletion(
+                    Ops.GetDynamicTypeFromType(Info.DeclaringType).Name,
+                    SymbolTable.StringToId(Name));
+        }
+
+        #endregion
+
+        #region IPythonContainer Members
+
+        int IPythonContainer.GetLength() {
+            return 1;
+        }
+
+        bool IPythonContainer.ContainsValue(object value) {
+            object dummy;
+            return TryGetValue(value, out dummy);
+        }
+
+        #endregion
+
+        #region IDescriptor Members
+
+        [PythonName("__get__")]
+        public object GetAttribute(object instance, object owner) {
+            return new ReflectedIndexer(this, instance);
+        }
+
+        #endregion
+
+        public override string ToString() {
+            return string.Format("<indexer# {0} on {1}>", Name,
+                Ops.GetDynamicTypeFromType(Info.DeclaringType).Name);
+        }
+    }
+
+
+    [PythonType("property#")]
+    public class ReflectedProperty : ReflectedGetterSetter, IDataDescriptor {
+        public ReflectedProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) :
+            base(info, getter, setter, nt) {
+        }
+
+        public object GetValue(object instance) {
+            return GetAttribute(instance, null);
+        }
+
+        public void SetValue(object instance, object value) {
+            SetAttribute(instance, value);
+        }
+
+        [PythonName("__get__")]
+        public object GetAttribute(object instance, object context) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
+            if (Getter == null)
+                throw Ops.AttributeError("attribute '{0}' of '{1}' object is write-only",
+                    Name,
+                    Ops.GetDynamicTypeFromType(Info.DeclaringType).Name);
+
+            return CallGetter(instance, Ops.EMPTY);
+        }
+
+
+        [PythonName("__set__")]
+        public bool SetAttribute(object instance, object value) {
+            return CallSetter(instance, Ops.EMPTY, value);
+        }
+
+        [PythonName("__delete__")]
+        public virtual bool DeleteAttribute(object instance) {
+            if (Setter != null)
+                throw Ops.AttributeErrorForReadonlyAttribute(
+                    Ops.GetDynamicTypeFromType(Info.DeclaringType).Name,
+                    SymbolTable.StringToId(Name));
+            else
+                throw Ops.AttributeErrorForBuiltinAttributeDeletion(
+                    Ops.GetDynamicTypeFromType(Info.DeclaringType).Name,
+                    SymbolTable.StringToId(Name));
+        }
+
+        [PythonName("__str__")]
+        public override string ToString() {
+            return string.Format("<property# {0} on {1}>", Name,
+                Ops.GetDynamicTypeFromType(Info.DeclaringType).Name);
+        }
+
     }
 
     [PythonType("event#")]
@@ -459,12 +601,20 @@ namespace IronPython.Runtime.Types {
 
             private void Hook(object instance) {
                 Delegate handler = Ops.GetDelegate(this, info.EventHandlerType);
-                info.AddEventHandler(instance, handler);
+                try {
+                    info.AddEventHandler(instance, handler);
+                } catch (TargetInvocationException tie) {
+                    throw ExceptionConverter.UpdateForRethrow(tie.InnerException);
+                }
             }
 
             private void Unhook(object instance) {
                 Delegate handler = Ops.GetDelegate(this, info.EventHandlerType);
-                info.RemoveEventHandler(instance, handler);
+                try {
+                    info.RemoveEventHandler(instance, handler);
+                } catch (TargetInvocationException tie) {
+                    throw ExceptionConverter.UpdateForRethrow(tie.InnerException);
+                }
             }
 
             public EventInfo Info {
@@ -475,20 +625,25 @@ namespace IronPython.Runtime.Types {
         }
     }
 
+    [Flags]
     public enum NameType {
-        None,
-        Method,
-        ClassMethod,
-        Field,
-        Property,
-        Event,
-        Type,
+        None         = 0x0000,
+        Python       = 0x0001,
 
-        // Python versions are marked as exposed to all python code.
-        PythonMethod,
-        PythonProperty,
-        PythonType,
-        PythonField,
+        Method          = 0x0002,
+        Field           = 0x0004,
+        Property        = 0x0008, 
+        Event           = 0x0010,
+        Type            = 0x0020,
+
+        PythonMethod    = Method | Python,
+        PythonField     = Field | Python,
+        PythonProperty  = Property | Python,
+        PythonEvent     = Event | Python,
+        PythonType      = Type | Python,
+
+        ClassMember   = 0x0040,
+        ClassMethod   = ClassMember | PythonMethod,
     }
 
 

@@ -186,4 +186,25 @@ if is_cli:
         
         AreEqual('a' in a, True)
 
+def test_str_equals():
+    x = 'abc' == 'abc'
+    y = 'def' == 'def'
+    AreEqual(id(x), id(y))
+    AreEqual(id(x), id(True))
+    
+    x = 'abc' != 'abc'
+    y = 'def' != 'def'
+    AreEqual(id(x), id(y))
+    AreEqual(id(x), id(False))
+    
+    x = 'abcx' == 'abc'
+    y = 'defx' == 'def'
+    AreEqual(id(x), id(y))
+    AreEqual(id(x), id(False))
+    
+    x = 'abcx' != 'abc'
+    y = 'defx' != 'def'
+    AreEqual(id(x), id(y))
+    AreEqual(id(x), id(True))
+
 run_test(__name__)

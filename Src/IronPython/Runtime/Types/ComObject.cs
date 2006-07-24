@@ -70,6 +70,29 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        protected override void AddOps() {
+            foreach (Type ty in type.GetInterfaces()) {
+                InterfaceMapping mapping = type.GetInterfaceMap(ty);
+                for (int i = 0; i < mapping.TargetMethods.Length; i++) {
+                    MethodInfo mi = mapping.TargetMethods[i];
+
+                    if (mi == null) {
+                        // COM objects can have interfaces that they don't appear
+                        // to implement.  When that happens our target method is 
+                        // null, but the interface method actually exists (we just need
+                        // to QI for it).  For those we store the interfaces method
+                        // directly into our dynamic type so the user can still call
+                        // the appropriate method directly from the type.
+                        Debug.Assert(type.IsCOMObject);
+                        StoreReflectedMethod(mapping.InterfaceMethods[i].Name,
+                            mapping.InterfaceMethods[i],
+                            NameType.PythonMethod);
+                        continue;
+                    }
+                }
+            }
+        }
+
         #region DynamicType overrides
 
         public override string Repr(object self) {
@@ -100,8 +123,10 @@ namespace IronPython.Runtime.Types {
         public override List GetAttrNames(ICallerContext context, object self) {
             List ret = base.GetAttrNames(context, self);
 
-            ComObject com = ComObject.ObjectToComObject(self);
-            ret = ret.AddList(com.GetAttrNames(context));
+            if (self != null) {
+                ComObject com = ComObject.ObjectToComObject(self);
+                ret = ret.AddList(com.GetAttrNames(context));
+            }
 
             return ret;
         }

@@ -815,6 +815,86 @@ namespace IronPythonTest {
             return ParamsIntMethodWithContext(context, arg);
         }
     }
+
+    // helper classes for testing events & interfaces
+
+    public interface IEventInterface {
+        event SimpleDelegate MyEvent;
+    }
+
+    public abstract class AbstractEvent {
+        public abstract event SimpleDelegate MyEvent;
+
+    }
+
+    public static class UseEvent {
+        public static bool Called;
+
+        public static void Hook(IEventInterface eventInterface) {
+            eventInterface.MyEvent += new SimpleDelegate(CallMe);
+        }
+
+        public static void Hook(AbstractEvent abstractEvent) {
+            abstractEvent.MyEvent += new SimpleDelegate(CallMe);
+        }
+
+        public static void Hook(VirtualEvent virtualEvent) {
+            virtualEvent.MyEvent += new SimpleDelegate(CallMe);
+        }
+
+        public static void Unhook(IEventInterface eventInterface) {
+            eventInterface.MyEvent -= new SimpleDelegate(CallMe);
+        }
+
+        public static void Unhook(AbstractEvent abstractEvent) {
+            abstractEvent.MyEvent -= new SimpleDelegate(CallMe);
+        }
+
+        public static void Unhook(VirtualEvent virtualEvent) {
+            virtualEvent.MyEvent -= new SimpleDelegate(CallMe);
+        }
+
+        private static void CallMe() {
+            Called = true;
+        }
+    }
+
+    public class VirtualEvent {
+        public virtual event SimpleDelegate MyEvent;
+        public virtual event SimpleDelegate MyCustomEvent {
+            add {
+                LastCall = "Add";
+            }
+            remove{
+                LastCall = "Remove";
+            }            
+        }
+        public string LastCall;
+
+        public virtual void FireEvent() {
+            SimpleDelegate simple = MyEvent;
+            if(simple != null)
+                simple();
+        }
+    }
+ 
+    public class OverrideVirtualEvent : VirtualEvent {
+        public override event SimpleDelegate MyEvent;
+        public override event SimpleDelegate MyCustomEvent {
+            add {
+                LastCall = "OverrideAdd";
+            }
+            remove {
+                LastCall = "OverrideRemove";
+            }
+        }
+
+        public override void FireEvent() {
+            SimpleDelegate simple = MyEvent;
+            if (simple != null)
+                simple();
+        }
+    }
 }
 
 

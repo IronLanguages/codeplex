@@ -198,7 +198,8 @@ namespace IronPython.Runtime.Types {
                 ClassMethodDescriptor cm = existingMethod as ClassMethodDescriptor;
 
                 Debug.Assert(cm != null,
-                    String.Format("Replacing existing method {0} on {1}", methodId, this));
+                    String.Format("Replacing existing method {0} on {1}", methodId, this),
+                    String.Format("Existing Method: {0}",existingMethod));
 
                 cm.func.AddMethod(mi);
             } else {
@@ -418,7 +419,6 @@ namespace IronPython.Runtime.Types {
         }
 
         private PropertyInfo GetPropertyFromMethod(MethodInfo mi, MemberInfo[] defaultMembers) {
-
             foreach (MemberInfo member in defaultMembers) {
                 if (member.MemberType == MemberTypes.Property) {
                     PropertyInfo property = member as PropertyInfo;
@@ -592,7 +592,7 @@ namespace IronPython.Runtime.Types {
                     StoreReflectedMethod(name, mi, nt);
                     break;
                 case NameType.ClassMethod: StoreClassMethod(name, mi); break;
-                default: Debug.Assert(false, "Unexpected name type for reflected method"); break;
+                default: Debug.Assert(false, String.Format("Unexpected name type for reflected method {0}",nt)); break;
             }
 
             if (name != mi.Name) {
@@ -621,11 +621,22 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        private void AddNamedIndexer(PropertyInfo pi) {
+            MethodInfo mi = pi.GetGetMethod() ?? pi.GetSetMethod();
+            if (mi != null) {
+                string name;
+                NameType nt = NameConverter.TryGetName(this, pi, mi, out name);
+                if (nt != NameType.None) {
+                    dict[SymbolTable.StringToId(name)] = new ReflectedIndexer(pi, nt);
+                }
+            }
+        }
+
         internal static bool IsExplicitInterfaceImpl(MethodInfo mi) {
             return mi.IsFinal && mi.IsHideBySig && mi.IsPrivate && mi.IsVirtual;
         }
 
-        private void AddReflectedProperty(PropertyInfo info, MemberInfo[] defaultMembers) {
+        private void AddReflectedProperty(PropertyInfo info, MemberInfo[] defaultMembers) {            
             if (info.GetIndexParameters().Length > 0) {
                 foreach (MemberInfo member in defaultMembers) {
                     if (member == info) {
@@ -633,6 +644,10 @@ namespace IronPython.Runtime.Types {
                         return;
                     }
                 }
+
+                // named indexer that isn't a default.  This occurs if VB or COM components
+                // define a property that takes parameters.  
+                AddNamedIndexer(info);
             } else {
                 // properties can have conflicting accessibility.  Generate public or private
                 // accessors as necessary.
@@ -845,8 +860,6 @@ namespace IronPython.Runtime.Types {
                         AddNestedType(ty);
                     }
 
-                    AddComInterfaceMethods();
-
                     AddEnumOperators();
 
                     AddOps();
@@ -865,35 +878,6 @@ namespace IronPython.Runtime.Types {
                     initialized = true;
 
                     AddModule();
-                }
-            }
-        }
-
-        private void AddComInterfaceMethods() {
-            // interfaces can't have explicitly implemented interfaces
-            if (type.IsInterface) return;
-
-            foreach (Type ty in type.GetInterfaces()) {
-                // GetInterfaceMap fails on array types
-                if (!type.IsArray && !ty.IsGenericParameter) {
-                    InterfaceMapping mapping = type.GetInterfaceMap(ty);
-                    for (int i = 0; i < mapping.TargetMethods.Length; i++) {
-                        MethodInfo mi = mapping.TargetMethods[i];
-
-                        if (mi == null) {
-                            // COM objects can have interfaces that they don't appear
-                            // to implement.  When that happens our target method is 
-                            // null, but the interface method actually exists (we just need
-                            // to QI for it).  For those we store the interfaces method
-                            // directly into our dynamic type so the user can still call
-                            // the appropriate method directly from the type.
-                            Debug.Assert(type.IsCOMObject);
-                            StoreReflectedMethod(mapping.InterfaceMethods[i].Name,
-                                mapping.InterfaceMethods[i],
-                                NameType.PythonMethod);
-                            continue;
-                        }
-                    }
                 }
             }
         }

@@ -95,6 +95,15 @@ namespace IronPython.Runtime.Types {
             desc.SetAttribute(instance, newValue);
         }
 
+        public static void AddRemoveEventHelper(object method, object instance, UserType context, object eventValue, SymbolId name) {
+            object callable = Ops.GetDescriptor(method, instance, context);
+            if (!Ops.IsCallable(callable)) {
+                throw Ops.TypeError("Expected callable value for {0}, but found {1}", name.GetString(),
+                    Ops.GetDynamicType(method).Name);
+            }
+
+            Ops.Call(callable, eventValue);
+        }
 
         #endregion
 

@@ -406,6 +406,186 @@ if is_cli:
         a = m()	
         a.CallWithContext('abc')
         a.CallParamsWithContext('abc', 'def')
-        a.CallIntParamsWithContext(2, 3)
-	
+        a.CallIntParamsWithContext(2, 3)   
+
+    def test_nondefault_indexers():
+        from lib.process_util import *
+    
+        if not has_vbc(): return
+        import nt
+        import _random
+        
+        r = _random.Random()
+        r.seed()
+        f = file('vbproptest1.vb', 'w')
+        try:
+            f.write("""
+Public Class VbPropertyTest
+    private Indexes(23) as Integer
+    private IndexesTwo(23,23) as Integer
+    private shared SharedIndexes(5,5) as Integer
+    
+    Public Property IndexOne(ByVal index as Integer) As Integer
+        Get
+            return Indexes(index)
+        End Get
+        Set
+            Indexes(index) = Value
+        End Set
+    End Property
+    
+    Public Property IndexTwo(ByVal index as Integer, ByVal index2 as Integer) As Integer
+        Get
+            return IndexesTwo(index, index2)
+        End Get
+        Set
+            IndexesTwo(index, index2) = Value
+        End Set
+    End Property
+    
+    Public Shared Property SharedIndex(ByVal index as Integer, ByVal index2 as Integer) As Integer
+        Get
+            return SharedIndexes(index, index2)
+        End Get
+        Set
+            SharedIndexes(index, index2) = Value
+        End Set
+    End Property
+End Class        
+        """)
+            f.close()
+            
+            name = '%s\\vbproptest%f.dll' % (nt.environ['TEMP'], r.random())
+            x = run_vbc('/target:library vbproptest1.vb "/out:%s"' % name)        
+            AreEqual(x, 0)
+            import clr
+            clr.AddReferenceToFileAndPath(name)
+            import VbPropertyTest
+            
+            x = VbPropertyTest()
+            AreEqual(x.IndexOne[0], 0)
+            x.IndexOne[1] = 23
+            AreEqual(x.IndexOne[1], 23)
+            
+            AreEqual(x.IndexTwo[0,0], 0)
+            x.IndexTwo[1,2] = 5
+            AreEqual(x.IndexTwo[1,2], 5)
+            
+            AreEqual(VbPropertyTest.SharedIndex[0,0], 0)
+            VbPropertyTest.SharedIndex[3,4] = 42
+            AreEqual(VbPropertyTest.SharedIndex[3,4], 42)
+        finally:
+            if not f.closed: f.close()
+                  
+            nt.unlink('vbproptest1.vb')
+    
+    def test_interface_abstract_events():
+        # inherit from an interface or abstract event, and define the event
+        for baseType in [IEventInterface, AbstractEvent]:
+            class foo(baseType):
+                def __init__(self):
+                    self._events = []            
+                def add_MyEvent(self, value):
+                    AreEqual(type(value), SimpleDelegate)
+                    self._events.append(value)
+                def remove_MyEvent(self, value):
+                    AreEqual(type(value), SimpleDelegate)
+                    self._events.remove(value)
+                def MyRaise(self):
+                    for x in self._events: x()
+        
+            global called
+            called = False
+            def bar(*args): 
+                global called
+                called = True
+        
+            a = foo()
+            
+            a.MyEvent += bar
+            a.MyRaise()
+            AreEqual(called, True)
+            
+            a.MyEvent -= bar        
+            called = False        
+            a.MyRaise()        
+            AreEqual(called, False)
+            
+            # hook the event from the CLI side, and make sure that raising
+            # it causes the CLI side to see the event being fired.
+            UseEvent.Hook(a)
+            a.MyRaise()
+            AreEqual(UseEvent.Called, True)
+            UseEvent.Called = False
+            UseEvent.Unhook(a)
+            a.MyRaise()
+            AreEqual(UseEvent.Called, False)
+    
+    def test_virtual_event():
+        # inherit from a class w/ a virtual event and a
+        # virtual event that's been overridden.  Check both
+        # overriding it and not overriding it.
+        for baseType in [VirtualEvent, OverrideVirtualEvent]:
+            for override in [True, False]:
+                class foo(baseType):
+                    def __init__(self):
+                        self._events = []            
+                    if override:
+                        def add_MyEvent(self, value):
+                            AreEqual(type(value), SimpleDelegate)
+                            self._events.append(value)
+                        def remove_MyEvent(self, value):
+                            AreEqual(type(value), SimpleDelegate)
+                            self._events.remove(value)
+                        def add_MyCustomEvent(self, value): pass
+                        def remove_MyCustomEvent(self, value): pass
+                        def MyRaise(self):
+                            for x in self._events: x()
+                    else:
+                        def MyRaise(self):
+                            self.FireEvent()                    
+    
+                # normal event
+                global called
+                called = False
+                def bar(*args): 
+                    global called
+                    called = True
+                            
+                a = foo()
+                a.MyEvent += bar
+                a.MyRaise()
+                    
+                AreEqual(called, True)
+                
+                a.MyEvent -= bar
+                
+                called = False            
+                a.MyRaise()            
+                AreEqual(called, False)
+            
+                # custom event
+                a.LastCall = None
+                a = foo()
+                a.MyCustomEvent += bar
+                if override: AreEqual(a.LastCall, None)
+                else: Assert(a.LastCall.endswith('Add'))
+                
+                a.Lastcall = None            
+                a.MyCustomEvent -= bar
+                if override: AreEqual(a.LastCall, None)
+                else: Assert(a.LastCall.endswith('Remove'))
+    
+    
+                # hook the event from the CLI side, and make sure that raising
+                # it causes the CLI side to see the event being fired.
+                UseEvent.Hook(a)
+                a.MyRaise()
+                AreEqual(UseEvent.Called, True)
+                UseEvent.Called = False
+                UseEvent.Unhook(a)
+                a.MyRaise()
+                AreEqual(UseEvent.Called, False)
+
 run_test(__name__)
+

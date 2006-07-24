@@ -291,7 +291,6 @@ namespace IronPython.Runtime {
             DictOps.Update(this, b);
         }
 
-        [PythonName("fromkeys")]
         internal static object FromKeys(object[] keys) {
             Dict ret = new Dict();
             for (int i = 0; i < keys.Length; i++) {

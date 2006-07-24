@@ -31,46 +31,10 @@ namespace IronPython.Compiler {
         public static NameType TryGetName(ReflectedType dt, MethodInfo mi, out string name) {
             Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(mi)));
 
-            string namePrefix = null;
             NameType res = dt.IsClsType ? NameType.PythonMethod : NameType.Method;
             name = mi.Name;
 
-            if (mi.IsPrivate || (mi.IsAssembly && !mi.IsFamilyOrAssembly)) {
-                // allow explicitly implemented interface
-                if (!(mi.IsPrivate && mi.IsFinal && mi.IsHideBySig && mi.IsVirtual)) {
-                    if (!Options.PrivateBinding) {
-                        return NameType.None;
-                    } else {
-                        // mangle protectes to private
-                        namePrefix = "_" + dt.Name + "__";
-                    }
-                } else {
-                    // explicitly implemented interface
-
-                    // drop the namespace, leave the interface name, and replace 
-                    // the dot with an underscore.  Eg System.IConvertible.ToBoolean
-                    // becomes IConvertible_ToBoolean
-                    int lastDot = name.LastIndexOf(Type.Delimiter);
-                    if (lastDot != -1) {
-                        name = name.Substring(lastDot + 1);
-                    }
-                }
-            }
-
-            object[] attribute = mi.GetCustomAttributes(typeof(PythonNameAttribute), false);
-
-            if (attribute.Length > 0) {
-                PythonNameAttribute attr = attribute[0] as PythonNameAttribute;
-                if (attr.name != null && attr.name.Length > 0) {
-                    if (attr is PythonClassMethodAttribute) res = NameType.ClassMethod;
-                    else res = NameType.PythonMethod;
-                    name = attr.name;
-                }
-            }
-
-            if (namePrefix != null) name = namePrefix + name;
-
-            return res;
+            return GetNameFromMethod(dt, mi, res, ref name);
         }
 
         public static NameType TryGetName(ReflectedType dt, FieldInfo fi, out string name) {
@@ -100,47 +64,22 @@ namespace IronPython.Compiler {
             return nt;
         }
 
+        public static NameType TryGetName(ReflectedType dt, EventInfo ei, MethodInfo eventMethod, out string name) {
+            Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(ei)));
+
+            name = ei.Name;
+            NameType res = dt.IsClsType ? NameType.PythonEvent : NameType.Event;
+
+            return GetNameFromMethod(dt, eventMethod, res, ref name);
+        }
+
         public static NameType TryGetName(ReflectedType dt, PropertyInfo pi, MethodInfo prop, out string name) {
             Debug.Assert(dt.IsSubclassOf(DynamicType.GetDeclaringType(pi)));
 
             name = pi.Name;
-            string namePrefix = null;
             NameType res = dt.IsClsType ? NameType.PythonProperty : NameType.Property;
 
-            if (prop.IsPrivate || (prop.IsAssembly && !prop.IsFamilyOrAssembly)) {
-                // allow explicitly implemented interface
-                if (!(prop.IsPrivate && prop.IsFinal && prop.IsHideBySig && prop.IsVirtual)) {
-                    if (!Options.PrivateBinding) {
-                        return NameType.None;
-                    } else {
-                        // mangle protectes to private
-                        namePrefix = "_" + dt.Name + "__";
-                    }
-                } else {
-                    // explicitly implemented interface
-
-                    // drop the namespace, leave the interface name, and replace 
-                    // the dot with an underscore.  Eg System.IConvertible.ToBoolean
-                    // becomes IConvertible_ToBoolean
-                    int lastDot = name.LastIndexOf(Type.Delimiter);
-                    if (lastDot != -1) {
-                        name = name.Substring(lastDot + 1);
-                    }
-                }
-            }
-
-            object[] attribute = prop.GetCustomAttributes(typeof(PythonNameAttribute), false);
-
-            if (namePrefix != null) name = namePrefix + pi.Name;
-            if (attribute.Length > 0) {
-                PythonNameAttribute attr = attribute[0] as PythonNameAttribute;
-                if (attr.name != null && attr.name.Length > 0) {
-                    res = NameType.PythonProperty;
-                    name = attr.name;
-                }
-            }
-
-            return res;
+            return GetNameFromMethod(dt, prop, res, ref name);
         }
 
         public static NameType TryGetName(ReflectedType outerType, Type t, out string name) {
@@ -190,5 +129,47 @@ namespace IronPython.Compiler {
             name = namePrefix + name;
             return res;
         }
+
+        private static NameType GetNameFromMethod(ReflectedType dt, MethodInfo mi, NameType res, ref string name) {
+            string namePrefix = null;
+
+            if (mi.IsPrivate || (mi.IsAssembly && !mi.IsFamilyOrAssembly)) {
+                // allow explicitly implemented interface
+                if (!(mi.IsPrivate && mi.IsFinal && mi.IsHideBySig && mi.IsVirtual)) {
+                    if (!Options.PrivateBinding) {
+                        return NameType.None;
+                    } else {
+                        // mangle protectes to private
+                        namePrefix = "_" + dt.Name + "__";
+                    }
+                } else {
+                    // explicitly implemented interface
+
+                    // drop the namespace, leave the interface name, and replace 
+                    // the dot with an underscore.  Eg System.IConvertible.ToBoolean
+                    // becomes IConvertible_ToBoolean
+                    int lastDot = name.LastIndexOf(Type.Delimiter);
+                    if (lastDot != -1) {
+                        name = name.Substring(lastDot + 1);
+                    }
+                }
+            }
+
+            object[] attribute = mi.GetCustomAttributes(typeof(PythonNameAttribute), false);
+
+            if (namePrefix != null) name = namePrefix + name;
+            if (attribute.Length > 0) {
+                PythonNameAttribute attr = attribute[0] as PythonNameAttribute;
+                if (attr.name != null && attr.name.Length > 0) {
+                    if (attr is PythonClassMethodAttribute) res |= NameType.ClassMember;
+
+                    res |= NameType.Python;
+                    name = attr.name;
+                }
+            }
+
+            return res;
+        }
+
     }
 }

@@ -64,6 +64,33 @@ namespace IronPython.Runtime {
             return null;
         }
 
+        public static string DocOneInfo(PropertyInfo info) {
+            object[] attrs = info.GetCustomAttributes(typeof(DocumentationAttribute), false);
+            if (attrs.Length == 0) {
+                StringBuilder autoDoc = new StringBuilder();
+                MethodInfo getter = info.GetGetMethod();
+                MethodInfo setter = info.GetSetMethod();
+                if (getter != null) {
+                    autoDoc.Append("Get: ");
+                    autoDoc.AppendLine(CreateAutoDoc(getter, info.Name, 0));
+                }
+
+                if (setter != null) {
+                    autoDoc.Append("Set: ");
+                    autoDoc.Append(CreateAutoDoc(setter, info.Name, 1));
+                    autoDoc.AppendLine(" = value");
+                }
+                return autoDoc.ToString();
+            }
+
+            StringBuilder docStr = new StringBuilder();
+            for (int i = 0; i < attrs.Length; i++) {
+                docStr.Append(((DocumentationAttribute)attrs[i]).Value);
+                docStr.Append(Environment.NewLine);
+            }
+            return docStr.ToString();
+        }
+
         public static string DocOneInfo(MethodBase info) {
             // Look for methods tagged with [Documentation("doc string for foo")]
             object[] attrs = info.GetCustomAttributes(typeof(DocumentationAttribute), false);
@@ -87,6 +114,10 @@ namespace IronPython.Runtime {
         }
 
         public static string CreateAutoDoc(MethodBase info) {
+            return CreateAutoDoc(info, null, 0);
+        }
+
+        private static string CreateAutoDoc(MethodBase info, string name, int endParamSkip) {
             StringBuilder retType = new StringBuilder();
             StringBuilder ret = new StringBuilder();
 
@@ -98,7 +129,8 @@ namespace IronPython.Runtime {
                     returnCount++;
                 }
 
-                if (mi.Name.IndexOf('#') == -1) ret.Append(mi.Name);
+                if (name != null) ret.Append(name);
+                else if (mi.Name.IndexOf('#') == -1) ret.Append(mi.Name);
                 else ret.Append(mi.Name, 0, mi.Name.IndexOf('#'));
             } else {
                 ret.Append("__new__");
@@ -138,7 +170,9 @@ namespace IronPython.Runtime {
                 needComma = true;
             }
 
-            foreach (ParameterInfo pi in info.GetParameters()) {
+            ParameterInfo[] pis = info.GetParameters();
+            for(int i = 0; i<pis.Length - endParamSkip; i++) {
+                ParameterInfo pi = pis[i];
                 if (pi.IsOut || pi.ParameterType.IsByRef) {
                     if (returnCount == 1) {
                         retType.Insert(0, '(');

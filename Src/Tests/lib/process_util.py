@@ -102,6 +102,11 @@ def has_csc():
     except WindowsError: return False
     else:  return True
 
+def has_vbc():
+    try:   run_vbc("/?")
+    except WindowsError: return False
+    else:  return True
+
 def run_tlbimp(pathToTypeLib, outputName=None):
     if outputName:
         return run_tool("tlbimp.exe", pathToTypeLib+" /out:"+outputName)
@@ -116,6 +121,9 @@ def run_unregister_com_component(pathToDll):
 
 def run_csc(args):
     return run_tool("csc.exe", args)
+
+def run_vbc(args):
+    return run_tool("vbc.exe", args)
 
 def number_of_process(arg):
     return len([x for x in nt.popen('tasklist.exe').readlines() if x.lower().startswith(arg.lower()) ])

@@ -1083,11 +1083,11 @@ namespace IronPython.Runtime.Operations {
         [PythonName("__eq__")]
         public static object Equals(string x, object other) {
             if (other is string) {
-                return String.Equals(x, other as string);
+                return Ops.Bool2Object(String.Equals(x, other as string));
             } else if (other is ExtensibleString) {
-                return String.Equals(x, ((ExtensibleString)other).Value);
+                return Ops.Bool2Object(String.Equals(x, ((ExtensibleString)other).Value));
             } else if (other is char && x.Length == 1) {
-                return (char)other == x[0];
+                return Ops.Bool2Object((char)other == x[0]);
             }
             return Ops.NotImplemented;
         }
@@ -1106,11 +1106,11 @@ namespace IronPython.Runtime.Operations {
         [PythonName("__ne__")]
         public static object NotEquals(string x, object other) {
             if (other is string) {
-                return !String.Equals(x, other as string);
+                return Ops.Bool2Object(!String.Equals(x, other as string));
             } else if (other is ExtensibleString) {
-                return !String.Equals(x, ((ExtensibleString)other).Value);
+                return Ops.Bool2Object(!String.Equals(x, ((ExtensibleString)other).Value));
             } else if (other is char && x.Length == 1) {
-                return (char)other != x[0];
+                return Ops.Bool2Object((char)other != x[0]);
             }
             return Ops.NotImplemented;
         }

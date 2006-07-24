@@ -407,6 +407,7 @@ namespace IronPython.Compiler.Generation {
             if (doneTypes.ContainsKey(interfaceType)) return;
             doneTypes.Add(interfaceType, true);
             OverrideVirtualMethods(interfaceType, specialNames);
+            
             foreach (Type t in interfaceType.GetInterfaces()) {
                 DoInterfaceType(t, doneTypes, specialNames);
             }
@@ -738,7 +739,7 @@ namespace IronPython.Compiler.Generation {
                     }
                 }
             }
-        }
+        }        
 
         private static string[] SkipMethodNames = new string[] { "GetDynamicType", };
 
@@ -755,27 +756,42 @@ namespace IronPython.Compiler.Generation {
                         Slot methField = GetExistingField("__getitem__");
                         CreateVirtualMethodOverride(mi, methField);
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(tg, mi);
-                        break;
+                        return;
                     } else if (mi == pi.GetSetMethod(true)) {
                         Slot methField = GetExistingField("__setitem__");
                         CreateVirtualMethodOverride(mi, methField);
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(tg, mi);
-                        break;
+                        return;
                     }
                 } else if (mi == pi.GetGetMethod(true)) {
                     if (NameConverter.TryGetName((ReflectedType)Ops.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
-                    CreateVTableGetterOverride(tg, mi, GetOrMakeVTableEntry(name));
-                    break;
+                    CreateVTableGetterOverride(mi, GetOrMakeVTableEntry(name));
+                    return;
                 } else if (mi == pi.GetSetMethod(true)) {
                     if (NameConverter.TryGetName((ReflectedType)Ops.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
-                    CreateVTableSetterOverride(tg, mi, GetOrMakeVTableEntry(name));
-                    break;
+                    CreateVTableSetterOverride(mi, GetOrMakeVTableEntry(name));
+                    return;
                 }
+            }
+
+            EventInfo[] eis = mi.DeclaringType.GetEvents(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            foreach (EventInfo ei in eis) {
+                if (ei.GetAddMethod() == mi) {
+                    if (NameConverter.TryGetName((ReflectedType)Ops.GetDynamicTypeFromType(mi.DeclaringType), ei, mi, out name) == NameType.None) return;
+                    CreateVTableEventOverride(ei, mi, GetOrMakeVTableEntry(mi.Name));
+                    return;
+                } else if (ei.GetRemoveMethod() == mi) {
+                    if (NameConverter.TryGetName((ReflectedType)Ops.GetDynamicTypeFromType(mi.DeclaringType), ei, mi, out name) == NameType.None) return;
+                    CreateVTableEventOverride(ei, mi, GetOrMakeVTableEntry(mi.Name));
+                    return;
+                } 
             }
         }
 
-        // Loads all the incoming arguments of cg and forwards them to mi which
-        // has the same signature and then returns the result
+        /// <summary>
+        /// Loads all the incoming arguments of cg and forwards them to mi which
+        /// has the same signature and then returns the result
+        /// </summary>
         private static void EmitBaseMethodDispatch(MethodInfo mi, CodeGen cg) {
             if (!mi.IsAbstract) {
                 cg.EmitThis();
@@ -876,7 +892,7 @@ namespace IronPython.Compiler.Generation {
             return callTarget;
         }
 
-        private void CreateVTableGetterOverride(TypeGen tg, MethodInfo mi, VTableEntry methField) {
+        private void CreateVTableGetterOverride(MethodInfo mi, VTableEntry methField) {
             CodeGen cg = tg.DefineMethodOverride(mi);
             Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
 
@@ -889,7 +905,7 @@ namespace IronPython.Compiler.Generation {
             cg.Finish();
         }
 
-        private void CreateVTableSetterOverride(TypeGen tg, MethodInfo mi, VTableEntry methField) {
+        private void CreateVTableSetterOverride(MethodInfo mi, VTableEntry methField) {
             CodeGen cg = tg.DefineMethodOverride(mi);
             Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
 
@@ -899,6 +915,24 @@ namespace IronPython.Compiler.Generation {
             cg.EmitConvertToObject(mi.GetParameters()[0].ParameterType);
             cg.EmitSymbolId(methField.name);
             cg.EmitCall(typeof(UserType), "SetPropertyHelper");
+
+            cg.EmitReturn();
+            cg.Finish();
+        }
+
+        private void CreateVTableEventOverride(EventInfo ei, MethodInfo mi, VTableEntry methField) {
+            // override the add/remove method            
+            CodeGen cg = tg.DefineMethodOverride(mi);
+
+            Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
+
+            callTarget.EmitGet(cg);
+            cg.EmitThis();
+            typeField.EmitGet(cg);
+            cg.EmitArgGet(0);
+            cg.EmitConvertToObject(mi.GetParameters()[0].ParameterType);
+            cg.EmitSymbolId(methField.name);
+            cg.EmitCall(typeof(UserType), "AddRemoveEventHelper"); 
 
             cg.EmitReturn();
             cg.Finish();
