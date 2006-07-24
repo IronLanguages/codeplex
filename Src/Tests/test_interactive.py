@@ -322,5 +322,21 @@ def test_engine_input():
         except :
             Assert(False,"Exception raised on input"+x)
 
+# expect a clean exception message/stack from thread
+def test_thrown_from_thread():
+    inputScript = path_combine(testpath.temporary_dir, "throwingfromthread.py")
+    write_to_file(inputScript, '''
+def f(): raise AssertionError, 'hello'
+import thread, time
+thread.start_new_thread(f, tuple())
+time.sleep(2)
+''')   
+    
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " " + inputScript)
+    (result, output, exitCode) = ipi.StartAndRunToCompletion()
+    AreEqual(exitCode, 0)    
+    Assert("AssertionError: hello" in output)
+    Assert("IronPython." not in output)     # '.' is necessary here
+    ipi.End()
 
 run_test(__name__)

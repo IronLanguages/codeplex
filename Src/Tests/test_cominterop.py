@@ -40,6 +40,9 @@ def _test_common_on_object(o):
     for x in ['GetHashCode', 'GetPassword', '__repr__', 'ToString']:
         Assert(x in dir(o))
 
+    for x in ['__class__', '__doc__', '__init__', '__module__']:
+        AreEqual(dir(o).count(x), 1)
+    
     Assert(o.GetHashCode()) # not zero
     try: del o.GetHashCode
     except AttributeError: pass

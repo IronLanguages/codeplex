@@ -471,7 +471,7 @@ def test_methsonexcepobject():
 			AreEqual(se.clsException.filename, "Error")
 			AreEqual(se.clsException.text, "if 2==2: x=")
 
-def test_bug893_clionly():
+def test_throw_from_compiled_clionly():
     def bar(): return 1 + 'abc'
     unique_string = "<this is unique string>"
     c = compile('bar()', unique_string, 'single')

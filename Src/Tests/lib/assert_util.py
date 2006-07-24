@@ -43,7 +43,7 @@ def get_temp_dir():
     if (temp == None) or (' ' in temp) : 
         temp = r"C:\temp"
     return temp
-    
+
 class testpath:
     # find the ironpython root directory
     ip_root             = get_parent_directory(sys.prefix)

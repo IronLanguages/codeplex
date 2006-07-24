@@ -28,7 +28,8 @@ def test_sanity():
 
     AreEqual(x.strftime("%y-%a-%b"), "05-Tue-Mar")
     AreEqual(x.strftime("%Y-%A-%B"), "2005-Tuesday-March")
-
+    AreEqual(x.strftime("%Y%m%d"), '20050322')
+    
     AssertError(ValueError, datetime.date, 2005, 4,31)
     AssertError(ValueError, datetime.date, 2005, 3,32)
     
@@ -40,12 +41,5 @@ def test_sanity():
     AreEqual(x.minute, 28)
     AreEqual(x.second, 3)
     AreEqual(x.microsecond, 99)
-    
-
-def test_month():
-    from datetime import date
-    import time
-    d=date(2006,3,12)    
-    AreEqual(d.strftime("%Y%m%d"), '20060312')
 
 run_test(__name__)
