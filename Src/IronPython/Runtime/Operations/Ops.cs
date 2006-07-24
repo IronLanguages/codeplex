@@ -401,12 +401,20 @@ namespace IronPython.Runtime.Operations {
                 return Bool2Object(((IList)y).Contains(x));
             }
 
-            if (y is string) {
+            string ys;
+            if ((ys = y as string)!=null) {
                 string s = x as string;
                 if (s == null) {
+                    if (x is char) {
+                        return (ys.IndexOf((char)x) != -1) ? TRUE : FALSE;
+                    }
                     throw TypeError("'in <string>' requires string as left operand");
                 }
-                return ((string)y).Contains(s) ? TRUE : FALSE;
+                return ys.Contains(s) ? TRUE : FALSE;
+            }
+
+            if (y is char) {
+                return In(x, y.ToString());
             }
 
             object contains;
@@ -1227,6 +1235,7 @@ namespace IronPython.Runtime.Operations {
             if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
             if (o is double) return (int)(double)o;
             if (o == null) return NoneTypeOps.HashCode;
+            if (o is char) return new String((char)o, 1).GetHashCode();
 
             return o.GetHashCode();
         }
@@ -1237,6 +1246,7 @@ namespace IronPython.Runtime.Operations {
             if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
             if (o is double) return (int)(double)o;
             if (o == null) return NoneTypeOps.HashCode;
+            if (o is char) return new String((char)o, 1).GetHashCode();            
 
             IRichEquality ipe = o as IRichEquality;
             if (ipe != null) {

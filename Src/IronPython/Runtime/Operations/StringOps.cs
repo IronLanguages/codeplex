@@ -270,6 +270,11 @@ namespace IronPython.Runtime.Operations {
             return s.Contains(item);
         }
 
+        [PythonName("__contains__")]
+        public static bool Contains(string s, char item) {
+            return s.IndexOf(item) != -1;
+        }
+
         [PythonName("__len__")]
         public static int GetLength(string s) {
             return s.Length;

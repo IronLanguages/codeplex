@@ -174,4 +174,16 @@ def test_str_subclass():
     AreEqual(len(o), 2300)
     AreEqual('a' in o, False)
 
+if is_cli:
+    def test_str_char_hash():
+        import System 
+        a = System.Char.Parse('a')
+
+        for x in [{'a':'b'}, set(['a']), 'abc', ['a'], ('a',)]:
+            AreEqual(a in x, True)
+    
+        AreEqual(hash(a), hash('a'))
+        
+        AreEqual('a' in a, True)
+
 run_test(__name__)
