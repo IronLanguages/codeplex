@@ -16,6 +16,8 @@
 #
 # test ironmath
 #
+
+
 from lib.assert_util import *
 if is_cli:
     import sys
@@ -28,6 +30,9 @@ if is_cli:
     from IronMath import BigInteger
     from IronMath import Complex64
     
+    load_iron_python_test()
+    import IronPythonTest
+
     class myFormatProvider(IFormatProvider):
         def ToString():pass
     
@@ -141,4 +146,67 @@ if is_cli:
     AreEqual (Complex64.Divide(4+2j,2) , (2 + 1j) )
 
 
+    AreEqual(BigInteger(-1234).GetSign(), -1)
+    AreEqual(BigInteger(-1234).IsZero(), False)
+    AreEqual(BigInteger(-1234).IsNegative(), True)
+    AreEqual(BigInteger(-1234).IsPositive(), False)
 
+    AreEqual(BigInteger(0).GetSign(), 0)
+    AreEqual(BigInteger(0).IsZero(), True)
+    AreEqual(BigInteger(0).IsNegative(), False)
+    AreEqual(BigInteger(0).IsPositive(), False)
+
+    AreEqual(BigInteger(1234).GetSign(), 1)
+    AreEqual(BigInteger(1234).IsZero(), False)
+    AreEqual(BigInteger(1234).IsNegative(), False)
+    AreEqual(BigInteger(1234).IsPositive(), True)
+
+    def CheckByteConversions(bigint, bytes):
+        SequencesAreEqual(bigint.ToByteArray(), bytes)
+        AreEqual(BigInteger.Create(System.Array[System.Byte](bytes)), bigint)
+
+    CheckByteConversions(BigInteger(0x00), [0x00])
+
+    CheckByteConversions(BigInteger(-0x01), [0xff])
+    CheckByteConversions(BigInteger(-0x81), [0x7f, 0xff])
+    CheckByteConversions(BigInteger(-0x100), [0x00, 0xff])
+    CheckByteConversions(BigInteger(-0x1000), [0x00, 0xf0])
+    CheckByteConversions(BigInteger(-0x10000), [0x00, 0x00, 0xff])
+    CheckByteConversions(BigInteger(-0x100000), [0x00, 0x00, 0xf0])
+    CheckByteConversions(BigInteger(-0x10000000), [0x00, 0x00, 0x00, 0xf0])
+    CheckByteConversions(BigInteger(-0x100000000), [0x00, 0x00, 0x00, 0x00, 0xff])
+
+    CheckByteConversions(BigInteger(0x7f), [0x7f])
+    CheckByteConversions(BigInteger(0xff), [0xff, 0x00])
+    CheckByteConversions(BigInteger(0x0201), [0x01, 0x02])
+    CheckByteConversions(BigInteger(0xf2f1), [0xf1, 0xf2, 0x00])
+    CheckByteConversions(BigInteger(0x03020100), [0x00, 0x01, 0x02, 0x03])
+    CheckByteConversions(BigInteger(0x0403020100), [0x00, 0x01, 0x02, 0x03, 0x04])
+    CheckByteConversions(BigInteger(0x0706050403020100), [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
+    CheckByteConversions(BigInteger(0x080706050403020100), [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
+
+    def CheckDwordConversions(bigint, dwords):
+        SequencesAreEqual(bigint.GetBits(), dwords)
+        if bigint == BigInteger.Zero:
+            AreEqual(
+                IronPythonTest.IronMath.CreateBigInteger(
+                    0,
+                    System.Array[System.UInt32](dwords),),
+                bigint)
+        else:
+            AreEqual(
+                IronPythonTest.IronMath.CreateBigInteger(
+                    1,
+                    System.Array[System.UInt32](dwords)),
+                bigint)
+            AreEqual(
+                IronPythonTest.IronMath.CreateBigInteger(
+                    -1,
+                    System.Array[System.UInt32](dwords)),
+                BigInteger.Negate(bigint))
+
+    CheckDwordConversions(BigInteger(0), [])
+    CheckDwordConversions(BigInteger(1), [0x00000001])
+    CheckDwordConversions(BigInteger((1<<31)), [0x80000000])
+    CheckDwordConversions(BigInteger(((1<<31) + 9)), [0x80000009])
+    CheckDwordConversions(BigInteger((1<<32)), [0x00000000, 0x00000001])

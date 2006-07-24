@@ -50,7 +50,7 @@ data = [
 	TypeData('Array'),
 	TypeData('BuiltinFunction'),
 	TypeData('Dict'),
-	TypeData('FrozenSetCollection', entryName="FrozenSet"),
+	TypeData('FrozenSetCollection', entryName='FrozenSet'),
 	TypeData('PythonFunction', entryName='Function'),
 	TypeData('PythonCodecs', 'codecs', entryName='Codecs'),
 	TypeData('Builtin'),
@@ -65,7 +65,7 @@ data = [
 	TypeData('WeakReference'),
 	TypeData('List'),
 	TypeData('PythonFile'),
-	TypeData('PythonModule', entryName="Module"),
+	TypeData('PythonModule', entryName='Module'),
 	TypeData('Method'),
 	TypeData('Enumerate'),
 	TypeData('Int32', 'intType'),
@@ -74,6 +74,10 @@ data = [
 	TypeData('Complex64'),
 	TypeData('DynamicType'),
 	TypeData('Super'),
+	TypeData('OldClass'),
+	TypeData('OldInstance'),
+	TypeData('void', 'noneType', entryName='None'),
+	TypeData('Boolean', 'boolType'),
 ]
 
 # groups all of our type data by type, and outputs

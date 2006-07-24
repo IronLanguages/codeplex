@@ -120,7 +120,9 @@ namespace IronPython.Runtime.Calls {
             [PythonName("__module__")]
             get {
                 if (targets.Length > 0) {
-                    return (string)DeclaringType.dict[SymbolTable.Module];
+                    ReflectedType declaringType = DeclaringType;
+                    declaringType.Initialize();
+                    return (string)declaringType.dict[SymbolTable.Module];
                 }
                 return null;
             }

@@ -93,6 +93,37 @@ namespace IronPython.Runtime.Operations {
         }
 
         /// <summary>
+        /// Return a dict that maps slot names to slot values, but only include slots that have been assigned to.
+        /// Looks up slots in base types as well as the current type.
+        /// 
+        /// Sort-of Python equivalent (doesn't look up base slots, while the real code does):
+        ///   return dict([(slot, getattr(self, slot)) for slot in type(self).__slots__ if hasattr(self, slot)])
+        /// 
+        /// Return null if the object has no __slots__, or empty dict if it has __slots__ but none are initialized.
+        /// </summary>
+        private static Dict GetInitializedSlotValues(object obj) {
+            Dict initializedSlotValues = new Dict();
+            Tuple mro = Ops.GetDynamicType(obj).MethodResolutionOrder;
+            object slots;
+            object slotValue;
+            foreach (object type in mro) {
+                if (Ops.TryGetAttr(type, SymbolTable.Slots, out slots)) {
+                    List<string> slotNames = IronPython.Compiler.Generation.NewTypeMaker.SlotsToList(slots);
+                    foreach (string slotName in slotNames) {
+                        if (slotName == "__dict__") continue;
+                        // don't reassign same-named slots from types earlier in the MRO
+                        if (initializedSlotValues.ContainsKey(slotName)) continue;
+                        if (Ops.TryGetAttr(obj, SymbolTable.StringToId(slotName), out slotValue)) {
+                            initializedSlotValues[slotName] = slotValue;
+                        }
+                    }
+                }
+            }
+            if (initializedSlotValues.Count == 0) return null;
+            return initializedSlotValues;
+        }
+
+        /// <summary>
         /// Implements the default __reduce_ex__ method as specified by PEP 307 case 2 (new-style instance, protocol 0 or 1)
         /// </summary>
         private static Tuple ReduceProtocol0(ICallerContext context, object self) {
@@ -112,13 +143,7 @@ namespace IronPython.Runtime.Operations {
 
             DynamicType closestNonPythonBase = FindClosestNonPythonBase(myType); // PEP 307 calls this "B"
 
-            if (closestNonPythonBase != TypeCache.Object) {
-                if (!NonPythonTypeIsPickleable(closestNonPythonBase)) {
-                    throw Ops.TypeErrorForBadInstance("can't pickle {0} instance (non-default __reduce__ needed)", self);
-                }
-            }
-
-            object func = PythonCopyReg._reconstructor;
+            object func = PythonCopyReg.PythonReconstructor;
 
             object funcArgs = Tuple.MakeTuple(
                 myType,
@@ -128,7 +153,7 @@ namespace IronPython.Runtime.Operations {
 
             object state;
             if (hasGetState) {
-                state = Ops.Call(getState, self);
+                state = Ops.Call(getState);
             } else {
                 Ops.TryGetAttr(self, SymbolTable.Dict, out state);
             }
@@ -141,23 +166,6 @@ namespace IronPython.Runtime.Operations {
             if (Ops.TRUE == NativelyPickleableTypes.Contains(type)) {
                 throw Ops.TypeError("can't pickle {0} objects", type.Name);
             }
-        }
-
-        /// <summary>
-        /// Returns true if the class is picklable. From PEP 307:
-        ///     "Unless B is the class 'object', instances of class B must be
-        ///     picklable, either by having built-in support (as defined in the
-        ///     above three bullet points), or by having a non-default
-        ///     __reduce__ implementation."
-        /// </summary>
-        private static bool NonPythonTypeIsPickleable(DynamicType type) {
-            if (Ops.TRUE == NativelyPickleableTypes.Contains(type)) return true;
-
-            object reduceFunction = PythonCopyReg.FindReduceFunction(type);
-
-            return reduceFunction != null &&
-                reduceFunction != Ops.GetAttr(DefaultContext.Default, TypeCache.Object, SymbolTable.Reduce) &&
-                reduceFunction != Ops.GetAttr(DefaultContext.Default, TypeCache.Object, SymbolTable.ReduceEx);
         }
 
         /// <summary>
@@ -181,7 +189,7 @@ namespace IronPython.Runtime.Operations {
             object func, state, listIterator, dictIterator;
             object[] funcArgs;
 
-            func = PythonCopyReg.__newobj__;
+            func = PythonCopyReg.PythonNewObject;
 
             object getNewArgsCallable;
             if (Ops.TryGetAttr(myType, SymbolTable.GetNewArgs, out getNewArgsCallable)) {
@@ -199,15 +207,11 @@ namespace IronPython.Runtime.Operations {
 
             if (!Ops.TryInvokeSpecialMethod(self, SymbolTable.GetState, out state)) {
                 object dict;
-                if (Ops.TryGetAttr(self, SymbolTable.Dict, out dict)) {
-                    if (!(dict is IMapping && ((IMapping)dict).GetLength() > 0)) {
-                        dict = null;
-                    }
-                } else {
+                if (!Ops.TryGetAttr(self, SymbolTable.Dict, out dict)) {
                     dict = null;
                 }
 
-                Dict initializedSlotValues = PythonCopyReg.GetInitializedSlotValues(self);
+                Dict initializedSlotValues = GetInitializedSlotValues(self);
                 if (initializedSlotValues != null && initializedSlotValues.Count == 0) {
                     initializedSlotValues = null;
                 }

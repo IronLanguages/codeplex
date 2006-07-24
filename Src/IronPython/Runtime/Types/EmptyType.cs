@@ -126,7 +126,7 @@ namespace IronPython.Runtime.Types {
             return typeInstance;
         }
 
-        [StaticOpsMethodAttribute("__init__")]
+        [StaticOpsMethod("__init__")]
         public static void InitMethod(params object[] prms) {
             // nop
         }
@@ -155,17 +155,17 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        [StaticOpsMethodAttribute("__hash__")]
+        [StaticOpsMethod("__hash__")]
         public static int HashMethod() {
             return hash;
         }
 
-        [StaticOpsMethodAttribute("__repr__")]
+        [StaticOpsMethod("__repr__")]
         public static string ReprMethod() {
             return Name;
         }
 
-        [StaticOpsMethodAttribute("__str__")]
+        [StaticOpsMethod("__str__")]
         public static new string ToString() {
             return Name;
         }
@@ -181,17 +181,17 @@ namespace IronPython.Runtime.Types {
             return Ops.Call(type, prms);
         }
 
-        [StaticOpsMethodAttribute("__delattr__")]
+        [StaticOpsMethod("__delattr__")]
         public static void DelAttrMethod(string name) {
             typeInstance.DelAttr(DefaultContext.Default, instance, SymbolTable.StringToId(name));
         }
 
-        [StaticOpsMethodAttribute("__getattribute__")]
+        [StaticOpsMethod("__getattribute__")]
         public static object GetAttributeMethod(string name) {
             return typeInstance.GetAttr(DefaultContext.Default, instance, SymbolTable.StringToId(name));
         }
 
-        [StaticOpsMethodAttribute("__setattr__")]
+        [StaticOpsMethod("__setattr__")]
         public static void SetAttrMethod(string name, object value) {
             typeInstance.SetAttr(DefaultContext.Default, instance, SymbolTable.StringToId(name), value);
         }

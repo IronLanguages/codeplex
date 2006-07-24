@@ -1212,6 +1212,23 @@ namespace IronPython.Runtime.Operations {
             return b.ToString();
         }
 
+        internal static string RawUnicodeEscapeEncode(string s) {
+            // in the common case we don't need to encode anything, so we
+            // lazily create the StringBuilder only if necessary.
+            StringBuilder b = null;
+            for (int i = 0; i < s.Length; i++) {
+                char ch = s[i];
+                if (ch > 0xff) {
+                    ReprInit(ref b, s, i);
+                    b.AppendFormat("\\u{0:x4}", (int)ch);
+                } else if (b != null) {
+                    b.Append(ch);
+                }
+            }
+
+            if (b == null) return s;
+            return b.ToString();
+        }
 
         #endregion
 
@@ -1294,24 +1311,6 @@ namespace IronPython.Runtime.Operations {
             if (sb != null) return;
 
             sb = new StringBuilder(s, 0, c, s.Length);
-        }
-
-        private static string RawUnicodeEscapeEncode(string s) {
-            // in the common case we don't need to encode anything, so we
-            // lazily create the StringBuilder only if necessary.
-            StringBuilder b = null;
-            for (int i = 0; i < s.Length; i++) {
-                char ch = s[i];
-                if (ch > 0xff) {
-                    ReprInit(ref b, s, i);
-                    b.AppendFormat("\\u{0:x4}", (int)ch);
-                } else if (b != null) {
-                    b.Append(ch);
-                }
-            }
-
-            if (b == null) return s;
-            return b.ToString();
         }
 
         private static bool IsSign(char ch) {

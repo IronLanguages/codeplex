@@ -29,7 +29,7 @@ namespace IronPython.Runtime.Types {
 
         // *** BEGIN GENERATED CODE ***
 
-        private static ReflectedType array, builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, obj, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, pythonmodule, method, enumerate, intType, doubleType, biginteger, complex64, dynamictype, super;
+        private static ReflectedType array, builtinfunction, dict, frozensetcollection, pythonfunction, codecs, builtin, generator, obj, setcollection, reflectedtype, str, systemstate, tuple, usertype, weakreference, list, pythonfile, pythonmodule, method, enumerate, intType, doubleType, biginteger, complex64, dynamictype, super, oldclass, oldinstance, noneType, boolType;
 
         // *** END GENERATED CODE ***
 
@@ -225,6 +225,34 @@ namespace IronPython.Runtime.Types {
             get {
                 if (super == null) super = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(Super));
                 return super;
+            }
+        }
+
+        public static ReflectedType OldClass {
+            get {
+                if (oldclass == null) oldclass = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(OldClass));
+                return oldclass;
+            }
+        }
+
+        public static ReflectedType OldInstance {
+            get {
+                if (oldinstance == null) oldinstance = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(OldInstance));
+                return oldinstance;
+            }
+        }
+
+        public static ReflectedType None {
+            get {
+                if (noneType == null) noneType = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(void));
+                return noneType;
+            }
+        }
+
+        public static ReflectedType Boolean {
+            get {
+                if (boolType == null) boolType = (ReflectedType)Ops.GetDynamicTypeFromType(typeof(Boolean));
+                return boolType;
             }
         }
 

@@ -138,7 +138,9 @@ fieldList = [
     ('__missing__', 'Missing'),
     ('with', 'With'),
     ('with_statement','WithStmt'),
-
+    ('append', 'Append'),
+    ('extend', 'Extend'),
+    ('update', 'Update'),
 
     ('LastWellKnown', 'LastWellKnown')
     ]

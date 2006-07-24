@@ -22,7 +22,7 @@ using System.Collections.Generic;
 namespace IronMath {
     /// <summary>
     /// arbitrary precision integers
-    /// </summary>    
+    /// </summary>
     public class BigInteger : IFormattable, IComparable, IConvertible {
         private const int BitsPerDigit = 32;
         private const ulong Base = 0x100000000;
@@ -86,6 +86,57 @@ namespace IronMath {
 
             return new BigInteger(((bits[3] & DecimalSignMask) != 0) ? -1 : +1, array);
         }
+
+        /// <summary>
+        /// Create a BigInteger from a little-endian twos-complement byte array
+        /// (inverse of ToByteArray())
+        /// </summary>
+        public static BigInteger Create(byte[] v) {
+            if (v.Length == 0) return Create(0);
+
+            int byteCount = v.Length;
+            int unalignedBytes = byteCount % 4;
+            int dwordCount = byteCount / 4 + (unalignedBytes == 0 ? 0 : 1);
+            uint[] data = new uint[dwordCount];
+            
+            bool isNegative = (v[byteCount - 1] & 0x80) == 0x80;
+
+            bool isZero = true;
+
+            // Copy all dwords, except but don't do the last one if it's not a full four bytes
+            int curDword, curByte, byteInDword;
+            curByte = 3;
+            for (curDword = 0; curDword < dwordCount - (unalignedBytes == 0 ? 0 : 1); curDword++) {
+                byteInDword = 0;
+                while (byteInDword < 4) {
+                    if (v[curByte] != 0x00) isZero = false;
+                    data[curDword] <<= 8;
+                    data[curDword] |= v[curByte];
+                    curByte--;
+                    byteInDword++;
+                }
+                curByte += 8;
+            }
+
+            // Copy the last dword specially if it's not aligned
+            if (unalignedBytes != 0) {
+                if (isNegative) data[dwordCount - 1] = 0xffffffff;
+                for (curByte = byteCount - 1; curByte >= byteCount - unalignedBytes; curByte--) {
+                    if (v[curByte] != 0x00) isZero = false;
+                    data[curDword] <<= 8;
+                    data[curDword] |= v[curByte];
+                }
+            }
+
+            if (isZero) return Zero;
+
+            if (isNegative) {
+                makeTwosComplement(data);
+                return new BigInteger(-1, data);
+            }
+            return new BigInteger(1, data);
+        }
+
 
         private static bool Negative(byte[] v) {
             return ((v[7] & 0x80) != 0);
@@ -159,6 +210,38 @@ namespace IronMath {
             if (GetLength(data) != 0) {
                 this.sign = (short)sign;
             }
+        }
+
+        /// <summary>
+        /// Return the magnitude of this BigInteger as an array of zero or more uints.
+        /// Element zero is the value of the least significant four bytes, element one is
+        /// the value of the four next most significant bytes, etc.
+        /// 
+        /// The returned data is the unsigned magnitude of the number. To determine the sign,
+        /// use GetSign().
+        /// 
+        /// It is guaranteed that the highest element of the returned array is never zero.
+        /// This means that if the value of this BigInteger is zero, a zero-length array
+        /// is returned.
+        /// </summary>
+        public uint[] GetBits() {
+            if (sign == 0) return new uint[0];
+            int mostSignificantNonZeroWord;
+            for (
+                mostSignificantNonZeroWord = data.Length - 1;
+                mostSignificantNonZeroWord >= 0 && data[mostSignificantNonZeroWord] == 0;
+                mostSignificantNonZeroWord--
+            );
+            uint[] bits = new uint[mostSignificantNonZeroWord + 1];
+            Array.Copy(data, bits, mostSignificantNonZeroWord + 1);
+            return bits;
+        }
+
+        /// <summary>
+        /// Return the sign of this BigInteger: -1, 0, or 1.
+        /// </summary>
+        public short GetSign() {
+            return sign;
         }
 
         public bool AsInt64(out long ret) {
@@ -289,9 +372,7 @@ namespace IronMath {
 
         private static uint[] copy(uint[] v) {
             uint[] ret = new uint[v.Length];
-            for (int i = 0; i < v.Length; i++) {
-                ret[i] = v[i];
-            }
+            Array.Copy(v, ret, v.Length);
             return ret;
         }
 
@@ -816,6 +897,9 @@ namespace IronMath {
             }
         }
 
+        /// <summary>
+        /// Do an in-place twos complement of d and also return the result.
+        /// </summary>
         private static uint[] makeTwosComplement(uint[] d) {
             // first do complement and +1 as long as carry is needed
             int i = 0;
@@ -1154,6 +1238,14 @@ namespace IronMath {
             return sign < 0;
         }
 
+        public bool IsZero() {
+            return sign == 0;
+        }
+
+        public bool IsPositive() {
+            return sign > 0;
+        }
+
         #region IComparable Members
 
         public int CompareTo(object obj) {
@@ -1182,6 +1274,56 @@ namespace IronMath {
                 return (byte)ret;
             }
             throw new OverflowException(IronMath.BigIntWontFitByte);
+        }
+
+        /// <summary>
+        /// Return the value of this BigInteger as a little-endian twos-complement
+        /// byte array, using the fewest number of bytes possible. If the value is zero,
+        /// return an array of one byte whose element is 0x00.
+        /// </summary>
+        public byte[] ToByteArray() {
+            // We could probably make this more efficient by eliminating one of the passes.
+            // The current code does one pass for uint array -> byte array conversion,
+            // and then a another pass to remove unneeded bytes at the top of the array.
+            if (0 == sign) return new byte[] { 0 };
+
+            uint[] dwords;
+            byte highByte;
+
+            if (-1 == sign) {
+                dwords = (uint[])this.data.Clone();
+                makeTwosComplement(dwords);
+                highByte = 0xff;
+            } else {
+                dwords = this.data;
+                highByte = 0x00;
+            }
+
+            byte[] bytes = new byte[4 * dwords.Length];
+            int curByte = 0;
+            uint dword;
+            for (int i = 0; i < dwords.Length; i++) {
+                dword = dwords[i];
+                for (int j = 0; j < 4; j++) {
+                    bytes[curByte++] = (byte)(dword & 0xff);
+                    dword >>= 8;
+                }
+            }
+
+            // find highest significant byte
+            int msb;
+            for (msb = bytes.Length - 1; msb > 0; msb--) {
+                if (bytes[msb] != highByte) break;
+            }
+            // ensure high bit is 0 if positive, 1 if negative
+            bool needExtraByte = (bytes[msb] & 0x80) != (highByte & 0x80);
+
+            byte[] trimmedBytes = new byte[msb + 1 + (needExtraByte ? 1 : 0)];
+            Array.Copy(bytes, trimmedBytes, msb + 1);
+
+            if (needExtraByte) trimmedBytes[trimmedBytes.Length - 1] = highByte;
+
+            return trimmedBytes;
         }
 
         public char ToChar(IFormatProvider provider) {

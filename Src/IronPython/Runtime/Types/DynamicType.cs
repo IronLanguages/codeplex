@@ -181,7 +181,8 @@ namespace IronPython.Runtime.Types {
             if (!dict.ContainsKey(SymbolTable.Module)) {
                 if (type.Assembly == typeof(DynamicType).Assembly ||
                     type.Assembly == typeof(IronMath.BigInteger).Assembly ||
-                    this is OpsReflectedType) {
+                    this is OpsReflectedType
+                ) {
                     string moduleName = null;
                     Type curType = type;
                     while (curType != null) {
@@ -518,16 +519,7 @@ namespace IronPython.Runtime.Types {
         #region IFancyCallable Members
 
         public object Call(ICallerContext context, object[] args, string[] names) {
-            Initialize();
-
-            object newFunc, newObject;
-
-            // object always has __new__, so we'll always find at least one            
-            TryLookupBoundSlot(context, this, SymbolTable.NewInst, out newFunc);
-            Debug.Assert(newFunc != null);
-
-            if (names != null) newObject = Ops.CallWithContext(context, newFunc, PrependThis(args), names);
-            else newObject = Ops.CallWithContext(context, newFunc, PrependThis(args));
+            object newObject = CreateInstance(context, args, names);
             if (newObject == null) return newObject;
 
             DynamicType newObjectType = Ops.GetDynamicType(newObject);
@@ -546,6 +538,21 @@ namespace IronPython.Runtime.Types {
                     iwr.SetFinalizer(new WeakRefTracker(nif, nif));
                 }
             }
+
+            return newObject;
+        }
+
+        internal object CreateInstance(ICallerContext context, object[] args, string[] names) {
+            Initialize();
+
+            object newFunc, newObject;
+
+            // object always has __new__, so we'll always find at least one            
+            TryLookupBoundSlot(context, this, SymbolTable.NewInst, out newFunc);
+            Debug.Assert(newFunc != null);
+
+            if (names != null) newObject = Ops.CallWithContext(context, newFunc, PrependThis(args), names);
+            else newObject = Ops.CallWithContext(context, newFunc, PrependThis(args));
 
             return newObject;
         }

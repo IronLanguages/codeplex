@@ -113,6 +113,11 @@ def AssertUnreachable(m = None):
 def AreEqual(a, b):
     Assert(a == b, "expected %r, but found %r" % (b, a))
 
+def SequencesAreEqual(a, b, m=None):
+    Assert(len(a) == len(b), m or 'sequence lengths differ: expected %d, but found %d' % (len(b), len(a)))
+    for i in xrange(len(a)):
+        Assert(a[i] == b[i], m or 'sequences differ at index %d: expected %r, but found %r' % (i, b[i], a[i]))
+
 def AlmostEqual(a, b):
     Assert(round(a-b, 6) == 0, "expected %r and %r almost same" % (a, b))    
     

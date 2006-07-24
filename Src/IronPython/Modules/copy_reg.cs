@@ -31,35 +31,70 @@ namespace IronPython.Modules {
     [Documentation("Provides global reduction-function registration for pickling and copying objects.")]
     public static class PythonCopyReg {
 
-        public static Dict dispatch_table = new Dict();
-        public static Dict _extension_cache = new Dict();
-        public static Dict _extension_registry = new Dict();
-        public static Dict _inverted_registry = new Dict();
+        private static Dict dispatchTable = new Dict();
+        private static Dict extensionCache = new Dict();
+        private static Dict extensionRegistry = new Dict();
+        private static Dict invertedRegistry = new Dict();
 
-        public static BuiltinFunction pickle_complex;
-        public static BuiltinFunction _reconstructor;
-        public static BuiltinFunction __newobj__;
+        private static BuiltinFunction pythonReduceComplex;
+        private static BuiltinFunction pythonReconstructor;
+        private static BuiltinFunction pythonCreateNewObject;
+
+        public static Dict DispatchTable {
+            [PythonName("dispatch_table")] get { return dispatchTable; }
+            [PythonName("dispatch_table")] set { dispatchTable = value; }
+        }
+
+        public static Dict ExtensionCache {
+            [PythonName("_extension_cache")] get { return extensionCache; }
+            [PythonName("_extension_cache")] set { extensionCache = value; }
+        }
+
+        public static Dict ExtensionRegistry {
+            [PythonName("_extension_registry")] get { return extensionRegistry; }
+            [PythonName("_extension_registry")] set { extensionRegistry = value; }
+        }
+
+        public static Dict InvertedRegistry {
+            [PythonName("_inverted_registry")] get { return invertedRegistry; }
+            [PythonName("_inverted_registry")] set { invertedRegistry = value; }
+        }
+
+        public static BuiltinFunction PythonReduceComplex {
+            [PythonName("pickle_complex")] get { return pythonReduceComplex; }
+            [PythonName("pickle_complex")] set { pythonReduceComplex = value; }
+        }
+
+        public static BuiltinFunction PythonReconstructor {
+            [PythonName("_reconstructor")] get { return pythonReconstructor; }
+            [PythonName("_reconstructor")] set { pythonReconstructor = value; }
+        }
+
+        public static BuiltinFunction PythonNewObject {
+            [PythonName("__newobj__")] get { return pythonCreateNewObject; }
+            [PythonName("__newobj__")] set { pythonCreateNewObject = value; }
+        }
 
         static PythonCopyReg() {
-            pickle_complex = BuiltinFunction.MakeMethod(
+            pythonReduceComplex = BuiltinFunction.MakeMethod(
                 "pickle_complex",
                 typeof(PythonCopyReg).GetMethod("ReduceComplex"),
                 FunctionType.Function | FunctionType.PythonVisible
             );
 
-            _reconstructor = BuiltinFunction.MakeMethod(
+            pythonReconstructor = BuiltinFunction.MakeMethod(
                 "_reconstructor",
                 typeof(PythonCopyReg).GetMethod("Reconstructor"),
                 FunctionType.Function | FunctionType.PythonVisible
             );
 
-            __newobj__ = BuiltinFunction.MakeMethod(
+            pythonCreateNewObject = BuiltinFunction.MakeMethod(
                 "__newobj__",
                 typeof(PythonCopyReg).GetMethod("NewObject"),
                 FunctionType.Function | FunctionType.PythonVisible
             );
 
-            dispatch_table[TypeCache.Complex64] = pickle_complex;
+            dispatchTable[TypeCache.Complex64] = pythonReduceComplex;
         }
 
         #region Public API
@@ -81,8 +116,8 @@ namespace IronPython.Modules {
         [PythonName("pickle")]
         public static void RegisterReduceFunction(object type, object function, [DefaultParameterValue(null)] object constructor) {
             EnsureCallable(function, "reduction functions must be callable");
-            Constructor(constructor);
-            dispatch_table[type] = function;
+            if (constructor != null) Constructor(constructor);
+            dispatchTable[type] = function;
         }
 
         [Documentation("constructor(object) -> None\n\n"
@@ -119,51 +154,51 @@ namespace IronPython.Modules {
 
         [PythonName("clear_extension_cache")]
         public static void ClearExtensionCache() {
-            _extension_cache.Clear();
+            extensionCache.Clear();
         }
 
         [Documentation("Register an extension code.")]
         [PythonName("add_extension")]
-        public static void AddExtension(object key1, object key2, object value) {
-            Tuple key = Tuple.MakeTuple(key1, key2);
+        public static void AddExtension(object moduleName, object objectName, object value) {
+            Tuple key = Tuple.MakeTuple(moduleName, objectName);
             int code = GetCode(value);
 
-            bool keyExists = _extension_registry.ContainsKey(key);
-            bool codeExists = _inverted_registry.ContainsKey(code);
+            bool keyExists = extensionRegistry.ContainsKey(key);
+            bool codeExists = invertedRegistry.ContainsKey(code);
 
             if (!keyExists && !codeExists) {
-                _extension_registry[key] = code;
-                _inverted_registry[code] = key;
+                extensionRegistry[key] = code;
+                invertedRegistry[code] = key;
             } else if (keyExists && codeExists &&
-                Ops.EqualRetBool(_extension_registry[key], code) &&
-                Ops.EqualRetBool(_inverted_registry[code], key)
+                Ops.EqualRetBool(extensionRegistry[key], code) &&
+                Ops.EqualRetBool(invertedRegistry[code], key)
             ) {
                 // nop
             } else {
                 if (keyExists) {
-                    throw Ops.ValueError("key {0} is already registered with code {1}", Ops.Repr(key), Ops.Repr(_extension_registry[key]));
+                    throw Ops.ValueError("key {0} is already registered with code {1}", Ops.Repr(key), Ops.Repr(extensionRegistry[key]));
                 } else { // codeExists
-                    throw Ops.ValueError("code {0} is already in use for key {1}", Ops.Repr(code), Ops.Repr(_inverted_registry[code]));
+                    throw Ops.ValueError("code {0} is already in use for key {1}", Ops.Repr(code), Ops.Repr(invertedRegistry[code]));
                 }
             }
         }
 
         [Documentation("Unregister an extension code. (only for testing)")]
         [PythonName("remove_extension")]
-        public static void RemoveExtension(object key1, object key2, object value) {
-            Tuple key = Tuple.MakeTuple(key1, key2);
+        public static void RemoveExtension(object moduleName, object objectName, object value) {
+            Tuple key = Tuple.MakeTuple(moduleName, objectName);
             int code = GetCode(value);
 
             object existingKey;
             object existingCode;
 
-            if (_extension_registry.TryGetValue(key, out existingCode) &&
-                _inverted_registry.TryGetValue(code, out existingKey) &&
+            if (extensionRegistry.TryGetValue(key, out existingCode) &&
+                invertedRegistry.TryGetValue(code, out existingKey) &&
                 Ops.EqualRetBool(existingCode, code) &&
                 Ops.EqualRetBool(existingKey, key)
             ) {
-                _extension_registry.DeleteItem(key);
-                _inverted_registry.DeleteItem(code);
+                extensionRegistry.DeleteItem(key);
+                invertedRegistry.DeleteItem(code);
             } else {
                 throw Ops.ValueError("key {0} is not registered with code {1}", Ops.Repr(key), Ops.Repr(code));
             }
@@ -191,59 +226,6 @@ namespace IronPython.Modules {
             object obj = Ops.Invoke(baseType, SymbolTable.NewInst, objType, baseState);
             Ops.Invoke(baseType, SymbolTable.Init, obj, baseState);
             return obj;
-        }
-
-        #endregion
-
-        #region Internal methods (used by other runtime code)
-
-        /// <summary>
-        /// Return the first available of:
-        ///  - copy_reg.dispatch_table[type]
-        ///  - type.__reduce_ex__
-        ///  - type.__reduce__
-        /// 
-        /// Return null if none of the preceding are available.
-        /// </summary>
-        internal static object FindReduceFunction(DynamicType type) {
-            object func;
-
-            if (dispatch_table.TryGetValue(type, out func)) return func;
-            if (Ops.TryGetAttr(type, SymbolTable.ReduceEx, out func)) return func;
-            if (Ops.TryGetAttr(type, SymbolTable.Reduce, out func)) return func;
-
-            return null;
-        }
-
-        /// <summary>
-        /// Return a dict that maps slot names to slot values, but only include slots that have been assigned to.
-        /// Looks up slots in base types as well as the current type.
-        /// 
-        /// Sort-of Python equivalent (doesn't look up base slots, while the real code does):
-        ///   return dict([(slot, getattr(self, slot)) for slot in type(self).__slots__ if hasattr(self, slot)])
-        /// 
-        /// Return null if the object has no __slots__, or empty dict if it has __slots__ but none are initialized.
-        /// </summary>
-        internal static Dict GetInitializedSlotValues(object obj) {
-            Dict initializedSlotValues = new Dict();
-            Tuple mro = Ops.GetDynamicType(obj).MethodResolutionOrder;
-            object slots;
-            object slotValue;
-            foreach (object type in mro) {
-                if (Ops.TryGetAttr(type, SymbolTable.Slots, out slots)) {
-                    List<string> slotNames = IronPython.Compiler.Generation.NewTypeMaker.SlotsToList(slots);
-                    foreach (string slotName in slotNames) {
-                        if (slotName == "__dict__") continue;
-                        // don't reassign same-named slots from types earlier in the MRO
-                        if (initializedSlotValues.ContainsKey(slotName)) continue;
-                        if (Ops.TryGetAttr(obj, SymbolTable.StringToId(slotName), out slotValue)) {
-                            initializedSlotValues[slotName] = slotValue;
-                        }
-                    }
-                }
-            }
-            if (initializedSlotValues.Count == 0) return null;
-            return initializedSlotValues;
         }
 
         #endregion

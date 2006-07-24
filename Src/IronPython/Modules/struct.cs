@@ -29,7 +29,7 @@ namespace IronPython.Modules {
 
         #region Public API Surface
         [PythonName("pack")]
-        public static object Pack(string fmt, params object[] values) {
+        public static string Pack(string fmt, params object[] values) {
             int count = 1;
             int curObj = 0;
             StringBuilder res = new StringBuilder();
@@ -137,8 +137,7 @@ namespace IronPython.Modules {
 
             if (curObj != values.Length) throw Error("not all arguments used");
 
-            if (fStandardized)
-                return res.ToString();
+            if (fStandardized) return res.ToString();
             return res.ToString();
         }
 
@@ -488,7 +487,7 @@ namespace IronPython.Modules {
         #endregion
 
         #region Data getter helpers
-        private static char GetCharValue(int index, object[] args) {
+        internal static char GetCharValue(int index, object[] args) {
             object val = GetValue(index, args);
             char res;
             if (Converter.TryConvertToChar(val, out res)) {
@@ -497,7 +496,7 @@ namespace IronPython.Modules {
             throw Error("expected character value");
         }
 
-        private static sbyte GetSByteValue(int index, object[] args) {
+        internal static sbyte GetSByteValue(int index, object[] args) {
             object val = GetValue(index, args);
             sbyte res;
             if (Converter.TryConvertToSByte(val, out res)) {
@@ -506,7 +505,7 @@ namespace IronPython.Modules {
             throw Error("expected sbyte value got " + val.ToString());
         }
 
-        private static byte GetByteValue(int index, object[] args) {
+        internal static byte GetByteValue(int index, object[] args) {
             object val = GetValue(index, args);
 
             byte res;
@@ -518,63 +517,63 @@ namespace IronPython.Modules {
             throw Error("expected byte value got " + val.ToString());
         }
 
-        private static short GetShortValue(int index, object[] args) {
+        internal static short GetShortValue(int index, object[] args) {
             object val = GetValue(index, args);
             short res;
             if (Converter.TryConvertToInt16(val, out res)) return res;
             throw Error("expected short value");
         }
 
-        private static ushort GetUShortValue(int index, object[] args) {
+        internal static ushort GetUShortValue(int index, object[] args) {
             object val = GetValue(index, args);
             ushort res;
             if (Converter.TryConvertToUInt16(val, out res)) return res;
             throw Error("expected ushort value");
         }
 
-        private static int GetIntValue(int index, object[] args) {
+        internal static int GetIntValue(int index, object[] args) {
             object val = GetValue(index, args);
             int res;
             if (Converter.TryConvertToInt32(val, out res)) return res;
             throw Error("expected int value");
         }
 
-        private static uint GetUIntValue(int index, object[] args) {
+        internal static uint GetUIntValue(int index, object[] args) {
             object val = GetValue(index, args);
             uint res;
             if (Converter.TryConvertToUInt32(val, out res)) return res;
             throw Error("expected uint value");
         }
 
-        private static long GetLongValue(int index, object[] args) {
+        internal static long GetLongValue(int index, object[] args) {
             object val = GetValue(index, args);
             long res;
             if (Converter.TryConvertToInt64(val, out res)) return res;
             throw Error("expected long value");
         }
 
-        private static ulong GetULongValue(int index, object[] args) {
+        internal static ulong GetULongValue(int index, object[] args) {
             object val = GetValue(index, args);
             ulong res;
             if (Converter.TryConvertToUInt64(val, out res)) return res;
             throw Error("expected ulong value");
         }
 
-        private static double GetDoubleValue(int index, object[] args) {
+        internal static double GetDoubleValue(int index, object[] args) {
             object val = GetValue(index, args);
             double res;
             if (Converter.TryConvertToDouble(val, out res)) return res;
             throw Error("expected double value");
         }
 
-        private static string GetStringValue(int index, object[] args) {
+        internal static string GetStringValue(int index, object[] args) {
             object val = GetValue(index, args);
             string res;
             if (Converter.TryConvertToString(val, out res)) return res;
             throw Error("expected string value");
         }
 
-        private static object GetValue(int index, object[] args) {
+        internal static object GetValue(int index, object[] args) {
             if (index >= args.Length) throw Error("not enough arguments");
             return args[index];
         }
@@ -582,11 +581,11 @@ namespace IronPython.Modules {
 
         #region Data creater helpers
 
-        private static char CreateCharValue(ref int index, string data) {
+        internal static char CreateCharValue(ref int index, string data) {
             return ReadData(ref index, data);
         }
 
-        private static short CreateShortValue(ref int index, bool fLittleEndian, string data) {
+        internal static short CreateShortValue(ref int index, bool fLittleEndian, string data) {
             byte b1 = (byte)ReadData(ref index, data);
             byte b2 = (byte)ReadData(ref index, data);
 
@@ -597,7 +596,7 @@ namespace IronPython.Modules {
             }
         }
 
-        private static ushort CreateUShortValue(ref int index, bool fLittleEndian, string data) {
+        internal static ushort CreateUShortValue(ref int index, bool fLittleEndian, string data) {
             byte b1 = (byte)ReadData(ref index, data);
             byte b2 = (byte)ReadData(ref index, data);
 
@@ -608,7 +607,7 @@ namespace IronPython.Modules {
             }
         }
 
-        private static float CreateFloatValue(ref int index, bool fLittleEndian, string data) {
+        internal static float CreateFloatValue(ref int index, bool fLittleEndian, string data) {
             byte[] bytes = new byte[4];
             if (fLittleEndian) {
                 bytes[0] = (byte)ReadData(ref index, data);
@@ -624,7 +623,7 @@ namespace IronPython.Modules {
             return BitConverter.ToSingle(bytes, 0);
         }
 
-        private static int CreateIntValue(ref int index, bool fLittleEndian, string data) {
+        internal static int CreateIntValue(ref int index, bool fLittleEndian, string data) {
             byte b1 = (byte)ReadData(ref index, data);
             byte b2 = (byte)ReadData(ref index, data);
             byte b3 = (byte)ReadData(ref index, data);
@@ -636,7 +635,7 @@ namespace IronPython.Modules {
                 return (int)((b1 << 24) | (b2 << 16) | (b3 << 8) | b4);
         }
 
-        private static uint CreateUIntValue(ref int index, bool fLittleEndian, string data) {
+        internal static uint CreateUIntValue(ref int index, bool fLittleEndian, string data) {
             byte b1 = (byte)ReadData(ref index, data);
             byte b2 = (byte)ReadData(ref index, data);
             byte b3 = (byte)ReadData(ref index, data);
@@ -648,7 +647,7 @@ namespace IronPython.Modules {
                 return (uint)((b1 << 24) | (b2 << 16) | (b3 << 8) | b4);
         }
 
-        private static long CreateLongValue(ref int index, bool fLittleEndian, string data) {
+        internal static long CreateLongValue(ref int index, bool fLittleEndian, string data) {
             long b1 = (byte)ReadData(ref index, data);
             long b2 = (byte)ReadData(ref index, data);
             long b3 = (byte)ReadData(ref index, data);
@@ -666,7 +665,7 @@ namespace IronPython.Modules {
                                 (b5 << 24) | (b6 << 16) | (b7 << 8) | b8);
         }
 
-        private static ulong CreateULongValue(ref int index, bool fLittleEndian, string data) {
+        internal static ulong CreateULongValue(ref int index, bool fLittleEndian, string data) {
             ulong b1 = (byte)ReadData(ref index, data);
             ulong b2 = (byte)ReadData(ref index, data);
             ulong b3 = (byte)ReadData(ref index, data);
@@ -683,7 +682,7 @@ namespace IronPython.Modules {
                                 (b5 << 24) | (b6 << 16) | (b7 << 8) | b8);
         }
 
-        private static double CreateDoubleValue(ref int index, bool fLittleEndian, string data) {
+        internal static double CreateDoubleValue(ref int index, bool fLittleEndian, string data) {
             byte[] bytes = new byte[8];
             if (fLittleEndian) {
                 bytes[0] = (byte)ReadData(ref index, data);
@@ -707,7 +706,7 @@ namespace IronPython.Modules {
             return BitConverter.ToDouble(bytes, 0);
         }
 
-        private static string CreateString(ref int index, int count, string data) {
+        internal static string CreateString(ref int index, int count, string data) {
             StringBuilder res = new StringBuilder();
             for (int i = 0; i < count; i++) {
                 res.Append(ReadData(ref index, data));
@@ -716,7 +715,7 @@ namespace IronPython.Modules {
         }
 
 
-        private static string CreatePascalString(ref int index, int count, string data) {
+        internal static string CreatePascalString(ref int index, int count, string data) {
             int realLen = (int)ReadData(ref index, data);
             StringBuilder res = new StringBuilder();
             for (int i = 0; i < realLen; i++) {

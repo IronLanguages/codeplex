@@ -125,6 +125,15 @@ namespace IronPython.Runtime {
             }
         }
 
+        /// <summary>
+        /// Return a copy of this tuple's data array.
+        /// </summary>
+        internal object[] ToArray() {
+            object[] copy = new object[data.Length];
+            Array.Copy(data, copy, data.Length);
+            return copy;
+        }
+
         #region ISequence Members
         [PythonName("__len__")]
         public int GetLength() {

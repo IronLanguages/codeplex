@@ -63,6 +63,7 @@ IronPythonTests = {
                 '''
                 test_binascii
                 test_cStringIO
+                test_cPickle
                 test_codecs
                 test_collections
                 test_datetime
@@ -196,6 +197,7 @@ LibraryTests = {
                 cookielib
                 copy
                 copy_reg
+                cPickle
                 csv
                 dbhash
                 decimal
@@ -364,9 +366,11 @@ RegressionTests = {
                 test.test_atexit
                 test.test_augassign
                 test.test_binop
+                test.test_bool
                 test.test_bufio
                 test.test_call
                 test.test_calendar
+                test.test_coercion
                 test.test_colorsys
                 test.test_contains
                 test.test_compare
@@ -424,10 +428,10 @@ RegressionTests = {
             'regression-withchange':
             [
     "test.test_bisect",     # doctest support
-    "test.test_bool",       # 4 scenarios disabled due to pickle
     "test.test_codecs",     # Pyunycode, Nameprep, and idna not implemented, need to manually import encodings
-    "test.test_coercion",   # no copy module
-    "test.test_decimal",    # Bugs 972, 975, 973; another 2 cases disabled due to pickle
+    "test.test_copy",       # No _testcapi module, can't override __getattribute__ on builtins
+    "test.test_cPickle",    # One test needs object.__base__
+    "test.test_decimal",    # Bugs 972, 975, 973
     "test.test_deque",      # weakref, pickle, itertools not implemented
     "test.test_eof",        # tests for the whole exception string verbatim, changed to test for substring
     "test.test_exceptions", # warnings module
@@ -442,6 +446,7 @@ RegressionTests = {
     "test.test_scope",      # Bugs 961, 962
     "test.test_set",        # weakref, itertools, and pickling not supported
     "test.test_sort",       # finalizer (__del__)
+    "test.test_socket",     # accept() timeouts, getservbyname(), makefile(), select module are skipped
     "test.test_str",        # formatting disabled in string_tests, need to import encodings manually
     "test.test_stringio",   # IP doesn't support buffer, iter(StringIO()) is wrapped IEnumerator
     "test.test_traceback",  # generates files aren't collected, need to close manually

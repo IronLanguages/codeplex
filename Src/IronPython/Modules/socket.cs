@@ -764,28 +764,15 @@ namespace IronPython.Modules {
 
         [Documentation("")]
         [PythonName("getaddrinfo")]
-        public static Tuple GetAddrInfo(string host, object port, int family, int socktype, int proto, int flags) {
-            throw Ops.NotImplementedError("getaddrinfo() is not currently implemented");
-        }
-        [Documentation("")]
-        [PythonName("getaddrinfo")]
-        public static Tuple GetAddrInfo(string host, object port, int family, int socktype, int proto) {
-            throw Ops.NotImplementedError("getaddrinfo() is not currently implemented");
-        }
-        [Documentation("")]
-        [PythonName("getaddrinfo")]
-        public static Tuple GetAddrInfo(string host, object port, int family, int socktype) {
-            throw Ops.NotImplementedError("getaddrinfo() is not currently implemented");
-        }
-        [Documentation("")]
-        [PythonName("getaddrinfo")]
-        public static Tuple GetAddrInfo(string host, object port, int family) {
-            throw Ops.NotImplementedError("getaddrinfo() is not currently implemented");
-        }
-        [Documentation("")]
-        [PythonName("getaddrinfo")]
-        public static Tuple GetAddrInfo(string host, object port) {
-            throw Ops.NotImplementedError("getaddrinfo() is not currently implemented");
+        public static Tuple GetAddrInfo(
+            string host,
+            object port,
+            [DefaultParameterValue((int)AddressFamily.InterNetwork)] int family,
+            [DefaultParameterValue(0)] int socktype,
+            [DefaultParameterValue((int)ProtocolType.IP)] int proto,
+            [DefaultParameterValue(0)] int flags
+        ) {
+            return null;
         }
 
         [Documentation("getfqdn([hostname_or_ip]) -> hostname\n\n"

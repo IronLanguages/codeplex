@@ -272,6 +272,13 @@ namespace IronPython.Runtime {
             return new List(ret);
         }
 
+        internal object[] GetSliceAsArray(int start, int stop) {
+            if (start < 0) start = 0;
+            if (stop > GetLength()) stop = GetLength();
+
+            lock (this) return ArrayOps.GetSlice(data, start, stop);
+        }
+
         [PythonName("__setslice__")]
         public virtual void SetSlice(int start, int stop, object value) {
             if (start < 0) start = 0;
@@ -459,7 +466,7 @@ namespace IronPython.Runtime {
             return Ops.StringRepr(this);
         }
 
-        private void EnsureSize(int needed) {
+        internal void EnsureSize(int needed) {
             if (data.Length >= needed) return;
 
             int newSize = Math.Max(size * 2, 4);
