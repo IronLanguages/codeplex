@@ -71,6 +71,6 @@ using System.Security;
 //       documentation for more information on this.
 //
 [assembly: SecurityTransparent]
-
+[assembly: AllowPartiallyTrustedCallers]
 [assembly: ComVisible(false)]
 //[assembly: CLSCompliant(true)] @todo

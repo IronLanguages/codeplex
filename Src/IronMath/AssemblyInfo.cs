@@ -73,6 +73,7 @@ using System.Security.Permissions;
 //       documentation for more information on this.
 //
 [assembly: SecurityTransparent]
+[assembly: AllowPartiallyTrustedCallers]
 [assembly: CLSCompliant(false)]
 [assembly: ComVisible(false)]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum)]
