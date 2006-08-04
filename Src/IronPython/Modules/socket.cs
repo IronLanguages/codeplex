@@ -154,7 +154,7 @@ namespace IronPython.Modules {
                 )]
             [PythonName("bind")]
             public void Bind(Tuple address) {
-                IPEndPoint localEP = TupleToEndPoint(address);
+                IPEndPoint localEP = TupleToEndPoint(address, socket.AddressFamily);
                 try {
                     socket.Bind(localEP);
                 } catch (Exception e) {
@@ -196,7 +196,7 @@ namespace IronPython.Modules {
                 )]
             [PythonName("connect")]
             public void Connect(Tuple address) {
-                IPEndPoint remoteEP = TupleToEndPoint(address);
+                IPEndPoint remoteEP = TupleToEndPoint(address, socket.AddressFamily);
                 try {
                     socket.Connect(remoteEP);
                 } catch (Exception e) {
@@ -218,7 +218,7 @@ namespace IronPython.Modules {
                 )]
             [PythonName("connect_ex")]
             public int ConnectEx(Tuple address) {
-                IPEndPoint remoteEP = TupleToEndPoint(address);
+                IPEndPoint remoteEP = TupleToEndPoint(address, socket.AddressFamily);
                 try {
                     socket.Connect(remoteEP);
                 } catch (SocketException e) {
@@ -438,7 +438,7 @@ namespace IronPython.Modules {
             [PythonName("sendto")]
             public int SendTo(string data, int flags, Tuple address) {
                 byte[] buffer = StringOps.ToByteArray(data);
-                EndPoint remoteEP = TupleToEndPoint(address);
+                EndPoint remoteEP = TupleToEndPoint(address, socket.AddressFamily);
                 try {
                     return socket.SendTo(buffer, (SocketFlags)flags, remoteEP);
                 } catch (Exception e) {
@@ -1482,7 +1482,7 @@ namespace IronPython.Modules {
         ///  - address[0] is not a string
         ///  - address[1] is not an int
         /// </summary>
-        private static IPEndPoint TupleToEndPoint(Tuple address) {
+        private static IPEndPoint TupleToEndPoint(Tuple address, AddressFamily family) {
             if (address.Count != 2 && address.Count != 4) {
                 throw Ops.TypeError("address tuple must have exactly 2 (IPv4) or exactly 4 (IPv6) elements");
             }
@@ -1501,7 +1501,7 @@ namespace IronPython.Modules {
                 throw Ops.TypeError("port must be integer");
             }
 
-            IPAddress ip = HostToAddress(host, null);
+            IPAddress ip = HostToAddress(host, family);
 
             if (address.Count == 2) {
                 return new IPEndPoint(ip, port);
