@@ -22,7 +22,12 @@ from lib.assert_util import *
 import re
 from cStringIO import StringIO
 
-import cPickle
+import sys
+
+if sys.platform == 'cli':
+    import cPickle
+else:
+    import pickle as cPickle
 
 def sorted_dict_repr(dict):
     # We do str(k) to force unicode attribute values to be strings. On
