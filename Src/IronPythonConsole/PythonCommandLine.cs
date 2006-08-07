@@ -607,7 +607,7 @@ namespace IronPythonConsole {
                 if (pki != null) {
                     Thread.ResetAbort();
                     bool endOfMscorlib = false;
-                    string ex = engine.FormatException(tae, pki, delegate(StackFrame sf) {
+                    string ex = engine.FormatException(tae, ExceptionConverter.ToPython(pki), delegate(StackFrame sf) {
                         // filter out mscorlib methods that show up on the stack initially, 
                         // for example ReadLine / ReadBuffer etc...
                         if (!endOfMscorlib &&
