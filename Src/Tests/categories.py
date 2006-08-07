@@ -64,13 +64,8 @@ IronPythonTests = {
                 test_binascii
                 test_cStringIO
                 test_cPickle
-                test_codecs
-                test_collections
                 test_datetime
-                test_errno
-                test_gc
                 test_imp
-                test_itertools
                 test_marshal
                 test_math
                 test_nt
@@ -87,25 +82,20 @@ IronPythonTests = {
             'netinterop':
                 '''
                 test_array
-                test_assembly
-                test_callback 
                 test_cliclass
                 test_clrexception
                 test_clrload
                 test_clrload2
                 test_cominterop
                 test_delegate
-                test_enum
                 test_event
                 test_exceptionconverter
                 test_genericmeth
-                test_generictype
                 test_inheritance
                 test_methodbinder1
                 test_methodbinder2
                 test_methoddispatch
                 test_missing
-                test_namespace
                 test_privateBinding
                 test_protected
                 test_specialcontext
@@ -129,7 +119,6 @@ IronPythonTests = {
                 test_index
                 test_ironmath
                 test_kwarg
-                test_lambda
                 test_listcomp
                 test_namebinding
                 test_nofuture
@@ -141,7 +130,6 @@ IronPythonTests = {
                 ''',
             'stress':
                 '''
-                test_coredata
                 test_threadsafety
                 test_memory
                 ''',
