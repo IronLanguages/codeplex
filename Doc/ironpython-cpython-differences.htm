@@ -1,0 +1,265 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>IronPython Tutorial</title>
+<link rel="stylesheet" type="text/css" href="IronPython.css">
+<style>
+<!--
+.sbody       { font-family: Georgia; font-size: 10pt; margin-bottom: 6pt }
+-->
+</style>
+</head>
+
+<body lang="EN-US">
+
+<div class="Section1">
+	<p class="Title2">Differences between CPython and IronPython</p>
+	<p>&nbsp;</p>
+	<hr />
+	<p class="CopyrightText">Information in this document is subject to change without 
+	notice. The example companies, organizations, products, people, and events depicted 
+	herein are fictitious. No association with any real company, organization, product, 
+	person or event is intended or should be inferred. Complying with all applicable 
+	copyright laws is the responsibility of the user. Without limiting the rights 
+	under copyright, no part of this document may be reproduced, stored in or introduced 
+	into a retrieval system, or transmitted in any form or by any means (electronic, 
+	mechanical, photocopying, recording, or otherwise), or for any purpose, without 
+	the express written permission of Microsoft Corporation.</p>
+	<p class="CopyrightText">&nbsp;</p>
+	<p class="CopyrightText">Microsoft may have patents, patent applications, trademarked, 
+	copyrights, or other intellectual property rights covering subject matter in 
+	this document. Except as expressly provided in any written license agreement 
+	from Microsoft, the furnishing of this document does not give you any license 
+	to these patents, trademarks, copyrights, or other intellectual property.</p>
+	<p class="CopyrightText">&nbsp;</p>
+	<p class="CopyrightText">© Microsoft Corporation. All rights reserved.</p>
+	<p class="CopyrightText">&nbsp;</p>
+	<p class="CopyrightText">Microsoft, MS-DOS, MS, Windows, Windows NT, MSDN, Active 
+	Directory, BizTalk, SQL Server, SharePoint, Outlook, PowerPoint, FrontPage, 
+	Visual Basic, Visual C++, Visual J++, Visual InterDev, Visual SourceSafe, Visual 
+	C#, Visual J#,&nbsp; and Visual Studio are either registered trademarks or trademarks 
+	of Microsoft Corporation in the U.S.A. and/or other countries.</p>
+	<p class="CopyrightText">&nbsp;</p>
+	<p class="CopyrightText">Other product and company names herein may be the trademarks of their respective owners.</p>
+	<hr />
+	<p class="Normal">&nbsp;</p>
+	<h1>Introduction</h1>
+	<P class="sbody">CPython and IronPython are two different implementations of the Python 
+      language.&nbsp; While a <A href="http://www.python.org/doc/ref">Language 
+      Reference</A> exists for the Python language, there are a number of 
+      features of the language that are incompletely specified.&nbsp; The following 
+      lists all known differences between the two implementations of the Python 
+      language.&nbsp; These differences range from the trivial (such as, IronPython 
+	(XXX get sample) to the dramatic (XXX get example).<P class="sbody">Any other differences not listed here 
+	are purely an accidental omission.&nbsp; Please submit a bug report at
+	<a href="http://www.codeplex.com/ironpython">www.codeplex.com/ironpython</a> 
+	so that we can either fix the difference or update this document until we 
+	can fix it. 
+	<P class="sbody">This list has been updated to describe the differences between 
+      IronPython 1.0 and CPython 2.0.<p class="sbody">&nbsp;</p>
+	<h1>Syntax</h1>
+	<P class="Body"></P>
+	<p class="sbody">IronPython allows ...<I>.</I> </p>
+	<p class="Body">&nbsp;</p>
+	<h1>Standard Types, Functions, and Behaviors</h1>
+	<p class="sbody">IronPython has a more modern garbage collector whereas CPython uses reference 
+        counting.&nbsp; This means that in IronPython users don't need to worry about 
+        handling circular references as these are guaranteed to be collected 
+        properly.&nbsp; On the other hand, users of IronPython have no guarantees of 
+        when an object will be finalized.&nbsp; This can cause problems for people 
+        who use open("foo", 'r').read() excessively. <I>&nbsp;Both behaviors are 
+        acceptable.</I> </p>
+    <p class="sbody">
+        &nbsp;</p>
+	<p class="sbody">
+        Printing numbers on a machine with French locales produces different output:</p>
+    <p>
+        <blockquote>
+			<table id="table8">
+				<tr>
+					<td>IronPython</td>
+					<td>CPython</td>
+				</tr>
+				<tr>
+					<td>
+					<pre>&gt;&gt;&gt; x = 1.234
+&gt;&gt;&gt; x
+1.234
+&gt;&gt;&gt; print x<strong>
+1,234</strong></pre></td>
+					<td>
+					<pre>&gt;&gt;&gt; x = 1.234
+&gt;&gt;&gt; x
+1.234
+&gt;&gt;&gt; print x<strong>
+1.234</strong></pre></td>
+				</tr>
+			</table>
+	</blockquote>
+	<p class="sbody">Small integer caching in IronPython is different than in standard 
+	CPython.&nbsp; Code such as:</p>
+	<p class="Code-Background">i = 2<br>
+	i is 2</p>
+	<p class="sbody">will produce different results in IronPython and CPython.&nbsp; However, the 
+	consistency of the result of such expressions is not guaranteed even within CPython which seems to be using different small integer caching strategies 
+	for different situations:</p>
+	<blockquote>
+		<table border="0" id="table9" width="250">
+			<tr>
+				<td>IronPython</td>
+				<td width="124">CPython</td>
+			</tr>
+			<tr>
+				<td>
+				<pre>&gt;&gt;&gt; i=5
+&gt;&gt;&gt; i is 5
+False
+&gt;&gt;&gt; i=5000
+&gt;&gt;&gt; i is 5000
+False</pre></td>
+				<td width="124">
+				<pre>&gt;&gt;&gt; i = 5
+&gt;&gt;&gt; i is 5
+True
+&gt;&gt;&gt; i = 5000
+&gt;&gt;&gt; i is 5000
+False</pre></td>
+			</tr>
+		</table>
+	</blockquote>
+
+
+	<p class="sbody">IronPython allows setting attributes on built-in functions.</p>
+	<p class="sbody">&nbsp;</p>
+	<h1><a name="Extension_Modules">Extension Modules</a></h1>
+	<p class="sbody">IronPyton does not support &quot;import __future__&quot; or &quot;from 
+	__future__ ...&quot;.&nbsp; To include all Python 2.5 features implemented, 
+	invoke the console (ipy.exe) with the &quot;-X:Python25&quot; switch.</p>
+	<p class="sbody">XXX Is there a standard future set of features we should 
+	have implemented, or this doesn't matter for documentation of 
+	incompatibilities?</p>
+	<p class="sbody">IronPython support importing .NET Frameworks assemblies as 
+	extension modules.&nbsp; Usually you need to import the built-in extension 
+	module clr and then call one of the clr.AddReference... functions.</p>
+	<p class="sbody">Some CPython builtin extension modules do not exist in 
+	IronPython.&nbsp; The following should be added:</p>
+	<table border="1" width="100%" id="table6">
+		<tr>
+			<td width="218">
+			<ul>
+				<li>
+				<p class="Body">_bisect</p></li>
+				<li>
+				<p class="Body">_codecs_hk</p></li>
+				<li>
+				<p class="Body">audioop</p></li>
+				<li>
+				<p class="Body">_multibytecodec</p></li>
+				<li>
+				<p class="Body">parser</p></li>
+				<li>
+				<p class="Body">array</p></li>
+				<li>
+				<p class="Body">msvcrt</p></li>
+				<li>
+				<p class="Body">_codecs_kr</p></li>
+			</ul>
+			</td>
+			<td width="221">
+			<ul>
+				<li>
+				<p class="Body">_heapq</p></li>
+				<li>
+				<p class="Body">_codecs_jp</p></li>
+				<li>
+				<p class="Body">imageop</p></li>
+				<li>
+				<p class="Body">mmap</p></li>
+				<li>
+				<p class="Body">_subprocess</p></li>
+				<li>
+				<p class="Body">_codecs_tw</p></li>
+				<li>
+				<p class="Body">regex</p></li>
+				<li>
+				<p class="Body">sys XXX ??? how???</p></li>
+			</ul>
+			</td>
+			<td width="208">
+			<ul>
+				<li>
+				<p class="Body">zipimport</p></li>
+				<li>
+				<p class="Body">xxsubtype</p></li>
+				<li>
+				<p class="Body">_codecs_cn</p></li>
+				<li>
+				<p class="Body">md5</p></li>
+				<li>
+				<p class="Body">_codecs_iso2022</p></li>
+				<li>
+				<p class="Body">rgbimg</p></li>
+				<li>
+				<p class="Body">_csv</p></li>
+			</ul>
+			<p>&nbsp;</td>
+			<td>
+			<ul>
+				<li>
+				<p class="Body">signal</p></li>
+				<li>
+				<p class="Body">_hotshot</p></li>
+				<li>
+				<p class="Body">sha</p></li>
+				<li>
+				<p class="Body">cmath</p></li>
+				<li>
+				<p class="Body">_symtable</p></li>
+				<li>
+				<p class="Body">_winreg</p></li>
+				<li>
+				<p class="Body">strop</p></li>
+			</ul>
+			<p>&nbsp;</td>
+		</tr>
+	</table>
+	<p class="sbody">The following are highly unlikely to be added any time soon:</p>
+	<table border="1" width="100%" id="table7">
+		<tr>
+			<td width="219">XXX </td>
+			<td width="224">&nbsp;</td>
+			<td width="204">&nbsp;</td>
+			<td>&nbsp;</td>
+		</tr>
+	</table>
+	<p class="sbody">IronPython has these additional modules: 're', 'copy_reg', 'socket'.&nbsp; 
+	These are built in rather than being implemented in Python either to 
+	leverage the .NET Frameworks or to avoid dependencies on CPython for a 
+	minimal installation.</p>
+	<p class="Body">&nbsp;</p>
+	<h1>Interpreter and environment</h1>
+	<p class="sbody">IronPython does not by default have the standard CPython 
+	libs on its path.&nbsp; <i>Fixed by adding these two lines to the site.py 
+	file in the IronPython lib directory:</i></p>
+	<p class="Code-Background">import sys<br>
+	sys.path.append(r&quot;c:\python24\lib&quot;)</p>
+	<p class="sbody">IronPython has different command line editing support than 
+	CPython.</p>
+	<p class="sbody">XXXIronPython should have a feature similar to $PYTHONSTARTUP, which 
+        specifies a script to run at the start of interactive mode only. </p>
+	<p class="sbody">IronPython supports different command 
+        line options than CPython.&nbsp; Invoke ipy.exe with the &quot;-?&quot; switch to 
+	see options.</p>
+	<p class="sbody">IronPython's sys.builtin_module_names tuple contains 
+	different values than CPython's result.&nbsp; See section
+	<a href="#Extension_Modules">Extension Modules</a> for differences.</p>
+</div>
+
+
+<p class="sbody">&nbsp;</p>
+
+
+</body>
+
+</html>
