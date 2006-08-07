@@ -92,6 +92,7 @@ namespace IronMath {
         /// (inverse of ToByteArray())
         /// </summary>
         public static BigInteger Create(byte[] v) {
+            if (v == null) throw new ArgumentNullException("v");
             if (v.Length == 0) return Create(0);
 
             int byteCount = v.Length;
@@ -196,20 +197,27 @@ namespace IronMath {
 
         public static implicit operator double(BigInteger i) {
             if (object.ReferenceEquals(i, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "i");
+                throw new ArgumentNullException("i");
             }
             return i.ToFloat64();
         }
         public BigInteger(BigInteger copy) {
+            if (object.ReferenceEquals(copy, null)) {
+                throw new ArgumentNullException("copy");
+            }
             this.sign = copy.sign;
             this.data = copy.data;
         }
 
         public BigInteger(int sign, params uint[] data) {
-            this.data = data;
+            if (data == null) throw new ArgumentNullException("data");
+            if (sign != -1 && sign != 0 && sign != 1) throw new ArgumentException(IronMath.InvalidArgument, "sign");
             if (GetLength(data) != 0) {
-                this.sign = (short)sign;
-            }
+                if (sign == 0) throw new ArgumentException(IronMath.InvalidArgument, "sign");
+            } else sign = 0;
+
+            this.data = data;
+            this.sign = (short)sign;
         }
 
         /// <summary>
@@ -456,10 +464,10 @@ namespace IronMath {
 
         public static int Compare(BigInteger x, BigInteger y) {
             if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "x");
+                throw new ArgumentNullException("x");
             }
             if (object.ReferenceEquals(y, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "y");
+                throw new ArgumentNullException("y");
             }
             if (x.sign == y.sign) {
                 int xl = x.Length;
@@ -488,7 +496,7 @@ namespace IronMath {
 
         public static bool operator ==(BigInteger x, double y) {
             if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "x");
+                throw new ArgumentNullException("x");
             }
 
             // we can hold all double values, but not all double values
@@ -538,6 +546,13 @@ namespace IronMath {
         }
 
         public static BigInteger operator +(BigInteger x, BigInteger y) {
+            if (object.ReferenceEquals(x, null)) {
+                throw new ArgumentNullException("x");
+            }
+            if (object.ReferenceEquals(y, null)) {
+                throw new ArgumentNullException("y");
+            }
+            
             if (x.sign == y.sign) {
                 return new BigInteger(x.sign, add0(x.data, x.Length, y.data, y.Length));
             } else {
@@ -578,10 +593,10 @@ namespace IronMath {
 
         public static BigInteger operator *(BigInteger x, BigInteger y) {
             if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "x");
+                throw new ArgumentNullException("x");
             }
             if (object.ReferenceEquals(y, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "y");
+                throw new ArgumentNullException("y");
             }
             int xl = x.Length;
             int yl = y.Length;
@@ -626,7 +641,7 @@ namespace IronMath {
             return ret;
         }
 
-        public static int GetNormalizeShift(uint value) {
+        private static int GetNormalizeShift(uint value) {
             int shift = 0;
 
             if ((value & 0xFFFF0000) == 0) { value <<= 16; shift += 16; }
@@ -847,6 +862,13 @@ namespace IronMath {
         }
 
         public static BigInteger DivRem(BigInteger x, BigInteger y, out BigInteger remainder) {
+            if (object.ReferenceEquals(x, null)) {
+                throw new ArgumentNullException("x");
+            }
+            if (object.ReferenceEquals(y, null)) {
+                throw new ArgumentNullException("y");
+            }
+
             uint[] q;
             uint[] r;
 
@@ -929,10 +951,10 @@ namespace IronMath {
 
         public static BigInteger operator &(BigInteger x, BigInteger y) {
             if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "x");
+                throw new ArgumentNullException("x");
             }
             if (object.ReferenceEquals(y, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "y");
+                throw new ArgumentNullException("y");
             }
             int xl = x.Length, yl = y.Length;
             uint[] xd = x.data, yd = y.data;
@@ -964,10 +986,10 @@ namespace IronMath {
 
         public static BigInteger operator |(BigInteger x, BigInteger y) {
             if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "x");
+                throw new ArgumentNullException("x");
             }
             if (object.ReferenceEquals(y, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "y");
+                throw new ArgumentNullException("y");
             }
             int xl = x.Length, yl = y.Length;
             uint[] xd = x.data, yd = y.data;
@@ -998,10 +1020,10 @@ namespace IronMath {
 
         public static BigInteger operator ^(BigInteger x, BigInteger y) {
             if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "x");
+                throw new ArgumentNullException("x");
             }
             if (object.ReferenceEquals(y, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "y");
+                throw new ArgumentNullException("y");
             }
             int xl = x.Length, yl = y.Length;
             uint[] xd = x.data, yd = y.data;
@@ -1032,7 +1054,7 @@ namespace IronMath {
 
         public static BigInteger operator <<(BigInteger x, int shift) {
             if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "x");
+                throw new ArgumentNullException("x");
             }
             if (shift == 0) return x;
             else if (shift < 0) return x >> -shift;
@@ -1069,7 +1091,7 @@ namespace IronMath {
 
         public static BigInteger operator >>(BigInteger x, int shift) {
             if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "x");
+                throw new ArgumentNullException("x");
             }
             if (shift == 0) return x;
             else if (shift < 0) return x << -shift;
@@ -1105,7 +1127,7 @@ namespace IronMath {
 
         public static BigInteger operator -(BigInteger x) {
             if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(IronMath.InvalidArgument, "x");
+                throw new ArgumentNullException("x");
             }
             return new BigInteger(-x.sign, x.data);
         }
@@ -1115,6 +1137,9 @@ namespace IronMath {
         }
 
         public static BigInteger operator ~(BigInteger x) {
+            if (object.ReferenceEquals(x, null)) {
+                throw new ArgumentNullException("x");
+            }
             return -(x + One);
         }
 
@@ -1140,6 +1165,9 @@ namespace IronMath {
         }
 
         public BigInteger ModPow(int power, BigInteger mod) {
+            if (object.ReferenceEquals(mod, null)) {
+                throw new ArgumentNullException("mod");
+            }
             if (power == 0) return One;
             if (power < 0) {
                 throw new ArgumentOutOfRangeException(IronMath.NonNegativePower);
@@ -1249,6 +1277,9 @@ namespace IronMath {
         #region IComparable Members
 
         public int CompareTo(object obj) {
+            if (obj == null) {
+                return 1;
+            }
             BigInteger o = obj as BigInteger;
             if (object.ReferenceEquals(o, null)) {
                 throw new ArgumentException(IronMath.ExpectedInteger);

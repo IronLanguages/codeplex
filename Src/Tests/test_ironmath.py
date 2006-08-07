@@ -210,3 +210,9 @@ if is_cli:
     CheckDwordConversions(BigInteger((1<<31)), [0x80000000])
     CheckDwordConversions(BigInteger(((1<<31) + 9)), [0x80000009])
     CheckDwordConversions(BigInteger((1<<32)), [0x00000000, 0x00000001])
+
+    AssertError(System.ArgumentException, IronPythonTest.IronMath.CreateBigInteger, 0, (1, 2, 3))
+    AssertError(System.ArgumentNullException, IronPythonTest.IronMath.CreateBigInteger, 0, None)
+
+    AreEqual(BigInteger(1).CompareTo(None), 1)
+    AssertError(System.ArgumentException, BigInteger(1).CompareTo, True)
