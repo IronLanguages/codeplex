@@ -527,6 +527,52 @@ else:
     
     AreEqual(launch_ironpython(_f_imfp_start), 0)
     
+    # test import of package module with name bound in __init__.py
+    write_to_file(_f_imfp_init, """
+mod = 10
+non_existent_mod = 20
+""")
+    write_to_file(_f_imfp_mod, """
+value = "value in module"
+""")
+    write_to_file(_f_imfp_start, """
+import impmodfrmpkg.mod as m
+if m.value != "value in module":
+    raise AssertionError("Failed to import nested module with name bound in __init__.py")
+""")
+    AreEqual(launch_ironpython(_f_imfp_start), 0)
+
+    write_to_file(_f_imfp_start, """
+try:
+    import impmodfrmpkg.non_existent_mod as nm
+except ImportError:
+    pass
+else:
+    raise AssertionError("Import of impmodfrmpkg.non_existent_mod unexpectedly succeeded.")
+""")
+    AreEqual(launch_ironpython(_f_imfp_start), 0)
+
+    write_to_file(_f_imfp_start, """
+import impmodfrmpkg
+if impmodfrmpkg.mod != 10:
+    raise AssertionError("The value 'mod' in the package was set to module before importing it")
+if impmodfrmpkg.non_existent_mod != 20:
+    raise AssertionError("The 'non_existent_mod' has wrong value")
+import impmodfrmpkg.mod
+if impmodfrmpkg.mod.value != "value in module":
+    raise AssertionError("Failed to import nested module with name bound in __init__.py")
+
+try:
+    import impmodfrmpkg.non_existent_mod
+except ImportError:
+    pass
+else:
+    raise AssertionError("Import of impmodfrmpkg.non_existent_mod unexpectedly succeeded")
+""")
+    AreEqual(launch_ironpython(_f_imfp_start), 0)
+
+    
+
     _recimp = 'recimp'
     _f_recimp_init = path_combine(testpath.public_testdir, _recimp, "__init__.py")
     _f_recimp_a = path_combine(testpath.public_testdir, _recimp, "a.py")

@@ -60,9 +60,7 @@ namespace IronPython.Runtime {
                 } else {
                     object path;
                     if (from.TryGetAttr(from, SymbolTable.Path, out path)) {
-                        return ImportNested(from, name);
-                    } else {
-                        throw Ops.ImportError("Cannot import name {0}", name);
+                        return ImportNestedModule(from, name);
                     }
                 }
             } else {
@@ -70,10 +68,26 @@ namespace IronPython.Runtime {
                 object ret;
                 if (Ops.TryGetAttr(context, mod, SymbolTable.StringToId(name), out ret)) {
                     return ret;
-                } else {
-                    throw Ops.ImportError("No module named {0}", name);
                 }
             }
+            throw Ops.ImportError("Cannot import name {0}", name);
+        }
+
+
+        private static object ImportModuleFrom(ICallerContext context, object mod, string name) {
+            PythonModule from = mod as PythonModule;
+            if (from != null) {
+                object ret;
+                if (TryGetNestedModule(from, name, out ret)) {
+                    return ret;
+                } else {
+                    object path;
+                    if (from.TryGetAttr(from, SymbolTable.Path, out path)) {
+                        return ImportNestedModule(from, name);
+                    }
+                }
+            }
+            throw Ops.ImportError("No module named {0}", name);
         }
 
         /// <summary>
@@ -101,7 +115,6 @@ namespace IronPython.Runtime {
                     PythonModule pm = newmod as PythonModule;
                     if (pm != null && pm.InnerModule != null) pm.PackageImported = true;
                 }
-
             }
 
             if (newmod == null) {
@@ -112,7 +125,7 @@ namespace IronPython.Runtime {
             // now import the b.c etc.
             object next = newmod;
             for (int i = 1; i < parts.Length; i++) {
-                next = ImportFrom(context, next, parts[i]);
+                next = ImportModuleFrom(context, next, parts[i]);
             }
 
             return bottom ? next : newmod;
@@ -267,9 +280,19 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        private static object ImportNested(PythonModule mod, string name) {
+        private static bool TryGetNestedModule(PythonModule mod, string name, out object nested) {
+            if (mod.TryGetAttr(mod, SymbolTable.StringToId(name), out nested)) {
+                if (nested is PythonModule) return true;
+
+                // This allows from System.Math import *
+                if (nested is ReflectedType) return true;
+            }
+            return false;
+        }
+
+        private static object ImportNestedModule(PythonModule mod, string name) {
             object ret;
-            if (mod.TryGetAttr(mod, SymbolTable.StringToId(name), out ret)) return ret;
+            if (TryGetNestedModule(mod, name, out ret)) { return ret; }
 
             string baseName;
             List path = ResolveSearchPath(mod, out baseName);
