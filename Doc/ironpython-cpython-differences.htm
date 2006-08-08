@@ -70,8 +70,25 @@
         when an object will be finalized.&nbsp; This can cause problems for people 
         who use open("foo", 'r').read() excessively. <I>&nbsp;Both behaviors are 
         acceptable.</I> </p>
-    <p class="sbody">
-        &nbsp;</p>
+	<p class="sbody">XXX Bug PS68/CP378.&nbsp; IronPython does not use a single 
+	type object to represent all types in the system, but CPython does.&nbsp; If 
+	programmers try to test whether an object is a type object by using Python's 
+	identity operator (is), instead of using instanceof(), then they will get 
+	different results.</p>
+	<p class="sbody">IronPython is less restrictive for some string methods with 
+	respect to allowing keyword arguments.&nbsp; For example, the following 
+	works in IronPython but raises an error in CPython:</p>
+	<p class="Code-Background">x = &quot;&quot;</p>
+	<p class="Code-Background">x.center(1, fillchar='*')</p>
+	<p class="sbody">IronPython allows setting attributes on built-in functions.</p>
+	<p class="sbody">IronPython does not allow you to set attributes on __builtins__, 
+	but CPython does let you do this.</p>
+	<p class="sbody">IronPython allows you to set the value of __builtins__, as 
+	does CPython, but the results are different.&nbsp; For example, import will 
+	no longer work in IronPython, but the built-in function min() will continue 
+	to work.</p>
+	<p class="sbody">IronPython reports the value of __builtins__ to be a type, 
+	but CPython reports it to be a module.</p>
 	<p class="sbody">
         Printing numbers on a machine with French locales produces different output:</p>
     <p>
@@ -130,7 +147,6 @@ False</pre></td>
 	</blockquote>
 
 
-	<p class="sbody">IronPython allows setting attributes on built-in functions.</p>
 	<p class="sbody">&nbsp;</p>
 	<h1><a name="Extension_Modules">Extension Modules</a></h1>
 	<p class="sbody">IronPyton does not support &quot;import __future__&quot; or &quot;from 
