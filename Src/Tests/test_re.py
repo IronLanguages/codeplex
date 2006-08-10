@@ -355,4 +355,13 @@ def test_lone_hat():
 
     AreEqual(sol.match('foobar', 1, 2), None)
 
+
+def test_eol():
+    r = re.compile(r'<(/|\Z)')
+    s = r.search("<", 0)
+    Assert(s != None)
+    AreEqual(s.span(), (0, 1))
+    AreEqual(s.group(0), '<')
+    AreEqual(r.search("<Z", 0), None)
+
 run_test(__name__)
