@@ -2058,7 +2058,7 @@ namespace IronPython.Runtime.Operations {
                 throw Ops.TypeError("exec: arg 3 must be mapping or None");
             }
 
-            fc.Call(new ModuleScope(context.Module, globals, locals));
+            fc.Call(new ExecModuleScope(context.Module, globals, locals, context));
         }
 
         public static void Raise() {

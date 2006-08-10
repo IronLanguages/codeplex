@@ -397,7 +397,7 @@ namespace IronPython.Modules {
                 throw Ops.TypeError("execfile: arg 3 must be dictionary");
             }
 
-            ModuleScope topFrame = new ModuleScope(mod, g, l);
+            ModuleScope topFrame = new ExecModuleScope(mod, g, l, context);
             CompiledCode compiledCode = OutputGenerator.GenerateSnippet(cc, s);
             compiledCode.Run(topFrame);
             return null;

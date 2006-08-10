@@ -106,6 +106,7 @@ namespace IronPythonConsole {
             EngineModule engineModule = engine.CreateModule("__main__", new Dictionary<string, object>(), true);
             engineModule.Globals["__doc__"] = null;
             engine.DefaultModule = engineModule;
+            engineModule.TrueDivision = IronPython.Compiler.Options.Division == DivisionOption.New;
         }
 
         [STAThread]

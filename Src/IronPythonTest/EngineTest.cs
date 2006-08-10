@@ -949,6 +949,93 @@ if r.sum != 110:
             compiledCode.Execute();
         }
 
+        public void ScenarioTrueDivision1() {
+            PythonEngine pe = new PythonEngine();
+            TestOldDivision(pe);
+            pe.DefaultModule.TrueDivision = true;
+            TestNewDivision(pe);
+        }
+
+        public void ScenarioTrueDivision2() {
+            PythonEngine pe = new PythonEngine();
+            TestOldDivision(pe);
+            EngineModule em = pe.CreateModule("__future__", true);
+            em.Globals["division"] = 1;
+            pe.Execute("from __future__ import division");
+            TestNewDivision(pe);
+        }
+
+        public void ScenarioTrueDivision3() {
+            PythonEngine pe = new PythonEngine();
+            CompiledCode cc = pe.Compile("from __future__ import division");
+            TestOldDivision(pe);
+            EngineModule future = pe.CreateModule("__future__", true);
+            future.Globals["division"] = 1;
+            EngineModule td = pe.CreateModule("truediv", false);
+            cc.Execute(td);
+            TestOldDivision(pe);
+        }
+
+        public void ScenarioTrueDivision4() {
+            PythonEngine pe = new PythonEngine();
+            pe.AddToPath(Common.ScriptTestDirectory);
+
+            string file = System.IO.Path.Combine(Common.ScriptTestDirectory, "engine_td_test.py");
+            System.IO.File.WriteAllText(file, "result = 1/2");
+
+            DivisionOption old = Options.Division;
+
+            try {
+                Options.Division = DivisionOption.Old;
+                pe.DefaultModule.TrueDivision = true;
+                pe.Execute("import engine_td_test");
+                int res = pe.EvaluateAs<int>("engine_td_test.result");
+                AreEqual(res, 0);
+            } finally {
+                Options.Division = old;
+                try {
+                    System.IO.File.Delete(file);
+                } catch { }
+            }
+        }
+
+        public void ScenarioTrueDivision5() {
+            PythonEngine pe = new PythonEngine();
+            pe.AddToPath(Common.ScriptTestDirectory);
+
+            string file = System.IO.Path.Combine(Common.ScriptTestDirectory, "engine_td_test.py");
+            System.IO.File.WriteAllText(file, "from __future__ import division; result = 1/2");
+
+            try {
+                pe.Execute("import engine_td_test");
+                double res = pe.EvaluateAs<double>("engine_td_test.result");
+                AreEqual(res, 0.5);
+                AreEqual(pe.DefaultModule.TrueDivision, false);
+            } finally {
+                try {
+                    System.IO.File.Delete(file);
+                } catch { }
+            }
+        }
+
+        private static void TestOldDivision(PythonEngine pe) {
+            pe.Execute("result = 1/2");
+            AreEqual((int)pe.Globals["result"], 0);
+            AreEqual(pe.EvaluateAs<int>("1/2"), 0);
+            pe.Execute("exec 'result = 3/2'");
+            AreEqual((int)pe.Globals["result"], 1);
+            AreEqual(pe.EvaluateAs<int>("eval('3/2')"), 1);
+        }
+
+        private static void TestNewDivision(PythonEngine pe) {
+            pe.Execute("result = 1/2");
+            AreEqual((double)pe.Globals["result"], 0.5);
+            AreEqual(pe.EvaluateAs<double>("1/2"), 0.5);
+            pe.Execute("exec 'result = 3/2'");
+            AreEqual((double)pe.Globals["result"], 1.5);
+            AreEqual(pe.EvaluateAs<double>("eval('3/2')"), 1.5);
+        }
+
         // More to come: exception related...
 
         public static int Negate(int arg) { return -1 * arg; }

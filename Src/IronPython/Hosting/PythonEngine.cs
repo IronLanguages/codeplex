@@ -32,6 +32,7 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 
+
 namespace IronPython.Hosting {
 
     public class EngineOptions {
@@ -124,7 +125,6 @@ namespace IronPython.Hosting {
 
         private EngineModule defaultModule;
 
-        private CompilerContext compilerContext = new CompilerContext("<stdin>");
         private PythonFile stdIn, stdOut, stdErr;
 
         #endregion
@@ -434,7 +434,7 @@ namespace IronPython.Hosting {
             if (fileName == null) throw new ArgumentNullException("fileName");
             if (moduleName == null) throw new ArgumentNullException("moduleName");
 
-            CompilerContext context = this.compilerContext.CopyWithNewSourceFile(fileName);
+            CompilerContext context = new CompilerContext(fileName);
             Parser p = Parser.FromFile(Sys, context, Sys.EngineOptions.SkipFirstLine, false);
             Statement s = p.ParseFileInput();
 
@@ -469,14 +469,16 @@ namespace IronPython.Hosting {
         public void ExecuteToConsole(string text, EngineModule engineModule, IDictionary<string, object> locals) {
             ModuleScope moduleScope = GetModuleScope(engineModule, locals);
 
-            Parser p = Parser.FromString(Sys, compilerContext, text);
+            CompilerContext context = DefaultCompilerContext("<stdin>");
+
+            Parser p = Parser.FromString(Sys, context, text);
             bool isEmptyStmt = false;
             Statement s = p.ParseInteractiveInput(false, out isEmptyStmt);
 
             //  's' is null when we parse a line composed only of a NEWLINE (interactive_input grammar);
             //  we don't generate anything when 's' is null
             if (s != null) {
-                CompiledCode compiledCode = OutputGenerator.GenerateSnippet(compilerContext, s, true, false);
+                CompiledCode compiledCode = OutputGenerator.GenerateSnippet(context, s, true, false);
                 Exception ex = null;
 
                 if (consoleCommandDispatcher != null) {
@@ -497,7 +499,7 @@ namespace IronPython.Hosting {
         }
 
         public bool ParseInteractiveInput(string text, bool allowIncompleteStatement) {
-            Parser p = Parser.FromString(Sys, compilerContext, text);
+            Parser p = Parser.FromString(Sys, new CompilerContext("<stdin>"), text);
             return VerifyInteractiveInput(p, allowIncompleteStatement);
         }
 
@@ -755,7 +757,7 @@ namespace IronPython.Hosting {
         public ModuleBinder<TDelegate> CreateMethodUnscoped<TDelegate>(string statements, IList<string> parameters) {
             ValidateCreationParameters<TDelegate>();
 
-            Parser p = Parser.FromString(Sys, compilerContext, statements);
+            Parser p = Parser.FromString(Sys, DefaultCompilerContext(), statements);
             CodeGen cg = CreateDelegateWorker<TDelegate>(p.ParseFunction(), parameters);
 
             return delegate(EngineModule engineModule) {
@@ -779,7 +781,7 @@ namespace IronPython.Hosting {
         public ModuleBinder<TDelegate> CreateLambdaUnscoped<TDelegate>(string expression, IList<string> parameters) {
             ValidateCreationParameters<TDelegate>();
 
-            Parser p = Parser.FromString(Sys, compilerContext, expression.TrimStart(' ', '\t'));
+            Parser p = Parser.FromString(Sys, DefaultCompilerContext(), expression.TrimStart(' ', '\t'));
             Expression e = p.ParseTestListAsExpression();
             ReturnStatement ret = new ReturnStatement(e);
             int lineCnt = expression.Split('\n').Length;
@@ -811,7 +813,7 @@ namespace IronPython.Hosting {
             List<ReturnFixer> fixers = PromoteArgumentsToLocals(paramExpr, cg);
 
             // bind the slots
-            Compiler.Ast.Binder.Bind(fd, compilerContext);
+            Compiler.Ast.Binder.Bind(fd, DefaultCompilerContext());
 
             foreach (KeyValuePair<SymbolId, Compiler.Ast.Binding> kv in fd.Names) {
                 Slot slot = cg.Names.Globals.GetOrMakeSlot(kv.Key);
@@ -883,7 +885,7 @@ namespace IronPython.Hosting {
             // argument 0 is a ModuleScope, set these to a slot
             // which pulls it's module.
             cg.ContextSlot = cg.GetArgumentSlot(0);
-            cg.Context = compilerContext.CopyWithNewSourceFile("<methodOrLambda>");
+            cg.Context = DefaultCompilerContext("<methodOrLambda>");
 
             cg.ModuleSlot = new FieldSlot(cg.GetArgumentSlot(0), typeof(ModuleScope).GetField("__module__"));
             // setup the namespace for the method - get the arguments &
@@ -941,9 +943,7 @@ namespace IronPython.Hosting {
             if (scriptCode == null) throw new ArgumentNullException("scriptCode");
 
             // When a sourceFileName is passed in, it is used to generated debug info
-            CompilerContext context = compilerContext;
-            if (sourceFileName != null)
-                context = compilerContext.CopyWithNewSourceFile(sourceFileName);
+            CompilerContext context = DefaultCompilerContext(sourceFileName);
 
             Parser p = Parser.FromString(Sys, context, scriptCode);
             return Compile(p, sourceFileName != null);
@@ -951,11 +951,22 @@ namespace IronPython.Hosting {
 
         public CompiledCode CompileFile(string fileName) {
             if (fileName == null) throw new ArgumentNullException("fileName");
-            Parser p = Parser.FromFile(Sys, compilerContext.CopyWithNewSourceFile(fileName));
+            Parser p = Parser.FromFile(Sys, DefaultCompilerContext(fileName));
             return Compile(p, true);
         }
 
         #endregion
+
+        private CompilerContext DefaultCompilerContext() {
+            return DefaultCompilerContext(null);
+        }
+
+        private CompilerContext DefaultCompilerContext(string fileName) {
+            CompilerContext context = defaultModule.CallerContext.CreateCompilerContext();
+            if (fileName != null)
+                context = context.CopyWithNewSourceFile(fileName);
+            return context;
+        }
 
         #region Dump
         public string FormatException(Exception exception) {

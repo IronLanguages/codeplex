@@ -66,6 +66,12 @@ namespace IronPython.Hosting {
             }
             return module;
         }
+
+        public bool TrueDivision {
+            get { return CallerContext.TrueDivision; }
+            set { CallerContext.TrueDivision = value; }
+        }
+
         #endregion
 
         internal IAttributesDictionary GlobalsAdapter { get { return globalsAdapter; } }

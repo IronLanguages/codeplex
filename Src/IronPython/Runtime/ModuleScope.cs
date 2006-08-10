@@ -39,8 +39,6 @@ namespace IronPython.Runtime {
         private IAttributesDictionary f_globals;
         private object f_locals; // can be any dictionary or IMapping.
 
-        private bool trueDivision;
-
         private ReflectedType __builtin__;
         public PythonModule __module__;
 
@@ -59,7 +57,7 @@ namespace IronPython.Runtime {
 
         internal ModuleScope(PythonModule mod, IAttributesDictionary globals, object locals, ICallerContext context)
             : this(mod, globals, locals) {
-            trueDivision = context.TrueDivision;
+            this.TrueDivision = context.TrueDivision;
         }
 
         public override string ToString() {
@@ -184,9 +182,9 @@ namespace IronPython.Runtime {
             }
         }
 
-        public bool TrueDivision {
-            get { return trueDivision; }
-            set { trueDivision = value; }
+        public virtual bool TrueDivision {
+            get { return ((ICallerContext)__module__).TrueDivision; }
+            set { ((ICallerContext)__module__).TrueDivision = value; }
         }
 
         public CompilerContext CreateCompilerContext() {
@@ -204,5 +202,19 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+    }
+
+    class ExecModuleScope : ModuleScope {
+        private bool trueDivision;
+
+        internal ExecModuleScope(PythonModule mod, IAttributesDictionary globals, object locals, ICallerContext context)
+            : base(mod, globals, locals) {
+            trueDivision = context.TrueDivision;
+        }
+
+        public override bool TrueDivision {
+            get { return trueDivision; }
+            set { trueDivision = value; }
+        }
     }
 }
