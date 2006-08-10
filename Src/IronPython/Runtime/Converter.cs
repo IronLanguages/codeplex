@@ -131,6 +131,23 @@ namespace IronPython.Runtime {
                 if (ConvertToComplex64Impl(newValue, out result)) return result;
             }
 
+            // Try converting to double and use it as a real part of the complex number
+            Double dresult;
+            if (ConvertToDoubleImpl(value, out dresult)) return new Complex64(dresult);
+
+            // Fall back to __xxx__ method call
+            if (Ops.TryInvokeSpecialMethod(value, SymbolTable.ConvertToFloat, out newValue)) {
+                // Convert resulting object to the desired type
+                if (newValue is double) {
+                    dresult = (double)newValue;
+                } else if (newValue is ExtensibleFloat) {
+                    dresult = ((ExtensibleFloat)newValue).value;
+                } else {
+                    throw Ops.TypeError("__float__ returned non-float");
+                }
+                return new Complex64(dresult);
+            }
+
             throw CannotConvertTo("Complex64", value);
         }
 

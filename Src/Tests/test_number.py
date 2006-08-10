@@ -14,6 +14,17 @@
 ######################################################################################
 
 from lib.assert_util import *
+
+class complextest:
+    def __init__(self, value): self.value = value
+    def __float__(self) : return self.value
+
+class myfloat(float): pass
+
+AreEqual(complex(complextest(2.0)), 2+0j)
+AreEqual(complex(complextest(myfloat(2.0))), 2+0j)
+AssertError(TypeError, complex, complextest(2))
+
 if is_cli:
     from System import *
     import clr
@@ -2124,4 +2135,3 @@ if is_cli:
             def __str__(self): return 'mylong'
             
         AreEqual(repr(mylong(3L)), '3L')
-
