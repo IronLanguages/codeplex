@@ -30,8 +30,8 @@ namespace IronMath {
         private readonly short sign;
         private readonly uint[] data;
 
-        public static BigInteger Zero = new BigInteger(0, new uint[0]);
-        public static BigInteger One = new BigInteger(+1, new uint[] { 1 });
+        public static readonly BigInteger Zero = new BigInteger(0, new uint[0]);
+        public static readonly BigInteger One = new BigInteger(+1, new uint[] { 1 });
 
         public static BigInteger Create(ulong v) {
             return new BigInteger(+1, (uint)v, (uint)(v >> BitsPerDigit));
