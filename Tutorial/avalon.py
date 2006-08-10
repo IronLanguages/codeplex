@@ -81,8 +81,8 @@ def SetScript(e,s):
     e.SetValue(PythonScript.ScriptProperty, s)
 	
 def SaveXaml(filename, element):
-    from System.Windows.Serialization import XamlReader
-    s = XamlReader.SaveAsXml(element)
+    from System.Windows.Markup import XamlWriter
+    s = XamlWriter.Save(element)
     try:
 	f = open(filename, "w")
 	f.write(s)
