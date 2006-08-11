@@ -63,6 +63,37 @@ if is_cli: AreEqual(5j * Int64(), 0)
 AreEqual(5j * 3L, 15j)
 AssertError(TypeError, (lambda:(5j*[])))
 
+AreEqual(pow(2, 1000000000, 2147483647 + 10), 511677409)
+AreEqual(pow(2, 2147483647*2147483647, 2147483647*2147483647), 297528129805479806)
+
+for i in range(1, 100, 7):
+    l = long(i)
+    Assert(type(i) == int)
+    Assert(type(l) == long)
+    for exp in [17, 2863, 234857, 1435435, 234636554, 2147483647]:
+        lexp = long(exp)
+        Assert(type(exp) == int)
+        Assert(type(lexp) == long)
+        for mod in [7, 5293, 23745, 232474276, 534634665, 2147483647]:
+            lmod = long(mod)
+            Assert(type(mod) == int)
+            Assert(type(lmod) == long)
+
+            ir = pow(i, exp, mod)
+            lr = pow(l, lexp, lmod)
+
+            print ir, lr
+            AreEqual(ir, lr)
+            
+            ir = pow(i, 0, mod)
+            lr = pow(l, 0L, lmod)
+
+            AreEqual(ir, 1)
+            AreEqual(lr, 1)
+
+        AssertError(ValueError, pow, i, exp, 0)
+        AssertError(ValueError, pow, l, lexp, 0L)
+
 # Extensible Float tests
 class XFloat(float): pass
 

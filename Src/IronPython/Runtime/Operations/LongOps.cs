@@ -279,22 +279,25 @@ namespace IronPython.Runtime.Operations {
             if (y is int) {
                 return PowerMod(x, (int)y, z);
             } else if (y is long) {
-                long longy = (long)y;
-                if (longy < Int32.MinValue || longy > Int32.MaxValue) {
-                    throw Ops.ValueError("value too big");
-                }
-                return PowerMod(x, (int)longy, z);
+                return PowerMod(x, BigInteger.Create((long)y), z);
             } else if (y is BigInteger) {
-                int inty;
-                if (((BigInteger)y).AsInt32(out inty)) {
-                    return PowerMod(x, inty, z);
-                }
-                throw Ops.ValueError("value too big");
+                return PowerMod(x, (BigInteger)y, z);
             }
             return Ops.NotImplemented;
         }
 
         private static object PowerMod(BigInteger x, int y, object z) {
+            if (z is int) {
+                return PowerMod(x, y, BigInteger.Create((int)z));
+            } else if (z is long) {
+                return PowerMod(x, y, BigInteger.Create((long)z));
+            } else if (z is BigInteger) {
+                return PowerMod(x, y, (BigInteger)z);
+            }
+            return Ops.NotImplemented;
+        }
+
+        private static object PowerMod(BigInteger x, BigInteger y, object z) {
             if (z is int) {
                 return PowerMod(x, y, BigInteger.Create((int)z));
             } else if (z is long) {
@@ -315,13 +318,32 @@ namespace IronPython.Runtime.Operations {
 
             BigInteger result = x.ModPow(y, z);
 
-            if (result >= 0) {
-                if (z < 0) return result + z;
+            if (result >= BigInteger.Zero) {
+                if (z < BigInteger.Zero) return result + z;
             } else {
-                if (z > 0) return result + z;
+                if (z > BigInteger.Zero) return result + z;
             }
             return result;
         }
+
+        private static object PowerMod(BigInteger x, BigInteger y, BigInteger z) {
+            if (y < BigInteger.Zero) {
+                throw Ops.TypeError("power", y, "power must be >= 0");
+            }
+            if (z == BigInteger.Zero) {
+                throw Ops.ZeroDivisionError();
+            }
+
+            BigInteger result = x.ModPow(y, z);
+
+            if (result >= BigInteger.Zero) {
+                if (z < BigInteger.Zero) return result + z;
+            } else {
+                if (z > BigInteger.Zero) return result + z;
+            }
+            return result;
+        }
+
 
         //[PythonName("__pow__")]
         public static object Power(BigInteger x, int y) {

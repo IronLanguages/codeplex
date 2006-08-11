@@ -1180,6 +1180,34 @@ namespace IronMath {
                     result = result % mod;
                 }
                 factor = factor.Square();
+                factor = factor % mod;
+                power >>= 1;
+            }
+            return result;
+        }
+
+        public BigInteger ModPow(BigInteger power, BigInteger mod) {
+            if (object.ReferenceEquals(power, null)) {
+                throw new ArgumentNullException("power");
+            }
+            if (object.ReferenceEquals(mod, null)) {
+                throw new ArgumentNullException("mod");
+            }
+
+            if (power == Zero) return One;
+            if (power < 0) {
+                throw new ArgumentOutOfRangeException(IronMath.NonNegativePower);
+            }
+
+            BigInteger factor = this;
+            BigInteger result = One;
+            while (power != Zero) {
+                if (power.IsOdd()) {
+                    result = result * factor;
+                    result = result % mod;
+                }
+                factor = factor.Square();
+                factor = factor % mod;
                 power >>= 1;
             }
             return result;
@@ -1272,6 +1300,11 @@ namespace IronMath {
 
         public bool IsPositive() {
             return sign > 0;
+        }
+
+        private bool IsOdd() {
+            // must have the lowest-order bit set to 1
+            return (data != null && data.Length > 0 && ((data[0] & 1) != 0));
         }
 
         #region IComparable Members

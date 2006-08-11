@@ -157,5 +157,39 @@ class test_builtin(object):
                     printwithtype(c)
                 except:
                     printwith("same", sys.exc_type, sys.exc_value)
-                    
+    
+    def test_bigint(self):
+        s = '1234567890' 
+        for x in range(10): s += str(x) * x
+        s = s * 10
+
+        l = [7, 1001, 5.89, True]
+        for start in range(1, 50, 7):
+            startx = start
+            for length in [1, 20, 50, 60, 100]:
+                startx += 1
+                l.append(long(s[startx:startx + length]))
+        
+        for x in l:
+            for y in l:
+                print x, y
+                printwith('case', '%s, %s' % (x, y))
+                printwith('same', x+y)
+                printwith('same', x-y)
+                printwith('same', x*y)
+                if y: 
+                    printwith('same', x/y)
+                    t = divmod(x, y)
+                    printwithtype(t[0])
+                    printwithtype(t[1])
+        
+        l.remove(5.89)
+        l.remove(True) #
+        for a in range(1, 100, 7):            
+            for x in l:
+                for y in l:
+                    if x and y: 
+                        printwith('case', a, x, y)
+                        printwith('same', pow(a, x, y))
+        
 runtests(test_builtin)
