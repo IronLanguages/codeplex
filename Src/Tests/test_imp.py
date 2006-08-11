@@ -96,6 +96,65 @@ def test_imp_module():
     AreEqual(module.value, 'imp test module')
     pf.close()
 
+def test_direct_module_creation():
+	import math
+	import sys
+	
+	for baseMod in math, sys:
+		module = type(baseMod)
+		
+		x = module.__new__(module)
+		AreEqual(repr(x), "<module '?' (built-in)>")
+		AreEqual(x.__dict__, None)
+		
+		x.__init__('abc', 'def')
+		AreEqual(repr(x), "<module 'abc' (built-in)>")
+		AreEqual(x.__doc__, 'def')
+		
+		x.__init__('aaa', 'zzz')
+		AreEqual(repr(x), "<module 'aaa' (built-in)>")
+		AreEqual(x.__doc__, 'zzz')
+				
+		# can't assign to module __dict__	 
+		try:
+			x.__dict__ = {}
+		except TypeError: pass
+		else: AssertUnreachable()
+		
+		# can't delete __dict__
+		try:
+			del(x.__dict__)
+		except TypeError: pass
+		else: AssertUnreachable()
+
+		# init doesn't clobber dict, it just re-initializes values
+		
+		x.__dict__['foo'] = 'xyz'
+		x.__init__('xyz', 'nnn')
+		
+		AreEqual(x.foo, 'xyz')
+		
+		# dict is lazily created on set
+		x = module.__new__(module)
+		x.foo = 23
+		AreEqual(x.__dict__, {'foo':23})
+		
+		AreEqual(repr(x), "<module '?' (built-in)>")
+		
+		# can't pass wrong sub-type to new
+		try:
+			module.__new__(str)
+		except TypeError: pass
+		else: AssertUnreachable()
+
+		# dir on non-initialized module raises TypeError
+		x = module.__new__(module)
+		
+		AssertError(TypeError, dir, x)
+		AssertError(SystemError, reload, x)
+		x.__name__ = 'module_does_not_exist_in_sys_dot_modules'
+		AssertError(ImportError, reload, x)
+
 def test_module_dict():
     currentModule = sys.modules[__name__]
     AreEqual(type({}), type(currentModule.__dict__))

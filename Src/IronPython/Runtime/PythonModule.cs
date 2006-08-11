@@ -27,6 +27,8 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 
+using System.Threading;
+
 namespace IronPython.Runtime {
 
     /// <summary>
@@ -49,22 +51,61 @@ namespace IronPython.Runtime {
         private InitializeModule initialize;
         private SystemState systemState;
 
-        #region Public constructors
+        #region Python constructors
 
-        public PythonModule(string name, IAttributesDictionary dict, SystemState state)
+        [PythonName("__new__")]
+        public static PythonModule MakeModule(ICallerContext context, DynamicType cls, params object[] args\u03c4) {
+            if (cls.IsSubclassOf(TypeCache.Module)) {
+                return new PythonModule(context);
+            }
+            throw Ops.TypeError("{0} is not a subtype of module", cls.__name__);
+        }
+
+        [PythonName("__new__")]
+        public static PythonModule MakeModule(ICallerContext context, DynamicType cls, [ParamDict] Dict kwDict\u03c4, params object[] args\u03c4) {
+            return MakeModule(context, cls, args\u03c4);
+        }
+        
+        [PythonName("__init__")]
+        public void Initialize(ICallerContext context, string name) {
+            Initialize(context, name, null);
+        }
+
+        [PythonName("__init__")]
+        public void Initialize(ICallerContext context, string name, string documentation) {
+            EnsureDict();
+
+            ModuleName = name;
+
+            if (documentation != null) {
+                __dict__[SymbolTable.Doc] = documentation;
+            }
+        }
+
+        #endregion
+
+        #region Internal constructors
+
+        internal PythonModule(ICallerContext context) {
+            contextFlags = context.ContextFlags;
+            systemState = context.SystemState;
+        }
+
+        internal PythonModule(string name, IAttributesDictionary dict, SystemState state)
             : this(name, dict, state, null, CallerContextAttributes.None) {
         }
 
-        public PythonModule(string name, CompiledModule compiledModule, SystemState state, InitializeModule init)
+        internal PythonModule(string name, CompiledModule compiledModule, SystemState state, InitializeModule init)
             : this(name, compiledModule, state, init, CallerContextAttributes.None) {
         }
 
-        public PythonModule(string name, IAttributesDictionary dict, SystemState state, InitializeModule init, CallerContextAttributes callerContextFlags) {
+        internal PythonModule(string name, IAttributesDictionary dict, SystemState state, InitializeModule init, CallerContextAttributes callerContextFlags) {
             Debug.Assert(state != null);
 
             __dict__ = dict;
             ModuleName = name;
             __dict__[SymbolTable.Builtins] = TypeCache.Builtin;
+            
 
             initialize = init;
 
@@ -77,25 +118,36 @@ namespace IronPython.Runtime {
         #region Public API Surface
         public string ModuleName {
             [PythonName("__name__")]
-            get { return (string)__dict__[SymbolTable.Name]; }
+            get {
+                object res;
+                if (__dict__ != null && __dict__.TryGetValue(SymbolTable.Name, out res))
+                    return res as string;
+
+                return "?";
+            }
             [PythonName("__name__")]
-            set { __dict__[SymbolTable.Name] = value; }
+            set { EnsureDict(); __dict__[SymbolTable.Name] = value; }
         }
         public string Filename {
             [PythonName("__file__")]
             get {
-                object file;
-                if (__dict__.TryGetValue(SymbolTable.File, out file)) {
-                    string sfile = file as string;
-                    if (sfile != null) return sfile;
+                if (__dict__ != null) {
+
+                    object file;
+                    if (__dict__.TryGetValue(SymbolTable.File, out file)) {
+                        string sfile = file as string;
+                        if (sfile != null) return sfile;
+                    }
                 }
                 return null;
             }
             [PythonName("__file__")]
-            set { __dict__[SymbolTable.File] = value; }
+            set { EnsureDict();  __dict__[SymbolTable.File] = value; }
         }
 
-        public void Initialize() {
+        public void Initialize() {            
+            Debug.Assert(__dict__ != null, "Generated modules should always get a __dict__");
+
             if (initialize != null) {
                 initialize();
             }
@@ -226,7 +278,7 @@ namespace IronPython.Runtime {
         #region ICustomAttributes Members
 
         public bool TryGetAttr(ICallerContext context, SymbolId name, out object value) {
-            if (__dict__.TryGetValue(name, out value)) {
+            if (__dict__ != null && __dict__.TryGetValue(name, out value)) {
                 if (value == Uninitialized.instance) return false;
 
                 IContextAwareMember icaa = value as IContextAwareMember;
@@ -250,11 +302,22 @@ namespace IronPython.Runtime {
         }
 
         public void SetAttr(ICallerContext context, SymbolId name, object value) {
+            if (name == SymbolTable.Dict) throw Ops.TypeError("readonly attribute");
+
+            EnsureDict();
             TypeCache.Module.SetAttrWithCustomDict(context, this, __dict__, name, value);
         }
 
+        private void EnsureDict() {
+            if (__dict__ == null) {
+                Interlocked.CompareExchange<IAttributesDictionary>(ref __dict__, new FieldIdDict(), null);
+            }
+        }
+
         public void DeleteAttr(ICallerContext context, SymbolId name) {
-            if (TypeCache.Module.DeleteAttrWithCustomDict(context, this, __dict__, name)) {
+            if (name == SymbolTable.Dict) throw Ops.TypeError("can't set attributes of built-in/extension type 'module'");
+
+            if (__dict__ != null && TypeCache.Module.DeleteAttrWithCustomDict(context, this, __dict__, name)) {
                 object dummy;
                 if (packageImported && innerMod.TryGetAttr(context, name, out dummy))
                     innerMod.DeleteAttr(context, name);
@@ -268,6 +331,8 @@ namespace IronPython.Runtime {
         }
 
         public List GetAttrNames(ICallerContext context) {
+            if (__dict__ == null) throw Ops.TypeError("module.__dict__ is not a dictionary");
+
             List ret;
             if ((context.ContextFlags & CallerContextAttributes.ShowCls) == 0) {
                 ret = new List();
@@ -292,11 +357,12 @@ namespace IronPython.Runtime {
         }
 
         public IDictionary<object, object> GetAttrDict(ICallerContext context) {
-            return TypeCache.Module.GetAttrDictWithCustomDict(context, this, __dict__);
+            return TypeCache.Module.GetAttrDictWithCustomDict(context, this, __dict__ == null ? new Dict(1) : __dict__);
         }
         #endregion
 
         internal void SetImportedAttr(ICallerContext context, SymbolId name, object value) {
+            EnsureDict();
             __dict__[name] = value;
         }
 

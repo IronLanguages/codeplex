@@ -15,6 +15,7 @@
 
 using System;
 using System.Diagnostics;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
     #region Generated environment types
@@ -68,6 +69,14 @@ namespace IronPython.Runtime.Calls {
                 case 1: return value1;
                 default: throw OutOfRange(index);
             }
+        }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+             return Dict.FromKeys(cls, seq, null);
+        }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
         }
     }
 
@@ -147,6 +156,14 @@ namespace IronPython.Runtime.Calls {
                 default: throw OutOfRange(index);
             }
         }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+             return Dict.FromKeys(cls, seq, null);
+        }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
+        }
     }
 
     [PythonType(typeof(Dict))]
@@ -212,6 +229,14 @@ namespace IronPython.Runtime.Calls {
                 case 7: value7 = value; break;
                 default: throw OutOfRange(index);
             }
+        }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+             return Dict.FromKeys(cls, seq, null);
+        }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
         }
     }
 
@@ -302,6 +327,14 @@ namespace IronPython.Runtime.Calls {
                 case 15: value15 = value; break;
                 default: throw OutOfRange(index);
             }
+        }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+             return Dict.FromKeys(cls, seq, null);
+        }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
         }
     }
 
@@ -440,6 +473,14 @@ namespace IronPython.Runtime.Calls {
                 case 31: value31 = value; break;
                 default: throw OutOfRange(index);
             }
+        }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+             return Dict.FromKeys(cls, seq, null);
+        }
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
         }
     }
 

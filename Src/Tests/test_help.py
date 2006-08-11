@@ -122,6 +122,21 @@ def test_nodoc():
     help(foo)
     
     sys.stdout = sys.__stdout__
+
+def test_help_instance():
+	class foo(object):
+		"""my documentation"""
+		
+	a = foo()
+	
+	sys.stdout = stdout_reader()
+	
+	help(a)
+	
+	x = sys.stdout.text
+	sys.stdout = sys.__stdout__
+		
+	Assert(x.find('my documentation') != -1)
     
 def test_str():
     sys.stdout = stdout_reader()

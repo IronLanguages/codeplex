@@ -834,16 +834,6 @@ namespace IronPython.Runtime.Types {
                         AddReflectedMethod(mi, defaultMembers);
                     }
 
-                    if (type != typeof(object)) {
-                        Type curType = type.BaseType;
-                        while (curType != null && curType != typeof(object) && curType != typeof(ValueType)) {
-                            foreach (MethodInfo mi in curType.GetMethods(bf & ~BindingFlags.Instance)) {
-                                AddReflectedMethod(mi, defaultMembers);
-                            }
-                            curType = curType.BaseType;
-                        }
-                    }
-
                     foreach (FieldInfo fi in type.GetFields(bf)) {
                         AddReflectedField(fi);
                     }
@@ -1324,7 +1314,19 @@ namespace IronPython.Runtime.Types {
         }
 
         public override bool TrySetExtraValue(SymbolId key, object value) {
-            throw Ops.TypeError("can't set items in dictproxy");
+            if(value == Uninitialized.instance)
+                throw Ops.TypeError("can't delete '{0}' from dictproxy", key.ToString());
+            throw Ops.TypeError("can't set '{0}' in dictproxy",key.ToString());
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+            return Dict.FromKeys(cls, seq, null);
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
         }
     }
 }

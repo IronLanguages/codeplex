@@ -15,6 +15,7 @@
 
 using System;
 using System.Diagnostics;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
@@ -209,5 +210,17 @@ namespace IronPython.Runtime.Calls {
             }
             return TryGetOuterValue(key, out value);
         }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+            return Dict.FromKeys(cls, seq, null);
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
+        }
+
+
     }
 }

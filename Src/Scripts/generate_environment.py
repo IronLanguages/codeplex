@@ -96,7 +96,22 @@ def gen_one_env(cw, i):
         cw.writeline("default: throw OutOfRange(index);")
         cw.exit_block()
         cw.exit_block()
+
+    cw.writeline('[PythonClassMethod("fromkeys")]')
+    cw.enter_block('public static object fromkeys(DynamicType cls, object seq)')
+    cw.writeline(' return Dict.FromKeys(cls, seq, null);')
     cw.exit_block()
+    
+    cw.writeline('[PythonClassMethod("fromkeys")]')
+    cw.enter_block('public static object fromkeys(DynamicType cls, object seq, object value)')
+    cw.writeline('return Dict.FromKeys(cls, seq, value);')
+    cw.exit_block()
+
+
+
+    cw.exit_block()
+    
+    
 
 sizes = [2, 4, 8, 16, 32]
 

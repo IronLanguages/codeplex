@@ -74,6 +74,7 @@
     <Compile Include="LoadTest.cs" />
     <Compile Include="IronMath.cs" />
     <Compile Include="NestedClass.cs" />
+    <Compile Include="StaticTest.cs" />
     <Compile Include="TypeDescriptor.cs" />
     <AppDesigner Include="Properties\" />
   </ItemGroup>

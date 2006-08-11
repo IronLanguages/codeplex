@@ -1475,6 +1475,11 @@ namespace IronPython.Runtime.Operations {
                 return dynType[index];
             }
 
+            BuiltinFunction bf = o as BuiltinFunction;
+            if (bf != null) {
+                return bf[index];
+            }
+
             return GetDynamicType(o).GetIndex(o, index);
         }
 

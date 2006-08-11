@@ -47,6 +47,16 @@ namespace IronPython.Runtime {
         // See _socket.cs for details
         internal bool isSocketRefCountHookInstalled;
 
+        [PythonName("__new__")]
+        public static object MakeModule(ICallerContext context, DynamicType cls, params object[] args\u03c4) {
+            return PythonModule.MakeModule(context, cls);
+        }
+
+        [PythonName("__new__")]
+        public static object MakeModule(ICallerContext context, DynamicType cls, [ParamDict] Dict kwDict\u03c4, params object[] args\u03c4) {
+            return MakeModule(context, cls, args\u03c4);
+        }
+
         public SystemState()
             : this(new EngineOptions()) {
         }

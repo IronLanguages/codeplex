@@ -86,9 +86,11 @@ namespace IronPython.Runtime.Calls {
 
         internal static Exception BadArgumentError(string name, int minArgs, int maxArgs, CallType callType, int argCount) {
             if (callType == CallType.ImplicitInstance) {
-                argCount -= 1;
-                minArgs -= 1;
-                maxArgs -= 1;
+                if (maxArgs > 0) {
+                    argCount -= 1;
+                    minArgs -= 1;
+                    maxArgs -= 1;
+                } 
             }
 
             // This generates Python style error messages assuming that all arg counts in between min and max are allowed

@@ -1341,3 +1341,15 @@ else:
 
 AreEqual(IExplicitTest3.M(x), 3)
 AreEqual(IExplicitTest4.M(x, 7), 4)
+
+
+Assert(System.Security.Cryptography.MD5.Create("MD5") != None)
+
+clr.AddReference('System.Windows.Forms')
+import System
+x = System.Windows.Forms.Form()
+try:
+	font = x.DefaultFont
+except TypeError, e:
+	Assert(e.msg.find('takes exactly 0 arguments (0 given)') != -1)
+else: AssertUnreachable()

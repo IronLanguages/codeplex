@@ -182,6 +182,14 @@ if is_cli:
         for i in range(5):
             AreEqual(a[str(i)], i)
 
+	def test_generic_function():
+		# all should succeed at indexing
+		x = GenMeth.StaticMeth[int, int]
+		x = GenMeth.StaticMeth[int]
+		x = GenMeth.StaticMeth[(int, int)]
+		x = GenMeth.StaticMeth[(int,)]
+
+
 def test_getorsetitem_override():   
     for base in [object, list, dict, int, str, tuple, float, long, complex]:        
         class foo(base):
@@ -251,6 +259,7 @@ def test_getorsetitem_super():
             AreEqual(a[(0,1)], 'y')
             a[(0,1,2)] = 'z'
             AreEqual(a[(0,1,2)], 'z')
+
         
 def test_getorsetitem_slice():
     tests = [  # base type, constructor arg, result of index 0

@@ -381,6 +381,9 @@ namespace IronPython.Compiler.Generation {
 
                 int offset = (sigInfo.HasContext ? 2 : 1);
                 if ((attrs & MethodAttributes.Static) != 0) offset--;
+                
+                if (node.Parameters.Count == 0 && (attrs & MethodAttributes.Static) == 0)
+                    throw new CompilerException(String.Format("defining non-static method {0} with no parameters.  Add self or @staticmethod decorator", node.Name), node, this.compctx.SourceFile);
 
                 Debug.Assert(sigInfo.ParamNames.Length >= offset,
                     "less param names then offset",

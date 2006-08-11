@@ -489,6 +489,10 @@ namespace IronPython.Modules {
             Help(context, doced, doc, 0, o);
 
             if (doc.Length == 0) {
+                if (!(o is string)) {
+                    Help(context, Ops.GetDynamicType(o));
+                    return;
+                }
                 doc.Append("no documentation found for ");
                 doc.Append(Ops.StringRepr(o));
             }
@@ -1233,6 +1237,13 @@ namespace IronPython.Modules {
 
         [PythonName("reload")]
         public static object Reload(PythonModule module) {
+            if (module.__dict__ == null || !module.__dict__.ContainsKey(SymbolTable.Name))
+                throw Ops.SystemError("nameless module");
+
+            if (!module.SystemState.modules.ContainsKey(module.__dict__[SymbolTable.Name])) {
+                throw Ops.ImportError("module {0} not in sys.modules", module.__dict__[SymbolTable.Name]);
+            }
+
             if (module.Filename == null) return Importer.ReloadBuiltin(module);
 
             CompilerContext cc = new CompilerContext(module.Filename);

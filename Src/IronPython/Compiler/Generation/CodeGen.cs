@@ -42,7 +42,29 @@ namespace IronPython.Compiler.Generation {
         public Label returnStart;
     }
 
-    struct Targets {
+    class ListStack<T> : List<T> {
+        public void Push(T val) {
+            Add(val);
+        }
+
+        public T Peek() {
+            if (Count == 0)
+                throw new InvalidOperationException();
+
+            return this[Count - 1];
+        }
+
+        public T Pop() {
+            if (Count == 0)
+                throw new InvalidOperationException();
+
+            T res = this[Count - 1];
+            RemoveAt(Count - 1);
+            return res;
+        }
+    }
+
+    class Targets {
         public enum TargetBlockType {
             Normal,
             Try,
@@ -54,6 +76,7 @@ namespace IronPython.Compiler.Generation {
         public static readonly Label NoLabel = new Label();
         public readonly Label breakLabel;
         public readonly Label continueLabel;
+        public Nullable<Label> leaveLabel;
         private TargetBlockType blockType;
         public readonly Slot finallyReturns;
         public Slot isTryYielded;
@@ -74,6 +97,7 @@ namespace IronPython.Compiler.Generation {
             this.blockType = blockType;
             this.finallyReturns = finallyReturns;
             this.isTryYielded = isTryYielded;
+            this.leaveLabel = null;
         }
     }
 
@@ -89,13 +113,14 @@ namespace IronPython.Compiler.Generation {
         private readonly ILGenerator ilg;
         public MethodInfo methodToOverride;
         private Namespace names;
-        private Stack<Targets> targets = new Stack<Targets>();
+        private ListStack<Targets> targets = new ListStack<Targets>();
         private ArrayList freeSlots = new ArrayList();
 
         public Label[] yieldLabels;
         public bool printExprStmts = false;
         public bool doNotCacheConstants = Options.DoNotCacheConstants;
         private ReturnBlock returnBlock;
+        private bool returnBlockCreated = false;
 
         // Key slots
         private Slot environmentSlot;           // reference to function's own environment
@@ -287,8 +312,33 @@ namespace IronPython.Compiler.Generation {
                         EmitCallerContext();
                         EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
 
-                        // emit the real return
-                        EmitReturn();
+                        int finallyIndex = -1;
+                        for (int i = targets.Count-1; i >= 0; i--) {
+                            if (targets[i].BlockType == Targets.TargetBlockType.Finally) {
+                                finallyIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (finallyIndex == -1) {
+                            // emit the real return
+                            EmitReturn();
+                        } else {
+                            // need to leave into the inner most finally block,
+                            // the finally block will fall through and check
+                            // the return value.
+                            targets[finallyIndex].leaveLabel = DefineLabel();
+
+                            EnsureReturnBlock();
+                            if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
+                                returnBlock.returnValue.EmitSet(this);
+                            }
+                            Emit(OpCodes.Ldc_I4_1);
+                            targets[finallyIndex].finallyReturns.EmitSet(this);
+
+                            Emit(OpCodes.Leave, targets[finallyIndex].leaveLabel.Value);
+                        }
+                        
                     });
 
                     break;
@@ -514,7 +564,6 @@ namespace IronPython.Compiler.Generation {
             Emit(OpCodes.Ldsfld, typeof(Uninitialized).GetField("instance"));
         }
 
-        bool returnBlockCreated = false;
         private void EnsureReturnBlock() {
             if (!returnBlockCreated) {
                 if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
@@ -1354,6 +1403,11 @@ namespace IronPython.Compiler.Generation {
             ilg.EmitCall(opcode, methodInfo, optionalParameterTypes);
         }
         public void EndExceptionBlock() {
+            Targets t = targets.Peek();
+            if (t.BlockType == Targets.TargetBlockType.Finally && t.leaveLabel.HasValue) {
+                MarkLabel(t.leaveLabel.Value);
+            }
+
             ilg.EndExceptionBlock();
         }
         public void MarkLabel(Label loc) {

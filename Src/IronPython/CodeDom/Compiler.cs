@@ -191,7 +191,16 @@ namespace IronPython.CodeDom {
     /// This is the only exception we catch - all other exceptions propagate to our caller.
     /// </summary>
     class CompilerException : Exception {
+        public readonly Compiler.Ast.Node Node;
+        public readonly string Filename;
+
         public CompilerException() {
+        }
+
+        public CompilerException(string msg, Compiler.Ast.Node node, string filename)
+            : base(msg) {
+            Node = node;
+            Filename = filename;
         }
 
         public CompilerException(
@@ -249,10 +258,14 @@ namespace IronPython.CodeDom {
                 } catch {
                     errorCnt = 1;
                 }
-            } catch (CompilerException) {
+            } catch (CompilerException ex) {
                 // errors occured during compilation
+                if (ex.Node == null) {
+                    Errors.Add(new CompilerError("unknown", 0, 0, "unknown", ex.Message));
+                } else {
+                    Errors.Add(new CompilerError(ex.Filename, ex.Node.Start.Line, ex.Node.Start.Line, "0", ex.Message));
+                }
                 errorCnt = Errors.Count;
-                //                Errors.Add(new CompilerError("unknown", 0, 0, "unknown", ex.ToString()));
             } catch (Exception ex) {
                 errorCnt++;
                 Errors.Add(new CompilerError("unknown", 0, 0, "unknown", ex.ToString()));

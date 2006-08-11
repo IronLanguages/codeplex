@@ -99,6 +99,7 @@ IronPythonTests = {
                 test_privateBinding
                 test_protected
                 test_specialcontext
+                test_statics
                 test_weakref
                 ''',
             'standard':

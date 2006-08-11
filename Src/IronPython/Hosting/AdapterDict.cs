@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Hosting {
 
@@ -43,6 +44,16 @@ namespace IronPython.Hosting {
             if (!(key is string))
                 throw new NotSupportedException("Cannot add or delete non-string attribute");
             return SymbolTable.StringToId((string)key);
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+            return Dict.FromKeys(cls, seq, null);
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
         }
 
         #region SymbolIdDictBase abstract methods

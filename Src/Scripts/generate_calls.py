@@ -194,8 +194,9 @@ def gen_fastcallable_x(cw, index, postfix="WithContext", extraArg=("context",)):
     cw.exit_block()
 
     cw.enter_block("public override object CallInstance(ICallerContext context, object instance, params object[] args)")
-    cw.write("if (args.Length == %(index)d) return CallInstance(%(args)s);", index=index-1,
-             args=", ".join(["context", "instance"] + ["args[%d]" % i for i in xrange(index-1)]))
+    if index-1 >= 0:
+		cw.write("if (args.Length == %(index)d) return CallInstance(%(args)s);", index=index-1,
+				 args=", ".join(["context", "instance"] + ["args[%d]" % i for i in xrange(index-1)]))
     cw.write("throw BadArgumentError(CallType.ImplicitInstance, args.Length);")
     cw.exit_block()
     

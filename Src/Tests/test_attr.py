@@ -55,10 +55,7 @@ def CheckDictionary(mod):
     del mod.__dict__[1]
     
     # Try to replace __dict__
-    if is_cli: # CPython does not consistently use TypeError/AttributeError for read-only attributes
-        AssertErrorWithMessage(AttributeError, "attribute '__dict__' of 'module' object is read-only", SetDictionary, mod, dict(mod.__dict__))
-    else:
-        AssertErrorWithMessage(TypeError, "readonly attribute", SetDictionary, mod, dict(mod.__dict__))
+    AssertErrorWithMessage(TypeError, "readonly attribute", SetDictionary, mod, dict(mod.__dict__))
 
 import sys
 me = sys.modules[__name__]

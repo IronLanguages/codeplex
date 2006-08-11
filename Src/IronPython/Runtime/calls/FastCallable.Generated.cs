@@ -360,7 +360,6 @@ namespace IronPython.Runtime.Calls {
             throw BadArgumentError(CallType.None, args.Length);
         }
         public override object CallInstance(ICallerContext context, object instance, params object[] args) {
-            if (args.Length == -1) return CallInstance(context, instance);
             throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
         private Exception BadArgumentError(CallType callType, int nargs) {
@@ -412,7 +411,6 @@ namespace IronPython.Runtime.Calls {
             throw BadArgumentError(CallType.None, args.Length);
         }
         public override object CallInstance(ICallerContext context, object instance, params object[] args) {
-            if (args.Length == -1) return CallInstance(context, instance);
             throw BadArgumentError(CallType.ImplicitInstance, args.Length);
         }
         private Exception BadArgumentError(CallType callType, int nargs) {
