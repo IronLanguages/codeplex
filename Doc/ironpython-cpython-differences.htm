@@ -101,7 +101,7 @@
 	For example, the &quot;x = compile('def f(a):\n\treturn a\n\t', '', 'single')&quot; 
 	trailing \t causes an error in this case.&nbsp; <i>We do not intend to fix 
 	this difference.</i></p>
-	<p class="sbody">IronPython uses unicode characters, not ASCII as CPython 
+	<p class="sbody">IronPython uses unicode characters and strings, not ASCII as CPython 
 	does.&nbsp; For example &quot;'%c' % i&quot; for 255 &lt; i &lt;65536 raises an error in 
 	CPython but succeeds in IronPython.&nbsp; <i>We may wait to see how Python3k 
 	incorporate unicode before fixing this.</i></p>
@@ -109,6 +109,23 @@
 	contains characters other than A-Z).&nbsp; IS THIS AN INCOMPATIBILITY???&nbsp; 
 	IronPython will compile files whose identifiers use non-ASCII characters if 
 	the file has an encoding comment such as &quot;# -*- coding: utf-8 -*-&quot;.</p>
+	<p class="sbody">IronPython does not support a DeprecationWarning mechanism.</p>
+	<p class="sbody">IronPython does not support a -W switch to control 
+	warnings.</p>
+	<p class="sbody">IronPython has slightly different system-defined attribute 
+	names on some types.&nbsp; For example, try &quot;dir(True)&quot; in both CPython and 
+	IronPython.</p>
+	<p class="sbody">XXX BUG PS789/CP354 (behavior of globals inconsistent).&nbsp; 
+	IronPython initializes the builtins for a module, y, when it is imported by 
+	a module, x.</p>
+	<p class="sbody">&nbsp;</p>
+	<p class="sbody">XXX Bug CP1752 (yield in finally).&nbsp; IronPython re-runs 
+	a generator after an exception was raised from within the dynamic context of 
+	the generator, and we re-raise that same exception.&nbsp; We should raise a 
+	StopIteration exception.</p>
+	<p class="sbody">XXXIronPython does not allow yield statements in nested try 
+	blocks.</p>
+	<p class="sbody">&nbsp;</p>
 	<p class="sbody">&nbsp;</p>
 	<p class="sbody">
         Printing numbers on a machine with French locales produces different output:</p>
