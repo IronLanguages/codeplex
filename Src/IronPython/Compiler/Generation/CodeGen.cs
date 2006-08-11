@@ -1403,9 +1403,11 @@ namespace IronPython.Compiler.Generation {
             ilg.EmitCall(opcode, methodInfo, optionalParameterTypes);
         }
         public void EndExceptionBlock() {
-            Targets t = targets.Peek();
-            if (t.BlockType == Targets.TargetBlockType.Finally && t.leaveLabel.HasValue) {
-                MarkLabel(t.leaveLabel.Value);
+            if (targets.Count > 0) {
+                Targets t = targets.Peek();
+                if (t.BlockType == Targets.TargetBlockType.Finally && t.leaveLabel.HasValue) {
+                    MarkLabel(t.leaveLabel.Value);
+                }
             }
 
             ilg.EndExceptionBlock();
