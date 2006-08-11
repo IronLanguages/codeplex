@@ -679,3 +679,26 @@ class sublist(list): pass
 a = []
 sublist.__init__(a, 'abc')
 AreEqual(a, ['a', 'b', 'c'])
+
+
+for base in [object, list]:
+    class C(base):
+        def __init__(self, args=None):
+            self.args = args
+    c = C(args=1)
+    AreEqual(c.args, 1)
+
+    class C(base):
+        def __init__(self, type=None): self.type = type
+    c = C(type=1)
+    AreEqual(c.type, 1)
+
+    class C(base):
+        def __init__(self, overloads=None): self.overloads = overloads
+    c = C(overloads=1)
+    AreEqual(c.overloads, 1)
+
+for base in [int, long, float]:
+    class C(int):
+        def __new__(cls, args=None): return base()
+    c = C(args=1)

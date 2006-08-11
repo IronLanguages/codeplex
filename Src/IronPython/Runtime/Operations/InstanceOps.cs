@@ -77,29 +77,29 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object DefaultNew(ICallerContext context, DynamicType type, params object[] args) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
+        public static object DefaultNew(ICallerContext context, DynamicType type\u03c4, params object[] args\u03b1) {
+            if (type\u03c4 == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type\u03c4)));
 
-            CheckInitArgs(context, null, args, type);
+            CheckInitArgs(context, null, args\u03b1, type\u03c4);
 
-            return type.AllocateObject();
+            return type\u03c4.AllocateObject();
         }
 
         [PythonName("__new__")]
-        public static object DefaultNewKW(ICallerContext context, DynamicType type, [ParamDict] Dict kwArgs, params object[] args) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
+        public static object DefaultNewKW(ICallerContext context, DynamicType type\u03c4, [ParamDict] Dict kwargs\u03ba, params object[] args\u03b1) {
+            if (type\u03c4 == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type\u03c4)));
 
-            CheckInitArgs(context, kwArgs, args, type);
+            CheckInitArgs(context, kwargs\u03ba, args\u03b1, type\u03c4);
 
-            return type.AllocateObject();
+            return type\u03c4.AllocateObject();
         }
 
         [PythonName("__new__")]
-        public static object DefaultNewClsKW(ICallerContext context, DynamicType type, [ParamDict] Dict kwDict, params object[] args) {
-            object res = DefaultNew(context, type, args);
+        public static object DefaultNewClsKW(ICallerContext context, DynamicType type\u03c4, [ParamDict] Dict kwargs\u03ba, params object[] args\u03b1) {
+            object res = DefaultNew(context, type\u03c4, args\u03b1);
 
-            if (kwDict.Count > 0) {
-                foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)kwDict) {
+            if (kwargs\u03ba.Count > 0) {
+                foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)kwargs\u03ba) {
                     Ops.SetAttr(context,
                         res,
                         SymbolTable.StringToId(kvp.Key.ToString()),
@@ -110,63 +110,62 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__new__")]
-        public static object OverloadedNewBasic(ICallerContext context, BuiltinFunction overloads, DynamicType type, params object[] args) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
-            if (args == null) args = new object[1];
-            return overloads.Call(context, args);
+        public static object OverloadedNewBasic(ICallerContext context, BuiltinFunction overloads\u03bf, DynamicType type\u03c4, params object[] args\u03b1) {
+            if (type\u03c4 == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type\u03c4)));
+            if (args\u03b1 == null) args\u03b1 = new object[1];
+            return overloads\u03bf.Call(context, args\u03b1);
         }
 
         [PythonName("__new__")]
-        public static object OverloadedNewKW(ICallerContext context, BuiltinFunction overloads, DynamicType type, [ParamDict] Dict kwArgs) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
+        public static object OverloadedNewKW(ICallerContext context, BuiltinFunction overloads\u03bf, DynamicType type\u03c4, [ParamDict] Dict kwargs\u03ba) {
+            if (type\u03c4 == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type\u03c4)));
 
             object[] finalArgs;
             string[] names;
-            DynamicType.GetKeywordArgs(kwArgs, Ops.EMPTY, out finalArgs, out names);
+            DynamicType.GetKeywordArgs(kwargs\u03ba, Ops.EMPTY, out finalArgs, out names);
 
-
-            return overloads.CallHelper(context, finalArgs, names, null);
+            return overloads\u03bf.CallHelper(context, finalArgs, names, null);
         }
 
         [PythonName("__new__")]
-        public static object OverloadedNewClsKW(ICallerContext context, BuiltinFunction overloads, DynamicType type, [ParamDict] Dict kwDict, params object[] args) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
-            if (args == null) args = new object[1];
+        public static object OverloadedNewClsKW(ICallerContext context, BuiltinFunction overloads\u03bf, DynamicType type\u03c4, [ParamDict] Dict kwargs\u03ba, params object[] args\u03b1) {
+            if (type\u03c4 == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type\u03c4)));
+            if (args\u03b1 == null) args\u03b1 = new object[1];
 
             object[] finalArgs;
             string[] names;
-            DynamicType.GetKeywordArgs(kwDict, args, out finalArgs, out names);
+            DynamicType.GetKeywordArgs(kwargs\u03ba, args\u03b1, out finalArgs, out names);
 
-            return overloads.CallHelper(context, finalArgs, names, null);
+            return overloads\u03bf.CallHelper(context, finalArgs, names, null);
         }
 
         [PythonName("__init__")]
-        public static void DefaultInit(ICallerContext context, object self, params object[] args) {
+        public static void DefaultInit(ICallerContext context, object self, params object[] args\u03b1) {
         }
 
         [PythonName("__init__")]
-        public static void DefaultInitKW(ICallerContext context, object self, [ParamDict] Dict kwDict, params object[] args) {
+        public static void DefaultInitKW(ICallerContext context, object self, [ParamDict] Dict kwargs\u03ba, params object[] args\u03b1) {
         }
 
         [PythonName("__new__")]
-        public static object NonDefaultNew(ICallerContext context, DynamicType type, params object[] args) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
-            if (args == null) args = new object[1];
-            return type.AllocateObject(args);
+        public static object NonDefaultNew(ICallerContext context, DynamicType type\u03c4, params object[] args\u03b1) {
+            if (type\u03c4 == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type\u03c4)));
+            if (args\u03b1 == null) args\u03b1 = new object[1];
+            return type\u03c4.AllocateObject(args\u03b1);
         }
 
         [PythonName("__new__")]
-        public static object NonDefaultNewKW(ICallerContext context, DynamicType type, [ParamDict] Dict dict, params object[] args) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
-            if (args == null) args = new object[1];
-            return type.AllocateObject(dict, args);
+        public static object NonDefaultNewKW(ICallerContext context, DynamicType type\u03c4, [ParamDict] Dict kwargs\u03ba, params object[] args\u03b1) {
+            if (type\u03c4 == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type\u03c4)));
+            if (args\u03b1 == null) args\u03b1 = new object[1];
+            return type\u03c4.AllocateObject(kwargs\u03ba, args\u03b1);
         }
 
         [PythonName("__new__")]
-        public static object NonDefaultNewKWNoParams(ICallerContext context, DynamicType type, [ParamDict] Dict dict) {
-            if (type == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type)));
+        public static object NonDefaultNewKWNoParams(ICallerContext context, DynamicType type\u03c4, [ParamDict] Dict kwargs\u03ba) {
+            if (type\u03c4 == null) throw Ops.TypeError("__new__ expected type object, got {0}", Ops.StringRepr(Ops.GetDynamicType(type\u03c4)));
 
-            return type.AllocateObject(dict, Ops.EMPTY);
+            return type\u03c4.AllocateObject(kwargs\u03ba, Ops.EMPTY);
         }
 
         public static object NextMethod(object self) {
@@ -227,8 +226,8 @@ namespace IronPython.Runtime.Operations {
             return ((IDescriptor)self).GetAttribute(instance, context);
         }
 
-        public static object CallMethod(object self, params object[] args) {
-            return ((ICallable)self).Call(args);
+        public static object CallMethod(object self, params object[] args\u03b1) {
+            return ((ICallable)self).Call(args\u03b1);
         }
 
         private static void CheckInitArgs(ICallerContext context, Dict dict, object[] args, DynamicType pt) {
@@ -257,7 +256,5 @@ namespace IronPython.Runtime.Operations {
             }
             return BuiltinFunction.MakeMethod(name, methods, FunctionType.Function | FunctionType.PythonVisible);
         }
-
-
     }
 }
