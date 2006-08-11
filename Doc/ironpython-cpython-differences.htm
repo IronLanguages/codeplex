@@ -115,16 +115,29 @@
 	<p class="sbody">IronPython has slightly different system-defined attribute 
 	names on some types.&nbsp; For example, try &quot;dir(True)&quot; in both CPython and 
 	IronPython.</p>
-	<p class="sbody">XXX BUG PS789/CP354 (behavior of globals inconsistent).&nbsp; 
-	IronPython initializes the builtins for a module, y, when it is imported by 
-	a module, x.</p>
-	<p class="sbody">&nbsp;</p>
-	<p class="sbody">XXX Bug CP1752 (yield in finally).&nbsp; IronPython re-runs 
-	a generator after an exception was raised from within the dynamic context of 
-	the generator, and we re-raise that same exception.&nbsp; We should raise a 
-	StopIteration exception.</p>
-	<p class="sbody">XXXIronPython does not allow yield statements in nested try 
+	<p class="sbody">XXX BUG PS885 (changing sys.stdout does not affect 
+	Console.Out).&nbsp; IS THIS AN INCOMPATIBILITY???&nbsp; There's are argument 
+	that our behavior is correct (or useful) in the bug since Python does not 
+	distinguish sys.terminalIO from stdout.&nbsp; How and where should this be 
+	captured if not as an incompatibility?</p>
+	<p class="sbody">If executing within the dynamic context of a generator, and 
+	an exception is raised, IronPython exhibits a different behavior than 
+	CPython.&nbsp; IronPython will continually re-raise the same exception every 
+	time you call next() on the generator.&nbsp; CPython raises a StopIteration 
+	exception on subsequent calls to next().</p>
+	<p class="sbody">IronPython does not handle falling off the end of generator 
+	functions the same way as CPython.&nbsp; When you call next() after a last 
+	yield statement has executed, IronPython continually returns execution to 
+	the point immediately after that yield statement, executes to the end of the 
+	function, and then raises a StopIteration exception.&nbsp; CPython executes 
+	from the last yield to the end of the function only one time, and then 
+	subsequent calls to next() immediately raise a StopIteration exception.</p>
+	<p class="sbody">IronPython does not allow yield statements in nested try 
 	blocks.</p>
+	<p class="sbody">XXX (why by design???) IronPython does not allow you to 
+	open a file for writing and separately open it for reading, but CPython does 
+	let you do this.&nbsp; <i>We likely will not fix this.</i></p>
+	<p class="sbody">&nbsp;</p>
 	<p class="sbody">&nbsp;</p>
 	<p class="sbody">&nbsp;</p>
 	<p class="sbody">
