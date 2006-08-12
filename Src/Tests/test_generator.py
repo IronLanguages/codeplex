@@ -177,4 +177,30 @@ def f():
 
 AreEqual(list(f()), [1, 2, 3, 11, 12, 13])
 
- 
+def yield_in_finally_w_exception():
+    try:
+        1/0
+    finally:
+        yield 1
+        yield 2
+        yield 3
+
+n = yield_in_finally_w_exception()
+AreEqual(n.next(), 1)
+AreEqual(n.next(), 2)
+AreEqual(n.next(), 3)
+AssertError(ZeroDivisionError, n.next)
+
+def yield_in_finally_w_exception_2():
+    try:
+        1/0
+    finally:
+        yield 1
+        yield 2
+        raise AssertionError()
+        yield 3
+
+n = yield_in_finally_w_exception_2()
+AreEqual(n.next(), 1)
+AreEqual(n.next(), 2)
+AssertError(AssertionError, n.next)

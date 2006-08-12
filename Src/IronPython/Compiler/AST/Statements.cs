@@ -836,6 +836,24 @@ namespace IronPython.Compiler.Ast {
     }
 
     public class TryFinallyStatement : Statement {
+        class ReturnFinder : AstWalker {
+            bool found;
+
+            public static bool FindReturn(Statement statement) {
+                // No return in null statement
+                if (statement == null) return false;
+
+                // find it now.
+                ReturnFinder rf = new ReturnFinder();
+                statement.Walk(rf);
+                return rf.found;
+            }
+            public override bool Walk(ReturnStatement node) {
+                found = true;
+                return true;
+            }
+        }
+
         private Location header;
         private readonly Statement body;
         private readonly Statement finallyStmt;
@@ -866,12 +884,16 @@ namespace IronPython.Compiler.Ast {
             cg.EmitPosition(Start, header);
             Slot choiceVar = null;
             Slot returnVar = cg.GetLocalTmp(typeof(bool));
+            Slot exception = null;
             Label endOfTry = new Label();
+
+            bool yieldInFinally = yieldTargets.Count > 0;
+            bool returnInFinally = ReturnFinder.FindReturn(finallyStmt);
 
             cg.EmitInt(0);
             returnVar.EmitSet(cg);
 
-            if (yieldTargets.Count > 0) {
+            if (yieldInFinally) {
                 Label startOfBlock = cg.DefineLabel();
                 choiceVar = cg.GetLocalTmp(typeof(int));
                 cg.EmitInt(-1);
@@ -887,12 +909,17 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 cg.MarkLabel(startOfBlock);
+                exception = cg.Names.GetTempSlot("exception", typeof(Exception));
+            } else if (returnInFinally) {
+                exception = cg.GetLocalTmp(typeof(Exception));
+                cg.Emit(OpCodes.Ldnull);
+                exception.EmitSet(cg);
             }
 
             cg.PushTryBlock();
             cg.BeginExceptionBlock();
 
-            if (yieldTargets.Count > 0) {
+            if (yieldInFinally) {
                 endOfTry = cg.DefineLabel();
                 for (int index = 0; index < yieldTargets.Count; index++) {
                     choiceVar.EmitGet(cg);
@@ -903,15 +930,21 @@ namespace IronPython.Compiler.Ast {
 
             body.Emit(cg);
 
-            if (yieldTargets.Count > 0) {
+            if (yieldInFinally) {
                 cg.MarkLabel(endOfTry);
+            }
+
+            if (yieldInFinally || returnInFinally) {
+                Debug.Assert((object)exception != null);
+                cg.BeginCatchBlock(typeof(Exception));
+                exception.EmitSet(cg); // save the exception
             }
 
             cg.PopTargets();
             cg.PushFinallyBlock(returnVar);
             cg.BeginFinallyBlock();
 
-            if (yieldTargets.Count > 0) {
+            if (yieldInFinally) {
                 int index = 0;
                 foreach (YieldTarget yt in yieldTargets) {
                     choiceVar.EmitGet(cg);
@@ -922,13 +955,23 @@ namespace IronPython.Compiler.Ast {
 
             finallyStmt.Emit(cg);
 
+            if (yieldInFinally || returnInFinally) {
+                Label nothrow = cg.DefineLabel();
+                exception.EmitGet(cg);
+                cg.Emit(OpCodes.Dup);
+                cg.Emit(OpCodes.Brfalse_S, nothrow);
+                cg.Emit(OpCodes.Throw);
+                cg.MarkLabel(nothrow);
+                cg.Emit(OpCodes.Pop);
+            }
+
             cg.EndExceptionBlock();
             cg.PopTargets();
 
             Label noReturn = cg.DefineLabel();
             returnVar.EmitGet(cg);
             cg.Emit(OpCodes.Brfalse_S, noReturn);
-            if (yieldTargets.Count > 0) {
+            if (yieldInFinally) {
                 // return true from the generator method
                 cg.Emit(OpCodes.Ldc_I4_1);
             } else {
@@ -951,6 +994,15 @@ namespace IronPython.Compiler.Ast {
 
         public void AddYieldTarget(YieldTarget target) {
             yieldTargets.Add(target);
+        }
+
+        // try-finally requires one temporary slot in the generator environment
+        // to store the exception should one happen to re-throw it at the end
+        // of the finally
+        internal static int LocalSlots {
+            get {
+                return 1;
+            }
         }
     }
 

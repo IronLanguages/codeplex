@@ -401,6 +401,27 @@ def ret_from_finally2(x):
 AreEqual(ret_from_finally2(True), 1)
 AreEqual(ret_from_finally2(False), 2)
 
+def ret_from_finally_x(x):
+    try:
+        1/0
+    finally:
+        return x
+
+AreEqual(ret_from_finally_x("Hi"), "Hi")
+
+def ret_from_finally_x2():
+    try:
+        1/0
+    finally:
+        raise AssertionError("This one")
+
+try:
+    ret_from_finally_x2()
+except AssertionError, e:
+    AreEqual(e.args[0], "This one")
+else:    
+    Fail("Expected AssertionError, got none")
+
 try:
     pass
 finally:

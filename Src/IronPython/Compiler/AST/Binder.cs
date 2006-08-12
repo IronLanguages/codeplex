@@ -362,6 +362,12 @@ namespace IronPython.Compiler.Ast {
             return true;
         }
 
+        public override bool Walk(TryFinallyStatement node) {
+            Debug.Assert(current != null);
+            current.TempsCount += TryFinallyStatement.LocalSlots;
+            return true;
+        }
+
         // DottedName
         public override bool Walk(DottedName node) {
             Reference(node.Names[0]);
