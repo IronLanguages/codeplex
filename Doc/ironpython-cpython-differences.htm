@@ -7,6 +7,7 @@
 <style>
 <!--
 .sbody       { font-family: Georgia; font-size: 10pt; margin-bottom: 6pt }
+.sbullet     { font-family: Georgia; font-size: 10pt; list-style-type: none }
 -->
 </style>
 </head>
@@ -60,16 +61,9 @@
       IronPython 1.0 and CPython 2.0.<p class="sbody">&nbsp;</p>
 	<h1>Syntax</h1>
 	<P class="Body"></P>
-	<p class="sbody">IronPython allows ...<I>.</I> </p>
+	<p class="sbody">XXX generic type syntax</p>
 	<p class="Body">&nbsp;</p>
 	<h1>Standard Types, Functions, and Behaviors</h1>
-	<p class="sbody">IronPython has a more modern garbage collector whereas CPython uses reference 
-        counting.&nbsp; This means that in IronPython users don't need to worry about 
-        handling circular references as these are guaranteed to be collected 
-        properly.&nbsp; On the other hand, users of IronPython have no guarantees of 
-        when an object will be finalized.&nbsp; This can cause problems for people 
-        who use open("foo", 'r').read() excessively. <I>&nbsp;Both behaviors are 
-        acceptable.</I> </p>
 	<p class="sbody">XXX Bug PS68/CP378.&nbsp; IronPython does not use a single 
 	type object to represent all types in the system, but CPython does.&nbsp; If 
 	programmers try to test whether an object is a type object by using Python's 
@@ -134,9 +128,27 @@
 	subsequent calls to next() immediately raise a StopIteration exception.</p>
 	<p class="sbody">IronPython does not allow yield statements in nested try 
 	blocks.</p>
-	<p class="sbody">XXX (why by design???) IronPython does not allow you to 
+	<p class="sbody">IronPython does not allow you to 
 	open a file for writing and separately open it for reading, but CPython does 
-	let you do this.&nbsp; <i>We likely will not fix this.</i></p>
+	let you do this<i>.</i></p>
+	<p class="sbody">IronPython raises an exception when it cannot convert a 
+	string to a unicode string, and CPython just returns the argument to unicode().</p>
+	<p class="sbody">XXX IronPython's _codecs module implementation is 
+	incomplete.&nbsp; There are several replace_error/lookup_error handlers that 
+	IronPython does not implement.</p>
+	<p class="sbody">XXX Bug (CP1060 implement type.mro()).&nbsp; IronPython 
+	does not implement type.mro, and user overrides do not affect how a type's 
+	__mro__ works.</p>
+	<p class="sbody">IronPython does not have an xxsubtypes built in module.</p>
+</div>
+<div class="Section1">
+	<p class="sbody">XXX (how to better characterize this???) IronPython does 
+	not support overriding __getattribute__ for some user-defined subclasses of 
+	built in types.</p>
+	<p class="sbody">XXX Bug PS 1056 (assigning to new style class's __str__).&nbsp; 
+	Not sure how to capture this, and CPython seems to allow some bizarre sets 
+	as well, without checking that the value is callable until you do something 
+	that tries to invoke it.</p>
 	<p class="sbody">&nbsp;</p>
 	<p class="sbody">&nbsp;</p>
 	<p class="sbody">&nbsp;</p>
@@ -201,8 +213,9 @@ False</pre></td>
 	<p class="sbody">&nbsp;</p>
 	<h1><a name="Extension_Modules">Extension Modules</a></h1>
 	<p class="sbody">IronPyton does not support &quot;import __future__&quot; or &quot;from 
-	__future__ ...&quot;.&nbsp; To include all Python 2.5 features implemented, 
-	invoke the console (ipy.exe) with the &quot;-X:Python25&quot; switch.</p>
+	__future__ ...&quot;.&nbsp; To include all Python 2.5 features that 
+	IronPython implements, 
+	invoke the interpreter (ipy.exe) with the &quot;-X:Python25&quot; switch.</p>
 	<p class="sbody">XXX Is there a standard future set of features we should 
 	have implemented, or this doesn't matter for documentation of 
 	incompatibilities?</p>
@@ -216,77 +229,77 @@ False</pre></td>
 			<td width="218">
 			<ul>
 				<li>
-				<p class="Body">_bisect</p></li>
+				<p class="Body"><font face="Georgia" size="2">_bisect</font></p></li>
 				<li>
-				<p class="Body">_codecs_hk</p></li>
+				<p class="Body"><font face="Georgia" size="2">_codecs_hk</font></p></li>
 				<li>
-				<p class="Body">audioop</p></li>
+				<p class="Body"><font face="Georgia" size="2">audioop</font></p></li>
 				<li>
-				<p class="Body">_multibytecodec</p></li>
+				<p class="Body"><font face="Georgia" size="2">_multibytecodec</font></p></li>
 				<li>
-				<p class="Body">parser</p></li>
+				<p class="Body"><font face="Georgia" size="2">parser</font></p></li>
 				<li>
-				<p class="Body">array</p></li>
+				<p class="Body"><font face="Georgia" size="2">array</font></p></li>
 				<li>
-				<p class="Body">msvcrt</p></li>
+				<p class="Body"><font face="Georgia" size="2">msvcrt</font></p></li>
 				<li>
-				<p class="Body">_codecs_kr</p></li>
+				<p class="Body"><font face="Georgia" size="2">_codecs_kr</font></p></li>
 			</ul>
 			</td>
 			<td width="221">
 			<ul>
 				<li>
-				<p class="Body">_heapq</p></li>
+				<p class="Body"><font face="Georgia" size="2">_heapq</font></p></li>
 				<li>
-				<p class="Body">_codecs_jp</p></li>
+				<p class="Body"><font face="Georgia" size="2">_codecs_jp</font></p></li>
 				<li>
-				<p class="Body">imageop</p></li>
+				<p class="Body"><font face="Georgia" size="2">imageop</font></p></li>
 				<li>
-				<p class="Body">mmap</p></li>
+				<p class="Body"><font face="Georgia" size="2">mmap</font></p></li>
 				<li>
-				<p class="Body">_subprocess</p></li>
+				<p class="Body"><font face="Georgia" size="2">_subprocess</font></p></li>
 				<li>
-				<p class="Body">_codecs_tw</p></li>
+				<p class="Body"><font face="Georgia" size="2">_codecs_tw</font></p></li>
 				<li>
-				<p class="Body">regex</p></li>
+				<p class="Body"><font face="Georgia" size="2">regex</font></p></li>
 				<li>
-				<p class="Body">sys XXX ??? how???</p></li>
+				<p class="Body"><font face="Georgia" size="2">sys XXX ??? how???</font></p></li>
 			</ul>
 			</td>
 			<td width="208">
 			<ul>
 				<li>
-				<p class="Body">zipimport</p></li>
+				<p class="Body"><font face="Georgia" size="2">zipimport</font></p></li>
 				<li>
-				<p class="Body">xxsubtype</p></li>
+				<p class="Body"><font face="Georgia" size="2">xxsubtype</font></p></li>
 				<li>
-				<p class="Body">_codecs_cn</p></li>
+				<p class="Body"><font face="Georgia" size="2">_codecs_cn</font></p></li>
 				<li>
-				<p class="Body">md5</p></li>
+				<p class="Body"><font face="Georgia" size="2">md5</font></p></li>
 				<li>
-				<p class="Body">_codecs_iso2022</p></li>
+				<p class="Body"><font face="Georgia" size="2">_codecs_iso2022</font></p></li>
 				<li>
-				<p class="Body">rgbimg</p></li>
+				<p class="Body"><font face="Georgia" size="2">rgbimg</font></p></li>
 				<li>
-				<p class="Body">_csv</p></li>
+				<p class="Body"><font face="Georgia" size="2">_csv</font></p></li>
 			</ul>
 			<p>&nbsp;</td>
 			<td>
 			<ul>
 				<li>
-				<p class="Body">signal</p></li>
+				<p class="Body"><font face="Georgia" size="2">signal</font></p></li>
 				<li>
-				<p class="Body">_hotshot</p></li>
+				<p class="Body"><font face="Georgia" size="2">_hotshot</font></p></li>
 				<li>
-				<p class="Body">sha</p></li>
+				<p class="Body"><font face="Georgia" size="2">sha</font></p></li>
 				<li>
-				<p class="Body">cmath</p></li>
+				<p class="Body"><font face="Georgia" size="2">cmath</font></p></li>
 				<li>
-				<p class="Body">_symtable</p></li>
+				<p class="Body"><font face="Georgia" size="2">_symtable</font></p></li>
 				<li>
-				<p class="Body">_winreg</p></li>
+				<p class="Body"><font face="Georgia" size="2">_winreg</font></p></li>
 				<li>
-				<p class="Body">strop</p></li>
+				<p class="Body"><font face="Georgia" size="2">strop</font></p></li>
 			</ul>
 			<p>&nbsp;</td>
 		</tr>
@@ -294,7 +307,7 @@ False</pre></td>
 	<p class="sbody">The following are highly unlikely to be added any time soon:</p>
 	<table border="1" width="100%" id="table7">
 		<tr>
-			<td width="219">XXX </td>
+			<td width="219"><font face="Georgia" size="2">XXX </font> </td>
 			<td width="224">&nbsp;</td>
 			<td width="204">&nbsp;</td>
 			<td>&nbsp;</td>
@@ -311,10 +324,10 @@ False</pre></td>
 	file in the IronPython lib directory:</i></p>
 	<p class="Code-Background">import sys<br>
 	sys.path.append(r&quot;c:\python24\lib&quot;)</p>
+	<p class="sbody">IronPython does not redirect the interpreter's error output 
+	in response to setting sys.stderr.</p>
 	<p class="sbody">IronPython has different command line editing support than 
 	CPython.</p>
-	<p class="sbody">XXXIronPython should have a feature similar to $PYTHONSTARTUP, which 
-        specifies a script to run at the start of interactive mode only. </p>
 	<p class="sbody">IronPython supports different command 
         line options than CPython.&nbsp; Invoke ipy.exe with the &quot;-?&quot; switch to 
 	see options.</p>
@@ -324,7 +337,82 @@ False</pre></td>
 </div>
 
 
-<p class="sbody">&nbsp;</p>
+<div class="Section1">
+	<p class="sbody">IronPython has several incompatibilities relating to the 
+	interpreter and the sys module hooks:</p><font SIZE="1">
+	<ul>
+		<li>
+		<p class="sbody" style="margin-bottom: 0">settrace</li>
+	</ul>
+	<blockquote>
+		<p class="sbody" style="margin-bottom: 0">Calling this raises a 
+		NotImplementedException.</p>
+	</blockquote>
+	<ul>
+		<li>
+		<p class="sbody" style="margin-bottom: 0">api_version</li>
+	</ul>
+	<blockquote>
+		<p class="sbody" style="margin-bottom: 0">This always has the value: &quot;IronPython 
+		does not support the C APIs, the api_version is not supported&quot;.</p>
+	</blockquote>
+	<ul>
+		<li>
+		<p class="sbody" style="margin-bottom: 0">displayhook</li>
+	</ul>
+	<blockquote>
+		<p class="sbody" style="margin-bottom: 0">Setting this will throw a 
+		NotImplementedException.</p>
+	</blockquote>
+	<ul>
+		<li>
+		<p class="sbody">_getframe</li>
+	</ul>
+	<blockquote>
+		<p class="sbody">Calling this function raises a ValueError exception.</p>
+	</blockquote>
+	<ul>
+		<li>
+		<p class="sbody">__excepthook__</li>
+	</ul>
+	<blockquote>
+		<p class="sbody">IronPython does not support __excepthook because it 
+		does not implement sys.excepthook().&nbsp; IronPython does not currently 
+		support replacing function definitions in the sys module.&nbsp; Note, 
+		excepthook is an attribute in the sys module, but it is bound to a 
+		string: &quot;IronPython does not support sys.excepthook&quot;.</p>
+	</blockquote>
+	<ul>
+		<li>
+		<p class="sbody">setcheckinterval</li>
+	</ul>
+	<blockquote>
+		<p class="sbody">IronPython does not use the value set with this 
+		function.</p>
+	</blockquote>
+	</font>
+</div>
+	<p class="sbody">&nbsp;</p>
+	<h1>Interpreter and environment</h1>
+	<p class="sbody">IronPython has a more modern GC whereas CPython uses reference 
+        counting, and IronPython's GC choice is considered to be a valid and 
+	acceptable implementation.&nbsp; This has several effects which are listed 
+	below.</p>
+<p class="sbody">IronPython users don't need to worry about 
+        handling circular references as these are guaranteed to be collected 
+        properly.&nbsp; <i>This behavior is acceptable.</i></p>
+<p class="sbody">IronPython does not have guarantees for when finalization or 
+system resource freeing occurs.&nbsp; This can cause problems for people 
+        who use open("foo", 'r').read() excessively. <I>&nbsp;This behavior are 
+        acceptable.</I> </p>
+	<p class="sbody">IronPython does not immediately invoke __del__ methods when 
+	del is called on a variable; it happens during the next GC pass.&nbsp; <i>
+	This behavior is acceptable.</i></p>
+	<font SIZE="1">
+<p class="sbody">Calling sys.getrefcount raises a NotImplementedError.&nbsp; <i>
+Alternatively IronPython could always return could always return some positive 
+constant since there's a reference that was passed to getrefcount.</i></p>
+</font>
 
 
 </body>
