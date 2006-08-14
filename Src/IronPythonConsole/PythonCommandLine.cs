@@ -242,6 +242,7 @@ namespace IronPythonConsole {
                     case "-X:SaveAssemblies": Options.SaveAndReloadBinaries = true; break;
                     case "-X:ShowClrExceptions": options.ShowClrExceptions = true; break;
                     case "-X:StaticMethods": Options.GenerateDynamicMethods = false; break;
+                    case "-X:NoTraceBack": Options.TraceBackSupport = false; break;
                     case "-X:TrackPerformance": // accepted but ignored on retail builds
 #if DEBUG
                         Options.TrackPerformance = true;
@@ -341,6 +342,7 @@ namespace IronPythonConsole {
 #if !IRONPYTHON_WINDOW
             Console.WriteLine("  -X:TabCompletion       Enable TabCompletion mode");
 #endif
+            Console.WriteLine("  -X:NoTraceBack         Disable traceback support");
 #if DEBUG
             Console.WriteLine("  -X:TrackPerformance    Track performance sensitive areas");
 #endif

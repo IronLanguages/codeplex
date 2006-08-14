@@ -91,14 +91,14 @@ namespace IronPython.CodeDom {
                     merger = CodeMerger.GetCachedCode(e);
                     string oldNewline = Output.NewLine;
                     if (merger != null) {
+                        AddNewImports(e);
                         writeCache = new StringBuilder();
                         lastRow = 1;
                         lastCol = 1;
                         col = 1;
                         row = 1;
                         Output.NewLine = "";
-                    }
-
+                    }                    
 
                     base.GenerateCompileUnit(e);
 
@@ -124,6 +124,94 @@ namespace IronPython.CodeDom {
             }
 #endif
         }
+
+        /// <summary>
+        /// Check if there are any types in the CodeDom tree that we don't currently have
+        /// imports for.  If we find any then add them into the imports list.
+        /// </summary>
+        private void AddNewImports(CodeCompileUnit ccu) {            
+            foreach (CodeNamespace cn in ccu.Namespaces) {
+                CodeNamespaceImportCollection curImports = cn.Imports;
+
+                foreach (CodeTypeDeclaration ctd in cn.Types) {
+                    AddImportsForTypeDeclaration(curImports, ctd);
+                }
+            }
+        }
+
+        private void AddImportsForTypeDeclaration(CodeNamespaceImportCollection curImports, CodeTypeDeclaration ctd) {
+            AddImportsForCodeTypeReferenceCollection(curImports, ctd.BaseTypes);
+
+            foreach (CodeTypeMember member in ctd.Members) {
+                CodeMemberProperty prop;
+                CodeMemberMethod meth;
+                CodeMemberField field;
+                CodeMemberEvent evnt;
+                CodeTypeDeclaration innerType;
+
+                if ((prop = member as CodeMemberProperty) != null) {
+                    AddImportsForProperty(curImports, prop);
+                } else if ((evnt = member as CodeMemberEvent) != null) {
+                    AddImportsForEvent(curImports, evnt);
+                } else if ((field = member as CodeMemberField) != null) {
+                    AddImportsForField(curImports, field);
+                } else if ((meth = member as CodeMemberMethod) != null) {
+                    AddImportsForMethod(curImports, meth);
+                } else if ((innerType = member as CodeTypeDeclaration) != null) {
+                    AddImportsForTypeDeclaration(curImports, innerType);
+                }
+            }
+        }
+
+        private void AddImportsForProperty(CodeNamespaceImportCollection imports, CodeMemberProperty prop) {
+            MaybeAddImport(imports, prop.Type);
+        }
+
+        private void AddImportsForEvent(CodeNamespaceImportCollection imports, CodeMemberEvent evnt) {
+            MaybeAddImport(imports, evnt.Type);
+        }
+        
+        private void AddImportsForField(CodeNamespaceImportCollection imports, CodeMemberField field) {
+            MaybeAddImport(imports, field.Type);
+        }
+        
+        private void AddImportsForMethod(CodeNamespaceImportCollection imports, CodeMemberMethod method) {
+            MaybeAddImport(imports, method.ReturnType);
+        }
+
+        private void AddImportsForCodeTypeReferenceCollection(CodeNamespaceImportCollection curImports, CodeTypeReferenceCollection ctrc) {
+            foreach (CodeTypeReference ctr in ctrc) {
+                MaybeAddImport(curImports, ctr);
+            }
+        }
+
+        private void MaybeAddImport(CodeNamespaceImportCollection curImports, CodeTypeReference reference) {
+            string typeName = reference.BaseType;
+
+            if (reference.BaseType == "System.Object" ||
+                reference.BaseType == "System.String" ||
+                reference.BaseType == "System.Int32" ||
+                reference.BaseType == "System.Double" ||
+                reference.BaseType == "System.Void")
+                return;
+
+            
+            int firstDot;
+            if((firstDot = typeName.IndexOf('.')) == -1){
+                return;
+            }
+
+            string typeNs = typeName.Substring(0, firstDot);
+
+            foreach (CodeNamespaceImport cni in curImports) {
+                if (cni.Namespace.StartsWith(typeNs))
+                    return;
+            }
+
+            Console.WriteLine(reference.BaseType);
+            curImports.Add(new CodeNamespaceImport(typeName.Substring(0, typeName.LastIndexOf('.'))));
+        }
+
         protected override void GenerateNamespace(CodeNamespace e) {
             if (Options != null) {
                 Options.BlankLinesBetweenMembers = false;
