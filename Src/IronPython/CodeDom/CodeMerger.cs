@@ -30,23 +30,26 @@ namespace IronPython.CodeDom {
     /// will write the updated text as a string to the output stream.
     /// </summary>
     class CodeMerger {
-        string originalText;
-        List<string> lines;
-        int startLineCount, lineDelta;
+        private IMergeDestination destination;
+        private int startLineCount, lineDelta;
 #if DEBUG
-        int lastLine;
+        private int lastLine;
 #endif
 
         public static void CacheCode(CodeCompileUnit ccu, string code) {
-            ccu.UserData["MergerCache"] = new CodeMerger(code);
+            ccu.UserData["MergerCache"] = new CodeMerger(new SimpleMergeDestination(code));
+        }
+
+        public static void CacheCode(CodeCompileUnit ccu, IMergeDestination mergeDestination) {
+            ccu.UserData["MergerCache"] = new CodeMerger(mergeDestination);
         }
 
         public static CodeMerger GetCachedCode(CodeCompileUnit ccu) {
             return ccu.UserData["MergerCache"] as CodeMerger;
         }
 
-        private CodeMerger(string codeString) {
-            originalText = codeString;
+        private CodeMerger(IMergeDestination destination) {
+            this.destination = destination;
         }
 
         /// <summary>
@@ -67,9 +70,12 @@ namespace IronPython.CodeDom {
             lastLine = startRow;
 #endif
 
-            TextToLines();
-
+            bool hasMerged = destination.HasMerged;
+            int destLineCount = destination.LineCount;
             List<string> newLines = GetLines(text);
+            if (!hasMerged) {
+                startLineCount = destLineCount;
+            }
 
             // last \r\n should be removed (eg 'foo\r\n' should just be 'foo', but we 
             // can't ask Split in GetLines to remove blanks because we actually \
@@ -86,7 +92,7 @@ namespace IronPython.CodeDom {
 
             Debug.Assert(lineRange >= 0, "line range is negative");
             Debug.Assert(startRow + lineDelta >= 0, "row & line delta is negative");
-            Debug.Assert(startRow + lineDelta < lines.Count, "row + lineDelta is > # of lines");
+            Debug.Assert(startRow + lineDelta < startLineCount, "row + lineDelta is > # of lines");
 
             // we expect merges to come in-order (because we are walking
             // over the same CodeDOM tree in the same order).  Therefore
@@ -95,50 +101,37 @@ namespace IronPython.CodeDom {
             // from our CodeDOM tree.  This data will be reset when we finalize
             // the merge and return the resulting text.
 
-            lines.RemoveRange(startRow + lineDelta, lineRange);
-            lines.InsertRange(startRow + lineDelta, newLines);
+            destination.RemoveRange(startRow + lineDelta, lineRange);
+            destination.InsertRange(startRow + lineDelta, newLines);
 
             int newLineDelta = newLines.Count - lineRange;
             lineDelta += newLineDelta;
-        }
-
-        public int GetNewLine(int oldLine) {
-            return oldLine + lineDelta;
         }
 
         public int LineDelta {
             get {
                 return lineDelta;
             }
-        }
-        public string FinalizeMerge() {
-            if (lines == null) return originalText;
-            StringBuilder res = new StringBuilder();
-            for (int i = 0; i < lines.Count; i++) {
-                res.AppendLine(lines[i]);
+            set {
+                lineDelta = value;
             }
+        }
+
+        public string FinalizeMerge() {
+            string res = destination.FinalText;
 
             // and now we expect any new merges to be based on our
             // current offsets.
-            startLineCount = lines.Count;
+            startLineCount = startLineCount + lineDelta;
             lineDelta = 0;
 #if DEBUG
             lastLine = 0;
 #endif
-            return res.ToString();
+            return res;
         }
 
-        /// <summary>
-        /// Converts our original text into a line based format
-        /// that can be more quickly updated.
-        /// </summary>
-        private void TextToLines() {
-            if (lines == null) {
-                lines = GetLines(originalText);
-                startLineCount = lines.Count;
-                // no longer needed.
-                originalText = null;
-            }
+        private int GetNewLine(int oldLine) {
+            return oldLine + lineDelta;
         }
 
         private static List<string> GetLines(string text) {
@@ -152,6 +145,75 @@ namespace IronPython.CodeDom {
             }
             return res;
         }
+        
+        /// <summary>
+        /// A simple merger that uses strings as it's backing store.
+        /// </summary>
+        class SimpleMergeDestination : IMergeDestination {
+            private string originalText;
+            private List<string> lines;
+
+            public SimpleMergeDestination(string code) {
+                originalText = code;
+            }
+
+            #region IMergeDestination Members
+
+            public void InsertRange(int start, IList<string> newLines) {
+                TextToLines();
+                lines.InsertRange(start, newLines);
+            }
+
+            public void RemoveRange(int start, int count) {
+                TextToLines();
+                lines.RemoveRange(start, count);
+            }
+
+            public int LineCount {
+                get {
+                    TextToLines();
+                    return lines.Count;
+                }
+            }            
+
+            /// <summary>
+            /// True if any updates have been applied to the original text, false other wise.
+            /// </summary>
+            public bool HasMerged {
+                get { return lines != null; }
+            }
+
+            /// <summary>
+            /// Returns the original text in the buffer.  May return null if any merges have been preformed.
+            /// </summary>
+            public string FinalText {
+                get {
+                    if (lines == null) return originalText;
+
+                    StringBuilder res = new StringBuilder();
+                    for (int i = 0; i < lines.Count; i++) {
+                        res.AppendLine(lines[i]);
+                    }
+                    return res.ToString();
+                }
+            }
+
+            #endregion
+
+            /// <summary>
+            /// Converts our original text into a line based format
+            /// that can be more quickly updated.
+            /// </summary>
+            private void TextToLines() {
+                if (lines == null) {
+                    lines = GetLines(originalText);
+                    // no longer needed.
+                    originalText = null;
+                }
+            }
+
+        }
 
     }
+
 }

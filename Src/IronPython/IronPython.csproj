@@ -95,6 +95,7 @@
     </Compile>
     <Compile Include="CodeDom\CodeMerger.cs" />
     <Compile Include="CodeDom\Compiler.cs" />
+    <Compile Include="CodeDom\Interfaces.cs" />
     <Compile Include="CodeDom\Generator.cs" />
     <Compile Include="CodeDom\Parser.cs" />
     <Compile Include="CodeDom\Provider.cs">

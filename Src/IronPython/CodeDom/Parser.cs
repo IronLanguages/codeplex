@@ -57,6 +57,17 @@ namespace IronPython.CodeDom {
         /// Parse an arbitrary stream
         /// </summary>
         public override CodeCompileUnit Parse(System.IO.TextReader codeStream) {
+            return ParseMergeable(codeStream, null);
+        }
+
+        public CodeCompileUnit ParseMergeable(string text, string filename, IMergeDestination destination){
+            CodeCompileUnit tree = Parse(Parser.FromString(state, new CompilerContext(), text), filename);
+
+            CodeMerger.CacheCode(tree, destination);
+            return tree;
+        }
+
+        public CodeCompileUnit ParseMergeable(System.IO.TextReader codeStream, IMergeDestination destination) {
             // get a better filename if we can
             string name = "<unknown>";
             StreamReader sw = codeStream as StreamReader;
@@ -68,7 +79,9 @@ namespace IronPython.CodeDom {
             string codeText = codeStream.ReadToEnd();
             CodeCompileUnit tree = Parse(Parser.FromString(state, new CompilerContext(), codeText), name);
 
-            CodeMerger.CacheCode(tree, codeText);
+            if (destination != null) CodeMerger.CacheCode(tree, destination);
+            else CodeMerger.CacheCode(tree, codeText);
+
             return tree;
         }
 
@@ -89,6 +102,10 @@ namespace IronPython.CodeDom {
             Statement s = p.ParseFileInput();
             CodeCompileUnit res = new CodeCompileUnit();
             CodeNamespace defaultNamespace = new CodeNamespace();
+            defaultNamespace.UserData["Line"] = 1;
+            defaultNamespace.UserData["Column"] = 1;
+            defaultNamespace.UserData["EndLine"] = 1;
+            defaultNamespace.UserData["EndColumn"] = 1;
 
             //!!! enable AD usage when we're strong named.
             //AppDomainSetup ads = new AppDomainSetup();
@@ -117,7 +134,7 @@ namespace IronPython.CodeDom {
                 }
 
                 // if no namespaces we're added then everything's in our default namespace.
-                if (res.Namespaces.Count == 0) {
+                if (res.Namespaces.Count == 0 || defaultNamespace.Types.Count > 0) {
                     res.Namespaces.Add(defaultNamespace);
                 }
 
@@ -135,12 +152,16 @@ namespace IronPython.CodeDom {
             } else if (cur is CodeTypeDeclaration) {
                 CodeTypeDeclaration ctd = cur as CodeTypeDeclaration;
                 bool fRealClass = false;
-                foreach (CodeTypeMember mem in ctd.Members) {
-                    if (mem is CodeTypeDeclaration)
-                        continue;
+                if (ctd.BaseTypes.Count == 0) {
+                    foreach (CodeTypeMember mem in ctd.Members) {
+                        if (mem is CodeTypeDeclaration)
+                            continue;
 
+                        fRealClass = true;
+                        break;
+                    }
+                } else {
                     fRealClass = true;
-                    break;
                 }
 
                 if (fRealClass) {
@@ -173,20 +194,16 @@ namespace IronPython.CodeDom {
 
             foreach (CodeNamespaceImport cn in defaultNamespace.Imports) {
                 nsRes.Imports.Add(cn);
-            }
+            }            
         }
 
         private static void CopyLineInfo(CodeTypeDeclaration ctd, CodeNamespace nsRes) {
             nsRes.UserData["PreImport"] = true;
-            if (ctd.LinePragma != null) {
-                nsRes.UserData["IPCreated"] = true;
-                nsRes.UserData["Line"] = ctd.LinePragma.LineNumber;
-                nsRes.UserData["Column"] = 0;
-            } else {
-                nsRes.UserData["IPCreated"] = ctd.UserData["IPCreated"];
-                nsRes.UserData["Line"] = ctd.UserData["Line"];
-                nsRes.UserData["Column"] = ctd.UserData["Column"];
-            }
+            nsRes.UserData["IPCreated"] = ctd.UserData["IPCreated"];
+            nsRes.UserData["EndLine"] = ctd.UserData["EndLine"];
+            nsRes.UserData["EndColumn"] = ctd.UserData["EndColumn"];
+            nsRes.UserData["Column"] = ctd.UserData["Column"];
+            nsRes.UserData["Line"] = ctd.UserData["Line"];
         }
 
         private static void UpdateTopType(CodeTypeDeclaration topType, CodeNamespace defaultNamespace) {

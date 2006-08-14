@@ -80,9 +80,13 @@ namespace IronPython.CodeDom {
                 method.Attributes = MemberAttributes.Public;
             }
 
-            // method starts at decorators, if they're available.
-            if (node.Decorators != null && node.Decorators.Start.Line != -1) MarkForCodeDom(node.Decorators, method);
-            else MarkForCodeDom(node, method);
+            // method starts at decorators, if they're available (still ends @ method)
+            if (node.Decorators != null && node.Decorators.Start.Line != -1) {
+                MarkForCodeDom(node.Decorators, method);
+                MarkForCodeDomEndOnly(node, method);
+            } else {
+                MarkForCodeDom(node, method);
+            }
 
             // process the method...
             try {
@@ -443,7 +447,7 @@ namespace IronPython.CodeDom {
                                 return AddProperty(node, name, ce);
                             }
                         } else {
-                            DeclareField(name, LastExpression);
+                            DeclareField(name, LastExpression, node);
                         }
                     } else throw CodeDomSerializerError(node, "Assignment in unexpected location");
 
@@ -479,6 +483,7 @@ namespace IronPython.CodeDom {
                     }
                 }
             }
+            MarkForCodeDom(node, prop);
             lastObject = prop;
             return false;
         }
@@ -1152,10 +1157,10 @@ namespace IronPython.CodeDom {
             localDict[name] = type;
         }
 
-        public void DeclareField(string name, CodeTypeReference type) {
+        public void DeclareField(string name, CodeTypeReference type, Node node) {
             Debug.Assert(CurrentType != null);
 
-            CurrentType.Members.Add(new CodeMemberField(type, name));
+            CurrentType.Members.Add(MarkForCodeDom(node, new CodeMemberField(type, name)));
         }
 
         /// <summary> Gets or sets the type of the last expression</summary>
@@ -1417,13 +1422,16 @@ namespace IronPython.CodeDom {
                     CodeTypeMember ctm;
                     if (co is CodeNamespaceImport) {
                         // this would appear to be a top-level namespace, not a type declaration
-                        if (cn == null) cn = MarkForCodeDom(node, new CodeNamespace(node.Name.GetString()));
+                        if (cn == null) {
+                            cn = MarkForCodeDom(node, new CodeNamespace(node.Name.GetString()));
+                            MarkForCodeDom(s, cn);
+                        }
                         //if (ctd != null && ctd.Members.Count > 0) throw CodeDomSerializerError(state, "Mixing types & namespaces");
 
                         ctd = null;
                         res = cn;
 
-                        cn.Imports.Add((CodeNamespaceImport)co);
+                        cn.Imports.Add((CodeNamespaceImport)co);                        
                     } else if ((ctm = co as CodeTypeMember) != null) {
                         SaveCodeTypeMember(node, ctd, cn, ctm);
                     } else {
@@ -1459,7 +1467,14 @@ namespace IronPython.CodeDom {
                     (cmm.Attributes & MemberAttributes.Static) != 0) {
 
                     // entry point method
-                    CodeEntryPointMethod entry = MarkForCodeDom(node, new CodeEntryPointMethod());
+                    CodeEntryPointMethod entry = new CodeEntryPointMethod();
+
+                    entry.UserData["IPCreated"] = cmm.UserData["IPCreated"];
+                    entry.UserData["EndLine"] = cmm.UserData["EndLine"];
+                    entry.UserData["EndColumn"] = cmm.UserData["EndColumn"];
+                    entry.UserData["Column"] = cmm.UserData["Column"];
+                    entry.UserData["Line"] = cmm.UserData["Line"];
+
                     foreach (CodeStatement cs in cmm.Statements) {
                         entry.Statements.Add(cs);
                     }
@@ -1526,9 +1541,9 @@ namespace IronPython.CodeDom {
                             CodeMemberField field;
 
                             if (fieldType != null) {
-                                field = new CodeMemberField(new CodeTypeReference(fieldType.FullName), slot);
+                                field = MarkForCodeDom(node.Body, new CodeMemberField(new CodeTypeReference(fieldType.FullName), slot));
                             } else {
-                                field = new CodeMemberField(new CodeTypeReference(type), slot);
+                                field = MarkForCodeDom(node.Body, new CodeMemberField(new CodeTypeReference(type), slot));
                             }
 
                             // check accessibility
@@ -1658,6 +1673,9 @@ namespace IronPython.CodeDom {
             codeObject.UserData["IPCreated"] = true;
             codeObject.UserData["Line"] = node.Start.Line;
             codeObject.UserData["Column"] = node.Start.Column;
+            return MarkForCodeDomEndOnly(node, codeObject);
+        }
+        public static T MarkForCodeDomEndOnly<T>(Node node, T codeObject) where T : CodeObject {
             codeObject.UserData["EndLine"] = node.End.Line;
             codeObject.UserData["EndColumn"] = node.End.Column;
             return codeObject;

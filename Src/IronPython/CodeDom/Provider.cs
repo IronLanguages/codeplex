@@ -21,7 +21,7 @@ using System.CodeDom.Compiler;
 using System.Reflection;
 
 namespace IronPython.CodeDom {
-    public class PythonProvider : CodeDomProvider {
+    public class PythonProvider : CodeDomProvider, IMergableProvider {
         List<string> references = new List<string>();
 
         [Obsolete]
@@ -48,5 +48,22 @@ namespace IronPython.CodeDom {
                 return "py";
             }
         }
+
+        #region IMergableProvider Members
+
+        public CodeCompileUnit ParseMergable(string text, string filename, IMergeDestination mergeDestination) {
+            return new PythonParser(references).ParseMergeable(text, filename, mergeDestination);
+        }
+
+        public CodeCompileUnit ParseMergable(System.IO.StreamReader sw, IMergeDestination mergeDestination) {
+            return new PythonParser(references).ParseMergeable(sw, mergeDestination);
+        }
+
+        public void MergeCodeFromCompileUnit(CodeCompileUnit compileUnit) {
+            new PythonGenerator().InternalGenerateCompileUnit(compileUnit);
+        }
+
+        #endregion
     }
+
 }

@@ -90,6 +90,7 @@ namespace IronPython.CodeDom {
                     // cache all at once.
                     merger = CodeMerger.GetCachedCode(e);
                     string oldNewline = Output.NewLine;
+
                     if (merger != null) {
                         AddNewImports(e);
                         writeCache = new StringBuilder();
@@ -108,9 +109,13 @@ namespace IronPython.CodeDom {
                         // suppressed it (this occurs when user code is at the
                         // end of the code compile unit).
                         suppressFlush = false;
+
                         DoFlush(-1, -1);
 
-                        Output.Write(merger.FinalizeMerge());
+                        string finalText = merger.FinalizeMerge();
+                        if (finalText != null) {
+                            Output.Write(finalText);
+                        }
                         Output.NewLine = oldNewline;
                     }
                 } finally {
@@ -210,6 +215,10 @@ namespace IronPython.CodeDom {
 
             Console.WriteLine(reference.BaseType);
             curImports.Add(new CodeNamespaceImport(typeName.Substring(0, typeName.LastIndexOf('.'))));
+        }
+
+        internal void InternalGenerateCompileUnit(CodeCompileUnit ccu) {
+            ((ICodeGenerator)this).GenerateCodeFromCompileUnit(ccu, new System.IO.StringWriter(), null);
         }
 
         protected override void GenerateNamespace(CodeNamespace e) {
@@ -332,7 +341,7 @@ namespace IronPython.CodeDom {
             } else {
                 GenerateExpression(e.Listener);
             }
-            WriteLine();
+            WriteLine();            
         }
 
         protected override void GenerateBaseReferenceExpression(CodeBaseReferenceExpression e) {
@@ -370,7 +379,7 @@ namespace IronPython.CodeDom {
                 Indent++;
                 GenerateStatements(e.FalseStatements);
                 Indent--;
-            }
+            }            
         }
 
         private bool NeedFieldInit() {
@@ -387,11 +396,12 @@ namespace IronPython.CodeDom {
                 typeStack.Peek().NeedsFieldInit = needsInit;
             }
 
+
             return (bool)typeStack.Peek().NeedsFieldInit;
         }
 
         protected override void GenerateConstructor(CodeConstructor e, CodeTypeDeclaration c) {
-            FlushOutput(e);
+            FlushOutput(e);           
 
             Write("def __init__(self");
             if (e.Parameters.Count > 0) {
@@ -428,6 +438,7 @@ namespace IronPython.CodeDom {
             }
 
             Indent--;
+           
             WriteLine();
         }
 
@@ -541,12 +552,13 @@ namespace IronPython.CodeDom {
                 GenerateStatements(e.Statements);
             if (e.IncrementStatement != null)
                 GenerateStatement(e.IncrementStatement);
-            Indent--;
+            Indent--;            
         }
 
 
         protected override void GenerateMethod(CodeMemberMethod e, CodeTypeDeclaration c) {
             FlushOutput(e);
+
             if (merger != null && e.UserData["MergeOnly"] != null) {
                 MarkMergeOnly(e);
                 return;
@@ -568,8 +580,7 @@ namespace IronPython.CodeDom {
                 e.Parameters,
                 e.Statements,
                 e.ReturnType,
-                e.UserData);
-
+                e.UserData);            
         }
 
         protected override void GeneratePrimitiveExpression(CodePrimitiveExpression e) {
@@ -619,6 +630,7 @@ namespace IronPython.CodeDom {
 
             Write(Ops.Repr(e.Value));
         }
+
         protected override void GenerateMethodInvokeExpression(CodeMethodInvokeExpression e) {
             if (e.Method.TargetObject != null) {
                 GenerateExpression(e.Method.TargetObject);
@@ -671,6 +683,8 @@ namespace IronPython.CodeDom {
             Write("return ");
             GenerateExpression(e.Expression);
             WriteLine();
+
+            
         }
 
         protected override void GenerateNamespaceEnd(CodeNamespace e) {
@@ -687,6 +701,8 @@ namespace IronPython.CodeDom {
                 }
 
                 namespaceStack.Pop();
+
+                
             }
         }
 
@@ -696,7 +712,7 @@ namespace IronPython.CodeDom {
             }
         }
 
-        protected override void GenerateNamespaceStart(CodeNamespace e) {
+        protected override void GenerateNamespaceStart(CodeNamespace e) {            
             if (!UserDataFalse(e.UserData, "PreImport")) {
                 // loigcally part of the namespace declaration, so
                 // we generate these before flushing output (as flushing will advance
@@ -705,7 +721,7 @@ namespace IronPython.CodeDom {
             }
 
             FlushOutput(e);
-
+  
             if (!String.IsNullOrEmpty(e.Name)) {
                 namespaceStack.Push(e);
 
@@ -745,6 +761,8 @@ namespace IronPython.CodeDom {
             } else {
                 WriteLine(String.Format("import {0}", e.Namespace));
             }
+
+            
         }
 
         protected override void GenerateObjectCreateExpression(CodeObjectCreateExpression e) {
@@ -820,6 +838,7 @@ namespace IronPython.CodeDom {
             }
             WriteLine(")");
 
+            
         }
 
         protected override void GeneratePropertyReferenceExpression(CodePropertyReferenceExpression e) {
@@ -846,6 +865,8 @@ namespace IronPython.CodeDom {
 
             GenerateExpression(e.Listener);
             WriteLine();
+
+            
         }
 
         protected override void GenerateSnippetExpression(CodeSnippetExpression e) {
@@ -871,13 +892,15 @@ namespace IronPython.CodeDom {
             WriteLine("# end snippet member");
 
             Indent = oldIndent;
+
+            
         }
 
         protected override void GenerateSnippetStatement(CodeSnippetStatement e) {
             AdvanceOutput(e);
             int oldIndent = Indent;
             Indent = lastIndent;
-
+            
 
             WriteLine("# Snippet Statement");
 
@@ -889,6 +912,8 @@ namespace IronPython.CodeDom {
 
 
             Indent = oldIndent;
+
+            
         }
 
 
@@ -903,6 +928,8 @@ namespace IronPython.CodeDom {
             Write("raise ");
             GenerateExpression(e.ToThrow);
             WriteLine();
+
+            
         }
 
         protected override void GenerateTryCatchFinallyStatement(CodeTryCatchFinallyStatement e) {
@@ -951,12 +978,14 @@ namespace IronPython.CodeDom {
                 GenerateStatements(e.FinallyStatements);
                 Indent--;
             }
+
+            
         }
 
         protected override void GenerateTypeConstructor(CodeTypeConstructor e) {
             FlushOutput(e);
 
-            GenerateStatements(e.Statements);
+            MyGenerateStatements(e.Statements);            
         }
 
         private void GenerateFieldInit() {
@@ -969,7 +998,7 @@ namespace IronPython.CodeDom {
 
                 if (e.InitExpression != null) {
                     //!!! non-static init expression should be moved to constructor
-                    FlushOutput(e);
+                    AdvanceOutput(e);
 
                     Write("self.");
                     if ((e.Attributes & MemberAttributes.AccessMask) == MemberAttributes.Private) Write("_");
@@ -977,8 +1006,9 @@ namespace IronPython.CodeDom {
                     Write(" = ");
                     GenerateExpression(e.InitExpression);
                     WriteLine();
+                    
                 } else if ((e.Attributes & MemberAttributes.ScopeMask) == MemberAttributes.Static) {
-                    FlushOutput(e);
+                    AdvanceOutput(e);
 
                     if ((e.Attributes & MemberAttributes.AccessMask) == MemberAttributes.Private) Write("_");
                     Write(e.Name);
@@ -995,6 +1025,8 @@ namespace IronPython.CodeDom {
                     }
 
                     WriteLine();
+
+                    
                 }
             }
 
@@ -1040,11 +1072,12 @@ namespace IronPython.CodeDom {
                     entryPoint = null;
                 }
             }
-
+            
         }
 
         protected override void GenerateTypeStart(CodeTypeDeclaration e) {
-            FlushOutput(e);
+            if (UserDataFalse(e.UserData, "NoEmit")) FlushOutput(e);
+
             if (e.UserData["MergeOnly"] != null) {
                 MarkMergeOnly(e);
                 return;
@@ -1172,6 +1205,8 @@ namespace IronPython.CodeDom {
                 Write(" = ");
                 GenerateExpression(e.InitExpression);
                 WriteLine();
+
+                
             }
         }
 
@@ -1533,7 +1568,7 @@ namespace IronPython.CodeDom {
                 WriteLine("):"); //!!! Consult UserData["NoNewLine"]
                 Indent++;
                 lastIndent = Indent;
-                GenerateStatements(stmts);
+                MyGenerateStatements(stmts);
                 Indent--;
                 cursorCol = col;
                 cursorRow = row;
@@ -1551,6 +1586,14 @@ namespace IronPython.CodeDom {
 
             // store the location the cursor shold goto for this function.
             userData[typeof(System.Drawing.Point)] = new System.Drawing.Point(cursorCol, cursorRow);
+        }
+
+        private void MyGenerateStatements(CodeStatementCollection statements) {
+            GenerateStatements(statements);
+            /*foreach (CodeStatement cs in statements) {
+                AdvanceOutput(cs);
+                GenerateStatement(cs);
+            }*/
         }
 
         private static string UserDataString(IDictionary userData, string name, string defaultValue) {
@@ -1577,39 +1620,23 @@ namespace IronPython.CodeDom {
 
             ctm.UserData["IPCreated"] = true;
             ctm.UserData["Column"] = col;
-            ctm.UserData["Line"] = row;
-        }
-
-        private void AdvanceOutput(CodeStatement co) {
-            if (merger != null && co.UserData["IPCreated"] != null && co.LinePragma != null) {
-                while (row < co.LinePragma.LineNumber) {
-                    WriteLine();
-                }
-            }
+            ctm.UserData["Line"] = row;            
         }
 
         private void AdvanceOutput(CodeObject co) {
             if (merger != null && co.UserData["IPCreated"] != null) {
                 int line = (int)co.UserData["Line"];
-                while (row < line) {
-                    WriteLine();
+                if (line == 1) return;
+
+                if (writeCache.Length == 0) {
+                    if (row < line) {
+                        row = line;
+                    }
+                } else {
+                    while (row < line) {
+                        WriteLine();
+                    }
                 }
-            }
-        }
-
-        private void FlushOutput(CodeTypeMember ctm) {
-            if (ctm.UserData["IPCreated"] != null) {
-                int line = (int)ctm.UserData["Line"];
-                int column = (int)ctm.UserData["Column"];
-
-                DoFlush(line, column);
-            }
-
-            if (merger != null) {
-                // update line information for round-tripping
-                ctm.UserData["IPCreated"] = true;
-                ctm.UserData["Line"] = row;
-                ctm.UserData["Column"] = col;
             }
         }
 
@@ -1624,10 +1651,10 @@ namespace IronPython.CodeDom {
                 int column = (int)co.UserData["Column"];
 
                 DoFlush(line, column);
-            }
+            } 
 
             if (merger != null) {
-                AdvanceOutput(co);
+                if(!(co is CodeTypeMember)) AdvanceOutput(co);
 
                 // update line information for round-tripping
                 co.UserData["IPCreated"] = true;
@@ -1643,7 +1670,7 @@ namespace IronPython.CodeDom {
                     // last write was a merge only item, therefore we
                     // don't merge now, we just update lastRow/lastCol.
                     merger.DoMerge(lastRow, lastCol, line, col, writeCache.ToString());
-                    writeCache.Length = 0;
+                    writeCache.Length = 0;                    
                 } else {
                     // we've skipped the merged output, and now we're 
                     // writing where this new element starts, update
@@ -1733,6 +1760,7 @@ namespace IronPython.CodeDom {
             if (merger != null) writeCache.AppendLine(text);
             else Output.WriteLine(text);
         }
+
     }
 
 
