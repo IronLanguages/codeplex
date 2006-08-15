@@ -135,6 +135,11 @@ namespace IronPython.Compiler.Generation {
         private int curLine;
         TextWriter ilOut;
 
+        internal const int FinallyExitsNormally = 0;
+        internal const int BranchForReturn = 1;
+        internal const int BranchForBreak  = 2;
+        internal const int BranchForContinue = 3;
+
 
         public CodeGen(TypeGen typeGen, MethodBase mi, ILGenerator ilg, ParameterInfo[] paramInfos)
             : this(typeGen, mi, ilg, CompilerHelpers.GetTypes(paramInfos)) {
@@ -246,15 +251,13 @@ namespace IronPython.Compiler.Generation {
                     break;
                 case Targets.TargetBlockType.Try:
                 case Targets.TargetBlockType.With:
+                case Targets.TargetBlockType.Catch:
                     Emit(OpCodes.Leave, t.breakLabel);
                     break;
                 case Targets.TargetBlockType.Finally:
+                    EmitInt(CodeGen.BranchForBreak);
+                    t.finallyReturns.EmitSet(this);
                     Emit(OpCodes.Endfinally);
-                    break;
-                case Targets.TargetBlockType.Catch:
-                    EmitFlowControlInCatch(delegate() {
-                        EmitBreak();
-                    });
                     break;
             }
         }
@@ -268,32 +271,53 @@ namespace IronPython.Compiler.Generation {
                     break;
                 case Targets.TargetBlockType.Try:
                 case Targets.TargetBlockType.With:
+                case Targets.TargetBlockType.Catch:
                     Emit(OpCodes.Leave, t.continueLabel);
                     break;
                 case Targets.TargetBlockType.Finally:
+                    EmitInt(CodeGen.BranchForContinue);
+                    t.finallyReturns.EmitSet(this);
                     Emit(OpCodes.Endfinally);
-                    break;
-                case Targets.TargetBlockType.Catch:
-                    EmitFlowControlInCatch(delegate() {
-                        EmitContinue();
-                    });
                     break;
             }
         }
 
         public void EmitReturn() {
+            int finallyIndex = -1;
             switch (BlockType) {
                 default:
                 case Targets.TargetBlockType.Normal:
                     Emit(OpCodes.Ret);
                     break;
                 case Targets.TargetBlockType.Try:
+                    // with has it's own finally block, so no need to search...
+                    for (int i = targets.Count - 1; i >= 0; i--) {
+                        if (targets[i].BlockType == Targets.TargetBlockType.Finally) {
+                            finallyIndex = i;
+                            break;
+                        }
+                    }
+                    goto case Targets.TargetBlockType.With;
                 case Targets.TargetBlockType.With:
                     EnsureReturnBlock();
                     if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
                         returnBlock.returnValue.EmitSet(this);
                     }
-                    Emit(OpCodes.Leave, returnBlock.returnStart);
+
+                    if (finallyIndex == -1) {
+                        // emit the real return
+                        Emit(OpCodes.Leave, returnBlock.returnStart);
+                    } else {
+                        // need to leave into the inner most finally block,
+                        // the finally block will fall through and check
+                        // the return value.
+                        targets[finallyIndex].leaveLabel = DefineLabel();
+
+                        Emit(OpCodes.Ldc_I4_1);
+                        targets[finallyIndex].finallyReturns.EmitSet(this);
+
+                        Emit(OpCodes.Leave, targets[finallyIndex].leaveLabel.Value);
+                    }
                     break;
                 case Targets.TargetBlockType.Finally: {
                         Targets t = targets.Peek();
@@ -301,47 +325,17 @@ namespace IronPython.Compiler.Generation {
                         if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
                             returnBlock.returnValue.EmitSet(this);
                         }
-                        Emit(OpCodes.Ldc_I4_1);
+                        EmitInt(CodeGen.BranchForReturn);
                         t.finallyReturns.EmitSet(this);
                         Emit(OpCodes.Endfinally);
                         break;
                     }
                 case Targets.TargetBlockType.Catch:
-                    EmitFlowControlInCatch(delegate() {
-                        // clear the current exception
-                        EmitCallerContext();
-                        EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
+                    // clear the current exception
+                    EmitCallerContext();
+                    EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
 
-                        int finallyIndex = -1;
-                        for (int i = targets.Count-1; i >= 0; i--) {
-                            if (targets[i].BlockType == Targets.TargetBlockType.Finally) {
-                                finallyIndex = i;
-                                break;
-                            }
-                        }
-
-                        if (finallyIndex == -1) {
-                            // emit the real return
-                            EmitReturn();
-                        } else {
-                            // need to leave into the inner most finally block,
-                            // the finally block will fall through and check
-                            // the return value.
-                            targets[finallyIndex].leaveLabel = DefineLabel();
-
-                            EnsureReturnBlock();
-                            if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
-                                returnBlock.returnValue.EmitSet(this);
-                            }
-                            Emit(OpCodes.Ldc_I4_1);
-                            targets[finallyIndex].finallyReturns.EmitSet(this);
-
-                            Emit(OpCodes.Leave, targets[finallyIndex].leaveLabel.Value);
-                        }
-                        
-                    });
-
-                    break;
+                    goto case Targets.TargetBlockType.Try;
             }
         }
 
@@ -349,32 +343,6 @@ namespace IronPython.Compiler.Generation {
             EnsureReturnBlock();
             if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
                 returnBlock.returnValue.EmitGet(this);
-            }
-        }
-
-        delegate void FlowDelegate();
-
-        /// <summary>
-        /// Emits flow control (branch, break, continue, return) inside of
-        /// a Python catch block.    FlowDelegate is a delegate that performs the actual
-        /// emission of the flow control after this function temporarily updates our
-        /// flow control state.
-        /// </summary>
-        private void EmitFlowControlInCatch(FlowDelegate fd) {
-            int popCount;
-
-            // pop off all catch blocks
-            for (popCount = 0; targets.Peek().BlockType == Targets.TargetBlockType.Catch; popCount++) {
-                targets.Pop();
-            }
-
-            // emit the flow control
-            fd();
-
-            // push catch blocks back on.
-            while (popCount > 0) {
-                PushExceptionBlock(Targets.TargetBlockType.Catch, null, null);
-                popCount--;
             }
         }
 

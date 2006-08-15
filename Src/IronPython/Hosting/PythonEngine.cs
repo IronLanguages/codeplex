@@ -836,7 +836,7 @@ namespace IronPython.Hosting {
 
             if (fixers != null) {
                 cg.PopTargets();
-                Slot returnVar = cg.GetLocalTmp(typeof(bool));
+                Slot returnVar = cg.GetLocalTmp(typeof(int));
                 cg.PushFinallyBlock(returnVar);
                 cg.BeginFinallyBlock();
 

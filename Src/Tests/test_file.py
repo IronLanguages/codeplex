@@ -507,6 +507,19 @@ if is_cli:
         f.close()
         AssertError(OSError, nt.fdopen, fd)
 
+def test_sharing():
+    modes = ['w', 'w+', 'a+', 'r', 'w']
+    for xx in modes:
+        for yy in modes:
+            x = file('tempfile.txt', xx)
+            y = file('tempfile.txt', yy)
+            
+            x.close()
+            y.close()
+            
+    import nt
+    nt.unlink('tempfile.txt')
+
 def test_overwrite_readonly():
     import nt
     filename = "tmp.txt"

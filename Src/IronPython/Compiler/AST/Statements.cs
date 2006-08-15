@@ -836,20 +836,35 @@ namespace IronPython.Compiler.Ast {
     }
 
     public class TryFinallyStatement : Statement {
-        class ReturnFinder : AstWalker {
+        class ControlFlowFinder : AstWalker {
             bool found;
+            bool foundLoopControl;
 
-            public static bool FindReturn(Statement statement) {
+            public static bool FindControlFlow(Statement statement, out bool foundLoopControl) {
                 // No return in null statement
-                if (statement == null) return false;
+                if (statement == null) {
+                    foundLoopControl = false;
+                    return false;
+                }
 
                 // find it now.
-                ReturnFinder rf = new ReturnFinder();
+                ControlFlowFinder rf = new ControlFlowFinder();
                 statement.Walk(rf);
+                foundLoopControl = rf.foundLoopControl;
                 return rf.found;
             }
             public override bool Walk(ReturnStatement node) {
                 found = true;
+                return true;
+            }
+            public override bool Walk(BreakStatement node) {
+                found = true;
+                foundLoopControl = true;
+                return true;
+            }
+            public override bool Walk(ContinueStatement node) {
+                found = true;
+                foundLoopControl = true;
                 return true;
             }
         }
@@ -883,15 +898,16 @@ namespace IronPython.Compiler.Ast {
         internal override void Emit(CodeGen cg) {
             cg.EmitPosition(Start, header);
             Slot choiceVar = null;
-            Slot returnVar = cg.GetLocalTmp(typeof(bool));
+            Slot flowControlVar = cg.GetLocalTmp(typeof(int));
             Slot exception = null;
             Label endOfTry = new Label();
 
             bool yieldInFinally = yieldTargets.Count > 0;
-            bool returnInFinally = ReturnFinder.FindReturn(finallyStmt);
+            bool foundLoopControl;
+            bool returnInFinally = ControlFlowFinder.FindControlFlow(finallyStmt, out foundLoopControl);
 
-            cg.EmitInt(0);
-            returnVar.EmitSet(cg);
+            cg.EmitInt(CodeGen.FinallyExitsNormally);
+            flowControlVar.EmitSet(cg);
 
             if (yieldInFinally) {
                 Label startOfBlock = cg.DefineLabel();
@@ -941,7 +957,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             cg.PopTargets();
-            cg.PushFinallyBlock(returnVar);
+            cg.PushFinallyBlock(flowControlVar);
             cg.BeginFinallyBlock();
 
             if (yieldInFinally) {
@@ -969,8 +985,9 @@ namespace IronPython.Compiler.Ast {
             cg.PopTargets();
 
             Label noReturn = cg.DefineLabel();
-            returnVar.EmitGet(cg);
-            cg.Emit(OpCodes.Brfalse_S, noReturn);
+            flowControlVar.EmitGet(cg);
+            cg.EmitInt(CodeGen.BranchForReturn);
+            cg.Emit(OpCodes.Bne_Un, noReturn);
             if (yieldInFinally) {
                 // return true from the generator method
                 cg.Emit(OpCodes.Ldc_I4_1);
@@ -980,6 +997,26 @@ namespace IronPython.Compiler.Ast {
             }
             cg.EmitReturn();
             cg.MarkLabel(noReturn);
+
+            if (foundLoopControl) {
+                noReturn = cg.DefineLabel();
+                flowControlVar.EmitGet(cg);
+                cg.EmitInt(CodeGen.BranchForBreak);
+                cg.Emit(OpCodes.Bne_Un, noReturn);
+                cg.EmitBreak();
+                cg.MarkLabel(noReturn);
+
+                noReturn = cg.DefineLabel();
+                flowControlVar.EmitGet(cg);
+                cg.EmitInt(CodeGen.BranchForContinue);
+                cg.Emit(OpCodes.Bne_Un, noReturn);
+                cg.EmitContinue();
+                cg.MarkLabel(noReturn);
+            }
+#if DEBUG
+            cg.EmitInt(-1);
+            flowControlVar.EmitSet(cg);            
+#endif
 
             yieldTargets.Clear();
         }

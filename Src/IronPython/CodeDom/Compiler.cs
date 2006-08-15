@@ -23,6 +23,7 @@ using System.IO;
 
 using System.CodeDom;
 using System.CodeDom.Compiler;
+using System.Diagnostics;
 
 using IronPython.Runtime;
 using IronPython.Hosting;
@@ -180,9 +181,56 @@ namespace IronPython.CodeDom {
         }
 
         public override void AddError(string path, string message, string lineText, CodeSpan span, int errorCode, Severity severity) {
-            compResults.Errors.Add(new CompilerError(path, span.StartLine, span.StartColumn, errorCode.ToString(), message));
+            string filename;
+            int lineNumber;
+            GetUpdatedLineInfo(path, span, out filename, out lineNumber);
+
+            compResults.Errors.Add(new CompilerError(filename, 
+                lineNumber, 
+                span.StartColumn, 
+                errorCode.ToString(), 
+                message));
             throw new CompilerException();
         }
+
+
+        private void GetUpdatedLineInfo(string path, CodeSpan span, out string filename, out int line) {
+            string[] lines = File.ReadAllLines(path);
+
+            filename = path;
+            line = span.StartLine;
+
+            int lineDelta = 0;
+            // get updated line info...
+            for (int i = Math.Min(span.StartLine-1, lines.Length - 1); i >= 0; i--) {
+                int extSrc;
+                if ((extSrc = lines[i].IndexOf("#ExternalSource")) != -1) {
+                    filename = lines[i].Substring(extSrc + 17);
+                    for (int j = 0; j < filename.Length; j++) {
+                        if (filename[j] == '\\') {
+                            if ((j + 1 < filename.Length) && filename[j] == '"')
+                                j++;
+                        } else if (filename[j] == '"') {
+                            filename = filename.Substring(0, j);
+                            break;
+                        }
+                    }
+
+                    Debug.Assert(lines[i].LastIndexOf(',') != -1);
+                    string lineNo = lines[i].Substring(lines[i].LastIndexOf(',') + 1);
+                    for (int j = 0; j < lineNo.Length; j++) {
+                        if (!Char.IsDigit(lineNo[j])) {
+                            line = Convert.ToInt32(lineNo.Substring(0, j)) + (lineDelta-2); // minus 2 removes external source info
+                        }
+                    }
+                    break;
+                } else if (lines[i].IndexOf("#End ExternalSource") != -1) {
+                    break;
+                }
+                lineDelta++;
+            }
+        }
+
     }
 
     /// <summary>

@@ -825,7 +825,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__new__")]
         public static PythonFile Make(ICallerContext context, DynamicType cls, string name, string mode, int bufsize) {
-            FileShare fshare = FileShare.None;
+            FileShare fshare = FileShare.ReadWrite;
             FileMode fmode;
             FileAccess faccess;
             string inMode = mode;
@@ -839,9 +839,9 @@ namespace IronPython.Runtime {
                 mode = mode.Substring(0, mode.Length - 1);
 
             if (mode == "r" || mode == "rU" || mode == "U") {
-                fmode = FileMode.Open; faccess = FileAccess.Read; fshare = FileShare.ReadWrite;
+                fmode = FileMode.Open; faccess = FileAccess.Read;
             } else if (mode == "r+") {
-                fmode = FileMode.Open; faccess = FileAccess.ReadWrite; fshare = FileShare.ReadWrite;
+                fmode = FileMode.Open; faccess = FileAccess.ReadWrite; 
             } else if (mode == "w") {
                 fmode = FileMode.Create; faccess = FileAccess.Write;
             } else if (mode == "w+") {
