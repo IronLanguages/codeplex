@@ -583,6 +583,13 @@ namespace IronPython.Runtime.Types {
             return Ops.NotImplemented;
         }
 
+        internal virtual object InvokeSpecialMethod(SymbolId op, object self, object arg0, object arg1) {
+            object func;
+            if (TryLookupBoundSlot(DefaultContext.Default, self, op, out func)) {
+                return Ops.Call(func, arg0, arg1);
+            }
+            return Ops.NotImplemented;
+        }
 
         internal bool TryInvokeSpecialMethod(object target, SymbolId name, out object ret, params object[] args) {
             object meth;
@@ -796,6 +803,10 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
+        public object PowerMod(object self, object other, object mod) {
+            return InvokeSpecialMethod(SymbolTable.OpPower, self, other, mod);
+        }
+
         public virtual object CallOnInstance(object func, object[] args) {
             object ret;
             if (TryInvokeSpecialMethod(func, SymbolTable.Call, out ret, args)) return ret;
@@ -818,6 +829,10 @@ namespace IronPython.Runtime.Types {
 
         [PythonName("__getitem__")]
         public virtual object GetIndex(object self, object index) {
+            return GetIndexHelper(self, index);
+        }
+
+        internal static object GetIndexHelper(object self, object index) {
             Slice slice = index as Slice;
             if (slice != null && slice.Step == null) {
                 object getSlice;
@@ -833,6 +848,10 @@ namespace IronPython.Runtime.Types {
 
         [PythonName("__setitem__")]
         public virtual void SetIndex(object self, object index, object value) {
+            SetIndexHelper(self, index, value);
+        }
+
+        internal static void SetIndexHelper(object self, object index, object value) {
             Slice slice = index as Slice;
             if (slice != null && slice.Step == null) {
                 object setSlice;

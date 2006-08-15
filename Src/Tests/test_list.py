@@ -125,6 +125,14 @@ def test_add_mul():
     AreEqual(x * 2, [1,2,3,1,2,3])
     AreEqual(2 * x, [1,2,3,1,2,3])
 
+    class mylong(long): pass
+    AreEqual([1, 2] * mylong(2L), [1, 2, 1, 2])
+    AreEqual([3, 4].__mul__(mylong(2L)), [3, 4, 3, 4])
+    AreEqual([5, 6].__rmul__(mylong(2L)), [5, 6, 5, 6])
+    AreEqual(mylong(2L) * [7,8] , [7, 8, 7, 8])
+    AssertError(TypeError, lambda: [1,2] * [3,4])
+    AssertError(OverflowError, lambda: [1,2] * mylong(203958720984752098475023957209L))
+
 def test_reverse():
     x = ["begin",1,2,3,4,5,6,7,8,9,0,"end"]
     del x[6:]

@@ -54,6 +54,12 @@ def test_add_mul():
     AreEqual((1,2,3) * 2, (1,2,3,1,2,3))
     AreEqual(2 * (1,2,3), (1,2,3,1,2,3))
 
+    class mylong(long): pass
+    AreEqual((1,2) * mylong(2L), (1, 2, 1, 2))
+    AreEqual((3, 4).__mul__(mylong(2L)), (3, 4, 3, 4))
+    AreEqual((5, 6).__rmul__(mylong(2L)), (5, 6, 5, 6))
+    AreEqual(mylong(2L) * (7,8) , (7, 8, 7, 8))
+
 def test_tuple_hash():
     class myhashable(object):
         def __init__(self):
@@ -88,6 +94,6 @@ def test_sequence_assign():
         AssertUnreachable()
     except TypeError, e:
         Assert(str(e).find('unpack non-sequence') != -1)
-    
+
 run_test(__name__)
 

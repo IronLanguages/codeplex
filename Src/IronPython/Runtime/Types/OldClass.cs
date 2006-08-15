@@ -877,6 +877,12 @@ namespace IronPython.Runtime.Types {
             return Ops.NotImplemented;
         }
 
+        internal override object InvokeSpecialMethod(SymbolId op, object self, object arg0, object arg1) {
+            object func;
+            if (Ops.TryGetAttr(self, op, out func)) return Ops.Call(func, arg0, arg1);
+            return Ops.NotImplemented;
+        }
+
         protected override object InvokeSpecialMethod(SymbolId op, object self) {
             object func;
             if (Ops.TryGetAttr(self, op, out func)) return Ops.Call(func);
@@ -907,6 +913,18 @@ namespace IronPython.Runtime.Types {
                 return Converter.ConvertToInt32(ret);
             }
             throw Ops.AttributeError("{0} instance has no attribute '__len__'", Name);
+        }
+
+        [PythonName("__getitem__")]
+        public override object GetIndex(object self, object index) {
+            // Use the DynamicType behavior, not ReflectedType one (expands tuples)
+            return GetIndexHelper(self, index);
+        }
+
+        [PythonName("__setitem__")]
+        public override void SetIndex(object self, object index, object value) {
+            // Use the DynamicType behavior, not ReflectedType one (expands tuples)
+            SetIndexHelper(self, index, value);
         }
     }
 }

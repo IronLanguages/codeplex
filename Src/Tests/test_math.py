@@ -82,7 +82,6 @@ for i in range(1, 100, 7):
             ir = pow(i, exp, mod)
             lr = pow(l, lexp, lmod)
 
-            print ir, lr
             AreEqual(ir, lr)
             
             ir = pow(i, 0, mod)
@@ -93,6 +92,19 @@ for i in range(1, 100, 7):
 
         AssertError(ValueError, pow, i, exp, 0)
         AssertError(ValueError, pow, l, lexp, 0L)
+
+class powtest:
+    def __pow__(self, exp, mod = None):
+        return ("powtest.__pow__", exp, mod)
+    def __rpow__(self, exp):
+        return ("powtest.__rpow__", exp)
+
+AreEqual(pow(powtest(), 1, 2), ("powtest.__pow__", 1, 2))
+AreEqual(pow(powtest(), 3), ("powtest.__pow__", 3, None))
+AreEqual(powtest() ** 4, ("powtest.__pow__", 4, None))
+AreEqual(5 ** powtest(), ("powtest.__rpow__", 5))
+AreEqual(pow(7, powtest()), ("powtest.__rpow__", 7))
+AssertError(TypeError, pow, 1, powtest(), 7)
 
 # Extensible Float tests
 class XFloat(float): pass

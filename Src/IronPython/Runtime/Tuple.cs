@@ -173,6 +173,11 @@ namespace IronPython.Runtime {
             return Ops.MultiplySequence<Tuple>(MultiplySequenceWorker, this, count);
         }
 
+        [PythonName("__rmul__")]
+        public virtual object ReverseMultiply(object count) {
+            return MultiplySequenceWorker(this, Converter.ConvertToInt32(count));
+        }
+
         private static Tuple MultiplySequenceWorker(Tuple self, int count) {
             return MakeTuple(ArrayOps.Multiply(self.data, self.data.Length, count));
         }

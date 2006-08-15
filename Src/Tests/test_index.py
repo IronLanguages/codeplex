@@ -190,8 +190,10 @@ if is_cli:
 		x = GenMeth.StaticMeth[(int,)]
 
 
-def test_getorsetitem_override():   
-    for base in [object, list, dict, int, str, tuple, float, long, complex]:        
+def test_getorsetitem_override():
+    class old_base: pass
+
+    for base in [object, list, dict, int, str, tuple, float, long, complex, old_base]:        
         class foo(base):
             def __getitem__(self, index): 
                 return index
@@ -202,14 +204,21 @@ def test_getorsetitem_override():
         AreEqual(a[1], 1)
         AreEqual(a[1,2], (1,2))
         AreEqual(a[1,2,3], (1,2,3))
-        
+        AreEqual(a[(1, 2)], (1, 2))
+        AreEqual(a[(5,)], (5,))
+        AreEqual(a[6,], (6,))
+
         a[1] = 23
         AreEqual(a.res, (1,23))
         a[1,2] = 23
         AreEqual(a.res, ((1,2),23))
         a[1,2,3] = 23
         AreEqual(a.res, ((1,2,3),23))
-        
+
+        a[(1, 2)] = "B"; AreEqual(a.res, ((1, 2), "B"))
+        a[(5,)] = "D"; AreEqual(a.res, ((5,), "D"))
+        a[6,] = "E"; AreEqual(a.res, ((6,), "E"))
+
 def test_getorsetitem_super():        
     tests = [  # base type, constructor arg, result of index 0
        (list,(1,2,3,4,5), 1), 
@@ -310,5 +319,27 @@ def test_getorsetitem_slice():
             AreEqual(a[(slice(0,1),slice(1,2))], ['y'])
             a[(slice(0,1),slice(1,2),slice(2,3))] = 'z'
             AreEqual(a[(slice(0,1),slice(1,2),slice(2,3))], ['z'])
-        
+
+
+def test_index_by_tuple():
+    class indexable:
+        def __getitem__(self, index):
+            return index
+        def __setitem__(self, index, value):
+            self.index = index
+            self.value = value
+
+    i = indexable()
+    AreEqual(i["Hi"], "Hi")
+    AreEqual(i[(1, 2)], (1, 2))
+    AreEqual(i[3, 4], (3, 4))
+    AreEqual(i[(5,)], (5,))
+    AreEqual(i[6,], (6,))
+
+    i["Hi"] = "A"; AreEqual(i.index, "Hi"); AreEqual(i.value, "A")
+    i[(1, 2)] = "B"; AreEqual(i.index, (1, 2)); AreEqual(i.value, "B")
+    i[3, 4] = "C"; AreEqual(i.index, (3, 4)); AreEqual(i.value, "C")
+    i[(5,)] = "D"; AreEqual(i.index, (5,)); AreEqual(i.value, "D")
+    i[6,] = "E"; AreEqual(i.index, (6,)); AreEqual(i.value, "E")
+
 run_test(__name__)

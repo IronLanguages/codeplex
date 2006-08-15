@@ -103,7 +103,7 @@ namespace IronPython.Runtime.Operations {
             return (double)x / (double)y;
         }
 
-        [PythonName("__powmod__")]
+        [PythonName("__pow__")]
         public static long PowerMod(long x, long power, long mod) {
             if (power < 0) {
                 throw Ops.TypeError("power", power, "power must be >= 0");
@@ -131,7 +131,7 @@ namespace IronPython.Runtime.Operations {
             return result;
         }
 
-        [PythonName("__powmod__")]
+        [PythonName("__pow__")]
         public static object PowerMod(long x, object y, object z) {
             return PowerMod(x, Converter.ConvertToInt64(y), Converter.ConvertToInt64(z));
         }

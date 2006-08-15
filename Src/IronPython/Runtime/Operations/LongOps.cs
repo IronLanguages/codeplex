@@ -274,7 +274,7 @@ namespace IronPython.Runtime.Operations {
             return Xor(x, other);
         }
 
-        [PythonName("__powmod__")]
+        [PythonName("__pow__")]
         public static object PowerMod(BigInteger x, object y, object z) {
             if (y is int) {
                 return PowerMod(x, (int)y, z);
@@ -293,6 +293,8 @@ namespace IronPython.Runtime.Operations {
                 return PowerMod(x, y, BigInteger.Create((long)z));
             } else if (z is BigInteger) {
                 return PowerMod(x, y, (BigInteger)z);
+            } else if (z == null) {
+                return Power(x, y);
             }
             return Ops.NotImplemented;
         }
@@ -304,6 +306,8 @@ namespace IronPython.Runtime.Operations {
                 return PowerMod(x, y, BigInteger.Create((long)z));
             } else if (z is BigInteger) {
                 return PowerMod(x, y, (BigInteger)z);
+            } else if (z == null) {
+                return Power(x, y);
             }
             return Ops.NotImplemented;
         }

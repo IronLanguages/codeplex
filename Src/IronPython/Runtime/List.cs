@@ -121,14 +121,6 @@ namespace IronPython.Runtime {
             size = i;
         }
 
-        public static List operator *(List l, int count) {
-            return List.MultiplySequenceWorker(l, count);
-        }
-
-        public static List operator *(int count, List l) {
-            return List.MultiplySequenceWorker(l, count);
-        }
-
         public object[] GetObjectArray() {
             lock (this) {
                 object[] ret = new object[size];
@@ -213,6 +205,11 @@ namespace IronPython.Runtime {
         [PythonName("__mul__")]
         public virtual object MultiplySequence(object count) {
             return Ops.MultiplySequence<List>(List.MultiplySequenceWorker, this, count);
+        }
+
+        [PythonName("__rmul__")]
+        public virtual object ReverseMultiply(object count) {
+            return MultiplySequenceWorker(this, Converter.ConvertToInt32(count));
         }
 
         private static List MultiplySequenceWorker(List self, int count) {

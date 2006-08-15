@@ -608,6 +608,8 @@ namespace IronPython.Runtime.Operations {
                 if (value < 0) value = 0;
                 if (value == 1 && sequence.GetType() == typeof(T)) return sequence;
                 return multiplier(sequence, value);
+            } else if (count is BigInteger || count is ExtensibleLong) {
+                throw Ops.OverflowError("long won't fit into int");
             } else {
                 // check __coerce__...
                 Tuple coerced = Ops.GetDynamicType(count).Coerce(count, 1) as Tuple;
@@ -1140,6 +1142,7 @@ namespace IronPython.Runtime.Operations {
 
         public static object PowerMod(object x, object y, object z) {
             object ret;
+            if (z == null) return Ops.Power(x, y);
             if (x is int) {
                 ret = IntOps.PowerMod((int)x, y, z);
                 if (ret != NotImplemented) return ret;
@@ -1154,6 +1157,9 @@ namespace IronPython.Runtime.Operations {
             if (x is IronMath.Complex64 || y is IronMath.Complex64 || z is IronMath.Complex64) {
                 throw Ops.ValueError("complex modulo");
             }
+
+            ret = GetDynamicType(x).PowerMod(x, y, z);
+            if (ret != NotImplemented) return ret;
 
             throw Ops.TypeErrorForBinaryOp("power with modulus", x, y);
         }

@@ -183,6 +183,17 @@ namespace IronPython.Runtime.Operations {
                 return Converter.CastEnumToInt32(o);
             }
 
+            object newValue;
+            if (Ops.TryInvokeSpecialMethod(o, SymbolTable.ConvertToInt, out newValue)) {
+                // Convert resulting object to the desired type
+                if (newValue is int) return newValue;
+                if (newValue is ExtensibleInt) return ((ExtensibleInt)newValue).value;
+                if (newValue is BigInteger) return newValue;
+                if (newValue is ExtensibleLong)return ((ExtensibleLong)newValue).Value;
+
+                throw Ops.TypeError("__int__ returned non-int");
+            }
+
             return Converter.ConvertToInt32(o);
         }
 
@@ -276,7 +287,7 @@ namespace IronPython.Runtime.Operations {
             return ComplexOps.TrueDivide(Complex64.MakeReal(x), y);
         }
 
-        [PythonName("__powmod__")]
+        [PythonName("__pow__")]
         public static int PowerMod(int x, int power, int mod) {
             if (power < 0) throw Ops.TypeError("power", power, "power must be >= 0");
 
@@ -302,7 +313,7 @@ namespace IronPython.Runtime.Operations {
             return (int)result;
         }
 
-        [PythonName("__powmod__")]
+        [PythonName("__pow__")]
         public static object PowerMod(int x, int y, object z) {
             ExtensibleLong el;
             if (z is int) {
@@ -313,11 +324,13 @@ namespace IronPython.Runtime.Operations {
                 return LongOps.PowerMod(BigInteger.Create(x), BigInteger.Create(y), (BigInteger)z);
             } else if ((el = z as ExtensibleLong) != null) {
                 return LongOps.PowerMod(BigInteger.Create(x), BigInteger.Create(y), el.Value);
+            } else if (z == null) {
+                return Power(x, y);
             }
             return Ops.NotImplemented;
         }
 
-        [PythonName("__powmod__")]
+        [PythonName("__pow__")]
         public static object PowerMod(int x, object y, object z) {
             if (y is int) {
                 return PowerMod(x, (int)y, z);

@@ -14,6 +14,7 @@
 ######################################################################################
 
 from lib.assert_util import *
+from lib.type_util import *
 
 ############################################################
 def test_common_attributes():
@@ -1543,6 +1544,45 @@ class C:
 AreEqual(C.b, 10)
 AreEqual(x, 10)
 
+## __int__
 
+def test_fastnew_int():
+    class C1:
+        def __int__(self): return 100
+    class C2: 
+        def __int__(self): return myint(100)
+    class C3:
+        def __int__(self): return 100L
+    class C4: 
+        def __int__(self): return mylong(100L)
+    class C5:
+        def __int__(self): return -123456789012345678910
+    class C6:
+        def __int__(self): return C6()
+    class C7: 
+        def __int__(self): return "100"
+    
+    for x in [C1, C2, C3, C4]:   AreEqual(int(x()), 100)
+    AreEqual(int(C5()), -123456789012345678910)
+    for x in [C6, C7]:      AssertError(TypeError, int, x())       
+        
+    class C1(object):
+        def __int__(self): return 100
+    class C2(object): 
+        def __int__(self): return myint(100)
+    class C3(object):
+        def __int__(self): return 100L
+    class C4(object): 
+        def __int__(self): return mylong(100L)
+    class C5(object):
+        def __int__(self): return -123456789012345678910
+    class C6(object):
+        def __int__(self): return C6()
+    class C7(object): 
+        def __int__(self): return "100"
+    
+    for x in [C1, C2, C3, C4]:   AreEqual(int(x()), 100)
+    AreEqual(int(C5()), -123456789012345678910)
+    for x in [C6, C7]:      AssertError(TypeError, int, x())       
 
 run_test(__name__)
