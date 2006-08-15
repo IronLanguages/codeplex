@@ -62,6 +62,10 @@
 	<h1>Syntax</h1>
 	<P class="Body"></P>
 	<p class="sbody">XXX generic type syntax</p>
+	<p class="sbody">IronPython has slightly different error messages when 
+	parsing arguments to eval().&nbsp; IronPython identifies the file name as 
+	&quot;&lt;string&gt;&quot;, but CPython does not report anything as a file name or that the 
+	error was found while parsing a string.</p>
 	<p class="Body">&nbsp;</p>
 	<h1>Standard Types, Functions, and Behaviors</h1>
 	<p class="sbody">XXX Bug PS68/CP378.&nbsp; IronPython does not use a single 
@@ -139,22 +143,47 @@
 	<p class="sbody">XXX Bug (CP1060 implement type.mro()).&nbsp; IronPython 
 	does not implement type.mro, and user overrides do not affect how a type's 
 	__mro__ works.</p>
-	<p class="sbody">IronPython does not have an xxsubtypes built in module.</p>
+	<p class="sbody">IronPython does not have an xxsubtypes built-in module.</p>
 </div>
 <div class="Section1">
-	<p class="sbody">XXX (how to better characterize this???) IronPython does 
+	<p class="sbody">XXX Bug PS964 (how to better characterize this???) IronPython does 
 	not support overriding __getattribute__ for some user-defined subclasses of 
-	built in types.</p>
+	built-in types.</p>
 	<p class="sbody">XXX Bug PS 1056 (assigning to new style class's __str__).&nbsp; 
 	Not sure how to capture this, and CPython seems to allow some bizarre sets 
 	as well, without checking that the value is callable until you do something 
 	that tries to invoke it.</p>
-	<p class="sbody">&nbsp;</p>
-	<p class="sbody">&nbsp;</p>
-	<p class="sbody">&nbsp;</p>
+	<p class="sbody">XXX Bug PS1056 (??? is this capture sufficient?)&nbsp; 
+	IronPython allows setting a new style class's __str__ attribute to a string, 
+	but you only get an error when you call the str operator on an instance of 
+	the class.&nbsp; CPython raises an error if you simply create an instance of 
+	the class, and the interpreter tries to print it.</p>
+	<p class="sbody">IronPython gives different error message and raises 
+	different exceptions in some situations using the complex built-in function.&nbsp; 
+	For example, calling complex on an old style class instance in CPython 
+	raises an AttributeError due to no __float__ function existing, but 
+	IronPython raises a TypeError.&nbsp; Doing the same thing on a new style 
+	class raises a TypeError in both implementations, but CPython's message 
+	explains the argument must be a string or number while IronPython's message 
+	just says it cannot convert to complex.</p>
+	<p class="sbody">IronPython raises different exceptions than CPython (and 
+	sometimes raises exceptions when CPython does not) in isinstance() with 
+	complex class definitions that affect bases and return bases in various 
+	ways.&nbsp; See <a href="http://www.codeplex.com/ironpython">CodePlex</a>
+	<a href="http://www.codeplex.com/WorkItem/View.aspx?ProjectName=IronPython&WorkItemId=2169">
+	bug 2169</a> for details.</p>
+	<p class="sbody">IronPython differs from CPython if you call del on __builtin__.pow 
+	and then try to print pow within a module.&nbsp; Importing or executing the 
+	module from the command line in IronPython will print &quot;&lt;built-in function 
+	pow&gt;&quot; while CPython raises a NameError.</p>
+	<p class="sbody">IronPython has extra attributes ('msg' and 'clsException') 
+	on exception objects.</p>
+	<p class="sbody">IronPython does not return a code object if it encounters a 
+	syntax warning when calling compile().&nbsp; IronPython raises a 
+	SyntaxWarning exception, but CPython catches and prints the exeption before 
+	returning a code object.</p>
 	<p class="sbody">
         Printing numbers on a machine with French locales produces different output:</p>
-    <p>
         <blockquote>
 			<table id="table8">
 				<tr>
@@ -178,11 +207,8 @@
 			</table>
 	</blockquote>
 	<p class="sbody">Small integer caching in IronPython is different than in standard 
-	CPython.&nbsp; Code such as:</p>
-	<p class="Code-Background">i = 2<br>
-	i is 2</p>
-	<p class="sbody">will produce different results in IronPython and CPython.&nbsp; However, the 
-	consistency of the result of such expressions is not guaranteed even within CPython which seems to be using different small integer caching strategies 
+	CPython.&nbsp; If you set i = 2&nbsp; and then test &quot;i is 2&quot;, the code produces different results in IronPython and CPython.&nbsp; However, the 
+	consistency of the result of such expressions is not guaranteed even within CPython, which seems to be using different small integer caching strategies 
 	for different situations:</p>
 	<blockquote>
 		<table border="0" id="table9" width="250">
@@ -222,7 +248,7 @@ False</pre></td>
 	<p class="sbody">IronPython support importing .NET Frameworks assemblies as 
 	extension modules.&nbsp; Usually you need to import the built-in extension 
 	module clr and then call one of the clr.AddReference... functions.</p>
-	<p class="sbody">Some CPython builtin extension modules do not exist in 
+	<p class="sbody">Some CPython built-in extension modules do not exist in 
 	IronPython.&nbsp; The following should be added:</p>
 	<table border="1" width="100%" id="table6">
 		<tr>
@@ -318,7 +344,7 @@ False</pre></td>
 	leverage the .NET Frameworks or to avoid dependencies on CPython for a 
 	minimal installation.</p>
 	<p class="Body">&nbsp;</p>
-	<h1>Interpreter and environment</h1>
+	<h1>Interpreter and Environment</h1>
 	<p class="sbody">IronPython does not by default have the standard CPython 
 	libs on its path.&nbsp; <i>Fixed by adding these two lines to the site.py 
 	file in the IronPython lib directory:</i></p>
@@ -392,8 +418,10 @@ False</pre></td>
 	</blockquote>
 	</font>
 </div>
-	<p class="sbody">&nbsp;</p>
-	<h1>Interpreter and environment</h1>
+	<p class="sbody">IronPython allows access to __dict__, __module__, 
+	__class__, and __init__ at the global level, but CPython does not.</p>
+<p class="sbody">&nbsp;</p>
+	<h1>Garbage Collection</h1>
 	<p class="sbody">IronPython has a more modern GC whereas CPython uses reference 
         counting, and IronPython's GC choice is considered to be a valid and 
 	acceptable implementation.&nbsp; This has several effects which are listed 
@@ -403,10 +431,12 @@ False</pre></td>
         properly.&nbsp; <i>This behavior is acceptable.</i></p>
 <p class="sbody">IronPython does not have guarantees for when finalization or 
 system resource freeing occurs.&nbsp; This can cause problems for people 
-        who use open("foo", 'r').read() excessively. <I>&nbsp;This behavior are 
+        who use open("foo", 'r').read() excessively. <I>&nbsp;This behavior is 
         acceptable.</I> </p>
 	<p class="sbody">IronPython does not immediately invoke __del__ methods when 
-	del is called on a variable; it happens during the next GC pass.&nbsp; <i>
+	del is called on a variable; it happens during the next GC pass.&nbsp; 
+	Similarly, calling del on an object that a weakref object refers to and then 
+	immediately testing if the weakref is None may return False.&nbsp; <i>
 	This behavior is acceptable.</i></p>
 	<font SIZE="1">
 <p class="sbody">Calling sys.getrefcount raises a NotImplementedError.&nbsp; <i>
