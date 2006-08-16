@@ -16,6 +16,7 @@
 from common import *
 
 import sys
+import nt
 
 class CodeHolder(object):
     def __init__(self):
@@ -84,11 +85,13 @@ class while_loop_generator(object):
         self.code = codeHolder
         self.body = body
     def generate(self, indent=1):
+        global uniqueCount
         self.code.Add('    '*indent);self.code.Add('log+="preloop"\n')
-        self.code.Add('    '*indent);self.code.Add('whilevar%d = 0' % indent)
-        self.code.Add('    '*indent);self.code.Add('while whilevar%d < 3:\n' % indent)
-        self.code.Add('    '*(indent+1));self.code.Add('whilevar%d += 1' % indent)
+        self.code.Add('    '*indent);self.code.Add('whilevar%d_%d = 0\n' % (indent, uniqueCount))
+        self.code.Add('    '*indent);self.code.Add('while whilevar%d_%d < 3:\n' % (indent, uniqueCount))
+        self.code.Add('    '*(indent+1));self.code.Add('whilevar%d_%d += 1\n' % (indent, uniqueCount))
         self.code.Add('    '*(indent+1));self.code.Add('log+="inloop"\n')
+        uniqueCount += 1
         self.body.generate(indent+1)
 
 class pass_generator(object):
@@ -154,10 +157,28 @@ class raise_generator(object):
         self.state = state
     def generate(self, indent=1):
         self.code.Add('    '*indent);self.code.Add('raise "%s"\n' % self.state)
+
+class define_generator(object):
+    def __init__(self, codeHolder, body):
+        self.code = codeHolder
+        self.body = body
+    def generate(self, indent=1):
+        global uniqueCount
+        saved = uniqueCount
+        uniqueCount += 1
+        self.code.Add('    '*indent);self.code.Add('log+="predefine"\n')
+        self.code.Add('    '*indent);self.code.Add('def func%d_%d():\n' % (indent, saved))
+        self.code.Add('    '*(indent+1));self.code.Add('global log\n')
+        self.body.generate(indent+1)
+        self.code.Add('    '*indent);self.code.Add('func%d_%d()\n' % (indent, saved))
+
 ch = CodeHolder()
 
-def loop_maker(ch, body):
+def for_loop_maker(ch, body):
     return for_loop_generator(ch, 'x', 'range(3)', body)
+    
+def while_loop_maker(ch, body):
+    return while_loop_generator(ch, body)
     
 def try_except_maker1(ch, body):
     return try_except_generator(ch, pass_generator(ch), body)
@@ -180,9 +201,6 @@ def try_finally_maker3(ch, body):
 def try_else_maker1(ch, body):
     return try_except_else_generator(ch, pass_generator(ch), body, body)
 
-def while_loop_maker(ch, body):
-    return while_loop_generator(ch, body)
-
 def pass_maker(ch, body):
     return pass_generator(ch)
 
@@ -192,6 +210,8 @@ def break_maker(ch, body):
 def continue_maker(ch, body):
     return continue_generator(ch)
 
+def define_maker(ch, body):
+    return define_generator(ch, body)
 
 def generator(): yield 2
 generator_type = type(generator())
@@ -202,20 +222,27 @@ yieldState = 0
 finallyCnt = 0
 tryOrCatchCount = 0
 
+uniqueCount = 0
+
 class test_exceptions(object):
     def test_exceptions(self):    
-        allGenerators = [loop_maker, try_except_maker1, try_except_maker2, try_except_maker3, 
-                         try_finally_maker1, try_finally_maker2, try_finally_maker3, try_else_maker1, if_false_generator, if_true_generator]    
+        allGenerators = [for_loop_maker, while_loop_maker,
+                         try_except_maker1, try_except_maker2, try_except_maker3, 
+                         try_finally_maker1, try_finally_maker2, try_finally_maker3, 
+                         try_else_maker1, 
+                         if_false_generator, if_true_generator, 
+                         define_maker,
+                         ]    
         stateful = [raise_generator, return_generator]
         
         ch = CodeHolder()
         
         for depth in range(3):
             def do_generate(test):
-                global loopCnt, yieldState, finallyCnt, tryOrCatchCount
+                global loopCnt, yieldState, finallyCnt, tryOrCatchCount, uniqueCount
                 yieldState += 1
                 
-                if test in (loop_maker, ):
+                if test in (for_loop_maker,  while_loop_maker):
                     loopCnt += 1
                 if test in (try_finally_maker1, try_finally_maker2, try_finally_maker3):
                     finallyCnt += 1
@@ -245,7 +272,7 @@ class test_exceptions(object):
                 if (tryOrCatchCount + finallyCnt) <= 1:
                     yield test(ch, yield_generator(ch, yieldState))
                 
-                if test in (loop_maker, ):
+                if test in (for_loop_maker,  while_loop_maker):
                     loopCnt -= 1        
                 if test in (try_finally_maker1, try_finally_maker2, try_finally_maker3):
                     finallyCnt -= 1
@@ -254,41 +281,45 @@ class test_exceptions(object):
                         
             for testCase in allGenerators:
                 x = do_generate(testCase)
-                class logger(object):
-                    def __init__(self):
-                        self.data = ''
-                    def __iadd__(self, other):
-                        self.data += other
-                        return self
-        
+                        
                 for y in x:
-                    y.code.text = 'def test(log):\n'
-                    y.generate()
-                    d = {}
+                    if 'IRONPYTHON_RUNSLOWTESTS' in nt.environ:
+                        uniqueCount = 0
+    
+                        # run without a function                    
+                        y.code.text = ''
+                        y.generate(0)
+                        y.code.text += 'print log'
+                        d = {'log': ''}
+                        try: 
+                            #printwith(y.code.text)
+                            exec y.code.text in d, d
+                        except:
+                            printwith('same', sys.exc_type)
+
+                    uniqueCount = 0
                     
-                    #import sys
-                    #sto = sys.stdout
-                    #sys.stdout = sys.__stdout__
-                    #print hash(y.code.text)
-                    #print y.code.text
-                    #sys.stdout = sto
+                    # run within a function
+                    y.code.text = 'def test():\n'
+                    y.code.text += '    global log\n'
+                    y.generate()
+                    d = {'log' : ''}
                     
                     try:
-                        printwith(y.code.text)
+                        #printwith(y.code.text)
                         exec y.code.text in d, d
-                    except:
+                    except SyntaxError:
                         printwith("same", sys.exc_type)
                         continue
                     
-                    l = logger()            
                     try:
-                        retval = d['test'](l)
+                        retval = d['test']()
                         if isinstance(retval, generator_type):
                             for it in retval: printwith('same', it)
                         else:
                             printwith('same', retval)
                     except: 
                         printwith("same", sys.exc_type)
-                    printwith('same', l.data)
+                    printwith('same', d['log'])
     
 runtests(test_exceptions)

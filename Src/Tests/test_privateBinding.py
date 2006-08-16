@@ -43,9 +43,26 @@ def test_Common():
 
 if not privateBinding: 
     def test_NormalBinding():    
-        pass
+        try:
+            # no public types in namespace, shouldn't be able to get namespace
+            from IronPython.Compiler import Generation
+        except ImportError:
+            pass
+
+        # mixed namespace
+        import IronPython.Runtime
+        AssertError(AttributeError, lambda: IronPython.Runtime.TopReflectedPackage)
+        
 else: 
     def test_PrivateBinding():
+        # entirely internal namespace
+        from IronPython.Compiler import Generation
+        x = Generation.Namespace(None)
+        
+        # mixed namespace
+        import IronPython.Runtime
+        x = IronPython.Runtime.TopReflectedPackage
+        
         clsPart._ClsPart__privateField = 1
         AreEqual(clsPart._ClsPart__privateField, 1)
         clsPart._ClsPart__privateProperty = 1
@@ -70,7 +87,7 @@ else:
         # !!! AreEqual("_InternalClsPart__privateMethod" in dir(InternalClsPart), True)
 
 # use this when running standalone
-# run_test(__name__)
+#run_test(__name__)
 
 run_test(__name__, noOutputPlease=True)
 
