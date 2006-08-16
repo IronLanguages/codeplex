@@ -839,6 +839,7 @@ namespace IronPython.Compiler.Ast {
         class ControlFlowFinder : AstWalker {
             bool found;
             bool foundLoopControl;
+            int loopCount = 0;
 
             public static bool FindControlFlow(Statement statement, out bool foundLoopControl) {
                 // No return in null statement
@@ -858,14 +859,36 @@ namespace IronPython.Compiler.Ast {
                 return true;
             }
             public override bool Walk(BreakStatement node) {
-                found = true;
-                foundLoopControl = true;
+                if (loopCount == 0) {
+                    found = true;
+                    foundLoopControl = true;
+                } 
                 return true;
             }
             public override bool Walk(ContinueStatement node) {
-                found = true;
-                foundLoopControl = true;
+                if (loopCount == 0) {
+                    found = true;
+                    foundLoopControl = true;
+                }
                 return true;
+            }
+            
+            public override bool Walk(ForStatement node) {
+                loopCount++;
+                return true;
+            }
+            
+            public override void PostWalk(ForStatement node) {
+                loopCount--;
+            }
+
+            public override bool Walk(WhileStatement node) {
+                loopCount++;
+                return true;
+            }
+
+            public override void PostWalk(WhileStatement node) {
+                loopCount--;
             }
         }
 
@@ -991,11 +1014,12 @@ namespace IronPython.Compiler.Ast {
             if (yieldInFinally) {
                 // return true from the generator method
                 cg.Emit(OpCodes.Ldc_I4_1);
-            } else {
+                cg.EmitReturn();
+            } else if (returnInFinally) {
                 // return the actual value
                 cg.EmitReturnValue();
+                cg.EmitReturn();
             }
-            cg.EmitReturn();
             cg.MarkLabel(noReturn);
 
             if (foundLoopControl) {

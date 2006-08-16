@@ -70,7 +70,8 @@ namespace IronPython.Compiler.Generation {
             Try,
             Finally,
             Catch,
-            With
+            With,
+            LoopInFinally
         }
 
         public static readonly Label NoLabel = new Label();
@@ -218,7 +219,7 @@ namespace IronPython.Compiler.Generation {
                 targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag, isTryYielded));
             } else {
                 Targets t = targets.Peek();
-                targets.Push(new Targets(t.breakLabel, t.continueLabel, type, returnFlag, isTryYielded));
+                targets.Push(new Targets(t.breakLabel, t.continueLabel, type, returnFlag ?? t.finallyReturns, isTryYielded));
             }
         }
 
@@ -235,7 +236,16 @@ namespace IronPython.Compiler.Generation {
         }
 
         public void PushTargets(Label breakTarget, Label continueTarget) {
-            targets.Push(new Targets(breakTarget, continueTarget, BlockType, null, null));
+            if (targets.Count == 0) {
+                targets.Push(new Targets(breakTarget, continueTarget, BlockType, null, null));
+            } else {
+                Targets t = targets.Peek();
+                Targets.TargetBlockType bt = t.BlockType;
+                if (bt == Targets.TargetBlockType.Finally) {
+                    bt = Targets.TargetBlockType.LoopInFinally;
+                }
+                targets.Push(new Targets(breakTarget, continueTarget, bt, t.finallyReturns, null));
+            }
         }
 
         public void PopTargets() {
@@ -244,15 +254,37 @@ namespace IronPython.Compiler.Generation {
 
         public void EmitBreak() {
             Targets t = targets.Peek();
+            int finallyIndex = -1;
             switch (t.BlockType) {
                 default:
                 case Targets.TargetBlockType.Normal:
+                case Targets.TargetBlockType.LoopInFinally:
                     Emit(OpCodes.Br, t.breakLabel);
                     break;
                 case Targets.TargetBlockType.Try:
                 case Targets.TargetBlockType.With:
                 case Targets.TargetBlockType.Catch:
-                    Emit(OpCodes.Leave, t.breakLabel);
+                    for (int i = targets.Count - 1; i >= 0; i--) {
+                        if (targets[i].BlockType == Targets.TargetBlockType.Finally) {
+                            finallyIndex = i;
+                            break;
+                        }
+
+                        if (targets[i].BlockType == Targets.TargetBlockType.LoopInFinally)
+                            break;
+                    }
+
+                    if (finallyIndex == -1) {
+                        Emit(OpCodes.Leave, t.breakLabel);
+                    } else {
+                        if(!targets[finallyIndex].leaveLabel.HasValue)
+                            targets[finallyIndex].leaveLabel = DefineLabel();
+
+                        EmitInt(CodeGen.BranchForBreak);
+                        targets[finallyIndex].finallyReturns.EmitSet(this);
+
+                        Emit(OpCodes.Leave, targets[finallyIndex].leaveLabel.Value);
+                    }
                     break;
                 case Targets.TargetBlockType.Finally:
                     EmitInt(CodeGen.BranchForBreak);
@@ -267,6 +299,7 @@ namespace IronPython.Compiler.Generation {
             switch (t.BlockType) {
                 default:
                 case Targets.TargetBlockType.Normal:
+                case Targets.TargetBlockType.LoopInFinally:
                     Emit(OpCodes.Br, t.continueLabel);
                     break;
                 case Targets.TargetBlockType.Try:
@@ -289,6 +322,12 @@ namespace IronPython.Compiler.Generation {
                 case Targets.TargetBlockType.Normal:
                     Emit(OpCodes.Ret);
                     break;
+                case Targets.TargetBlockType.Catch:
+                    // clear the current exception
+                    EmitCallerContext();
+                    EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
+
+                    goto case Targets.TargetBlockType.Try;
                 case Targets.TargetBlockType.Try:
                     // with has it's own finally block, so no need to search...
                     for (int i = targets.Count - 1; i >= 0; i--) {
@@ -311,14 +350,16 @@ namespace IronPython.Compiler.Generation {
                         // need to leave into the inner most finally block,
                         // the finally block will fall through and check
                         // the return value.
-                        targets[finallyIndex].leaveLabel = DefineLabel();
+                        if(!targets[finallyIndex].leaveLabel.HasValue)
+                            targets[finallyIndex].leaveLabel = DefineLabel();
 
-                        Emit(OpCodes.Ldc_I4_1);
+                        EmitInt(CodeGen.BranchForReturn);
                         targets[finallyIndex].finallyReturns.EmitSet(this);
 
                         Emit(OpCodes.Leave, targets[finallyIndex].leaveLabel.Value);
                     }
                     break;
+                case Targets.TargetBlockType.LoopInFinally:
                 case Targets.TargetBlockType.Finally: {
                         Targets t = targets.Peek();
                         EnsureReturnBlock();
@@ -330,12 +371,6 @@ namespace IronPython.Compiler.Generation {
                         Emit(OpCodes.Endfinally);
                         break;
                     }
-                case Targets.TargetBlockType.Catch:
-                    // clear the current exception
-                    EmitCallerContext();
-                    EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
-
-                    goto case Targets.TargetBlockType.Try;
             }
         }
 
@@ -1373,6 +1408,7 @@ namespace IronPython.Compiler.Generation {
         public void EndExceptionBlock() {
             if (targets.Count > 0) {
                 Targets t = targets.Peek();
+                Debug.Assert(t.BlockType != Targets.TargetBlockType.LoopInFinally);
                 if (t.BlockType == Targets.TargetBlockType.Finally && t.leaveLabel.HasValue) {
                     MarkLabel(t.leaveLabel.Value);
                 }
