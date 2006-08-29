@@ -40,7 +40,7 @@
             IronPython has a high degree of compatibility with CPython, but 
 			there are some differences, ranging from the trivial (such as, 
 			IronPython has different error messages in some cases, but it raises 
-			the same exception type) to the dramatic (such as, IronPython does 
+			the same exception type) to the significant (such as, IronPython does 
 			not implement some standard extension modules like cmath).&nbsp; See
 			<a href="http://www.codeplex.com/WorkItem/WorkItemFileAttachmentDownload.aspx?ProjectName=IronPython&WorkItemId=2702&FileAttachmentId=642">
 			IronPython Differences</a> for details.</p>
@@ -50,15 +50,15 @@
 	missing standard CPython libraries (See
 	<a href="http://www.codeplex.com/WorkItem/WorkItemFileAttachmentDownload.aspx?ProjectName=IronPython&WorkItemId=2702&FileAttachmentId=642">
 	IronPython Differences</a> for details.), and there are some known issues 
+	with the IronPython implementation 
 	(see <a href="http://www.codeplex.com/ironpython">
-	www.codeplex.com/ironpython</a>).&nbsp; Going forward, we will make 
-	incremental releases to 1.0 as we move toward a 2.0 release in 2007.</p>
+	www.codeplex.com/ironpython</a>).</p>
 <p>
     &nbsp;</p>
 <h2>
     Prerequisites</h2>
     <p>
-        To run, IronPython 1.0 Beta requires .NET Framework version 2.0 to be installed
+        To run, IronPython 1.0 requires .NET Framework version 2.0 to be installed
         on your system. You can install the latest version from Microsoft:</p>
     <ul>
         <li>
@@ -79,7 +79,7 @@ adding the IronPython installation directory to your PATH.&nbsp; To test the ins
 should launch the interactive interpreter as shown below:</p>
 <blockquote>
 	<pre>C:\IronPython&gt;ipy
-IronPython 1.0 Beta on .NET 2.0.50727.42
+IronPython 1.0.2424 on .NET 2.0.50727.42
 Copyright (c) Microsoft Corporation. All rights reserved.
 &gt;&gt;&gt; 2+2
 4</pre>
@@ -105,7 +105,7 @@ This simple example shows how you can start using WinForms from IronPython:
 
 <blockquote>
 	<pre>C:\IronPython&gt;ipy
-IronPython 1.0 (Beta) on .NET 2.0.50727.42
+IronPython 1.0.2424 on .NET 2.0.50727.42
 Copyright (c) Microsoft Corporation. All rights reserved.
 &gt;&gt;&gt; import clr
 &gt;&gt;&gt; clr.AddReference(&quot;System.Windows.Forms&quot;)
