@@ -71,7 +71,7 @@ resolved as we work on future releases.<h3>Q: Why am I getting errors when tryin
 <p>A: One common error that you may be getting is:</p>
 <blockquote>
 	<pre>C:\IronPython&gt;ipy.exe
-IronPython 1.0 (Beta) on .NET 2.0.50727.42
+IronPython 1.0.2424 on .NET 2.0.50727.42
 Copyright (c) Microsoft Corporation. All rights reserved.
 &gt;&gt;&gt; import System.Windows.Forms as WinForms
 Traceback (most recent call last):
@@ -96,11 +96,17 @@ happen in the context of the module that contains the “import clr” statement.</p
 <h3>Q: How do I choose amongst a method's overloads?</h3>
 <p>A: .NET methods may have an Overloads attribute which can be indexed by a 
 tuple of types to choose between overloads of a .NET method.&nbsp; For example, 
-&quot;Console.WriteLine.Overloads[object](None)&quot; chooses the WriteLine method that 
-takes an object and passes None for it.</p>
-<h3>Q: How do I import .NET libraries that don't seem to work?</h3>
-<p>A; IronPython can directly import only some of the .NET libraries -- the most 
-commonly used ones.&nbsp; To use additional .NET libraries, they must be 
+the following chooses the WriteLine method that takes an object and passes None 
+for it:</p>
+<blockquote>
+	<p><font face="Courier New"><font size="2">from System import Console<br>
+	Console.WriteLine.Overloads[object](None)</font><br>
+&nbsp;</font></p>
+</blockquote>
+<h3>Q: How do I import .NET namespaces from assemblies other than System and 
+Mscorlib?</h3>
+<p>A: IronPython can directly import only some of the .NET libraries -- the most 
+commonly used ones.&nbsp; To use additional .NET assemblies, they must be 
 explicitly referenced.&nbsp; To add a reference to a .NET assembly, use one of 
 the clr.AddReference* functions.&nbsp; See
 <a href="Tutorial/Tutorial.htm">IronPython Tutorial</a> for good examples and 
@@ -108,6 +114,11 @@ instruction on how to do this.</p>
 <h3>Q: How do I create a .NET array?</h3>
 <p>A: Here is an example that shows how to create a .NET array: 
 “System.Array[int]((1,2,3))”.</p>
+<blockquote>
+	<p><font face="Courier New"><font size="2">import System<br>
+	System.Array[int]((1,2,3))</font><br>
+&nbsp;</font></p>
+</blockquote>
 <h3>Q: How do I specify generic types, such as collections?</h3>
 <p>A: IronPython supports an indexing-like syntax for identifying concrete 
 realizations of generic types and methods (for example, “q = 
@@ -121,29 +132,41 @@ your actual path to the CPython lib directory): </p>
 <blockquote>
 	<pre>import sys
 sys.path.append(r&quot;c:\python24\lib&quot;)
+
 </pre>
 </blockquote>
 <h3>Q: Why are some built-in modules not present?</h3>
 <p>A: IronPython implements all the commonly used built-in modules.&nbsp; Some 
-modules are only relevant on SGI or the Mac, where we haven't ensured IronPython 
-runs yet.</p>
+modules are not implemented because they are OS-specific (for example, they are 
+only relevant on SGI or the Mac).&nbsp; Some modules aren't present only because 
+we didn't have time to implement them yet.&nbsp;&nbsp; See the
+<a href="http://www.codeplex.com/WorkItem/WorkItemFileAttachmentDownload.aspx?ProjectName=IronPython&WorkItemId=2702&FileAttachmentId=642">
+IronPython Differences</a> document for details. </p>
 <h3>Q: What CPython version are you compatible with?</h3>
-<p>A: IronPython 1.0 targeted CPython 2.4.3 for compatibility.&nbsp; See our
+<p>A: IronPython 1.0 targeted CPython 2.4.3 for compatibility.&nbsp; See the
 <a href="http://www.codeplex.com/WorkItem/WorkItemFileAttachmentDownload.aspx?ProjectName=IronPython&WorkItemId=2702&FileAttachmentId=642">
 IronPython Differences</a> document for details.</p>
 <h3>Q: Do you have any 2.5 features working?</h3>
-<p>A: Yes, IronPython implements several 2.5 features, but we do not have the 
-same list working that CPython 2.4.3 has working.</p>
-<h3>Q: Do we work with the compact .NET Fx?</h3>
-<p>A: No, IronPython 1.0 targets only the .NET 2.0 Common Language Runtime.</p>
+<p>A: Yes, IronPython implements several 2.5 features: all(), any(), max() with 
+a key argument, min() with a key argument, partition() and rpartition() on 
+strings, the with statement, empty parenthetic expression for the bases classes 
+in a class statement, try-except-finally, and ternary expressions</p>
+<h3>Q: Do we work with the .NET Compact Framework?</h3>
+<p>A: No, IronPython 1.0 targets only the .NET 2.0 Common Language Runtime.&nbsp; 
+The .NET Compact Framework lacks Reflection.Emit and lightweight code generation 
+(dynamic methods), both of which IronPython requires.</p>
 <h3>Q: How do I compile .py files to a DLL for linking into my C# or VB program
 </h3>
 <p>A: IronPython does not support building DLLs for a C# style of linking and 
 calling into Python code.&nbsp; You can define interfaces in C#, build those 
-into a DLL, and then implement those interfaces as well as pass the objects that 
+into a DLL, and then implement those interfaces in Python code as well as pass the 
+python objects that 
 implement the interfaces to C# code.</p>
 <h3>Q: How do I build and call into PYD libraries </h3>
-<p>A: IronPython does not support XXX</p>
+<p>A: IronPython does not support using PYDs built for CPython since they 
+leverage implementation details of CPython.&nbsp; You can get a similar effect 
+for new &quot;PYD&quot;s you would like to implement by writing them in C# or VB and 
+building a DLL for .NET.</p>
 <h3>Q: How do I create, or why don't you create .pyc files</h3>
 <p>A: IronPython does not cache binary products for .py files, nor write fast 
 loading version of .py files.&nbsp; IronPython will likely support this kind of 
