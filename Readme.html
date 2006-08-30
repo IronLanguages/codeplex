@@ -14,7 +14,7 @@
     <h1>
         IronPython 1.0</h1>
     <p>
-            IronPython is a new of the Python programming language on .NET.&nbsp; The .NET Framework
+            IronPython is a new implementation of the Python programming language on .NET.&nbsp; The .NET Framework
                 is a managed programming model for Windows; Microsoft standardized part of it in&nbsp;<a href="http://www.ecma-international.org/">ECMA</a>
             several years ago as the 
 		<a href="http://www.ecma-international.org/publications/standards/Ecma-335.htm">Common Language Infrastructure</a> and 
@@ -23,7 +23,8 @@
     <p>
             IronPython is fast - up to 1.8x faster than Python-2.4 on the standard pystone benchmark.&nbsp; It supports an interactive interpreter
             with fully dynamic compilation.&nbsp; It is well integrated with
-            the rest of the framework and makes all .NET libraries easily available to Python
+            the rest of the framework and makes the whole .NET Framework class 
+			library easily available to Python
             programmers.</p>
 <p>
             You can get IronPython sources, binaries, and samples from
@@ -35,18 +36,16 @@
 			like.</span></p>
 <p>
             There's a good introductory tutorial at
-			<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a><span style="color: #000000">.</span></p>
+			<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a>.</p>
 <p>
             IronPython has a high degree of compatibility with CPython, but 
 			there are some differences. See
-			<a href="http://www.codeplex.com/WorkItem/WorkItemFileAttachmentDownload.aspx?ProjectName=IronPython&WorkItemId=2702&FileAttachmentId=642">
-			IronPython Differences</a> document for details.</p>
+			<a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> document for details.</p>
 <p>
     IronPython 1.0 is suitable for building Python applications where you want 
-	to make use of .NET libraries and pure python code. There are still some 
+	to make use of .NET Framework and pure python modules. There are still some 
 	missing standard CPython libraries (See
-	<a href="http://www.codeplex.com/WorkItem/WorkItemFileAttachmentDownload.aspx?ProjectName=IronPython&WorkItemId=2702&FileAttachmentId=642">
-	IronPython Differences</a> for details.), and there are some known issues 
+	<a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> for details.), and there are some known issues 
 	with the IronPython implementation 
 	(see <a href="http://www.codeplex.com/ironpython">
 	www.codeplex.com/ironpython</a>).</p>
@@ -111,7 +110,7 @@ Copyright (c) Microsoft Corporation. All rights reserved.
 OK
 </pre>
 </blockquote>
-<p>For more information on clr.AddReference function, see the
+<p>For more information on the clr.AddReference function, see the
 <a href="Tutorial/Tutorial.htm#T1.3">Loading .NET Libraries</a> exercise in the
 <a href="Tutorial/Tutorial.htm">IronPython Tutorial</a><span style="color: #000000">, 
 which has many examples of using IronPython in various ways.</span></p>
