@@ -83,13 +83,17 @@ AttributeError: 'package#' object has no attribute 'Windows'</pre>
 a little bit out of the ordinary.&nbsp; The Built-in module clr provides functions to add 
 references to .NET modules (clr.AddReference).&nbsp; For more information, see the
 <a href="Tutorial/Tutorial.htm#T1.3">Loading .NET Libraries</a> exercise in the
-<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a>.</p>
+<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a> (if you're reading the 
+FAQ on the web, the tutorial.htm document is in the tutorial directory where you 
+installed IronPython).</p>
 
 <h3>Q: How do I make use of .NET features in IronPython?</h3>
 <p>A: Users have to opt in to this functionality.&nbsp; No new keywords have 
 been added, and the existing language semantics are unchanged.&nbsp; A “clr” 
 module is available for import to turn on .NET extensions. See the
-<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a> for good examples.&nbsp; 
+<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a> for good examples (if 
+you're reading the FAQ on the web, the tutorial.htm document is in the tutorial 
+directory where you installed IronPython).&nbsp; 
 Using the “import clr” statement adds methods to built-in types in some cases; 
 for example, dir(int) will show a ToString attribute.&nbsp; Such effects only 
 happen in the context of the module that contains the “import clr” statement.</p>
@@ -100,7 +104,9 @@ commonly used ones.&nbsp; To use additional .NET assemblies, they must be
 explicitly referenced.&nbsp; To add a reference to a .NET assembly, use one of 
 the clr.AddReference* functions.&nbsp; See
 <a href="Tutorial/Tutorial.htm">IronPython Tutorial</a> for good examples and 
-instruction on how to do this.</p>
+instruction on how to do this (if you're reading the FAQ on the web, the 
+tutorial.htm document is in the tutorial directory where you installed 
+IronPython).</p>
 <h3>Q: How do I use CPython standard libraries?</h3>
 <p>A: To tell IronPython where the Python standard library is, you can add the 
 &quot;lib&quot; directory of CPython to IronPython's path.&nbsp; To do this, put the 
@@ -117,12 +123,10 @@ sys.path.append(r&quot;c:\python24\lib&quot;)
 modules are not implemented because they are OS-specific (for example, they are 
 only relevant on SGI or the Mac).&nbsp; Some modules aren't present only because 
 we didn't have time to implement them yet.&nbsp;&nbsp; See the
-<a href="http://www.codeplex.com/WorkItem/WorkItemFileAttachmentDownload.aspx?ProjectName=IronPython&WorkItemId=2702&FileAttachmentId=642">
-IronPython Differences</a> document for details. </p>
+<a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> document for details. </p>
 <h3>Q: What CPython version are you compatible with?</h3>
 <p>A: IronPython 1.0 targeted CPython 2.4.3 for compatibility.&nbsp; See the
-<a href="http://www.codeplex.com/WorkItem/WorkItemFileAttachmentDownload.aspx?ProjectName=IronPython&WorkItemId=2702&FileAttachmentId=642">
-IronPython Differences</a> document for details.</p>
+<a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> document for details.</p>
 <h3>Q: Do you have any 2.5 features working?</h3>
 <p>A: Yes, IronPython implements several 2.5 features: all(), any(), max() with 
 a key argument, min() with a key argument, partition() and rpartition() on 
@@ -296,8 +300,7 @@ type, but the value can be easily converted to string:</p>
 	&gt;&gt;&gt; x<br>
 	&lt;System.Char object at 0x000000000000002C [a]&gt;<br>
 	&gt;&gt;&gt; str(x)<br>
-	'a'<br>
-&nbsp;</font></p>
+	'a'</font></p>
 </blockquote>
 <h3>Q: How does IronPython work with .NET structs, value types, enums?</h3>
 <p>A: All instances of value types are always boxed within the IronPython 
@@ -306,11 +309,14 @@ runtime. For more details, refer to the
 document</a> on CodePlex.</p>
 <h3>Q: How do .NET assemblies and namespaces relate to Python modules?</h3>
 <p>A: In IronPython, the import mechanism provides access to the namespaces in 
-.NET assemblies. Once the assembly is referenced by the IronPython runtime (For more information, see the
-<a href="Tutorial/Tutorial.htm#T1.3">Loading .NET Libraries</a> exercise in the
-<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a>.), it is possible to 
+.NET assemblies. Once the assembly is referenced by the IronPython runtime, it is possible to 
 import the namespaces contained within the assembly. Once a namespace is 
-imported, all nested namespaces are also accessible.</p>
+imported, all nested namespaces are also accessible.&nbsp; For more information, 
+see the
+<a href="Tutorial/Tutorial.htm#T1.3">Loading .NET Libraries</a> exercise in the
+<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a> (if you're reading the 
+FAQ on the web, the tutorial.htm document is in the tutorial directory where you 
+installed IronPython).</p>
 <p><font size="2" face="Courier New">&gt;&gt;&gt; import System<br>
 &gt;&gt;&gt; clr.AddReference(&quot;System.Windows.Forms&quot;)<br>
 &gt;&gt;&gt; import System.Windows<br>
