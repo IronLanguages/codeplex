@@ -93,16 +93,6 @@ module is available for import to turn on .NET extensions. See the
 Using the “import clr” statement adds methods to built-in types in some cases; 
 for example, dir(int) will show a ToString attribute.&nbsp; Such effects only 
 happen in the context of the module that contains the “import clr” statement.</p>
-<h3>Q: How do I choose amongst a method's overloads?</h3>
-<p>A: .NET methods may have an Overloads attribute which can be indexed by a 
-tuple of types to choose between overloads of a .NET method.&nbsp; For example, 
-the following chooses the WriteLine method that takes an object and passes None 
-for it:</p>
-<blockquote>
-	<p><font face="Courier New"><font size="2">from System import Console<br>
-	Console.WriteLine.Overloads[object](None)</font><br>
-&nbsp;</font></p>
-</blockquote>
 <h3>Q: How do I import .NET namespaces from assemblies other than System and 
 Mscorlib?</h3>
 <p>A: IronPython can directly import only some of the .NET libraries -- the most 
@@ -111,19 +101,6 @@ explicitly referenced.&nbsp; To add a reference to a .NET assembly, use one of
 the clr.AddReference* functions.&nbsp; See
 <a href="Tutorial/Tutorial.htm">IronPython Tutorial</a> for good examples and 
 instruction on how to do this.</p>
-<h3>Q: How do I create a .NET array?</h3>
-<p>A: Here is an example that shows how to create a .NET array: 
-“System.Array[int]((1,2,3))”.</p>
-<blockquote>
-	<p><font face="Courier New"><font size="2">import System<br>
-	System.Array[int]((1,2,3))</font><br>
-&nbsp;</font></p>
-</blockquote>
-<h3>Q: How do I specify generic types, such as collections?</h3>
-<p>A: IronPython supports an indexing-like syntax for identifying concrete 
-realizations of generic types and methods (for example, “q = 
-System.Collections.Generic.Queue[str]()”). This is similar to creating a .NET 
-array.</p>
 <h3>Q: How do I use CPython standard libraries?</h3>
 <p>A: To tell IronPython where the Python standard library is, you can add the 
 &quot;lib&quot; directory of CPython to IronPython's path.&nbsp; To do this, put the 
@@ -155,22 +132,189 @@ in a class statement, try-except-finally, and ternary expressions</p>
 <p>A: No, IronPython 1.0 targets only the .NET 2.0 Common Language Runtime.&nbsp; 
 The .NET Compact Framework lacks Reflection.Emit and lightweight code generation 
 (dynamic methods), both of which IronPython requires.</p>
-<h3>Q: How do I compile .py files to a DLL for linking into my C# or VB program
-</h3>
+<h3>Q: How do I compile .py files to a DLL for linking into my C# or VB program?</h3>
 <p>A: IronPython does not support building DLLs for a C# style of linking and 
 calling into Python code.&nbsp; You can define interfaces in C#, build those 
 into a DLL, and then implement those interfaces in Python code as well as pass the 
 python objects that 
 implement the interfaces to C# code.</p>
-<h3>Q: How do I build and call into PYD libraries </h3>
+<h3>Q: How do I build and call into PYD libraries?</h3>
 <p>A: IronPython does not support using PYDs built for CPython since they 
 leverage implementation details of CPython.&nbsp; You can get a similar effect 
 for new &quot;PYD&quot;s you would like to implement by writing them in C# or VB and 
 building a DLL for .NET.</p>
-<h3>Q: How do I create, or why don't you create .pyc files</h3>
+<h3>Q: How do I create, or why don't you create .pyc files?</h3>
 <p>A: IronPython does not cache binary products for .py files, nor write fast 
 loading version of .py files.&nbsp; IronPython will likely support this kind of 
 optimization in the future.</p>
+
+<h3>Q: How do I choose amongst a method's overloads?</h3>
+<p>A: .NET methods may have an Overloads attribute which can be indexed by a 
+tuple of types to choose between overloads of a .NET method.&nbsp; For example, 
+the following chooses the WriteLine method that takes an object and passes None 
+for it:</p>
+<blockquote>
+	<p><font face="Courier New"><font size="2">from System import Console<br>
+	Console.WriteLine.Overloads[object](None)</font></font></p>
+</blockquote>
+<h3>Q: How can I call a method with <span style="font-weight: 400">
+<font face="Courier New">ref</font></span>, <span style="font-weight: 400">
+<font face="Courier New">out</font></span>, and <span style="font-weight: 400">
+<font face="Courier New">params</font></span> parameters?</h3>
+<p>A: Consider the following C# class which defines methods with ref, out, and 
+params parameters. Following the C# code are examples in the Python interpreter 
+of calling these methods.</p>
+<blockquote>
+	<p><font face="Courier New" size="2">File a.cs (compiled with &quot;csc.exe /t:library 
+	a.cs&quot;):</font></p>
+	<p><font face="Courier New" size="2">public class C {<br>&nbsp;&nbsp;&nbsp; public static int MethodRef(ref int i) { i = 1; return 2; }<br>&nbsp;&nbsp;&nbsp; public static int MethodOut(out int i) { i = 1; return 2; }<br>&nbsp;&nbsp;&nbsp; public static int MethodParams(params object[] values) { 
+	return values.Length; }<br>}</font></p>
+</blockquote>
+<p>Loading the class C:</p>
+<blockquote>
+	<p><font size="2" face="Courier New">&gt;&gt;&gt; import clr<br>
+	&gt;&gt;&gt; clr.AddReference(&quot;a.dll&quot;)<br>
+	&gt;&gt;&gt; import C</font></p>
+</blockquote>
+<p>Calling the method with ref parameters: if you pass the value (3) directly, 
+the output value will become part of the returned tuple.</p>
+<blockquote>
+	<p><font face="Courier New" size="2">&gt;&gt;&gt; C.MethodRef(3)<br>(2, 1)</font></p>
+</blockquote>
+	
+	<p>Alternatively, you can create an instance of clr.Reference&lt;T&gt; and 
+	initialize it with the value that you want to pass into the method. When the 
+	call returns, the value will have been updated.</p>
+	<blockquote>
+	<p><font size="2" face="Courier New">&gt;&gt;&gt; import clr<br>&gt;&gt;&gt; x = clr.Reference[int](3)<br>&gt;&gt;&gt; x.Value<br>3<br>&gt;&gt;&gt; C.MethodRef(x)<br>2<br>&gt;&gt;&gt; x.Value<br>1</font></p>
+</blockquote>
+<p>Calling the method with an out parameter is very similar, except there is no 
+need to provide the input value. The values of the out parameters will become 
+part of the returned tuple:</p>
+<blockquote>
+	<p><font size="2" face="Courier New">&gt;&gt;&gt; C.MethodOut()<br>(2, 1)</font></p>
+</blockquote>
+<p>You can also provide an instance of clr.Reference&lt;T&gt; to capture the value of 
+the out parameter. The initial value in this case does not matter.</p>
+<blockquote>
+	<p><font face="Courier New" size="2">&gt;&gt;&gt; x = clr.Reference[int]()<br>
+	&gt;&gt;&gt; x.Value&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	# The Value is initialized to 0<br>
+	0<br>
+	&gt;&gt;&gt; C.MethodOut(x)<br>2<br>&gt;&gt;&gt; x.Value&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	# Value was modified by the MethodOut method.<br>1<br>&gt;&gt;&gt; x.Value = 10<br>&gt;&gt;&gt; C.MethodOut(x)<br>2<br>&gt;&gt;&gt; x.Value<br>1</font></p>
+</blockquote>
+<p>IronPython handles methods with params arguments in a natural way. The 
+parameters can be passed as a parameter list:</p>
+<blockquote>
+	<p><font face="Courier New" size="2">&gt;&gt;&gt; C.MethodParams(1,2,3)<br>3<br>&gt;&gt;&gt; C.MethodParams(1,2,3,4,5,6,)<br>6</font></p>
+</blockquote>
+<h3><font face="Courier New" size="2"><br></font>Q: How do I create a .NET array?</h3>
+<p>A: Here is an example that shows how to create a .NET array: 
+“System.Array[int]((1,2,3))”.</p>
+<blockquote>
+	<p><font face="Courier New"><font size="2">import System<br>
+	System.Array[int]((1,2,3))</font><br>
+&nbsp;</font></p>
+</blockquote>
+<h3>Q: How do I specify generic types, such as collections?</h3>
+<p>A: IronPython supports an indexing-like syntax for identifying concrete 
+realizations of generic types and methods, for example:</p>
+<blockquote>
+<p><font size="2" face="Courier New">import System<br>
+q = System.Collections.Generic.Queue[str]()</font></p>
+</blockquote>
+<p>This is similar to creating a .NET 
+array.</p>
+<h3>Q: How can I access .NET properties and indexers?</h3>
+<p>A: The following is a simple example of setting and getting the value of a 
+property &quot;Text&quot; on a windows form. The syntax is the same as any attribute 
+access.</p>
+<blockquote>
+	<p><font size="2" face="Courier New">&gt;&gt;&gt; import System<br>
+	&gt;&gt;&gt; clr.AddReference(&quot;System.Windows.Forms&quot;)<br>
+	&gt;&gt;&gt; from System.Windows.Forms import Form<br>
+	&gt;&gt;&gt; f = Form()<br>
+	&gt;&gt;&gt; f.Text = &quot;Hello&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	# Set the property<br>
+	&gt;&gt;&gt; f.Text&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	# Get the property value<br>
+	'Hello'<br>
+	&gt;&gt;&gt;</font></p>
+</blockquote>
+<p>To call indexers, use Python's indexing syntax:</p>
+<blockquote>
+	<p><font face="Courier New" size="2">&gt;&gt;&gt; import System<br>
+	&gt;&gt;&gt; h = System.Collections.Hashtable()<br>
+	&gt;&gt;&gt; h['a'] = 10<br>
+	&gt;&gt;&gt; h['a']<br>
+	10</font></p>
+</blockquote>
+<h3>Q: How does IronPython handle conversions between Python types and .NET 
+types?</h3>
+<p>A: IronPython runs on the .NET Framework which provides more primitive types 
+than Python. If you use normal Python code with IronPython, you will only 
+encounter the standard Python types (int, long, float, str, ...). When calling 
+.NET methods, IronPython will try to convert the argument values to the 
+appropriate .NET types. See below for an example with integer numbers.</p>
+<blockquote>
+	<p><font face="Courier New" size="2">File a.cs (compiled with &quot;csc.exe /t:library 
+	a.cs&quot;):</font></p>
+	<p><font face="Courier New" size="2">public class C {<br>
+&nbsp;&nbsp;&nbsp; public static void MethodUShort(ushort p) { }<br>
+	}</font></p>
+</blockquote>
+<p>The following Python code calls the &quot;MethodUShort&quot; on class C with different 
+argument values:</p>
+<blockquote>
+	<p><font face="Courier New" size="2">&gt;&gt;&gt; import clr<br>
+	&gt;&gt;&gt; clr.AddReference(&quot;a.dll&quot;)<br>
+	&gt;&gt;&gt; import C<br>
+	&gt;&gt;&gt; C.MethodUShort(1)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	# conversion will succeed<br>
+	&gt;&gt;&gt; C.MethodUShort(65536)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	# 65536 won't fit into System.UInt16<br>
+	Traceback (most recent call last):<br>
+	File , line 0, in &lt;stdin&gt;##20<br>
+	File , line 0, in MethodUShort##19<br>
+	OverflowError: Arithmetic operation resulted in an overflow.<br>
+	&gt;&gt;&gt; C.MethodUShort(-1)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	# neither will -1<br>
+	Traceback (most recent call last):<br>
+	File , line 0, in &lt;stdin&gt;##21<br>
+	File , line 0, in MethodUShort##19<br>
+	OverflowError: Arithmetic operation resulted in an overflow.</font></p>
+</blockquote>
+<h3>Q: How does IronPython work with the .NET System.Char type since Python 
+doesn't have a char type?</h3>
+<p>A: In IronPython, all strings of length 1 will be automatically coerced into 
+System.Char type when System.Char type is expected. If a method returns 
+System.Char type, the actual return value will be an instance of System.Char 
+type, but the value can be easily converted to string:</p>
+<blockquote>
+	<p><font face="Courier New" size="2">&gt;&gt;&gt; x = System.Char.Parse('a')<br>
+	&gt;&gt;&gt; x<br>
+	&lt;System.Char object at 0x000000000000002C [a]&gt;<br>
+	&gt;&gt;&gt; str(x)<br>
+	'a'<br>
+&nbsp;</font></p>
+</blockquote>
+<h3>Q: How does IronPython work with .NET structs, value types, enums?</h3>
+<p>A: All instances of value types are always boxed within the IronPython 
+runtime. For more details, refer to the
+<a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Value Types">
+document</a> on CodePlex.</p>
+<h3>Q: How do .NET assemblies and namespaces relate to Python modules?</h3>
+<p>A: In IronPython, the import mechanism provides access to the namespaces in 
+.NET assemblies. Once the assembly is referenced by the IronPython runtime (For more information, see the
+<a href="Tutorial/Tutorial.htm#T1.3">Loading .NET Libraries</a> exercise in the
+<a href="Tutorial/Tutorial.htm">IronPython Tutorial</a>.), it is possible to 
+import the namespaces contained within the assembly. Once a namespace is 
+imported, all nested namespaces are also accessible.</p>
+<p><font size="2" face="Courier New">&gt;&gt;&gt; import System<br>
+&gt;&gt;&gt; clr.AddReference(&quot;System.Windows.Forms&quot;)<br>
+&gt;&gt;&gt; import System.Windows<br>
+&gt;&gt;&gt; form = System.Windows.Forms.Form()</font></p>
 
 </body>
 
