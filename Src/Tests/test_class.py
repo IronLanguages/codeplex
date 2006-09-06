@@ -74,6 +74,7 @@ def test_set_dict():
     Assert(o2.__class__ is C)
     Assert(o2.__class__ is not o1.__class__)
 
+
 ############################################################
 def test_attrs():
     class C:pass
@@ -318,6 +319,34 @@ def test_inheritance_attrs_dir():
     Assert(bz.__module__ == [2, 3 , 4])
 
 
+############################################################
+def test_oldstyle_setattr():
+    global called
+    class C:
+        def __setattr__(self, name, value):
+            global called
+            called = (self, name, value)
+            
+    a = C()
+    a.abc = 'def'
+    AreEqual(called, (a, 'abc', 'def'))
+    
+    del C.__setattr__
+    
+    a.qrt = 'abc'
+    
+    AreEqual(called, (a, 'abc', 'def'))
+    
+    def setattr(self, name, value): 
+        global called
+        called = (self, name, value)        
+    
+    C.__setattr__ = setattr
+    
+    a.qrt = 'abc'
+    
+    AreEqual(called, (a, 'qrt', 'abc'))
+    
 ############################################################
 def test_oldstyle_getattr():
     """verify we don't access __getattr__ while creating an old

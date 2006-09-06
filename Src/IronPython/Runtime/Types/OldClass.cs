@@ -35,11 +35,18 @@ namespace IronPython.Runtime.Types {
     // UserType is the equivalent of OldClass for new-style Python classes (which can inherit 
     // from built-in types).
 
+    [Flags]
+    enum OldClassAttributes {
+        None = 0x00,
+        HasFinalizer = 0x01,
+        HasSetAttr = 0x02,
+    }
+
     [PythonType("classobj")]
     public sealed class OldClass : IPythonType, ICallableWithCallerContext, IFancyCallable, IDynamicObject, ICustomTypeDescriptor, ICodeFormattable, ICustomAttributes {
         public Tuple __bases__;
         public IAttributesDictionary __dict__;
-        bool hasFinalizer;
+        private int attrs;  // actually OldClassAttributes - losing type safety for thread safety
         public object __name__;
 
         public OldClass(string name, Tuple bases, IDictionary<object, object> dict) {
@@ -53,7 +60,10 @@ namespace IronPython.Runtime.Types {
             }
 
             if (__dict__.ContainsKey(SymbolTable.Unassign)) {
-                hasFinalizer = true;
+                HasFinalizer = true;
+            }
+            if (__dict__.ContainsKey(SymbolTable.SetAttr)) {
+                HasSetAttr = true;
             }
         }
 
@@ -89,7 +99,27 @@ namespace IronPython.Runtime.Types {
 
         public bool HasFinalizer {
             get {
-                return (hasFinalizer);
+                return (attrs & (int)OldClassAttributes.HasFinalizer) != 0;
+            }
+            internal set {
+                int oldAttrs, newAttrs;
+                do {
+                    oldAttrs = attrs;
+                    newAttrs = value ? oldAttrs | ((int)OldClassAttributes.HasFinalizer) : oldAttrs & ((int)~OldClassAttributes.HasFinalizer);
+                } while (Interlocked.CompareExchange(ref attrs, newAttrs, oldAttrs) != oldAttrs);
+            }
+        }
+
+        internal bool HasSetAttr {
+            get {
+                return (attrs & (int)OldClassAttributes.HasSetAttr) != 0;
+            }
+            set {
+                int oldAttrs, newAttrs;
+                do {
+                    oldAttrs = attrs;
+                    newAttrs = value ? oldAttrs | ((int)OldClassAttributes.HasSetAttr) : oldAttrs & ((int)~OldClassAttributes.HasSetAttr);
+                } while (Interlocked.CompareExchange(ref attrs, newAttrs, oldAttrs) != oldAttrs);
             }
         }
 
@@ -146,6 +176,7 @@ namespace IronPython.Runtime.Types {
                 case SymbolTable.NameId: value = __name__; return true;
                 case SymbolTable.DictId:
                     //!!! user code can modify __del__ property of __dict__ behind our back
+                    HasSetAttr = true;  // pessimisticlly assume the user is setting __setattr__ in the dict
                     value = __dict__; return true;
             }
 
@@ -184,7 +215,10 @@ namespace IronPython.Runtime.Types {
                     __dict__ = d;
                     break;
                 case SymbolTable.UnassignId:
-                    hasFinalizer = true;
+                    HasFinalizer = true;
+                    goto default;
+                case SymbolTable.SetAttrId:
+                    HasSetAttr = true;
                     goto default;
                 default:
                     __dict__[name] = value;
@@ -198,7 +232,10 @@ namespace IronPython.Runtime.Types {
             }
 
             if (name == SymbolTable.Unassign) {
-                hasFinalizer = false;
+                HasFinalizer = false;
+            }
+            if (name == SymbolTable.SetAttr) {
+                HasSetAttr = false;
             }
         }
 
@@ -499,6 +536,8 @@ namespace IronPython.Runtime.Types {
         }
 
         public void SetAttr(ICallerContext context, SymbolId name, object value) {
+            object setFunc;
+
             if (name.Id == SymbolTable.ClassId) {
                 OldClass oc = value as OldClass;
                 if (oc == null) {
@@ -519,6 +558,8 @@ namespace IronPython.Runtime.Types {
                 }
 
                 __dict__ = dict;
+            } else if (__class__.HasSetAttr && __class__.TryLookupSlot(SymbolTable.SetAttr, out setFunc)) {
+                Ops.Call(Ops.GetDescriptor(setFunc, this, __class__), name.ToString(), value);
             } else if (name.Id == SymbolTable.UnassignId) {
                 if (!HasFinalizer()) {
                     // user is defining __del__ late bound for the 1st time
