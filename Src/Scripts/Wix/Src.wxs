@@ -26,6 +26,7 @@
                 <ComponentRef Id="Comp_SrcIronPythonWindow" />
                 <ComponentRef Id="Comp_SrcIronPythonTest" />
                 <ComponentRef Id="Comp_SrcScripts" />
+                <ComponentRef Id="Comp_SrcScriptsWix" />
                 <ComponentRef Id="Comp_SrcTests" />
                 <ComponentRef Id="Comp_SrcTestsInputs" />
                 <ComponentRef Id="Comp_SrcTestsInc" />
@@ -56,7 +57,9 @@
                 <Directory Id="Dir_SrcIronPythonConsole" Name="IRONPYCO" LongName="IronPythonConsole" />
                 <Directory Id="Dir_SrcIronPythonWindow" Name="IRONPYW" LongName="IronPythonWindow" />
                 <Directory Id="Dir_SrcIronPythonTest" Name="IRONPYTE" LongName="IronPythonTest" />
-                <Directory Id="Dir_SrcScripts" Name="Scripts" />
+                <Directory Id="Dir_SrcScripts" Name="Scripts">
+                    <Directory Id="Dir_SrcScriptsWix" Name="Wix" />
+                </Directory>
                 <Directory Id="Dir_SrcTests" Name="Tests">
                     <Directory Id="Dir_SrcTestsInputs" Name="Inputs" />
                     <Directory Id="Dir_SrcTestsInc" Name="Inc" />
@@ -408,6 +411,16 @@
                 <File Id="File_test_cgcheck.py" Name="TCGCHECK.PY" LongName="test_cgcheck.py" />
                 <File Id="File_test_parrot.py" Name="TPARROT.PY" LongName="test_parrot.py" />
                 <File Id="File_test_pystone.py" Name="TPYSTONE.PY" LongName="test_pystone.py" />
+            </Component>
+        </DirectoryRef>
+        
+        <DirectoryRef Id="Dir_SrcScriptsWix" FileSource="Src\Scripts\Wix">
+            <Component Id="Comp_SrcScriptsWix" DiskId="1" Guid="E4472FFD-D8C0-41F1-9234-2B900711AD52">
+                <File Id="File_Build.bat" Name="Build.bat" />
+                <File Id="File_Core.wxs" Name="Core.wxs" />
+                <File Id="File_Doc.wxs" Name="Doc.wxs" />
+                <File Id="File_IronPython.wxs" Name="IronPy.wxs" LongName="IronPython.wxs" />
+                <File Id="File_Src.wxs" Name="Src.wxs" />
             </Component>
         </DirectoryRef>
 

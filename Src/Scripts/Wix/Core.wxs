@@ -21,6 +21,7 @@
       <Component Id="Comp_Core" DiskId="1" Guid="F3CA0734-D47C-41E9-881E-BD77E3DB750E">
         <File Id="File_FAQ.html" Name="FAQ.HTM" LongName="FAQ.html" />
         <File Id="File_License.html" Name="LICENSE.HTM" LongName="License.html" />
+        <File Id="File_License.rtf" Name="License.rtf" />
         <File Id="File_Readme.html" Name="README.HTM" LongName="Readme.html" />
         <Shortcut Id="Shortcut_Readme" Directory="Dir_StartMenu" Name="IRPYRDME" LongName="IronPython Readme" Target="[#File_Readme.html]" />
         <Shortcut Id="Shortcut_FAQ" Directory="Dir_StartMenu" Name="IRPYFAQ" LongName="IronPython FAQ" Target="[#File_FAQ.html]" />
