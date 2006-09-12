@@ -1,0 +1,565 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  IronPython source-code components
+
+  2006-01-01 BobArnso Created
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2003/01/wi">
+    <Fragment>
+        <FeatureRef Id="Feature_IronPython">
+            <Feature Id="Feature_Src" AllowAdvertise="no" Level="1" Title="Source code" Description="Source code for IronPython and its unit tests">
+                <ComponentRef Id="Comp_Src" />
+                <ComponentRef Id="Comp_SrcIronMath" />
+                <ComponentRef Id="Comp_SrcIronPython" />
+                <ComponentRef Id="Comp_SrcIronPythonCodeDom" />
+                <ComponentRef Id="Comp_SrcIronPythonCompiler" />
+                <ComponentRef Id="Comp_SrcIronPythonCompilerAST" />
+                <ComponentRef Id="Comp_SrcIronPythonCompilerGeneration" />
+                <ComponentRef Id="Comp_SrcIronPythonHosting" />
+                <ComponentRef Id="Comp_SrcIronPythonModules" />
+                <ComponentRef Id="Comp_SrcIronPythonRuntime" />
+                <ComponentRef Id="Comp_SrcIronPythonRuntimeCalls" />
+                <ComponentRef Id="Comp_SrcIronPythonRuntimeExceptions" />
+                <ComponentRef Id="Comp_SrcIronPythonRuntimeOperations" />
+                <ComponentRef Id="Comp_SrcIronPythonRuntimeTypes" />
+                <ComponentRef Id="Comp_SrcIronPythonConsole" />
+                <ComponentRef Id="Comp_SrcIronPythonWindow" />
+                <ComponentRef Id="Comp_SrcIronPythonTest" />
+                <ComponentRef Id="Comp_SrcScripts" />
+                <ComponentRef Id="Comp_SrcTests" />
+                <ComponentRef Id="Comp_SrcTestsInputs" />
+                <ComponentRef Id="Comp_SrcTestsInc" />
+                <ComponentRef Id="Comp_SrcTestsLib" />
+                <ComponentRef Id="Comp_SrcTestsCompat" />
+            </Feature>
+        </FeatureRef>
+
+        <!-- Avoid extra-deep source code by creating the tree here and using DirectoryRef elements for the component definitions. -->
+        <DirectoryRef Id="INSTALLDIR">
+            <Directory Id="Dir_Src" Name="Src">
+                <Directory Id="Dir_SrcIronMath" Name="IronMath" />
+                <Directory Id="Dir_SrcIronPython" Name="IRONPY" LongName="IronPython">
+                    <Directory Id="Dir_SrcIronPythonCompiler" Name="Compiler" >
+                        <Directory Id="Dir_SrcIronPythonCompilerAST" Name="AST" />
+                        <Directory Id="Dir_SrcIronPythonCompilerGeneration" LongName="Generation" Name="Generate" />
+                    </Directory>
+                    <Directory Id="Dir_SrcIronPythonHosting" Name="Hosting" />
+                    <Directory Id="Dir_SrcIronPythonCodeDom" Name="CodeDom" />
+                    <Directory Id="Dir_SrcIronPythonModules" Name="Modules" />
+                    <Directory Id="Dir_SrcIronPythonRuntime" Name="Runtime">
+                        <Directory Id="Dir_SrcIronPythonRuntimeCalls" Name="Calls"/>
+                        <Directory Id="Dir_SrcIronPythonRuntimeExceptions" LongName="Exceptions" Name="Excpts"/>
+                        <Directory Id="Dir_SrcIronPythonRuntimeOperations" LongName="Operations" Name="Ops"/>
+                        <Directory Id="Dir_SrcIronPythonRuntimeTypes" Name="Types"/>
+                    </Directory>
+                </Directory>
+                <Directory Id="Dir_SrcIronPythonConsole" Name="IRONPYCO" LongName="IronPythonConsole" />
+                <Directory Id="Dir_SrcIronPythonWindow" Name="IRONPYW" LongName="IronPythonWindow" />
+                <Directory Id="Dir_SrcIronPythonTest" Name="IRONPYTE" LongName="IronPythonTest" />
+                <Directory Id="Dir_SrcScripts" Name="Scripts" />
+                <Directory Id="Dir_SrcTests" Name="Tests">
+                    <Directory Id="Dir_SrcTestsInputs" Name="Inputs" />
+                    <Directory Id="Dir_SrcTestsInc" Name="Inc" />
+                    <Directory Id="Dir_SrcTestsLib" Name="Lib" />
+                    <Directory Id="Dir_SrcTestsCompat" Name="Compat" />
+                </Directory>
+            </Directory>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_Src" FileSource="Src">
+            <Component Id="Comp_Src" DiskId="1" Guid="8B7BB67E-3D31-4136-8D8B-71990E3025D9">
+                <File Id="File_IronPython.sln" Name="IRONPY.SLN" LongName="IronPython.sln" />
+                <File Id="File_makefile" Name="makefile" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronMath" FileSource="Src\IronMath">
+            <Component Id="Comp_SrcIronMath" DiskId="1" Guid="C2B40CC7-22E1-4E56-B1FC-6339B948C015">
+                <File Id="File_IronMath_AssemblyInfo.cs" Name="ASMINFO.CS" LongName="AssemblyInfo.cs" />
+                <File Id="File_BigInteger.cs" Name="BIGINT.CS" LongName="BigInteger.cs" />
+                <File Id="File_Complex64.cs" Name="COMPLEX.CS" LongName="Complex64.cs" />
+                <File Id="File_ISlice.cs" Name="ISLICE.CS" LongName="ISlice.cs" />
+                <File Id="File_IronMath.csproj" Name="IRONMATH.CSP" LongName="IronMath.csproj" />
+                <File Id="File_IronMath.resx" Name="IRONMATH.RSX" LongName="IronMath.resx" />
+                <File Id="File_IronMath.Designer.cs" Name="IMDESIGN.CS" LongName="IronMath.Designer.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPython" FileSource="Src\IronPython">
+            <Component Id="Comp_SrcIronPython" DiskId="1" Guid="FB1C508B-621B-4FD6-84BF-D00EAFF21B82">
+                <File Id="File_IronPython_AssemblyInfo.cs" Name="ASMINFO.CS" LongName="AssemblyInfo.cs" />
+                <File Id="File_IronPython.csproj" Name="IRONPY.CSP" LongName="IronPython.csproj" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonCodeDom" FileSource="Src\IronPython\CodeDom">
+            <Component Id="Comp_SrcIronPythonCodeDom" DiskId="1" Guid="027CB3AE-0690-4438-B6C2-7E306EF601F9">
+                <File Id="File_CodeDomCompiler.cs" Name="COMPILER.CS" LongName="Compiler.cs" />
+                <File Id="File_CodeDomGenerator.cs" Name="GENERATR.cs" LongName = "Generator.cs" />
+                <File Id="File_CodeDomInteraces.cs" Name="IFACES.cs" LongName = "Interfaces.cs" />
+                <File Id="File_CodeDomMerger.cs" Name="CodeMerg.CS" LongName="CodeMerger.cs" />
+                <File Id="File_CodeDomParser.cs" Name="PARSER.CS" LongName="Parser.cs" />
+                <File Id="File_CodeDomProvider.cs" Name="PROVIDER.CS" LongName="Provider.cs" />
+                <File Id="File_CodeDomReferences.cs" Name="REFERNCS.CS" LongName="References.CS" />
+                <File Id="File_CodeDomWalker.cs" Name="Walker.CS" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonCompiler" FileSource="Src\IronPython\Compiler">
+            <Component Id="Comp_SrcIronPythonCompiler" DiskId="1" Guid="261685AE-935F-4EA3-8B38-F675937B00A4">
+                <File Id="File_CompiledModule.cs" Name="CMPLDMOD.CS" LongName="CompiledModule.cs" />
+                <File Id="File_CompilerContext.cs" Name="CMPLRCTX.CS" LongName="CompilerContext.cs" />
+                <File Id="File_CompilerHelpers.cs" Name="CMPLRHLP.CS" LongName="CompilerHelpers.cs" />
+                <File Id="File_MethodBinder.cs" Name="MethodBi.cs" LongName="MethodBinder.cs" />
+                <File Id="File_MethodTracker.cs" Name="MethodTr.cs" LongName="MethodTracker.cs" />
+                <File Id="File_NameConverter.cs" Name="NAMECONV.CS" LongName="NameConverter.cs" />
+                <File Id="File_NameEnv.cs" Name="NameEnv.cs" />
+                <File Id="File_NewTypeInfo.cs" Name="NEWTYPIN.CS" LongName="NewTypeInfo.cs" />
+                <File Id="File_Options.cs" Name="Options.cs" />
+                <File Id="File_Parser.cs" Name="Parser.cs" />
+                <File Id="File_ParserSink.cs" Name="PARSERSN.CS" LongName="ParserSink.cs" />
+                <File Id="File_Token.cs" Name="Token.cs" />
+                <File Id="File_Tokenizer.cs" Name="TOKENIZR.CS" LongName="Tokenizer.cs" />
+                <File Id="File_Tokenizer.Generated.cs" Name="TOKNIZRG.CS" LongName="Tokenizer.Generated.cs" />
+                <File Id="File_TokenKind.Generated.cs" Name="TOKNKNDG.CS" LongName="TokenKind.Generated.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonCompilerAST" FileSource="Src\IronPython\Compiler\AST">
+            <Component Id="Comp_SrcIronPythonCompilerAST" DiskId="1" Guid="9DF6E321-96E8-43ac-86DF-F36E1EA1A0AB">
+                <File Id="File_Binder.cs" Name="Binder.cs" />
+                <File Id="File_ClassDef.cs" Name="ClassDef.cs" />
+                <File Id="File_Expressions.cs" Name="Expr.cs" LongName="Expressions.cs" />
+                <File Id="File_FlowChecker.cs" Name="FlowChkr.cs" LongName="FlowChecker.cs" />
+                <File Id="File_FuncDef.cs" Name="FuncDef.cs" />
+                <File Id="File_FuncDef.Generated.cs" Name="FuncDefG.cs" LongName="FuncDef.Generated.cs" />                
+                <File Id="File_Node.cs" Name="Node.cs" />
+                <File Id="File_Operator.cs" Name="Operator.cs" />
+                <File Id="File_Operator.Generated.cs" Name="OperatrG.cs" LongName="Operator.Generated.cs"/>
+                <File Id="File_ScopeStatement.cs" Name="SCOPESTM.CS" LongName="ScopeStatement.cs" />
+                <File Id="File_ScopeStatement.Generated.cs" Name="SCPESTMG.CS" LongName="ScopeStatement.Generated.cs" />
+                <File Id="File_Statements.cs" Name="Stmt.cs" LongName="Statements.cs" />
+                <File Id="File_Walker.Generated.cs" Name="WALKERGN.CS" LongName="Walker.Generated.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonCompilerGeneration" FileSource="Src\IronPython\Compiler\Generation">
+            <Component Id="Comp_SrcIronPythonCompilerGeneration" DiskId="1" Guid="7322EC89-7650-4bcd-8369-31B48764222F">
+                <File Id="File_AssemblyGen.cs" Name="ASMGEN.CS" LongName="AssemblyGen.cs" />
+                <File Id="File_CodeGen.cs" Name="CodeGen.cs" />
+                <File Id="File_EnvironmentFactory.cs" Name="ENVFACT.CS" LongName="EnvironmentFactory.cs" />
+                <File Id="File_EnvironmentNamespace.cs" Name="ENVNSPCE.CS" LongName="EnvironmentNamespace.cs" />
+                <File Id="File_EnvironmentReference.cs" Name="ENVREF.CS" LongName="EnvironmentReference.cs" />
+                <File Id="File_Namespace.cs" Name="NAMESPCE.CS" LongName="Namespace.cs" />
+                <File Id="File_NewSubtypeMaker.cs" Name="NEWSTMK.CS" LongName="NewSubtypeMaker.cs" />
+                <File Id="File_NewTypeMaker.cs" Name="NEWTYPMK.CS" LongName="NewTypeMaker.cs" />
+                <File Id="File_OutputGenerator.cs" Name="OUTPUTGN.CS" LongName="OutputGenerator.cs" />
+                <File Id="File_Slot.cs" Name="Slot.cs" />
+                <File Id="File_SlotFactory.cs" Name="SLOTFACT.CS" LongName="SlotFactory.cs" />
+                <File Id="File_TypeGen.cs" Name="TypeGen.cs" />
+                <File Id="File_UserTypeGenerator.cs" Name="USRTPGEN.cs" LongName="UserTypeGenerator.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonHosting" FileSource="Src\IronPython\Hosting">
+            <Component Id="Comp_SrcIronPythonHosting" DiskId="1" Guid="F33420D3-ABF7-4EF3-9992-7F8FDB53EB0F">
+                <File Id="File_AdapterDict.cs" Name="AdptDict.CS" LongName="AdapterDict.cs" />
+                <File Id="File_CompiledCode.cs" Name="CompCode.CS" LongName="CompiledCode.cs" />
+                <File Id="File_CompilerSink.cs" Name="CMPLSINK.CS" LongName="CompilerSink.cs" />
+                <File Id="File_EngineModule.cs" Name="EnginMod.CS" LongName="EngineModule.cs" />
+                <File Id="File_PythonCompiler.cs" Name="PYCMPLR.CS" LongName="PythonCompiler.cs" />
+                <File Id="File_PythonEngine.cs" Name="PYENG.CS" LongName="PythonEngine.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonModules" FileSource="Src\IronPython\Modules">
+            <Component Id="Comp_SrcIronPythonModules" DiskId="1" Guid="FEB94478-6B5E-4912-98DC-A518F93D328E">
+                <File Id="File_binascii.cs" Name="binascii.cs" />
+                <File Id="File_clr.cs" Name="clr.cs" />
+                <File Id="File_codecs.cs" Name="codecs.cs" />
+                <File Id="File_collections.cs" Name="COLLECTS.CS" LongName="collections.cs" />
+                <File Id="File_copy_reg.cs" Name="copy_reg.cs" />
+                <File Id="File_cStringIO.cs" Name="CSTRIO.CS" LongName="cStringIO.cs" />
+                <File Id="File_cPickle.cs" Name="cPickle.cs" />
+                <File Id="File_datetime.cs" Name="datetime.cs" />
+                <File Id="File_errno.cs" Name="errno.cs" />
+                <File Id="File_gc.cs" Name="gc.cs" />
+                <File Id="File_imp.cs" Name="imp.cs" />
+                <File Id="File_IterTools.cs" Name="ITERTO_1.CS" LongName="IterTools.cs" />
+                <File Id="File_locale.cs" Name="LOCALE.CS" LongName="locale.cs" />
+                <File Id="File_marshal.cs" Name="marshal.cs" />
+                <File Id="File_math.cs" Name="math.cs" />
+                <File Id="File_math.generated.cs" Name="mathgen.cs" LongName = "math.Generated.cs" />
+                <File Id="File_nt.cs" Name="nt.cs" />
+                <File Id="File_operator.cs" Name="operator.cs" />
+                <File Id="File_ModExceptions.cs" Name="EXCEPS.CS" LongName="Exceptions.cs" />
+                <File Id="File_ModExceptions.Generated.cs" Name="EXCEPSG.CS" LongName="Exceptions.Generated.cs" />
+                <File Id="File_re.cs" Name="re.cs" />
+                <File Id="File_thread.cs" Name="thread.cs" />
+                <File Id="File_time.cs" Name="time.cs" />
+                <File Id="File_random.cs" Name="_random.cs" />
+                <File Id="File_socket.cs" Name="socket.cs" />
+                <File Id="File_sre.cs" Name="_sre.cs" />
+                <File Id="File_struct.cs" Name="struct.cs" />
+                <File Id="File_weakref.cs" Name="_weakref.cs" />
+                <File Id="File_weakref.Generated.cs" Name="_weakrfG.cs" LongName="_weakref.Generated.cs" />
+                <File Id="File_builtin.cs" Name="BUILTIN.CS" LongName="Builtin.cs" />
+                <File Id="File_builtin.generated.cs" Name="BUILTING.CS" LongName="Builtin.Generated.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonRuntime" FileSource="Src\IronPython\Runtime">
+            <Component Id="Comp_SrcIronPythonRuntime" DiskId="1" Guid="52BA8F5A-46F5-473C-ADA7-7BD6DBFD33A0">
+                <File Id="File_Attributes.cs" Name="ATTRS.CS" LongName="Attributes.cs" />
+                <File Id="File_CompareUtil.cs" Name="CMPUTIL.CS" LongName="CompareUtil.cs" />
+                <File Id="File_ConversionWrappers.cs" Name="CONVWRAP.CS" LongName="ConversionWrappers.cs" />
+                <File Id="File_Converter.Generated.cs" Name="CNVRTRG.CS" LongName="Converter.Generated.cs" />
+                <File Id="File_Converter.cs" Name="CNVRTR.CS" LongName="Converter.cs" />
+                <File Id="File_CustomSymbolDict.cs" Name="CSYMDICT.CS" LongName="CustomSymbolDict.cs" />
+                <File Id="File_Dict.cs" Name="Dict.cs" />
+                <File Id="File_DictComparers.cs" Name="DictComp.cs" LongName="DictComparers.cs"/>
+                <File Id="File_Enumerate.cs" Name="ENUMERAT.CS" LongName="Enumerate.cs" />
+                <File Id="File_FieldIdDict.cs" Name="FLDIDDCT.CS" LongName="FieldIdDict.cs" />
+                <File Id="File_Generator.cs" Name="GEN.CS" LongName="Generator.cs" />
+                <File Id="File_IdDispenser.cs" Name="IDDISP.CS" LongName="IdDispenser.cs" />
+                <File Id="File_Importer.cs" Name="Importer.cs" />
+                <File Id="File_Interfaces.cs" Name="IFACES.CS" LongName="Interfaces.cs" />
+                <File Id="File_Interfaces.Generated.cs" Name="IFACESG.CS" LongName="Interfaces.Generated.cs" />
+                <File Id="File_List.cs" Name="List.cs" />
+                <File Id="File_LiteralParser.cs" Name="LITERALP.CS" LongName="LiteralParser.cs" />
+                <File Id="File_ModuleScope.cs" Name="ModScope.cs" LongName="ModuleScope.cs"/>
+                <File Id="File_PerfTrack.cs" Name="PerfTrak.cs" LongName="PerfTrack.cs" />
+                <File Id="File_Publisher.cs" Name="Publishr.CS" LongName="Publisher.cs" />
+                <File Id="File_PythonBuffer.cs" Name="PYBUFFER.CS" LongName="PythonBuffer.cs" />
+                <File Id="File_PythonFile.cs" Name="PYFILE.CS" LongName="PythonFile.cs" />
+                <File Id="File_PythonModule.cs" Name="PYMOD.CS" LongName="PythonModule.cs" />
+                <File Id="File_ReflectedPackage.cs" Name="REFLPKG.CS" LongName="ReflectedPackage.cs" />
+                <File Id="File_ReflectionUtil.cs" Name="REFLUTIL.CS" LongName="ReflectionUtil.cs" />
+                <File Id="File_Set.cs" Name="Set.cs" />
+                <File Id="File_Slice.cs" Name="Slice.cs" />
+                <File Id="File_StringFormatter.cs" Name="STRFMTR.CS" LongName="StringFormatter.cs" />
+                <File Id="File_Super.cs" Name="Super.cs" />
+                <File Id="File_SymbolIdDictBase.cs" Name="SymDictB.CS" LongName="SymbolIdDictBase.cs" />
+                <File Id="File_SymbolTable.cs" Name="SYMTABLE.CS" LongName="SymbolTable.cs" />
+                <File Id="File_SymbolTable.Generated.cs" Name="SYMTBLEG.CS" LongName="SymbolTable.Generated.cs" />
+                <File Id="File_SystemState.cs" Name="SYSSTATE.CS" LongName="SystemState.cs" />
+                <File Id="File_Tuple.cs" Name="Tuple.cs" />
+                <File Id="File_Uninitialized.cs" Name="UNINITED.CS" LongName="Uninitialized.cs" />
+                <File Id="File_WeakHash.cs" Name="WeakHash.cs" />
+                <File Id="File_WeakRef.cs" Name="WeakRef.cs" />
+                <File Id="File_XRange.cs" Name="XRange.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonRuntimeCalls" FileSource="Src\IronPython\Runtime\Calls">
+            <Component Id="Comp_SrcIronPythonRuntimeCalls" DiskId="1" Guid="3D91385A-EDB4-4438-8EDF-D0D4D203FC45">
+                <File Id="File_BuiltinFunction.cs" Name="BUILTINF.CS" LongName="BuiltinFunction.cs" />
+                <File Id="File_BuiltinFunction.Generated.cs" Name="BUILTING.CS" LongName="BuiltinFunction.Generated.cs" />
+                <File Id="File_DefaultContext.cs" Name="DEFCTX.CS" LongName="DefaultContext.cs" />
+                <File Id="File_Descriptors.cs" Name="DSCRPTRS.CS" LongName="Descriptors.cs" />
+                <File Id="File_FastCallable.cs" Name="FastCall.CS" LongName="FastCallable.cs" />
+                <File Id="File_FastCallable.Generated.cs" Name="FastCalG.CS" LongName="FastCallable.Generated.cs" />
+                <File Id="File_Function.Generated.cs" Name="FuncGen.cs" LongName = "Function.Generated.cs"/>
+                <File Id="File_Function.cs" Name="Function.cs" />
+                <File Id="File_FunctionEnvironment.cs" Name="FUNCENV.CS" LongName="FunctionEnvironment.cs" />
+                <File Id="File_FunctionEnvironment.Generated.cs" Name="FUNCENVG.CS" LongName="FunctionEnvironment.Generated.cs" />
+                <File Id="File_Interfaces_Calls_.cs" Name="IFACES.CS" LongName="Interfaces.cs" />
+                <File Id="File_KwArgBinder.cs" Name="KWARGBND.CS" LongName="KwArgBinder.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonRuntimeExceptions" FileSource="Src\IronPython\Runtime\Exceptions">
+            <Component Id="Comp_SrcIronPythonRuntimeExceptions" DiskId="1" Guid="1F6E713F-6C4C-4025-98BE-FD01CE7A5383">
+                <File Id="File_ExceptionConverter.cs" Name="EXCPCONV.CS" LongName="ExceptionConverter.cs" />
+                <File Id="File_PythonException.cs" Name="PYEXCEP.CS" LongName="PythonException.cs" />
+                <File Id="File_PythonException.Generated.cs" Name="PYEXCEPG.CS" LongName="PythonException.Generated.cs" />
+                <File Id="File_TraceBack.cs" Name="TRACEBK.CS" LongName="TraceBack.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonRuntimeOperations" FileSource="Src\IronPython\Runtime\Operations">
+            <Component Id="Comp_SrcIronPythonRuntimeOperations" DiskId="1" Guid="798D77D5-2D0F-4a94-A8D7-8F27B93C94F9">
+                <File Id="File_ArrayOps.cs" Name="ArrayOps.cs" />
+                <File Id="File_BoolOps.cs" Name="BoolOps.cs" />
+                <File Id="File_ByteOps.cs" Name="ByteOps.cs" />
+                <File Id="File_ByteOps.Generated.cs" Name="ByteOpsG.CS" LongName="ByteOps.Generated.cs" />
+                <File Id="File_CharOps.cs" Name="CharOps.cs" />
+                <File Id="File_ComplexOps.cs" Name="CPLXOPS.CS" LongName="ComplexOps.cs" />
+                <File Id="File_ComplexOps.Generated.cs" Name="CPLXOPSG.CS" LongName="ComplexOps.Generated.cs" />
+                <File Id="File_CustomTypeDescHelpers.cs" Name="CUSTYPDS.CS" LongName="CustomTypeDescHelpers.cs" />
+                <File Id="File_DecimalOps.cs" Name="DecmlOps.CS" LongName="DecimalOps.cs" />
+                <File Id="File_EnumOps.cs" Name="EnumOps.cs" />
+                <File Id="File_FloatOps.cs" Name="FloatOps.cs" />
+                <File Id="File_FloatOps.Generated.cs" Name="FltOpsG.cs" LongName = "FloatOps.Generated.cs"/>
+                <File Id="File_InstanceOps.cs" Name="InstOps.cs" LongName="InstanceOps.cs" />
+                <File Id="File_Int16Ops.cs" Name="Int16Ops.cs" />
+                <File Id="File_Int16Ops.Generated.cs" Name="I16OpsG.cs" LongName="Int16Ops.Generated.cs" />
+                <File Id="File_Int64Ops.cs" Name="Int64Ops.cs" />
+                <File Id="File_Int64Ops.Generated.cs" Name="I64OpsG.cs" LongName="Int64Ops.Generated.cs" />
+                <File Id="File_IntOps.cs" Name="IntOps.cs" />
+                <File Id="File_IntOps.Generated.cs" Name="IntOpsG.cs" LongName="IntOps.Generated.cs"/>
+                <File Id="File_LongOps.Generated.cs" Name="LongOpsG.cs" LongName="LongOps.Generated.cs" />
+                <File Id="File_LongOps.cs" Name="LongOps.cs" />
+                <File Id="File_ObjectOps.cs" Name="ObjOps.cs" LongName="ObjectOps.cs" />
+                <File Id="File_Ops.cs" Name="Ops.cs" />
+                <File Id="File_Ops.Generated.cs" Name="OpsGen.cs" LongName="Ops.Generated.cs" />
+                <File Id="File_SByteOps.cs" Name="SByteOps.cs" />
+                <File Id="File_SByteOps.Generated.cs" Name="SByteOpG.cs" LongName="SByteOps.Generated.cs" />
+                <File Id="File_SingleOps.cs" Name="SingOps.cs" LongName="SingleOps.cs" />
+                <File Id="File_SingleOps.Generated.cs" Name="SingOpsG.cs" LongName="SingleOps.Generated.cs" />
+                <File Id="File_StringOps.cs" Name="STROPS.CS" LongName="StringOps.cs" />
+                <File Id="File_UInt16Ops.cs" Name="UI16Ops.cs" LongName="UInt16Ops.cs" />
+                <File Id="File_UInt16Ops.Generated.cs" Name="UI16OpsG.cs" LongName="UInt16Ops.Generated.cs" />
+                <File Id="File_UInt32Ops.cs" Name="UI32Ops.cs" LongName="UInt32Ops.cs" />
+                <File Id="File_UInt32Ops.Generated.cs" Name="UI32OpsG.cs" LongName="UInt32Ops.Generated.cs" />
+                <File Id="File_UInt64Ops.cs" Name="UI64Ops.cs" LongName="UInt64Ops.cs" />
+                <File Id="File_UInt64Ops.Generated.cs" Name="UI64OpsG.cs" LongName="UInt64Ops.Generated.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonRuntimeTypes" FileSource="Src\IronPython\Runtime\Types">
+            <Component Id="Comp_SrcIronPythonRuntimeTypes" DiskId="1" Guid="F9BF6036-BF23-4192-824D-078B72113DAB">
+                <File Id="File_ComObject.cs" Name="COMOBJ.CS" LongName="ComObject.cs" />
+                <File Id="File_CompiledType.cs" Name="CMPTYPE.CS" LongName="CompiledType.cs" />
+                <File Id="File_DelegateType.cs" Name="DELEGTYP.CS" LongName="DelegateType.cs" />
+                <File Id="File_DynamicType.cs" Name="DYNATYPE.CS" LongName="DynamicType.cs" />
+                <File Id="File_DynamicType.Generated.cs" Name="DYNTYPEG.CS" LongName="DynamicType.Generated.cs" />
+                <File Id="File_EmptyType.cs" Name="EMPTTYPE.CS" LongName="EmptyType.cs" />
+                <File Id="File_MethodWrapper.cs" Name="MethodWr.cs" LongName="MethodWrapper.cs" />
+                <File Id="File_Mro.cs" Name="Mro.cs" />
+                <File Id="File_OldClass.cs" Name="OldClass.cs" />
+                <File Id="File_OpsReflectedType.cs" Name="OpsRefTy.cs" LongName="OpsReflectedType.cs" />
+                <File Id="File_ReflectedAssembly.cs" Name="REFLASSM.CS" LongName="ReflectedAssembly.cs" />
+                <File Id="File_ReflectedMembers.cs" Name="REFLMEMB.CS" LongName="ReflectedMembers.cs" />
+                <File Id="File_ReflectedType.cs" Name="REFLTYPE.CS" LongName="ReflectedType.cs" />
+                <File Id="File_TypeCache.Generated.cs" Name="TypeCach.cs" LongName="TypeCache.Generated.cs" />
+                <File Id="File_UserType.cs" Name="UserType.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonConsole" FileSource="Src\IronPythonConsole">
+            <Component Id="Comp_SrcIronPythonConsole" DiskId="1" Guid="CE0D6A94-2D23-42BD-ABA4-C93E874918BA">
+                <File Id="File_ipy.ico" Name="ipy.ico" />
+                <File Id="File_IronPythonConsole_AssemblyInfo.cs" Name="ASMINFO.CS" LongName="AssemblyInfo.cs" />
+                <File Id="File_IronPythonConsole.csproj" Name="IRPYCONS.CSP" LongName="IronPythonConsole.csproj" />
+                <File Id="File_PythonCommandLine.cs" Name="PYCMDLIN.CS" LongName="PythonCommandLine.cs" />
+                <File Id="File_SuperConsole.cs" Name="SUPRCONS.CS" LongName="SuperConsole.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonWindow" FileSource="Src\IronPythonWindow">
+            <Component Id="Comp_SrcIronPythonWindow" DiskId="1" Guid="723EF4AB-DB9E-4620-BCE9-9E2D97B2B815">
+                <File Id="File_ipyw.ico" Name="ipyw.ico" />
+                <File Id="File_IronPythonWindow.csproj" Name="IRPYWIN.CSP" LongName="IronPythonWindow.csproj" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcIronPythonTest" FileSource="Src\IronPythonTest">
+            <Component Id="Comp_SrcIronPythonTest" DiskId="1" Guid="BC1CAD47-EA16-4E63-AC99-BA53881016E9">
+                <File Id="File_AssemblyInfo.cs" Name="ASMINFO.CS" LongName="AssemblyInfo.cs" />
+                <File Id="File_AttrInjectorTest.cs" Name="ATTRINJ.CS" LongName="AttrInjectorTest.cs" />
+                <File Id="File_BinderTest.cs" Name="BINDERTE.cs" LongName="BinderTest.cs" />
+                <File Id="File_BindTest.cs" Name="BindTest.cs" />
+                <File Id="File_Conversions.cs" Name="Conversn.cs" LongName="Conversions.cs" />
+                <File Id="File_Cmplx.cs" Name="Cmplx.cs" />
+                <File Id="File_DefaultParams.cs" Name="Dfltprms.cs" LongName="DefaultParams.cs" />
+                <File Id="File_DeTest.cs" Name="DeTest.cs" />
+                <File Id="File_DelegateTest.cs" Name="DlgTest.cs" LongName="DelegateTest.cs" />
+                <File Id="File_Enums.cs" Name="Enums.cs" />
+                <File Id="File_EngineTest.cs" Name="ENGTEST.cs" LongName="EngineTest.cs"/>
+                <File Id="File_Events.cs" Name="Events.cs" />
+                <File Id="File_Excplicit.cs" Name="Explicit.cs" />
+                <File Id="File_IPTExceptionConverter.cs" Name="EXCPCONV.CS" LongName="ExceptionConverter.cs" />
+                <File Id="File_Exceptions.cs" Name="EXCEPTS.CS" LongName="Exceptions.cs" />
+                <File Id="File_GenMeth.cs" Name="GenMeth.cs" />
+                <File Id="File_Indexable.cs" Name="IDXABLE.CS" LongName="Indexable.cs" />
+                <File Id="File_InheritTest.cs" Name="NHRTTEST.CS" LongName="InheritTest.cs" />
+                <File Id="File_IntegerTest.cs" Name="INTTEST.CS" LongName="IntegerTest.cs" />
+                <File Id="File_IronMath.cs" Name="IronMath.cs" />
+                <File Id="File_IronPythonTest.csproj" Name="IRPYTEST.CSP" LongName="IronPythonTest.csproj" />
+                <File Id="File_LoadTest.cs" Name="LoadTest.cs" />
+                <File Id="File_NestedClass.cs" Name="NestCls.cs" LongName="NestedClass.cs" />
+                <File Id="File_StaticTest.cs" Name="StaticT.cs" LongName="StaticTest.cs" />
+                <File Id="File_TypeDescriptor.cs" Name="TYPEDESC.CS" LongName="TypeDescriptor.cs" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcScripts" FileSource="Src\Scripts">
+            <Component Id="Comp_SrcScripts" DiskId="1" Guid="2C37C080-7FC6-41CE-A5DA-9274CAD9BDF8">
+                <File Id="File_clean.py" Name="clean.py" />
+                <File Id="File_CompareDirs.py" Name="COMPARED.PY" LongName="CompareDirs.py" />
+                <File Id="File_copyrights.py" Name="COPYRIGH.PY" LongName="copyrights.py" />
+                <File Id="File_generate.py" Name="generate.py" />
+                <File Id="File_generate_alltypes.py" Name="GALLTYPE.PY" LongName="generate_alltypes.py" />
+                <File Id="File_generate_binops.py" Name="GBINOPS.PY" LongName="generate_binops.py" />
+                <File Id="File_generate_calls.py" Name="GCALLS.PY" LongName="generate_calls.py" />
+                <File Id="File_generate_convert.py" Name="GCONVERT.PY" LongName="generate_convert.py" />
+                <File Id="File_generate_environment.py" Name="GENVIRON.PY" LongName="generate_environment.py" />
+                <File Id="File_generate_exceptions.py" Name="GEXCEPTI.PY" LongName="generate_exceptions.py" />
+                <File Id="File_generate_indicetest.py" Name="GINDICET.PY" LongName="generate_indicetest.py" />
+                <File Id="File_generate_math.py" Name="GMATH.PY" LongName="generate_math.py" />
+                <File Id="File_generate_ops.py" Name="GOPS.PY" LongName="generate_ops.py" />
+                <File Id="File_generate_symboltable.py" Name="GSYMBOLT.PY" LongName="generate_symboltable.py" />
+                <File Id="File_generate_typecache.py" Name="GTYPECAC.PY" LongName="generate_typecache.py" />
+                <File Id="File_generate_walker.py" Name="GWALKER.PY" LongName="generate_walker.py" />
+                <File Id="File_make_meta1.py" Name="MAKEMETA.PY" LongName="make_meta1.py" />
+                <File Id="File_radix_generator.py" Name="RADIXGEN.PY" LongName="radix_generator.py" />
+                <File Id="File_test_builder.py" Name="TBUILDER.PY" LongName="test_builder.py" />
+                <File Id="File_test_cgcheck.py" Name="TCGCHECK.PY" LongName="test_cgcheck.py" />
+                <File Id="File_test_parrot.py" Name="TPARROT.PY" LongName="test_parrot.py" />
+                <File Id="File_test_pystone.py" Name="TPYSTONE.PY" LongName="test_pystone.py" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcTests" FileSource="Src\Tests">
+            <Component Id="Comp_SrcTests" DiskId="1" Guid="7E2635AF-ACDF-46CF-BAAB-E6E65F4F1026">
+                <File Id="File_c1.cs" Name="c1.cs" />
+                <File Id="File_c2.cs" Name="c2.cs" />
+                <File Id="File_c3.cs" Name="c3.cs" />
+                <File Id="File_categories.py" Name="CATEGORI.PY" LongName="categories.py" />
+                <File Id="File_custombuiltins.py" Name="CUSTOMBU.PY" LongName="custombuiltins.py" />
+                <File Id="File_iprun.py" Name="iprun.py" />
+                <File Id="File_pretest.py" Name="pretest.py" />
+                <File Id="File_run.py" Name="run.py" />
+                <File Id="File_test_array.py" Name="TARRAY.PY" LongName="test_array.py" />
+                <File Id="File_test_assert.py" Name="TASSERT.PY" LongName="test_assert.py"/>
+                <File Id="File_test_attr.py" Name="TATTR.PY" LongName="test_attr.py" />
+                <File Id="File_test_attrinjector.py" Name="TATTRINJ.PY" LongName="test_attrinjector.py" />
+                <File Id="File_test_bigint.py" Name="TBIGINT.PY" LongName="test_bigint.py" />
+                <File Id="File_test_binascii.py" Name="TBINASCI.PY" LongName="test_binascii.py" />
+                <File Id="File_test_bool.py" Name="TBOOL.PY" LongName="test_bool.py" />
+                <File Id="File_test_buffer.py" Name="TBUFFER.PY" LongName="test_buffer.py" />
+                <File Id="File_test_builtinfunc.py" Name="TBUILTIN.PY" LongName="test_builtinfunc.py" />
+                <File Id="File_test_cPickle.py" Name="TCPICKLE.PY" LongName="test_cPickle.py" />
+                <File Id="File_test_cStringIO.py" Name="TCSTRING.PY" LongName="test_cStringIO.py" />
+                <File Id="File_test_class.py" Name="TCLASS.PY" LongName="test_class.py" />
+                <File Id="File_test_cliclass.py" Name="TCLICLS.PY" LongName="test_cliclass.py" />
+                <File Id="File_test_closure.py" Name="TCLOSURE.PY" LongName="test_closure.py" />
+                <File Id="File_test_clrexception.py" Name="TCLREXCE.PY" LongName="test_clrexception.py" />
+                <File Id="File_test_clrload.py" Name="TCLRLOAD.PY" LongName="test_clrload.py" />
+                <File Id="File_test_clrload2.py" Name="TCLRLD2.PY" LongName="test_clrload2.py" />
+                <File Id="File_test_codedom.py" Name="TCODEDOM.PY" LongName="test_codedom.py" />
+                <File Id="File_test_cominterop.py" Name="TCOMINTE.PY" LongName="test_cominterop.py" />
+                <File Id="File_test_complex.py" Name="TCOMPLEX.PY" LongName="test_complex.py" />
+                <File Id="File_test_conditional.py" Name="TCONDTNL.PY" LongName="test_conditional.py" />
+                <File Id="File_test_datetime.py" Name="TDATETIM.PY" LongName="test_datetime.py" />
+                <File Id="File_test_decorator.py" Name="TDECORAT.PY" LongName="test_decorator.py" />
+                <File Id="File_test_delegate.py" Name="TDELEGAT.PY" LongName="test_delegate.py" />
+                <File Id="File_test_dict.py" Name="TDICT.PY" LongName="test_dict.py" />
+                <File Id="File_test_doc.py" Name="test_doc.py" />
+                <File Id="File_test_event.py" Name="TEVENT.PY" LongName="test_event.py" />
+                <File Id="File_test_exceptionconverter.py" Name="TEXCEPCV.PY" LongName="test_exceptionconverter.py" />
+                <File Id="File_test_exceptions.py" Name="TEXCEPTI.PY" LongName="test_exceptions.py" />
+                <File Id="File_test_exec.py" Name="TEXEC.PY" LongName="test_exec.py"/>
+                <File Id="File_test_execfile.py" Name="TEXECFIL.PY" LongName="test_execfile.py" />
+                <File Id="File_test_file.py" Name="TFILE.PY" LongName="test_file.py" />
+                <File Id="File_test_formatting.py" Name="TFORMATT.PY" LongName="test_formatting.py" />
+                <File Id="File_test_function.py" Name="TFUNCTIO.PY" LongName="test_function.py" />
+                <File Id="File_test_future.py" Name="TFUTURE.PY" LongName="test_future.py" />
+                <File Id="File_test_generator.py" Name="TGENERAT.PY" LongName="test_generator.py" />
+                <File Id="File_test_genericmeth.py" Name="TGENERIC.PY" LongName="test_genericmeth.py" />
+                <File Id="File_test_help.py" Name="testhelp.PY" LongName="test_help.py" />
+                <File Id="File_test_imp.py" Name="test_imp.py" />
+                <File Id="File_test_importpkg.py" Name="TIMPORTP.PY" LongName="test_importpkg.py" />
+                <File Id="File_test_in.py" Name="test_in.py" />
+                <File Id="File_test_index.py" Name="TINDEX.PY" LongName="test_index.py" />
+                <File Id="File_test_inheritance.py" Name="TINHERIT.PY" LongName="test_inheritance.py" />
+                <File Id="File_test_interactive.py" Name="TINTERAC.PY" LongName="test_interactive.py" />
+                <File Id="File_test_ipyc.py" Name="TIPYC.PY" LongName="test_ipyc.py" />
+                <File Id="File_test_ipye.py" Name="TIPYE.PY" LongName="test_ipye.py" />
+                <File Id="File_test_ironmath.py" Name="TIRONMAT.PY" LongName="test_ironmath.py"/>
+                <File Id="File_test_isinstance.py" Name="TISINSTA.PY" LongName="test_isinstance.py" />
+                <File Id="File_test_iterator.py" Name="TITERATO.PY" LongName="test_iterator.py" />
+                <File Id="File_test_kwarg.py" Name="TKWARG.PY" LongName="test_kwarg.py" />
+                <File Id="File_test_list.py" Name="TLIST.PY" LongName="test_list.py" />
+                <File Id="File_test_listcomp.py" Name="TLISTCOM.PY" LongName="test_listcomp.py" />
+                <File Id="File_test_marshal.py" Name="TMARSHAL.PY" LongName="test_marshal.py" />
+                <File Id="File_test_math.py" Name="TMATH.PY" LongName="test_math.py" />
+                <File Id="File_test_memory.py" Name="TMEMORY.PY" LongName="test_memory.py" />
+                <File Id="File_test_methodbinder1.py" Name="TMETHODB.PY" LongName="test_methodbinder1.py"/>
+                <File Id="File_test_methodbinder2.py" Name="TMETHOD0.PY" LongName="test_methodbinder2.py"/>
+                <File Id="File_test_methoddispatch.py" Name="TMETHODD.PY" LongName="test_methoddispatch.py" />
+                <File Id="File_test_missing.py" Name="TMISSING.PY" LongName="test_missing.py" />
+                <File Id="File_test_namebinding.py" Name="TNAMEBIN.PY" LongName="test_namebinding.py" />
+                <File Id="File_test_nofuture.py" Name="TNOFUTUR.PY" LongName="test_nofuture.py" />
+                <File Id="File_test_nonetype.py" Name="TNONETYP.PY" LongName="test_nonetype.py" />
+                <File Id="File_test_nt.py" Name="test_nt.py" />
+                <File Id="File_test_number.py" Name="TNUMBER.PY" LongName="test_number.py" />
+                <File Id="File_test_numtypes.py" Name="TNUMTYPS.PY" LongName="test_numtypes.py" />
+                <File Id="File_test_operator.py" Name="TOPERATO.PY" LongName="test_operator.py" />
+                <File Id="File_test_privateBinding.py" Name="TPRVBIND.PY" LongName="test_privateBinding.py" />
+                <File Id="File_test_property.py" Name="TPROPERT.PY" LongName="test_property.py" />
+                <File Id="File_test_protected.py" Name="TPROTECT.PY" LongName="test_protected.py" />
+                <File Id="File_test_python25.py" Name="TPYTHON2.PY" LongName="test_python25.py"/>
+                <File Id="File_test_random.py" Name="TRANDOM.PY" LongName="test_random.py"/>
+                <File Id="File_test_re.py" Name="test_re.py" />
+                <File Id="File_test_set.py" Name="test_set.py" />
+                <File Id="File_test_slice.py" Name="TSLICE.PY" LongName="test_slice.py" />
+                <File Id="File_test_socket.py" Name="TSOCKET.PY" LongName="test_socket.py" />
+                <File Id="File_test_specialcontext.py" Name="TSPECIAL.PY" LongName="test_specialcontext.py" />
+                <File Id="File_test_statics.py" Name="TSTATICS.PY" LongName="test_statics.py"/>
+                <File Id="File_test_stdconsole.py" Name="TSTDCONS.PY" LongName="test_stdconsole.py" />
+                <File Id="File_test_str.py" Name="test_str.py" />
+                <File Id="File_test_struct.py" Name="TSTRUCT.PY" LongName="test_struct.py" />
+                <File Id="File_test_superconsole.py" Name="TSUPERCO.PY" LongName="test_superconsole.py" />
+                <File Id="File_test_syntax.py" Name="TSYNTAX.PY" LongName="test_syntax.py" />
+                <File Id="File_test_sys.py" Name="test_sys.py" />
+                <File Id="File_test_thread.py" Name="TTHREAD.PY" LongName="test_thread.py" />
+                <File Id="File_test_threadsafety.py" Name="TTHREADS.PY" LongName="test_threadsafety.py" />
+                <File Id="File_test_time.py" Name="TTIME.PY" LongName="test_time.py" />
+                <File Id="File_test_tuple.py" Name="TTUPLE.PY" LongName="test_tuple.py" />
+                <File Id="File_test_unicode.py" Name="TUNICODE.PY" LongName="test_unicode.py" />
+                <File Id="File_test_weakref.py" Name="TWEAKREF.PY" LongName="test_weakref.py" />
+                <File Id="File_test_xrange.py" Name="TXRANGE.PY" LongName="test_xrange.py" />
+                <File Id="File_toimport.py" Name="toimport.py" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcTestsInputs" FileSource="Src\Tests\Inputs">
+            <Component Id="Comp_SrcTestsInputs" DiskId="1" Guid="1CD86534-6F61-4b18-B863-C32A8991590E">
+                <File Id="File_exit.py" Name="exit.py" />
+                <File Id="File_exitFuncRaises.py" Name="EXITFUNC.PY" LongName="exitFuncRaises.py" />
+                <File Id="File_exitFuncRuns.py" Name="EXITFUN0.PY" LongName="exitFuncRuns.py" />
+                <File Id="File_raise.py" Name="raise.py" />
+                <File Id="File_simpleCommand.py" Name="SIMPLECO.PY" LongName="simpleCommand.py" />
+                <File Id="File_syntaxError.py" Name="SYNTAXER.PY" LongName="syntaxError.py" />
+                <File Id="File_uninitializedGlobal.py" Name="UNINITGB.PY" LongName="uninitializedGlobal.py" />
+                <File Id="File_UseCLI.py" Name="USECLI.PY" LongName="UseCLI.py" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcTestsInc" FileSource="Src\Tests\Inc">
+            <Component Id="Comp_SrcTestsInc" DiskId="1" Guid="9732DDB3-57FD-4A49-9ED8-AF0219F21EA4">
+                <File Id="File_toexec.py" Name="toexec.py" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcTestsLib" FileSource="Src\Tests\lib">
+            <Component Id="Comp_SrcTestsLib" DiskId="1" Guid="5D309824-2B5E-4809-810C-B1CE1D02138C">
+                <File Id="File___init__.py" Name="__init__.py" />
+                <File Id="File_assert_util.py" Name="ASSERTUT.PY" LongName="assert_util.py" />
+                <File Id="File_console_util.py" Name="CONSOLEU.PY" LongName="console_util.py" />
+                <File Id="File_file_util.py" Name="FILEUTIL.PY" LongName="file_util.py" />
+                <File Id="File_process_util.py" Name="PROCESSU.PY" LongName="process_util.py" />
+                <File Id="File_type_util.py" Name="TYPEUTIL.PY" LongName="type_util.py" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="Dir_SrcTestsCompat" FileSource="Src\Tests\Compat">
+            <Component Id="Comp_SrcTestsCompat" DiskId="1" Guid="C56B9C39-4296-4bc8-BD0B-778B19324ECD">
+                <File Id="File_common.py" Name="common.py" />
+                <File Id="File_rulediff.py" Name="rulediff.py" />
+                <File Id="File_runsbs.py" Name="runsbs.py" />
+                <File Id="File_sbs_builtin.py" Name="SBUILTIN.PY" LongName="sbs_builtin.py" />
+                <File Id="File_sbs_class_compare.py" Name="SCLASSCO.PY" LongName="sbs_class_compare.py" />
+                <File Id="File_sbs_exceptions.py" Name="SBSEXCEP.PY" LongName="sbs_exceptions.py" />
+                <File Id="File_sbs_parse_string.py" Name="SPARSEST.PY" LongName="sbs_parse_string.py" />
+                <File Id="File_sbs_simple_compare.py" Name="SSIMPLEC.PY" LongName="sbs_simple_compare.py" />
+                <File Id="File_sbs_simple_ops.py" Name="SSIMPLEO.PY" LongName="sbs_simple_ops.py" />
+                <File Id="File_sbs_true_division.py" Name="STRUEDIV.PY" LongName="sbs_true_division.py" />
+                <File Id="File_sbs_typeop.py" Name="STYPEOP.PY" LongName="sbs_typeop.py" />
+                <File Id="File_testdata.py" Name="testdata.py" />
+            </Component>
+        </DirectoryRef>
+    </Fragment>
+</Wix>
