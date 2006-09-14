@@ -103,11 +103,7 @@ namespace IronPython.Hosting {
 
         public static string VersionString {
             get {
-                Version pythonVersion = Version;
-                string version = String.Format("IronPython {0}.{1}.{2} on .NET {3}",
-                                  pythonVersion.Major, pythonVersion.Minor, pythonVersion.Build,
-                                  Environment.Version);
-                return version;
+                return String.Format("IronPython {0} ({1}) on .NET {2}", GetInformationalVersion(), GetFileVersion(), Environment.Version);
             }
         }
 
@@ -1042,7 +1038,27 @@ namespace IronPython.Hosting {
         }
 
         #endregion
-    }
 
+        private static T GetAssemblyAttribute<T>() where T : Attribute {
+            Assembly asm = typeof(PythonEngine).Assembly;
+            object[] attributes = asm.GetCustomAttributes(typeof(T), false);
+            if (attributes != null && attributes.Length > 0) {
+                return (T)attributes[0];
+            } else {
+                Debug.Fail(String.Format("Cannot find attribute {0}", typeof(T).Name));
+                return null;
+            }
+        }
+
+        private static string GetInformationalVersion() {
+            AssemblyInformationalVersionAttribute attribute = GetAssemblyAttribute<AssemblyInformationalVersionAttribute>();
+            return attribute != null ? attribute.InformationalVersion : "";
+        }
+
+        private static string GetFileVersion() {
+            AssemblyFileVersionAttribute attribute = GetAssemblyAttribute<AssemblyFileVersionAttribute>();
+            return attribute != null ? attribute.Version : "";
+        }
+    }
 }
 

@@ -25,6 +25,23 @@ pe = IronPython.Hosting.PythonEngine()
 def test_trivial():
     Assert(IronPython.Hosting.PythonEngine.Version != "")
 
+
+def test_version():
+    """ test that the assembly versions are the same as 1.0 release for compatibility."""
+    import clr
+    import System
+
+    for asm in [
+            clr.GetClrType(IronPython.Hosting.PythonEngine).Assembly,
+            (1L).GetType().Assembly
+        ]:
+        av = asm.GetName().Version
+        Assert(av != None)
+        AreEqual(av.Major, 1)
+        AreEqual(av.Minor, 0)
+        AreEqual(av.Build, 60816)
+        AreEqual(av.Revision, 1877)
+
 def test_coverage():
     # 1. fasteval 
     save = IronPython.Compiler.Options.FastEvaluation
