@@ -887,6 +887,10 @@ namespace IronPython.Modules {
                     case 'Z':
                         // known escape sequences, leave escaped.
                         break;
+                    case '\\':
+                        // escaping a \\
+                        cur += 2;
+                        break;
                     default:
                         System.Globalization.UnicodeCategory charClass = Char.GetUnicodeCategory(curChar);
                         switch (charClass) {

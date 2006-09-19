@@ -173,7 +173,15 @@ namespace IronPython.Modules {
                     switch (formatInfo[i].Type) {
                         case FormatInfoType.UserText: formats[i] = "'" + formatInfo[i].Text + "'"; break;
                         case FormatInfoType.SimpleFormat: formats[i] = formatInfo[i].Text; break;
-                        case FormatInfoType.CustomFormat: formats[i] = "%" + formatInfo[i].Text; break;
+                        case FormatInfoType.CustomFormat:
+                            // include % if we only have one specifier to mark that it's a custom
+                            // specifier
+                            if (formatInfo.Count == 1 && formatInfo[i].Text.Length == 1) {
+                                formats[i] = "%" + formatInfo[i].Text;
+                            } else {
+                                formats[i] = formatInfo[i].Text;
+                            } 
+                            break;
                     }
                 }
 
@@ -283,7 +291,11 @@ namespace IronPython.Modules {
                         case 'A': newFormat.Add(new FormatInfo("dddd")); break;
                         case 'b': newFormat.Add(new FormatInfo("MMM")); break;
                         case 'B': newFormat.Add(new FormatInfo("MMMM")); break;
-                        case 'c': newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, "f")); break;
+                        case 'c': 
+                            newFormat.Add(new FormatInfo(FormatInfoType.SimpleFormat, "d"));
+                            newFormat.Add(new FormatInfo(FormatInfoType.UserText, " "));
+                            newFormat.Add(new FormatInfo(FormatInfoType.SimpleFormat, "t")); 
+                            break;
                         case 'd':
                             // if we're parsing we want to use the less-strict
                             // d format and which doesn't require both digits.
@@ -297,7 +309,7 @@ namespace IronPython.Modules {
                         case 'p': newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, "t")); break;
                         case 'S': newFormat.Add(new FormatInfo("ss")); break;
                         case 'w': newFormat.Add(new FormatInfo("ddd")); break;       // weekday name
-                        case 'x': newFormat.Add(new FormatInfo(FormatInfoType.SimpleFormat, "D")); break;
+                        case 'x': newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, PythonLocale.currentLocale.Time.DateTimeFormat.ShortDatePattern)); break;
                         case 'X': newFormat.Add(new FormatInfo(FormatInfoType.SimpleFormat, "t")); break;
                         case 'y': newFormat.Add(new FormatInfo("yy")); break;
                         case 'Y': newFormat.Add(new FormatInfo("yyyy")); break;

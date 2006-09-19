@@ -197,6 +197,9 @@ def test_escape():
     x = re.escape(s)
     Assert(x == '\\ \\!\\"\\#\\$\\%\\&\\\'\\(\\)\\*\\+\\,\\-\\.\\/\\:\\;\\<\\=\\>\\?\\@\\[\\\\\\]\\^\\_\\`\\{\\|\\}\\~\\\x7f')
 
+    x = re.compile(r'[\\A-Z\.\+]')
+    Assert(x.search('aaaA\\B\\Caaa'))
+    
 # From the docs: "^" matches only at the start of the string, or in MULTILINE mode also immediately 
 # following a newline.
 # bug 827 

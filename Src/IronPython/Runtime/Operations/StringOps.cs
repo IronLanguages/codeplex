@@ -256,7 +256,7 @@ namespace IronPython.Runtime.Operations {
             [DefaultParameterValue("strict")]string errors) {
 
             if (cls == TypeCache.String) {
-                return Decode(context, @string, encoding, errors);
+                return Decode(context, @string, encoding ?? context.SystemState.getdefaultencoding(), errors);
             } else {
                 return cls.ctor.Call(cls, @string, encoding, errors);
             }
@@ -413,16 +413,16 @@ namespace IronPython.Runtime.Operations {
 
         [PythonName("decode")]
         public static string Decode(ICallerContext context, string s) {
-            return Decode(context, s, null, "strict");
+            return Decode(context, s, Missing.Value, "strict");
         }
 
         [PythonName("decode")]
-        public static string Decode(ICallerContext context, string s, string encoding, [DefaultParameterValue("strict")]string errors) {
+        public static string Decode(ICallerContext context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
             return RawDecode(context.SystemState, s, encoding, errors);
         }
 
         [PythonName("encode")]
-        public static string Encode(ICallerContext context, string s, string encoding, [DefaultParameterValue("strict")]string errors) {
+        public static string Encode(ICallerContext context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
             return RawEncode(context.SystemState, s, encoding, errors);
         }
 
@@ -1321,7 +1321,17 @@ namespace IronPython.Runtime.Operations {
             return name.ToLower().Replace('-', '_');
         }
 
-        private static string RawDecode(SystemState state, string s, string encoding, string errors) {
+        private static string RawDecode(SystemState state, string s, object encodingType, string errors) {
+            string encoding = null;
+            if (encodingType == Missing.Value) {
+                encoding = state.getdefaultencoding();
+            } else {
+                encoding = encodingType as string;
+                if (encoding == null)
+                    encoding = state.getdefaultencoding();
+                    //throw Ops.TypeError("decode() expected string, got {0}", Ops.StringRepr(Ops.GetDynamicType(encodingType).Name));
+            }
+
             if (encoding != null) {
                 string normalizedName = NormalizeEncodingName(encoding);
                 if ("raw_unicode_escape" == normalizedName) {
@@ -1360,7 +1370,18 @@ namespace IronPython.Runtime.Operations {
 
         }
 
-        private static string RawEncode(SystemState state, string s, string encoding, string errors) {
+        private static string RawEncode(SystemState state, string s, object encodingType, string errors) {
+            string encoding = null;
+            if (encodingType == Missing.Value) {
+                encoding = state.getdefaultencoding();
+            } else {
+                encoding = encodingType as string;
+                if (encoding == null)
+                    encoding = state.getdefaultencoding();
+                    //throw Ops.TypeError("encode() expected string, got {0}", Ops.StringRepr(Ops.GetDynamicType(encodingType).Name));
+
+            }
+
             if (encoding != null) {
                 string normalizedName = NormalizeEncodingName(encoding);
                 if ("raw_unicode_escape" == normalizedName) {
@@ -1417,6 +1438,7 @@ namespace IronPython.Runtime.Operations {
             EncodingInfo[] encs = Encoding.GetEncodings();
             for (int i = 0; i < encs.Length; i++) {
                 string normalizedName = NormalizeEncodingName(encs[i].Name);
+
                 // setup well-known mappings, for everything
                 // else we'll store as lower case w/ _                
                 switch (normalizedName) {
@@ -1443,6 +1465,9 @@ namespace IronPython.Runtime.Operations {
                 }
 
                 d[normalizedName] = encs[i];
+
+                // publish under code page number as well...
+                d["cp" + encs[i].CodePage.ToString()] = encs[i];
             }
 
             codecs = d;

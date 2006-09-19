@@ -185,3 +185,15 @@ nt.chmod('tmpfile.tmp', 256)
 nt.chmod('tmpfile.tmp', 128)
 nt.unlink('tmpfile.tmp')
 
+
+def test_utime():
+    f = file('temp_file_does_not_exist.txt', 'w')
+    f.close()
+    import nt
+    x = nt.stat('.')
+    nt.utime('temp_file_does_not_exist.txt', (x[7], x[8]))
+    y = nt.stat('temp_file_does_not_exist.txt')
+    AreEqual(x[7], y[7])
+    AreEqual(x[8], y[8])
+    
+test_utime()

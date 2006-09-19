@@ -642,6 +642,10 @@ namespace IronPython.Modules {
                 return new PythonDateTimeCombo(date.dateTime.Subtract(delta.timeSpan), delta.lostMicroseconds - date.lostMicroseconds);
             }
 
+            public static PythonTimeDelta operator -(PythonDateTimeCombo date, PythonDateTimeCombo other) {                
+                return new PythonTimeDelta(date.dateTime.Subtract(other.dateTime), date.lostMicroseconds - other.lostMicroseconds);
+            }
+
             public override bool Equals(object obj) {
                 PythonDateTimeCombo pdtc = obj as PythonDateTimeCombo;
                 if (pdtc == null) return false;

@@ -47,6 +47,9 @@ def test_sanity():
 
     AreEqual(struct.pack(' c\t', 'a'), 'a') 
     
+def test_padding_len():
+    AreEqual(struct.unpack('4xi','\x00\x01\x02\x03\x01\x00\x00\x00'), (1,))
+
 def test_negative():
     AssertError(struct.error, struct.pack, 'x', 1)
     AssertError(struct.error, struct.unpack, 'hh', struct.pack('h', 1))

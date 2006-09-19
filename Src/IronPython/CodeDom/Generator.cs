@@ -681,10 +681,10 @@ namespace IronPython.CodeDom {
             AdvanceOutput(e);
 
             Write("return ");
-            GenerateExpression(e.Expression);
-            WriteLine();
-
-            
+            if (e.Expression != null) {
+                GenerateExpression(e.Expression);
+            }
+            WriteLine();            
         }
 
         protected override void GenerateNamespaceEnd(CodeNamespace e) {

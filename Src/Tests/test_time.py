@@ -29,6 +29,9 @@ def test_strftime():
     Assert(len(x2) > 1)
     
     AreEqual(x, x1 + ' ' + x2)
+    
+    t = time.gmtime()
+    AreEqual(time.strftime('%c', t), time.strftime('%x %X', t))
 
 def test_strptime():
     import time

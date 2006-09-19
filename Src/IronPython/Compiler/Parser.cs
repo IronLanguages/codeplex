@@ -96,6 +96,8 @@ namespace IronPython.Compiler {
                 }
             }
 
+            if (encType == null) context.AddError("unknown encoding type", "<unknown>", 0, 0, 0, 0, Severity.Error);
+
             // re-read w/ the correct encoding type...
             using (StreamReader sr = new StreamReader(new MemoryStream(bytes), encType)) {
                 if (skipLine) {

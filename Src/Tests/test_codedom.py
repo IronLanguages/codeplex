@@ -98,7 +98,10 @@ class assignStmt(object):
 class returnStmt(object):
     def __init__(self, val):
         self.value = val
-    def generate(self, indent): return '%sreturn %s\r\n' % ('    '*indent, self.value)
+    def generate(self, indent): 
+        if self.value != None:
+            return '%sreturn %s\r\n' % ('    '*indent, self.value)
+        return '%sreturn\r\n' % ('    '*indent)
 
 class eventAttachStmt(object):
     def __init__(self, lhs, rhs):
@@ -177,6 +180,8 @@ testCases = [
 #        [methGen('test1', ('x','y','z'), [ assignStmt('a', idRef('5')), commentStmt('hello world') ])],
 #        [fieldMember('foo', 'bool')],
 #        ),        
+
+    fileGen([importStmt('clr', '*'), typeGen('foo', 'object', [methGen('test1', ('x','y','z'), [ returnStmt('a') ], 'int', ('Self()', 'int', 'int')), ] ) ]),
 
     fileGen( [importStmt('clr', '*'), 
             typeGen('foo', 'object', [    

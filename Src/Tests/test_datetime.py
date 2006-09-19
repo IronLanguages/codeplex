@@ -42,4 +42,11 @@ def test_sanity():
     AreEqual(x.second, 3)
     AreEqual(x.microsecond, 99)
 
+
+def test_subtract():
+    #subtraction should be available
+    from datetime import datetime
+    x = datetime.now()
+    datetime.now() - x    
+    
 run_test(__name__)

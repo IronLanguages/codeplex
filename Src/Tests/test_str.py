@@ -118,6 +118,10 @@ def test_split():
     Assert("1--2--3--4--5--6--7--8--9--0".split("--", -1) == ['1','2','3','4','5','6','7','8','9','0'])
     Assert("1--2--3--4--5--6--7--8--9--0".split("--", 2) == ['1', '2', '3--4--5--6--7--8--9--0'])
 
+
+def test_codecs():
+    'abc'.encode('cp1252')  # code page codecs should be registered in the system
+    
 def test_count():
     Assert("adadad".count("d") == 3)
     Assert("adbaddads".count("ad") == 3)
@@ -146,6 +150,12 @@ def test_string_escape():
         else:
             AreEqual(chr(i).encode('string-escape'), repr(chr(i))[1:-1])
 
+def test_encode_decode():
+    #AssertError(TypeError, 'abc'.encode, None) #INCOMPAT
+    #AssertError(TypeError, 'abc'.decode, None)
+    AreEqual('abc'.encode(), 'abc')
+    AreEqual('abc'.decode(), 'abc')
+    
 def test_string_escape_trailing_slash():
     ok = False
     try:

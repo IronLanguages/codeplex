@@ -134,6 +134,7 @@ namespace IronPython.Runtime {
             maxunicode = (int)ushort.MaxValue;
             platform = "cli";
             version_info = Tuple.MakeTuple(2, 4, 0, "final", 0);    // report as being compatible w/ 2.4.0 final
+            winver = "2.4";
             // !!! These fields do need to be reset on "reload(sys)". However, the initial value is specified by the 
             // engine elsewhere. For now, we initialize them just once to some default value
             if (version == null) {
@@ -395,6 +396,9 @@ namespace IronPython.Runtime {
 
         [PythonName("version_info")]
         public object version_info;
+
+        [PythonName("winver")]
+        public object winver;
 
         #region ICustomAttributes Members
 

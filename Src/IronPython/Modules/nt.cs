@@ -678,11 +678,11 @@ namespace IronPython.Modules {
                     fi.LastAccessTime = DateTime.Now;
                     fi.LastWriteTime = DateTime.Now;
                 } else if (times.Count == 2) {
-                    DateTime atime = new DateTime(1969, 12, 31, 16, 0, 0).Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[0])));
-                    DateTime mtime = new DateTime(1969, 12, 31, 16, 0, 0).Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[1])));
+                    DateTime atime = DateTime.MinValue.Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[0])));
+                    DateTime mtime = DateTime.MinValue.Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[1])));
 
                     fi.LastAccessTime = atime;
-                    fi.LastAccessTime = mtime;
+                    fi.LastWriteTime = mtime;
                 } else {
                     throw Ops.TypeError("times value must be a 2-value tuple (atime, mtime)");
                 }

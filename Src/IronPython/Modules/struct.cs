@@ -144,8 +144,8 @@ namespace IronPython.Modules {
         [PythonName("unpack")]
         public static Tuple Unpack(string fmt, string @string) {
             string data = @string;
-            int count = 1;
-            int curIndex = 0;
+            int count = 1;              // formats can be pre-pended w/ a repeat count, this is that count
+            int curIndex = 0;           // current index into the output string.
             List<object> res = new List<object>();
             bool fLittleEndian = BitConverter.IsLittleEndian;
             bool fStandardized = false;
@@ -154,7 +154,8 @@ namespace IronPython.Modules {
             for (int i = 0; i < fmt.Length; i++) {
                 switch (fmt[i]) {
                     case 'x': // pad byte
-                        curIndex++;
+                        curIndex+=count;
+                        count = 1;
                         break;
                     case 'c': // char
                         for (int j = 0; j < count; j++) res.Add(CreateCharValue(ref curIndex, data).ToString());

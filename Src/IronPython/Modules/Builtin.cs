@@ -128,6 +128,12 @@ namespace IronPython.Modules {
 
         [PythonName("apply")]
         [Documentation("apply(object[, args[, kwargs]]) -> value\n\nDeprecated.\nInstead, use:\n    function(*args, **keywords).")]
+        public static object Apply(ICallerContext context, object func) {
+            return Ops.CallWithContext(context, func);
+        }
+
+        [PythonName("apply")]
+        [Documentation("apply(object[, args[, kwargs]]) -> value\n\nDeprecated.\nInstead, use:\n    function(*args, **keywords).")]
         public static object Apply(ICallerContext context, object func, object args) {
             return Ops.CallWithArgsTupleAndContext(context, func, Ops.EMPTY, args);
         }

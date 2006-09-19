@@ -69,6 +69,11 @@ def test_reduce():
     AssertError(TypeError, reduce, add, "")
     AssertError(TypeError, reduce, add, ())
     
+def test_apply():
+    def foo(): return 42
+    
+    AreEqual(apply(foo), 42)
+    
 def test_map():
     def cat(x,y):
         ret = ""

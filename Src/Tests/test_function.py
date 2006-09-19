@@ -686,6 +686,25 @@ if is_cli:
 
 #TestCase(bool, True, True),                    # not an acceptable base type
 
+def test_func_flags():
+    def foo0(): pass
+    def foo1(*args): pass
+    def foo2(**args): pass
+    def foo3(*args, **kwargs): pass
+    def foo4(a): pass
+    def foo5(a, *args): pass
+    def foo6(a, **args): pass
+    def foo7(a, *args, **kwargs): pass
+    
+    AreEqual(foo0.func_code.co_flags, 0)
+    AreEqual(foo1.func_code.co_flags, 4)
+    AreEqual(foo2.func_code.co_flags, 8)
+    AreEqual(foo3.func_code.co_flags, 12)
+    AreEqual(foo4.func_code.co_flags, 0)
+    AreEqual(foo5.func_code.co_flags, 4)
+    AreEqual(foo6.func_code.co_flags, 8)
+    AreEqual(foo7.func_code.co_flags, 12)
+
 def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)
     Assert((x.co_flags & 8192) == 8192)

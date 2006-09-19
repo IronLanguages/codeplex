@@ -222,8 +222,12 @@ namespace IronPython.Runtime.Operations {
             int start, stop, step;
             slice.indices(size, out start, out stop, out step);
 
-            if ((step > 0 && start >= stop) || (step < 0 && start <= stop))
-                return Ops.EMPTY;
+            if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
+                if (data.GetType().GetElementType() == typeof(object))                 
+                    return Ops.EMPTY;
+
+                return Array.CreateInstance(data.GetType().GetElementType(), 0);
+            }
 
             if (step == 1) {
                 int n = stop - start;
@@ -233,10 +237,10 @@ namespace IronPython.Runtime.Operations {
             } else {
                 // could cause overflow (?)
                 int n = step > 0 ? (stop - start + step - 1) / step : (stop - start + step + 1) / step;
-                object[] ret = new object[n];
+                Array ret = Array.CreateInstance(data.GetType().GetElementType(), n);                
                 int ri = 0;
                 for (int i = 0, index = start; i < n; i++, index += step) {
-                    ret[ri++] = data.GetValue(index + data.GetLowerBound(0));
+                    ret.SetValue(data.GetValue(index + data.GetLowerBound(0)), ri++);
                 }
                 return ret;
             }

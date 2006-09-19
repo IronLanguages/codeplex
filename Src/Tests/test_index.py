@@ -67,6 +67,13 @@ if is_cli:
                 for k in range(2):
                     Assert(md[i,j,k] == i+j+k)
 
+    def test_array():
+        # verify that slicing an array returns an array of the proper type               
+        from System import Array
+        data = Array[int]( (2,3,4,5,6) )
+        
+        AreEqual(type(data[:0]), Array[int])
+        AreEqual(type(data[0:3:2]), Array[int])
 
 def test_dict():
     d = dict()

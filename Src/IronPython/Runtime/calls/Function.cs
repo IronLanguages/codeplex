@@ -132,11 +132,12 @@ namespace IronPython.Runtime.Calls {
                 FuncCodeFlags res = flags;
                 FunctionN funcN = func as FunctionN;
                 FunctionX funcX = func as FunctionX;
-                if (funcN != null) res |= FuncCodeFlags.VarArgs;
                 if (funcX != null) {
                     if ((funcX.Flags & FunctionAttributes.KeywordDictionary) != 0) res |= FuncCodeFlags.KwArgs;
                     if ((funcX.Flags & FunctionAttributes.ArgumentList) != 0) res |= FuncCodeFlags.VarArgs;
                 }
+                else if (funcN != null) res |= FuncCodeFlags.VarArgs;
+
                 return (int)res;
             }
         }
