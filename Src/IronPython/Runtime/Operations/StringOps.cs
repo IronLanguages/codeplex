@@ -1327,9 +1327,11 @@ namespace IronPython.Runtime.Operations {
                 encoding = state.getdefaultencoding();
             } else {
                 encoding = encodingType as string;
-                if (encoding == null)
+                if (encoding == null) {
+                    if (encodingType != null)
+                        throw Ops.TypeError("decode() expected string, got {0}", Ops.StringRepr(Ops.GetDynamicType(encodingType).Name));                    
                     encoding = state.getdefaultencoding();
-                    //throw Ops.TypeError("decode() expected string, got {0}", Ops.StringRepr(Ops.GetDynamicType(encodingType).Name));
+                }                    
             }
 
             if (encoding != null) {
@@ -1376,10 +1378,11 @@ namespace IronPython.Runtime.Operations {
                 encoding = state.getdefaultencoding();
             } else {
                 encoding = encodingType as string;
-                if (encoding == null)
+                if (encoding == null) {
+                    if (encodingType != null)
+                        throw Ops.TypeError("encode() expected string, got {0}", Ops.StringRepr(Ops.GetDynamicType(encodingType).Name));
                     encoding = state.getdefaultencoding();
-                    //throw Ops.TypeError("encode() expected string, got {0}", Ops.StringRepr(Ops.GetDynamicType(encodingType).Name));
-
+                }
             }
 
             if (encoding != null) {
