@@ -64,6 +64,58 @@ def getNextResultLog():
 
     raise AssertionError, 'cannot create log file'
 
+## To control the output stream
+#
+#   - NullStream eats all, 
+#   - MyFileStream flushes to file immediately (More consideration)
+#
+
+class NullStream:
+    softspace = False
+    def __init__(self): pass
+    def __repr__(self): return ''
+    def close(self):    pass
+    def flush(self):    pass
+    def fileno(self):   return 1
+    def read(self):     return ""
+    def readline(self): return "\n"
+    def write(self, s): pass
+
+
+class MyFileStream(NullStream):
+    def __init__(self, sw): self.sw = sw
+    def close(self):    self.sw.close()
+    def write(self, s):
+        self.sw.write(s)
+        self.sw.flush()        
+
+logname, logfile = getNextResultLog()
+logstream = MyFileStream(logfile)
+
+assertOccurred = False
+
+if is_cli: 
+    from System.Diagnostics import Debug, TraceListener
+    
+    class MyTraceListener(TraceListener):
+        def __init__(self, stream):
+            self.stream = stream
+            self.banner = '\n!!!' + 'X' * 70 + '!!!\n'
+        def Write(self, message):
+            self.stream.write(self.banner) 
+            self.stream.write(message)
+            self.stream.write(self.banner) 
+            global assertOccurred
+            assertOccurred = True
+        def WriteLine(self, message):
+            self.Write(message + r'\n')
+        def Flush(self):
+            self.stream.flush()
+            
+    Debug.Listeners.Clear()
+    myListener = MyTraceListener(logstream)
+    Debug.Listeners.Add(myListener)
+
 # result related classes
 class TestResultSet:
     startTime = time.ctime()
@@ -161,6 +213,11 @@ class TestResult:
         self.succeed = True
         self.exception = None
         self._stopTest()
+    
+    def setAssertOccur(self):
+        self.succeed = False
+        self.exception = None
+        self._stopTest()    
 ##
 ## How each file gets run
 ##
@@ -212,31 +269,7 @@ def LibraryRunStep(file, timeLevel='long'):
 def CompatRunStep(file, timelevel='med'):
     package = __import__(file)
     del sys.modules[file]
-    
-## To control the output stream
-#
-#   - NullStream eats all, 
-#   - MyFileStream flushes to file immediately (More consideration)
-#
 
-class NullStream:
-    softspace = False
-    def __init__(self): pass
-    def __repr__(self): return ''
-    def close(self):    pass
-    def flush(self):    pass
-    def fileno(self):   return 1
-    def read(self):     return ""
-    def readline(self): return "\n"
-    def write(self, s): pass
-
-
-class MyFileStream(NullStream):
-    def __init__(self, sw): self.sw = sw
-    def close(self):    self.sw.close()
-    def write(self, s):
-        self.sw.write(s)
-        self.sw.flush()        
 
 ## Runners
 ## not used, but leave it for debugging purpose
@@ -277,16 +310,27 @@ class RedirectTestRunner(TestRunner):
         self._redirect_output()
         if self.detailLevel <> 'min':
             self.saved_stdout.write(test.ljust(formatter.TestNameLen))
-        logstream.write('>>>> ' + test)
+        logstream.write('>>>> ' + test +'\n')
         try:
             self.testResult.startTest()
             self.runstep(test, self.timeLevel)
-            self.testResult.setSuccess()
+            
             logstream.write('\n') 
-            if self.detailLevel == 'min':
-                self.saved_stdout.write(".")
+            global assertOccurred
+            if assertOccurred: 
+                self.testResult.setAssertOccur()
+                assertOccurred = False
+
+                if self.detailLevel == 'min':
+                    self.saved_stdout.write("A(%s)" % test)
+                else:
+                    self.saved_stdout.write("!ASSERT!\n")
             else:
-                self.saved_stdout.write(" PASS \n")
+                self.testResult.setSuccess()
+                if self.detailLevel == 'min':
+                    self.saved_stdout.write(".")
+                else:
+                    self.saved_stdout.write(" PASS \n")
         except Exception, e: 
             logstream.write('\t\t*FAIL*\n')
             self.testResult.setFailure((str(e.args), my_format_exc()))
@@ -404,6 +448,20 @@ class TestConfig:
                 self.testList.extend([x for x in reqs if x.startswith("test_")])
         return self.testList
 
+class MathTestConfig(TestConfig):
+    def __init__(self):
+        self.notRunList = ['nztest.testFactor', ]
+        self.name       = "Math"
+        self.shortcut   = 'math nzmath'
+        self.directory  = [testpath.math_testdir, testpath.lib_testdir,]
+        self.runner     = RedirectTestRunner
+        self.runstep    = RegressRunStep        
+        self.categories = categories.MathTests
+        self.Mode       = 1
+        
+    def getAllTests(self):
+        return self.getTestsShownInCategories()
+
 class MiscTestConfig(TestConfig):
     def __init__(self):
         self.notRunList = []
@@ -487,14 +545,6 @@ def getAllConfigs2():
         getExtraConfig(testpath.my_dir)
 
     return l
-
-logname, logfile = getNextResultLog()
-logstream = MyFileStream(logfile)
-
-#if is_cli: 
-    #from System.Diagnostics import Debug
-    #Debug.Listeners.Clear()
-    #Debug.Listeners.Add(
 
 def main(args):
     unknown = [x for x in args if x.startswith('-') and not x.startswith('-T:') and not x.startswith('-O:')]

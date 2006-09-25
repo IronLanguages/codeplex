@@ -349,6 +349,40 @@ LibraryTests = {
                 '''
         }      
 
+MathTests = {
+            'math-all':
+                '''
+                nztest.testArith1
+                nztest.testBigrandom
+                nztest.testCombinatorial
+                nztest.testElliptic
+                nztest.testEquation
+                nztest.testFactor
+                nztest.testFactorMethods
+                nztest.testFactorMisc
+                nztest.testFactorMpqs
+                nztest.testFactorUtil
+                nztest.testFiniteField
+                nztest.testGcd
+                nztest.testGroup
+                nztest.testImaginary
+                nztest.testIntegerResidueClass
+                nztest.testLattice
+                nztest.testMatrix
+                nztest.testMultiplicative
+                nztest.testPermute
+                nztest.testPolynomial
+                nztest.testPrime
+                nztest.testQuad
+                nztest.testRational
+                nztest.testRationalFunction
+                nztest.testReal
+                nztest.testRing
+                nztest.testVector
+                nztest.testZassenhaus
+                '''
+}
+
 RegressionTests = {
             'regression-nochange': 
                 '''

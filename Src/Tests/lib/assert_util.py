@@ -55,6 +55,7 @@ class testpath:
     test_inputs_dir     = path_combine(sys.prefix, r'Src\Tests\Inputs')
     script_testdir      = path_combine(sys.prefix, r'Src\Scripts')
 
+    math_testdir        = path_combine(external_dir, r'Math')
     parrot_testdir      = path_combine(external_dir, r'parrotbench')
     lib_testdir         = path_combine(external_dir, r'Regress\Python24\Lib')
     private_testdir     = path_combine(external_dir, r'Regress\Python24\Lib\test')

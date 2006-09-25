@@ -75,7 +75,7 @@ class ModeInfo:
         
 mode_mapping = { 
     '1': ModeInfo('-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 1001', ['Compat-']),
-    '2': ModeInfo('-O -D -X:SaveAssemblies -X:AssembliesDir %s' % testpath.temporary_dir, []),
+    '2': ModeInfo('-O -D -X:SaveAssemblies -X:AssembliesDir %s' % testpath.temporary_dir, ['Math-']),
 }
 
 def get_mode_list(modes):
@@ -126,8 +126,13 @@ def clean_log_files():
             f = nt.listdir(".")
             f = filter(matcher(), f)
             delete_files(*f)
-
     except: pass
+
+def clean_pyc_files():
+    # cleaning .pyc files, as the workaround for external issue (ps#1149)
+    delete_files(*tuple([ path_combine(testpath.public_testdir, x) 
+                          for x in nt.listdir(testpath.public_testdir) 
+                          if x.endswith('.pyc')]))
 
 def main(args):
     # run options check
@@ -143,6 +148,8 @@ def main(args):
     test_exit_code()
     
     clean_log_files()
+    
+    clean_pyc_files()
     
     # shortcuts
     tests = [x.lower() for x in args if not x.startswith('-')]
