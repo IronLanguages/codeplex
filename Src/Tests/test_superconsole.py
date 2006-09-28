@@ -110,15 +110,14 @@ if doRun:
 
 # Test Case #6: cursor keys
 ######################################################################################################
-    # BLOCKED ON BUG 837
-    #superConsole.SendKeys("print 'up'{ENTER}")
-    #testRegex += 'up'
-    #superConsole.SendKeys("print 'down'{ENTER}")
-    #testRegex += 'down'
-    #superConsole.SendKeys("{UP}{UP}{ENTER}") 
-    #testRegex += 'up'
-    #superConsole.SendKeys("{DOWN}{ENTER}")
-    #testRegex += 'down'
+    superConsole.SendKeys("print 'up'{ENTER}")
+    testRegex += 'up'
+    superConsole.SendKeys("print 'down'{ENTER}")
+    testRegex += 'down'
+    superConsole.SendKeys("{UP}{UP}{ENTER}") 
+    testRegex += 'up'
+    superConsole.SendKeys("{DOWN}{ENTER}")
+    testRegex += 'down'
 
     superConsole.SendKeys("print 'up'{ENTER}{UP}{ENTER}")
     testRegex += 'upup'
@@ -155,6 +154,39 @@ if doRun:
     superConsole.SendKeys('import System{ENTER}')
     superConsole.SendKeys('print System.r{TAB}{(}{)}{ENTER}')
     testRegex += 'System\.Random'
+
+# Test Case #11: history
+###########################################
+    superConsole.SendKeys('print "first"{ENTER}')
+    testRegex += 'first'
+    superConsole.SendKeys('print "second"{ENTER}')
+    testRegex += 'second'
+    superConsole.SendKeys('print "third"{ENTER}')
+    testRegex += 'third'
+    superConsole.SendKeys('print "fourth"{ENTER}')
+    testRegex += 'fourth'
+    superConsole.SendKeys('print "fifth"{ENTER}')
+    testRegex += 'fifth'
+    superConsole.SendKeys('{UP}{UP}{UP}{ENTER}')
+    testRegex += 'third'
+    superConsole.SendKeys('{UP}{ENTER}')
+    testRegex += 'third'
+    superConsole.SendKeys('{UP}{UP}{UP}{DOWN}{ENTER}')
+    testRegex += 'second'
+    superConsole.SendKeys('{UP}{ENTER}')
+    testRegex += 'second'
+    superConsole.SendKeys('{DOWN}{ENTER}')
+    testRegex += 'third'
+    superConsole.SendKeys('{DOWN}{ENTER}')
+    testRegex += 'fourth'
+    superConsole.SendKeys('{DOWN}{ENTER}')
+    testRegex += 'fifth'
+    superConsole.SendKeys('{UP}{UP}{ESC}print "sixth"{ENTER}')
+    testRegex += 'sixth'
+    superConsole.SendKeys('{UP}{ENTER}')
+    testRegex += 'sixth'
+    superConsole.SendKeys('{UP}{DOWN}{DOWN}{DOWN}{DOWN}{DOWN}{DOWN}{ENTER}')
+    testRegex += 'sixth'
 
 # and finally test that F6 shuts it down
     superConsole.SendKeys('{F6}')

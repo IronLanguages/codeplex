@@ -39,8 +39,54 @@ namespace IronPythonConsole {
         /// Class managing the command history.
         /// </summary>
         class History {
-            protected ArrayList list = new ArrayList();
-            protected int current = 0;
+            private ArrayList list = new ArrayList();
+            private int current = 0;
+            private bool increment = false;     // increment on Next()
+
+            private string Current {
+                get {
+                    return current >= 0 && current < list.Count ? (string)list[current] : String.Empty;
+                }
+            }
+
+            public void Add(string line, bool setCurrentAsLast) {
+                if (line != null && line.Length > 0) {
+                    int oldCount = list.Count;
+                    list.Add(line);
+                    if (setCurrentAsLast || current == oldCount) {
+                        current = list.Count;
+                    } else {
+                        current++;
+                    }
+                    // Do not increment on the immediately following Next()
+                    increment = false;
+                }
+            }
+
+            public string Previous() {
+                if (current > 0) {
+                    current--;
+                    increment = true;
+                }
+                return Current;
+            }
+
+            public string Next() {
+                if (current + 1 < list.Count) {
+                    if (increment) current++;
+                    increment = true;
+                }
+                return Current;
+            }
+        }
+
+        /// <summary>
+        /// List of available options
+        /// </summary>
+        class SuperConsoleOptions {
+            private ArrayList list = new ArrayList();
+            private int current = 0;
+            private string root;
 
             public int Count {
                 get {
@@ -48,7 +94,7 @@ namespace IronPythonConsole {
                 }
             }
 
-            public string Current {
+            private string Current {
                 get {
                     return current >= 0 && current < list.Count ? (string)list[current] : String.Empty;
                 }
@@ -65,22 +111,6 @@ namespace IronPythonConsole {
                 }
             }
 
-            public void AddLast(string line) {
-                if (line != null && line.Length > 0) {
-                    current = list.Add(line) + 1;
-                }
-            }
-
-            public string First() {
-                current = 0;
-                return Current;
-            }
-
-            public string Last() {
-                current = list.Count - 1;
-                return Current;
-            }
-
             public string Previous() {
                 if (list.Count > 0) {
                     current = ((current - 1) + list.Count) % list.Count;
@@ -94,13 +124,6 @@ namespace IronPythonConsole {
                 }
                 return Current;
             }
-        }
-
-        /// <summary>
-        /// List of available options
-        /// </summary>
-        class SuperConsoleOptions : History {
-            private string root;
 
             public string Root {
                 get {
@@ -183,7 +206,7 @@ namespace IronPythonConsole {
         /// <summary>
         /// Input has changed.
         /// </summary>
-        private bool changed = true;
+        //private bool changed = true;
         /// <summary>
         /// Command history
         /// </summary>
@@ -281,7 +304,7 @@ namespace IronPythonConsole {
             input.Length = 0;
             current = 0;
             rendered = 0;
-            changed = false;
+            //changed = false;
         }
 
         // Check if the user is backspacing the auto-indentation. In that case, we go back all the way to
@@ -489,29 +512,34 @@ namespace IronPythonConsole {
             for (int i = 0; i < autoIndentSize; i++)
                 Insert(' ');
 
+            bool inputChanged = false;
+            bool optionsObsolete = false;
+
             for (; ; ) {
                 ConsoleKeyInfo key = Console.ReadKey(true);
 
                 switch (key.Key) {
                     case ConsoleKey.Backspace:
                         Backspace();
+                        inputChanged = optionsObsolete = true;
                         break;
                     case ConsoleKey.Delete:
                         Delete();
+                        inputChanged = optionsObsolete = true;
                         break;
                     case ConsoleKey.Enter:
                         Console.Write("\n");
                         string line = input.ToString();
                         if (line == FinalLineText) return null;
                         if (line.Length > 0) {
-                            history.AddLast(line);
+                            history.Add(line, inputChanged);
                         }
                         return line;
                     case ConsoleKey.Tab: {
                             bool prefix = false;
-                            if (changed) {
+                            if (optionsObsolete) {
                                 prefix = GetOptions();
-                                changed = false;
+                                optionsObsolete = false;
                             }
 
                             if (options.Count > 0) {
@@ -524,40 +552,50 @@ namespace IronPythonConsole {
                                     InsertTab();
                                 }
                             }
-                            continue;
+                            inputChanged = true;
+                            break;
                         }
                     case ConsoleKey.UpArrow:
                         SetInput(history.Previous());
+                        optionsObsolete = true;
+                        inputChanged = false;
                         break;
                     case ConsoleKey.DownArrow:
                         SetInput(history.Next());
+                        optionsObsolete = true;
+                        inputChanged = false;
                         break;
                     case ConsoleKey.RightArrow:
                         MoveRight(key.Modifiers);
+                        optionsObsolete = true;
                         break;
                     case ConsoleKey.LeftArrow:
                         MoveLeft(key.Modifiers);
+                        optionsObsolete = true;
                         break;
                     case ConsoleKey.Escape:
                         SetInput(String.Empty);
+                        inputChanged = optionsObsolete = true;
                         break;
                     case ConsoleKey.Home:
                         MoveHome();
+                        optionsObsolete = true;
                         break;
                     case ConsoleKey.End:
                         MoveEnd();
+                        optionsObsolete = true;
                         break;
                     case ConsoleKey.LeftWindows:
                     case ConsoleKey.RightWindows:
                         // ignore these
-                        break;
+                        continue;
                     default:
                         if (key.KeyChar == '\x0D') goto case ConsoleKey.Enter;      // Ctrl-M
                         if (key.KeyChar == '\x08') goto case ConsoleKey.Backspace;  // Ctrl-H
                         Insert(key);
+                        inputChanged = optionsObsolete = true;
                         break;
                 }
-                changed = true;
             }
         }
 
