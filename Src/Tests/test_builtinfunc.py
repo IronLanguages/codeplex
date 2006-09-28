@@ -68,7 +68,7 @@ def test_reduce():
     AssertError(TypeError, reduce, add, [])
     AssertError(TypeError, reduce, add, "")
     AssertError(TypeError, reduce, add, ())
-    
+
 def test_apply():
     def foo(): return 42
     
@@ -138,11 +138,25 @@ def test_sorted():
     Assert(x == [(1, 'Joe'), (2, 'Tom'), (3, 'David'), (4, 'Gary'), (5, 'Carl'), (6, 'John'), (7, 'Tim'), (8, 'Todd'), (9, 'Jack')])
 
 def test_unichr():
-    AssertError(ValueError, unichr, -1) # arg must be in the range [0...65535] inclusive
-    AssertError(ValueError, unichr, 65536)
-    AssertError(ValueError, unichr, 100000)
+
+    #Added the following to resolve Codeplex WorkItem #3220.
+    max_uni = sys.maxunicode
+    Assert(max_uni==0xFFFF or max_uni==0x10FFFF)
+    max_uni_plus_one = max_uni + 1
+    
+    huger_than_max = 100000
+    max_ok_value = u'\uffff'
+    
+    #special case for WorkItem #3220
+    if max_uni==0x10FFFF:
+        huger_than_max = 10000000
+        max_ok_value = u'\u0010FFFF' #OK representation for UCS4???
+        
+    AssertError(ValueError, unichr, -1) # arg must be in the range [0...65535] or [0...1114111] inclusive
+    AssertError(ValueError, unichr, max_uni_plus_one)
+    AssertError(ValueError, unichr, huger_than_max)
     Assert(unichr(0) == '\x00')
-    Assert(unichr(65535) == u'\uffff')
+    Assert(unichr(max_uni) == max_ok_value)
 
 def test_max_min():
     Assert(max([1,2,3]) == 3)
