@@ -686,6 +686,7 @@ if is_cli:
 
 #TestCase(bool, True, True),                    # not an acceptable base type
 
+#Codeplex WorkItem 3118
 def test_func_flags():
     def foo0(): pass
     def foo1(*args): pass
@@ -704,9 +705,10 @@ def test_func_flags():
     AreEqual(foo5.func_code.co_flags, 4)
     AreEqual(foo6.func_code.co_flags, 8)
     AreEqual(foo7.func_code.co_flags, 12)
+    
 
 def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)
     Assert((x.co_flags & 8192) == 8192)
 
-test_compile()
+run_test(__name__)
