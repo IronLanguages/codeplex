@@ -186,7 +186,7 @@ namespace IronPython.Compiler.Generation {
                     }
                 }
 
-                ProcessStartInfo psi = new ProcessStartInfo(peverifyPath, verifyFile);
+                ProcessStartInfo psi = new ProcessStartInfo(peverifyPath, "\"" + verifyFile + "\"");
                 psi.UseShellExecute = false;
                 psi.RedirectStandardOutput = true;
                 Process proc = Process.Start(psi);
