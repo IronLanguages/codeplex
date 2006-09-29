@@ -250,14 +250,6 @@ namespace IronPython.Runtime.Operations {
 
             if (handler != null) return handler;
 
-            // if we have a python function make sure it's compatible...
-            PythonFunction fo = o as PythonFunction;
-
-            Method m = o as Method;
-            if (m != null) {
-                fo = m.Function as PythonFunction;
-            }
-
             MethodInfo invoke = delegateType.GetMethod("Invoke");
 
             if (invoke == null) {
@@ -270,12 +262,38 @@ namespace IronPython.Runtime.Operations {
             }
 
             ParameterInfo[] pis = invoke.GetParameters();
+            int expArgCnt = pis.Length;
+
+            int minArgCnt, maxArgCnt;
+            if (!IsCallableCompatible(o, expArgCnt, out minArgCnt, out maxArgCnt))
+                return null;
+
+            DelegateSignatureInfo dsi = new DelegateSignatureInfo(invoke.ReturnType, pis);
+            MethodInfo methodInfo = dynamicDelegates.GetOrCreateValue(dsi,
+                delegate() {
+                    // creation code
+                    return dsi.CreateNewDelegate();
+                });
+
+            return CodeGen.CreateDelegate(methodInfo, delegateType, o);
+        }
+
+        internal static bool IsCallableCompatible(object o, int expArgCnt, out int minArgCnt, out int maxArgCnt) {
+            // if we have a python function make sure it's compatible...
+            PythonFunction fo = o as PythonFunction;
+
+            Method m = o as Method;
+            if (m != null) {
+                fo = m.Function as PythonFunction;
+            }
+
+            minArgCnt = 0;
+            maxArgCnt = 0;
 
             if (fo != null) {
                 if (fo is FunctionN == false) {
-                    int expArgCnt = pis.Length;
-                    int maxArgCnt = fo.ArgCount;
-                    int minArgCnt = fo.ArgCount - fo.FunctionDefaults.Count;
+                    maxArgCnt = fo.ArgCount;
+                    minArgCnt = fo.ArgCount - fo.FunctionDefaults.Count;
 
                     // take into account unbound methods / bound methods
                     if (m != null) {
@@ -288,18 +306,10 @@ namespace IronPython.Runtime.Operations {
                     // the target is no good for this delegate - we don't have enough
                     // parameters.
                     if (expArgCnt < minArgCnt || expArgCnt > maxArgCnt)
-                        return null;
+                        return false;
                 }
             }
-
-            DelegateSignatureInfo dsi = new DelegateSignatureInfo(invoke.ReturnType, pis);
-            MethodInfo methodInfo = dynamicDelegates.GetOrCreateValue(dsi,
-                delegate() {
-                    // creation code
-                    return dsi.CreateNewDelegate();
-                });
-
-            return CodeGen.CreateDelegate(methodInfo, delegateType, o);
+            return true;
         }
 
         public static object ConvertTo(object o, Type toType) {

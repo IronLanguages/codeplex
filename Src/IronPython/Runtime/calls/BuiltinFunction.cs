@@ -525,6 +525,7 @@ Eg. The following will call the overload of WriteLine that takes an int argument
         #region Private APIs
 
         private static void AddDocumentation(StringBuilder sb, ref bool nl, MethodBase mb) {
+            if (mb.Name.StartsWith("#base#")) return;
             if (nl) {
                 sb.Append(System.Environment.NewLine);
             }
@@ -1031,7 +1032,8 @@ Eg. The following will call the overload of WriteLine that takes an int argument
                 MethodBase[] targets = ctors;
 
                 for (int i = 0; i < targets.Length; i++) {
-                    if (targets[i] != null) sb.AppendLine(ReflectionUtil.DocOneInfo(targets[i]));
+                    if (targets[i] != null && !targets[i].Name.StartsWith("#base#")) 
+                        sb.AppendLine(ReflectionUtil.DocOneInfo(targets[i]));
                 }
                 return sb.ToString();
 

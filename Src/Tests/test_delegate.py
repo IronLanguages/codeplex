@@ -589,3 +589,14 @@ myfuncCalled = False
 passedarg = 0
 IronPythonTest.DelegateTest.InvokeUntypedDelegate(IronPythonTest.SimpleDelegateWithOneArg(myotherfunc), 100)
 AreEqual((myfuncCalled, passedarg), (True, 100))
+
+def test_error_message():
+    def func(a, b, c, d, e): pass
+    import System
+    try:
+        a = System.Threading.Thread.__new__.Overloads[(ThreadStart)](System.Threading.Thread, func)
+        AssertUnreachable()
+    except TypeError, e:
+        Assert(e.msg.find('(expected 0 args, target takes 5)') != -1)        
+        
+test_error_message()

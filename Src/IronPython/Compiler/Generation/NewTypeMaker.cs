@@ -397,7 +397,26 @@ namespace IronPython.Compiler.Generation {
 
                 string methodName = mi.Name;
                 if (methodName.StartsWith("#base#")) {
+                    ParameterInfo[] pis= mi.GetParameters();
+                    Type[] types = new Type[pis.Length];
+                    int i = 0;
+                    foreach (ParameterInfo pi in pis) {
+                        types[i++] = pi.ParameterType;
+                    }
+                    MethodInfo overriding = this.baseType.GetMethod(methodName.Substring(6), 
+                        BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance,
+                        null,
+                        types,
+                        null);
+                    Debug.Assert(overriding != null);
+
                     string newName = GetBaseName(mi, specialNames);
+                    string outName;
+                    NameType nt = NameConverter.TryGetName(Ops.GetDynamicTypeFromType(baseType) as ReflectedType, overriding, out outName);
+                    if (nt != NameType.None && outName != newName) {
+                        rt.StoreReflectedBaseMethod(outName, mi, nt);
+                    }
+
                     rt.StoreReflectedBaseMethod(newName, mi, NameType.Method);
                 }
             }

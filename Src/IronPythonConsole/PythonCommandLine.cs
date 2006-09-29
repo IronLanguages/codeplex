@@ -314,7 +314,7 @@ namespace IronPythonConsole {
             Console.WriteLine(PythonEngine.Copyright);
             Console.WriteLine("Usage: ipy [options] [file.py|- [arguments]]");
             Console.WriteLine("Options:");
-            Console.WriteLine("  -O:                    Enable optimizations");
+            Console.WriteLine("  -O                     Enable optimizations");
 #if DEBUG
             Console.WriteLine("  -D                     EngineDebug mode");
 #endif

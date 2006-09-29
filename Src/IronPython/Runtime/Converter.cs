@@ -658,7 +658,19 @@ namespace IronPython.Runtime {
             object deleg = Ops.GetDelegate(value, to);
             if (deleg != null) return deleg;
 
-            throw Ops.TypeErrorForBadInstance("expected compatible function, found {0}", value);
+            if (Ops.IsCallable(value)) {
+                int min, max;
+                int expectedArgs = to.GetMethod("Invoke").GetParameters().Length;
+                if (!Ops.IsCallableCompatible(value, expectedArgs, out min, out max)) {
+                    if (min == max) {
+                        throw Ops.TypeError("expected compatible function, but got parameter count mismatch (expected {0} args, target takes {1})", expectedArgs, min);
+                    } else {
+                        throw Ops.TypeError("expected compatible function, but got parameter count mismatch (expected {0} args, target takes at least {1} and at most {2})", expectedArgs, min, max);
+                    }
+                }
+            } 
+            throw Ops.TypeErrorForBadInstance("expected compatible function, but found non-callable object of type {0}", value);
+            
         }
 
 

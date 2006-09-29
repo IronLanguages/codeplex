@@ -1458,6 +1458,14 @@ if is_cli:
     def test_type_mro():
         AssertError(NotImplementedError, type.mro, int)
 
+def test_derived_tuple_eq():
+    # verify overriding __eq__ on tuple still allows us to call the super version
+    class Foobar(tuple):    
+        def __eq__(self,other):
+            other = Foobar(other)
+            return super(Foobar,self).__eq__(other)
+    AreEqual(Foobar('abc'), 'abc')
+    
 def test_new_old_slots():
     class N(object): pass
     class O: pass

@@ -2,12 +2,12 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
-<title>IronPython 1.0 FAQ</title>
+<title>IronPython %IRONPYTHON_VERSION% FAQ</title>
 </head>
 
 <body>
 
-<h2>IronPython 1.0 Frequently Asked Questions</h2>
+<h2>IronPython %IRONPYTHON_VERSION% Frequently Asked Questions</h2>
 <h4>Q: Is this license OSI compliant?</h4>
 <p>A: This license has not been submitted to OSI, but it allows developers to take 
 full advantage of a dynamic language on the CLR and to have the freedom to distribute 
@@ -48,7 +48,7 @@ designer, etc.?</h3>
 <p>A good explanation of the Visual Studio IronPython integration sample is in
 <a href="http://blogs.msdn.com/aaronmar/archive/2006/02/16/533273.aspx">this 
 blog post</a>.</p>
-<h3>Q: Why do you require .NET 2.0 to run IronPython 1.0?</h3>
+<h3>Q: Why do you require .NET 2.0 to run IronPython %IRONPYTHON_VERSION%?</h3>
 A: There are a lot of features in .NET 2.0 that we wanted to use in IronPython. 
 These include generics, DynamicMethods, new kinds of delegates, and more. We could 
 have supported these new features using #ifdefs to keep a version of the code base 
@@ -64,8 +64,8 @@ the main public API exposed by IronPython.&nbsp; However, there are other public
 types that are marked public either because the generated IL code needs them or 
 because of historical reasons.&nbsp; While we would like to fix all FxCop issues 
 for all public types, those remaining do not affect users of IronPython.&nbsp; 
-We want to release IronPython 1.0 under the principles of &nbsp;“release early, 
-release often”.&nbsp; We thought that it was unnecessary to delay the release to 
+We want to release IronPython %IRONPYTHON_VERSION% under the principles of &nbsp;"release early, 
+release often".&nbsp; We thought that it was unnecessary to delay the release to 
 take the time to do this work first.&nbsp; These kinds of issues will be 
 resolved as we work on future releases.<h3>Q: Why am I getting errors when trying to use WinForms?</h3>
 <p>A: One common error that you may be getting is:</p>
@@ -89,14 +89,14 @@ installed IronPython).</p>
 
 <h3>Q: How do I make use of .NET features in IronPython?</h3>
 <p>A: Users have to opt in to this functionality.&nbsp; No new keywords have 
-been added, and the existing language semantics are unchanged.&nbsp; A “clr” 
+been added, and the existing language semantics are unchanged.&nbsp; A "clr" 
 module is available for import to turn on .NET extensions. See the
 <a href="Tutorial/Tutorial.htm">IronPython Tutorial</a> for good examples (if 
 you're reading the FAQ on the web, the tutorial.htm document is in the tutorial 
 directory where you installed IronPython).&nbsp; 
-Using the “import clr” statement adds methods to built-in types in some cases; 
+Using the "import clr" statement adds methods to built-in types in some cases; 
 for example, dir(int) will show a ToString attribute.&nbsp; Such effects only 
-happen in the context of the module that contains the “import clr” statement.</p>
+happen in the context of the module that contains the "import clr" statement.</p>
 <h3>Q: How do I import .NET namespaces from assemblies other than System and 
 Mscorlib?</h3>
 <p>A: IronPython can directly import only some of the .NET libraries -- the most 
@@ -125,7 +125,7 @@ only relevant on SGI or the Mac).&nbsp; Some modules aren't present only because
 we didn't have time to implement them yet.&nbsp;&nbsp; See the
 <a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> document for details. </p>
 <h3>Q: What CPython version are you compatible with?</h3>
-<p>A: IronPython 1.0 targeted CPython 2.4.3 for compatibility.&nbsp; See the
+<p>A: IronPython %IRONPYTHON_VERSION% targeted CPython 2.4.3 for compatibility.&nbsp; See the
 <a href="http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython&title=Differences">IronPython Differences</a> document for details.</p>
 <h3>Q: Do you have any 2.5 features working?</h3>
 <p>A: Yes, IronPython implements several 2.5 features: all(), any(), max() with 
@@ -133,7 +133,7 @@ a key argument, min() with a key argument, partition() and rpartition() on
 strings, the with statement, empty parenthetic expression for the bases classes 
 in a class statement, try-except-finally, and ternary expressions</p>
 <h3>Q: Do we work with the .NET Compact Framework?</h3>
-<p>A: No, IronPython 1.0 targets only the .NET 2.0 Common Language Runtime.&nbsp; 
+<p>A: No, IronPython %IRONPYTHON_VERSION% targets only the .NET 2.0 Common Language Runtime.&nbsp; 
 The .NET Compact Framework lacks Reflection.Emit and lightweight code generation 
 (dynamic methods), both of which IronPython requires.</p>
 <h3>Q: How do I compile .py files to a DLL for linking into my C# or VB program?</h3>
@@ -213,14 +213,26 @@ parameters can be passed as a parameter list:</p>
 <blockquote>
 	<p><font face="Courier New" size="2">&gt;&gt;&gt; C.MethodParams(1,2,3)<br>3<br>&gt;&gt;&gt; C.MethodParams(1,2,3,4,5,6,)<br>6</font></p>
 </blockquote>
-<h3><font face="Courier New" size="2"><br></font>Q: How do I create a .NET array?</h3>
+<h3>Q: How do I create a .NET array?</h3>
 <p>A: Here is an example that shows how to create a .NET array: 
-“System.Array[int]((1,2,3))”.</p>
+"System.Array[int]((1,2,3))".</p>
 <blockquote>
 	<p><font face="Courier New"><font size="2">import System<br>
-	System.Array[int]((1,2,3))</font><br>
-&nbsp;</font></p>
+	System.Array[int]((1,2,3))</font></font></p>
 </blockquote>
+<p>Here is another example that creates a multi-dimensional array of arrays and 
+initializes it (any kind of Python sequence can be used to initialize the 
+array):</p>
+<blockquote>
+<p><font size="2" face="Courier New">Array[Array[int]]( ( (1,2), (2,3) ) )</font></p>
+</blockquote>
+<p>If you want to create a true 
+multi-dimensional array and set elements, you can do the following :</p>
+<blockquote>
+<p><font size="2" face="Courier New">x = Array.CreateInstance(int, Array[int]((1,2,3)))<br>
+x[0,1,2] = 2</font></p>
+</blockquote>
+
 <h3>Q: How do I specify generic types, such as collections?</h3>
 <p>A: IronPython supports an indexing-like syntax for identifying concrete 
 realizations of generic types and methods, for example:</p>
@@ -317,10 +329,36 @@ see the
 <a href="Tutorial/Tutorial.htm">IronPython Tutorial</a> (if you're reading the 
 FAQ on the web, the tutorial.htm document is in the tutorial directory where you 
 installed IronPython).</p>
-<p><font size="2" face="Courier New">&gt;&gt;&gt; import System<br>
-&gt;&gt;&gt; clr.AddReference(&quot;System.Windows.Forms&quot;)<br>
-&gt;&gt;&gt; import System.Windows<br>
-&gt;&gt;&gt; form = System.Windows.Forms.Form()</font></p>
+<blockquote>
+    <font size="2" face="Courier New">&gt;&gt;&gt; import System<br>
+    &gt;&gt;&gt; clr.AddReference(&quot;System.Windows.Forms&quot;)<br>
+    &gt;&gt;&gt; import System.Windows<br>
+    &gt;&gt;&gt; form = System.Windows.Forms.Form()</font>
+</blockquote>
+<h3>Q: How does IronPython's threading model relate to CPython's with respect to 
+object operations?</h3>
+<p>A: CPython has a Global Interpreter Lock, and it interprets opcodes for 
+operations on primitive types atomically.&nbsp; IronPython also ensures 
+operations on primitive types are atomic (for example, inserting into a list or 
+removing an item at a specific index).&nbsp; However, IronPython's in-place 
+addition operations (for example, &quot;l = []; l += [2,3,4]&quot;) are not atomic, so if 
+two threads perform this operation, &quot;l&quot; could end up with interleaving values.&nbsp; 
+Furthermore, IronPython looks up an operation's implementation method atomically 
+and then invokes the method atomically.&nbsp; Between the time of the look up 
+and the invoke, another thread could execute that replaced the definition of the 
+operation, and the first thread would invoke the old definition it found. If a 
+program's behavior needs to be guaranteed across this sort of scenario, your 
+program should be ensuring this level of thread safety; the CPython 
+specification makes no guarantees in this situation either.</p>
+<h3>Q: Why does ipy.exe appear to access the internet sometimes?</h3>
+<p>A: Microsoft signs its DLLs so that they can be verified as coming from 
+Microsoft.&nbsp; Because ipy.exe is using DLLs that are signed, the .NET CLR tries 
+to confirm the certificates that were used to sign the DLLs.&nbsp; 
+When it does this, you may notice internet traffic to a certification service 
+for signed binaries, and you may notice performance impact on start up.&nbsp; 
+For a good discussion of this topic, please see
+<a href="http://blogs.msdn.com/shawnfa/archive/2005/12/13/502779.aspx">
+Authenticode and Assemblies</a>.</p>
 
 </body>
 
