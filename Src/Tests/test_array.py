@@ -171,5 +171,62 @@ def test_nonzero_lowerbound():
     AssertError(NotImplementedError, sliceArrayAssign, a, -200, 1)
     AssertError(NotImplementedError, sliceArrayAssign, a, 1, 1)
 
+#Codeplex WorkItem 2730    
+def test_array_type():
+    
+    def type_helper(array_type, instance):
+        #create the array type
+        AT = System.Array[array_type]
+        
+        a0 = AT([])
+        a1 = AT([instance])
+        a2 = AT([instance, instance])
+                
+        a_normal = System.Array.CreateInstance(array_type, 3)
+        Assert(str(AT)==str(type(a_normal)))
+        for i in xrange(3): 
+            a_normal[i] = instance
+            Assert(str(AT)==str(type(a_normal)))
    
+        a_multi  = System.Array.CreateInstance(array_type, 2, 3)
+        Assert(str(AT)==str(type(a_multi)))
+        for i in xrange(2):
+            for j in xrange(3):
+                Assert(str(AT)==str(type(a_multi)))
+                a_multi[i, j]=instance
+                
+        Assert(str(AT)==str(type(a0)))
+        Assert(str(AT)==str(type(a0[0:])))
+        Assert(str(AT)==str(type(a0[:0])))
+        Assert(str(AT)==str(type(a1)))
+        Assert(str(AT)==str(type(a1[1:])))
+        Assert(str(AT)==str(type(a1[:0])))
+        Assert(str(AT)==str(type(a_normal)))
+        Assert(str(AT)==str(type(a_normal[:0])))
+        Assert(str(AT)==str(type(a_normal[3:])))
+        Assert(str(AT)==str(type(a_normal[4:])))
+        Assert(str(AT)==str(type(a_normal[1:])))
+        Assert(str(AT)==str(type(a_normal[1:1:50])))
+        Assert(str(AT)==str(type(a_multi)))
+        def silly(): a_multi[0:][1:0]
+        AssertError(NotImplementedError, silly)
+        Assert(str(AT)==str(type((a0+a1)[:0])))
+            
+    type_helper(int, 0)
+    type_helper(int, 1)
+    type_helper(int, 100)
+    type_helper(bool, False)
+    type_helper(bool, True)
+    #type_helper(bool, 1)
+    type_helper(long, 0L)
+    type_helper(long, 1L)
+    type_helper(long, 100L)
+    type_helper(float, 0.0)
+    type_helper(float, 1.0)
+    type_helper(float, 3.14)
+    type_helper(str, "")
+    type_helper(str, " ")
+    type_helper(str, "abc")
+    
+    
 run_test(__name__)

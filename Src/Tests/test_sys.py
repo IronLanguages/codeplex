@@ -65,6 +65,9 @@ def test_negative():
 	# getrefcount
 	AssertError(NotImplementedError, sys.getrefcount, None)
 
+def test_winver():
+    #Codeplex WorkItem 2267
+    Assert(hasattr(sys, 'winver'))
 
 if is_cli:
     testDelGetFrame = "Test_Del_GetFrame" in sys.argv

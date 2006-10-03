@@ -120,7 +120,11 @@ def test_split():
 
 
 def test_codecs():
-    'abc'.encode('cp1252')  # code page codecs should be registered in the system
+    #all the encodings that should be supported
+    #encodings = [ 'cp1252','ascii', 'utf-8', 'utf-16', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape']
+    #what actually is supported
+    encodings = [ 'cp1252','ascii', 'utf-8', 'latin-1', 'iso-8859-1', 'utf-16-le', 'raw-unicode-escape']
+    for encoding in encodings: Assert('abc'.encode(encoding).decode(encoding)=='abc')
     
 def test_count():
     Assert("adadad".count("d") == 3)
