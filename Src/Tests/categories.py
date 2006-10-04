@@ -81,7 +81,6 @@ IronPythonTests = {
                 ''',
             'netinterop':
                 '''
-                dllsite
                 test_array
                 test_cliclass
                 test_clrexception
