@@ -431,6 +431,7 @@
                 <File Id="File_c3.cs" Name="c3.cs" />
                 <File Id="File_categories.py" Name="CATEGORI.PY" LongName="categories.py" />
                 <File Id="File_custombuiltins.py" Name="CUSTOMBU.PY" LongName="custombuiltins.py" />
+                <File Id="File_dllsite.py" Name="dllsite.py" />
                 <File Id="File_iprun.py" Name="iprun.py" />
                 <File Id="File_pretest.py" Name="pretest.py" />
                 <File Id="File_run.py" Name="run.py" />
@@ -459,6 +460,7 @@
                 <File Id="File_test_decorator.py" Name="TDECORAT.PY" LongName="test_decorator.py" />
                 <File Id="File_test_delegate.py" Name="TDELEGAT.PY" LongName="test_delegate.py" />
                 <File Id="File_test_dict.py" Name="TDICT.PY" LongName="test_dict.py" />
+                <File Id="File_test_dllsite.py" Name="TDLLSITE.PY" LongName="test_dllsite.py"/>
                 <File Id="File_test_doc.py" Name="test_doc.py" />
                 <File Id="File_test_event.py" Name="TEVENT.PY" LongName="test_event.py" />
                 <File Id="File_test_exceptionconverter.py" Name="TEXCEPCV.PY" LongName="test_exceptionconverter.py" />

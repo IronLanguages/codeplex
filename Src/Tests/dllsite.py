@@ -18,9 +18,11 @@
 ##
 
 from lib.assert_util import *
-if not is_cli:
+from sys import exit, argv
+
+
+if argv.count("OKtoRun")==0 or is_cli==False:
     #bail
-    from sys import exit
     exit(0)
 
 

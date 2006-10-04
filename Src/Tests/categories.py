@@ -81,6 +81,7 @@ IronPythonTests = {
                 ''',
             'netinterop':
                 '''
+                dllsite
                 test_array
                 test_cliclass
                 test_clrexception
@@ -88,6 +89,7 @@ IronPythonTests = {
                 test_clrload2
                 test_cominterop
                 test_delegate
+                test_dllsite
                 test_event
                 test_exceptionconverter
                 test_genericmeth

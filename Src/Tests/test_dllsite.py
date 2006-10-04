@@ -345,7 +345,7 @@ def main():
     Directory.SetCurrentDirectory(ORIG_DIR)
     
     from lib.process_util import launch_ironpython
-    launch_ironpython("dllsite.py")
+    launch_ironpython("dllsite.py", "OKtoRun")
 
     cleanUp()
     
