@@ -13,7 +13,7 @@
 #
 ######################################################################################
 
-from lib.assert_util import is_cli
+from lib.assert_util import *
 if not is_cli:
     #bail
     from sys import exit
@@ -28,9 +28,8 @@ from System.CodeDom.Compiler   import CompilerParameters
 #------------------------------------------------------------------------------
 #--GLOBALS
 
-ORIG_DIR = Directory.GetCurrentDirectory()
-Directory.SetCurrentDirectory("..\..")
-IP_DIR = Directory.GetCurrentDirectory()
+ORIG_DIR = testpath.public_testdir
+IP_DIR = sys.prefix
 DLLS_DIR = IP_DIR + "\\DLLs"
 PROVIDER = CSharpCodeProvider()
 
