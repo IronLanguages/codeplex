@@ -120,7 +120,7 @@ def test_x():
 
 def test_match():
     p = re.compile('.')
-    AreEqual(p.match('foobar', 1,2).span(), (1,2))
+    AreEqual(p.match('bazbar', 1,2).span(), (1,2))
  
 def test_startandend():
     m = re.match(r'(a)|(b)', 'b')
@@ -151,14 +151,14 @@ def test_startandend():
     
 def test_start_of_str():
     startOfStr = re.compile('^')
-    AreEqual(startOfStr.match('foobar', 1), None)
-    AreEqual(startOfStr.match('foobar', 0,0).span(), (0,0))
+    AreEqual(startOfStr.match('bazbar', 1), None)
+    AreEqual(startOfStr.match('bazbar', 0,0).span(), (0,0))
     # BUG 674
-    #AreEqual(startOfStr.match('foobar', 1,2), None)
+    #AreEqual(startOfStr.match('bazbar', 1,2), None)
     # /BUG
 
     # BUG
-    #AreEqual(startOfStr.match('foobar', endpos=3).span(), (0,0))
+    #AreEqual(startOfStr.match('bazbar', endpos=3).span(), (0,0))
     #/BUG
 
 # check that groups in split RE are added properly
@@ -259,8 +259,8 @@ def test_options():
         l = c.findall("foo yadayadayada\nyadayadayada bar")
         Assert(l == ['foo yadayadayada\nyadayadayada bar'])
         c = re.compile("(?x:foo  bar)") #verbose (ignore whitespace)
-        l = c.findall("foobar foo bar      foobar \n\n\tfoobar")
-        Assert(l == ['foobar', 'foobar', 'foobar'])
+        l = c.findall("bazbar foo bar      bazbar \n\n\tbazbar")
+        Assert(l == ['bazbar', 'bazbar', 'bazbar'])
     
     pattern = "t(?=s)"
     c = re.compile(pattern)
@@ -282,7 +282,7 @@ def test_options():
 
 def test_finditer():
     # finditer 
-    matches = re.finditer("foo","barfoobarfoobar")
+    matches = re.finditer("foo","barbazbarbazbar")
     num = 0
     for m in matches:
         num = num + 1
@@ -356,7 +356,7 @@ def test_lone_hat():
     """Single ^ reg-ex shouldn't match w/ a sub-set of a string"""
     sol = re.compile('^')
 
-    AreEqual(sol.match('foobar', 1, 2), None)
+    AreEqual(sol.match('bazbar', 1, 2), None)
 
 
 def test_eol():

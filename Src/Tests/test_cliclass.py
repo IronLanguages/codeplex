@@ -226,15 +226,15 @@ def test_type_descs():
     Assert(x.Count > 0)
     
     Assert(test.TestProperties(b, ['__doc__'], []))
-    b.foobar = 'hello'
-    Assert(test.TestProperties(b, ['__doc__','foobar'], []))
+    b.bazbar = 'hello'
+    Assert(test.TestProperties(b, ['__doc__','bazbar'], []))
     b.baz = 'goodbye'
-    Assert(test.TestProperties(b, ['__doc__','foobar', 'baz'], []))
+    Assert(test.TestProperties(b, ['__doc__','bazbar', 'baz'], []))
     delattr(b, 'baz')
-    Assert(test.TestProperties(b, ['__doc__','foobar'], ['baz']))
+    Assert(test.TestProperties(b, ['__doc__','bazbar'], ['baz']))
     # Check that adding a non-string entry in the dictionary does not cause any grief.
     b.__dict__[1] = 1;
-    Assert(test.TestProperties(b, ['__doc__','foobar'], ['baz']))
+    Assert(test.TestProperties(b, ['__doc__','bazbar'], ['baz']))
     
     #Assert(test.TestProperties(test, ['GetConverter', 'GetEditor', 'GetEvents', 'GetHashCode'] , []))
     

@@ -1460,11 +1460,11 @@ if is_cli:
 
 def test_derived_tuple_eq():
     # verify overriding __eq__ on tuple still allows us to call the super version
-    class Foobar(tuple):    
+    class bazbar(tuple):    
         def __eq__(self,other):
-            other = Foobar(other)
-            return super(Foobar,self).__eq__(other)
-    AreEqual(Foobar('abc'), 'abc')
+            other = bazbar(other)
+            return super(bazbar,self).__eq__(other)
+    AreEqual(bazbar('abc'), 'abc')
     
 def test_new_old_slots():
     class N(object): pass
