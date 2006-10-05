@@ -258,7 +258,7 @@ def test_options():
         c = re.compile("(?s:foo.*bar)") # dotall (make "." match any chr, including a newline)
         l = c.findall("foo yadayadayada\nyadayadayada bar")
         Assert(l == ['foo yadayadayada\nyadayadayada bar'])
-        c = re.compile("(?x:foo  bar)") #verbose (ignore whitespace)
+        c = re.compile("(?x:baz  bar)") #verbose (ignore whitespace)
         l = c.findall("bazbar foo bar      bazbar \n\n\tbazbar")
         Assert(l == ['bazbar', 'bazbar', 'bazbar'])
     
@@ -282,11 +282,11 @@ def test_options():
 
 def test_finditer():
     # finditer 
-    matches = re.finditer("foo","barbazbarbazbar")
+    matches = re.finditer("baz","barbazbarbazbar")
     num = 0
     for m in matches:
         num = num + 1
-        AreEqual("foo", m.group(0))
+        AreEqual("baz", m.group(0))
     Assert(num == 2)
 
 
