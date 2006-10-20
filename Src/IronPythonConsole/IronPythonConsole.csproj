@@ -23,14 +23,6 @@
     </StartupObject>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
-    <SccProjectName>
-    </SccProjectName>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccProvider>
-    </SccProvider>
     <IsWebBootstrapper>true</IsWebBootstrapper>
     <PublishUrl>http://localhost/IronPythonConsole</PublishUrl>
     <Install>true</Install>

@@ -87,7 +87,7 @@ namespace IronPython.Modules {
             private const int DefaultSocketType = (int)System.Net.Sockets.SocketType.Stream;
             private const int DefaultProtocolType = (int)ProtocolType.Unspecified;
 
-            private Socket socket;
+            internal Socket socket;
             private WeakRefTracker weakRefTracker = null;
 
             #endregion

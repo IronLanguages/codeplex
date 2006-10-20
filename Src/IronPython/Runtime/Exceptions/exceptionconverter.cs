@@ -47,6 +47,7 @@ namespace IronPython.Runtime.Exceptions {
         static PythonFunction exceptionInitMethod;
         static PythonFunction exceptionGetItemMethod;
         static PythonFunction exceptionStrMethod;
+        static PythonFunction exceptionGetStateMethod;
         static PythonFunction syntaxErrorStrMethod;
         static PythonFunction unicodeErrorInit;
         static PythonFunction systemExitInitMethod;
@@ -127,6 +128,7 @@ namespace IronPython.Runtime.Exceptions {
             exceptionInitMethod = new FunctionX(null, "__init__", new CallTargetN(ExceptionConverter.ExceptionInit), new string[] { "args" }, Ops.EMPTY, FunctionAttributes.ArgumentList);
             exceptionGetItemMethod = new FunctionX(null, "__getitem__", new CallTargetN(ExceptionConverter.ExceptionGetItem), new string[] { "args" }, Ops.EMPTY, FunctionAttributes.ArgumentList);
             exceptionStrMethod = new FunctionX(null, "__str__", new CallTargetN(ExceptionConverter.ExceptionToString), new string[] { "args" }, Ops.EMPTY, FunctionAttributes.ArgumentList);
+            exceptionGetStateMethod= new FunctionX(null, "__getstate__", new CallTargetN(ExceptionConverter.ExceptionGetState), new string[] { "args" }, Ops.EMPTY, FunctionAttributes.ArgumentList);
             syntaxErrorStrMethod = new FunctionX(null, "__str__",
                 new CallTargetN(ExceptionConverter.SyntaxErrorToString), new string[] { "args" }, Ops.EMPTY, FunctionAttributes.ArgumentList);
             unicodeErrorInit = new FunctionX(null,
@@ -264,6 +266,33 @@ namespace IronPython.Runtime.Exceptions {
             }
 
             return String.Empty;
+        }
+
+        /// <summary>
+        /// Helper function for exception instances. Returns pickled object state.
+        // ie. Exception.__getstate__
+        /// </summary>
+        public static Dict ExceptionGetState(params object[] args) {
+            Debug.Assert(args.Length == 1);
+            Tuple t = args[0] as Tuple;
+
+            if (t == null || t.GetLength() == 0) throw Ops.TypeErrorForUnboundMethodCall("__getstate__", typeof(Exception), null);
+
+            object self = t[0];
+
+            if (!IsExceptionObject(self))
+                throw Ops.TypeErrorForUnboundMethodCall("__getstate__", typeof(Exception), self);
+
+            if (t.GetLength() != 1) throw Ops.TypeErrorForArgumentCountMismatch("__getstate__", 1, t.GetLength());
+
+            OldInstance selfObj = (OldInstance)self;
+            Dict dictCopy = new Dict(selfObj.GetAttrDict(DefaultContext.Default).Count - 1);
+            foreach (KeyValuePair<object, object> item in selfObj.GetAttrDict(DefaultContext.Default)) {
+                if (item.Key is string && (string)item.Key == SymbolTable.ClrExceptionKey.ToString()) continue;
+                dictCopy[item.Key] = item.Value;
+            }
+
+            return dictCopy;
         }
 
         /// <summary>
@@ -597,6 +626,7 @@ namespace IronPython.Runtime.Exceptions {
             oc.SetAttr(DefaultContext.Default, SymbolTable.Init, exceptionInitMethod);
             oc.SetAttr(DefaultContext.Default, SymbolTable.GetItem, exceptionGetItemMethod);
             oc.SetAttr(DefaultContext.Default, SymbolTable.String, exceptionStrMethod);
+            oc.SetAttr(DefaultContext.Default, SymbolTable.GetState, exceptionGetStateMethod);
 
             return oc;
         }

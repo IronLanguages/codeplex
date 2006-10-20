@@ -1347,16 +1347,30 @@ namespace IronPython.Compiler {
         //    ['else' ':' suite] | 'try' ':' suite 'finally' ':' suite)
         //# NB compile.c makes sure that the default except clause is last
 
+        // Python 2.5 grammar
+        //try_stmt: 'try' ':' suite
+        //          (
+        //            (except_clause ':' suite)+
+        //            ['else' ':' suite]
+        //            ['finally' ':' suite]
+        //          |
+        //            'finally' : suite
+        //          )
+
+
         private Statement ParseTryStmt() {
             Eat(TokenKind.KeywordTry);
             Location start = GetStart();
             Location mid = GetEnd();
             Statement body = ParseSuite();
+            Statement finallySuite = null;
+            TryStatementHandler[] handlers = null;
+            Statement elseSuite = null;
             Statement ret;
 
             if (MaybeEat(TokenKind.KeywordFinally)) {
-                Statement finally_ = ParseSuite();
-                TryFinallyStatement tfs = new TryFinallyStatement(body, finally_);
+                finallySuite = ParseSuite();
+                TryStatement tfs = new TryStatement(body, handlers, elseSuite, finallySuite);
                 tfs.Header = mid;
                 ret = tfs;
             } else {
@@ -1364,14 +1378,17 @@ namespace IronPython.Compiler {
                 do {
                     l.Add(ParseTryStmtHandler());
                 } while (PeekToken().Kind == TokenKind.KeywordExcept);
-                TryStatementHandler[] handlers = l.ToArray();
+                handlers = l.ToArray();
 
-                Statement else_ = null;
                 if (MaybeEat(TokenKind.KeywordElse)) {
-                    else_ = ParseSuite();
+                    elseSuite = ParseSuite();
                 }
 
-                TryStatement ts = new TryStatement(body, handlers, else_);
+                if (Options.Python25 && MaybeEat(TokenKind.KeywordFinally)) {
+                    finallySuite = ParseSuite();
+                }
+
+                TryStatement ts = new TryStatement(body, handlers, elseSuite, finallySuite);
                 ts.Header = mid;
                 ret = ts;
             }

@@ -453,7 +453,7 @@ End Class
     """)
         f.close()
         
-        name = '%s\\vbproptest%f.dll' % (nt.environ['TEMP'], r.random())
+        name = '%s\\vbproptest%f.dll' % (testpath.temporary_dir, r.random())
         x = run_vbc('/target:library vbproptest1.vb "/out:%s"' % name)        
         AreEqual(x, 0)
         import clr

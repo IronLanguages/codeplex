@@ -38,9 +38,13 @@ namespace IronPython.Modules {
         )]
     public static class PythonPickle {
 
-        public static int HIGHEST_PROTOCOL = 2;
+        private static int highestProtocol = 2;
+        public static int HighestProtocol {
+            [PythonName("HIGHEST_PROTOCOL")]
+            get { return highestProtocol; }
+        }
 
-        public const string Newline = "\n";
+        private const string Newline = "\n";
 
         public static IPythonType PickleError = ExceptionConverter.CreatePythonException("PickleError", "cPickle");
         public static IPythonType PicklingError = ExceptionConverter.CreatePythonException("PicklingError", "cPickle", PickleError);
@@ -365,10 +369,10 @@ namespace IronPython.Modules {
                 if (protocol == null) protocol = Ops.IsTrue(bin) ? 1 : 0;
 
                 int intProtocol = Converter.ConvertToInt32(protocol);
-                if (intProtocol > HIGHEST_PROTOCOL) {
-                    throw Ops.ValueError("pickle protocol {0} asked for; the highest available protocol is {1}", intProtocol, HIGHEST_PROTOCOL);
+                if (intProtocol > highestProtocol) {
+                    throw Ops.ValueError("pickle protocol {0} asked for; the highest available protocol is {1}", intProtocol, highestProtocol);
                 } else if (intProtocol < 0) {
-                    this.protocol = HIGHEST_PROTOCOL;
+                    this.protocol = highestProtocol;
                 } else {
                     this.protocol = intProtocol;
                 }

@@ -161,8 +161,8 @@ try:
     a.close()
 
 
-    result = nt.spawnl(0, csc, "/target:library", "/nologo", "/out:"+tmp+'test2.dll', tmp+'test2.cs')
-    result = nt.spawnl(0, csc, "/target:library", "/nologo", "/r:" + tmp + 'test2.dll', "/out:"+tmp+'test1.dll', tmp+'test1.cs')
+    result = nt.spawnv(0, csc, (csc, "/target:library", "/nologo", "/out:"+tmp+'test2.dll', tmp+'test2.cs'))
+    result = nt.spawnv(0, csc, (csc, "/target:library", "/nologo", "/r:" + tmp + 'test2.dll', "/out:"+tmp+'test1.dll', tmp+'test1.cs'))
     
     clr.AddReferenceToFile('test1')
     

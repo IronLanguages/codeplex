@@ -109,8 +109,10 @@ def RunPythonExe(file, *args):
     if (fullpath != temppath):
         System.IO.File.Copy(fullpath, temppath, True)
 
+    realargs = [temppath]
+    realargs.extend(args)
     try:
-        retval = nt.spawnl(0, temppath, *args)
+        retval = nt.spawnv(0, temppath, realargs)
     except:
         retval = 1
 

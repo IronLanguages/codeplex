@@ -406,59 +406,48 @@ namespace IronPython.Compiler.Ast {
             return false;
         }
 
-        // TryFinallyStmt
-        public override bool Walk(TryFinallyStatement node) {
-            BitArray save = bits;
-            bits = new BitArray(bits);
-            // Flow the body
-            node.Body.Walk(this);
-            bits = save;
-            // Flow finally - this executes no matter what
-            node.FinallyStmt.Walk(this);
-            return false;
-        }
-
         // TryStmt
         public override bool Walk(TryStatement node) {
-            BitArray result = new BitArray(bits.Length, true);
             BitArray save = bits;
             bits = new BitArray(bits);
 
             // Flow the body
             node.Body.Walk(this);
-            result.And(bits);
-
-            foreach (TryStatementHandler tsh in node.Handlers) {
-                // Restore to saved state
-                bits.SetAll(false);
-                bits.Or(save);
-
-                // Flow the test
-                if (tsh.Test != null) {
-                    tsh.Test.Walk(this);
-                }
-
-                // Define the target
-                if (tsh.Target != null) {
-                    tsh.Target.Walk(fdef);
-                }
-
-                // Flow the body
-                tsh.Body.Walk(this);
-                result.And(bits);
-            }
 
             if (node.ElseStatement != null) {
-                bits.SetAll(false);
-                bits.Or(save);
-
+                // Else is flown only after completion of Try with same bits
                 node.ElseStatement.Walk(this);
-                result.And(bits);
+            }
+
+
+            if (node.Handlers != null) {
+                foreach (TryStatementHandler tsh in node.Handlers) {
+                    // Restore to saved state
+                    bits.SetAll(false);
+                    bits.Or(save);
+
+                    // Flow the test
+                    if (tsh.Test != null) {
+                        tsh.Test.Walk(this);
+                    }
+
+                    // Define the target
+                    if (tsh.Target != null) {
+                        tsh.Target.Walk(fdef);
+                    }
+
+                    // Flow the body
+                    tsh.Body.Walk(this);
+                }
             }
 
             bits = save;
-            bits.SetAll(false);
-            bits.Or(result);
+
+            if (node.FinallyStatement != null) {
+                // Flow finally - this executes no matter what
+                node.FinallyStatement.Walk(this);
+            }
+
             return false;
         }
 

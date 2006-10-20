@@ -272,7 +272,11 @@ namespace IronPython.Compiler.Ast {
                 PromoteLocalsToEnvironment();
             }
 
-            methodCodeGen.EmitTraceBackTryBlockStart();
+            // Try block may yield, but we are not interested in the isBlockYielded value
+            // hence push a dummySlot to pass the Assertion.
+            Slot dummySlot = methodCodeGen.GetLocalTmp(typeof(object));
+
+            methodCodeGen.EmitTraceBackTryBlockStart(dummySlot);
 
             // emit the actual body
             if (yieldCount > 0) {
@@ -280,7 +284,8 @@ namespace IronPython.Compiler.Ast {
             } else {
                 EmitFunctionBody(methodCodeGen, initCodeGen);
             }
-
+            // free up dummySlot
+            methodCodeGen.FreeLocalTmp(dummySlot);
             methodCodeGen.EmitTraceBackFaultBlock(name.GetString(), filename);
 
         }
@@ -414,7 +419,11 @@ namespace IronPython.Compiler.Ast {
             for (int i = 0; i < yieldCount; i++) jumpTable[i] = targets[i].TopBranchTarget;
             ncg.yieldLabels = jumpTable;
 
-            ncg.PushTryBlock();
+            // Generator will ofcourse yield, but we are not interested in the isBlockYielded value
+            // hence push a dummySlot to pass the Assertion.
+
+            Slot dummySlot = ncg.GetLocalTmp(typeof(object));
+            ncg.PushTryBlock(dummySlot);
             ncg.BeginExceptionBlock();
 
             ncg.Emit(OpCodes.Ldarg_0);
@@ -424,7 +433,8 @@ namespace IronPython.Compiler.Ast {
             // fall-through on first pass
             // yield statements will insert the needed labels after their returns
             Body.Emit(ncg);
-
+            //free the dummySlot
+            ncg.FreeLocalTmp(dummySlot);
             // fall-through is almost always possible in generators, so this
             // is almost always needed
             ncg.EmitReturnInGenerator(null);
@@ -528,13 +538,11 @@ namespace IronPython.Compiler.Ast {
 
     public struct YieldTarget {
         private Label topBranchTarget;
-        private Label tryBranchTarget;
-        private bool finallyBranch;
+        private Label yieldContinuationTarget;
 
         public YieldTarget(Label topBranchTarget) {
             this.topBranchTarget = topBranchTarget;
-            tryBranchTarget = new Label();
-            finallyBranch = false;
+            yieldContinuationTarget = new Label();
         }
 
         public Label TopBranchTarget {
@@ -542,26 +550,16 @@ namespace IronPython.Compiler.Ast {
             set { topBranchTarget = value; }
         }
 
-        public Label TryBranchTarget {
-            get { return tryBranchTarget; }
-            set { tryBranchTarget = value; }
+        public Label YieldContinuationTarget {
+            get { return yieldContinuationTarget; }
+            set { yieldContinuationTarget = value; }
         }
 
-        public bool FinallyBranch {
-            get { return finallyBranch; }
-            set { finallyBranch = value; }
-        }
-
-        internal YieldTarget FixForTry(CodeGen cg) {
-            tryBranchTarget = cg.DefineLabel();
+        internal YieldTarget FixForTryCatchFinally(CodeGen cg) {
+            yieldContinuationTarget = cg.DefineLabel();
             return this;
         }
 
-        internal YieldTarget FixForFinally(CodeGen cg) {
-            tryBranchTarget = cg.DefineLabel();
-            finallyBranch = true;
-            return this;
-        }
     }
 
     class YieldLabelBuilder : AstWalker {
@@ -569,7 +567,8 @@ namespace IronPython.Compiler.Ast {
             public enum State {
                 Try,
                 Handler,
-                Finally
+                Finally,
+                Else
             };
             public State state;
 
@@ -594,57 +593,46 @@ namespace IronPython.Compiler.Ast {
             }
 
             public override void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg) {
-                stmt.AddYieldTarget(yt.FixForTry(cg));
-                ys.Label = yt.TryBranchTarget;
+                stmt.AddYieldTarget(yt.FixForTryCatchFinally(cg));
+                ys.Label = yt.YieldContinuationTarget;
             }
         }
 
         public sealed class TryBlock : ExceptionBlock {
             private TryStatement stmt;
+            private bool isPython24TryFinallyStmt;
 
-            public TryBlock(TryStatement stmt)
-                : this(stmt, State.Try) {
+            public TryBlock(TryStatement stmt, bool isPython24TryFinallyStmt)
+                : this(stmt, State.Try, isPython24TryFinallyStmt) {
             }
-            public TryBlock(TryStatement stmt, State state)
+
+            public TryBlock(TryStatement stmt, State state, bool isPython24TryFinallyStmt)
                 : base(state) {
                 this.stmt = stmt;
+                this.isPython24TryFinallyStmt = isPython24TryFinallyStmt;
             }
 
             public override void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg) {
                 switch (state) {
                     case State.Try:
-                        stmt.AddYieldTarget(yt.FixForTry(cg));
-                        ys.Label = yt.TryBranchTarget;
+                        if(isPython24TryFinallyStmt)
+                            cg.Context.AddError("cannot yield from try block with finally", ys);
+                        else
+                            stmt.AddTryYieldTarget(yt.FixForTryCatchFinally(cg));
                         break;
                     case State.Handler:
-                        stmt.YieldInExcept = true;
-                        ys.Label = yt.TopBranchTarget;
-                        break;
-                }
-            }
-        }
-
-        public sealed class TryFinallyBlock : ExceptionBlock {
-            private TryFinallyStatement stmt;
-
-            public TryFinallyBlock(TryFinallyStatement stmt)
-                : this(stmt, State.Try) {
-            }
-            public TryFinallyBlock(TryFinallyStatement stmt, State state)
-                : base(state) {
-                this.stmt = stmt;
-            }
-
-            public override void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg) {
-                switch (state) {
-                    case State.Try:
-                        cg.Context.AddError("cannot yield from try block with finally", ys);
+                        stmt.AddCatchYieldTarget(yt.FixForTryCatchFinally(cg));
                         break;
                     case State.Finally:
-                        stmt.AddYieldTarget(yt.FixForFinally(cg));
-                        ys.Label = yt.TryBranchTarget;
+                        stmt.AddFinallyYieldTarget(yt.FixForTryCatchFinally(cg));
                         break;
+                    case State.Else:
+                        stmt.AddElseYieldTarget(yt.FixForTryCatchFinally(cg));
+                        break;
+
                 }
+                ys.Label = yt.YieldContinuationTarget;
+
             }
         }
 
@@ -684,34 +672,38 @@ namespace IronPython.Compiler.Ast {
             return false;
         }
 
-        public override bool Walk(TryFinallyStatement node) {
-            TryFinallyBlock tfb = new TryFinallyBlock(node);
-            tryBlocks.Push(tfb);
-            node.Body.Walk(this);
-            tfb.state = ExceptionBlock.State.Finally;
-            node.FinallyStmt.Walk(this);
-            ExceptionBlock eb = tryBlocks.Pop();
-            Debug.Assert((object)eb == (object)tfb);
-            return false;
-        }
-
 
         public override bool Walk(TryStatement node) {
-            TryBlock tb = new TryBlock(node);
+            TryBlock tb = null;
+            
+            if(!Options.Python25 && node.Handlers == null) 
+                tb = new TryBlock(node, true);
+            else
+                tb = new TryBlock(node, false);
+
             tryBlocks.Push(tb);
             node.Body.Walk(this);
 
-            tb.state = TryBlock.State.Handler;
-            foreach (TryStatementHandler handler in node.Handlers) {
-                handler.Walk(this);
+            if (node.Handlers != null) {
+                tb.state = TryBlock.State.Handler;
+                foreach (TryStatementHandler handler in node.Handlers) {
+                    handler.Walk(this);
+                }
+            }
+
+            if (node.ElseStatement != null) {
+                tb.state = TryBlock.State.Else;
+                node.ElseStatement.Walk(this);
+            }
+
+            if (node.FinallyStatement != null) {
+                tb.state = TryBlock.State.Finally;
+                node.FinallyStatement.Walk(this);
             }
 
             ExceptionBlock eb = tryBlocks.Pop();
             Debug.Assert((object)tb == (object)eb);
 
-            if (node.ElseStatement != null) {
-                node.ElseStatement.Walk(this);
-            }
             return false;
         }
 

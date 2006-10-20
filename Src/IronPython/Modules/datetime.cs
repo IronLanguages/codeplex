@@ -203,18 +203,21 @@ namespace IronPython.Modules {
             public object Replace() {
                 return new PythonDateTimeTime(time, lostMicroseconds);
             }
+            
 
             [PythonName("replace")]
             public object Replace([ParamDict]Dict dict) {
                 //Return time with new specified fields.
                 TimeSpan res = time;
                 int ms = lostMicroseconds;
-                foreach (KeyValuePair<object, object> kvp in dict) {
+
+                foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dict) {
                     string key = kvp.Key as string;
                     if (key == null) continue;
 
                     switch (key) {
                         case "hour":
+                            
                             res = new TimeSpan(0, (int)kvp.Value, res.Minutes, res.Seconds, res.Milliseconds);
                             break;
                         case "minute":
@@ -491,7 +494,7 @@ namespace IronPython.Modules {
             public object Replace([ParamDict]Dict dict) {
                 DateTime curTime = dateTime;
                 int ms = lostMicroseconds;
-                foreach (KeyValuePair<object, object> kvp in dict) {
+                foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dict) {
                     string key = kvp.Key as string;
                     if (key == null) continue;
 

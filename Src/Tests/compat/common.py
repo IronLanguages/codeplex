@@ -68,10 +68,7 @@ def delete_files(files):
         nt.remove(f)
 
 def launch(executable, test):
-    if sys.platform == "cli":
-        return nt.spawnl(0, executable, *(test,))
-    else:
-        return nt.spawnv(0, executable, (executable, test))
+    return nt.spawnv(0, executable, (executable, test))
         
 class my_stdout:
     def __init__(self, o):

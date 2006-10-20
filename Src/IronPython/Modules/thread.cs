@@ -36,7 +36,7 @@ namespace IronPython.Modules {
 
         [Documentation("start_new_thread(function, [args, [kwDict]]) -> thread id\nCreates a new thread running the given function")]
         [PythonName("start_new_thread")]
-        public static object StartNewThread(ICallerContext context, object function, object args, [ParamDict]object kwDict) {
+        public static object StartNewThread(ICallerContext context, object function, object args, object kwDict) {
             Tuple tupArgs = args as Tuple;
             if (tupArgs == null) throw Ops.TypeError("2nd arg must be a tuple");
 

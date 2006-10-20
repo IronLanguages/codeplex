@@ -354,19 +354,21 @@ namespace IronPython.Compiler.Ast {
 
         // TryStmt
         public override bool Walk(TryStatement node) {
-            foreach (TryStatementHandler tsh in node.Handlers) {
-                if (tsh.Target != null) {
-                    tsh.Target.Walk(define);
+
+            if (node.Handlers != null) {
+                foreach (TryStatementHandler tsh in node.Handlers) {
+                    if (tsh.Target != null) {
+                        tsh.Target.Walk(define);
+                    }
                 }
             }
+
+            // Add locals
+            Debug.Assert(current != null);
+            current.TempsCount += TryStatement.LocalSlots;
             return true;
         }
 
-        public override bool Walk(TryFinallyStatement node) {
-            Debug.Assert(current != null);
-            current.TempsCount += TryFinallyStatement.LocalSlots;
-            return true;
-        }
 
         // DottedName
         public override bool Walk(DottedName node) {

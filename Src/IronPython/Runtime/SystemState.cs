@@ -129,7 +129,6 @@ namespace IronPython.Runtime {
             DefaultEncoding = Encoding.ASCII;
             byteorder = BitConverter.IsLittleEndian ? "little" : "big";
             copyright = "Copyright (c) Microsoft Corporation. All rights reserved.";
-            hexversion = 0x02040000;
             maxint = Int32.MaxValue;
             maxunicode = (int)ushort.MaxValue;
             platform = "cli";
@@ -138,10 +137,33 @@ namespace IronPython.Runtime {
             // !!! These fields do need to be reset on "reload(sys)". However, the initial value is specified by the 
             // engine elsewhere. For now, we initialize them just once to some default value
             if (version == null) {
-                version = IronPython.Hosting.PythonEngine.VersionString;
+                SetVersion(PythonEngine.VersionString);
                 warnoptions = List.Make();
                 executable = "";
             }
+        }
+
+        internal void SetVersion(string ironPythonVersion) {
+            Version pythonVersion;
+            string pythonVersionLevel;
+
+            if (Options.Python25) {
+                pythonVersion = new Version(2, 5, 0);
+                pythonVersionLevel = "alpha";
+            } else {
+                pythonVersion = new Version(2, 4, 0);
+                pythonVersionLevel = "release";
+            }
+
+            Debug.Assert(pythonVersion.Major <= 0xff, "version components must fit in two-hex-digit field");
+            Debug.Assert(pythonVersion.Minor <= 0xff, "version components must fit in two-hex-digit field");
+            Debug.Assert(pythonVersion.Build <= 0xff, "version components must fit in two-hex-digit field");
+
+            // e.g. hexversion = 0x02040000;
+            hexversion = (pythonVersion.Major << 24) + (pythonVersion.Minor << 16) + (pythonVersion.Build << 8);
+            version_info = Tuple.MakeTuple(pythonVersion.Major, pythonVersion.Minor, pythonVersion.Build, pythonVersionLevel, 0);
+
+            version = String.Format("{0}.{1}.{2} ({3})", pythonVersion.Major, pythonVersion.Minor, pythonVersion.Build, ironPythonVersion);
         }
 
         public override string ToString() {

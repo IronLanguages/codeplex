@@ -19,14 +19,6 @@
     </StartupObject>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
-    <SccProjectName>
-    </SccProjectName>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccProvider>
-    </SccProvider>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU' or '$(Configuration)|$(Platform)' == 'Signed Debug|AnyCPU'">
     <OutputPath>bin\Debug\</OutputPath>

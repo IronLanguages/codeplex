@@ -47,7 +47,9 @@ f.close()
 #       "lastline"  : valuestring is compared against the last line of the output
 #       "regexp"    : valuestring is a regular expression compared against the entire output
 def TestCommandLine(args, expected_output, expected_exitcode = 0):
-    exitcode = nt.spawnl(0, batfile, *args)
+    realargs = [batfile]
+    realargs.extend(args)
+    exitcode = nt.spawnv(0, batfile, realargs)
     cmdline = "ipy " + ' '.join(args)
     Assert(exitcode == expected_exitcode, "'" + cmdline + "' generated unexpected exit code " + str(exitcode))
     if (expected_output != None):

@@ -161,7 +161,7 @@ namespace IronPython.Hosting {
         }
 
         public void InitializeModules(string prefix, string executable, string version) {
-            Sys.version = version;
+            Sys.SetVersion(version);
             Sys.prefix = prefix;
             Sys.executable = executable;
             Sys.exec_prefix = prefix;
@@ -820,11 +820,16 @@ namespace IronPython.Hosting {
                 }
             }
 
+            Slot dummySlot = null;
             // finally emit the function into the method, if we
             // have ref/out params then we wrap it in a try/finally
             // that updates them before the function ends.
             if (fixers != null) {
-                cg.PushTryBlock();
+                // Try block may yield, but we are not interested in the isBlockYielded value
+                // hence push a dummySlot to pass the Assertion.
+                dummySlot = cg.GetLocalTmp(typeof(object));
+
+                cg.PushTryBlock(dummySlot);
                 cg.BeginExceptionBlock();
             }
 
@@ -833,7 +838,7 @@ namespace IronPython.Hosting {
             if (fixers != null) {
                 cg.PopTargets();
                 Slot returnVar = cg.GetLocalTmp(typeof(int));
-                cg.PushFinallyBlock(returnVar);
+                cg.PushFinallyBlock(returnVar, dummySlot);
                 cg.BeginFinallyBlock();
 
                 foreach (ReturnFixer rf in fixers) {
@@ -842,6 +847,7 @@ namespace IronPython.Hosting {
 
                 cg.EndExceptionBlock();
                 cg.PopTargets();
+                cg.FreeLocalTmp(dummySlot);
             }
             cg.Finish();
             return cg;
