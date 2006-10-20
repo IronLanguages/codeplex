@@ -210,11 +210,11 @@ namespace IronPython.Runtime.Operations {
         public static object Make(DynamicType cls, string s, int radix) {
             ValidateType(cls);
 
-            try {
+            //try {
                 return LiteralParser.ParseIntegerSign(s, radix);
-            } catch (ArgumentException e) {
-                throw Ops.ValueError(e.Message);
-            }
+            /*} catch (ArgumentException e) {
+                throw Runtime.Exceptions.ExceptionConverter.UpdateForRethrow(Ops.ValueError(e.Message));
+            }*/
         }
 
         [PythonName("__new__")]

@@ -83,6 +83,23 @@ namespace IronPython.Modules {
             if (ret == null) {
                 throw Ops.ImportError("No module named {0}", name);
             }
+
+            PythonModule mod = ret as PythonModule;
+            if (mod != null && from != null) {
+                string strAttrName;
+                object attrValue;
+                foreach (object attrName in from) {
+                    if (Converter.TryConvertToString(attrName, out strAttrName) && strAttrName != null) {
+                        try {
+                            attrValue = Ops.ImportOneFrom(context, mod, strAttrName);
+                        } catch (PythonImportErrorException) {
+                            continue;
+                        }
+                        mod.SetImportedAttr(context, SymbolTable.StringToId(strAttrName), attrValue);
+                    }
+                }
+            }
+
             return ret;
         }
 

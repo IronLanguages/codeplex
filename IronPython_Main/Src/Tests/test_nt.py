@@ -23,7 +23,7 @@ AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 1)
 nt.rmdir('dir_create_test')
 AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 0)
 
-AreEqual(nt.environ['COMPUTERNAME'] != None, True)
+AreEqual(nt.environ.has_key('COMPUTERNAME') or nt.environ.has_key('computername'), True)
 
 AssertError(nt.error, nt.stat, 'doesnotexist.txt')
 

@@ -9,14 +9,6 @@
     <RootNamespace>IronPythonTest</RootNamespace>
     <AssemblyName>IronPythonTest</AssemblyName>
     <WarningLevel>4</WarningLevel>
-    <SccProjectName>
-    </SccProjectName>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccProvider>
-    </SccProvider>
     <StartupObject>
     </StartupObject>
   </PropertyGroup>

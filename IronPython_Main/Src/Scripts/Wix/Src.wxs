@@ -193,6 +193,7 @@
                 <File Id="File_marshal.cs" Name="marshal.cs" />
                 <File Id="File_math.cs" Name="math.cs" />
                 <File Id="File_math.generated.cs" Name="mathgen.cs" LongName = "math.Generated.cs" />
+                <File Id="File_md5.cs" Name="md5.cs" />
                 <File Id="File_nt.cs" Name="nt.cs" />
                 <File Id="File_operator.cs" Name="operator.cs" />
                 <File Id="File_ModExceptions.cs" Name="EXCEPS.CS" LongName="Exceptions.cs" />
@@ -201,6 +202,8 @@
                 <File Id="File_thread.cs" Name="thread.cs" />
                 <File Id="File_time.cs" Name="time.cs" />
                 <File Id="File_random.cs" Name="_random.cs" />
+                <File Id="File_select.cs" Name="select.cs" />
+                <File Id="File_sha.cs" Name="sha.cs" />
                 <File Id="File_socket.cs" Name="socket.cs" />
                 <File Id="File_sre.cs" Name="_sre.cs" />
                 <File Id="File_struct.cs" Name="struct.cs" />
@@ -452,6 +455,7 @@
                 <File Id="File_test_clrexception.py" Name="TCLREXCE.PY" LongName="test_clrexception.py" />
                 <File Id="File_test_clrload.py" Name="TCLRLOAD.PY" LongName="test_clrload.py" />
                 <File Id="File_test_clrload2.py" Name="TCLRLD2.PY" LongName="test_clrload2.py" />
+				<File Id="File_test_codecs.py" Name="TCODECS.PY" LongName="test_codecs.py" />
                 <File Id="File_test_codedom.py" Name="TCODEDOM.PY" LongName="test_codedom.py" />
                 <File Id="File_test_cominterop.py" Name="TCOMINTE.PY" LongName="test_cominterop.py" />
                 <File Id="File_test_complex.py" Name="TCOMPLEX.PY" LongName="test_complex.py" />

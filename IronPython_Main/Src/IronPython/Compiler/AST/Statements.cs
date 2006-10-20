@@ -536,7 +536,7 @@ namespace IronPython.Compiler.Ast {
                 foreach (YieldTarget yt in yieldTargets) {
                     choiceVar.EmitGet(cg);
                     cg.EmitInt(index);
-                    cg.Emit(OpCodes.Beq, yt.TryBranchTarget);
+                    cg.Emit(OpCodes.Beq, yt.YieldContinuationTarget);
                     index++;
                 }
                 cg.FreeLocalTmp(choiceVar);
@@ -550,9 +550,9 @@ namespace IronPython.Compiler.Ast {
             body.Emit(cg);
 
             EmitWithCatchBlock(cg, exc, exit);
+            cg.PopTargets();
             EmitWithFinallyBlock(cg, exc, exit, isTryYielded);
             cg.EndExceptionBlock();
-            cg.PopTargets();
             if (yieldTargets != null)
                 yieldTargets.Clear();
 
@@ -586,10 +586,13 @@ namespace IronPython.Compiler.Ast {
             cg.MarkLabel(afterRaise);
             cg.EmitCallerContext();
             cg.EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
+            cg.PopTargets();
+
         }
 
         private void EmitWithFinallyBlock(CodeGen cg, Slot exc, Slot exit, Slot isTryYielded) {
-            cg.PushFinallyBlock(null);
+            // we are certain that Finally will never yield
+            cg.PushFinallyBlock(null, null);
             cg.BeginFinallyBlock();
 
             //finally body
@@ -616,6 +619,7 @@ namespace IronPython.Compiler.Ast {
             cg.Emit(OpCodes.Pop);
 
             cg.MarkLabel(endOfFinally);
+            cg.PopTargets();
 
             // finally end
 
@@ -633,15 +637,78 @@ namespace IronPython.Compiler.Ast {
     }
 
     public class TryStatement : Statement {
+        class ControlFlowFinder : AstWalker {
+            bool found;
+
+            bool foundLoopControl;
+            int loopCount = 0;
+
+            public static bool FindControlFlow(Statement statement, out bool foundLoopControl) {
+                // No return in null statement
+                if (statement == null) {
+                    foundLoopControl = false;
+                    return false;
+                }
+
+                // find it now.
+                ControlFlowFinder rf = new ControlFlowFinder();
+                statement.Walk(rf);
+                foundLoopControl = rf.foundLoopControl;
+                return rf.found;
+            }
+            public override bool Walk(ReturnStatement node) {
+                found = true;
+                return true;
+            }
+            public override bool Walk(BreakStatement node) {
+                if (loopCount == 0) {
+                    found = true;
+                    foundLoopControl = true;
+                }
+                return true;
+            }
+            public override bool Walk(ContinueStatement node) {
+                if (loopCount == 0) {
+                    found = true;
+                    foundLoopControl = true;
+                }
+                return true;
+            }
+
+            public override bool Walk(ForStatement node) {
+                loopCount++;
+                return true;
+            }
+
+            public override void PostWalk(ForStatement node) {
+                loopCount--;
+            }
+
+            public override bool Walk(WhileStatement node) {
+                loopCount++;
+                return true;
+            }
+
+            public override void PostWalk(WhileStatement node) {
+                loopCount--;
+            }
+        }
+
         private Location header;
         private readonly Statement body;
         private readonly TryStatementHandler[] handlers;
         private readonly Statement elseStmt;
-        private bool yieldInExcept = false;
-        private List<YieldTarget> yieldTargets = new List<YieldTarget>();
+        private readonly Statement finallyStmt;
+        private List<YieldTarget> tryYieldTargets = null;
+        private List<YieldTarget> catchYieldTargets = null;
+        private List<YieldTarget> finallyYieldTargets = null;
+        private List<YieldTarget> elseYieldTargets = null;
 
-        public TryStatement(Statement body, TryStatementHandler[] handlers, Statement else_) {
-            this.body = body; this.handlers = handlers; this.elseStmt = else_;
+        public TryStatement(Statement body, TryStatementHandler[] handlers, Statement elseSuite, Statement finallySuite) {
+            this.body = body;
+            this.handlers = handlers;
+            this.elseStmt = elseSuite;
+            this.finallyStmt = finallySuite;
         }
 
         public Location Header {
@@ -661,141 +728,532 @@ namespace IronPython.Compiler.Ast {
             get { return elseStmt; }
         }
 
-        public bool YieldInExcept {
-            get { return yieldInExcept; }
-            set { yieldInExcept = value; }
+        public Statement FinallyStatement {
+            get { return finallyStmt; }
         }
 
-        public IList<YieldTarget> YieldTargets {
-            get { return yieldTargets; }
+        internal IList<YieldTarget> TryYieldTargets {
+            get { return tryYieldTargets; }
         }
 
-        public void AddYieldTarget(YieldTarget target) {
-            yieldTargets.Add(target);
+        internal void AddTryYieldTarget(YieldTarget target) {
+            if (tryYieldTargets == null)
+                tryYieldTargets = new List<YieldTarget>();
+            tryYieldTargets.Add(target);
         }
 
-        internal override void Emit(CodeGen cg) {
-            Slot choiceVar = null;
-            cg.EmitPosition(Start, header);
+        internal IList<YieldTarget> ElseYieldTargets {
+            get { return elseYieldTargets; }
+        }
 
-            if (yieldTargets.Count > 0) {
-                Label startOfBlock = cg.DefineLabel();
-                choiceVar = cg.GetLocalTmp(typeof(int));
+        internal void AddElseYieldTarget(YieldTarget target) {
+            if (elseYieldTargets == null)
+                elseYieldTargets = new List<YieldTarget>();
+
+            elseYieldTargets.Add(target);
+        }
+
+        internal IList<YieldTarget> CatchYieldTargets {
+            get { return catchYieldTargets; }
+        }
+
+        internal void AddCatchYieldTarget(YieldTarget target) {
+            if (catchYieldTargets == null)
+                catchYieldTargets = new List<YieldTarget>();
+
+            catchYieldTargets.Add(target);
+        }
+
+        internal IList<YieldTarget> FinallyYieldTargets {
+            get { return finallyYieldTargets; }
+        }
+
+        internal void AddFinallyYieldTarget(YieldTarget target) {
+            if (finallyYieldTargets == null)
+                finallyYieldTargets = new List<YieldTarget>();
+
+            finallyYieldTargets.Add(target);
+        }
+
+        private bool IsBlockYieldable(List<YieldTarget> block) {
+            if (block != null && block.Count > 0)
+                return true;
+            return false;
+        }
+
+        // With uses 6 environmental slots 
+        internal static int LocalSlots {
+            get {
+                // Binding looks for the LocalSlots even before the yield targets are counted,
+                // Hence we need to set the, max posssible slots i.e 5 currently.
+                // Though TryStatement requests 5 slots, during code gen it may use <= 5 based on what all block yield
+
+                // There is scope to optimize here by getting the yield counts before binding. 
+                // Once that is done uncomment the code code below, and use the instance of TryStatement in Walk(TryStatement node) in Binder.cs.
+
+                //int ret = 0;
+                //if (IsBlockYieldable(tryYieldTargets))
+                //    ret++;
+                //if (IsBlockYieldable(catchYieldTargets))
+                //    ret += 2;
+                //if (IsBlockYieldable(elseYieldTargets))
+                //    ret++;
+                //if (IsBlockYieldable(finallyYieldTargets))
+                //    ret++; 
+                return 6;
+            }
+        }
+
+        private void EmitTopYieldTargetLabels(List<YieldTarget> yieldTargets, Slot choiceVar, CodeGen cg) {
+            if (IsBlockYieldable(yieldTargets)) {
+                Label label = cg.DefineLabel();
                 cg.EmitInt(-1);
                 choiceVar.EmitSet(cg);
-                cg.Emit(OpCodes.Br, startOfBlock);
+                cg.Emit(OpCodes.Br, label);
 
                 int index = 0;
                 foreach (YieldTarget yt in yieldTargets) {
                     cg.MarkLabel(yt.TopBranchTarget);
                     cg.EmitInt(index++);
                     choiceVar.EmitSet(cg);
-                    cg.Emit(OpCodes.Br, startOfBlock);
+                    cg.Emit(OpCodes.Br, label);
                 }
-
-                cg.MarkLabel(startOfBlock);
+                cg.MarkLabel(label);
             }
+        }
 
-            Label afterCatch = new Label();
-            Label afterElse = cg.DefineLabel();
+        private void EmitYieldDispatch(List<YieldTarget> yieldTargets, Slot isYielded, Slot choiceVar, CodeGen cg) {
+            if (IsBlockYieldable(yieldTargets)) {
+                cg.EmitFieldGet(typeof(Ops).GetField("FALSE"));
+                isYielded.EmitSet(cg);
 
-            cg.PushTryBlock();
-            cg.BeginExceptionBlock();
-
-            if (yieldTargets.Count > 0) {
                 int index = 0;
                 foreach (YieldTarget yt in yieldTargets) {
                     choiceVar.EmitGet(cg);
                     cg.EmitInt(index);
-                    cg.Emit(OpCodes.Beq, yt.TryBranchTarget);
+                    cg.Emit(OpCodes.Beq, yt.YieldContinuationTarget);
                     index++;
                 }
-                cg.FreeLocalTmp(choiceVar);
+            }
+        }
+
+        private void EmitOnYieldBranchToLabel(List<YieldTarget> yieldTargets, Slot isYielded, Label label, CodeGen cg) {
+            if (IsBlockYieldable(yieldTargets)) {
+                isYielded.EmitGet(cg);
+                cg.EmitUnbox(typeof(bool));
+                cg.Emit(OpCodes.Brtrue, label);
+            }
+        }
+
+        // codegen algorithm for unified try-catch-else-finally
+
+        //    isTryYielded = false
+        //    isCatchYielded = false
+        //    isFinallyYielded = false
+        //    isElseYielded = false
+        //    Set up the labels for Try Yield Targets
+        //    Set up the labels for Catch Yield Targets
+        //    Set up the labels for Else Yield Targets
+        //    Set up the labels for Finally Yield Targets
+        //    returnVar = false
+        //    isElseBlock = false
+
+        //TRY:
+        //    if isCatchYielded :
+        //        rethow  storedException
+        //    if finallyYielded :
+        //        goto endOfTry
+        //    if isElseYielded :
+        //        goto beginElseBlock
+        //    if isTryYielded:
+        //        isTryYielded = false
+        //        goto desired_label_in_TRY-BODY
+        //    TRY-BODY
+        //  beginElseBlock: # Note we are still under TRY
+        //    isElseBlock = true
+        //    if isElseYielded :
+        //        isElseYielded  = false
+        //        goto desired_label_in_ELSE-BODY
+        //    ELSE-BODY
+        //  endOfTry:
+        //EXCEPT: # catches any exception
+        //    if isElseBlock:
+        //        rethrow
+        //    pyExc = ExtractException()
+        //    storedException = ExtractSysExcInfo()
+        //    if pyExc == handler[0].Test :
+        //        if isCatchYielded :
+        //            isCatchYielded  = false
+        //            goto desired_label_in_HANDLER-BODY
+        //        HANDLER-BODY
+        //        ClearException()
+        //        Leave afterFinally
+        //    elif pyExc == handler[1].Test :
+        //        if isCatchYielded :
+        //            isCatchYielded  = false
+        //            goto desired_label_in_HANDLER-BODY
+        //        HANDLER-BODY
+        //        ClearException()
+        //        Leave afterFinally
+        //    .
+        //    .
+        //    .
+        //    Rethrow
+        //FINALLY:
+        //    if (isTryYielded  or isCatchYielded  or isElseYielded ):
+        //        goto endOfFinally
+        //    if isFinallyYielded :
+        //        isFinallyYielded  = false
+        //        goto desired_label_in_FINALLY-BODY
+        //    FINALLY-BODY
+        //  endOfFinally:
+        // #try-cathch-finally ends here
+        // afterFinally:
+        //    if not returnVar :
+        //      goto noReturn
+        //    if (finally may yield ):
+        //          return 1
+        //    else
+        //          return appropriate_return_value
+        //  noReturn:
+
+
+        internal override void Emit(CodeGen cg) {
+            // environmental slots
+            Slot isTryYielded = null;
+            Slot isCatchYielded = null;
+            Slot isFinallyYielded = null;
+            Slot isElseYielded = null;
+            Slot storedException = null;
+
+            // local slots
+            Slot tryChoiceVar = null;
+            Slot catchChoiceVar = null;
+            Slot elseChoiceVar = null;
+            Slot finallyChoiceVar = null;
+
+            Slot flowControlVar = cg.GetLocalTmp(typeof(int));
+            Slot isElseBlock = null;
+
+            cg.EmitPosition(Start, header);
+
+            if (IsBlockYieldable(tryYieldTargets)) {
+                tryChoiceVar = cg.GetLocalTmp(typeof(int));
+                isTryYielded = cg.Names.GetTempSlot("is", typeof(object));
+                cg.EmitFieldGet(typeof(Ops).GetField("FALSE"));
+                isTryYielded.EmitSet(cg);
             }
 
-            body.Emit(cg);
-            if (yieldInExcept) {
-                afterCatch = cg.DefineLabel();
-                cg.Emit(OpCodes.Leave, afterCatch);
-            }
-            cg.BeginCatchBlock(typeof(Exception));
-            // Extract state from the carrier exception
-            cg.EmitCallerContext();
-            cg.EmitCall(typeof(Ops), "ExtractException",
-                new Type[] { typeof(Exception), typeof(ICallerContext) });
-            Slot pyExc = cg.GetLocalTmp(typeof(object));
-            Slot tmpExc = cg.GetLocalTmp(typeof(object));
-            pyExc.EmitSet(cg);
-            if (yieldInExcept) {
-                cg.EndExceptionBlock();
-                cg.PopTargets();
+            if (IsBlockYieldable(catchYieldTargets)) {
+                catchChoiceVar = cg.GetLocalTmp(typeof(int));
+                storedException = cg.Names.GetTempSlot("exc", typeof(object));
+                isCatchYielded = cg.Names.GetTempSlot("is", typeof(object));
+                cg.EmitFieldGet(typeof(Ops).GetField("FALSE"));
+                isCatchYielded.EmitSet(cg);
             }
 
-            foreach (TryStatementHandler handler in handlers) {
-                cg.EmitPosition(handler.Start, handler.Header);
-                Label next = cg.DefineLabel();
-                if (handler.Test != null) {
-                    pyExc.EmitGet(cg);
-                    handler.Test.Emit(cg);
-                    cg.EmitCall(typeof(Ops), "CheckException");
-                    if (handler.Target != null) {
-                        tmpExc.EmitSet(cg);
-                        tmpExc.EmitGet(cg);
-                    }
-                    cg.EmitPythonNone();
-                    cg.Emit(OpCodes.Ceq);
-                    cg.Emit(OpCodes.Brtrue, next);
-                }
-
-                if (handler.Target != null) {
-                    tmpExc.EmitGet(cg);
-                    handler.Target.EmitSet(cg);
-                }
-
-                cg.PushExceptionBlock(Targets.TargetBlockType.Catch, null, null);
-
-                handler.Body.Emit(cg);
-                cg.EmitCallerContext();
-                cg.EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
-
-                cg.PopTargets();
-
-                if (yieldInExcept) {
-                    cg.Emit(OpCodes.Br, afterElse);
-                } else {
-                    cg.Emit(OpCodes.Leave, afterElse);
-                }
-                cg.MarkLabel(next);
+            if (IsBlockYieldable(finallyYieldTargets)) {
+                finallyChoiceVar = cg.GetLocalTmp(typeof(int));
+                isFinallyYielded = cg.Names.GetTempSlot("is", typeof(object));
+                cg.EmitFieldGet(typeof(Ops).GetField("FALSE"));
+                isFinallyYielded.EmitSet(cg);
             }
 
-            cg.FreeLocalTmp(tmpExc);
-            if (yieldInExcept) {
-                pyExc.EmitGet(cg);
-                cg.Emit(OpCodes.Throw);
-                cg.MarkLabel(afterCatch);
-            } else {
-                cg.Emit(OpCodes.Rethrow);
-                cg.EndExceptionBlock();
-                cg.PopTargets();
+            if (IsBlockYieldable(elseYieldTargets)) {
+                elseChoiceVar = cg.GetLocalTmp(typeof(int));
+                isElseYielded = cg.Names.GetTempSlot("is", typeof(object));
+                cg.EmitFieldGet(typeof(Ops).GetField("FALSE"));
+                isElseYielded.EmitSet(cg);
             }
 
             if (elseStmt != null) {
-                elseStmt.Emit(cg);
+                isElseBlock = cg.GetLocalTmp(typeof(bool));
+                cg.EmitInt(0);
+                isElseBlock.EmitSet(cg);
             }
-            cg.MarkLabel(afterElse);
 
-            cg.FreeLocalTmp(pyExc);
+            Slot exception = null;
+            bool foundLoopControl;
+            bool returnInFinally = ControlFlowFinder.FindControlFlow(FinallyStatement, out foundLoopControl);
 
-            yieldTargets.Clear();
+            if (IsBlockYieldable(finallyYieldTargets)) {
+                exception = cg.Names.GetTempSlot("exception", typeof(Exception));
+                cg.Emit(OpCodes.Ldnull);
+                exception.EmitSet(cg);
+            } else if (returnInFinally) {
+                exception = cg.GetLocalTmp(typeof(Exception));
+                cg.Emit(OpCodes.Ldnull);
+                exception.EmitSet(cg);
+            }
+
+            EmitTopYieldTargetLabels(tryYieldTargets, tryChoiceVar, cg);
+            EmitTopYieldTargetLabels(catchYieldTargets, catchChoiceVar, cg);
+            EmitTopYieldTargetLabels(elseYieldTargets, elseChoiceVar, cg);
+            EmitTopYieldTargetLabels(finallyYieldTargets, finallyChoiceVar, cg);
+
+
+            cg.EmitInt(CodeGen.FinallyExitsNormally);
+            flowControlVar.EmitSet(cg);
+
+            Label afterFinally = cg.DefineLabel();
+
+            cg.PushExceptionBlock(Targets.TargetBlockType.Try, flowControlVar, isTryYielded);
+            cg.BeginExceptionBlock();
+
+            // if catch yielded, rethow the storedException to be handled by Catch block
+            if (IsBlockYieldable(catchYieldTargets)) {
+                Label testFinally = cg.DefineLabel();
+                isCatchYielded.EmitGet(cg);
+                cg.EmitUnbox(typeof(bool));
+                cg.Emit(OpCodes.Brfalse, testFinally);
+                storedException.EmitGet(cg);
+                cg.EmitCall(typeof(Ops), "Raise", new Type[] { typeof(object) });
+                cg.MarkLabel(testFinally);
+            }
+
+            // if Finally yielded, Branch to the end of Try block
+            Label endOfTry = cg.DefineLabel();
+            EmitOnYieldBranchToLabel(finallyYieldTargets, isFinallyYielded, endOfTry, cg);
+
+            Label beginElseBlock = cg.DefineLabel();
+            if (IsBlockYieldable(elseYieldTargets)) {
+                // isElseYielded ?
+                Debug.Assert(isElseYielded != null);
+                isElseYielded.EmitGet(cg);
+                cg.EmitUnbox(typeof(bool));
+                cg.Emit(OpCodes.Brtrue, beginElseBlock);
+            }
+
+
+            EmitYieldDispatch(tryYieldTargets, isTryYielded, tryChoiceVar, cg);
+
+            body.Emit(cg);
+
+            if (elseStmt != null) {
+                if (IsBlockYieldable(elseYieldTargets)) {
+                    cg.MarkLabel(beginElseBlock);
+                }
+
+                cg.PopTargets(Targets.TargetBlockType.Try);
+                cg.PushExceptionBlock(Targets.TargetBlockType.Else, flowControlVar, isElseYielded);
+
+                cg.EmitInt(1);
+                isElseBlock.EmitSet(cg);
+
+                EmitYieldDispatch(elseYieldTargets, isElseYielded, elseChoiceVar, cg);
+
+                elseStmt.Emit(cg);
+                cg.PopTargets(Targets.TargetBlockType.Else);
+                cg.PushExceptionBlock(Targets.TargetBlockType.Try, flowControlVar, isTryYielded);
+
+            }
+
+            cg.MarkLabel(endOfTry);
+
+            // get the exception if there is a yield / return  in finally
+            if (IsBlockYieldable(finallyYieldTargets) || returnInFinally) {
+                cg.BeginCatchBlock(typeof(Exception));
+                exception.EmitSet(cg);
+            }
+
+            if (handlers != null) {
+                cg.PushExceptionBlock(Targets.TargetBlockType.Catch, flowControlVar, isCatchYielded);
+                if (IsBlockYieldable(finallyYieldTargets) || returnInFinally) {
+                    exception.EmitGet(cg);
+                } else {
+                    cg.BeginCatchBlock(typeof(Exception));
+                }
+
+
+                // if in Catch block due to exception in else block -> just rethrow
+                if (elseStmt != null) {
+                    Label beginCatchBlock = cg.DefineLabel();
+                    isElseBlock.EmitGet(cg);
+                    cg.Emit(OpCodes.Brfalse, beginCatchBlock);
+                    cg.Emit(OpCodes.Rethrow);
+                    cg.MarkLabel(beginCatchBlock);
+                }
+
+                // Extract state from the carrier exception
+                cg.EmitCallerContext();
+                cg.EmitCall(typeof(Ops), "ExtractException",
+                    new Type[] { typeof(Exception), typeof(ICallerContext) });
+                Slot pyExc = cg.GetLocalTmp(typeof(object));
+                Slot tmpExc = cg.GetLocalTmp(typeof(object));
+                pyExc.EmitSet(cg);
+
+                if (IsBlockYieldable(catchYieldTargets)) {
+                    cg.EmitCallerContext();
+                    cg.EmitCall(typeof(Ops), "ExtractSysExcInfo");
+                    storedException.EmitSet(cg);
+                }
+
+                foreach (TryStatementHandler handler in handlers) {
+                    cg.EmitPosition(handler.Start, handler.Header);
+                    Label next = cg.DefineLabel();
+                    if (handler.Test != null) {
+                        pyExc.EmitGet(cg);
+                        handler.Test.Emit(cg);
+                        cg.EmitCall(typeof(Ops), "CheckException");
+                        if (handler.Target != null) {
+                            tmpExc.EmitSet(cg);
+                            tmpExc.EmitGet(cg);
+                        }
+                        cg.EmitPythonNone();
+                        cg.Emit(OpCodes.Ceq);
+                        cg.Emit(OpCodes.Brtrue, next);
+                    }
+
+                    if (handler.Target != null) {
+                        tmpExc.EmitGet(cg);
+                        handler.Target.EmitSet(cg);
+                    }
+
+                    if (IsBlockYieldable(finallyYieldTargets) || returnInFinally) {
+                        cg.Emit(OpCodes.Ldnull);
+                        exception.EmitSet(cg);
+                    }
+
+                    EmitYieldDispatch(catchYieldTargets, isCatchYielded, catchChoiceVar, cg);
+                    handler.Body.Emit(cg);
+
+                    cg.EmitCallerContext();
+                    cg.EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
+
+                    cg.Emit(OpCodes.Leave, afterFinally);
+                    cg.MarkLabel(next);
+
+                }
+
+                cg.FreeLocalTmp(tmpExc);
+                cg.FreeLocalTmp(pyExc);
+
+                cg.Emit(OpCodes.Rethrow);
+                cg.PopTargets(Targets.TargetBlockType.Catch);
+            }
+
+            if (finallyStmt != null) {
+                cg.PushExceptionBlock(Targets.TargetBlockType.Finally, flowControlVar, isFinallyYielded);
+                cg.BeginFinallyBlock();
+
+                Label endOfFinally = cg.DefineLabel();
+
+                // if try yielded
+                EmitOnYieldBranchToLabel(tryYieldTargets, isTryYielded, endOfFinally, cg);
+                // if catch yielded
+                EmitOnYieldBranchToLabel(catchYieldTargets, isCatchYielded, endOfFinally, cg);
+                //if else yielded
+                EmitOnYieldBranchToLabel(elseYieldTargets, isElseYielded, endOfFinally, cg);
+
+                EmitYieldDispatch(finallyYieldTargets, isFinallyYielded, finallyChoiceVar, cg);
+                finallyStmt.Emit(cg);
+
+                if (IsBlockYieldable(finallyYieldTargets) || returnInFinally) {
+                    Label nothrow = cg.DefineLabel();
+                    exception.EmitGet(cg);
+                    cg.Emit(OpCodes.Dup);
+                    cg.Emit(OpCodes.Brfalse_S, nothrow);
+                    cg.Emit(OpCodes.Throw);
+                    cg.MarkLabel(nothrow);
+                    cg.Emit(OpCodes.Pop);
+                }
+
+
+                cg.MarkLabel(endOfFinally);
+                cg.EndExceptionBlock();
+                cg.PopTargets(Targets.TargetBlockType.Finally);
+            } else {
+                cg.EndExceptionBlock();
+            }
+            cg.PopTargets(Targets.TargetBlockType.Try);
+
+            cg.MarkLabel(afterFinally);
+            Label noReturn = cg.DefineLabel();
+            flowControlVar.EmitGet(cg);
+            cg.EmitInt(CodeGen.BranchForReturn);
+            cg.Emit(OpCodes.Bne_Un, noReturn);
+
+            if (cg.IsGenerator()) {
+                // return true from the generator method
+                cg.Emit(OpCodes.Ldc_I4_1);
+                cg.EmitReturn();
+            } else if (returnInFinally) {
+                // return the actual value
+                cg.EmitReturnValue();
+                cg.EmitReturn();
+            }
+
+            cg.MarkLabel(noReturn);
+
+            if (foundLoopControl) {
+                noReturn = cg.DefineLabel();
+                flowControlVar.EmitGet(cg);
+                cg.EmitInt(CodeGen.BranchForBreak);
+                cg.Emit(OpCodes.Bne_Un, noReturn);
+                cg.EmitBreak();
+                cg.MarkLabel(noReturn);
+
+                noReturn = cg.DefineLabel();
+                flowControlVar.EmitGet(cg);
+                cg.EmitInt(CodeGen.BranchForContinue);
+                cg.Emit(OpCodes.Bne_Un, noReturn);
+                cg.EmitContinue();
+                cg.MarkLabel(noReturn);
+            }
+
+            // clean up 
+            if (IsBlockYieldable(tryYieldTargets)) {
+                cg.FreeLocalTmp(tryChoiceVar);
+                tryYieldTargets.Clear();
+            }
+            if (IsBlockYieldable(catchYieldTargets)) {
+                cg.FreeLocalTmp(catchChoiceVar);
+                catchYieldTargets.Clear();
+            }
+            if (IsBlockYieldable(finallyYieldTargets)) {
+                cg.FreeLocalTmp(finallyChoiceVar);
+                finallyYieldTargets.Clear();
+            }
+            if (IsBlockYieldable(elseYieldTargets)) {
+                cg.FreeLocalTmp(elseChoiceVar);
+                elseYieldTargets.Clear();
+            }
+            if (elseStmt != null) {
+                cg.FreeLocalTmp(isElseBlock);
+            }
+
+#if DEBUG
+            cg.EmitInt(-1);
+            flowControlVar.EmitSet(cg);
+#endif
+
+            cg.FreeLocalTmp(flowControlVar);
         }
 
         public override void Walk(IAstWalker walker) {
             if (walker.Walk(this)) {
                 body.Walk(walker);
-                foreach (TryStatementHandler handler in handlers) handler.Walk(walker);
-                if (elseStmt != null) elseStmt.Walk(walker);
+                if (handlers != null)
+                    foreach (TryStatementHandler handler in handlers)
+                        handler.Walk(walker);
+
+                if (elseStmt != null)
+                    elseStmt.Walk(walker);
+
+                if (finallyStmt != null)
+                    finallyStmt.Walk(walker);
+
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public class TryFinallyStatement : Statement {
+        internal override void Emit(CodeGen cg) {
+            throw new InvalidOperationException("TryFinallyStatement is deprecated");
+        }
+
+        public override void Walk(IAstWalker walker) {            
         }
     }
 
@@ -835,237 +1293,7 @@ namespace IronPython.Compiler.Ast {
         }
     }
 
-    public class TryFinallyStatement : Statement {
-        class ControlFlowFinder : AstWalker {
-            bool found;
-            bool foundLoopControl;
-            int loopCount = 0;
 
-            public static bool FindControlFlow(Statement statement, out bool foundLoopControl) {
-                // No return in null statement
-                if (statement == null) {
-                    foundLoopControl = false;
-                    return false;
-                }
-
-                // find it now.
-                ControlFlowFinder rf = new ControlFlowFinder();
-                statement.Walk(rf);
-                foundLoopControl = rf.foundLoopControl;
-                return rf.found;
-            }
-            public override bool Walk(ReturnStatement node) {
-                found = true;
-                return true;
-            }
-            public override bool Walk(BreakStatement node) {
-                if (loopCount == 0) {
-                    found = true;
-                    foundLoopControl = true;
-                } 
-                return true;
-            }
-            public override bool Walk(ContinueStatement node) {
-                if (loopCount == 0) {
-                    found = true;
-                    foundLoopControl = true;
-                }
-                return true;
-            }
-            
-            public override bool Walk(ForStatement node) {
-                loopCount++;
-                return true;
-            }
-            
-            public override void PostWalk(ForStatement node) {
-                loopCount--;
-            }
-
-            public override bool Walk(WhileStatement node) {
-                loopCount++;
-                return true;
-            }
-
-            public override void PostWalk(WhileStatement node) {
-                loopCount--;
-            }
-        }
-
-        private Location header;
-        private readonly Statement body;
-        private readonly Statement finallyStmt;
-        private List<YieldTarget> yieldTargets = new List<YieldTarget>();
-
-        public TryFinallyStatement(Statement body, Statement finally_) {
-            this.body = body; this.finallyStmt = finally_;
-        }
-
-        public Location Header {
-            get { return header; }
-            set { header = value; }
-        }
-
-        public Statement Body {
-            get { return body; }
-        }
-
-        public Statement FinallyStmt {
-            get { return finallyStmt; }
-        }
-
-        public IList<YieldTarget> YieldTargets {
-            get { return yieldTargets; }
-        }
-
-        internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, header);
-            Slot choiceVar = null;
-            Slot flowControlVar = cg.GetLocalTmp(typeof(int));
-            Slot exception = null;
-            Label endOfTry = new Label();
-
-            bool yieldInFinally = yieldTargets.Count > 0;
-            bool foundLoopControl;
-            bool returnInFinally = ControlFlowFinder.FindControlFlow(finallyStmt, out foundLoopControl);
-
-            cg.EmitInt(CodeGen.FinallyExitsNormally);
-            flowControlVar.EmitSet(cg);
-
-            if (yieldInFinally) {
-                Label startOfBlock = cg.DefineLabel();
-                choiceVar = cg.GetLocalTmp(typeof(int));
-                cg.EmitInt(-1);
-                choiceVar.EmitSet(cg);
-                cg.Emit(OpCodes.Br, startOfBlock);
-
-                int index = 0;
-                foreach (YieldTarget yt in yieldTargets) {
-                    cg.MarkLabel(yt.TopBranchTarget);
-                    cg.EmitInt(index++);
-                    choiceVar.EmitSet(cg);
-                    cg.Emit(OpCodes.Br, startOfBlock);
-                }
-
-                cg.MarkLabel(startOfBlock);
-                exception = cg.Names.GetTempSlot("exception", typeof(Exception));
-            } else if (returnInFinally) {
-                exception = cg.GetLocalTmp(typeof(Exception));
-                cg.Emit(OpCodes.Ldnull);
-                exception.EmitSet(cg);
-            }
-
-            cg.PushTryBlock();
-            cg.BeginExceptionBlock();
-
-            if (yieldInFinally) {
-                endOfTry = cg.DefineLabel();
-                for (int index = 0; index < yieldTargets.Count; index++) {
-                    choiceVar.EmitGet(cg);
-                    cg.EmitInt(index);
-                    cg.Emit(OpCodes.Beq, endOfTry);
-                }
-            }
-
-            body.Emit(cg);
-
-            if (yieldInFinally) {
-                cg.MarkLabel(endOfTry);
-            }
-
-            if (yieldInFinally || returnInFinally) {
-                Debug.Assert((object)exception != null);
-                cg.BeginCatchBlock(typeof(Exception));
-                exception.EmitSet(cg); // save the exception
-            }
-
-            cg.PopTargets();
-            cg.PushFinallyBlock(flowControlVar);
-            cg.BeginFinallyBlock();
-
-            if (yieldInFinally) {
-                int index = 0;
-                foreach (YieldTarget yt in yieldTargets) {
-                    choiceVar.EmitGet(cg);
-                    cg.EmitInt(index++);
-                    cg.Emit(OpCodes.Beq, yt.TryBranchTarget);
-                }
-            }
-
-            finallyStmt.Emit(cg);
-
-            if (yieldInFinally || returnInFinally) {
-                Label nothrow = cg.DefineLabel();
-                exception.EmitGet(cg);
-                cg.Emit(OpCodes.Dup);
-                cg.Emit(OpCodes.Brfalse_S, nothrow);
-                cg.Emit(OpCodes.Throw);
-                cg.MarkLabel(nothrow);
-                cg.Emit(OpCodes.Pop);
-            }
-
-            cg.EndExceptionBlock();
-            cg.PopTargets();
-
-            Label noReturn = cg.DefineLabel();
-            flowControlVar.EmitGet(cg);
-            cg.EmitInt(CodeGen.BranchForReturn);
-            cg.Emit(OpCodes.Bne_Un, noReturn);
-            if (yieldInFinally) {
-                // return true from the generator method
-                cg.Emit(OpCodes.Ldc_I4_1);
-                cg.EmitReturn();
-            } else if (returnInFinally) {
-                // return the actual value
-                cg.EmitReturnValue();
-                cg.EmitReturn();
-            }
-            cg.MarkLabel(noReturn);
-
-            if (foundLoopControl) {
-                noReturn = cg.DefineLabel();
-                flowControlVar.EmitGet(cg);
-                cg.EmitInt(CodeGen.BranchForBreak);
-                cg.Emit(OpCodes.Bne_Un, noReturn);
-                cg.EmitBreak();
-                cg.MarkLabel(noReturn);
-
-                noReturn = cg.DefineLabel();
-                flowControlVar.EmitGet(cg);
-                cg.EmitInt(CodeGen.BranchForContinue);
-                cg.Emit(OpCodes.Bne_Un, noReturn);
-                cg.EmitContinue();
-                cg.MarkLabel(noReturn);
-            }
-#if DEBUG
-            cg.EmitInt(-1);
-            flowControlVar.EmitSet(cg);            
-#endif
-
-            yieldTargets.Clear();
-        }
-
-        public override void Walk(IAstWalker walker) {
-            if (walker.Walk(this)) {
-                body.Walk(walker);
-                finallyStmt.Walk(walker);
-            }
-            walker.PostWalk(this);
-        }
-
-        public void AddYieldTarget(YieldTarget target) {
-            yieldTargets.Add(target);
-        }
-
-        // try-finally requires one temporary slot in the generator environment
-        // to store the exception should one happen to re-throw it at the end
-        // of the finally
-        internal static int LocalSlots {
-            get {
-                return 1;
-            }
-        }
-    }
 
     public class ExpressionStatement : Statement {
         private readonly Expression expr;

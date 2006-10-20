@@ -14,10 +14,12 @@
  * **********************************************************************************/
 
 using System;
-using System.IO;
+using System.Collections;
+using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Security.Cryptography;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 using IronMath;
 using IronPython.Runtime;
@@ -327,30 +329,52 @@ namespace IronPython.Modules {
 
         [PythonName("spawnl")]
         public static object SpawnProcess(int mode, string path, params object[] args) {
-            System.Diagnostics.Process process;
+            return SpawnProcessImpl(MakeProcess(), mode, path, args);
+        }
+
+        [PythonName("spawnle")]
+        public static object SpawnProcessWithParamsArgsAndEnvironment(int mode, string path, params object[] args) {
+            if (args.Length < 1) {
+                throw Ops.TypeError("spawnle() takes at least three arguments ({0} given)", 2 + args.Length);
+            }
+
+            object env = args[args.Length - 1];
+            object[] slicedArgs = new object[args.Length - 1];
+
+            Array.Copy(args, 1, slicedArgs, 0, args.Length - 1);
+
+            Process process = MakeProcess();
+            SetEnvironment(process.StartInfo.EnvironmentVariables, env);
+
+            return SpawnProcessImpl(process, mode, path, slicedArgs);
+        }
+
+        [PythonName("spawnv")]
+        public static object SpawnProcess(int mode, string path, object args) {
+            return SpawnProcessImpl(MakeProcess(), mode, path, args);
+        }
+
+        [PythonName("spawnve")]
+        public static object SpawnProcess(int mode, string path, object args, object env) {
+            Process process = MakeProcess();
+            SetEnvironment(process.StartInfo.EnvironmentVariables, env);
+
+            return SpawnProcessImpl(process, mode, path, args);
+        }
+
+        private static Process MakeProcess() {
             try {
-                process = new System.Diagnostics.Process();
+                return new Process();
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
+        }
+
+        private static object SpawnProcessImpl(Process process, int mode, string path, object args) {
+            try {
+                process.StartInfo.Arguments = ArgumentsToString(args);
                 process.StartInfo.FileName = path;
                 process.StartInfo.UseShellExecute = false;
-                if (args != null && args.Length > 0) {
-                    System.Text.StringBuilder sb = new System.Text.StringBuilder();
-                    bool space = false;
-                    foreach (object arg in args) {
-                        string strarg = Ops.ToString(arg);
-                        if (space) {
-                            sb.Append(' ');
-                        }
-                        if (strarg.IndexOf(' ') != -1) {
-                            sb.Append('"');
-                            sb.Append(strarg);
-                            sb.Append('"');
-                        } else {
-                            sb.Append(strarg);
-                        }
-                        space = true;
-                    }
-                    process.StartInfo.Arguments = sb.ToString();
-                }
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
@@ -358,7 +382,7 @@ namespace IronPython.Modules {
             if (!process.Start()) {
                 throw Ops.OSError("Cannot start process: {0}", path);
             }
-            if (mode == 0) {
+            if (mode == (int)P_WAIT) {
                 process.WaitForExit();
                 int exitCode = process.ExitCode;
                 process.Close();
@@ -366,6 +390,67 @@ namespace IronPython.Modules {
             } else {
                 return process.Id;
             }
+        }
+
+        /// <summary>
+        /// Copy elements from a Python mapping of dict environment variables to a StringDictionary.
+        /// </summary>
+        private static void SetEnvironment(StringDictionary currentEnvironment, object newEnvironment) {
+            Dict env = newEnvironment as Dict;
+            if (env == null) {
+                throw Ops.TypeError("env argument must be a dict");
+            }
+
+            currentEnvironment.Clear();
+
+            string strKey, strValue;
+            foreach (object key in env.Keys) {
+                if (!Converter.TryConvertToString(key, out strKey)) {
+                    throw Ops.TypeError("env dict contains a non-string key");
+                }
+                if (!Converter.TryConvertToString(env[key], out strValue)) {
+                    throw Ops.TypeError("env dict contains a non-string value");
+                }
+                currentEnvironment[strKey] = strValue;
+            }
+        }
+
+        /// <summary>
+        /// Convert a sequence of args to a string suitable for using to spawn a process.
+        /// </summary>
+        private static string ArgumentsToString(object args) {
+            IEnumerator argsEnumerator;
+            System.Text.StringBuilder sb = null;
+            if (!Converter.TryConvertToIEnumerator(args, out argsEnumerator)) {
+                throw Ops.TypeError("args parameter must be sequence, not {0}", Ops.GetDynamicType(args));
+            }
+
+            bool space = false;
+            try {
+                // skip the first element, which is the name of the command being run
+                argsEnumerator.MoveNext();
+                while (argsEnumerator.MoveNext()) {
+                    if (sb == null) sb = new System.Text.StringBuilder(); // lazy creation
+                    string strarg = Ops.ToString(argsEnumerator.Current);
+                    if (space) {
+                        sb.Append(' ');
+                    }
+                    if (strarg.IndexOf(' ') != -1) {
+                        sb.Append('"');
+                        sb.Append(strarg);
+                        sb.Append('"');
+                    } else {
+                        sb.Append(strarg);
+                    }
+                    space = true;
+                }
+            } finally {
+                IDisposable disposable = argsEnumerator as IDisposable;
+                if (disposable != null) disposable.Dispose();
+            }
+
+            if (sb == null) return "";
+            return sb.ToString();
         }
 
         [PythonName("startfile")]
@@ -730,6 +815,13 @@ namespace IronPython.Modules {
 
         public static object O_BINARY = 0x8000;
         public static object O_TEXT = 0x4000;
+
+        public static object P_WAIT = 0;
+        public static object P_NOWAIT = 1;
+        public static object P_NOWAITO = 3;
+        // Not implemented:
+        // public static object P_OVERLAY = 2;
+        // public static object P_DETACH = 4;
 
         #endregion
 

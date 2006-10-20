@@ -2091,6 +2091,12 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
+        public static void Raise(Object exc ) {
+            Debug.Assert(exc.GetType() == typeof(Tuple));
+            Tuple exception = exc as Tuple;
+            Raise(exception[0], exception[1], exception[2]);
+        }
+
         public static void Raise(object type, object value, object traceback) {
             // non-reraise.
             // type is the type of exception to throwo or an instance.  If it 

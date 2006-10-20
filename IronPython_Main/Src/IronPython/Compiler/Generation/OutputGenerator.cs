@@ -141,13 +141,21 @@ namespace IronPython.Compiler.Generation {
                 cg.EmitCall(typeof(ICallerContext), "set_TrueDivision");
             }
 
+            Slot dummySlot = null;
             // Emit a try/catch block  for TraceBack support, except for simple return statements
-            if (!(body is ReturnStatement))
-                cg.EmitTraceBackTryBlockStart();
+            if (!(body is ReturnStatement)) {
+                // Try block may yield, but we are not interested in the isBlockYielded value
+                // hence push a dummySlot to pass the Assertion.
+                dummySlot = cg.GetLocalTmp(typeof(object));
+
+                cg.EmitTraceBackTryBlockStart(dummySlot);
+            }
 
             gs.Emit(cg);
 
             if (!(body is ReturnStatement)) {
+                // free up the dummySlot
+                cg.FreeLocalTmp(dummySlot);
                 cg.EmitTraceBackFaultBlock("Initialize", context.SourceFile);
                 cg.EmitPosition(Location.None, Location.None);
                 cg.EmitReturn(null);

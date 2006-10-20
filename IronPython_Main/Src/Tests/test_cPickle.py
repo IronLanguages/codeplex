@@ -14,7 +14,7 @@
 ######################################################################################
 
 #
-# test pickle
+# test cPickle low-level bytecode output
 #
 
 from lib.assert_util import *
@@ -22,25 +22,55 @@ from lib.assert_util import *
 import re
 from cStringIO import StringIO
 
-import sys
-
+# We test IronPython's cPickle bytecode output against CPython's pickle.py
+# output, since pickle.py's output (specifically its memoization behavior) is
+# more predictable than cPickle's. (CPython's cPickle relies on reference counts
+# to determine whether or not to memoize objects, which is hard to reproduce on
+# IronPython.)
 if sys.platform == 'cli':
     import cPickle
 else:
     import pickle as cPickle
 
-def sorted_dict_repr(dict):
-    # We do str(k) to force unicode attribute values to be strings. On
-    # IronPython this doesn't matter, since everything is unicode. However,
-    # this allows us to test against CPython for compatibility.
-    return '{%s}' % ', '.join(
-        ['%r: %r' % (str(k),v)
-            for k,v
-            in sorted(dict.items(),
-                cmp=lambda a,b: cmp(a[0], b[0])
-                )
-            ]
-        )
+# Acquire refs to interned strings in an attempt to force deterministic CPython
+# memo behavior if testing against CPython's cPickle module.
+# (see http://mail.python.org/pipermail/python-dev/2006-August/067882.html)
+held_refs = [u'hey', u'Bob', 'name', 'age', u'state1', u'state2', u'arg1']
+
+def sorted_dict_repr(obj, memo=None):
+    if memo is None:
+        memo = set()
+    else:
+        memo = memo.copy()
+    memo.add(id(obj))
+
+    kv_reprs = []
+    for k in sorted(obj.keys()):
+        v = obj[k]
+        if isinstance(v, dict) and id(v) in memo:
+            val_repr = '{...}'
+        else:
+            val_repr = normalized_repr(v, memo)
+
+        # We do str(k) to force unicode dict keys to look like strings. On
+        # IronPython this doesn't matter, since everything is unicode. However,
+        # this allows us to test against CPython for compatibility.
+        if isinstance(k, unicode):
+            k = str(k)
+
+        kv_reprs.append('%s: %s' % (normalized_repr(k, memo), val_repr))
+
+    result = '{' + (', '.join(kv_reprs)) + '}'
+    return result
+
+def normalized_repr(obj, memo=None):
+    """Return repr of obj. If obj is a dict, return it in key-sorted order, with
+    keys normalized to str if they're unicode. Otherwise return the standard
+    repr of an object."""
+    if isinstance(obj, dict):
+        return sorted_dict_repr(obj, memo)
+    else:
+        return repr(obj)
 
 class OldClass:
     def __repr__(self):
@@ -49,7 +79,7 @@ class OldClass:
         else:
             state = sorted_dict_repr(self.__dict__)
         return "<%s instance with state %s>" % (
-            self.__class__, state)
+            self.__class__, normalized_repr(state))
 class OldClass_GetState(OldClass):
     def __getstate__(self):
         return (u'state1', u'state2')
@@ -69,7 +99,7 @@ class NewClass(object):
         else:
             state = sorted_dict_repr(self.__dict__)
         return "<%s instance with state %s>" % (
-            type(self).__name__, state)
+            type(self).__name__, normalized_repr(state))
 class NewClass_GetState(NewClass):
     def __getstate__(self):
         return (u'state1', u'state2')
@@ -150,6 +180,9 @@ class TestBank:
     # If thing_to_pickle is a NamedObject instance, then the NamedObject's
     # 'name' attr will be printed and its 'obj' attr will be pickled.
     #
+    # If thing_to_pickle is wrapped in a CLIOnly() object, then the test will be
+    # run only when testing against IronPython.
+    #
     # If there's only one expected alternative, you can just use that instead
     # of a tuple of possible alternatives.
     #
@@ -162,9 +195,9 @@ class TestBank:
     # (e.g. "<2>" or "<\x05>") is a wildcard that matches exactly one
     # character when testing the pickler. When testing the unpickler, the angle
     # brackets are stripped and the string is used otherwise unmodified. This
-    # is to allow slightly fuzzy matching against memo reference numbers.  As a
-    # corrolary, this means that you can't use strings that contain literal
-    # angle brackets.
+    # is to allow slightly fuzzy matching against memo reference numbers and
+    # dictionary entries, which are nondeterministic. As a corrolary, this
+    # means that you can't use strings that contain literal angle brackets.
 
     tests = [
         (None, {
@@ -325,17 +358,17 @@ class TestBank:
             0:'(lp<0>\nI5\naI6\na.',
             1:']q<\x00>(K\x05K\x06e.',
             }),
-        (CLIOnly(list(range(10))), {
+        (list(range(8)), {
+            0:'(lp<0>\nI0\naI1\naI2\naI3\naI4\naI5\naI6\naI7\na.',
+            1:']q<\x00>(K\x00K\x01K\x02K\x03K\x04K\x05K\x06K\x07e.',
+            }),
+        (list(range(9)), {
+            0:'(lp<0>\nI0\naI1\naI2\naI3\naI4\naI5\naI6\naI7\naI8\na.',
+            1:']q<\x00>(K\x00K\x01K\x02K\x03K\x04K\x05K\x06K\x07eK\x08a.',
+            }),
+        (list(range(10)), {
             0:'(lp<0>\nI0\naI1\naI2\naI3\naI4\naI5\naI6\naI7\naI8\naI9\na.',
-            1:']q<\x00>(K\x00K\x01K\x02K\x03K\x04K\x05K\x06K\x07K\x08K\te.',
-            }),
-        (CLIOnly(list(range(11))), {
-            0:'(lp<0>\nI0\naI1\naI2\naI3\naI4\naI5\naI6\naI7\naI8\naI9\naI10\na.',
-            1:']q<\x00>(K\x00K\x01K\x02K\x03K\x04K\x05K\x06K\x07K\x08K\teK\na.',
-            }),
-        (CLIOnly(list(range(12))), {
-            0:'(lp<0>\nI0\naI1\naI2\naI3\naI4\naI5\naI6\naI7\naI8\naI9\naI10\naI11\na.',
-            1:']q<\x00>(K\x00K\x01K\x02K\x03K\x04K\x05K\x06K\x07K\x08K\te(K\nK\x0be.',
+            1:']q<\x00>(K\x00K\x01K\x02K\x03K\x04K\x05K\x06K\x07e(K\x08K\x09e.',
             }),
         ([hey, hey], {
             0:'(lp<0>\nVhey\np<1>\nag<1>\na.',
@@ -345,25 +378,29 @@ class TestBank:
             0:'(dp<0>\n.',
             1:'}q<\x00>.',
             }),
-        ({1:2}, {
-            0:'(dp<0>\nI1\nI2\ns.',
-            1:'}q<\x00>K\x01K\x02s.',
-            }),
         ({1:2, 3:4}, {
-            0:'(dp<0>\nI1\nI2\nsI3\nI4\ns.',
-            1:'}q<\x00>(K\x01K\x02K\x03K\x04u.',
+            0:( '(dp<0>\nI1\nI2\nsI3\nI4\ns.',
+                '(dp<0>\nI3\nI4\nsI1\nI2\ns.',
+                ),
+            1:( '}q<\x00>(K\x01K\x02K\x03K\x04u.',
+                '}q<\x00>(K\x03K\x04K\x01K\x02u.',
+                ),
+            }),
+        # Dict keys and values are kept to single digits and bracketed below to
+        # avoid problems with nondeterministic dictionary entry ordering.
+        # Everywhere else in the tests that there are dicts we keep them to two
+        # elements or fewer and test for both possible orderings.
+        (dict([(x,x) for x in range(8)]), {
+            0:'(dp<0>\nI<0>\nI<0>\nsI<1>\nI<1>\nsI<2>\nI<2>\nsI<3>\nI<3>\nsI<4>\nI<4>\nsI<5>\nI<5>\nsI<6>\nI<6>\nsI<7>\nI<7>\ns.',
+            1:'}q<\x00>(K<\x00>K<\x00>K<\x01>K<\x01>K<\x02>K<\x02>K<\x03>K<\x03>K<\x04>K<\x04>K<\x05>K<\x05>K<\x06>K<\x06>K<\x07>K<\x07>u.',
+            }),
+        (dict([(x,x) for x in range(9)]), {
+            0:'(dp<0>\nI<0>\nI<0>\nsI<1>\nI<1>\nsI<2>\nI<2>\nsI<3>\nI<3>\nsI<4>\nI<4>\nsI<5>\nI<5>\nsI<6>\nI<6>\nsI<7>\nI<7>\nsI<8>\nI<8>\ns.',
+            1:'}q<\x00>(K<\x00>K<\x00>K<\x01>K<\x01>K<\x02>K<\x02>K<\x03>K<\x03>K<\x04>K<\x04>K<\x05>K<\x05>K<\x06>K<\x06>K<\x07>K<\x07>uK<\x08>K<\x08>s.',
             }),
         (dict([(x,x) for x in range(10)]), {
-            0:'(dp<0>\nI0\nI0\nsI1\nI1\nsI2\nI2\nsI3\nI3\nsI4\nI4\nsI5\nI5\nsI6\nI6\nsI7\nI7\nsI8\nI8\nsI9\nI9\ns.',
-            1:'}q<\x00>(K\x00K\x00K\x01K\x01K\x02K\x02K\x03K\x03K\x04K\x04K\x05K\x05K\x06K\x06K\x07K\x07K\x08K\x08K\tK\tu.',
-            }),
-        (CLIOnly(dict([(x,x) for x in range(11)])), {
-            0:'(dp<0>\nI0\nI0\nsI1\nI1\nsI2\nI2\nsI3\nI3\nsI4\nI4\nsI5\nI5\nsI6\nI6\nsI7\nI7\nsI8\nI8\nsI9\nI9\nsI10\nI10\ns.',
-            1:'}q<\x00>(K\x00K\x00K\x01K\x01K\x02K\x02K\x03K\x03K\x04K\x04K\x05K\x05K\x06K\x06K\x07K\x07K\x08K\x08K\tK\tuK\nK\ns.',
-            }),
-        (CLIOnly(dict([(x,x) for x in range(12)])), {
-            0:'(dp<0>\nI0\nI0\nsI1\nI1\nsI2\nI2\nsI3\nI3\nsI4\nI4\nsI5\nI5\nsI6\nI6\nsI7\nI7\nsI8\nI8\nsI9\nI9\nsI10\nI10\nsI11\nI11\ns.',
-            1:'}q<\x00>(K\x00K\x00K\x01K\x01K\x02K\x02K\x03K\x03K\x04K\x04K\x05K\x05K\x06K\x06K\x07K\x07K\x08K\x08K\tK\tu(K\nK\nK\x0bK\x0bu.',
+            0:'(dp<0>\nI<0>\nI<0>\nsI<1>\nI<1>\nsI<2>\nI<2>\nsI<3>\nI<3>\nsI<4>\nI<4>\nsI<5>\nI<5>\nsI<6>\nI<6>\nsI<7>\nI<7>\nsI<8>\nI<8>\nsI<9>\nI<9>\ns.',
+            1:'}q<\x00>(K<\x00>K<\x00>K<\x01>K<\x01>K<\x02>K<\x02>K<\x03>K<\x03>K<\x04>K<\x04>K<\x05>K<\x05>K<\x06>K<\x06>K<\x07>K<\x07>u(K<\x08>K<\x08>K<\t>K<\t>u.',
             }),
         ({hey: hey}, {
             0:'(dp<0>\nVhey\np<1>\ng<1>\ns.',
@@ -374,8 +411,12 @@ class TestBank:
             1:']q<\x00>(K\x01h<\x00>e.',
             }),
         (dict_recursive, {
-            0:'(dp<0>\nI0\nVhey\np<1>\nsI1\ng<0>\ns.',
-            1:'}q<\x00>(K\x00X\x03\x00\x00\x00heyq<\x01>K\x01h<\x00>u.',
+            0:( '(dp<0>\nI0\nVhey\np<1>\nsI1\ng<0>\ns.',
+                '(dp<0>\nI1\ng<0>\nsI0\nVhey\np<1>\ns.',
+                ),
+            1:( '}q<\x00>(K\x00X\x03\x00\x00\x00heyq<\x01>K\x01h<\x00>u.',
+                '}q<\x00>(K\x01h<\x00>K\x00X\x03\x00\x00\x00heyq<\x01>u.',
+                ),
             }),
 
         (OldClass, {
@@ -444,12 +485,12 @@ class TestBank:
             1:'(c%s\nOldClass_GetState_GetInitArgs\nq<\x00>X\x04\x00\x00\x00arg1q<\x01>K\x02K\x03oq<\x02>(X\x06\x00\x00\x00state1q<\x03>X\x06\x00\x00\x00state2q<\x04>tq<\x05>b.' % (__name__,),
             2:'(c%s\nOldClass_GetState_GetInitArgs\nq<\x00>X\x04\x00\x00\x00arg1q<\x01>K\x02K\x03oq<\x02>X\x06\x00\x00\x00state1q<\x03>X\x06\x00\x00\x00state2q<\x04>\x86q<\x05>b.' % (__name__,),
             }),
-        (CLIOnly(newinst0), {
+        (newinst0, {
             0:'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n.' % (__name__,),
             1:'ccopy_reg\n_reconstructor\nq<\x00>(c%s\nNewClass\nq<\x01>c__builtin__\nobject\nq<\x02>Ntq<\x03>Rq<\x04>.' % (__name__,),
             2:'c%s\nNewClass\nq<\x00>)\x81q<\x01>}q<\x02>b.' % (__name__,),
             }),
-        (CLIOnly(newinst1), {
+        (newinst1, {
             0:( 'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n(dp<5>\nVname\np<6>\nVBob\np<7>\nsVage\np<8>\nI3\nsb.' % (__name__,),
                 'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n(dp<5>\nVage\np<6>\nI3\nsVname\np<7>\nVBob\np<8>\nsb.' % (__name__,),
                 'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n(dp<5>\nS\'name\'\np<6>\nVBob\np<7>\nsS\'age\'\np<8>\nI3\nsb.' % (__name__,),
@@ -466,22 +507,22 @@ class TestBank:
                 'c%s\nNewClass\nq<\x00>)\x81q<\x01>}q<\x02>(U\x03ageq<\x03>K\x03U\x04nameq<\x04>X\x03\x00\x00\x00Bobq<\x05>ub.' % (__name__,),
                 ),
             }),
-        (CLIOnly(newinst2), {
+        (newinst2, {
             0:'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass_GetState\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n(Vstate1\np<5>\nVstate2\np<6>\ntp<7>\nb.' % (__name__,),
             1:'ccopy_reg\n_reconstructor\nq<\x00>(c%s\nNewClass_GetState\nq<\x01>c__builtin__\nobject\nq<\x02>Ntq<\x03>Rq<\x04>(X\x06\x00\x00\x00state1q<\x05>X\x06\x00\x00\x00state2q<\x06>tq<\x07>b.' % (__name__,),
             2:'c%s\nNewClass_GetState\nq<\x00>)\x81q<\x01>X\x06\x00\x00\x00state1q<\x02>X\x06\x00\x00\x00state2q<\x03>\x86q<\x04>b.' % (__name__,),
             }),
-        (CLIOnly(newinst3), {
+        (newinst3, {
             0:'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass_GetState\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n(Vstate1\np<5>\nVstate2\np<6>\ntp<7>\nb.' % (__name__,),
             1:'ccopy_reg\n_reconstructor\nq<\x00>(c%s\nNewClass_GetState\nq<\x01>c__builtin__\nobject\nq<\x02>Ntq<\x03>Rq<\x04>(X\x06\x00\x00\x00state1q<\x05>X\x06\x00\x00\x00state2q<\x06>tq<\x07>b.' % (__name__,),
             2:'c%s\nNewClass_GetState\nq<\x00>)\x81q<\x01>X\x06\x00\x00\x00state1q<\x02>X\x06\x00\x00\x00state2q<\x03>\x86q<\x04>b.' % (__name__,),
             }),
-        (CLIOnly(newinst4), {
+        (newinst4, {
             0:'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass_GetNewArgs\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n.' % (__name__,),
             1:'ccopy_reg\n_reconstructor\nq<\x00>(c%s\nNewClass_GetNewArgs\nq<\x01>c__builtin__\nobject\nq<\x02>Ntq<\x03>Rq<\x04>.' % (__name__,),
             2:'c%s\nNewClass_GetNewArgs\nq<\x00>X\x04\x00\x00\x00arg1q<\x01>K\x02K\x03\x87q<\x02>\x81q<\x03>}q<\x04>b.' % (__name__,),
             }),
-        (CLIOnly(newinst5), {
+        (newinst5, {
             0:( 'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass_GetNewArgs\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n(dp<5>\nS\'name\'\np<6>\nVBob\np<7>\nsb.' % (__name__,),
                 'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass_GetNewArgs\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n(dp<5>\nVname\np<6>\nVBob\np<7>\nsb.' % (__name__,),
                 ),
@@ -492,12 +533,12 @@ class TestBank:
                 'c%s\nNewClass_GetNewArgs\nq<\x00>X\x04\x00\x00\x00arg1q<\x01>K\x02K\x03\x87q<\x02>\x81q<\x03>}q<\x04>X\x04\x00\x00\x00nameq<\x05>X\x03\x00\x00\x00Bobq<\x06>sb.' % (__name__,),
                 ),
             }),
-        (CLIOnly(newinst6), {
+        (newinst6, {
             0:'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass_GetState_GetNewArgs\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n(Vstate1\np<5>\nVstate2\np<6>\ntp<7>\nb.' % (__name__,),
             1:'ccopy_reg\n_reconstructor\nq<\x00>(c%s\nNewClass_GetState_GetNewArgs\nq<\x01>c__builtin__\nobject\nq<\x02>Ntq<\x03>Rq<\x04>(X\x06\x00\x00\x00state1q<\x05>X\x06\x00\x00\x00state2q<\x06>tq<\x07>b.' % (__name__,),
             2:'c%s\nNewClass_GetState_GetNewArgs\nq<\x00>X\x04\x00\x00\x00arg1q<\x01>K\x02K\x03\x87q<\x02>\x81q<\x03>X\x06\x00\x00\x00state1q<\x04>X\x06\x00\x00\x00state2q<\x05>\x86q<\x06>b.' % (__name__,),
             }),
-        (CLIOnly(newinst7), {
+        (newinst7, {
             0:'ccopy_reg\n_reconstructor\np<0>\n(c%s\nNewClass_GetState_GetNewArgs\np<1>\nc__builtin__\nobject\np<2>\nNtp<3>\nRp<4>\n(Vstate1\np<5>\nVstate2\np<6>\ntp<7>\nb.' % (__name__,),
             1:'ccopy_reg\n_reconstructor\nq<\x00>(c%s\nNewClass_GetState_GetNewArgs\nq<\x01>c__builtin__\nobject\nq<\x02>Ntq<\x03>Rq<\x04>(X\x06\x00\x00\x00state1q<\x05>X\x06\x00\x00\x00state2q<\x06>tq<\x07>b.' % (__name__,),
             2:'c%s\nNewClass_GetState_GetNewArgs\nq<\x00>X\x04\x00\x00\x00arg1q<\x01>K\x02K\x03\x87q<\x02>\x81q<\x03>X\x06\x00\x00\x00state1q<\x04>X\x06\x00\x00\x00state2q<\x05>\x86q<\x06>b.' % (__name__,),
@@ -547,11 +588,10 @@ def test_pickler(module=cPickle, verbose=True):
         module.Pickler(s, protocol=2),
         ]
 
-    if sys.platform.startswith('cli'):
-        for p in picklers:
-            # This lets us test batched SETITEMS and APPENDS without generating
-            # huge (1000-item) datasets
-            p._BATCHSIZE = 10
+    for p in picklers:
+        # This lets us test batched SETITEMS and APPENDS without generating
+        # huge (1000-item) datasets
+        p._BATCHSIZE = 8
 
     for test in TestBank.tests:
         obj, expectations = test
@@ -561,11 +601,7 @@ def test_pickler(module=cPickle, verbose=True):
             else:
                 obj = obj.obj
 
-        if isinstance(obj, NamedObject):
-            display_name = '<<%s>>' % obj.name
-            obj = obj.obj
-        else:
-            display_name = repr(obj)
+        obj, _unused, display_name = TestBank.normalize(test)
 
         if verbose: print "Testing %s..." % display_name,
         for proto in range(len(picklers)):
@@ -601,7 +637,7 @@ def test_unpickler(module=cPickle, verbose=True):
     s = StringIO()
     for test in TestBank.tests:
         obj, pickle_lists, display_name = TestBank.normalize(test)
-        expected = repr(obj)
+        expected = normalized_repr(obj)
 
         if verbose: print "Testing %s..." % display_name,
 
@@ -622,20 +658,16 @@ def test_unpickler(module=cPickle, verbose=True):
                 s.truncate(0)
                 s.write(pickle.replace('<', '').replace('>', ''))
                 s.seek(0)
-                try:
-                    unpickled_obj = unpickler.load()
-                except NotImplementedError:
-                    print "SKIPPED",
-                else:
-                    actual = repr(unpickled_obj)
+                unpickled_obj = unpickler.load()
+                actual = normalized_repr(unpickled_obj)
 
-                    if expected != actual:
-                        print 
-                        Fail('Wrong unpickled value:\n'
-                            'with pickle %d %r\n'
-                            'expected\n'
-                            '%r, got\n'
-                            '%r' % (pickle_num, pickle, expected, actual))
+                if expected != actual:
+                    print 
+                    Fail('Wrong unpickled value:\n'
+                        'with pickle %d %r\n'
+                        'expected\n'
+                        '%r, got\n'
+                        '%r' % (pickle_num, pickle, expected, actual))
 
                 pickle_num += 1
 
