@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  IronPython doc and tutorial components
+
+  2006-01-01 BobArnso Created
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2003/01/wi">
+  <Fragment>
+    <FeatureRef Id="Feature_IronPython">
+      <Feature Id="Feature_Doc" AllowAdvertise="no" Level="1" Title="Documentation" Description="Documentation and tutorial">
+        <ComponentRef Id="Comp_Doc" />
+        <ComponentRef Id="Comp_Tutorial" />
+        <ComponentRef Id="Comp_TutorialEmbed" />
+        <ComponentRef Id="Comp_TutorialExtend" />
+        <ComponentRef Id="Comp_TutorialHostingApp" />
+      </Feature>
+    </FeatureRef>
+
+    <DirectoryRef Id="INSTALLDIR">
+      <Directory Id="Dir_Doc" Name="Doc" FileSource="Doc">
+        <Component Id="Comp_Doc" DiskId="1" Guid="FABE89D9-DE25-49E8-BF85-A3AC7B66DFD7">
+          <File Id="File_Architecture.htm" Name="ARCH.HTM" LongName="Architecture.htm" />
+          <File Id="File_IronPython.css" Name="IRONPY.CSS" LongName="IronPython.css" />
+          <File Id="File_IronPythonApiReference.chm" Name="IPAPIREF.CHM" LongName="IronPythonApiReference.chm" />
+          <Shortcut Id="Shortcut_Architecture" Directory="Dir_StartMenu" Name="IRPYARCH" LongName="IronPython Architecture" Target="[#File_Architecture.htm]" />
+          <Shortcut Id="Shortcut_IronPythonApiReference" Directory="Dir_StartMenu" Name="IPAPIREF" LongName="IronPython API Reference" Target="[#File_IronPythonApiReference.chm]" />
+        </Component>
+      </Directory>
+
+      <Directory Id="Dir_Tutorial" Name="Tutorial" FileSource="Tutorial">
+        <Component Id="Comp_Tutorial" DiskId="1" Guid="BF263625-58BE-4904-BFE2-0ECBBE4FB748">
+          <File Id="File_avalon.py" Name="avalon.py" />
+          <File Id="File_Calc.xaml" Name="CALC.XAM" LongName="Calc.xaml" />
+          <File Id="File_calculator.py" Name="CALCUL_1.PY" LongName="calculator.py" />
+          <File Id="File_cseval.bat" Name="cseval.bat" />
+          <File Id="File_csextend.cs" Name="csextend.cs" />
+          <File Id="File_csx.bat" Name="csx.bat" />
+          <File Id="File_debugcsx.py" Name="debugcsx.py" />
+          <File Id="File_debugging.py" Name="DEBUGG_1.PY" LongName="debugging.py" />
+          <File Id="File_debugvbx.py" Name="debugvbx.py" />
+          <File Id="File_dialog1.jpg" Name="dialog2.jpg" />
+          <File Id="File_dialog2.jpg" Name="dialog1.jpg" />
+          <File Id="File_eval.cs" Name="eval.cs" />
+          <File Id="File_first.py" Name="first.py" />
+          <File Id="File_pyevent.py.xml" Name="pyevent.py" />
+          <File Id="File_Releases.xml" Name="Releases.xml" />
+          <File Id="File_spellcheck.py" Name="SPELLCHK.PY" LongName="spellcheck.py" />
+          <File Id="File_Tutorial.htm" Name="Tutorial.htm" />
+          <File Id="File_vbextend.vb" Name="vbextend.vb" />
+          <File Id="File_vbx.bat" Name="vbx.bat" />
+          <File Id="File_wfdemo.py" Name="wfdemo.py" />
+          <File Id="File_winforms.py" Name="winforms.py" />
+          <File Id="File_xmlutil.py" Name="xmlutil.py" />
+          <Shortcut Id="Shortcut_Tutorial" Directory="Dir_StartMenu" Name="IRPYTUT" LongName="IronPython Tutorial" Target="[#File_Tutorial.htm]" />
+        </Component>
+
+        <Directory Id="Dir_TutorialEmbed" Name="Embed" FileSource="Tutorial\Embed">
+          <Component Id="Comp_TutorialEmbed" DiskId="1" Guid="6C04CD8B-C945-4EFE-B5DC-6BACFC068794">
+            <File Id="File_Embed.cs" Name="Embed.cs" />
+            <File Id="File_Embed.csproj" Name="EMBED.CSP" LongName="Embed.csproj" />
+            <File Id="File_EmbedFinal.cs" Name="FINAL.CS" LongName="EmbedFinal.cs" />
+            <File Id="File_EmbedKoch.py" Name="KOCH.PY" LongName="EmbedKoch.py" />
+            <File Id="File_EmbedSimple.py" Name="SIMPLE.PY" LongName="EmbedSimple.py" />
+            <File Id="File_Embed_eval.cs" Name="eval.cs" />
+          </Component>
+        </Directory>
+
+        <Directory Id="Dir_TutorialExtend" Name="Extend" FileSource="Tutorial\Extend">
+          <Component Id="Comp_TutorialExtend" DiskId="1" Guid="250EE36B-4E60-49DC-A01F-12521FE65AA8">
+            <File Id="File_Extend_csextend.cs" Name="csextend.cs" />
+            <File Id="File_csxtest.py" Name="csxtest.py" />
+            <File Id="File_Extend_vbextend.vb" Name="vbextend.vb" />
+            <File Id="File_vbxtest.py" Name="vbxtest.py" />
+          </Component>
+        </Directory>
+
+        <Directory Id="Dir_TutorialHostingApp" Name="HostApp" LongName="HostingApp" FileSource="Tutorial\HostingApp">
+          <Component Id="Comp_TutorialHostingApp" DiskId="1" Guid="58e0a855-954c-43f4-9b23-8c1d9c98d987">
+            <File Id="File_App.cs" Name="App.cs" />
+            <File Id="File_makeha.bat" Name="makeha.bat" />
+            <File Id="File_MonthAtAGlance.1.cs" Name="MAH1.cs" LongName="MonthAtAGlance.1.cs" />
+            <File Id="File_MonthAtAGlance.2.1.cs" Name="MAG21.cs" LongName="MonthAtAGlance.2.1.cs" />
+            <File Id="File_MonthAtAGlance.2.2.cs" Name="MAG22.cs" LongName="MonthAtAGlance.2.2.cs" />
+            <File Id="File_MonthAtAGlance.2.3.cs" Name="MAG23.cs" LongName="MonthAtAGlance.2.3.cs" />
+            <File Id="File_MonthAtAGlance.3.1.cs" Name="MAG31.cs" LongName="MonthAtAGlance.3.1.cs" />
+            <File Id="File_MonthAtAGlance.3.2.cs" Name="MAG32.cs" LongName="MonthAtAGlance.3.2.cs" />
+            <File Id="File_MonthAtAGlance.3.3.cs" Name="MAG33.cs" LongName="MonthAtAGlance.3.3.cs" />
+            <File Id="File_MonthAtAGlance.cs" Name="MAG.cs" LongName="MonthAtAGlance.cs" />
+            <File Id="File_MonthAtAGlance.Designer.cs" Name="MAGDes.cs" LongName="MonthAtAGlance.Designer.cs" />
+          </Component>
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+</Wix>

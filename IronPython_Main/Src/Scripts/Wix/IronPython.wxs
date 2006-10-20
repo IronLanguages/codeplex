@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IronPython installer root features, upgrades, and product definition
+  
+  2006-01-01 BobArnso Created
+-->
+
+<?define ProductShortName = "IronPython" ?>
+<?define ProductVersion = "1.0.2428" ?>
+<?define ProductVersionText = "1.0" ?>
+<?define Manufacturer = "Microsoft Corporation" ?>
+<?define UpgradeCode = "69C1C046-7D77-4466-9D8A-BFDDDDC442FC" ?>
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2003/01/wi">
+  <Product Id="????????-????-????-????-????????????" UpgradeCode="$(var.UpgradeCode)" Name="$(var.ProductShortName) $(var.ProductVersionText)" Version="$(var.ProductVersion)" Language="1033" Manufacturer="$(var.Manufacturer)">
+    <Package Id="????????-????-????-????-????????????" Compressed="yes" Description="$(var.ProductShortName) $(var.ProductVersionText) ($(var.ProductVersion))" InstallerVersion="200" ShortNames="no" Manufacturer="$(var.Manufacturer)" />
+    <Media Id="1" Cabinet="IronPy.cab" EmbedCab="yes" />
+
+    <!-- Major upgrade -->
+    <Upgrade Id="$(var.UpgradeCode)">
+      <UpgradeVersion Minimum="$(var.ProductVersion)" OnlyDetect="yes" Property="NEWERVERSIONDETECTED" />
+      <UpgradeVersion Minimum="0.0.0.0" IncludeMinimum="yes" Maximum="$(var.ProductVersion)" IncludeMaximum="no" Property="OLDERVERSIONBEINGUPGRADED" />
+    </Upgrade>
+
+    <!-- Properties -->
+    <Property Id="ALLUSERS" Value="1" />
+    <Property Id="ARPHELPLINK" Value="http://workspaces.gotdotnet.com/ironpython" />
+    <Property Id="ARPURLINFOABOUT" Value="http://msdn.microsoft.com/" />
+    <Property Id="ARPURLUPDATEINFO" Value="http://workspaces.gotdotnet.com/ironpython" />
+    <Property Id="NET20DETECTED">
+      <RegistrySearch Id="Net20RegSearch" Root="HKLM" Key="Software\Microsoft\NET Framework Setup\NDP\v2.0.50727" Name="Install" Type="raw" />
+    </Property>
+
+    <!-- Launch conditions -->
+    <Condition Message="An administrator must approve or install [ProductName]."> Privileged </Condition>
+    <Condition Message="A later version of [ProductName] is already installed."> NOT NEWERVERSIONDETECTED </Condition>
+    <Condition Message="[ProductName] requires .NET Framework 2.0."> NET20DETECTED </Condition>
+
+    <!-- Root directories -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramMenuFolder" Name="PMENU">
+        <Directory Id="Dir_StartMenu" Name="IRONPY" LongName="IronPython" />
+      </Directory>
+      <Directory Id="ProgramFilesFolder" Name="PFILES">
+        <Directory Id="INSTALLDIR" Name="IRONPY" LongName="IronPython" />
+      </Directory>
+    </Directory>
+
+    <!-- Root feature -->
+    <Feature Id="Feature_IronPython" ConfigurableDirectory="INSTALLDIR" Absent="disallow" AllowAdvertise="no" Display="expand" Level="1" Title="IronPython" Description="IronPython runtime, compiler, and console">
+      <FeatureRef Id="Feature_Core" />
+      <FeatureRef Id="Feature_Doc" />
+      <FeatureRef Id="Feature_Src" />
+    </Feature>
+
+    <!-- Sequences -->
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallValidate" />
+    </InstallExecuteSequence>
+
+    <InstallUISequence>
+      <!-- Because we have a launch condition that uses the results of FindRelatedProducts, put it first. -->
+      <LaunchConditions After="FindRelatedProducts" />
+    </InstallUISequence>
+
+    <!-- User interface -->
+    <UIRef Id="WixUI_FeatureTree" />
+  </Product>
+</Wix>
