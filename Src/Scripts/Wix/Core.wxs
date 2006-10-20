@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  IronPython core runtime components
+
+  2006-01-01 BobArnso Created
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2003/01/wi">
+  <Fragment>
+    <FeatureRef Id="Feature_IronPython">
+      <Feature Id="Feature_Core" Absent="disallow" AllowAdvertise="no" Display="hidden" Level="1" Title="IronPython Core">
+        <ComponentRef Id="Comp_Core" />
+        <ComponentRef Id="Comp_IronMath" />
+        <ComponentRef Id="Comp_IronPython" />
+        <ComponentRef Id="Comp_IronPythonConsole" />
+        <ComponentRef Id="Comp_IronPythonWindow" />
+        <ComponentRef Id="Comp_Lib" />
+      </Feature>
+    </FeatureRef>
+
+    <DirectoryRef Id="INSTALLDIR" FileSource=".">
+      <Component Id="Comp_Core" DiskId="1" Guid="F3CA0734-D47C-41E9-881E-BD77E3DB750E">
+        <File Id="File_FAQ.html" Name="FAQ.HTM" LongName="FAQ.html" />
+        <File Id="File_License.html" Name="LICENSE.HTM" LongName="License.html" />
+        <File Id="File_License.rtf" Name="License.rtf" />
+        <File Id="File_Readme.html" Name="README.HTM" LongName="Readme.html" />
+        <Shortcut Id="Shortcut_Readme" Directory="Dir_StartMenu" Name="IRPYRDME" LongName="IronPython Readme" Target="[#File_Readme.html]" />
+        <Shortcut Id="Shortcut_FAQ" Directory="Dir_StartMenu" Name="IRPYFAQ" LongName="IronPython FAQ" Target="[#File_FAQ.html]" />
+      </Component>
+
+      <Component Id="Comp_IronMath" DiskId="1" Guid="D90EAFE9-88EE-4659-BE69-FCD8ABFEEEA4">
+        <File Id="File_IronMath.dll" Name="IronMath.dll" />
+      </Component>
+
+      <Component Id="Comp_IronPython" DiskId="1" Guid="779786C7-8428-4190-87A3-6B6DE68A95C3">
+        <File Id="File_IronPython.dll" Name="IRONPY.DLL" LongName="IronPython.dll" />
+      </Component>
+
+      <Component Id="Comp_IronPythonConsole" DiskId="1" Guid="BFA9CC89-FCCB-4CD3-893C-131B13DB0C52">
+        <File Id="File_ipy.exe" Name="ipy.exe" />
+        <Shortcut Id="Shortcut_Console" Directory="Dir_StartMenu" Name="IRPYCONS" LongName="IronPython Console" Target="[#File_ipy.exe]" />
+      </Component>
+
+      <Component Id="Comp_IronPythonWindow" DiskId="1" Guid="6A7D58EB-8B7F-44FE-A3E4-6DA52D4FD83B">
+        <File Id="File_ipyw.exe" Name="ipyw.exe" />
+      </Component>
+
+      <Directory Id="Dir_Lib" Name="Lib" FileSource="Lib">
+        <Component Id="Comp_Lib" DiskId="1" Guid="1D6B7169-37A7-4A4D-9D44-89668F6F984E">
+          <File Id="File_Site.py" Name="site.py" />
+        </Component>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+</Wix>
