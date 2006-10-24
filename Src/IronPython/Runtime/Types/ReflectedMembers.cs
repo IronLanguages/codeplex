@@ -88,6 +88,19 @@ namespace IronPython.Runtime.Types {
             return string.Format("<field# {0} on {1}>", info.Name, info.DeclaringType.Name);
         }
 
+        public string Documentation {
+            [PythonName("__doc__")]
+            get {
+                return ReflectionUtil.CreateAutoDoc(info);
+            }
+        }
+
+        public string Name {
+            get {
+                return info.Name;
+            }
+        }
+
         #region IContextAwareMember Members
 
         public bool IsVisible(ICallerContext context) {
@@ -523,6 +536,18 @@ namespace IronPython.Runtime.Types {
             return string.Format("<event# {0} on {1}>", dispatcher.Info.Name, dispatcher.Info.DeclaringType.Name);
         }
 
+        public string Name {
+            get {
+                return dispatcher.Info.Name;
+            }
+        }
+
+        public string Documentation {
+            [PythonName("__doc__")]
+            get {
+                return ReflectionUtil.CreateAutoDoc(dispatcher.Info);
+            }
+        }
         #region IContextAwareMember Members
 
         bool IContextAwareMember.IsVisible(ICallerContext context) {

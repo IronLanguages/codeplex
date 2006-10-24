@@ -162,7 +162,8 @@ if is_cli:
     def test_clr_doc():
         import System
         Assert(System.Collections.ArrayList.__new__.__doc__[:11] == "__new__(cls")
-        Assert(System.Collections.ArrayList.__doc__[:11] == "ArrayList()")
+        Assert(System.Collections.ArrayList.__doc__[:11] == "ArrayList()" or 
+            (System.Collections.ArrayList.__doc__[:11] == 'Implements ' and System.Collections.ArrayList.__doc__.find('ArrayList()') != -1))
 
         # static (bool, float) TryParse(str s)
         Assert(System.Double.TryParse.__doc__.index('(bool, float)') >= 0)

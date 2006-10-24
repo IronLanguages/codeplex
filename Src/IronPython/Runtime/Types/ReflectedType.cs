@@ -352,21 +352,27 @@ namespace IronPython.Runtime.Types {
         }
 
         private string GetDocumentation() {
+            // Python documentation
             object[] docAttr = type.GetCustomAttributes(typeof(DocumentationAttribute), false);
             if (docAttr != null && docAttr.Length > 0) {
                 return ((DocumentationAttribute)docAttr[0]).Value;
             }
 
-            BuiltinFunction newMeth = ctor as BuiltinFunction;
-            if (newMeth == null) {
-                if (type.IsEnum) return ReflectionUtil.CreateEnumDoc(type);
-
-                return null;
+            // Auto Doc (XML or otherwise)
+            string autoDoc = ReflectionUtil.CreateAutoDoc(type);
+            if (autoDoc == null) {
+                autoDoc = String.Empty;
+            } else {
+                autoDoc += Environment.NewLine + Environment.NewLine;
             }
+            
+            // Simple generated helpbased on ctor, if available.
+            BuiltinFunction newMeth = ctor as BuiltinFunction;
+            if(newMeth == null) return autoDoc;
 
             // strip off function name & cls parameter and just
             // display as plain type
-            return newMeth.Documentation.Replace("__new__(cls)", Name + "()").Replace("__new__(cls, ", Name + "(");
+            return autoDoc + newMeth.Documentation.Replace("__new__(cls)", Name + "()").Replace("__new__(cls, ", Name + "(");
         }
 
         private string GetName(Type type) {
