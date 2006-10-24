@@ -180,7 +180,7 @@ namespace IronPythonConsole {
                 } else {
                     return RunFile(engine, fileName);
                 }
-            } catch (System.Threading.ThreadAbortException tae) {
+            } catch (System.Threading.ThreadAbortException tae) {                
                 if (tae.ExceptionState is PythonKeyboardInterruptException) {
                     Thread.ResetAbort();
                 }

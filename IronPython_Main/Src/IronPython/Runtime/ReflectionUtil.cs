@@ -17,6 +17,11 @@ using System;
 using System.Text;
 using System.Reflection;
 using System.Diagnostics;
+using System.Collections.Generic;
+using System.IO;
+
+using System.Xml;
+using System.Xml.XPath;
 
 using IronPython.Runtime.Operations;
 
@@ -29,6 +34,8 @@ namespace IronPython.Runtime {
         internal const char GenericArityDelimiter = '`';
 
         internal static Version pythonVersion25 = new Version(2, 5);
+        private static XPathDocument cachedDoc;
+        private static string cachedDocName;
 
         internal static string GetDefaultDocumentation(string methodName) {
             switch (methodName) {
@@ -68,6 +75,16 @@ namespace IronPython.Runtime {
             object[] attrs = info.GetCustomAttributes(typeof(DocumentationAttribute), false);
             if (attrs.Length == 0) {
                 StringBuilder autoDoc = new StringBuilder();
+
+                string summary;
+                string returns;
+                GetXmlDoc(info, out summary, out returns);
+
+                if (summary != null) {
+                    autoDoc.AppendLine(summary);
+                    autoDoc.AppendLine();
+                }
+                
                 MethodInfo getter = info.GetGetMethod();
                 MethodInfo setter = info.GetSetMethod();
                 if (getter != null) {
@@ -119,7 +136,168 @@ namespace IronPython.Runtime {
             return CreateAutoDoc(info, null, 0);
         }
 
+        public static string CreateAutoDoc(FieldInfo info) {
+            string summary;
+            GetXmlDoc(info, out summary);
+
+            return summary;
+        }
+
+        public static string CreateAutoDoc(PropertyInfo info) {
+            string summary;
+            string returns;
+            GetXmlDoc(info, out summary, out returns);
+
+            return summary;
+        }
+
+        public static string CreateAutoDoc(EventInfo info) {
+            string summary;
+            string returns;
+            GetXmlDoc(info, out summary, out returns);
+
+            return summary;
+        }
+        
+        public static string CreateAutoDoc(Type t) {
+            string summary;
+            GetXmlDoc(t, out summary);
+
+            if (summary != null)
+                return summary;
+
+            if (t.IsEnum) {
+
+                string[] names = Enum.GetNames(t);
+                Array values = Enum.GetValues(t);
+                for (int i = 0; i < names.Length; i++) {
+                    names[i] = String.Concat(names[i],
+                        " (",
+                        Convert.ChangeType(values.GetValue(i), Enum.GetUnderlyingType(t)).ToString(),
+                        ")");
+                }
+
+                Array.Sort<string>(names);
+                string comment = "";
+
+                if (t.IsDefined(typeof(FlagsAttribute), false))
+                    comment = " (flags) ";
+
+                return String.Concat("enum ",
+                    comment,
+                    GetPythonTypeName(t),
+                    ", values: ",
+                    String.Join(", ", names));
+            }
+            return null;
+        }
+
+        private static string GetXmlName(Type type) {
+            StringBuilder res = new StringBuilder();
+            res.Append("T:");
+
+            AppendTypeFormat(type, res);
+
+            return res.ToString();
+        }
+
+        private static string GetXmlName(FieldInfo field) {
+            StringBuilder res = new StringBuilder();
+            res.Append("F:");
+
+            AppendTypeFormat(field.DeclaringType, res);
+            res.Append('.');
+            res.Append(field.Name);            
+
+            return res.ToString();
+        }
+
+        private static string GetXmlName(EventInfo field) {
+            StringBuilder res = new StringBuilder();
+            res.Append("E:");
+
+            AppendTypeFormat(field.DeclaringType, res);
+            res.Append('.');
+            res.Append(field.Name);
+
+            return res.ToString();
+        }
+
+        private static string GetXmlName(PropertyInfo property) {
+            StringBuilder res = new StringBuilder();
+            res.Append("P:");
+
+            res.Append(property.DeclaringType.Namespace);
+            res.Append('.');
+            res.Append(property.DeclaringType.Name);
+            res.Append('.');
+            res.Append(property.Name);
+
+            return res.ToString();
+        }
+
+        private static string GetXmlName(MethodBase info) {
+            StringBuilder res = new StringBuilder();
+            res.Append("M:");
+            res.Append(info.DeclaringType.Namespace);
+            res.Append('.');
+            res.Append(info.DeclaringType.Name);
+            res.Append('.');
+            res.Append(info.Name);            
+            ParameterInfo []pi = info.GetParameters();
+            if (pi.Length > 0) {
+                res.Append('(');
+                for (int i = 0; i < pi.Length; i++) {
+                    Type curType = pi[i].ParameterType;
+
+                    if (i != 0) res.Append(',');
+                    AppendTypeFormat(curType, res);
+                }
+                res.Append(')');
+            }
+            return res.ToString();
+        }
+
+        /// <summary>
+        /// Converts a Type object into a string suitable for lookup in the help file.  All generic types are
+        /// converted down to their generic type definition.
+        /// </summary>
+        private static void AppendTypeFormat(Type curType, StringBuilder res) {
+            if (curType.IsGenericType) {
+                curType = curType.GetGenericTypeDefinition();
+            }
+
+            if (curType.IsGenericParameter) {
+                res.Append('`');
+                res.Append(curType.GenericParameterPosition);
+            } else if (curType.ContainsGenericParameters) {
+                res.Append(curType.Namespace);
+                res.Append('.');
+                res.Append(curType.Name.Substring(0, curType.Name.Length - 2));
+                res.Append('{');
+                Type[] types = curType.GetGenericArguments();
+                for (int j = 0; j < types.Length; j++) {
+                    if (j != 0) res.Append(',');
+
+                    if (types[j].IsGenericParameter) {
+                        res.Append('`');
+                        res.Append(types[j].GenericParameterPosition);
+                    } else {
+                        AppendTypeFormat(types[j], res);
+                    }
+                }
+                res.Append('}');
+            } else {
+                res.Append(curType.FullName);
+            }
+        }
+
         private static string CreateAutoDoc(MethodBase info, string name, int endParamSkip) {
+            string summary, returns;
+            List<KeyValuePair<string, string>> parameters;
+
+            GetXmlDoc(info, out summary, out returns, out parameters);
+            
             StringBuilder retType = new StringBuilder();
             StringBuilder ret = new StringBuilder();
 
@@ -208,32 +386,273 @@ namespace IronPython.Runtime {
 
             retType.Append(ret.ToString());
 
+            // Append XML Doc Info if available
+            if (summary != null) {
+                retType.AppendLine(); retType.AppendLine(); 
+                retType.AppendLine(SplitWords(summary));
+            }
+            
+            if (parameters != null && parameters.Count > 0) {
+                // always output parameters in order
+                for (int j = 0; j < pis.Length; j++) {  
+                    for (int i = 0; i < parameters.Count; i++) {
+                        if (pis[j].Name == parameters[i].Key) {
+                            retType.Append("    ");
+                            retType.Append(parameters[i].Key);
+                            retType.Append(": ");
+                            retType.AppendLine(SplitWords(parameters[i].Value, false));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (returns != null) {
+                retType.AppendLine();
+                retType.Append("    Returns: ");
+                retType.AppendLine(SplitWords(returns, false));
+            }
+
             return retType.ToString();
         }
 
-        public static string CreateEnumDoc(Type t) {
-            Debug.Assert(t.IsEnum);
+        private static string SplitWords(string text) {
+            return SplitWords(text, true);
+        }
 
-            string[] names = Enum.GetNames(t);
-            Array values = Enum.GetValues(t);
-            for (int i = 0; i < names.Length; i++) {
-                names[i] = String.Concat(names[i],
-                    " (",
-                    Convert.ChangeType(values.GetValue(i), Enum.GetUnderlyingType(t)).ToString(),
-                    ")");
+        /// <summary>
+        /// Splits text to fit into the console window - breaks along words, not characters.
+        /// </summary>
+        private static string SplitWords(string text, bool indentFirst) {
+            const string indent = "    ";
+
+            int splitLen = Console.WindowWidth-30;
+
+            if (text.Length <= splitLen || splitLen <= 0) {
+                if(indentFirst) return indent + text;
+                return text;
+            }
+            
+            StringBuilder res = new StringBuilder();
+            int start = 0, len = splitLen;
+            while (start != text.Length) {                
+                if (len >= splitLen) {
+                    // find last space to break on
+                    while (len != 0 && !Char.IsWhiteSpace(text[start + len - 1]))
+                        len--;
+                }
+
+                if (res.Length != 0) res.Append(' ');
+                if(indentFirst || res.Length != 0) res.Append(indent);
+                
+                if (len == 0) {
+                    int copying = Math.Min(splitLen, text.Length - start);
+                    res.Append(text, start, copying);
+                    start += copying;
+                } else {
+                    res.Append(text, start, len);
+                    start += len;
+                }
+                res.AppendLine();
+                len = Math.Min(splitLen, text.Length - start);
+            }
+            return res.ToString();
+        }
+
+        /// <summary>
+        /// Gets the XPathDocument for the specified assembly, or null if one is not available.
+        /// </summary>
+        private static XPathDocument GetXPathDocument(Assembly asm) {
+            System.Globalization.CultureInfo ci = System.Threading.Thread.CurrentThread.CurrentCulture;
+            
+            string location;
+
+            try {
+                location = asm.Location;
+            } catch {
+                return null;
             }
 
-            Array.Sort<string>(names);
-            string comment = "";
+            string baseDir = Path.GetDirectoryName(location);
+            string baseFile = Path.GetFileNameWithoutExtension(location) + ".xml";
+            string xml = Path.Combine(Path.Combine(baseDir, ci.Name), baseFile);
 
-            if (t.IsDefined(typeof(FlagsAttribute), false))
-                comment = " (flags) ";
+            if (!System.IO.File.Exists(xml)) {
+                int hyphen = ci.Name.IndexOf('-');
+                if (hyphen != -1) {
+                    xml = Path.Combine(Path.Combine(baseDir, ci.Name.Substring(0, hyphen)), baseFile);
+                }
+                if (!System.IO.File.Exists(xml)) {
+                    xml = Path.Combine(baseDir, baseFile);
+                    if (!System.IO.File.Exists(xml)) {
+                        return null;
+                    }
+                }
+            }
 
-            return String.Concat("enum ",
-                comment,
-                GetPythonTypeName(t),
-                ", values: ",
-                String.Join(", ", names));
+            XPathDocument xpd;
+            
+            if (cachedDocName == xml) xpd = cachedDoc;
+            else xpd = new XPathDocument(xml);
+
+            cachedDoc = xpd;
+            cachedDocName = xml;
+            return xpd;
+        }
+
+        /// <summary>
+        /// Gets the Xml documentation for the specified MethodBase.
+        /// </summary>
+        private static void GetXmlDoc(MethodBase info, out string summary, out string returns, out List<KeyValuePair<string, string>> parameters) {
+            summary = null;
+            returns = null;
+            parameters = null;
+
+            XPathDocument xpd = GetXPathDocument(info.DeclaringType.Assembly);
+            if (xpd == null) return;
+
+            XPathNavigator xpn = xpd.CreateNavigator();
+            string path = "/doc/members/member[@name='" + GetXmlName(info) + "']/*";
+            XPathNodeIterator iter = xpn.Select(path);
+
+            while (iter.MoveNext()) {
+                switch (iter.Current.Name) {
+                    case "summary": summary = XmlToString(iter); break;
+                    case "returns": returns = XmlToString(iter); break;
+                    case "param":
+                        string name = null;
+                        string paramText = XmlToString(iter);
+                        if (iter.Current.MoveToFirstAttribute()) {                            
+                            name = iter.Current.Value;
+                        }
+
+                        if (name != null) {
+                            if (parameters == null) {
+                                parameters = new List<KeyValuePair<string, string>>();
+                            }
+
+                            parameters.Add(new KeyValuePair<string, string>(name, paramText));
+                        }
+                        break;
+                    case "exception":
+                        break;
+                }
+            }            
+        }
+
+        /// <summary>
+        /// Gets the Xml documentation for the specified Type.
+        /// </summary>
+        private static void GetXmlDoc(Type type, out string summary) {
+            summary = null;
+
+            XPathDocument xpd = GetXPathDocument(type.Assembly);
+            if (xpd == null) return;
+
+            XPathNavigator xpn = xpd.CreateNavigator();
+            string path = "/doc/members/member[@name='" + GetXmlName(type) + "']/*";
+            XPathNodeIterator iter = xpn.Select(path);
+
+            while (iter.MoveNext()) {
+                switch (iter.Current.Name) {
+                    case "summary": summary = XmlToString(iter); break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the Xml documentation for the specified Field.
+        /// </summary>
+        private static void GetXmlDoc(FieldInfo field, out string summary) {
+            summary = null;
+
+            XPathDocument xpd = GetXPathDocument(field.DeclaringType.Assembly);
+            if (xpd == null) return;
+
+            XPathNavigator xpn = xpd.CreateNavigator();
+            string path = "/doc/members/member[@name='" + GetXmlName(field) + "']/*";
+            XPathNodeIterator iter = xpn.Select(path);
+
+            while (iter.MoveNext()) {
+                switch (iter.Current.Name) {
+                    case "summary": summary = XmlToString(iter) + Environment.NewLine; break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the Xml documentation for the specified Field.
+        /// </summary>
+        private static void GetXmlDoc(PropertyInfo prop, out string summary, out string returns) {
+            summary = null;
+            returns = null;
+
+            XPathDocument xpd = GetXPathDocument(prop.DeclaringType.Assembly);
+            if (xpd == null) return;
+
+            XPathNavigator xpn = xpd.CreateNavigator();
+            string path = "/doc/members/member[@name='" + GetXmlName(prop) + "']/*";
+            XPathNodeIterator iter = xpn.Select(path);
+
+            while (iter.MoveNext()) {
+                switch (iter.Current.Name) {
+                    case "summary": summary = XmlToString(iter); break;
+                    case "returns": returns = XmlToString(iter); break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the Xml documentation for the specified Field.
+        /// </summary>
+        private static void GetXmlDoc(EventInfo info, out string summary, out string returns) {
+            summary = null;
+            returns = null;
+
+            XPathDocument xpd = GetXPathDocument(info.DeclaringType.Assembly);
+            if (xpd == null) return;
+
+            XPathNavigator xpn = xpd.CreateNavigator();
+            string path = "/doc/members/member[@name='" + GetXmlName(info) + "']/*";
+            XPathNodeIterator iter = xpn.Select(path);
+
+            while (iter.MoveNext()) {
+                switch (iter.Current.Name) {
+                    case "summary": summary = XmlToString(iter) + Environment.NewLine; break;
+                }
+            }
+        }
+        /// <summary>
+        /// Converts the XML as stored in the config file into a human readable string.
+        /// </summary>
+        private static string XmlToString(XPathNodeIterator iter) {
+            XmlReader xr = iter.Current.ReadSubtree();
+            StringBuilder text = new StringBuilder();
+            if (xr.Read()) {
+                for (; ; ) {
+                    switch (xr.NodeType) {
+                        case XmlNodeType.Text:
+                            text.Append(xr.ReadString());
+                            continue;
+                        case XmlNodeType.Element:
+                            switch (xr.Name) {
+                                case "see":
+                                    if (xr.MoveToFirstAttribute() && xr.ReadAttributeValue()) {
+                                        int arity = xr.Value.IndexOf('`');
+                                        if(arity != -1)
+                                            text.Append(xr.Value, 2, arity - 2);
+                                        else
+                                            text.Append(xr.Value, 2, xr.Value.Length - 2);
+                                    }
+                                    break;
+                            }
+                            break;
+                    }
+
+                    if (!xr.Read()) break;
+                }
+            }
+            return text.ToString();
         }
 
         public static bool IsParamArray(ParameterInfo pi) {

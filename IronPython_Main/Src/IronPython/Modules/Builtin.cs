@@ -540,6 +540,9 @@ namespace IronPython.Modules {
             string strVal;
             PythonModule pm;
             OldClass oc;
+            ReflectedField rf;
+            ReflectedProperty rp;
+            ReflectedEvent re;
 
             if (doced.Contains(o)) return;  // document things only once
             doced.Add(o);
@@ -624,6 +627,27 @@ namespace IronPython.Modules {
                 doc.Append("(...)\n");
 
                 AppendMultiLine(doc, bf.Documentation, indent + 1);
+            } else if ((rf = o as ReflectedField) != null) {
+                if (indent == 0) doc.AppendFormat("Help on field {0}\n\n", rf.Name);
+                AppendIndent(doc, indent);
+                doc.Append("Field ");
+                doc.AppendLine(rf.Name);
+
+                if(rf.Documentation != null) AppendMultiLine(doc, rf.Documentation, indent + 1);
+            } else if ((rp = o as ReflectedProperty) != null) {
+                if (indent == 0) doc.AppendFormat("Help on property {0}\n\n", rp.Name);
+                AppendIndent(doc, indent);
+                doc.Append("Property ");
+                doc.AppendLine(rp.Name);
+
+                if (rp.Documentation != null) AppendMultiLine(doc, rp.Documentation, indent + 1);
+            } else if ((re = o as ReflectedEvent) != null) {
+                if (indent == 0) doc.AppendFormat("Help on event {0}\n\n", re.Name);
+                AppendIndent(doc, indent);
+                doc.Append("Event ");
+                doc.AppendLine(re.Name);
+
+                if (re.Documentation != null) AppendMultiLine(doc, re.Documentation, indent + 1);
             } else if ((pf = o as PythonFunction) != null) {
                 if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}\n\n", pf.Name, pf.Module.ModuleName);
 
