@@ -26,7 +26,7 @@ from lib.process_util import *
 from System import Type, Activator, Environment, IntPtr, Array, Object, Int32
 from System.Reflection import BindingFlags
 
-windir = nt.environ["windir"] or ""
+windir = get_environ_variable("windir")
 scriptpw_path = path_combine(windir, r"system32\scriptpw.dll")
 agentsvr_path = path_combine(windir, r"msagent\agentsvr.exe")
 
@@ -62,90 +62,96 @@ def _test_common_on_object(o):
     AssertError(TypeError, (lambda:o >> 3))
     AssertError(TypeError, (lambda:o << 3))
 
-def test__1_registered_nopia():
-    # Check to see that namespace 'spwLib' isn't accessible
-    Assert('spwLib' not in dir(), "spwLib is already registered")
-
-    run_register_com_component(scriptpw_path)
+if file_exists(scriptpw_path):
+    def test__1_registered_nopia():
+        # Check to see that namespace 'spwLib' isn't accessible
+        Assert('spwLib' not in dir(), "spwLib is already registered")
     
-    pwcType = Type.GetTypeFromProgID('ScriptPW.Password.1')
+        run_register_com_component(scriptpw_path)
+        
+        pwcType = Type.GetTypeFromProgID('ScriptPW.Password.1')
+        
+        pwcInst = Activator.CreateInstance(pwcType)
     
-    pwcInst = Activator.CreateInstance(pwcType)
-
-    # looks like: <System.__ComObject  uninitialized>
-    for x in ['__ComObject', 'uninitialized']:
-        Assert(x in repr(pwcInst))
-    AreEqual('System.__ComObject', pwcInst.ToString())
+        # looks like: <System.__ComObject  uninitialized>
+        for x in ['__ComObject', 'uninitialized']:
+            Assert(x in repr(pwcInst))
+        AreEqual('System.__ComObject', pwcInst.ToString())
+        
+        try: del pwcInst.GetPassword
+        except AttributeError: pass
+        else: Fail("'__ComObject' object has no attribute 'GetPassword'")
+        
+        _test_common_on_object(pwcInst)
+        
+        # looks like: <System.__ComObject  with interfaces [<type 'Password'> <type 'IPassword'>]>
+        for x in ['__ComObject', 'Password', 'IPassword']:
+            Assert(x in repr(pwcInst))
     
-    try: del pwcInst.GetPassword
-    except AttributeError: pass
-    else: Fail("'__ComObject' object has no attribute 'GetPassword'")
+    def test__3_registered_with_pia():
+        run_tlbimp(scriptpw_path, "spwLib")
+        run_register_com_component(scriptpw_path)
+        clr.AddReference("spwLib.dll")
     
-    _test_common_on_object(pwcInst)
+        from spwLib import PasswordClass    
+        pc = PasswordClass()
+        
+        Assert('PasswordClass' in repr(pc))
+        Assert('spwLib.PasswordClass' in pc.ToString())
+        AreEqual(pc.__class__, PasswordClass)
+        
+        try: del pc.GetPassword
+        except AttributeError: pass
+        else: Fail("attribute 'GetPassword' of 'PasswordClass' object is read-only")
+        
+        _test_common_on_object(pc)
+        
+    def test__2_unregistered_nopia():
+        # Check to see that namespace 'spwLib' isn't accessible
+        Assert('spwLib' not in dir(), "spwLib is already registered")
     
-    # looks like: <System.__ComObject  with interfaces [<type 'Password'> <type 'IPassword'>]>
-    for x in ['__ComObject', 'Password', 'IPassword']:
-        Assert(x in repr(pwcInst))
-
-def test__3_registered_with_pia():
-    run_tlbimp(scriptpw_path, "spwLib")
-    run_register_com_component(scriptpw_path)
-    clr.AddReference("spwLib.dll")
-
-    from spwLib import PasswordClass    
-    pc = PasswordClass()
+        run_unregister_com_component(scriptpw_path)
+        pwcType = Type.GetTypeFromProgID('ScriptPW.Password.1')
+        AreEqual(pwcType, None)
+        
+        # Registration-free COM activation
+        load_iron_python_test()
+        import IronPythonTest
+        password = IronPythonTest.ScriptPW.CreatePassword()
+        AreEqual('System.__ComObject', password.ToString())
+else: 
+    print "warning: %s not found" % scriptpw_path
     
-    Assert('PasswordClass' in repr(pc))
-    Assert('spwLib.PasswordClass' in pc.ToString())
-    AreEqual(pc.__class__, PasswordClass)
+if file_exists(agentsvr_path):
+    def test_merlin():
+        run_tlbimp(agentsvr_path)
+        Assert(file_exists("AgentServerObjects.dll"))
+        
+        import clr
+        clr.AddReference("AgentServerObjects.dll")
     
-    try: del pc.GetPassword
-    except AttributeError: pass
-    else: Fail("attribute 'GetPassword' of 'PasswordClass' object is read-only")
+        from AgentServerObjects import * 
+        a = AgentServerClass()    
+        Assert('Equals' in dir(a))
+        cid = a.Load('Merlin.acs')[0]
+        
+        c = a.GetCharacter(cid)
+        #c.Show(0)
+        c.Think('IronPython...')
+        c.Play('Read')
+        c.GestureAt(True, False)
+        c.GestureAt(100, 200)
+        AssertError(TypeError, c.GestureAt, 11.34, 32) # Cannot convert float(11.34) to Int16
+        
+        c.Speak('hello world', None)
+        
+        c.StopAll(0)
+        c.Hide(0)
+        
+        delete_files("AgentServerObjects.dll")
+else: 
+    print "warning: %s not found" % agentsvr_path
     
-    _test_common_on_object(pc)
-    
-def test__2_unregistered_nopia():
-    # Check to see that namespace 'spwLib' isn't accessible
-    Assert('spwLib' not in dir(), "spwLib is already registered")
-
-    run_unregister_com_component(scriptpw_path)
-    pwcType = Type.GetTypeFromProgID('ScriptPW.Password.1')
-    AreEqual(pwcType, None)
-    
-    # Registration-free COM activation
-    load_iron_python_test()
-    import IronPythonTest
-    password = IronPythonTest.ScriptPW.CreatePassword()
-    AreEqual('System.__ComObject', password.ToString())
-
-def test_merlin():
-    run_tlbimp(agentsvr_path)
-    Assert(file_exists("AgentServerObjects.dll"))
-    
-    import clr
-    clr.AddReference("AgentServerObjects.dll")
-
-    from AgentServerObjects import * 
-    a = AgentServerClass()    
-    Assert('Equals' in dir(a))
-    cid = a.Load('Merlin.acs')[0]
-    
-    c = a.GetCharacter(cid)
-    #c.Show(0)
-    c.Think('IronPython...')
-    c.Play('Read')
-    c.GestureAt(True, False)
-    c.GestureAt(100, 200)
-    AssertError(TypeError, c.GestureAt, 11.34, 32) # Cannot convert float(11.34) to Int16
-    
-    c.Speak('hello world', None)
-    
-    c.StopAll(0)
-    c.Hide(0)
-    
-    delete_files("AgentServerObjects.dll")
-
 from Microsoft.Win32 import Registry
 
 def IsOfficeInstalled(product):
