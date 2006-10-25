@@ -52,7 +52,6 @@ IronPythonTests = {
                 '''
                 test_interactive
                 test_stdconsole
-                test_superconsole
                 ''',
             'hosting':
                 '''
@@ -87,7 +86,6 @@ IronPythonTests = {
                 test_clrexception
                 test_clrload
                 test_clrload2
-                test_cominterop
                 test_delegate
                 test_dllsite
                 test_event
@@ -140,6 +138,17 @@ IronPythonTests = {
                 '''
                 ''',
         }
+
+ConsoleInputTests = {
+            'cominterop':
+                '''
+                test_cominterop
+                ''',
+            'superconsole':
+                '''
+                test_superconsole
+                ''',
+}
         
 MiscTests = {
             'parrot':
