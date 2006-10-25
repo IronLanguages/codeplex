@@ -347,8 +347,21 @@ namespace IronPython.Runtime.Types {
 
         private void AddDocumentation() {
             if (!dict.ContainsKey(SymbolTable.Doc)) {
-                dict[SymbolTable.Doc] = GetDocumentation();
+                dict[SymbolTable.Doc] = new DocumentationDescriptor();
             }
+        }
+
+        class DocumentationDescriptor : IDescriptor {
+            #region IDescriptor Members
+
+            public object GetAttribute(object instance, object owner) {
+                ReflectedType rt = owner as ReflectedType;
+                if (owner == null) return null;
+
+                return rt.GetDocumentation();
+            }
+
+            #endregion
         }
 
         private string GetDocumentation() {
