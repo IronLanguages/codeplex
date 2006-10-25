@@ -159,30 +159,44 @@ def main(args):
             tests2 = shortcuts[x].split()
             break
     if tests2: tests = tests2
-        
-    # run compat test under cpython
-    if (not tests) or ('compat' in tests):
-        print "\nRUNNING CPYTHON ON COMPATABILITY TESTS"
-        launch_cpython(path_combine(testpath.compat_testdir, 'runsbs.py'))
-        
-    # find iprun.py
-    iprunfile = path_combine(get_directory_name(fullpath(sys.argv[0])), 'iprun.py')
     
-    # run ironpython tests with cpython (we don't run the netinterop or hosting categories)
-    # command: cpy iprun.py -O:max builtinfuncs builtintypes standard modules stress
+    rawModes = [ x[3:] for x in args if x.startswith('-M:') ]
     results = []
     sumretval = 0
-    if (not tests) or ('ipcp' in tests):
-        print "\nRUNNING CPYTHON ON IRONPYTHON TESTS"
-        sumretval += launch_cpython(iprunfile, '-O:min', 'builtinfuncs', 'builtintypes', 'standard', 'modules', 'stress')
     
     # other switches will be carried on to iprun.py
     carryon = [x for x in args if not x.startswith('-M:') and x.lower() not in shortcuts.keys() ]
     for x in tests: 
         if x not in carryon : carryon.append(x)
+        
+    # find iprun.py
+    iprunfile = path_combine(get_directory_name(fullpath(sys.argv[0])), 'iprun.py')
+    
+    #if no tests specified - create our bumped list
+    if len(tests)==0:
+        bumped_carryon = carryon + ["consinp"]
+        carryon = carryon + ["ConsoleInput-"]
+            
+        for style in get_mode_list(rawModes):
+            sstyle = str(style)
+            print "\nRUNNING BUMPED IRONPYTHON TESTS UNDER", sstyle
+            if style.testArgs: print 'With test options ', style.testArgs
+            retval = launch_ironpython_with_extensions(iprunfile, sstyle.split(), bumped_carryon + style.testArgs)
+            sumretval += retval
+            results.append((sstyle, retval))
+        
+    # run compat test under cpython
+    if (not tests) or ('compat' in tests):
+        print "\nRUNNING CPYTHON ON COMPATABILITY TESTS"
+        launch_cpython(path_combine(testpath.compat_testdir, 'runsbs.py'))
+    
+    # run ironpython tests with cpython (we don't run the netinterop or hosting categories)
+    # command: cpy iprun.py -O:max builtinfuncs builtintypes standard modules stress
+    if (not tests) or ('ipcp' in tests):
+        print "\nRUNNING CPYTHON ON IRONPYTHON TESTS"
+        sumretval += launch_cpython(iprunfile, '-O:min', 'builtinfuncs', 'builtintypes', 'standard', 'modules', 'stress')
 
     # launch iprun.py with different modes
-    rawModes = [ x[3:] for x in args if x.startswith('-M:') ]
     for style in get_mode_list(rawModes):
         sstyle = str(style)
         print "\nRUNNING IRONPYTHON UNDER", sstyle
