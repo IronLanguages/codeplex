@@ -136,7 +136,7 @@ if file_exists(agentsvr_path):
         cid = a.Load('Merlin.acs')[0]
         
         c = a.GetCharacter(cid)
-        #c.Show(0)
+        c.Show(0)
         c.Think('IronPython...')
         c.Play('Read')
         c.GestureAt(True, False)
