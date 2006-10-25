@@ -15,19 +15,6 @@
 
 from lib.assert_util import *
 
-def test_sanity():
-    root = testpath.public_testdir
+Assert(__name__ == "__main__", __name__)
 
-    execfile(root + "/Inc/toexec.py")
-    execfile(root + "/Inc/toexec.py")
-    #execfile(root + "/doc.py")
-    execfile(root + "/Inc/toexec.py")
-
-def test_negative():
-    AssertError(TypeError, execfile, None) # arg must be string
-    AssertError(TypeError, execfile, [])
-    AssertError(TypeError, execfile, 1)
-    AssertError(TypeError, execfile, "somefile", "")
-
-run_test(__name__)
-
+class C: pass
