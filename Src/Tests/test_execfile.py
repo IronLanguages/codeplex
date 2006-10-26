@@ -15,13 +15,14 @@
 
 from lib.assert_util import *
 
-def test_sanity():
-    root = testpath.public_testdir
-
-    execfile(root + "/Inc/toexec.py")
-    execfile(root + "/Inc/toexec.py")
-    #execfile(root + "/doc.py")
-    execfile(root + "/Inc/toexec.py")
+if is_cli: 
+    def test_sanity():
+        root = testpath.public_testdir
+    
+        execfile(root + "/Inc/toexec.py")
+        execfile(root + "/Inc/toexec.py")
+        #execfile(root + "/doc.py")
+        execfile(root + "/Inc/toexec.py")
 
 def test_negative():
     AssertError(TypeError, execfile, None) # arg must be string
