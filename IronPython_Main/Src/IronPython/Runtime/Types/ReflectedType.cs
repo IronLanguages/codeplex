@@ -61,6 +61,7 @@ namespace IronPython.Runtime.Types {
         public ReflectedType effectivePythonType;
 
         private static Hashtable operatorTable;
+        private static DocumentationDescriptor globalDesc = new DocumentationDescriptor();
 
         private IAttributesInjector prependedAttrs;
         private IAttributesInjector appendedAttrs;
@@ -347,11 +348,12 @@ namespace IronPython.Runtime.Types {
 
         private void AddDocumentation() {
             if (!dict.ContainsKey(SymbolTable.Doc)) {
-                dict[SymbolTable.Doc] = new DocumentationDescriptor();
+                dict[SymbolTable.Doc] = globalDesc;
             }
         }
 
         class DocumentationDescriptor : IDescriptor {
+
             #region IDescriptor Members
 
             public object GetAttribute(object instance, object owner) {
@@ -378,10 +380,10 @@ namespace IronPython.Runtime.Types {
             } else {
                 autoDoc += Environment.NewLine + Environment.NewLine;
             }
-            
+
             // Simple generated helpbased on ctor, if available.
             BuiltinFunction newMeth = ctor as BuiltinFunction;
-            if(newMeth == null) return autoDoc;
+            if (newMeth == null) return autoDoc;
 
             // strip off function name & cls parameter and just
             // display as plain type
