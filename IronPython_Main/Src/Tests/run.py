@@ -75,7 +75,7 @@ class ModeInfo:
         
 mode_mapping = { 
     '1': ModeInfo('-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 1001', ['Compat-']),
-    '2': ModeInfo('-O -D -X:SaveAssemblies -X:AssembliesDir %s' % testpath.temporary_dir, ['Math-']),
+    '2': ModeInfo('-O -D -X:SaveAssemblies -X:AssembliesDir %s' % testpath.temporary_dir, []),
 }
 
 def get_mode_list(modes):

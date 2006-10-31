@@ -521,6 +521,8 @@ class RegressionTestConfig(TestConfig):
 class CompatTestConfig(TestConfig):
     def __init__(self):
         self.notRunList = ['sbs_typeop.py']
+        if is_cli64:
+            self.notRunList.append('sbs_exceptions.py')
         self.name       = "Compatability"
         self.shortcut   = 'compat sbs'
         self.directory  = testpath.compat_testdir
