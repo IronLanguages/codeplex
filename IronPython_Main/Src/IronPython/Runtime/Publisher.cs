@@ -26,7 +26,7 @@ namespace IronPython.Runtime {
     /// the creation of the lazily created value.  Call GetOrCreateValue w/ a key
     /// and a callback function.  If the value exists it is returned, if not the create
     /// callback is called (w/o any locks held).  The create call back will only be called
-    /// once for each key.  
+    /// once for each key.   
     /// </summary>
     class Publisher<TKey, TValue> {
         Dictionary<TKey, PublishInfo<TValue>> data = new Dictionary<TKey, PublishInfo<TValue>>();
