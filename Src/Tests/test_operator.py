@@ -461,7 +461,7 @@ def test_sanity():
     AreEqual(operator.__rshift__(-1L, 1), -1L)
     
     #__not__
-    #BUG __not__ does not exist
+    #CodePlex Work Item 5085
     #AreEqual(operator.__not__(0), 1)
     #AreEqual(operator.__not__(1), 0)
     #AreEqual(operator.__not__(-1), 0)
@@ -493,14 +493,14 @@ def test_sanity():
     AreEqual(operator.__concat__([-1], [1]), [-1,1])
     
     #__contains__
-    #BUG
+    #CodePlex Work Item 5083
     #Assert(operator.__contains__("abc", "c"))
     Assert(not operator.__contains__("abc", "d"))
-    #BUG
+    #CodePlex Work Item 5083
     #Assert(operator.__contains__("abc", ""))
-    #BUG
+    #CodePlex Work Item 5083
     #Assert(not operator.__contains__("", "c"))
-    #BUG
+    #CodePlex Work Item 5083
     #Assert(operator.__contains__([1,2,3], 1))
     #Assert(not operator.__contains__([1,2,3], 4))
     
@@ -511,7 +511,7 @@ def test_sanity():
     AssertError(IndexError, operator.__getitem__, [1,2,3], 3)
     
     #__setitem__
-    #UNIMPLEMENTED or BUG
+    #CodePlex Work Item 5085
     #AssertError(TypeError, operator.__setitem__, "abc", 2, "d")
     #t_list = [1,2,3]
     #operator.__setitem__(t_list, 2, 4)
@@ -519,7 +519,7 @@ def test_sanity():
     #AssertError(IndexError, operator.__setitem__, [1,2,3], 4, 9)
     
     #__delitem__
-    #BUG
+    #UNIMPLEMENTED
     #AssertError(TypeError, operator.__delitem__, "abc", 2)
     t_list = [1,2,3]
     operator.__delitem__(t_list, 2)
