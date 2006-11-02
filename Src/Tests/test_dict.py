@@ -741,4 +741,26 @@ def test_eval_locals_simple():
     locs = Locals()
     AreEqual(eval("unknownvariable", globals(), locs), 'abc')
 
+
+def test_key_error():
+    class c: pass
+    class d(object): pass
+    
+    
+    for key in ['abc', 1, c(), d(), 1.0, 1L]:
+        try:
+            {}[key]
+        except KeyError, e:
+            AreEqual(e.args[0], key)
+        
+        try:
+            del {}[key]
+        except KeyError, e:
+            AreEqual(e.args[0], key)
+            
+        try:
+            set([]).remove(key)
+        except KeyError, e:
+            AreEqual(e.args[0], key)
+
 run_test(__name__)

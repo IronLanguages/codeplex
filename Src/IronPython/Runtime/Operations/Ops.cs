@@ -1558,12 +1558,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static void DelIndex(object o, object index) {
-            if (index == null) {
-                throw Ops.TypeError("index must be integer or slice");
-            }
-
             IMutableSequence seq = o as IMutableSequence;
             if (seq != null) {
+                if (index == null) {
+                    throw Ops.TypeError("index must be integer or slice");
+                }
+
                 Slice slice;
                 if (index is int) {
                     seq.DeleteItem((int)index);
@@ -2270,6 +2270,19 @@ namespace IronPython.Runtime.Operations {
 
         public static Exception ValueError(string format, params object[] args) {
             return new ArgumentException(string.Format(format, args));
+        }
+
+        public static Exception KeyError(object key) {
+            // create the .NET & Python exception, setting the Arguments on the
+            // python exception to the invalid key
+            Exception res = new KeyNotFoundException(string.Format("{0}", key));
+            
+            Ops.SetAttr(DefaultContext.Default,
+                ExceptionConverter.ToPython(res),
+                SymbolTable.Arguments,
+                Tuple.MakeTuple(key));
+
+            return res;
         }
 
         public static Exception KeyError(string format, params object[] args) {

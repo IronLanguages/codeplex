@@ -394,7 +394,7 @@ namespace IronPython.Runtime {
             o = SetHelpers.GetHashableSetIfSet(o);
 
             Ops.Hash(o);
-            if (!items.ContainsKey(o)) throw Ops.KeyError("{0}", o.ToString());
+            if (!items.ContainsKey(o)) throw Ops.KeyError(o);
 
             items.Remove(o);
         }
