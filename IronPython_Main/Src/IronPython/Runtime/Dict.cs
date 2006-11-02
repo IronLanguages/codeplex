@@ -192,7 +192,7 @@ namespace IronPython.Runtime {
                 lock (this) if (TryGetValue(realKey, out ret)) return ret;
                 if (Options.Python25 && Ops.TryInvokeSpecialMethod(this, SymbolTable.Missing, out ret, key))
                     return ret;
-                throw Ops.KeyError("'{0}'", key);
+                throw Ops.KeyError(key);
             }
             set {
                 lock (this) data[DictOps.NullToObj(key)] = value;
@@ -652,7 +652,7 @@ namespace IronPython.Runtime {
 
         public static void DelIndex(IDictionary<object, object> self, object key) {
             if (!self.Remove(key)) {
-                throw Ops.KeyError("'{0}'", key);
+                throw Ops.KeyError(key);
             }
         }
 
@@ -679,7 +679,7 @@ namespace IronPython.Runtime {
                 self.Remove(key);
                 return ret;
             } else {
-                throw Ops.KeyError("'{0}'", key);
+                throw Ops.KeyError(key);
             }
         }
 

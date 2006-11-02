@@ -81,6 +81,10 @@ def test_dict():
     Assert(d[1,2,3,4,5] == d[(1,2,3,4,5)])
     Assert(d[1,2,3,4,5] == 12345)
     Assert(d[(1,2,3,4,5)] == 12345)
+    
+    d = {None:23}
+    del d[None]
+    AreEqual(d, {})
 
 if is_cli:
     def test_custom_indexable():
