@@ -529,7 +529,7 @@ LibraryExpectedFailures = {
         "subprocess"         : "No module named fcntl",
         "symtable"           : "No module named _symtable",
         "tty"                : "No module named termios",
-        "tzparse"            : "'TZ'",
+        "tzparse"            : "TZ",
     }
 
 if __name__ == '__main__':
