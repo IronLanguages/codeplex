@@ -21,8 +21,7 @@ class stdout_reader:
         self.text = ''
     def write(self, text):
         self.text += text
-        
-
+    
 if is_cli:
     def test_z_cli_tests():    # runs last to prevent tainting the module w/ CLR names
         import clr
@@ -33,6 +32,7 @@ if is_cli:
         sys.stdout = stdout_reader()
         
         help(WriteOnly)
+        help(System.IO.Compression)
         
         sys.stdout = sys.__stdout__
 
@@ -75,7 +75,45 @@ def test_user_class():
         """this documentation is going to make the world a better place"""
                         
     sys.stdout = stdout_reader()
+    
+    class TClass(object):
+        '''
+        Some TClass doc...
+        '''
+        def __init__(self, p1, *args, **argkw):
+            '''
+            Some constructor doc...
+            
+            p1 does something
+            args does something
+            argkw does something
+            '''
+            self.member = 1
+            
+        def plainMethod(self):
+            '''
+            Doc here
+            '''
+            pass
+            
+        def plainMethodEmpty(self):
+            '''
+            '''
+            pass
+            
+        def plainMethodNone(self):
+            pass
+    
     help(foo)
+    
+    #sanity checks. just make sure no execeptions
+    #are thrown
+    help(TClass)
+    help(TClass.__init__)
+    help(TClass.plainMethod)
+    help(TClass.plainMethodEmpty)
+    help(TClass.plainMethodNone)
+    
     x = sys.stdout.text
     sys.stdout = sys.__stdout__
         
@@ -145,5 +183,6 @@ def test_str():
     sys.stdout = sys.__stdout__
     
     Assert(x.find('Return the absolute value of the argument.') != -1)
+    
     
 run_test(__name__)

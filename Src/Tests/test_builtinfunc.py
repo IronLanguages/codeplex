@@ -246,8 +246,5 @@ def test_len():
     
     AssertError(TypeError, len, foo())
     
-def test_help():
-    help(len)  # only check for not throwing
-    
 run_test(__name__)
 
