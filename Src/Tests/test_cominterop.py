@@ -153,22 +153,36 @@ else:
     print "warning: %s not found" % agentsvr_path
     
 from Microsoft.Win32 import Registry
+from System.IO import File
 
-def IsOfficeInstalled(product):
-    return Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\11.0\\%s" % product) or Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Office\\12.0\\%s" % product)
+def IsExcelInstalled():
+    excel = None
+    
+    #Office 11 or 12 are both OK for this test. Office 12 is preferred.
+    excel = Registry.LocalMachine.OpenSubKey("Software\\Microsoft\\Office\\12.0\\Excel\\InstallRoot")
+    if excel==None:
+        excel = Registry.LocalMachine.OpenSubKey("Software\\Microsoft\\Office\\11.0\\Excel\\InstallRoot")
+    
+    #sanity check
+    if excel==None:
+        return False
+    
+    #make sure it's really installed on disk
+    excel_path = excel.GetValue("Path") + "excel.exe"
+    return File.Exists(excel_path)
+    
+def TryGetTypeFromProgId(): 
+    return Type.GetTypeFromProgID("Excel.Application.12") or Type.GetTypeFromProgID("Excel.Application.11")
 
-def TryGetTypeFromProgId(product): 
-    return Type.GetTypeFromProgID("%s.Application.11" % product) or Type.GetTypeFromProgID("%s.Application.12" % product)
-
-def TryLoadInteropAssembly(product):
-    try:    clr.AddReferenceByName('Microsoft.Office.Interop.%s, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c' % product)
+def TryLoadInteropAssembly():
+    try:    clr.AddReferenceByName('Microsoft.Office.Interop.Excel, Version=12.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
     except: 
-        try: clr.AddReferenceByName('Microsoft.Office.Interop.%s, Version=12.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c' % product)
+        try: clr.AddReferenceByName('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
         except: pass
     
-if IsOfficeInstalled("Excel"):
+if IsExcelInstalled():
     def test_excel():
-        TryLoadInteropAssembly("Excel")
+        TryLoadInteropAssembly()
         
         try: import Microsoft.Office.Interop.Excel as Excel
         except ImportError: 
@@ -198,41 +212,6 @@ if IsOfficeInstalled("Excel"):
             graph.Chart.ChartWizard(rng, Excel.XlChartType.xl3DColumn)                        
         finally:    
             if ex: ex.Quit()
-            else: print "ex is %s" % ex
-
-if IsOfficeInstalled("PowerPoint"):
-    def test_powerpoint():
-        pp = None   
-        try:
-            ppt = TryGetTypeFromProgId("PowerPoint")
-            pp = Activator.CreateInstance(ppt)
-            # test that late-binding call to Name works the same as the one from the typeinfo
-            ppName = ppt.InvokeMember("Name", BindingFlags.GetProperty, None, pp, None)
-            Assert (ppName == "Microsoft PowerPoint", "Late-bound Name property should be 'Microsoft PowerPoint'")
-            Assert (ppName == pp.Name)
-            # test that we can change the caption from IronPython
-            if pp.Caption == "PowerPoint Controlled By Iron Python":
-                Fail("Kill PowerPnt.exe and try again")
-            Assert (pp.Caption == "Microsoft PowerPoint")
-            pp.Caption = "PowerPoint Controlled By Iron Python"
-            Assert (pp.Caption == "PowerPoint Controlled By Iron Python", "Setting caption should work")
-            # make it visible, just for kicks
-            args = Array.CreateInstance(Object, 1)
-            args[0] = Int32(-1) # literal value of msoTrue in MsoTriState enum, gacked from Office PIA by ILDASM
-            ppt.InvokeMember("Visible", BindingFlags.SetProperty, None, pp, args)
-            Assert (pp.Visible)
-            try:
-                for i in pp: pass
-                Assert(False, "PPT instance should not be enumerable")
-            except TypeError:
-                pass
-            for i in pp.Windows: pass
-            
-            Assert('ToString' in dir(pp))
-            Assert('ActiveWindow' in dir(pp))
-           
-        finally:
-            if pp: pp.Quit()
             else: print "ex is %s" % ex
 
 if is_cli32:
