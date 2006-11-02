@@ -313,3 +313,256 @@ AreEqual(id(complex.__ne__(1+1j, 1+1j)), id(False))
 AreEqual(id(complex.__ne__(1+1j, 1+2j)), id(True))
 
 
+def test_sanity():
+    '''
+    Performs a set of simple sanity checks on most operators.
+    '''
+    
+    #__abs__
+    AreEqual(operator.__abs__(0), 0)
+    AreEqual(operator.__abs__(1), 1)
+    AreEqual(operator.__abs__(-1), 1)
+    AreEqual(operator.__abs__(0.0), 0.0)
+    AreEqual(operator.__abs__(1.1), 1.1)
+    AreEqual(operator.__abs__(-1.1), 1.1)
+    AreEqual(operator.__abs__(0L), 0L)
+    AreEqual(operator.__abs__(1L), 1L)
+    AreEqual(operator.__abs__(-1L), 1L)
+    
+    #__neg__
+    AreEqual(operator.__neg__(0), 0)
+    AreEqual(operator.__neg__(1), -1)
+    AreEqual(operator.__neg__(-1), 1)
+    AreEqual(operator.__neg__(0.0), 0.0)
+    AreEqual(operator.__neg__(1.1), -1.1)
+    AreEqual(operator.__neg__(-1.1), 1.1)
+    AreEqual(operator.__neg__(0L), 0L)
+    AreEqual(operator.__neg__(1L), -1L)
+    AreEqual(operator.__neg__(-1L), 1L)
+    
+    #__pos__
+    AreEqual(operator.__pos__(0), 0)
+    AreEqual(operator.__pos__(1), 1)
+    AreEqual(operator.__pos__(-1), -1)
+    AreEqual(operator.__pos__(0.0), 0.0)
+    AreEqual(operator.__pos__(1.1), 1.1)
+    AreEqual(operator.__pos__(-1.1), -1.1)
+    AreEqual(operator.__pos__(0L), 0L)
+    AreEqual(operator.__pos__(1L), 1L)
+    AreEqual(operator.__pos__(-1L), -1L)
+    
+    #__add__
+    AreEqual(operator.__add__(0, 0), 0)
+    AreEqual(operator.__add__(1, 2), 3)
+    AreEqual(operator.__add__(-1, 2), 1)
+    AreEqual(operator.__add__(0.0, 0.0), 0.0)
+    AreEqual(operator.__add__(1.1, 2.1), 3.2)
+    AreEqual(operator.__add__(-1.1, 2.1), 1.0)
+    AreEqual(operator.__add__(0L, 0L), 0L)
+    AreEqual(operator.__add__(1L, 2L), 3L)
+    AreEqual(operator.__add__(-1L, 2L), 1L)
+    
+    #__sub__
+    AreEqual(operator.__sub__(0, 0), 0)
+    AreEqual(operator.__sub__(1, 2), -1)
+    AreEqual(operator.__sub__(-1, 2), -3)
+    AreEqual(operator.__sub__(0.0, 0.0), 0.0)
+    AreEqual(operator.__sub__(1.1, 2.1), -1.0)
+    AreEqual(operator.__sub__(-1.1, 2.1), -3.2)
+    AreEqual(operator.__sub__(0L, 0L), 0L)
+    AreEqual(operator.__sub__(1L, 2L), -1L)
+    AreEqual(operator.__sub__(-1L, 2L), -3L)
+    
+    #__mul__
+    AreEqual(operator.__mul__(0, 0), 0)
+    AreEqual(operator.__mul__(1, 2), 2)
+    AreEqual(operator.__mul__(-1, 2), -2)
+    AreEqual(operator.__mul__(0.0, 0.0), 0.0)
+    AreEqual(operator.__mul__(2.0, 3.0), 6.0)
+    AreEqual(operator.__mul__(-2.0, 3.0), -6.0)
+    AreEqual(operator.__mul__(0L, 0L), 0L)
+    AreEqual(operator.__mul__(1L, 2L), 2L)
+    AreEqual(operator.__mul__(-1L, 2L), -2L)
+    
+    #__div__
+    AreEqual(operator.__div__(0, 1), 0)
+    AreEqual(operator.__div__(4, 2), 2)
+    AreEqual(operator.__div__(-1, 2), -1)
+    AreEqual(operator.__div__(0.0, 1.0), 0.0)
+    AreEqual(operator.__div__(4.0, 2.0), 2.0)
+    AreEqual(operator.__div__(-4.0, 2.0), -2.0)
+    AreEqual(operator.__div__(0L, 1L), 0L)
+    AreEqual(operator.__div__(4L, 2L), 2L)
+    AreEqual(operator.__div__(-4L, 2L), -2L)
+    
+    #__floordiv__ 
+    AreEqual(operator.__floordiv__(0, 1), 0)
+    AreEqual(operator.__floordiv__(4, 2), 2)
+    AreEqual(operator.__floordiv__(-1, 2), -1)
+    AreEqual(operator.__floordiv__(0.0, 1.0), 0.0)
+    AreEqual(operator.__floordiv__(4.0, 2.0), 2.0)
+    AreEqual(operator.__floordiv__(-4.0, 2.0), -2.0)
+    AreEqual(operator.__floordiv__(0L, 1L), 0L)
+    AreEqual(operator.__floordiv__(4L, 2L), 2L)
+    AreEqual(operator.__floordiv__(-4L, 2L), -2L)
+
+    #__truediv__
+    AreEqual(operator.__truediv__(0, 1), 0)
+    AreEqual(operator.__truediv__(4, 2), 2)
+    AreEqual(operator.__truediv__(-1, 2), -0.5)
+    AreEqual(operator.__truediv__(0.0, 1.0), 0.0)
+    AreEqual(operator.__truediv__(4.0, 2.0), 2.0)
+    AreEqual(operator.__truediv__(-1.0, 2.0), -0.5)
+    AreEqual(operator.__truediv__(0L, 1L), 0L)
+    AreEqual(operator.__truediv__(4L, 2L), 2L)
+    AreEqual(operator.__truediv__(-4L, 2L), -2L)
+    
+    #__mod__
+    AreEqual(operator.__mod__(0, 1), 0)
+    AreEqual(operator.__mod__(4, 2), 0)
+    AreEqual(operator.__mod__(-1, 2), 1)
+    AreEqual(operator.__mod__(0.0, 1.0), 0.0)
+    AreEqual(operator.__mod__(4.0, 2.0), 0.0)
+    AreEqual(operator.__mod__(-1.0, 2.0), 1.0)
+    AreEqual(operator.__mod__(0L, 1L), 0L)
+    AreEqual(operator.__mod__(4L, 2L), 0L)
+    AreEqual(operator.__mod__(-4L, 2L), 0L)
+    
+    #__inv__
+    AreEqual(operator.__inv__(0), -1)
+    AreEqual(operator.__inv__(1), -2)
+    AreEqual(operator.__inv__(-1), 0)
+    AreEqual(operator.__inv__(0L), -1L)
+    AreEqual(operator.__inv__(1L), -2L)
+    AreEqual(operator.__inv__(-1L), 0L)
+
+    #__invert__
+    AreEqual(operator.__invert__(0), -1)
+    AreEqual(operator.__invert__(1), -2)
+    AreEqual(operator.__invert__(-1), 0)
+    AreEqual(operator.__invert__(0L), -1L)
+    AreEqual(operator.__invert__(1L), -2L)
+    AreEqual(operator.__invert__(-1L), 0L)
+
+    #__lshift__
+    AreEqual(operator.__lshift__(0, 1), 0)
+    AreEqual(operator.__lshift__(1, 1), 2)
+    AreEqual(operator.__lshift__(-1, 1), -2)
+    AreEqual(operator.__lshift__(0L, 1), 0L)
+    AreEqual(operator.__lshift__(1L, 1), 2L)
+    AreEqual(operator.__lshift__(-1L, 1), -2L)
+    
+    #__rshift__
+    AreEqual(operator.__rshift__(1, 1), 0)
+    AreEqual(operator.__rshift__(2, 1), 1)
+    AreEqual(operator.__rshift__(-1, 1), -1)
+    AreEqual(operator.__rshift__(1L, 1), 0L)
+    AreEqual(operator.__rshift__(2L, 1), 1L)
+    AreEqual(operator.__rshift__(-1L, 1), -1L)
+    
+    #__not__
+    #BUG __not__ does not exist
+    #AreEqual(operator.__not__(0), 1)
+    #AreEqual(operator.__not__(1), 0)
+    #AreEqual(operator.__not__(-1), 0)
+    #AreEqual(operator.__not__(0L), 1)
+    #AreEqual(operator.__not__(1L), 0)
+    #AreEqual(operator.__not__(-1L), 0)
+    
+    #__and__
+    AreEqual(operator.__and__(0, 0), 0)
+    AreEqual(operator.__and__(1, 1), 1)
+    AreEqual(operator.__and__(0, 1), 0)
+    AreEqual(operator.__and__(1, 0), 0)
+    
+    #__xor__
+    AreEqual(operator.__xor__(0, 0), 0)
+    AreEqual(operator.__xor__(1, 1), 0)
+    AreEqual(operator.__xor__(0, 1), 1)
+    AreEqual(operator.__xor__(1, 0), 1)
+    
+    #__or__
+    AreEqual(operator.__or__(0, 0), 0)
+    AreEqual(operator.__or__(1, 1), 1)
+    AreEqual(operator.__or__(0, 1), 1)
+    AreEqual(operator.__or__(1, 0), 1)
+
+    #__concat__
+    AreEqual(operator.__concat__([0], [1]), [0,1])
+    AreEqual(operator.__concat__([2], [1]), [2,1])
+    AreEqual(operator.__concat__([-1], [1]), [-1,1])
+    
+    #__contains__
+    #BUG
+    #Assert(operator.__contains__("abc", "c"))
+    Assert(not operator.__contains__("abc", "d"))
+    #BUG
+    #Assert(operator.__contains__("abc", ""))
+    #BUG
+    #Assert(not operator.__contains__("", "c"))
+    #BUG
+    #Assert(operator.__contains__([1,2,3], 1))
+    #Assert(not operator.__contains__([1,2,3], 4))
+    
+    #__getitem__
+    AreEqual(operator.__getitem__("abc", 2), "c")
+    AssertError(IndexError, operator.__getitem__, "abc", 3)
+    AreEqual(operator.__getitem__([1,2,3], 2), 3)
+    AssertError(IndexError, operator.__getitem__, [1,2,3], 3)
+    
+    #__setitem__
+    #UNIMPLEMENTED or BUG
+    #AssertError(TypeError, operator.__setitem__, "abc", 2, "d")
+    #t_list = [1,2,3]
+    #operator.__setitem__(t_list, 2, 4)
+    #AreEqual(t_list, [1,2,4])
+    #AssertError(IndexError, operator.__setitem__, [1,2,3], 4, 9)
+    
+    #__delitem__
+    #BUG
+    #AssertError(TypeError, operator.__delitem__, "abc", 2)
+    t_list = [1,2,3]
+    operator.__delitem__(t_list, 2)
+    AreEqual(t_list, [1,2])
+    AssertError(IndexError, operator.__delitem__, [1,2,3], 4)
+    
+    #__repeat__
+    AreEqual(operator.__repeat__("abc", 2), "abcabc")
+    AreEqual(operator.__repeat__("", 2), "")
+    AreEqual(operator.__repeat__([1,2,3], 2), [1,2,3,1,2,3])
+    
+    #__getslice__
+    AreEqual(operator.__getslice__("abc", 1, 2), "b")
+    AreEqual(operator.__getslice__("abc", 0, 3), "abc")
+    AreEqual(operator.__getslice__("", 0, 0), "")
+    AreEqual(operator.__getslice__([1,2,3], 1, 2), [2])
+    AreEqual(operator.__getslice__([1,2,3], 0, 3), [1,2,3])
+    AreEqual(operator.__getslice__([], 0, 0), [])
+    
+    #__delslice__
+    t_list = [1,2,3]
+    operator.__delslice__(t_list, 1, 2)
+    AreEqual(t_list, [1,3])
+    
+    t_list = [1,2,3]
+    operator.__delslice__(t_list, 0, 3)
+    AreEqual(t_list, [])
+    
+    t_list = [1,2,3]
+    operator.__delslice__(t_list, 0, 0)
+    AreEqual(t_list, [1,2,3])
+    
+    #__setslice__
+    t_list = [1,2,3]
+    operator.__setslice__(t_list, 1, 2, [9])
+    AreEqual(t_list, [1,9,3])
+    
+    t_list = [1,2,3]
+    operator.__setslice__(t_list, 0, 3, [9, 8])
+    AreEqual(t_list, [9, 8])
+    
+    t_list = [1,2,3]
+    operator.__setslice__(t_list, 0, 0, [9])
+    AreEqual(t_list, [9,1, 2,3])
+
+run_test(__name__)
