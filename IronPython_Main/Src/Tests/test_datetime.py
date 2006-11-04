@@ -133,7 +133,7 @@ def test_date():
     Assert(x.__hash__()!=None)
     
     #reduce
-    #BUG
+    #CodePlex Work Item 4858
     #x = datetime.date(2005, 3, 22)
     #Assert(x.__reduce__()[0] == datetime.date)
     #AreEqual(type(x.__reduce__()[1]), tuple)
@@ -142,7 +142,7 @@ def test_date():
     AreEqual(repr(datetime.date(2005, 3, 22)), 'datetime.date(2005, 3, 22)')
     
     #str
-    #BUG - same as repr(...)
+    #CodePlex WorkItem 4859
     #AreEqual(str(datetime.date(2005, 3, 22)), '2005-03-22')
     
     #ctime
@@ -344,17 +344,17 @@ def test_datetime():
     test_data = { ((2006, 9, 29, 15, 37, 28, 686000), (0, 0, 0)) : (2006, 9, 29, 15, 37, 28, 686000),
                   ((2006, 9, 29, 15, 37, 28, 686000), (1, 0, 0)) : (2006, 9, 28, 15, 37, 28, 686000),
                   ((2006, 9, 29, 15, 37, 28, 686000), (0, 1, 0)) : (2006, 9, 29, 15, 37, 27, 686000), 
-                  #BUG - microseconds
+                  #CodePlex Work Item 4860
                   #((2006, 9, 29, 15, 37, 28, 686000), (0, 0, 1)) : (2006, 9, 29, 15, 37, 28, 685999), 
                   #((2006, 9, 29, 15, 37, 28, 686000), (1, 1, 1)) : (2006, 9, 28, 15, 37, 27, 685999), 
                   
                   ((2006, 9, 29, 15, 37, 28, 686000), (-1, 0, 0)) : (2006, 9, 30, 15, 37, 28, 686000),
                   ((2006, 9, 29, 15, 37, 28, 686000), (0, -1, 0)) : (2006, 9, 29, 15, 37, 29, 686000), 
-                  #BUG - microseconds
+                  #CodePlex Work Item 4860
                   #((2006, 9, 29, 15, 37, 28, 686000), (0, 0, -1)) : (2006, 9, 29, 15, 37, 28, 686001), 
                   #((2006, 9, 29, 15, 37, 28, 686000), (-1, -1, -1)) : (2006, 9, 30, 15, 37, 29, 686001), 
                   
-                  #BUG
+                  #CodePlex Work Item 4860
                   #((9999, 12, 31, 23, 59, 59, 999999), (1, 1, 1)) : (9999, 12, 30, 23, 59, 58, 999998), 
                   #((9999, 12, 31, 23, 59, 59, 999999), (9999*365, 0, 0)) : (7, 8, 21, 23, 59, 59, 999999),
                   #((9999, 12, 31, 23, 59, 59, 999999), (0, 0, 0)) : (9999, 12, 31, 23, 59, 59, 999999),  
@@ -399,7 +399,7 @@ def test_datetime():
         AreEqual(x.second, value[5])
         AreEqual(x.microsecond, value[6])
         
-        #BUG - right add does not work
+        #CodePlex Work Item 4861
         #x = datetime.timedelta(*td0) + datetime.datetime(*dt1)
         #AreEqual(x.year,value[0])
         #AreEqual(x.month, value[1])
@@ -434,7 +434,7 @@ def test_datetime():
     Assert(t1>t0)
     
     #fromtimestamp
-    #BUG - does not accept floats
+    #Merlin Work Item 148717
     #x = datetime.datetime.fromtimestamp(1000000000.0)
     #AreEqual(x.year, 2001)
     #AreEqual(x.month, 9)
@@ -442,7 +442,7 @@ def test_datetime():
     #AreEqual(x.hour, 18)
     #AreEqual(x.minute, 46)
     #AreEqual(x.second, 40)
-    #BUG - gives the wrong values for x
+    #CodePlex Work Item 4862
     #x = datetime.datetime.fromtimestamp(1000000000)
     #AreEqual(x.year, 2001)
     #AreEqual(x.month, 9)
@@ -484,12 +484,12 @@ def test_datetime():
     AreEqual(x.minute, 0)
     AreEqual(x.second, 0)
     AreEqual(x.microsecond, 0)
-    #BUG
+    #CodePlex Work Item 4863
     #y = datetime.datetime(datetime.MINYEAR, 1, 1)
     #AreEqual(x, y)
     
     #max
-    #BUG microsecond value is wrong
+    #CodePlex Work Item 4864
     #x = datetime.datetime.max
     #AreEqual(x.year, datetime.MAXYEAR)
     #AreEqual(x.month, 12)
@@ -498,12 +498,12 @@ def test_datetime():
     #AreEqual(x.minute, 59)
     #AreEqual(x.second, 59)
     #AreEqual(x.microsecond, 999999)
-    #BUG
+    #CodePlex Work Item 4865
     #y = datetime.datetime(datetime.MAXYEAR, 12, 31, 23, 59, 59, 999999, None)
     #AreEqual(x, y)
     
     #resolution
-    #BUG - resolution should be a timedelta
+    #CodePlex Work Item 4866
     #x = datetime.datetime.resolution
     #AreEqual(x.days, 0)
     #AreEqual(x.seconds, 0)
@@ -526,7 +526,7 @@ def test_datetime():
     Assert(x!=y)
     
     #ge/le/gt/lt/eq/ne
-    #BUG - microseconds again
+    #CodePlex Work Item 4860
     #x_args = [2006, 9, 29, 15, 37, 28, 686000]
     x_args = [2006, 9, 29, 15, 37, 28]
     x = datetime.datetime(*x_args)
@@ -555,11 +555,11 @@ def test_datetime():
     time = datetime.time(2,28,3,99)
     x = datetime.datetime(2005, 3, 23, 2, 28, 3, 99)
     AreEqual(x.date(), date)
-    #BUG - loses microsecond
+    #CodePlex Work Item 4860
     #AreEqual(x.time(), time)
     
     #timetz
-    #BUG loses microsecond
+    #CodePlex Work Item 4860
     #x = datetime.datetime(2005, 3, 23, 2, 28, 3, 99)
     #time = datetime.time(2,28,3,99)
     #AreEqual(x.timetz(), time)
@@ -592,7 +592,7 @@ def test_datetime():
     AreEqual(y, x)
     AreEqual(z.second, 25)
     
-    #BUG
+    #CodePlex Work Item 4860
     #z = x.replace(microsecond=250)
     #AreEqual(y, x)
     #AreEqual(z.microsecond, 250)
@@ -605,7 +605,7 @@ def test_datetime():
     AreEqual(z.hour, 3)
     AreEqual(z.minute, 5)
     AreEqual(z.second, 25)
-    #BUG
+    #CodePlex Work Item 4860
     #AreEqual(z.microsecond, 250)
     
     #astimezone
@@ -622,16 +622,15 @@ def test_datetime():
     AreEqual(x.dst(), None)
     
     #tzname
-    #BUG - returns ''
+    #CodePlex Work Item 4867
     #x = datetime.datetime(2005, 3, 23, 2,28,3,99,None)
     #AreEqual(x.tzname(), None)
     
     #timetuple
-    #BUG
+    #CodePlex Work Item 4868
     #AreEqual(datetime.datetime(2005, 3, 23,2,28,3,99,None).timetuple(), (2005, 3, 23, 2, 28, 3, 2, 82, -1))
     
     #utctimetuple
-    #BUG
     AreEqual(datetime.datetime(2005, 3, 23,2,28,3,99,None).utctimetuple(), (2005, 3, 23, 2, 28, 3, 2, 82, 0))
     
     #toordinal
@@ -639,7 +638,7 @@ def test_datetime():
     #AreEqual(datetime.datetime(2005, 3, 23,2,28,3,99,None).toordinal(), 732028)
 
     #weekday
-    #BUG
+    #CodePlex Work Item 4869
     #AreEqual(datetime.datetime(2005, 3, 23,2,28,3,99,None).weekday(), 2)
     
     #isocalendar
@@ -650,7 +649,7 @@ def test_datetime():
     #AreEqual(x[2], 2)
     
     #isoformat
-    #BUG - loses microseconds
+    #CodePlex Work Item 4870
     #x = datetime.datetime(2005, 3, 22, 2,28,3,99,None).isoformat()
     #AreEqual(x, '2005-03-22T02:28:03.000099')
     
@@ -668,15 +667,15 @@ def test_datetime():
     AreEqual(x.strftime("%Y-%A-%B"), "2005-Tuesday-March")
     AreEqual(x.strftime("%Y%m%d"), '20050322')
     AreEqual(x.strftime("%I:%M:%S"), "02:28:03")
-    #BUG - misses the '0' in 02
+    #Similar to Merlin Work Item 148470
     #AreEqual(x.strftime("%H:%M:%S"), "02:28:03")
-    #BUG - too many problems to list
+    #Similar to Merlin Work Item 148470
     #AreEqual(x.strftime("%a %A %b %B %c %d %H %I %j %m %M %p %S %U %w %W %x %X %y %Y %Z %%"), "Tue Tuesday Mar March 03/22/05 02:28:03 22 02 02 081 03 28 AM 03 12 2 12 03/22/05 02:28:03 05 2005  %")
     
     
     
 def test_timedelta():
-    #BUG - only accepts first three params
+    #CodePlex Work Item 4871
     #x = datetime.timedelta(1, 2, 3, 4, 5, 6, 7)
     #AreEqual(x.days, 50)
     #AreEqual(x.seconds, 21902)
@@ -702,33 +701,33 @@ def test_timedelta():
     AreEqual(x.seconds, 2)
     AreEqual(x.microseconds, 3)
     
-    #BUG - does not round off floats correctly
+    #CodePlex WorkItem 5132
     #x = datetime.timedelta(1, 2, 3.74)
     #AreEqual(x.days, 1)
     #AreEqual(x.seconds, 2)
     #AreEqual(x.microseconds, 4)
     
-    #BUG - is not adding up the fractional microseconds from all arguments
+    #CodePlex Work Item 5149
     #x = datetime.timedelta(1, 2.0000003, 3.33)
     #AreEqual(x.days, 1)
     #AreEqual(x.seconds, 2)
     #AreEqual(x.microseconds, 4)
     
-    #BUG - does not normalize
+    #CodePlex WorkItem 5133
     #x = datetime.timedelta(microseconds=-1)
     #AreEqual(x.days, -1)
     #AreEqual(x.seconds, 86399)
     #AreEqual(x.microseconds, 999999)
     
-    #BUG
+    #CodePlex Work Item 5136
     #datetime.timedelta(-99999999, 0, 0) #min
     datetime.timedelta(0, 0, 0)
-    #BUG
+    #CodePlex Work Item 5136
     #datetime.timedelta(999999999, 3600*24-1, 1000000-1) #max
 
     AssertError(OverflowError, datetime.timedelta, -1000000000, 0, 0)
     
-    #BUG - does not normalize
+    #CodePlex WorkItem 5133
     #x = datetime.timedelta(0, -1, 0)
     #AreEqual(x.days, -1)
     #AreEqual(x.seconds, 3600*24-1)
@@ -743,21 +742,20 @@ def test_timedelta():
     AssertError(OverflowError, datetime.timedelta, 999999999, 3600*24-1, 1000000)
     
     #min
-    #UNIMPLEMENTED
+    #CodePlex Work Item 5135
     #x = datetime.timedelta.min
     #AreEqual(x.days, -999999999)
     #AreEqual(x.seconds, 0)
     #AreEqual(x.microseconds, 0)
     
     #max
-    #UNIMPLEMENTED
+    #CodePlex Work Item 5135
     #x = datetime.timedelta.max
     #AreEqual(x.days, 999999999)
     #AreEqual(x.seconds, 3600*24-1)
     #AreEqual(x.microseconds, 999999)
     
-    #resolution
-    #BUG - microseconds was 0
+    #CodePlex Work Item 5136
     #x = datetime.timedelta.resolution
     #AreEqual(x.days, 0)
     #AreEqual(x.seconds, 0)
@@ -770,7 +768,7 @@ def test_timedelta():
                   ((37, 28, 686000), (37, 29, 686000)) : (74, 58, 372000),
                   ((37, 28, 686000), (37, 28, 686001)) : (74, 57, 372001),
                   ((0, 0, 0), (0, 0, 0)) : (0, 0, 0),
-                  #BUG - duplicate overflow
+                  #Related to CodePlex Work Item 5135
                   #((999999999, 0, 0), (0, 0, 0)) : (999999999, 0, 0),
                   ((37, 28, 686000), (-1, -1, -1)) : (36, 27, 685999),
                   ((-1, -1, -1), (37, 28, 686000)) : (36, 27, 685999),
@@ -790,13 +788,13 @@ def test_timedelta():
     #--Test subtraction
     test_data = { ((37, 28, 686000), (37, 28, 686000)) : ((0, 0, 0),(0, 0, 0)),
                   ((37, 28, 686000), (38, 28, 686000)) : ((1, 0, 0),(-1, 0, 0)),
-                  #BUG - normalize again
+                  #CodePlex WorkItem 5133
                   #((37, 28, 686000), (-1, -1, -1)) : ((-39, 86370, 313999),(38, 29, 686001)),
-                  #BUG - duplicate...does not normalize
+                  #CodePlex WorkItem 5133
                   #((37, 28, 686000), (37, 29, 686000)) : ((0, 1, 0),(-1, 86399, 0)),
                   #((37, 28, 686000), (37, 28, 686001)) : ((0, 0, 1),(-1, 86399, 999999)),
                   ((0, 0, 0), (0, 0, 0)) : ((0, 0, 0),(0, 0, 0)),
-                  #BUG - overflow duplicate
+                  #CodePlex Work Item 5135
                   #((999999999, 0, 0), (999999999, 0, 0)) : ((0, 0, 0),(0, 0, 0))
                   }
     for key, (value0, value1) in test_data.iteritems():
@@ -834,7 +832,7 @@ def test_timedelta():
     #Assert(y==x)
     
     #-
-    #BUG - normalize
+    #CodePlex Work Item 5133
     #x = datetime.timedelta(37, 28, 686000)
     #y = -x
     #AreEqual(y.days, -38)
@@ -897,7 +895,7 @@ def test_timedelta():
     
     #bool
     Assert(datetime.timedelta(0, 0, 1))
-    #BUG
+    #CodePlex WorkItem 5139
     #Assert(not(datetime.timedelta(0, 0, 0)))
     
 def test_time():
@@ -948,14 +946,14 @@ def test_time():
     datetime.time(23, 59, 59, 999999) #max
     
     #negative cases
-    #BUG
+    #CodePlex Work Item 5143
     #AssertError(ValueError, datetime.time, -1, 0, 0, 0)
     #AssertError(ValueError, datetime.time, 0, -1, 0, 0)
     #AssertError(ValueError, datetime.time, 0, 0, -1, 0)
     #AssertError(ValueError, datetime.time, 0, 0, 0, -1)
     #AssertError(ValueError, datetime.time, -10, -10, -10, -10)
     
-    #BUG
+    #CodePlex Work Item 5143
     #AssertError(ValueError, datetime.time, 24, 59, 59, 999999)
     #AssertError(ValueError, datetime.time, 23, 60, 59, 999999)
     #AssertError(ValueError, datetime.time, 23, 59, 60, 999999)
@@ -969,7 +967,6 @@ def test_time():
     AreEqual(x.minute, 0)
     AreEqual(x.second, 0)
     AreEqual(x.microsecond, 0)
-    
     #max
     x = datetime.time.max
     AreEqual(x.hour, 23)
@@ -978,7 +975,7 @@ def test_time():
     AreEqual(x.microsecond, 999999)
     
     #resolution
-    #BUG - returns datetime.time
+    #CodePlex Work Item 5145
     #x = datetime.time.resolution
     #AreEqual(repr(x), 'datetime.timedelta(0, 0, 1)')
     
@@ -1031,7 +1028,7 @@ def test_time():
     
     #bool
     Assert(datetime.time(0, 0, 0, 1))
-    #BUG
+    #CodePlex Work Item 5139
     #Assert(not (datetime.time(0, 0, 0, 0)))
     
     #replace
@@ -1062,7 +1059,7 @@ def test_time():
     AreEqual(z.microsecond, 250)
     
     #isoformat
-    #BUG
+    #CodePlex Work Item 5146
     #x = datetime.time(2,28,3,99).isoformat()
     #AreEqual(x, '02:28:03.000099')
     
@@ -1072,7 +1069,7 @@ def test_time():
     AreEqual(x.strftime("%H:%M:%S"), "13:28:03")
     
     #utcoffset
-    #BUG - returns 0
+    #CodePlex Work Item 5147
     #x = datetime.time(2,28,3,99,None)
     #AreEqual(x.utcoffset(), None)
     
@@ -1081,7 +1078,7 @@ def test_time():
     AreEqual(x.dst(), None)
     
     #tzname
-    #BUG - returns ''
+    #CodePlex Work Item 5148
     #x = datetime.time(2,28,3,99,None)
     #AreEqual(x.tzname(), None)
     
