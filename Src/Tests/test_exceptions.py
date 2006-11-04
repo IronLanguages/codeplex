@@ -70,24 +70,23 @@ if is_cli:
         pass
 
 def divide(a, b) :
-    s = 0
     try:
         c = a / b
+        Fail("Expected ZeroDivisionError for %r / %r == %r" % (a, b, c))
     except ZeroDivisionError:
-        s = 1
-    Assert(s == 1)
-    s = 0
+        pass
+
     try:
         c = a % b
+        Fail("Expected ZeroDivisionError for %r %% %r == %r" % (a, b, c))
     except ZeroDivisionError:
-        s = 1
-    Assert(s == 1)
-    s = 0
+        pass
+
     try:
         c = a // b
+        Fail("Expected ZeroDivisionError for %r // %r == %r" % (a, b, c))
     except ZeroDivisionError:
-        s = 1
-    Assert(s == 1)
+        pass
 
 
 big0 = 9999999999999999999999999999999999999999999999999999999999999999999999
