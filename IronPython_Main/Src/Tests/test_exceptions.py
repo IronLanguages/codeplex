@@ -678,6 +678,40 @@ def test_serializable_clionly():
     import System
     path = clr.GetClrType(ExceptionsTest).Assembly.Location
     mbro = System.AppDomain.CurrentDomain.CreateInstanceFromAndUnwrap(path, "IronPythonTest.EngineTest")
-    AssertError(AssertionError, mbro.Run, 'raise AssertionError')      
+    AssertError(AssertionError, mbro.Run, 'raise AssertionError')
+    
+def test_sanity():
+    '''
+    Sanity checks to ensure all exceptions implemented can be created/thrown/etc
+    in the standard ways.
+    '''
+    #build up a list of all valid exceptions
+    import exceptions
+    #special cases - do not test these like everything else
+    special_types = [ "UnicodeTranslateError", "UnicodeEncodeError", "UnicodeDecodeError"]
+    exception_types = [ x for x in exceptions.__dict__.keys() if x.startswith("__")==False and special_types.count(x)==0]
+    exception_types = [ eval("exceptions." + x) for x in exception_types]
+    
+    #run a few sanity checks
+    for exception_type in exception_types:
+        except_list = [exception_type(), exception_type("a single param"), exception_type("a single param", "another param")]
+        
+        for t_except in except_list:
+            try:
+                raise t_except
+            except exception_type, e:
+                pass
+            
+            str_except = str(t_except)
+            
+            #there is no __getstate__ method of CPython exceptions...
+            if is_cli:
+                t_except.__getstate__()
+    
+    #special cases
+    exceptions.UnicodeEncodeError("1", u"2", 3, 4, "e")
+    #CodePlex Work Item 356
+    #AssertError(TypeError, exceptions.UnicodeDecodeError, "1", u"2", 3, 4, "e")
+    exceptions.UnicodeDecodeError("1", "2", 3, 4, "e")
         
 run_test(__name__)
