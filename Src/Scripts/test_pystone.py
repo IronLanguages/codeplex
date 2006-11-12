@@ -18,7 +18,9 @@
     benchmark and collecting separate timings for each component.
 """
 
-import sys
+import sys, nt
+sys.path.append(nt.environ['merlin_root'] + "\\..\\External\\Languages\\IronPython11\\24\\Lib\\Test")
+
 
 def test_main(type="short"):
     import pystone

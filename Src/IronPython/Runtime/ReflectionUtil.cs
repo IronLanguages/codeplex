@@ -426,7 +426,13 @@ namespace IronPython.Runtime {
         private static string SplitWords(string text, bool indentFirst) {
             const string indent = "    ";
 
-            int splitLen = Console.WindowWidth-30;
+            int splitLen;
+            try {
+                splitLen = Console.WindowWidth - 30;
+            } catch {
+                // console output has been redirected.
+                splitLen = 80;
+            }
 
             if (text.Length <= splitLen || splitLen <= 0) {
                 if(indentFirst) return indent + text;
