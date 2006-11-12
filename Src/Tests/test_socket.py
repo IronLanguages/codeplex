@@ -22,15 +22,14 @@ import sys
 
 if is_cli:
     import clr
+
+#workaround - _socket does not appear to be in $PYTHONPATH for CPython
+#only when run from the old test suite.
+try:
     import socket
-else:
-    #workaround - _socket does not appear to be in $PYTHONPATH for CPython
-    #only when run from the old test suite.
-    try:
-        import socket
-    except:
-        print "Unable to import socket (_socket) from CPython"
-        sys.exit(0)
+except:
+    print "Unable to import socket (_socket) from CPython"
+    sys.exit(0)
 
 #-----------------------
 #--GLOBALS
@@ -253,16 +252,14 @@ def test_getaddrinfo():
     '''
     Tests socket.getaddrinfo
     '''
-    joe = { ("localhost", 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
-            ("localhost", 1) : "[(2, 0, 0, '', ('127.0.0.1', 1))]",
-            ("localhost", 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
-            ("localhost", 0, 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
-            ("localhost", 0, 0, 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
-            ("localhost", 0, 0, 0, 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
-            ("localhost", 0, 0, 0, 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
-            ("localhost", 0, 0, 0, 0, 1) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
-            #BUG
-            #("<broadcast>", 0, 0, 0, 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
+    joe = { ("127.0.0.1", 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
+            ("127.0.0.1", 1) : "[(2, 0, 0, '', ('127.0.0.1', 1))]",
+            ("127.0.0.1", 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
+            ("127.0.0.1", 0, 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
+            ("127.0.0.1", 0, 0, 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
+            ("127.0.0.1", 0, 0, 0, 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
+            ("127.0.0.1", 0, 0, 0, 0, 0) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
+            ("127.0.0.1", 0, 0, 0, 0, 1) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
     }
     
     #just try them as-is
@@ -272,7 +269,7 @@ def test_getaddrinfo():
     
     #change the address family
     for addr_fam in ["AF_INET", "AF_UNSPEC"]:
-        addrinfo = socket.getaddrinfo("localhost", 
+        addrinfo = socket.getaddrinfo("127.0.0.1", 
                                        0, 
                                        eval("socket." + addr_fam), 
                                        0, 
@@ -284,7 +281,7 @@ def test_getaddrinfo():
     #change the socket type
     for socktype in ["SOCK_DGRAM", "SOCK_RAW", "SOCK_STREAM"]:
         socktype = eval("socket." + socktype)
-        addrinfo = socket.getaddrinfo("localhost", 
+        addrinfo = socket.getaddrinfo("127.0.0.1", 
                                        0, 
                                        0,
                                        socktype, 
@@ -300,7 +297,7 @@ def test_getaddrinfo():
         except:
             print proto
             continue
-        addrinfo = socket.getaddrinfo("localhost", 
+        addrinfo = socket.getaddrinfo("127.0.0.1", 
                                        0, 
                                        0,
                                        0,
@@ -311,7 +308,8 @@ def test_getaddrinfo():
     #negative cases
     AssertError(socket.gaierror, socket.getaddrinfo, "should never work.dfkdfjkkjdfkkdfjkdjf", 0)    
     
-    #BUG???
+    #CodePlex Work Item 5445
+    #"1" is a nonsense hostname/IP address
     #try:
     #    socket.getaddrinfo("1", 0)    
     #    raise Exception("Shouldn't have worked")
@@ -320,54 +318,56 @@ def test_getaddrinfo():
     
     AssertError(socket.gaierror, socket.getaddrinfo, ".", 0)    
     
-    #BUG
+    #CodePlex Work Item 5445
+    #IP accepts floats where ints are needed (2nd param)
     #try:
-    #    socket.getaddrinfo("localhost", 3.14, 0, 0, 0, 0)    
+    #    socket.getaddrinfo("127.0.0.1", 3.14, 0, 0, 0, 0)    
     #    raise Exception("Shouldn't have worked")
     #except socket.error:
     #    pass
     
-    AssertError(socket.error, socket.getaddrinfo, "localhost", 0, -1, 0, 0, 0)    
+    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, -1, 0, 0, 0)    
     
-    #BUG 
+    #CodePlex Work Item 5445
+    #Socket type param (4th param) is out of range
     #try:
-    #    socket.getaddrinfo("localhost", 0, 0, -1, 0, 0)    
+    #    socket.getaddrinfo("127.0.0.1", 0, 0, -1, 0, 0)    
     #    raise Exception("Shouldn't have worked")
     #except socket.error:
     #    pass    
     
-    #BUG
-    #socket.getaddrinfo("localhost", 0, 0, 0, 1000000, 0)
+    #CodePlex Work Item 5446
+    #socket.getaddrinfo("127.0.0.1", 0, 0, 0, 1000000, 0)
     
 def test_getnameinfo():
     '''
     Tests socket.getnameinfo()
     '''
-    
+    #sanity
+    #CodePlex Work Item 5447
+    #socket.getnameinfo(("127.0.0.1", 80), 8)
+    #socket.getnameinfo(("127.0.0.1", 80), 9)
+        
+    #host, service = socket.getnameinfo( ("127.0.0.1", 80), 8)
+    #AreEqual(service, '80')
+        
     if is_cli:
-        #sanity
-        socket.getnameinfo( ('localhost', 80), 8)
-        socket.getnameinfo( ('localhost', 80), 9)
-        
-        host, service = socket.getnameinfo( ('localhost', 80), 8)
-        AreEqual(service, '80')
-        
-        AssertError(NotImplementedError, socket.getnameinfo, ('localhost', 80), 0)
-        AssertError(TypeError, socket.getnameinfo, ('localhost'), 8)
-        AssertError(TypeError, socket.getnameinfo, (321), 8)
-        AssertError(TypeError, socket.getnameinfo, ('localhost'), '0')
-        AssertError(TypeError, socket.getnameinfo, ('localhost', 80, 0, 0, 0), 8)
-        AssertError(socket.gaierror, socket.getnameinfo, ('no such host will ever exist', 80), 8)
-    
+        AssertError(NotImplementedError, socket.getnameinfo, ("127.0.0.1", 80), 0)
+    #IP gives a TypeError
+    #AssertError(SystemError, socket.getnameinfo, ("127.0.0.1"), 8)
+    #AssertError(SystemError, socket.getnameinfo, (321), 8)
+    AssertError(TypeError, socket.getnameinfo, ("127.0.0.1"), '0')
+    AssertError(TypeError, socket.getnameinfo, ("127.0.0.1", 80, 0, 0, 0), 8)
+    AssertError(socket.gaierror, socket.getnameinfo, ('no such host will ever exist', 80), 8)
     
 def test_gethostbyaddr():
     '''
     Tests socket.gethostbyaddr
     '''
-    socket.gethostbyaddr("")
     socket.gethostbyaddr("localhost")
-    #BUG
-    #socket.gethostbyaddr("<broadcast>")
+    socket.gethostbyaddr("127.0.0.1")
+    if is_cli:
+        socket.gethostbyaddr("<broadcast>")
     
 def test_gethostbyname():
     '''
@@ -375,6 +375,7 @@ def test_gethostbyname():
     '''
     #sanity
     AreEqual(socket.gethostbyname("localhost"), "127.0.0.1")
+    AreEqual(socket.gethostbyname("127.0.0.1"), "127.0.0.1")
     AreEqual(socket.gethostbyname("<broadcast>"), "255.255.255.255")
     
     #negative
@@ -387,6 +388,8 @@ def test_gethostbyname_ex():
     '''
     #sanity
     joe = socket.gethostbyname_ex("localhost")[2]
+    Assert(joe.count("127.0.0.1")==1)
+    joe = socket.gethostbyname_ex("127.0.0.1")[2]
     Assert(joe.count("127.0.0.1")==1)
     
     #negative
@@ -429,5 +432,6 @@ def test_getfqdn():
     '''
     Tests socket.getfqdn
     '''
+    #TODO
 
 run_test(__name__)
