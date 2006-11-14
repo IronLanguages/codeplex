@@ -83,7 +83,7 @@ namespace IronPython.Runtime.Types {
             foreach (IPythonType dt in bases) {
                 DynamicType metaCls = Ops.GetDynamicType(dt);
 
-                if (metaCls == OldInstanceType.Instance) continue;
+                if (metaCls == TypeCache.OldClass) continue;
 
                 if (meta.IsSubclassOf(metaCls)) continue;
 
