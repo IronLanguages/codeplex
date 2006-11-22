@@ -455,9 +455,10 @@
                 <File Id="File_test_clrexception.py" Name="TCLREXCE.PY" LongName="test_clrexception.py" />
                 <File Id="File_test_clrload.py" Name="TCLRLOAD.PY" LongName="test_clrload.py" />
                 <File Id="File_test_clrload2.py" Name="TCLRLD2.PY" LongName="test_clrload2.py" />
-				<File Id="File_test_codecs.py" Name="TCODECS.PY" LongName="test_codecs.py" />
+				        <File Id="File_test_codecs.py" Name="TCODECS.PY" LongName="test_codecs.py" />
                 <File Id="File_test_codedom.py" Name="TCODEDOM.PY" LongName="test_codedom.py" />
                 <File Id="File_test_cominterop.py" Name="TCOMINTE.PY" LongName="test_cominterop.py" />
+                <File Id="File_test_clrnuminterop.py" Name="TCLRNUMI.PY" LongName="test_clrnuminterop.py" />
                 <File Id="File_test_complex.py" Name="TCOMPLEX.PY" LongName="test_complex.py" />
                 <File Id="File_test_conditional.py" Name="TCONDTNL.PY" LongName="test_conditional.py" />
                 <File Id="File_test_datetime.py" Name="TDATETIM.PY" LongName="test_datetime.py" />
