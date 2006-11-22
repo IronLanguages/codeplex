@@ -37,14 +37,14 @@ def get_all_paths():
     if sys.platform == "cli":
         ipython_executable = sys.executable
         compat_test_path   = sys.prefix + "/Src/Tests/Compat/"
-        cpython_executable = sys.prefix + "/../External/Regress/Python24/Python.exe"
-        cpython_lib_path   = sys.prefix + "/../External/Regress/Python24/Lib"
+        cpython_executable = sys.prefix + "/../../../../External/Languages/CPython/24/Python.exe"
+        cpython_lib_path   = sys.prefix + "/../../../../External/Languages/CPython/24/Lib"
         
     elif sys.platform == "win32":
         cpython_executable = sys.executable
         cpython_lib_path   = sys.prefix + "/Lib"
-        ipython_executable = sys.prefix + "/../../../Public/ipy.exe"
-        compat_test_path   = sys.prefix + "/../../../Public/Src/Tests/Compat/"
+        ipython_executable = sys.prefix + "/../../../../Legacy/IronPython_Main/IronPython/Public/ipy.exe"
+        compat_test_path   = sys.prefix + "/../../../../Legacy/IronPython_Main/IronPython/Public/Src/Tests/Compat/"
   
         # second try    
         if file_exists(ipython_executable) == False:
