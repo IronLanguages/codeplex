@@ -128,6 +128,7 @@ if file_exists(agentsvr_path):
         Assert(file_exists("AgentServerObjects.dll"))
         
         import clr
+        from time import sleep
         clr.AddReference("AgentServerObjects.dll")
     
         from AgentServerObjects import * 
@@ -136,7 +137,11 @@ if file_exists(agentsvr_path):
         cid = a.Load('Merlin.acs')[0]
         
         c = a.GetCharacter(cid)
+        sleep(1)
         c.Show(0)
+        sleep(1)
+        while c.GetVisible()==0:
+            sleep(1)
         c.Think('IronPython...')
         c.Play('Read')
         c.GestureAt(True, False)
@@ -147,6 +152,8 @@ if file_exists(agentsvr_path):
         
         c.StopAll(0)
         c.Hide(0)
+        sleep(1)
+        a.Unload(cid)
         
         delete_files("AgentServerObjects.dll")
 else: 
