@@ -128,7 +128,7 @@ namespace IronPython.Compiler.Ast {
             Label eoi = cg.DefineLabel();
             foreach (IfStatementTest t in tests) {
                 Label next = cg.DefineLabel();
-                cg.EmitPosition(t.Start, t.Header);
+                cg.EmitPosition(t);
                 cg.EmitTestTrue(t.Test);
                 cg.Emit(OpCodes.Brfalse, next);
                 t.Body.Emit(cg);
@@ -256,10 +256,14 @@ namespace IronPython.Compiler.Ast {
             }
             walker.PostWalk(this);
         }
+
         public void SetLoc(Location start, Location header, Location end) {
-            this.Start = start;
+            SetLoc(null, start, header, end);
+        }
+
+        internal void SetLoc(ExternalLineMapping externalInfo, Location start, Location header, Location end) {            
+            SetLoc(externalInfo, start, end);
             this.header = header;
-            this.End = end;
         }
     }
 
@@ -1310,7 +1314,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             if (cg.printExprStmts) {
                 // emit & print expression.
                 cg.EmitSystemState();
@@ -1380,7 +1384,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             rhs.Emit(cg);
             for (int i = 0; i < lhs.Length; i++) {
                 if (i < lhs.Length - 1) cg.Emit(OpCodes.Dup);
@@ -1420,7 +1424,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
 
             // if lhs is a complex expression (eg foo[x] or foo.bar)
             // then it's EmitSet needs to do the right thing.
@@ -1475,7 +1479,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             string suffix = "";
             if (dest != null) suffix = "WithDest";
             if (exprs.Length == 0) {
@@ -1557,7 +1561,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
 
             for (int i = 0; i < names.Length; i++) {
                 DottedName name = names[i];
@@ -1621,7 +1625,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
 
             cg.EmitModuleInstance();
             cg.EmitString(root.MakeString());
@@ -1705,7 +1709,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             foreach (Expression expr in exprs) {
                 expr.EmitDel(cg);
             }
@@ -1740,7 +1744,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             if (type == null && value == null && traceback == null) {
                 cg.EmitCall(typeof(Ops), "Raise", Type.EmptyTypes);
                 return;
@@ -1780,7 +1784,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override void Emit(CodeGen cg) {
             if (Options.DebugMode) {
-                cg.EmitPosition(Start, End);
+                cg.EmitPosition(this);
                 cg.EmitTestTrue(test);
                 Label endLabel = cg.DefineLabel();
                 cg.Emit(OpCodes.Brtrue, endLabel);
@@ -1831,7 +1835,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             cg.EmitCallerContext();
             code.Emit(cg);
             if (locals == null && globals == null) {
@@ -1886,7 +1890,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             cg.EmitReturn(expr);
         }
 
@@ -1922,7 +1926,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             cg.EmitYield(expr, index, label);
         }
 
@@ -1942,7 +1946,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
         }
 
         public override void Walk(IAstWalker walker) {
@@ -1962,7 +1966,7 @@ namespace IronPython.Compiler.Ast {
                 cg.Context.AddError("'break' not properly in loop", this);
                 return;
             }
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             cg.EmitBreak();
         }
 
@@ -1983,7 +1987,7 @@ namespace IronPython.Compiler.Ast {
                 cg.Context.AddError("'continue' not properly in loop", this);
                 return;
             }
-            cg.EmitPosition(Start, End);
+            cg.EmitPosition(this);
             cg.EmitContinue();
         }
 
