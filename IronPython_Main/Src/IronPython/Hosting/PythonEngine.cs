@@ -781,7 +781,7 @@ namespace IronPython.Hosting {
             Expression e = p.ParseTestListAsExpression();
             ReturnStatement ret = new ReturnStatement(e);
             int lineCnt = expression.Split('\n').Length;
-            ret.SetLoc(new Location(lineCnt, 0), new Location(lineCnt, 10));
+            ret.SetLoc(null, new Location(lineCnt, 0), new Location(lineCnt, 10));
             CodeGen cg = CreateDelegateWorker<TDelegate>(ret, parameters);
 
             return delegate(EngineModule engineModule) {

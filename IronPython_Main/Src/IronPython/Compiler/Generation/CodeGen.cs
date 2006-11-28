@@ -110,6 +110,7 @@ namespace IronPython.Compiler.Generation {
         public List<object> staticData;
         private int staticDataIndex;
         private ISymbolDocumentWriter debugSymbolWriter;
+        private Dictionary<string, ISymbolDocumentWriter> externalDebugSymbolWriters;
 
         internal readonly MethodBase methodInfo;
         private readonly ILGenerator ilg;
@@ -174,6 +175,25 @@ namespace IronPython.Compiler.Generation {
                 this.debugSymbolWriter = typeGen.myAssembly.sourceFile;
 
             WriteSignature(mi.Name, paramTypes);
+        }
+
+        private ISymbolDocumentWriter GetDebugWriter(string filename) {
+            if (!EmitDebugInfo) return null;
+
+            if (externalDebugSymbolWriters == null) externalDebugSymbolWriters = new Dictionary<string, ISymbolDocumentWriter>();
+
+            ISymbolDocumentWriter res;
+            if (externalDebugSymbolWriters.TryGetValue(filename, out res))
+                return res;
+
+            res = assemblyGen.myModule.DefineDocument(filename,
+                Guid.Empty, 
+                SymLanguageVendor.Microsoft, 
+                SymDocumentType.Text);
+
+            externalDebugSymbolWriters[filename] = res;
+
+            return res;
         }
 
         public override string ToString() {
@@ -448,7 +468,24 @@ namespace IronPython.Compiler.Generation {
             MarkLabel(label);
         }
 
+
+        public void EmitPosition(Node node) {
+            if (node.IsExternal) {
+                if (node.ExternalStart.Line > 0 && node.ExternalEnd.Line > 0) {
+                    EmitPosition(GetDebugWriter(node.ExternalInfo.OriginalFileName),
+                        node.ExternalStart,
+                        node.ExternalEnd);
+                }
+            } else {
+                EmitPosition(node.Start, node.End);
+            }
+        }
+
         public void EmitPosition(Location start, Location end) {
+            EmitPosition(debugSymbolWriter, start, end);
+        }
+
+        private void EmitPosition(ISymbolDocumentWriter symWriter, Location start, Location end) {
             EmitCurrentLine(start.Line);
 
             if (!EmitDebugInfo) return;
@@ -456,7 +493,7 @@ namespace IronPython.Compiler.Generation {
             Debug.Assert(start.Line != 0 && end.Line != 0);
 
             MarkSequencePoint(
-                debugSymbolWriter,
+                symWriter,
                 start.Line, start.Column + 1,
                 end.Line, end.Column + 1
                 );
