@@ -260,6 +260,11 @@ namespace IronPython.Runtime {
 
         [PythonName("exc_clear")]
         public void ClearException() {
+            ThreadAbortException tae = SystemState.RawException as ThreadAbortException;
+            if (tae != null && tae.ExceptionState is PythonKeyboardInterruptException) {
+                Thread.ResetAbort();
+            }
+
             SystemState.RawException = null;
             SystemState.RawTraceBack = null;
         }
