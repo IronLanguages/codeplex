@@ -28,11 +28,11 @@ def test_sanity():
         sin = file("onlyread.tmp", "r")
         sout = file("onlywrite.tmp", "w")
         
-	    # writer is null for sin
+        # writer is null for sin
         AssertError(IOError, sin.write, "abc")
         AssertError(IOError, sin.writelines, ["abc","def"])
 
-	    # reader is null for sout
+        # reader is null for sout
         if is_cli:
             AssertError(IOError, sout.read)
             AssertError(IOError, sout.read, 10)
@@ -40,31 +40,31 @@ def test_sanity():
             AssertError(IOError, sout.readline, 10)
             AssertError(IOError, sout.readlines)
             AssertError(IOError, sout.readlines, 10)
-    	
-	    sin.close()
-	    sout.close()
+        
+        sin.close()
+        sout.close()
 
-	    # now close a file and try to perform other I/O operations on it...
-	    # should throw ValueError according to docs
-	    f = file("onlywrite.tmp", "w")
-	    f.close()
-	    f.close()
-	    AssertError(ValueError, f.__iter__)
-	    AssertError(ValueError, f.flush)
-	    AssertError(ValueError, f.fileno)
-	    AssertError(ValueError, f.next)
-	    AssertError(ValueError, f.read)
-	    AssertError(ValueError, f.read, 10)
-	    AssertError(ValueError, f.readline)
-	    AssertError(ValueError, f.readline, 10)
-	    AssertError(ValueError, f.readlines)
-	    AssertError(ValueError, f.readlines, 10)
-	    AssertError(ValueError, f.seek, 10)
-	    AssertError(ValueError, f.seek, 10, 10)
-	    AssertError(ValueError, f.write, "abc")
-	    AssertError(ValueError, f.writelines, ["abc","def"])
+        # now close a file and try to perform other I/O operations on it...
+        # should throw ValueError according to docs
+        f = file("onlywrite.tmp", "w")
+        f.close()
+        f.close()
+        AssertError(ValueError, f.__iter__)
+        AssertError(ValueError, f.flush)
+        AssertError(ValueError, f.fileno)
+        AssertError(ValueError, f.next)
+        AssertError(ValueError, f.read)
+        AssertError(ValueError, f.read, 10)
+        AssertError(ValueError, f.readline)
+        AssertError(ValueError, f.readline, 10)
+        AssertError(ValueError, f.readlines)
+        AssertError(ValueError, f.readlines, 10)
+        AssertError(ValueError, f.seek, 10)
+        AssertError(ValueError, f.seek, 10, 10)
+        AssertError(ValueError, f.write, "abc")
+        AssertError(ValueError, f.writelines, ["abc","def"])
 
-	###
+    ###
 
 # The name of a temporary test data file that will be used for the following
 # file tests.
@@ -240,8 +240,6 @@ def test_read_size():
                                             ("H\r", "e\n", "\nl", "lo"), (2,4,7, 9),
                                             ("H\n", "e\n", "\nl", "lo"), (2,4,7, 9)))
 
-    if not is_cli: return
-    
     for test in read_size_tests:
         # Write the test pattern to disk in binary mode.
         f = file(temp_file, "wb")
@@ -267,7 +265,8 @@ def test_read_size():
                 count = count + 1
                 Assert(count <= len(strings))
                 Assert(data == strings[count - 1])
-                AreEqual(f.tell(), lengths[count-1])
+                if is_cli:
+                    AreEqual(f.tell(), lengths[count-1])
 
             f.close()
             AreEqual(f.closed, True)
@@ -327,6 +326,8 @@ def format_tuple(tup):
 # Test the 'newlines' attribute.
 # Format of the test data is the raw data written to the test file followed by a tuple representing the values
 # of newlines expected after each line is read from the file in universal newline mode.
+
+@skip("win32")
 def test_newlines_attribute():
     newlines_tests = (("123", (None, )),
                       ("1\r\n2\r3\n", ("\r\n", ("\r\n", "\r"), ("\r\n", "\r", "\n"))),
@@ -336,8 +337,6 @@ def test_newlines_attribute():
                       ("1\r2\r3\r", ("\r", "\r", "\r")),
                       ("1\n2\n3\n", ("\n", "\n", "\n")))
 
-    if not is_cli: return False
-    
     for test in newlines_tests:
         # Write the test pattern to disk in binary mode.
         f = file(temp_file, "wb")
@@ -433,12 +432,11 @@ def test_coverage():
 
     nt.unlink(temp_file)
 
+@skip("win32")
 def test_encoding():
     #verify we start w/ ASCII
     import sys
 
-    if not is_cli: return
-    
     f = file(temp_file, 'w')
     f.write(u'\u6211')
     f.close()
@@ -448,10 +446,8 @@ def test_encoding():
     f.close()
     Assert(txt != u'\u6211')
 
-
     #and verify UTF8 round trips correctly
     saved = sys.getdefaultencoding()
-    
     
     try:
         setenc = sys.setdefaultencoding       
@@ -468,71 +464,71 @@ def test_encoding():
     finally: 
         setenc(saved)
 
-if is_cli:
-    def test_net_stream():
-        import System
-        fs = System.IO.FileStream(temp_file, System.IO.FileMode.Create, System.IO.FileAccess.Write)
-        f = file(fs, "wb")
-        f.write('hello\rworld\ngoodbye\r\n')
-        f.close()
-        
-        f = file(temp_file, 'rb')
-        AreEqual(f.read(), 'hello\rworld\ngoodbye\r\n')
-        f.close()
-        
-        f = file(temp_file, 'rU')
-        AreEqual(f.read(), 'hello\nworld\ngoodbye\n')
-        f.close()
+@skip("win32")
+def test_net_stream():
+    import System
+    fs = System.IO.FileStream(temp_file, System.IO.FileMode.Create, System.IO.FileAccess.Write)
+    f = file(fs, "wb")
+    f.write('hello\rworld\ngoodbye\r\n')
+    f.close()
     
-    def test_file_manager():
-        def return_fd1():
-            f = file(temp_file, 'w')
-            return f.fileno()
-            
-        def return_fd2():
-            return nt.open(temp_file, 0)
+    f = file(temp_file, 'rb')
+    AreEqual(f.read(), 'hello\rworld\ngoodbye\r\n')
+    f.close()
+    
+    f = file(temp_file, 'rU')
+    AreEqual(f.read(), 'hello\nworld\ngoodbye\n')
+    f.close()
+    
+@skip("win32")
+def test_file_manager():
+    def return_fd1():
+        f = file(temp_file, 'w')
+        return f.fileno()
         
-        import nt
-        import System
+    def return_fd2():
+        return nt.open(temp_file, 0)
+    
+    import nt
+    import System
 
-        fd = return_fd1()
-        System.GC.Collect()
-        System.GC.WaitForPendingFinalizers()
-        AssertError(OSError, nt.fdopen, fd)
+    fd = return_fd1()
+    System.GC.Collect()
+    System.GC.WaitForPendingFinalizers()
+    AssertError(OSError, nt.fdopen, fd)
 
-        fd = return_fd2()
-        System.GC.Collect()
-        System.GC.WaitForPendingFinalizers()
-        f = nt.fdopen(fd)
-        f.close()
-        AssertError(OSError, nt.fdopen, fd)
+    fd = return_fd2()
+    System.GC.Collect()
+    System.GC.WaitForPendingFinalizers()
+    f = nt.fdopen(fd)
+    f.close()
+    AssertError(OSError, nt.fdopen, fd)
 
 def test_sharing():
-    modes = ['w', 'w+', 'a+', 'r', 'w']
+    modes = ['w', 'w+', 'a', 'a+', 'r', 'r+', 'rU']
     for xx in modes:
         for yy in modes:
-            x = file('tempfile.txt', xx)
-            y = file('tempfile.txt', yy)
+            x = file(temp_file, xx)
+            y = file(temp_file, yy)
             
             x.close()
             y.close()
             
     import nt
-    nt.unlink('tempfile.txt')
+    nt.unlink(temp_file)
 
 def test_overwrite_readonly():
     import nt
-    filename = "tmp.txt"
-    f = file(filename, "w+")
+    f = file(temp_file, "w+")
     f.write("I am read-only")
     f.close()
-    nt.chmod(filename, 256)
+    nt.chmod(temp_file, 256)
     try:
         try:
-            f = file(filename, "w+") # FAIL
+            f = file(temp_file, "w+") # FAIL
         finally:
-            nt.chmod(filename, 128)
-            nt.unlink(filename)
+            nt.chmod(temp_file, 128)
+            nt.unlink(temp_file)
     except IOError, e:
         pass
     else:

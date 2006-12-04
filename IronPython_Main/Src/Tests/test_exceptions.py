@@ -663,7 +663,8 @@ def test_break_and_continue():
     AreEqual(test_outer_for_with_finally(state, True), 42)
     AreEqual(state.finallyCalled, True)
 
-def test_throw_from_compiled_clionly():
+@skip("win32")
+def test_throw_from_compiled():
     def bar(): return 1 + 'abc'
     unique_string = "<this is unique string>"
     c = compile('bar()', unique_string, 'single')
@@ -672,7 +673,8 @@ def test_throw_from_compiled_clionly():
     except: x= sys.exc_info()
     Assert(unique_string in str(x[1].clsException))
 
-def test_serializable_clionly():
+@skip("win32")
+def test_serializable():
     import clr        
     import System
     path = clr.GetClrType(ExceptionsTest).Assembly.Location
