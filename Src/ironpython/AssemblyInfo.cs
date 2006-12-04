@@ -15,18 +15,16 @@
 
 using System;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Security;
-using System.Security.Permissions;
-
 //
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 //
-[assembly: AssemblyTitle("IronMath")]
-[assembly: AssemblyDescription("IronPython Math Assembly v1.1")]
+[assembly: AssemblyTitle("IronPython")]
+[assembly: AssemblyDescription("IronPython v1.1")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("IronPython")]
@@ -76,6 +74,5 @@ using System.Security.Permissions;
 //
 [assembly: SecurityTransparent]
 [assembly: AllowPartiallyTrustedCallers]
-[assembly: CLSCompliant(false)]
 [assembly: ComVisible(false)]
-[assembly: SecurityPermission(SecurityAction.RequestMinimum)]
+//[assembly: CLSCompliant(true)] @todo
