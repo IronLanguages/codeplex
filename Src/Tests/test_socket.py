@@ -20,9 +20,6 @@
 from lib.assert_util import *
 import sys
 
-if is_cli:
-    import clr
-
 #workaround - _socket does not appear to be in $PYTHONPATH for CPython
 #only when run from the old test suite.
 try:
@@ -198,16 +195,15 @@ OTHER_GLOBALS = {"AI_ADDRCONFIG" : 32,
                  "TCP_SYNCNT" : 7,
                  "TCP_WINDOW_CLAMP" : 10}
 
-
-    
+@skip("win32")
 def test_HandleToSocket():
-    s = socket.socket()
-    if is_cli:
-        
+    import clr
+    try:
+        s = socket.socket()
         system_socket = socket.socket.HandleToSocket(s.fileno())
         AreEqual(s.fileno(), system_socket.Handle.ToInt64())
-    s.close()
-    
+    finally:
+        s.close()
     
 def test_getprotobyname():
     '''

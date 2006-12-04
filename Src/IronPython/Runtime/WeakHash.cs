@@ -281,14 +281,16 @@ namespace IronPython.Runtime {
         }
 
         public void RemoveOnId(int id) {
-            try {
+            lock (synchObject) {
                 dict.Remove(id);
-            } catch { }
+            }
         }
 
         public void RemoveOnObject(T value) {
-            int id = GetIdFromObject(value);
-            RemoveOnId(id);
+            try {
+                int id = GetIdFromObject(value);
+                RemoveOnId(id);
+            } catch { }
         }
     }
 }

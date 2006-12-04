@@ -72,13 +72,6 @@ class testpath:
     else: 
         ipython_executable  = path_combine(sys.prefix, r'ipy.exe')
         cpython_executable  = sys.executable
-    
-    team_dir            = path_combine(ip_root, r'Team')
-    team_profile        = path_combine(team_dir, r'settings.py')
-    
-    my_name             = nt.environ.get(r'USERNAME', None)
-    my_dir              = my_name and path_combine(team_dir, my_name) or None
-    my_profile          = my_dir and path_combine(my_dir, r'settings.py') or None
 
 ensure_directory_present(testpath.temporary_dir)
 
@@ -192,15 +185,46 @@ def GetTotalMemory():
         System.GC.WaitForPendingFinalizers()
     return System.GC.GetTotalMemory(True)
 
+def _do_nothing(*args): 
+    print '... skipping ...'
+    pass
+
+class skip:
+    def __init__(self, *platforms):
+        if len(platforms) == 1 and isinstance(platforms[0], str): 
+            self.platforms = platforms[0].split()
+        else: 
+            self.platforms = platforms
+    def __call__(self, f):
+        if sys.platform in self.platforms: 
+            return _do_nothing
+        else: 
+            return f
+   
+class runonly: 
+    def __init__(self, *platforms):
+        if len(platforms) == 1 and isinstance(platforms[0], str): 
+            self.platforms = platforms[0].split()
+        else: 
+            self.platforms = platforms
+    def __call__(self, f):
+        if sys.platform in self.platforms: 
+            return f
+        else: 
+            return _do_nothing
+
+@runonly('win32 telesto cli')
+def _func(): pass
+
 def run_test(mod_name, noOutputPlease=False):
     import sys
     module = sys.modules[mod_name]
     for name in dir(module): 
         obj = getattr(module, name)
-        if isinstance(obj, types.functionType):
+        if isinstance(obj, type(_do_nothing)) or isinstance(obj, type(_func)) :
             if name.startswith("test_"): 
-                if name.endswith("_clionly") and not is_cli: continue
-                if not noOutputPlease and (mod_name == '__main__'): print "Testing %s" % name
+                if not noOutputPlease and (mod_name == '__main__'): 
+                    print ">>> testing %s" % name
                 obj()
 
 def run_class(mod_name, verbose=False): 
