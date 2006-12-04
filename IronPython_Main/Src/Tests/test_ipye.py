@@ -27,7 +27,7 @@ def test_trivial():
 
 
 def test_version():
-    """ test that the assembly versions are the same as 1.0 release for compatibility."""
+    """ test that the assembly versions are the same as 1.1 release for compatibility."""
     import clr
     import System
 
@@ -38,9 +38,9 @@ def test_version():
         av = asm.GetName().Version
         Assert(av != None)
         AreEqual(av.Major, 1)
-        AreEqual(av.Minor, 0)
-        AreEqual(av.Build, 60816)
-        AreEqual(av.Revision, 1877)
+        AreEqual(av.Minor, 1)
+        AreEqual(av.Build, 0)
+        AreEqual(av.Revision, 0)
 
 def test_coverage():
     # 1. fasteval 
