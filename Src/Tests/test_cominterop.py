@@ -62,7 +62,7 @@ def _test_common_on_object(o):
     AssertError(TypeError, (lambda:o >> 3))
     AssertError(TypeError, (lambda:o << 3))
 
-if file_exists(scriptpw_path):
+if file_exists(scriptpw_path) and file_exists_in_path("tlbimp.exe"):
     def test__1_registered_nopia():
         # Check to see that namespace 'spwLib' isn't accessible
         Assert('spwLib' not in dir(), "spwLib is already registered")
@@ -120,9 +120,9 @@ if file_exists(scriptpw_path):
         password = IronPythonTest.ScriptPW.CreatePassword()
         AreEqual('System.__ComObject', password.ToString())
 else: 
-    print "warning: %s not found" % scriptpw_path
+    print "warning:", scriptpw_path, "or tlbimp not found"
     
-if file_exists(agentsvr_path):
+if file_exists(agentsvr_path) and file_exists_in_path("tlbimp.exe"):
     def test_merlin():
         run_tlbimp(agentsvr_path)
         Assert(file_exists("AgentServerObjects.dll"))
@@ -157,7 +157,7 @@ if file_exists(agentsvr_path):
         
         delete_files("AgentServerObjects.dll")
 else: 
-    print "warning: %s not found" % agentsvr_path
+    print "warning:", agentsvr_path, "or tlbimp not found"
     
 from Microsoft.Win32 import Registry
 from System.IO import File
