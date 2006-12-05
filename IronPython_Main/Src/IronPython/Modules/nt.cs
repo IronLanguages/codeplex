@@ -892,27 +892,36 @@ namespace IronPython.Modules {
         }
 
         private static ProcessStartInfo GetProcessInfo(string command) {
-            ProcessStartInfo psi;
-            string baseCommand = command;
-            string args = null;
-            bool fInQuote = false;
-            int argStart = command.Length;
+            command = command.Trim();
 
-            for (int i = 0; i < command.Length; i++) {
-                if (command[i] == '\"') fInQuote = !fInQuote;
-                else if (!fInQuote && command[i] == ' ') {
-                    argStart = i + 1;
-                    break;
+            string baseCommand = command;
+            string args = string.Empty;
+            int pos;
+
+            if (command[0] == '\"') {
+                for (pos = 1; pos < command.Length; pos++) {
+                    if (command[pos] == '\"') {
+                        baseCommand = command.Substring(1, pos - 1).Trim();
+                        if (pos + 1 < command.Length) {
+                            args = command.Substring(pos + 1);
+                        }
+                        break;
+                    }
+                }
+                if (pos == command.Length)
+                    throw Ops.ValueError("mismatch quote in command");
+            } else {
+                pos = command.IndexOf(' ');
+                if (pos != -1) {
+                    baseCommand = command.Substring(0, pos);
+                    // pos won't be the last one
+                    args = command.Substring(pos + 1);
                 }
             }
 
-            if (argStart < command.Length) {
-                args = command.Substring(argStart);
-                baseCommand = command.Substring(0, argStart - 1);
-            }
-
             baseCommand = GetCommandFullPath(baseCommand);
-            psi = new ProcessStartInfo(baseCommand, args);
+
+            ProcessStartInfo psi = new ProcessStartInfo(baseCommand, args);
             psi.UseShellExecute = false;
 
             return psi;

@@ -16,37 +16,20 @@
 from lib.assert_util import *
 import re
 
-# None tests
 def test_none():
-    AssertError(TypeError, re.compile, None)
-    AssertError(TypeError, re.compile, None, None)
-
-    AssertError(TypeError, re.search, None, 'abc')
-    AssertError(TypeError, re.search, 'abc', None)
-
-    AssertError(TypeError, re.match, None, 'abc')
-    AssertError(TypeError, re.match, 'abc', None)
-
-    AssertError(TypeError, re.split, None, 'abc')
-    AssertError(TypeError, re.split, 'abc', None)
-
-    AssertError(TypeError, re.findall, None, 'abc')
-    AssertError(TypeError, re.findall, 'abc', None)
-
-    AssertError(TypeError, re.finditer,None, 'abc')
-    AssertError(TypeError, re.finditer, 'abc', None)
+    for x in 'compile search match split findall finditer'.split():
+        y = getattr(re, x)
+        AssertError(TypeError, y, None)
+        AssertError(TypeError, y, None, None)
+        AssertError(TypeError, y, None, 'abc')
+        AssertError(TypeError, y, 'abc', None)
 
     # Other exceptional input tests
-
-    AssertError(TypeError, re.sub, 'abc', None, 'abc')
-    AssertError(TypeError, re.sub, 'abc', None, None)
-    AssertError(TypeError, re.sub, None, 'abc', 'abc')
-    AssertError(TypeError, re.sub, 'abc', 'abc', None)
-
-    AssertError(TypeError, re.subn, 'abc', None, 'abc')
-    AssertError(TypeError, re.subn, 'abc', None, None)
-    AssertError(TypeError, re.subn, None, 'abc', 'abc')
-    AssertError(TypeError, re.subn, 'abc', 'abc', None)
+    for x in (re.sub, re.subn):
+        AssertError(TypeError, x, 'abc', None, 'abc')
+        AssertError(TypeError, x, 'abc', None, None)
+        AssertError(TypeError, x, None, 'abc', 'abc')
+        AssertError(TypeError, x, 'abc', 'abc', None)
 
     AssertError(TypeError, re.escape, None)
     
@@ -56,16 +39,16 @@ def test_comment():
     AreEqual(c.findall("abc"), ['abc'])
 
 def test_optional_paren():
-     pattern = r"""\(?\w+\)?"""
-     c = re.compile(pattern, re.X)
-     AreEqual(c.findall('abc'), ['abc'])
-     
+    pattern = r"""\(?\w+\)?"""
+    c = re.compile(pattern, re.X)
+    AreEqual(c.findall('abc'), ['abc'])
+
 def test_back_match():
     p = re.compile('(?P<grp>.+?)(?P=grp)')
     AreEqual(p.match('abcabc').groupdict(), {'grp':'abc'})
 
 def test_expand():
-	AreEqual(re.match("(a)(b)", "ab").expand("blah\g<1>\g<2>"), "blahab")
+    AreEqual(re.match("(a)(b)", "ab").expand("blah\g<1>\g<2>"), "blahab")
 
 def test_sub():    
     x = '\n   #region Generated Foo\nblah\nblah#end region'
@@ -153,20 +136,13 @@ def test_start_of_str():
     startOfStr = re.compile('^')
     AreEqual(startOfStr.match('bazbar', 1), None)
     AreEqual(startOfStr.match('bazbar', 0,0).span(), (0,0))
-    # BUG 674
-    #AreEqual(startOfStr.match('bazbar', 1,2), None)
-    # /BUG
-
-    # BUG
-    #AreEqual(startOfStr.match('bazbar', endpos=3).span(), (0,0))
-    #/BUG
+    AreEqual(startOfStr.match('bazbar', 1,2), None)
+    AreEqual(startOfStr.match('bazbar', endpos=3).span(), (0,0))
 
 # check that groups in split RE are added properly
 def test_split():
     AreEqual(re.split('{(,)?}', '1 {} 2 {,} 3 {} 4'), ['1 ', None, ' 2 ', ',', ' 3 ', None, ' 4'])
 
-    # BUG 637
-    
     pnogrp = ','
     
     ptwogrp = '((,))'
@@ -179,7 +155,6 @@ def test_split():
     
     ponegrp = '(,)'
     AreEqual(re.split(ponegrp, csv, 1), ['0', ',', csv[2:]])
-    # /BUG
 
 def test_escape():
     compiled = re.compile(re.escape("hi_"))
@@ -213,28 +188,19 @@ def test_escape():
 # bug 938
 #AreEqual(re.compile("^a", re.M).search("ba", 1), None)	# fails; no preceding \n
 
-
-
 # findall
 def test_findall():
-    l = re.findall('\d+', '99 blahblahblah 183 blah 12 blah 7777 yada yada')
-    Assert(l == ['99', '183', '12', '7777'])
-    l =re.findall('^\d+', '0blahblahblah blah blah yada yada1')
-    Assert(l == ['0'])
-    l =re.findall('^\d+', 'blahblahblah blah blah yada yada1')
-    Assert(l == [])
-    
-    expr = "x = 999y + 23"
-    l = re.findall("(\d+)|(\w+)", expr)
-    Assert(l == [('', 'x'), ('999', ''), ('', 'y'), ('23', '')])
-    
-    digits = "123456789123456789"
-    l = re.findall("(\d)(\d\d)(\d\d\d)", digits)
-    Assert(l == [('1', '23', '456'), ('7', '89', '123'), ('4', '56', '789')])
-    
-    sentence = "green fish black fish red fish blue fish"
-    l = re.findall(r"(?i)(\w+)\s+fish\b",sentence)
-    Assert(l == ['green', 'black', 'red', 'blue'])
+    for (x, y, z) in ( 
+            ('\d+', '99 blahblahblah 183 blah 12 blah 7777 yada yada', ['99', '183', '12', '7777']), 
+            ('^\d+', '0blahblahblah blah blah yada yada1', ['0']), 
+            ('^\d+', 'blahblahblah blah blah yada yada1', []),
+            ("(\d+)|(\w+)", "x = 999y + 23", [('', 'x'), ('999', ''), ('', 'y'), ('23', '')]),
+            ("(\d)(\d\d)(\d\d\d)", "123456789123456789", [('1', '23', '456'), ('7', '89', '123'), ('4', '56', '789')]),
+            (r"(?i)(\w+)\s+fish\b", "green fish black fish red fish blue fish", ['green', 'black', 'red', 'blue']),
+            ('(a)(b)', 'abab', [('a', 'b'), ('a', 'b')]),
+        ):
+        AreEqual(re.findall(x, y), z)
+        AreEqual(re.compile(x).findall(y), z)
 
 def test_match_groups():
     m = re.match('(?P<test>a)(b)', 'ab')
@@ -242,43 +208,30 @@ def test_match_groups():
     m = re.match('(u)(?P<test>v)(b)(?P<Named2>w)(x)(y)', 'uvbwxy')
     Assert(m.groups() == ('u', 'v', 'b', 'w', 'x', 'y'))
 
-
-
 def test_options():
     # coverage for ?iLmsux options in re.compile path
-    
+    tests = [ ("t(?=s)", "atreftsadbeatwttta", ['t']), 
+              ("t(?!s)", "atreftsadbeatststs", ['t']) ]
+
     # native implementation does not handle extensions specified in this way
     if is_cli:
-        c = re.compile("(?i:foo)") # ignorecase
-        l = c.findall("fooFoo FOO fOo fo oFO O\n\t\nFo ofO O")
-        Assert(l == ['foo', 'Foo', 'FOO', 'fOo'])
-        c = re.compile("(?im:^foo)") # ignorecase, multiline (matches at beginning of string and at each newline)
-        l = c.findall("fooFoo FOO fOo\n\t\nFoo\nFOO")
-        Assert(l == ['foo', 'Foo', 'FOO'])
-        c = re.compile("(?s:foo.*bar)") # dotall (make "." match any chr, including a newline)
-        l = c.findall("foo yadayadayada\nyadayadayada bar")
-        Assert(l == ['foo yadayadayada\nyadayadayada bar'])
-        c = re.compile("(?x:baz  bar)") #verbose (ignore whitespace)
-        l = c.findall("bazbar foo bar      bazbar \n\n\tbazbar")
-        Assert(l == ['bazbar', 'bazbar', 'bazbar'])
-    
-    pattern = "t(?=s)"
-    c = re.compile(pattern)
-    l = c.findall("atreftsadbeatwttta")
-    Assert(l == ['t'])
-    
-    pattern = "t(?!s)"
-    c = re.compile(pattern)
-    l = c.findall("atreftsadbeatststs")
-    Assert(l == ['t'])
-
-# bug 858
-#pattern = r"""\(? #optional paren
-#...   \)? #optional paren
-#...   \d+ """
-#c = re.compile(pattern, re.X)
-#l = c.findall("989")
-#Assert(l == ['989'])
+        tests.extend([ 
+            ("(?i:foo)", "fooFoo FOO fOo fo oFO O\n\t\nFo ofO O", ['foo', 'Foo', 'FOO', 'fOo']), 
+            ("(?im:^foo)", "fooFoo FOO fOo\n\t\nFoo\nFOO", ['foo', 'Foo', 'FOO']), # ignorecase, multiline (matches at beginning of string and at each newline)
+            ("(?s:foo.*bar)", "foo yadayadayada\nyadayadayada bar", ['foo yadayadayada\nyadayadayada bar']), # dotall (make "." match any chr, including a newline)
+            ("(?x:baz  bar)", "bazbar foo bar      bazbar \n\n\tbazbar", ['bazbar', 'bazbar', 'bazbar']),  #verbose (ignore whitespace)
+            ])
+    for (x, y, z) in tests:
+        AreEqual(re.findall(x, y), z)
+        AreEqual(re.compile(x).findall(y), z)
+        
+def test_bug858():
+    pattern = r"""\(? #optional paren
+       \)? #optional paren
+       \d+ """
+    c = re.compile(pattern, re.X)
+    l = c.findall("989")
+    Assert(l == ['989'])
 
 def test_finditer():
     # finditer 
@@ -289,7 +242,6 @@ def test_finditer():
         AreEqual("baz", m.group(0))
     Assert(num == 2)
 
-
 def test_search():
     # search
     sp = re.search('super', 'blahsupersuper').span()
@@ -298,9 +250,8 @@ def test_search():
     sp = re.search('super', 'superblahsuper').span()
     Assert(sp == (0, 5))
 
-    #bug 850
     #re.search.group() index error
-    
+
     AreEqual(re.search("z.*z", "az123za").group(),'z123z')
     AreEqual(re.search("z.*z", "az12za").group(),'z12z')
     AreEqual(re.search("z.*z", "azza").group(),'zz')
@@ -309,7 +260,6 @@ def test_search():
     AreEqual(re.search("z123p?z", "az123pza").group(),'z123pz')
     AreEqual(re.search("z123p?z", "az123za").group(),'z123z')
     
-    # bug 870
     AreEqual(re.search('b', 'abc').string, 'abc')
     
 def test_subn():
@@ -344,20 +294,15 @@ def test_groups():
     Assert ( m2.groups() == (None,))
     Assert ( m2.groups('Default') == ('Default',))
 
-
 def test_end():
     ex = re.compile(r'\s+')
-    
     m = ex.match('(object Petal', 7)
     Assert (m.end(0) == 8)
-
 
 def test_lone_hat():
     """Single ^ reg-ex shouldn't match w/ a sub-set of a string"""
     sol = re.compile('^')
-
     AreEqual(sol.match('bazbar', 1, 2), None)
-
 
 def test_eol():
     r = re.compile(r'<(/|\Z)')
