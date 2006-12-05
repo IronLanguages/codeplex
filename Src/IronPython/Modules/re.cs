@@ -502,6 +502,7 @@ namespace IronPython.Modules {
             RE_Pattern pattern;
             private Match m;
             private string text;
+            private int lastindex = -1;
 
             #region Internal makers
             internal static RE_Match make(Match m, RE_Pattern pattern, string input) {
@@ -520,11 +521,6 @@ namespace IronPython.Modules {
                 this.m = m;
                 this.pattern = pattern;
                 this.text = text;
-                for (int i = 0; i < m.Groups.Count; i++) {
-                    if (m.Groups[i].Captures.Count > 0) {
-                        lastindex = i;
-                    }
-                }
             }
             #endregion
 
@@ -606,8 +602,6 @@ namespace IronPython.Modules {
                 return Ops.MakeTuple(ret);
             }
 
-            public object lastindex;
-
             [PythonName("expand")]
             public object Expand(object template) {
                 string strTmp = ValidateString(template, "template");
@@ -668,13 +662,12 @@ namespace IronPython.Modules {
 
             [PythonName("span")]
             public object Span() {
-                return Tuple.MakeTuple(m.Groups[0].Index, m.Groups[0].Index + m.Groups[0].Length);
+                return Tuple.MakeTuple(this.Start(), this.End());
             }
 
             [PythonName("span")]
             public object Span(object group) {
-                int groupInt = GetGroupIndex(group);
-                return Tuple.MakeTuple(m.Groups[groupInt].Index, m.Groups[groupInt].Index + m.Groups[groupInt].Length);
+                return Tuple.MakeTuple(this.Start(group), this.End(group));
             }
 
             public int Position {
@@ -709,6 +702,58 @@ namespace IronPython.Modules {
                 [PythonName("re")]
                 get {
                     return pattern;
+                }
+            }
+
+            public object LastIndex {
+                [PythonName("lastindex")]
+                get {
+                    //   -1 : initial value of lastindex
+                    //    0 : no match found
+                    //other : the true lastindex
+
+                    // Match.Groups contains "lower" level matched groups, which has to be removed
+                    if (lastindex == -1) {
+                        int i = 1;
+                        while (i < m.Groups.Count) {
+                            if (m.Groups[i].Success) {
+                                lastindex = i;
+                                int start = m.Groups[i].Index;
+                                int end = start + m.Groups[i].Length;
+                                i++;
+
+                                // skip any group which fall into the range [start, end], 
+                                // no matter match succeed or fail
+                                while (i < m.Groups.Count && (m.Groups[i].Index < end)) {
+                                    i++;
+                                }
+                            } else {
+                                i++;
+                            }
+                        }
+
+                        if (lastindex == -1) {
+                            lastindex = 0;
+                        }
+                    }
+
+                    if (lastindex == 0) {
+                        return null;
+                    } else {
+                        return lastindex;
+                    }
+                }
+            }
+
+            public object LastGroup {
+                [PythonName("lastgroup")]
+                get {
+                    if (LastIndex == null) return null;
+
+                    // when group was not explicitly named, RegEx assigns the number as name
+                    // This is different from C-Python, which returns None in such cases
+
+                    return this.pattern.re.GroupNameFromNumber((int)LastIndex);
                 }
             }
             #endregion

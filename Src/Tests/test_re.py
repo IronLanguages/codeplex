@@ -311,5 +311,37 @@ def test_eol():
     AreEqual(s.span(), (0, 1))
     AreEqual(s.group(0), '<')
     AreEqual(r.search("<Z", 0), None)
+    
+def test_lastindex():
+    for (pat, index) in [ 
+              ('(a)b', 1), ('((a)(b))', 1), ('((ab))', 1), 
+              ('(a)(b)', 2), 
+              ('(a)?ab', None), 
+              ('(a)?b', 1),
+            ]:
+        AreEqual(re.match(pat, 'ab').lastindex, index)
+        
+    for (pat, index) in [ 
+              ('(a)ab', 1), 
+              ('(a)(a)b', 2), 
+              ('(a)(a)(b)', 3),
+              ('((a)a(b))', 1), 
+              ('((a)(a)(b))', 1), 
+              ('(a(a)(b))', 1), 
+              ('(a(a)?(b))', 1), 
+              ('(aa(a)?(b))', 1), 
+              ('(aa(b))', 1), 
+              ('(a(ab))', 1), 
+              ('(a)?ab', 1), 
+              ('a(a)?ab', None),
+              ('a(a)?(a)?b', 1),
+              ('a(a)?(a)?(b)', 3),
+              ('a(a)b', 1),
+              ('(a(a))(b)', 3),
+              ('(a(a))b', 1),
+              ('((a)(a))(b)', 4),
+              ('((a)(a))b', 1),
+            ]:
+        AreEqual(re.match(pat, 'aab').lastindex, index)
 
 run_test(__name__)
