@@ -23,6 +23,7 @@ using System.Diagnostics;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
+using System.Runtime.InteropServices;
 
 [assembly: PythonModule("re", typeof(IronPython.Modules.PythonRegex))]
 namespace IronPython.Modules {
@@ -117,43 +118,7 @@ namespace IronPython.Modules {
             RE_Pattern pat = new RE_Pattern(ValidatePattern(pattern), flags);
             ValidateString(@string, "string");
 
-            MatchCollection mc = pat.FindAllWorker(@string, 0, @string.Length);
-            object[] matches = new object[mc.Count];
-            int numgrps = pat.re.GetGroupNumbers().Length;
-            for (int i = 0; i < mc.Count; i++) {
-                if (numgrps > 2) { // CLR gives us a "bonus" group of 0 - the entire expression
-                    //  at this point we have more than one group in the pattern;
-                    //  need to return a list of tuples in this case
-
-                    //  for each match item in the matchcollection, create a tuple representing what was matched
-                    //  e.g. findall("(\d+)|(\w+)", "x = 99y") == [('', 'x'), ('99', ''), ('', 'y')]
-                    //  in the example above, ('', 'x') did not match (\d+) as indicated by '' but did 
-                    //  match (\w+) as indicated by 'x' and so on...
-                    int k = 0;
-                    ArrayList tpl = new ArrayList();
-                    foreach (Group g in mc[i].Groups) {
-                        //  here also the CLR gives us a "bonus" match as the first item which is the 
-                        //  group that was actually matched in the tuple e.g. we get 'x', '', 'x' for 
-                        //  the first match object...so we'll skip the first item when creating the 
-                        //  tuple
-                        if (k++ != 0) {
-                            tpl.Add(g.Value);
-                        }
-                    }
-                    matches[i] = Tuple.Make(tpl);
-                } else if (numgrps == 2) {
-                    //  at this point we have exactly one group in the pattern (including the "bonus" one given 
-                    //  by the CLR 
-                    //  skip the first match since that contains the entire match and not the group match
-                    //  e.g. re.findall(r"(\w+)\s+fish\b", "green fish") will have "green fish" in the 0 
-                    //  index and "green" as the (\w+) group match
-                    matches[i] = mc[i].Groups[1].Value;
-                } else {
-                    matches[i] = mc[i].Value;
-                }
-            }
-
-            return new List(matches);
+            return pat.FindAll(@string, 0, @string.Length);
         }
 
         [PythonName("finditer")]
@@ -260,7 +225,7 @@ namespace IronPython.Modules {
             }
 
             [PythonName("match")]
-            public RE_Match Match(object text, int pos, int endpos) {
+            public RE_Match Match(object text, [DefaultParameterValue(0)] int pos, int endpos) {
                 string input = ValidateString(text, "text");
                 return RE_Match.makeMatch(
                     re.Match(input.Substring(0, endpos), pos),
@@ -300,10 +265,39 @@ namespace IronPython.Modules {
             [PythonName("findall")]
             public object FindAll(object @string, int pos, object endpos) {
                 MatchCollection mc = FindAllWorker(ValidateString(@string, "text"), pos, endpos);
-
                 object[] matches = new object[mc.Count];
+                int numgrps = re.GetGroupNumbers().Length;
                 for (int i = 0; i < mc.Count; i++) {
-                    matches[i] = mc[i].Value;
+                    if (numgrps > 2) { // CLR gives us a "bonus" group of 0 - the entire expression
+                        //  at this point we have more than one group in the pattern;
+                        //  need to return a list of tuples in this case
+
+                        //  for each match item in the matchcollection, create a tuple representing what was matched
+                        //  e.g. findall("(\d+)|(\w+)", "x = 99y") == [('', 'x'), ('99', ''), ('', 'y')]
+                        //  in the example above, ('', 'x') did not match (\d+) as indicated by '' but did 
+                        //  match (\w+) as indicated by 'x' and so on...
+                        int k = 0;
+                        ArrayList tpl = new ArrayList();
+                        foreach (Group g in mc[i].Groups) {
+                            //  here also the CLR gives us a "bonus" match as the first item which is the 
+                            //  group that was actually matched in the tuple e.g. we get 'x', '', 'x' for 
+                            //  the first match object...so we'll skip the first item when creating the 
+                            //  tuple
+                            if (k++ != 0) {
+                                tpl.Add(g.Value);
+                            }
+                        }
+                        matches[i] = Tuple.Make(tpl);
+                    } else if (numgrps == 2) {
+                        //  at this point we have exactly one group in the pattern (including the "bonus" one given 
+                        //  by the CLR 
+                        //  skip the first match since that contains the entire match and not the group match
+                        //  e.g. re.findall(r"(\w+)\s+fish\b", "green fish") will have "green fish" in the 0 
+                        //  index and "green" as the (\w+) group match
+                        matches[i] = mc[i].Groups[1].Value;
+                    } else {
+                        matches[i] = mc[i].Value;
+                    }
                 }
 
                 return new List(matches);
