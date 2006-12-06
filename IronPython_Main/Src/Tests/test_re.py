@@ -12,7 +12,6 @@
 #  You must not remove this notice, or any other, from this software.
 #
 ######################################################################################
-
 from lib.assert_util import *
 import re
 
@@ -33,10 +32,237 @@ def test_none():
 
     AssertError(TypeError, re.escape, None)
     
+    
+def test_sanity_re():
+    '''
+    Basic sanity tests for the re module.  Each module member is
+    used at least once.
+    '''
+    #compile
+    Assert(hasattr(re.compile("(abc){1}"), "pattern"))
+    Assert(hasattr(re.compile("(abc){1}", re.L), "pattern"))
+    Assert(hasattr(re.compile("(abc){1}", flags=re.L), "pattern"))
+    
+    #I IGNORECASE L LOCAL MMULTILINE S DOTALL U UNICODE X VERBOSE
+    flags = ["I", "IGNORECASE",
+                 "L", "LOCALE", 
+                 "M", "MULTILINE", 
+                 "S", "DOTALL", 
+                 "U", "UNICODE", 
+                 "X", "VERBOSE"]
+    
+    for f in flags:
+        Assert(hasattr(re, f))
+    
+    #search
+    AreEqual(re.search("(abc){1}", ""), None)
+    AreEqual(re.search("(abc){1}", "abcxyz").span(), (0,3))
+    AreEqual(re.search("(abc){1}", "abcxyz", re.L).span(), (0,3))
+    AreEqual(re.search("(abc){1}", "abcxyz", flags=re.L).span(), (0,3))
+    AreEqual(re.search("(abc){1}", "xyzabc").span(), (3,6))
+    
+    #match
+    AreEqual(re.match("(abc){1}", ""), None)
+    AreEqual(re.match("(abc){1}", "abcxyz").span(), (0,3))
+    AreEqual(re.match("(abc){1}", "abcxyz", re.L).span(), (0,3))
+    AreEqual(re.match("(abc){1}", "abcxyz", flags=re.L).span(), (0,3))
+    
+    #split
+    AreEqual(re.split("(abc){1}", ""), [''])
+    AreEqual(re.split("(abc){1}", "abcxyz"), ['', 'abc', 'xyz'])
+    AreEqual(re.split("(abc){1}", "abc", 0), ['', 'abc', ''])
+    #CodePlex Work Item 6265
+    #AreEqual(re.split("(abc){1}", "abc", maxsplit=0), ['', 'abc', ''])
+    
+    #findall
+    AreEqual(re.findall("(abc){1}", ""), [])
+    AreEqual(re.findall("(abc){1}", "abcxyz"), ['abc'])
+    AreEqual(re.findall("(abc){1}", "abcxyz", re.L), ['abc'])
+    AreEqual(re.findall("(abc){1}", "abcxyz", flags=re.L), ['abc'])
+    AreEqual(re.findall("(abc){1}", "xyzabcabc"), ['abc', 'abc'])
+    
+    #finditer
+    AreEqual([x.group() for x in re.finditer("(abc){1}", "")], [])
+    AreEqual([x.group() for x in re.finditer("(abc){1}", "abcxyz")], ['abc'])
+    AreEqual([x.group() for x in re.finditer("(abc){1}", "abcxyz", re.L)], ['abc'])
+    AreEqual([x.group() for x in re.finditer("(abc){1}", "abcxyz", flags=re.L)], ['abc'])
+    AreEqual([x.group() for x in re.finditer("(abc){1}", "xyzabcabc")], ['abc', 'abc'])
+    
+    #sub
+    AreEqual(re.sub("(abc){1}", "9", "abcd"), "9d")
+    AreEqual(re.sub("(abc){1}", "abcxyz",'abcd'), "abcxyzd")
+    AreEqual(re.sub("(abc){1}", "1", "abcd", 0), "1d")
+    AreEqual(re.sub("(abc){1}", "1", "abcd", count=0), "1d")
+    AreEqual(re.sub("(abc){1}", "1", "abcdabcd", 1), "1dabcd")
+    AreEqual(re.sub("(abc){1}", "1", "abcdabcd", 2), "1d1d")
+    
+    #subn
+    AreEqual(re.subn("(abc){1}", "9", "abcd"), ("9d", 1))
+    AreEqual(re.subn("(abc){1}", "abcxyz",'abcd'), ("abcxyzd",1))
+    AreEqual(re.subn("(abc){1}", "1", "abcd", 0), ("1d",1))
+    AreEqual(re.subn("(abc){1}", "1", "abcd", count=0), ("1d",1))
+    AreEqual(re.subn("(abc){1}", "1", "abcdabcd", 1), ("1dabcd",1))
+    AreEqual(re.subn("(abc){1}", "1", "abcdabcd", 2), ("1d1d",2))
+    
+    #escape
+    AreEqual(re.escape("abc"), "abc")
+    AreEqual(re.escape(""), "")
+    AreEqual(re.escape("_"), "\\_")
+    AreEqual(re.escape("a_c"), "a\\_c")
+    
+    #error
+    exc = re.error()
+    exc = re.error("some args")
+    
+    #purge
+    #CodePlex Work Item 6277
+    #re.purge()
+    
+    
+def test_sanity_re_pattern():
+    '''
+    Basic sanity tests for the re module's Regular Expression
+    objects (i.e., Pattern in CPython).  Each method/member is 
+    utilized at least once.
+    '''
+    pattern = re.compile("(abc){1}")                
+    
+    #match
+    AreEqual(pattern.match(""), None)
+    AreEqual(pattern.match("abcxyz").span(), (0,3))
+    AreEqual(pattern.match("abc", 0).span(), (0,3))
+    AreEqual(pattern.match("abc", 0, 3).span(), (0,3))
+    AreEqual(pattern.match("abc", pos=0, endpos=3).span(), (0,3))
+    #CodePlex Work Item 6266
+    #AreEqual(pattern.match("abc", -5, 5).span(), (0,3))
+    
+    #search
+    AreEqual(pattern.search(""), None)
+    AreEqual(pattern.search("abcxyz").span(), (0,3))
+    AreEqual(pattern.search("abc", 0).span(), (0,3))
+    AreEqual(pattern.search("abc", 0, 3).span(), (0,3))
+    AreEqual(pattern.search("abc", pos=0, endpos=3).span(), (0,3))
+    AreEqual(pattern.search("xyzabc").span(), (3,6))
+    
+    #split
+    AreEqual(pattern.split(""), [''])
+    AreEqual(pattern.split("abcxyz"), ['', 'abc', 'xyz'])
+    AreEqual(pattern.split("abc", 0), ['', 'abc', ''])
+    #CodePlex Work Item 6265
+    #AreEqual(pattern.split("abc", maxsplit=0), ['', 'abc', ''])
+    
+    #findall
+    AreEqual(pattern.findall(""), [])
+    AreEqual(pattern.findall("abcxyz"), ['abc'])
+    AreEqual(pattern.findall("abc", 0), ['abc'])
+    AreEqual(pattern.findall("abc", 0, 3), ['abc'])
+    AreEqual(pattern.findall("abc", pos=0, endpos=3), ['abc'])
+    AreEqual(pattern.findall("xyzabcabc"), ['abc', 'abc'])
+    
+    #sub
+    AreEqual(pattern.sub("9", "abcd"), "9d")
+    AreEqual(pattern.sub("abcxyz",'abcd'), "abcxyzd")
+    AreEqual(pattern.sub("1", "abcd", 0), "1d")
+    AreEqual(pattern.sub("1", "abcd", count=0), "1d")
+    AreEqual(pattern.sub("1", "abcdabcd", 1), "1dabcd")
+    AreEqual(pattern.sub("1", "abcdabcd", 2), "1d1d")
+    
+    #subn
+    AreEqual(pattern.subn("9", "abcd"), ("9d", 1))
+    AreEqual(pattern.subn("abcxyz",'abcd'), ("abcxyzd",1))
+    AreEqual(pattern.subn("1", "abcd", 0), ("1d",1))
+    AreEqual(pattern.subn("1", "abcd", count=0), ("1d",1))
+    AreEqual(pattern.subn("1", "abcdabcd", 1), ("1dabcd",1))
+    AreEqual(pattern.subn("1", "abcdabcd", 2), ("1d1d",2))
+    
+    #flags
+    AreEqual(pattern.flags, 0)
+    AreEqual(re.compile("(abc){1}", re.L).flags, re.L)
+    
+    #groupindex
+    #Merlin Work Item 148105
+    #AreEqual(pattern.groupindex, {})
+    AreEqual(re.compile("(?P<abc>)(?P<bcd>)").groupindex, {'bcd': 2, 'abc': 1})
+    
+    #pattern
+    AreEqual(pattern.pattern, "(abc){1}")
+    AreEqual(re.compile("").pattern, "")
+    
+    
+def test_sanity_re_match():
+    '''
+    Basic sanity tests for the re module's Match objects.  Each method/member
+    is utilized at least once.
+    '''
+    pattern = re.compile("(abc){1}")
+    match_obj = pattern.match("abcxyzabc123 and some other words...")
+    
+    #expand
+    AreEqual(match_obj.expand("\1\g<1>.nt"), '\x01abc.nt')
+    
+    #group
+    AreEqual(match_obj.group(), 'abc')
+    AreEqual(match_obj.group(1), 'abc')
+    
+    #groups
+    AreEqual(match_obj.groups(), ('abc',))
+    AreEqual(match_obj.groups(1), ('abc',))
+    AreEqual(match_obj.groups(99), ('abc',))
+    
+    #groupdict
+    #CodePlex Work Item 6271
+    #AreEqual(match_obj.groupdict(), {})
+    #CodePlex Work Item 6271
+    #AreEqual(match_obj.groupdict(None), {})
+    
+    #start
+    AreEqual(match_obj.start(), 0)
+    AreEqual(match_obj.start(1), 0)
+    
+    #end
+    AreEqual(match_obj.end(), 3)
+    AreEqual(match_obj.end(1), 3)
+    
+    #span
+    AreEqual(match_obj.span(), (0,3))
+    AreEqual(match_obj.span(1), (0,3))
+    
+    #pos
+    AreEqual(match_obj.pos, 0)
+    
+    #endpos
+    #CodePlex Work Item 6272
+    #AreEqual(match_obj.endpos, 36)
+    
+    #lastindex
+    AreEqual(match_obj.lastindex, 1)
+    
+    #lastgroup
+    #CodePlex Work Item 5518
+    #AreEqual(match_obj.lastgroup, None)
+    
+    #re
+    Assert(match_obj.re==pattern)
+    
+    #string
+    AreEqual(match_obj.string, "abcxyzabc123 and some other words...")
+    
+    
 def test_comment():
+    '''
+    (?#...)
+    '''
     pattern = "a(?#foo)bc"
     c = re.compile(pattern)
     AreEqual(c.findall("abc"), ['abc'])
+    
+    pattern = "a(?#)bc"
+    c = re.compile(pattern)
+    AreEqual(c.findall("abc"), ['abc'])
+    
+    pattern = "a(?#foo)bdc"
+    c = re.compile(pattern)
+    AreEqual(len(c.findall("abc")), 0)
 
 def test_optional_paren():
     pattern = r"""\(?\w+\)?"""
@@ -49,6 +275,8 @@ def test_back_match():
 
 def test_expand():
     AreEqual(re.match("(a)(b)", "ab").expand("blah\g<1>\g<2>"), "blahab")
+    AreEqual(re.match("(a)()", "ab").expand("blah\g<1>\g<2>\n\r\t\\\\"),'blaha\n\r\t\\')
+    AreEqual(re.match("(a)()", "ab").expand(""),'')
 
 def test_sub():    
     x = '\n   #region Generated Foo\nblah\nblah#end region'
@@ -86,6 +314,12 @@ def test_sub():
 
     Assert(re.sub('([^aeiou])y$', r'\lies', 'vacancy') == 'vacan\\lies')
     Assert(re.sub('([^aeiou])y$', r'\1ies', 'vacancy') == 'vacancies')
+    
+    AreEqual(re.sub("a+", "\n\t\\\?\"\b", "abc"), '\n\t\\?"\x08bc')
+    #CodePlex Work Item 6273
+    #AreEqual(re.sub("a+", r"\n\t\\\?\"\b", "abc"), '\n\t\\\\?\\"\x08bc')
+    #CodePlex Work Item 6273
+    #AreEqual(re.sub("a+", "\n\t\\\\\\?\"\b", "abc"), '\n\t\\\\?"\x08bc')
 
 def test_dot():
     a = re.compile('.')
@@ -104,6 +338,29 @@ def test_x():
 def test_match():
     p = re.compile('.')
     AreEqual(p.match('bazbar', 1,2).span(), (1,2))
+    
+def test_span():
+    AreEqual(re.match('(baz)(bar)(m)', "bazbarmxyz").span(2),(3, 6))
+    
+def test_regs():
+    #CodePlex Work Item 6275
+    #AreEqual(re.match('(baz)(bar)(m)', "bazbarmxyz").regs,
+    #         ((0, 7), (0, 3), (3, 6), (6, 7)))
+    pass         
+             
+def test_endpos():
+    #CodePlex Work Item 6272
+    #AreEqual(re.match('(baz)(bar)(m)', "bazbarmx").endpos, 8)
+    pass
+    
+def test_re():
+    #Just ensure it's there for now
+    stuff = re.match('a(baz)(bar)(m)', "abazbarmx")
+    Assert(hasattr(stuff, "re"))
+    Assert(hasattr(stuff.re, "sub"))
+    
+def test_pos():
+    AreEqual(re.match('(baz)(bar)(m)', "bazbarmx").pos, 0) 
  
 def test_startandend():
     m = re.match(r'(a)|(b)', 'b')
@@ -241,6 +498,55 @@ def test_finditer():
         num = num + 1
         AreEqual("baz", m.group(0))
     Assert(num == 2)
+
+    matches = re.finditer("baz","barbazbarbazbar", re.L)
+    num = 0
+    for m in matches:
+        num = num + 1
+        AreEqual("baz", m.group(0))
+    Assert(num == 2)
+    
+    matches = re.compile("baz").finditer("barbazbarbazbar", 0)
+    num = 0
+    for m in matches:
+        num = num + 1
+        AreEqual("baz", m.group(0))
+    Assert(num == 2)
+    
+    matches = re.compile("baz").finditer("barbazbarbazbar", 14)
+    num = 0
+    for m in matches:
+        num = num + 1
+        AreEqual("baz", m.group(0))
+    Assert(num == 0)
+    
+    matches = re.compile("baz").finditer("barbazbarbazbar", 0, 14)
+    num = 0
+    for m in matches:
+        num = num + 1
+        AreEqual("baz", m.group(0))
+    Assert(num == 2)
+    
+    matches = re.compile("baz").finditer("barbazbarbazbar", 9, 12)
+    num = 0
+    for m in matches:
+        num = num + 1
+        AreEqual("baz", m.group(0))
+    AreEqual(num, 1)
+    
+    matches = re.compile("baz").finditer("barbazbarbazbar", 9, 11)
+    num = 0
+    for m in matches:
+        num = num + 1
+        AreEqual("baz", m.group(0))
+    AreEqual(num, 0)
+    
+    matches = re.compile("baz").finditer("barbazbarbazbar", 10, 12)
+    num = 0
+    for m in matches:
+        num = num + 1
+        AreEqual("baz", m.group(0))
+    AreEqual(num, 0)
 
 def test_search():
     # search
