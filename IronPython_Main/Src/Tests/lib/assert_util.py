@@ -119,6 +119,10 @@ def AssertError(exc, func, *args):
     try:        func(*args)
     except exc: return
     else :      Fail("Expected %r but got no exception" % exc)
+    
+def AssertInOrNot(container, yes, no=[]):
+    for x in yes: Assert(x in container)
+    for x in no: Assert(x not in container)
 
 # Check that the exception is raised with the provided message
 

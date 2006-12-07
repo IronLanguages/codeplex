@@ -193,7 +193,7 @@ def compileAndRef(name, filename, *args):
         AreEqual(run_csc("/nologo /t:library " + ' '.join(args) + " /out:\"" + sys.exec_prefix + "\"\\" + name +".dll \"" + filename + "\""), 0)
         clr.AddReference(name)
 
-
+@skip("win32")
 def test_c1cs():
     """verify re-loading an assembly causes the new type to show up"""
     if not has_csc(): 
@@ -219,6 +219,7 @@ def test_c1cs():
     # /Public; however, they need to be present for the peverify pass.
 
 
+@skip("win32")
 def test_c2cs():
     """verify generic types & non-generic types mixed in the same namespace can 
     successfully be used"""
@@ -304,9 +305,6 @@ def test_c2cs():
     x = ImportTestNS.Foo[int,int]()
     AreEqual(x.Test(), 'Foo<T,Y>')    
     
-if is_cli:    
-    test_c1cs()
-    test_c2cs()
 
 Assert(sys.modules.has_key("__main__"))
 
@@ -430,7 +428,9 @@ AreEqual(dir(test).count('cmp'), 0)     # used, assigned to, deleted, shouldn't 
 AreEqual(dir(test).count('del'), 0)     # assigned to, deleted, never used
 
 #########################################################################################
-if is_cli:
+
+@skip("win32")
+def test_importwinform():
     import clr
     clr.AddReferenceByPartialName("System.Windows.Forms")
     import System.Windows.Forms as TestWinForms
@@ -438,8 +438,7 @@ if is_cli:
     form.Text = "Hello"
     Assert(form.Text == "Hello")
 
-#***** Copying from 'Packages' *****
-
+@skip("win32")
 def test_copyfrompackages():
     _f_pkg1 = path_combine(testpath.public_testdir, 'StandAlone\\Packages1.py')
     _f_pkg2 = path_combine(testpath.public_testdir, 'StandAlone\\Packages2.py')
@@ -571,8 +570,6 @@ else:
 """)
     AreEqual(launch_ironpython(_f_imfp_start), 0)
 
-    
-
     _recimp = 'recimp'
     _f_recimp_init = path_combine(testpath.public_testdir, _recimp, "__init__.py")
     _f_recimp_a = path_combine(testpath.public_testdir, _recimp, "a.py")
@@ -586,9 +583,34 @@ else:
     
     AreEqual(launch_ironpython(_f_recimp_start), 0)
 
-if is_cli:
-    test_copyfrompackages()
+def test_import_inside_exec():
+    _f_module = path_combine(testpath.public_testdir, 'another.py')
+    write_to_file(_f_module, 'a1, a2, a3, _a4 = 1, 2, 3, 4')
+    
+    d = {}
+    exec 'from another import a2' in d
+    AssertInOrNot(d, ['a2'], ['a1', 'a3', '_a4', 'another'])
+    AssertInOrNot(dir(), [], ['a1', 'a2', 'a3', '_a4', 'another'])
+    
+    d = {}
+    exec 'from another import *' in d
+    AssertInOrNot(d, ['a1', 'a2', 'a3'], ['_a4', 'another'])
+    AssertInOrNot(dir(), [], ['a1', 'a2', 'a3', '_a4', 'another'])
+
+    d = {}
+    exec 'import another' in d
+    AssertInOrNot(d, ['another'], ['a1', 'a2', 'a3', '_a4'])
+    
+    # Also a precondition for the following tests: ensure a1 a2 a3 are not in dict
+    AssertInOrNot(dir(), [], ['a1', 'a2', 'a3', '_a4', 'another'])
+    
+    exec 'from another import a2'
+    AssertInOrNot(dir(), ['a2'], ['a1', 'a3', '_a4'])
+    
+    exec 'from another import *'
+    AssertInOrNot(dir(), ['a1', 'a2', 'a3'], ['_a4'])
+
+run_test(__name__)
 
 # remove all test files
-
-#delete_all_f(__name__)
+delete_all_f(__name__)

@@ -1391,7 +1391,7 @@ namespace IronPython.Runtime.Operations {
                 } else {
                     largs = new List<object>(args);
                     if (argsTuple != null) {
-                        largs.InsertRange(args.Length - names.Length, (Tuple)argsTuple);
+                        largs.InsertRange(args.Length - names.Length, Tuple.Make(argsTuple));
                     }
                 }
 
@@ -1877,7 +1877,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         // from spam import *
-        public static void ImportStar(PythonModule mod, string fullName) {
+        public static void ImportStar(ICallerContext context, string fullName) {
+            PythonModule mod = context.Module;
+
             Debug.Assert(typeof(PythonModule).IsAssignableFrom(mod.GetType()), "Got non-PythonModule passed to Ops");
 
             object newmod = Importer.Import(mod, fullName, List.MakeList("*"));
@@ -1892,7 +1894,7 @@ namespace IronPython.Runtime.Operations {
                         if (name == null) continue;
 
                         SymbolId fieldId = SymbolTable.StringToId(name);
-                        mod.SetImportedAttr(mod, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
+                        Ops.SetIndexId(context.Locals, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
                     }
                     return;
                 }
@@ -1906,7 +1908,7 @@ namespace IronPython.Runtime.Operations {
                     if (name[0] == '_') continue;
 
                     SymbolId fieldId = SymbolTable.StringToId(name);
-                    mod.SetImportedAttr(mod, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
+                    Ops.SetIndexId(context.Locals, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
                 }
             }
         }
@@ -2091,7 +2093,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static void Raise(Object exc ) {
+        public static void Raise(Object exc) {
             Debug.Assert(exc.GetType() == typeof(Tuple));
             Tuple exception = exc as Tuple;
             Raise(exception[0], exception[1], exception[2]);
@@ -2276,7 +2278,7 @@ namespace IronPython.Runtime.Operations {
             // create the .NET & Python exception, setting the Arguments on the
             // python exception to the invalid key
             Exception res = new KeyNotFoundException(string.Format("{0}", key));
-            
+
             Ops.SetAttr(DefaultContext.Default,
                 ExceptionConverter.ToPython(res),
                 SymbolTable.Arguments,
