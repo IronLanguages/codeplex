@@ -1627,11 +1627,15 @@ namespace IronPython.Compiler.Ast {
         internal override void Emit(CodeGen cg) {
             cg.EmitPosition(this);
 
-            cg.EmitModuleInstance();
-            cg.EmitString(root.MakeString());
             if (names == star) {
+                cg.EmitCallerContext();
+                cg.EmitString(root.MakeString());
+
                 cg.EmitCall(typeof(Ops), "ImportStar");
             } else {
+                cg.EmitModuleInstance();
+                cg.EmitString(root.MakeString());
+                
                 Slot fromObj = cg.GetLocalTmp(typeof(object));
                 cg.EmitStringArray(SymbolTable.IdsToStrings(names));
 
