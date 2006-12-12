@@ -103,7 +103,7 @@ namespace IronPython.Hosting {
 
         public static string VersionString {
             get {
-                return String.Format("IronPython {0} ({1}) on .NET {2}", GetInformationalVersion(), GetFileVersion(), Environment.Version);
+                return String.Format("{0} ({1}) on .NET {2}", GetInformationalVersion(), GetFileVersion(), Environment.Version);
             }
         }
 
@@ -1057,8 +1057,8 @@ namespace IronPython.Hosting {
         }
 
         private static string GetInformationalVersion() {
-            AssemblyInformationalVersionAttribute attribute = GetAssemblyAttribute<AssemblyInformationalVersionAttribute>();
-            return attribute != null ? attribute.InformationalVersion : "";
+            AssemblyDescriptionAttribute attribute = GetAssemblyAttribute<AssemblyDescriptionAttribute>();
+            return attribute != null ? attribute.Description : "";
         }
 
         private static string GetFileVersion() {
