@@ -26,7 +26,7 @@ using System.Security.Permissions;
 // associated with an assembly.
 //
 [assembly: AssemblyTitle("IronMath")]
-[assembly: AssemblyDescription("IronPython Math Assembly 1.1 Alpha")]
+[assembly: AssemblyDescription("IronPython Math Assembly 1.1a1")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("IronPython")]
