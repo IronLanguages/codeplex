@@ -150,6 +150,9 @@ namespace IronPythonTest {
             pe.Globals[clspartName] = 1;
             pe.Execute("if 1 != clsPart: raise AssertionError('test failed')");
             AreEqual((int)pe.Globals[clspartName], 1);
+
+            //clean things up
+            pe.Dispose();
         }
 
         // No intereference between two engines
