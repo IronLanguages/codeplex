@@ -95,14 +95,14 @@ namespace IronPython.Runtime {
             }
         }
 
-        private readonly object[] data;
+        internal readonly object[] data;
         private readonly bool expandable;
 
         public Tuple(object o) {
             this.data = MakeItems(o);
         }
 
-        private Tuple(object[] items) {
+        protected Tuple(object[] items) {
             this.data = items;
         }
 
@@ -352,7 +352,7 @@ namespace IronPython.Runtime {
 
         #region IDynamicObject Members
 
-        public DynamicType GetDynamicType() {
+        public virtual DynamicType GetDynamicType() {
             return TypeCache.Tuple;
         }
 
