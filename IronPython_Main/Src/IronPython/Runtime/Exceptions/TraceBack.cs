@@ -80,6 +80,10 @@ namespace IronPython.Runtime.Exceptions {
                 userSupplied = value;
             }
         }
+
+        public override string ToString() {
+            return string.Format("<traceback object at 0x{0:X8}>", this.GetHashCode());
+        }
     }
 
     public class TraceBackFrame {
@@ -112,6 +116,10 @@ namespace IronPython.Runtime.Exceptions {
             this.globals = globals;
             this.locals = locals;
             this.code = code;
+        }
+
+        public override string ToString() {
+            return string.Format("<frame object at 0x{0:X8}>", this.GetHashCode());
         }
     }
 }

@@ -61,7 +61,6 @@ namespace IronPython.Runtime.Operations {
         // The cache for dynamically generated delegates.
         private static Publisher<DelegateSignatureInfo, MethodInfo> dynamicDelegates = new Publisher<DelegateSignatureInfo, MethodInfo>();
 
-
         public static object[] MakeArray(object o1) { return new object[] { o1 }; }
         public static object[] MakeArray(object o1, object o2) { return new object[] { o1, o2 }; }
 
@@ -2158,18 +2157,23 @@ namespace IronPython.Runtime.Operations {
             systemState.ClearException();
         }
 
-        public static void UpdateTraceBack(ICallerContext context, string funcName, string filename, int line) {
-            TraceBack curTrace = SystemState.RawTraceBack;
-            if (curTrace == null || !curTrace.IsUserSupplied) {
-                PythonFunction fx = new Function0(context.Module, funcName, null, new string[0], Ops.EMPTY);
+        public static void UpdateTraceBack(ICallerContext context, string filename, int line, string funcName, ref bool notHandled) {
+            if (notHandled == false) {
+                notHandled = true;
 
-                TraceBackFrame tbf = new TraceBackFrame(context.Globals, context.Locals, fx.FunctionCode);
-                ((FunctionCode)fx.FunctionCode).SetFilename(filename);
-                ((FunctionCode)fx.FunctionCode).SetLineNumber(line);
-                TraceBack tb = new TraceBack(curTrace, tbf);
-                tb.SetLine(line);
+                TraceBack curTrace = SystemState.RawTraceBack;
 
-                SystemState.RawTraceBack = tb;
+                if (curTrace == null || !curTrace.IsUserSupplied) {
+                    PythonFunction fx = new Function0(context.Module, funcName, null, new string[0], Ops.EMPTY);
+
+                    TraceBackFrame tbf = new TraceBackFrame(context.Globals, context.Locals, fx.FunctionCode);
+                    ((FunctionCode)fx.FunctionCode).SetFilename(filename);
+                    ((FunctionCode)fx.FunctionCode).SetLineNumber(line);
+                    TraceBack tb = new TraceBack(curTrace, tbf);
+                    tb.SetLine(line);
+
+                    SystemState.RawTraceBack = tb;
+                }
             }
         }
 

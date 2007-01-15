@@ -149,6 +149,8 @@ namespace IronPython.Compiler.Generation {
                 dummySlot = cg.GetLocalTmp(typeof(object));
 
                 cg.EmitTraceBackTryBlockStart(dummySlot);
+                cg.FuncOrClassName = "<module>";
+                cg.EmitSetTraceBackUpdateStatus(false);
             }
 
             gs.Emit(cg);
@@ -156,7 +158,7 @@ namespace IronPython.Compiler.Generation {
             if (!(body is ReturnStatement)) {
                 // free up the dummySlot
                 cg.FreeLocalTmp(dummySlot);
-                cg.EmitTraceBackFaultBlock("Initialize", context.SourceFile);
+                cg.EmitTraceBackFaultBlock();
                 cg.EmitPosition(Location.None, Location.None);
                 cg.EmitReturn(null);
             }
@@ -299,6 +301,7 @@ namespace IronPython.Compiler.Generation {
         internal static CodeGen GenerateModuleInitialize(CompilerContext context, GlobalSuite gs, TypeGen tg, bool staticTypes, CustomModuleInit customInit) {
             CodeGen ncg = tg.DefineMethodOverride(typeof(CompiledModule).GetMethod("Initialize", BindingFlags.Public | BindingFlags.Instance));
             ncg.Context = context;
+            ncg.EmitSetTraceBackUpdateStatus(false);
 
             ncg.Names = CodeGen.CreateStaticFieldNamespace(tg);
 

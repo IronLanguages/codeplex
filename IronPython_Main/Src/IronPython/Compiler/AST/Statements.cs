@@ -261,7 +261,7 @@ namespace IronPython.Compiler.Ast {
             SetLoc(null, start, header, end);
         }
 
-        internal void SetLoc(ExternalLineMapping externalInfo, Location start, Location header, Location end) {            
+        internal void SetLoc(ExternalLineMapping externalInfo, Location start, Location header, Location end) {
             SetLoc(externalInfo, start, end);
             this.header = header;
         }
@@ -1028,10 +1028,21 @@ namespace IronPython.Compiler.Ast {
                 cg.Emit(OpCodes.Brtrue, beginElseBlock);
             }
 
-
             EmitYieldDispatch(tryYieldTargets, isTryYielded, tryChoiceVar, cg);
 
-            body.Emit(cg);
+            // if finally block presents, but no exception handler, we add try-fault 
+            // to update traceback; otherwise, we update the traceback inside exception handler.
+            if (finallyStmt != null && handlers == null) {
+                Slot dummySlot = cg.GetLocalTmp(typeof(object));
+                cg.EmitTraceBackTryBlockStart(dummySlot);
+
+                body.Emit(cg);
+
+                cg.FreeLocalTmp(dummySlot);
+                cg.EmitTraceBackFaultBlock();
+            } else {
+                body.Emit(cg);
+            }
 
             if (elseStmt != null) {
                 if (IsBlockYieldable(elseYieldTargets)) {
@@ -1078,6 +1089,8 @@ namespace IronPython.Compiler.Ast {
                     cg.MarkLabel(beginCatchBlock);
                 }
 
+                cg.EmitCallUpdateTraceBack();
+
                 // Extract state from the carrier exception
                 cg.EmitCallerContext();
                 cg.EmitCall(typeof(Ops), "ExtractException",
@@ -1123,6 +1136,7 @@ namespace IronPython.Compiler.Ast {
 
                     cg.EmitCallerContext();
                     cg.EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
+                    cg.EmitSetTraceBackUpdateStatus(false);
 
                     cg.Emit(OpCodes.Leave, afterFinally);
                     cg.MarkLabel(next);
@@ -1257,7 +1271,7 @@ namespace IronPython.Compiler.Ast {
             throw new InvalidOperationException("TryFinallyStatement is deprecated");
         }
 
-        public override void Walk(IAstWalker walker) {            
+        public override void Walk(IAstWalker walker) {
         }
     }
 
@@ -1635,7 +1649,7 @@ namespace IronPython.Compiler.Ast {
             } else {
                 cg.EmitModuleInstance();
                 cg.EmitString(root.MakeString());
-                
+
                 Slot fromObj = cg.GetLocalTmp(typeof(object));
                 cg.EmitStringArray(SymbolTable.IdsToStrings(names));
 
