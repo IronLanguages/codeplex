@@ -103,6 +103,11 @@ namespace IronPython.Compiler.Ast {
             CodeGen icg = cg.DefineUserHiddenMethod(name.GetString() + "$maker" + System.Threading.Interlocked.Increment(ref index),
                 typeof(IDictionary<object, object>), signature);
 
+            icg.FuncOrClassName = name.ToString();
+            icg.EmitSetTraceBackUpdateStatus(false);
+            Slot dummySlot = icg.GetLocalTmp(typeof(object));
+            icg.EmitTraceBackTryBlockStart(dummySlot);
+
             if (IsClosure) icg.StaticLinkSlot = icg.GetArgumentSlot(0);
             if (cg.ContextSlot != null) icg.ContextSlot = icg.GetArgumentSlot(1);
 
@@ -118,6 +123,11 @@ namespace IronPython.Compiler.Ast {
             // emit class initialization
 
             EmitClassInitialization(cg, icg);
+
+            // update the traceback
+            icg.FreeLocalTmp(dummySlot);
+            icg.EmitTraceBackFaultBlock();
+
             icg.EnvironmentSlot.EmitGet(icg);
             icg.Emit(OpCodes.Ret);
             return icg;

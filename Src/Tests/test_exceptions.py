@@ -328,14 +328,11 @@ if is_cli:
         import sys
         if (sys.exc_traceback != None):
             x = dir(sys.exc_traceback)
-            x.sort()
-            AreEqual(x,  ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'])
+            Assert(set(x) > set(['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next']))
             try:
                 raise "foo", "Msg", sys.exc_traceback
             except "foo", X:
                 pass
-    
-                      
     
     try:
         raise Exception(3,4,5)

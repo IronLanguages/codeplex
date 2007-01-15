@@ -274,6 +274,10 @@ namespace IronPython.Runtime.Calls {
 
             throw Ops.TypeError("bad code");
         }
+
+        public override string ToString() {
+            return string.Format("<code object {0} at {1:X8}, file \"{2}\", line {3}", "?", base.GetHashCode(), filename, lineNo);
+        }
     }
 
     /// <summary>

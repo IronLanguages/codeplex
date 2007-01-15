@@ -132,6 +132,9 @@ namespace IronPython.Compiler.Generation {
         private Slot contextSlot;               // caller context
         private Slot currentLineSlot;           // slot used for tracking the current source line
 
+        private Slot currentTraceBackUpdateStatusSlot;      
+        private string funcOrClassName;
+
         public ArgSlot[] argumentSlots;
         private CompilerContext context;
 
@@ -140,7 +143,7 @@ namespace IronPython.Compiler.Generation {
 
         internal const int FinallyExitsNormally = 0;
         internal const int BranchForReturn = 1;
-        internal const int BranchForBreak  = 2;
+        internal const int BranchForBreak = 2;
         internal const int BranchForContinue = 3;
 
 
@@ -187,8 +190,8 @@ namespace IronPython.Compiler.Generation {
                 return res;
 
             res = assemblyGen.myModule.DefineDocument(filename,
-                Guid.Empty, 
-                SymLanguageVendor.Microsoft, 
+                Guid.Empty,
+                SymLanguageVendor.Microsoft,
                 SymDocumentType.Text);
 
             externalDebugSymbolWriters[filename] = res;
@@ -220,6 +223,11 @@ namespace IronPython.Compiler.Generation {
             internal set {
                 context = value;
             }
+        }
+
+        public string FuncOrClassName {
+            get { return (funcOrClassName == null) ? "<module>" : funcOrClassName; }
+            set { funcOrClassName = value; }
         }
 
         public Targets.TargetBlockType BlockType {
@@ -304,7 +312,7 @@ namespace IronPython.Compiler.Generation {
                     if (finallyIndex == -1) {
                         Emit(OpCodes.Leave, t.breakLabel);
                     } else {
-                        if(!targets[finallyIndex].leaveLabel.HasValue)
+                        if (!targets[finallyIndex].leaveLabel.HasValue)
                             targets[finallyIndex].leaveLabel = DefineLabel();
 
                         EmitInt(CodeGen.BranchForBreak);
@@ -379,7 +387,7 @@ namespace IronPython.Compiler.Generation {
                         // need to leave into the inner most finally block,
                         // the finally block will fall through and check
                         // the return value.
-                        if(!targets[finallyIndex].leaveLabel.HasValue)
+                        if (!targets[finallyIndex].leaveLabel.HasValue)
                             targets[finallyIndex].leaveLabel = DefineLabel();
 
                         EmitInt(CodeGen.BranchForReturn);
@@ -1493,6 +1501,25 @@ namespace IronPython.Compiler.Generation {
             ilg.EmitWriteLine(value);
         }
 
+        internal void EmitSetTraceBackUpdateStatus(bool handled) {
+            if (Options.TraceBackSupport) {
+                if (currentTraceBackUpdateStatusSlot == null) {
+                    currentTraceBackUpdateStatusSlot = GetNamedLocal(typeof(bool), "tbstatus");
+                }
+
+                EmitInt(handled ? 1 : 0);
+                currentTraceBackUpdateStatusSlot.EmitSet(this);
+            }
+        }
+
+        internal void EmitGetTraceBackUpdateStatusAddr() {
+            if (currentTraceBackUpdateStatusSlot != null) {
+                currentTraceBackUpdateStatusSlot.EmitGetAddr(this);
+            } else {
+                Debug.Fail("No TraceBack update status slot");
+            }
+        }
+
         internal void EmitTraceBackTryBlockStart(Slot slot) {
             if (Options.TraceBackSupport) {
                 // push a try for traceback support
@@ -1500,8 +1527,7 @@ namespace IronPython.Compiler.Generation {
                 BeginExceptionBlock();
             }
         }
-
-        internal void EmitTraceBackFaultBlock(string name, string filename) {
+        internal void EmitTraceBackFaultBlock() {
             if (Options.TraceBackSupport) {
                 // push a fault block (runs only if there's an exception, doesn't handle the exception)
                 PopTargets();
@@ -1511,11 +1537,7 @@ namespace IronPython.Compiler.Generation {
                     BeginFaultBlock();
                 }
 
-                EmitCallerContext();
-                EmitString(name);
-                EmitString(filename);
-                EmitGetCurrentLine();
-                EmitCall(typeof(Ops), "UpdateTraceBack");
+                EmitCallUpdateTraceBack();
 
                 // end the exception block
                 if (IsDynamicMethod) {
@@ -1524,6 +1546,18 @@ namespace IronPython.Compiler.Generation {
                 EndExceptionBlock();
             }
         }
+
+        internal void EmitCallUpdateTraceBack() {
+            if (Options.TraceBackSupport) {
+                EmitCallerContext();
+                EmitString(Context.SourceFile);
+                EmitGetCurrentLine();
+                EmitString(FuncOrClassName);
+                EmitGetTraceBackUpdateStatusAddr();
+                EmitCall(typeof(Ops), "UpdateTraceBack");
+            }
+        }
+
         #endregion
 
         #region IL Debugging Support
