@@ -32,6 +32,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Hosting;
 
 using IronMath;
+using System.IO;
 
 [assembly: PythonModule("__builtin__", typeof(IronPython.Modules.Builtin))]
 namespace IronPython.Modules {
@@ -633,7 +634,7 @@ namespace IronPython.Modules {
                 doc.Append("Field ");
                 doc.AppendLine(rf.Name);
 
-                if(rf.Documentation != null) AppendMultiLine(doc, rf.Documentation, indent + 1);
+                if (rf.Documentation != null) AppendMultiLine(doc, rf.Documentation, indent + 1);
             } else if ((rp = o as ReflectedProperty) != null) {
                 if (indent == 0) doc.AppendFormat("Help on property {0}\n\n", rp.Name);
                 AppendIndent(doc, indent);
@@ -1293,10 +1294,24 @@ namespace IronPython.Modules {
 
             if (module.Filename == null) return Importer.ReloadBuiltin(module);
 
-            CompilerContext cc = new CompilerContext(module.Filename);
-            Parser parser = Parser.FromFile(module.SystemState, cc);
-            Statement s = parser.ParseFileInput();
-            PythonModule pmod = OutputGenerator.GenerateModule(module.SystemState, cc, s, module.ModuleName, "__" + System.Threading.Interlocked.Increment(ref reloadCounter));
+            PythonModule pmod;
+
+            bool reloadBinary = false;
+            bool binaryLoaded = string.Compare(Path.GetExtension(module.Filename), ".exe", true) == 0;
+
+            if (binaryLoaded) {
+                string source = Path.ChangeExtension(module.Filename, ".py");
+                reloadBinary = Importer.ShouldLoadPreCompiledModule(module.Filename, source);
+            }
+
+            if (reloadBinary) {
+                pmod = Importer.LoadPreCompiled(module.SystemState, module.ModuleName, module.Filename);
+            } else {
+                CompilerContext cc = new CompilerContext(module.Filename);
+                Parser parser = Parser.FromFile(module.SystemState, cc);
+                Statement s = parser.ParseFileInput();
+                pmod = OutputGenerator.GenerateModule(module.SystemState, cc, s, module.ModuleName, "__" + System.Threading.Interlocked.Increment(ref reloadCounter));
+            }
 
             foreach (KeyValuePair<object, object> attr in module.__dict__) {
                 if (pmod.__dict__.ContainsObjectKey(attr.Key)) continue;
