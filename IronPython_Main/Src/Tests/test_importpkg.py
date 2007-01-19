@@ -610,6 +610,185 @@ def test_import_inside_exec():
     exec 'from another import *'
     AssertInOrNot(dir(), ['a1', 'a2', 'a3'], ['_a4'])
 
+
+def _source(x): 
+    return sys.modules[__name__].__dict__["_f_compiled%s" % x]
+
+def _exe(x): 
+    return _source(x)[:-2] + "exe"    
+
+def _delete_compiled(d):
+    for x in nt.listdir(d):
+        if x.startswith("compiled"): 
+            delete_files(x)
+            
+def _with_assemblies_dir():
+    import System
+    return "-X:AssembliesDir" in System.Environment.GetCommandLineArgs()
+
+
+@skip("win32")
+def test_import_compiled_module_VARIOUS_IMPORT_STMT():
+    if _with_assemblies_dir(): return
+    
+    _delete_compiled(testpath.public_testdir)
+
+    NUM = 10
+    for x in range(NUM):
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, 'compiled%s.py' % x)
+        
+    write_to_file(_f_compiled0, "def f0(): return 567")
+
+    write_to_file(_f_compiled1, "import compiled0 as compiled\ndef f1(): return compiled.f0()")
+    write_to_file(_f_compiled2, "import compiled0\ndef f2(): return compiled0.f0()\nf2()")
+    write_to_file(_f_compiled3, "from compiled0 import *\ndef f3(): return f0()\nf3()")
+    write_to_file(_f_compiled4, "from compiled0 import f0\ndef f4(): return f0()\nf4()")
+    
+    write_to_file(_f_compiled5, "import compiled0, compiled4\nprint compiled0.f0(), compiled4.f4()")
+    write_to_file(_f_compiled6, "import compiled1, compiled0\nprint compiled0.f0(), compiled1.f1()")
+    
+    write_to_file(_f_compiled7, "import compiled1\ncompiled1.f1()\nimport compiled0\ncompiled0.f0()")
+    write_to_file(_f_compiled8, "import compiled1\ncompiled1.f1()\nreload(compiled1)\ncompiled1.f1()")
+    write_to_file(_f_compiled9, "from compiled0 import f0\nimport compiled0\ncompiled0.f0()\nf0()")
+    
+    # run all file without "-X:SaveAssemblies"
+    for x in range(NUM):
+        AreEqual(launch_ironpython_changing_extensions(_source(x), remove = ["-X:SaveAssemblies"]), 0)
+
+    # run all files with "-X:SaveAssemblies"
+    for x in range(NUM):
+        AreEqual(launch_ironpython_changing_extensions(_source(x), add = ["-X:SaveAssemblies"], remove = ["-X:GenerateAsSnippets"]), 0)
+    
+    for x in range(NUM):
+        Assert(file_exists(_exe(x)), x)
+
+    # Able to run these python files without module source code
+    delete_files(_f_compiled0)    
+    for x in range(1,5):
+        AreEqual(launch_ironpython_changing_extensions(_source(x)), 0)
+    
+    delete_files(_f_compiled1, _f_compiled4)        
+    for x in range(5,NUM): 
+        AreEqual(launch_ironpython_changing_extensions(_source(x)), 0)
+
+    # Should load module the source, but it is missing
+    print "EXCEPTION THROWN BELOW IS EXPECTED"
+    Assert(launch_ironpython_changing_extensions(_f_compiled9, add = ["-X:NotImportCompiled"]) != 0)
+    print "EXCEPTION THROWN ABOVE IS EXPECTED"
+
+@skip("win32")
+def test_import_compiled_module_NEWER_SOURCE_CAN_RUN_STANDALONE():
+    if _with_assemblies_dir(): return
+    
+    _delete_compiled(testpath.public_testdir)
+    _local_copy_path1 = path_combine(testpath.public_testdir, "ironpython.dll")
+    _local_copy_path2 = path_combine(testpath.public_testdir, "ironmath.dll")
+    
+    try:
+        filecopy(path_combine(sys.prefix, "ironpython.dll"), _local_copy_path1)
+        filecopy(path_combine(sys.prefix, "ironmath.dll"), _local_copy_path2)
+
+        for x in range(2):
+            sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, 'compiled%s.py' % x)
+
+        write_to_file(_f_compiled0, "def f0(): return 567")
+        write_to_file(_f_compiled1, "import compiled0, sys\nsys.exit(compiled0.f0())")
+
+        AreEqual(launch_ironpython_changing_extensions(_f_compiled1, add = ["-X:SaveAssemblies"], remove = ["-X:GenerateAsSnippets"]), 567)
+        AreEqual(launch_ironpython_changing_extensions(_f_compiled1), 567)
+        
+        write_to_file(_f_compiled0, "def f0(): return 890")
+        AreEqual(launch_ironpython_changing_extensions(_f_compiled1), 890)
+        AreEqual(launch_ironpython_changing_extensions(_f_compiled1, add = ["-X:SaveAssemblies"], remove = ["-X:GenerateAsSnippets"]), 890)
+
+        delete_files(_source(0), _source(1))
+        AreEqual(launch(_exe(1)), 890)
+        write_to_file(_f_compiled0, "def f0(): return 123")
+        AreEqual(launch(_exe(1)), 123)
+    finally:
+        delete_files(_local_copy_path1, _local_copy_path2)
+        pass
+        
+@skip("win32")
+def test_import_compiled_module_RECURSIVE_IMPORT(): 
+    if _with_assemblies_dir(): return
+
+    _delete_compiled(testpath.public_testdir)
+    
+    NUM = 5
+    for x in range(NUM):
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, 'compiled%s.py' % x)
+
+    write_to_file(_f_compiled0, "import compiled1\nx = 1234\ndef f0(): return compiled1.y+x")
+    write_to_file(_f_compiled1, "import compiled0\ny = 5678\ndef f1(): return compiled0.x+y")
+    
+    write_to_file(_f_compiled2, "import compiled0\na = compiled0.f0()")
+    write_to_file(_f_compiled3, "import compiled1\nb = compiled1.f1()")
+        
+    write_to_file(_f_compiled4, "from compiled1 import f1\nimport compiled3\nc = f1()")
+
+    # run all file without "-X:SaveAssemblies"
+    for x in range(NUM):
+        AreEqual(launch_ironpython_changing_extensions(_source(x), remove = ["-X:SaveAssemblies"]), 0)
+
+    # run all files with "-X:SaveAssemblies"
+    for x in range(NUM):
+        AreEqual(launch_ironpython_changing_extensions(_source(x), add = ["-X:SaveAssemblies"], remove = ["-X:GenerateAsSnippets"]), 0)
+    
+    for x in range(NUM):
+        Assert(file_exists(_exe(x)), x)
+
+    # Able to run these python files without module source code
+    # gradually delete python source file
+    for x in range(4):
+        delete_files(_source(x))    
+        for y in range(x + 1, NUM):
+            AreEqual(launch_ironpython_changing_extensions(_source(y)), 0)
+
+@skip("win32")
+def test_import_compiled_module_PACKAGE(): 
+    if _with_assemblies_dir(): return
+
+    _delete_compiled(testpath.public_testdir)
+    
+    compdir1, compdir2 = "compdir1", "compdir2" 
+    f1 = path_combine(testpath.public_testdir, compdir1)
+    f2 = path_combine(testpath.public_testdir, compdir2)
+    
+    if directory_exists(f1): _delete_compiled(f1)
+    if directory_exists(f2): _delete_compiled(f2)
+
+    _f_compiled_dir1 = path_combine(f1, '__init__.py')
+    _f_compiled_dir2 = path_combine(f2, '__init__.py')
+    
+    write_to_file(_f_compiled_dir1, "")
+    write_to_file(_f_compiled_dir2, "")
+    
+    for x in "a":
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, compdir1, 'compiled%s.py' % x)
+    write_to_file(_source('a'), 'a = 7654')
+    
+    for x in "x":
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, compdir2, 'compiled%s.py' % x)
+    write_to_file(_source('x'), 'x = 4567')
+
+    for x in range(6):
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, 'compiled%s.py' % x)
+    write_to_file(_source(0), 'import compdir1\nimport compdir1.compileda\n')
+    write_to_file(_source(1), 'import compdir1.compileda\nprint compdir1.compileda.a\nfrom compdir1.compileda import a\nprint a')
+    write_to_file(_source(2), 'from compdir1 import compileda\nprint compileda.a')
+    write_to_file(_source(3), 'from compdir1.compileda import a\nprint a')
+    write_to_file(_source(4), 'from compdir1.compileda import a\nimport compdir2.compiledx\nprint compdir2.compiledx.x')
+
+    # run all files with "-X:SaveAssemblies"
+    for x in range(5):
+        AreEqual(launch_ironpython_changing_extensions(_source(x), add = ["-X:SaveAssemblies"], remove = ["-X:GenerateAsSnippets"]), 0)
+    
+    for x in range(5):
+        delete_files(_source('a'), _source('x'), _f_compiled_dir1, _f_compiled_dir2)
+        AreEqual(launch_ironpython_changing_extensions(_source(x)), 0)
+
+    
 run_test(__name__)
 
 # remove all test files

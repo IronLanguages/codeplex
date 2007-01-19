@@ -62,8 +62,6 @@ namespace IronPython.Compiler {
 
             set {
                 FieldInfo ti = this.GetType().GetField(ModuleFieldName);
-                // Multiple PythonEngines do not reuse CompiledModules.
-                Debug.Assert(ti.GetValue(this) == null);
                 if (ti != null) ti.SetValue(this, value);
             }
         }

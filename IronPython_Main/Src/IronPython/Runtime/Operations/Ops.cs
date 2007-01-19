@@ -1919,14 +1919,21 @@ namespace IronPython.Runtime.Operations {
         internal static IronPython.Hosting.PythonEngine compiledEngine;
 
         public static PythonModule InitializeModule(CompiledModule compiledModule, string fullName, string[] references) {
+            Assembly userCodeAsm = compiledModule.GetType().Assembly;
+            string location = userCodeAsm.Location;
+            string directory = Path.GetDirectoryName(location);
+
             if (compiledEngine == null) {
                 compiledEngine = new IronPython.Hosting.PythonEngine();
 
-                compiledEngine.Sys.prefix = System.IO.Path.GetDirectoryName(fullName);
-                compiledEngine.Sys.executable = fullName;
+                compiledEngine.Sys.prefix = directory;
+                compiledEngine.Sys.executable = Path.Combine(directory, "ipy.exe");
                 compiledEngine.Sys.exec_prefix = compiledEngine.Sys.prefix;
 
                 compiledEngine.AddToPath(Environment.CurrentDirectory);
+                if (directory != Environment.CurrentDirectory) {
+                    compiledEngine.AddToPath(directory);
+                }
             }
 
             if (references != null) {
@@ -1935,7 +1942,8 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            compiledEngine.LoadAssembly(compiledModule.GetType().Assembly);
+            compiledEngine.LoadAssembly(userCodeAsm);
+
             PythonModule module = compiledModule.Load(fullName, (InitializeModule)null, compiledEngine.Sys);
             compiledEngine.Sys.modules[fullName] = module;
             return module;

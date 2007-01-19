@@ -54,6 +54,7 @@ namespace IronPython.Compiler {
         private static List<string> warningFilters;
         private static DivisionOption division = DivisionOption.Old;
         private static bool python25;
+        private static bool importCompiledModule = true;
 
         #region Public accessors
 
@@ -201,6 +202,10 @@ namespace IronPython.Compiler {
             set { Options.bufferedStdOutAndError = value; }
         }
 
+        public static bool ImportCompiledModule {
+            get { return Options.importCompiledModule; }
+            set { Options.importCompiledModule = value; }
+        }
 
         /// <summary> 
         /// Whether to generate a warning if the tokenizer detects that indentation is
