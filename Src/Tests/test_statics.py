@@ -224,19 +224,17 @@ def test_method():
     b, d1, d2 = Base(), OverrideNothing(), OverrideAll()
     for x in [b, d1, d2]:
         AreEqual(Base.Method_Base(x), 'Base.Method_Base')
-        AreEqual(OverrideNothing.Method_Base(x), 'Base.Method_Base')        
+        AreEqual(OverrideNothing.Method_Base(x), 'Base.Method_Base')       
+        AreEqual(OverrideAll.Method_Base(d2), 'OverrideAll.Method_Base')         
+        
     
-    AssertErrorWithMessage(TypeError, 'expected OverrideAll, got Base', OverrideAll.Method_Base, b)
-    AssertErrorWithMessage(TypeError, 'expected OverrideAll, got OverrideNothing', OverrideAll.Method_Base, d1)
-    AreEqual(OverrideAll.Method_Base(d2), 'OverrideAll.Method_Base')        
-
     #==============================================================
 
     b, d = B(), D()
     
     AreEqual(Base.Method_Inheritance1(b), 'Base.Method_Inheritance1')
     AreEqual(OverrideNothing.Method_Inheritance1(b), 'Base.Method_Inheritance1')
-    AssertErrorWithMessage(TypeError, 'expected D, got B', OverrideAll.Method_Inheritance1, b)
+    AreEqual(OverrideAll.Method_Inheritance1(b), 'Base.Method_Inheritance1')
 
     AreEqual(Base.Method_Inheritance1(d), 'Base.Method_Inheritance1')
     AreEqual(OverrideNothing.Method_Inheritance1(d), 'Base.Method_Inheritance1')
@@ -248,7 +246,7 @@ def test_method():
 
     AreEqual(Base.Method_Inheritance2(d), 'Base.Method_Inheritance2')
     AreEqual(OverrideNothing.Method_Inheritance2(d), 'Base.Method_Inheritance2')
-    AreEqual(OverrideAll.Method_Inheritance2(d), 'OverrideAll.Method_Inheritance2')
+    AreEqual(OverrideAll.Method_Inheritance2(d), 'Base.Method_Inheritance2')
 
     # play with instance
     b, o1, o2 = Base(), OverrideNothing(), OverrideAll()
@@ -258,11 +256,11 @@ def test_method():
     
     AreEqual(b.Method_Base(b), 'Base.Method_Base')
     AreEqual(o1.Method_Base(b), 'Base.Method_Base')
-    AssertErrorWithMessage(TypeError, 'expected OverrideAll, got Base', o2.Method_Base, b)
+    AreEqual(o2.Method_Base(b), 'Base.Method_Base')
 
     AreEqual(b.Method_Base(o1), 'Base.Method_Base')
-    AreEqual(o1.Method_Base(o1), 'Base.Method_Base')
-    AssertErrorWithMessage(TypeError, 'expected OverrideAll, got OverrideNothing', o2.Method_Base, o1)
+    AreEqual(o1.Method_Base(o1), 'Base.Method_Base') 
+    AreEqual(o2.Method_Base(o1), 'Base.Method_Base')
     
     AreEqual(b.Method_Base(o2), 'Base.Method_Base')
     AreEqual(o1.Method_Base(o2), 'Base.Method_Base')
@@ -272,11 +270,11 @@ def test_method():
     def f(target): del target.Method_None
 
     AssertErrorWithMessage(TypeError, "can't delete 'Method_None' from dictproxy", f, Base)
-    AssertErrorWithMessage(AttributeError, "No attribute Method_None.", f, OverrideNothing)
+    AssertErrorWithMessage(TypeError, "can't delete 'Method_None' from dictproxy", f, OverrideNothing)
     AssertErrorWithMessage(TypeError, "can't delete 'Method_None' from dictproxy", f, OverrideAll)
     
     AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'Base' object is read-only", f, b)
-    AssertErrorWithMessage(AttributeError, "'OverrideNothing' object has no attribute 'Method_None'", f, o1)
+    AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'OverrideNothing' object is read-only", f, o1)
     AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'OverrideAll' object is read-only", f, o2)
 
 run_test(__name__)

@@ -79,16 +79,6 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        [PythonClassMethod("fromkeys")]
-        public static object fromkeys(DynamicType cls, object seq) {
-            return Dict.FromKeys(cls, seq, null);
-        }
-
-        [PythonClassMethod("fromkeys")]
-        public static object fromkeys(DynamicType cls, object seq, object value) {
-            return Dict.FromKeys(cls, seq, value);
-        }
-
         #region IDictionary<object, object> Members
 
         void IDictionary<object, object>.Add(object key, object value) {

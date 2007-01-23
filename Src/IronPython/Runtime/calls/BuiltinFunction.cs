@@ -452,6 +452,52 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             }
         }
 
+        internal bool ContainsOverlappingTarget(MethodInfo mi) {
+            ParameterInfo[] pis = mi.GetParameters();
+            Type[] genArgs = mi.GetGenericArguments();
+            foreach (MethodBase existing in Targets) {
+                ParameterInfo[] exPis = existing.GetParameters();
+                if (exPis.Length < pis.Length) continue;
+
+                Type[] exGenArgs = existing.GetGenericArguments();
+                if (exGenArgs.Length != genArgs.Length) continue;
+
+                // check if argument types match, if at least one differs there's no conflict.
+                bool match = true;
+                for (int i = 0; i < pis.Length; i++) {
+                    if (exPis[i].ParameterType != pis[i].ParameterType ||
+                        exPis[i].IsOut != pis[i].IsOut) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (!match) continue;
+
+                // still a match:
+                // if our existing signature is longer, and has optional parameters for all additional
+                // arguments then we prefer the existing one.
+                for (int i = pis.Length; i < exPis.Length; i++) {
+                    if (!exPis[i].IsOptional && exPis[i].DefaultValue == DBNull.Value) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (!match) continue;
+
+                // still a match: check if we differ by generic arguments
+                for (int i = 0; i < genArgs.Length; i++) {
+                    if (genArgs[i] != exGenArgs[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) return true;
+            }
+            return false;
+        }
 
         #endregion
 
