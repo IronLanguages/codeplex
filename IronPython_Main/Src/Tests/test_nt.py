@@ -208,7 +208,8 @@ def test_utime():
     AreEqual(x[7], y[7])
     AreEqual(x[8], y[8])
 
-def test_tempnam():
+#Merlin Work Item 153306
+def xtest_tempnam():
     '''
     '''
     #sanity checks
