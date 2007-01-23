@@ -402,6 +402,11 @@ namespace IronPython.Runtime.Operations {
 
 
         public static object In(object x, object y) {
+            IPythonContainer ipc = y as IPythonContainer;
+            if (ipc != null) {
+                return Bool2Object(ipc.ContainsValue(x));
+            }
+
             if (y is IDictionary) {
                 return Bool2Object(((IDictionary)y).Contains(x));
             }
