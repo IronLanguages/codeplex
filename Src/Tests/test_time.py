@@ -18,12 +18,13 @@ from lib.assert_util import *
 import time
 
 def test_strftime():
-    x = time.strftime('%x %X', time.localtime())
+    t = time.localtime()
+    x = time.strftime('%x %X', t)
     
     Assert(len(x) > 3)
     
-    x1 = time.strftime('%x', time.localtime())
-    x2 = time.strftime('%X', time.localtime())
+    x1 = time.strftime('%x', t)
+    x2 = time.strftime('%X', t)
     
     Assert(len(x1) > 1)
     Assert(len(x2) > 1)
