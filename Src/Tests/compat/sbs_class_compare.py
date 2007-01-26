@@ -107,7 +107,7 @@ class common(object):
                 for op in oplist:  
                     try:
                         printwith("case", "condition", a.value, op,  b.value, a, b)
-                        line = "if %s %s %s: print 'same##', True\nelse: print 'same##', False" % (str(a), op, str(b))
+                        line = "if a %s b: print 'same##', True\nelse: print 'same##', False" % (op)
                         exec line
                     except: 
                         printwith("except_unexpected")
