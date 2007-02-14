@@ -66,7 +66,7 @@ namespace IronPython.Runtime.Types {
         private IAttributesInjector prependedAttrs;
         private IAttributesInjector appendedAttrs;
 
-        #endregion>open
+        #endregion
 
         #region ReflectedType factories
 
@@ -904,9 +904,12 @@ namespace IronPython.Runtime.Types {
                 Type curType = type.BaseType;
                 while (curType != null && curType != typeof(object) && curType != typeof(ValueType)) {
                     foreach (MethodInfo mi in curType.GetMethods(bf & ~BindingFlags.Instance)) {
+                        // Only inherit op_Implicit.  
+                        if (!mi.IsSpecialName || mi.Name != "op_Implicit") continue;
+
                         string name;
                         NameType nt = NameConverter.TryGetName(this, mi, out name);
-                        if (nt != NameType.PythonMethod || name != "__new__") {
+                        if (nt != NameType.PythonMethod) {
                             AddReflectedMethod(mi, defaultMembers);
                         }
                     }
@@ -1358,6 +1361,16 @@ namespace IronPython.Runtime.Types {
             if(value == Uninitialized.instance)
                 throw Ops.TypeError("can't delete '{0}' from dictproxy", key.ToString());
             throw Ops.TypeError("can't set '{0}' in dictproxy",key.ToString());
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+            return Dict.FromKeys(cls, seq, null);
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
         }
     }
 }
