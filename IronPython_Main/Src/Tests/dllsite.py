@@ -110,6 +110,8 @@ def test_bad_stuff():
         raise Exception("*.exe's should not be autoloaded!")
     except ImportError, e:
         pass
+    except SystemError, e:
+        print "Work Item #189503"
     
     #ensure *.txt's are not autoloaded at all
     try:
