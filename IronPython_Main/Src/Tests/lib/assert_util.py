@@ -217,7 +217,7 @@ class runonly:
         else: 
             return _do_nothing
 
-@runonly('win32 telesto cli')
+@runonly('win32 cli')
 def _func(): pass
 
 def run_test(mod_name, noOutputPlease=False):
