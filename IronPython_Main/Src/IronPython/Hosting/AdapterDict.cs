@@ -312,6 +312,17 @@ namespace IronPython.Hosting {
         }
 
         #endregion
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+            return Dict.FromKeys(cls, seq, null);
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
+        }
+
     }
 
     /// <summary>

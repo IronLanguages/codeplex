@@ -383,7 +383,7 @@ def test_arg_Byte():
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
-def test_arg_Int16():
+def Xtest_arg_Int16():
     target = COverloads_Int16()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
@@ -403,7 +403,7 @@ def test_arg_Int16():
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
-def test_arg_Int32():
+def Xtest_arg_Int32():
     target = COverloads_Int32()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),

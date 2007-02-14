@@ -430,6 +430,16 @@ namespace IronPython.Runtime.Types {
             value = null;
             return false;
         }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+            return Dict.FromKeys(cls, seq, null);
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
+        }
     }
 
     [PythonType("instance")]
