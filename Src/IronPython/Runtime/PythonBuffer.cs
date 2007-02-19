@@ -18,6 +18,7 @@ using System.Collections;
 using System.Text;
 
 using IronPython.Runtime.Operations;
+using IronPython.Modules;
 
 namespace IronPython.Runtime {
     [PythonType("buffer")]
@@ -47,7 +48,7 @@ namespace IronPython.Runtime {
         private bool InitBufferObject(object o, int offset, int size) {
             //  we currently support only buffers, strings and arrays
             //  of primitives and strings
-            if (o == null || (!(isbuffer = o is PythonBuffer) && !(isstring = o is string) && !(isarray = o is Array))) {
+            if (o == null || (!(isbuffer = o is PythonBuffer) && !(isstring = o is string) && !(isarray = o is Array) && !(isarray = o is ArrayModule.PythonArray))) {
                 return false;
             }
             if (offset < 0) {
@@ -75,15 +76,20 @@ namespace IronPython.Runtime {
                     this.size = size;
                 }
             } else if (isarray) { // has to be an array at this point
-                Array arr = (Array)o;
-                Type t = arr.GetType().GetElementType();
-                if (!t.IsPrimitive && t != typeof(string)) {
-                    return false;
-                }
-                if (size >= arr.Length || size == -1) {
-                    this.size = arr.Length;
+                Array arr = o as Array;
+                if (arr != null) {
+                    Type t = arr.GetType().GetElementType();
+                    if (!t.IsPrimitive && t != typeof(string)) {
+                        return false;
+                    }
+                    if (size >= arr.Length || size == -1) {
+                        this.size = arr.Length;
+                    } else {
+                        this.size = size;
+                    }
                 } else {
-                    this.size = size;
+                    ArrayModule.PythonArray pa = (ArrayModule.PythonArray)o;
+                    this.size = pa.GetLength();
                 }
             }
             this.@object = o;
@@ -107,6 +113,12 @@ namespace IronPython.Runtime {
 
         public object this[object s] {
             get {
+                if (isarray) {
+                    ArrayModule.PythonArray arr = this.@object as ArrayModule.PythonArray;
+                    if (arr != null) {
+                        return Ops.GetIndex(arr.ConvertToString(), s);
+                    }
+                }
                 return Ops.GetIndex(Ops.GetIndex(@object, GetSlice()), s);
             }
             set {
