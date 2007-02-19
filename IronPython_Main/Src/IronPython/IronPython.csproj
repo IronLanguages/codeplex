@@ -125,6 +125,7 @@
     <Compile Include="Hosting\AdapterDict.cs" />
     <Compile Include="Hosting\CompiledCode.cs" />
     <Compile Include="Hosting\EngineModule.cs" />
+    <Compile Include="Modules\array.cs" />
     <Compile Include="Modules\md5.cs" />
     <Compile Include="Modules\Builtin.cs" />
     <Compile Include="Modules\Builtin.Generated.cs" />
