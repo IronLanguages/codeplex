@@ -438,7 +438,8 @@
                 <File Id="File_iprun.py" Name="iprun.py" />
                 <File Id="File_pretest.py" Name="pretest.py" />
                 <File Id="File_run.py" Name="run.py" />
-                <File Id="File_test_array.py" Name="TARRAY.PY" LongName="test_array.py" />
+				<File Id="File_RunAgainstCpy.py" Name="TRACPY.PY" LongName="RunAgainstCpy.py" />
+			    <File Id="File_test_array.py" Name="TARRAY.PY" LongName="test_array.py" />
                 <File Id="File_test_assert.py" Name="TASSERT.PY" LongName="test_assert.py"/>
                 <File Id="File_test_attr.py" Name="TATTR.PY" LongName="test_attr.py" />
                 <File Id="File_test_attrinjector.py" Name="TATTRINJ.PY" LongName="test_attrinjector.py" />
@@ -455,7 +456,7 @@
                 <File Id="File_test_clrexception.py" Name="TCLREXCE.PY" LongName="test_clrexception.py" />
                 <File Id="File_test_clrload.py" Name="TCLRLOAD.PY" LongName="test_clrload.py" />
                 <File Id="File_test_clrload2.py" Name="TCLRLD2.PY" LongName="test_clrload2.py" />
-				        <File Id="File_test_codecs.py" Name="TCODECS.PY" LongName="test_codecs.py" />
+				<File Id="File_test_codecs.py" Name="TCODECS.PY" LongName="test_codecs.py" />
                 <File Id="File_test_codedom.py" Name="TCODEDOM.PY" LongName="test_codedom.py" />
                 <File Id="File_test_cominterop.py" Name="TCOMINTE.PY" LongName="test_cominterop.py" />
                 <File Id="File_test_clrnuminterop.py" Name="TCLRNUMI.PY" LongName="test_clrnuminterop.py" />
