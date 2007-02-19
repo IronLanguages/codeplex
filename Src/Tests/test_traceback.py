@@ -21,7 +21,7 @@ _retb = (18, 0, 'test_traceback.py', '_raise_exception')
 
 from lib.assert_util import *
 from lib.file_util import *
-
+if not is_cli: import os
 def _raise_exception_with_finally():
     try:
         raise Exception()
@@ -155,8 +155,8 @@ def test_throw_when_defining_class_directly():
         assert_traceback([(LINE180 + 2, 0, FILE, 'test_throw_when_defining_class_directly'), 
         (LINE180 - 4, 0, FILE, 'throw_when_defining_class_directly'), 
         (LINE180 - 3, 0, FILE, 'C3'), _retb])
-
-LINE200 = 160    
+LINE200 = 160   
+@skip("win32") #CodePlex Work Item #8291
 def test_compiled_code():
     try:
         codeobj = compile('\nraise Exception()', '<mycode>', 'exec')
@@ -214,10 +214,10 @@ def test_throw_and_throw():
         _raise_exception()
     except:
         assert_traceback([(LINE240 + 6, 0, FILE, 'test_throw_and_throw'), _retb])
-       
-LINE250 = 219
+LINE250 = 219 
 def test_throw_in_another_file():
-    _f_file = path_combine(testpath.public_testdir, 'foo.py')
+    if is_cli: _f_file = path_combine(testpath.public_testdir, 'foo.py')
+    else: _f_file = os.getcwd() + '\\foo.py'
     write_to_file(_f_file, '''
 def another_raise():
     raise Exception()

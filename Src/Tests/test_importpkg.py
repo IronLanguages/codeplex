@@ -24,12 +24,19 @@ try:
 except ImportError: pass
 else:  Fail("should already thrown")
 
+if is_cli:
+    root_testdir = testpath.public_testdir
+else:
+    import os
+    root_testdir = os.getcwd()
+
+
 # generate test files on the fly
 _testdir    = 'ImportTestDir'
-_f_init     = path_combine(testpath.public_testdir, _testdir, '__init__.py')
-_f_error    = path_combine(testpath.public_testdir, _testdir, 'Error.py')
-_f_gen      = path_combine(testpath.public_testdir, _testdir, 'Gen.py') 
-_f_module   = path_combine(testpath.public_testdir, _testdir, 'Module.py') 
+_f_init     = path_combine(root_testdir, _testdir, '__init__.py')
+_f_error    = path_combine(root_testdir, _testdir, 'Error.py')
+_f_gen      = path_combine(root_testdir, _testdir, 'Gen.py') 
+_f_module   = path_combine(root_testdir, _testdir, 'Module.py') 
 
 write_to_file(_f_init)
 write_to_file(_f_error, 'raise AssertionError()')
@@ -311,10 +318,10 @@ Assert(sys.modules.has_key("__main__"))
 #########################################################################################
 
 _testdir        = 'ImportTestDir'
-_f_init2         = path_combine(testpath.public_testdir, _testdir, '__init__.py')
-_f_longpath     = path_combine(testpath.public_testdir, _testdir, 'longpath.py')
-_f_recursive    = path_combine(testpath.public_testdir, _testdir, 'recursive.py')
-_f_usebuiltin   = path_combine(testpath.public_testdir, _testdir, 'usebuiltin.py')
+_f_init2         = path_combine(root_testdir, _testdir, '__init__.py')
+_f_longpath     = path_combine(root_testdir, _testdir, 'longpath.py')
+_f_recursive    = path_combine(root_testdir, _testdir, 'recursive.py')
+_f_usebuiltin   = path_combine(root_testdir, _testdir, 'usebuiltin.py')
 
 write_to_file(_f_init2, '''
 import recursive
@@ -347,8 +354,8 @@ dir = 'abc'
 del(dir)
 ''')
 
-_f_pkga_init    = path_combine(testpath.public_testdir, _testdir, 'pkg_a', '__init__.py')
-_f_pkga_moda    = path_combine(testpath.public_testdir, _testdir, 'pkg_a', 'mod_a.py')
+_f_pkga_init    = path_combine(root_testdir, _testdir, 'pkg_a', '__init__.py')
+_f_pkga_moda    = path_combine(root_testdir, _testdir, 'pkg_a', 'mod_a.py')
 write_to_file(_f_pkga_init, '''
 import __builtin__
 
@@ -374,13 +381,13 @@ old_import = __builtin__.__import__
 import pkg_b.mod_b
 ''')
 
-_f_pkgb_init    = path_combine(testpath.public_testdir, _testdir, 'pkg_a', 'pkg_b','__init__.py')
-_f_pkgb_modb    = path_combine(testpath.public_testdir, _testdir, 'pkg_a', 'pkg_b','mod_b.py')
+_f_pkgb_init    = path_combine(root_testdir, _testdir, 'pkg_a', 'pkg_b','__init__.py')
+_f_pkgb_modb    = path_combine(root_testdir, _testdir, 'pkg_a', 'pkg_b','mod_b.py')
 write_to_file(_f_pkgb_init)
 write_to_file(_f_pkgb_modb, 'import pkg_c.mod_c')
 
-_f_pkgc_init    = path_combine(testpath.public_testdir, _testdir, 'pkg_a', 'pkg_b', 'pkg_c', '__init__.py')
-_f_pkgc_modc    = path_combine(testpath.public_testdir, _testdir, 'pkg_a', 'pkg_b', 'pkg_c', 'mod_c.py')
+_f_pkgc_init    = path_combine(root_testdir, _testdir, 'pkg_a', 'pkg_b', 'pkg_c', '__init__.py')
+_f_pkgc_modc    = path_combine(root_testdir, _testdir, 'pkg_a', 'pkg_b', 'pkg_c', 'mod_c.py')
 write_to_file(_f_pkgc_init)
 write_to_file(_f_pkgc_modc, '''
 import __builtin__
@@ -396,22 +403,22 @@ old_import = __builtin__.__import__
 import pkg_d.mod_d
 ''')
 
-_f_pkgd_init    = path_combine(testpath.public_testdir, _testdir, 'pkg_a', 'pkg_b', 'pkg_c', 'pkg_d', '__init__.py')
-_f_pkgd_modd    = path_combine(testpath.public_testdir, _testdir, 'pkg_a', 'pkg_b', 'pkg_c', 'pkg_d', 'mod_d.py')
+_f_pkgd_init    = path_combine(root_testdir, _testdir, 'pkg_a', 'pkg_b', 'pkg_c', 'pkg_d', '__init__.py')
+_f_pkgd_modd    = path_combine(root_testdir, _testdir, 'pkg_a', 'pkg_b', 'pkg_c', 'pkg_d', 'mod_d.py')
 write_to_file(_f_pkgd_init)
 write_to_file(_f_pkgd_modd, '''result="Success"''')
 
-_f_pkgm_init    = path_combine(testpath.public_testdir, _testdir, 'pkg_m', '__init__.py')
-_f_pkgm_moda    = path_combine(testpath.public_testdir, _testdir, 'pkg_m', 'mod_a.py')
-_f_pkgm_modb    = path_combine(testpath.public_testdir, _testdir, 'pkg_m', 'mod_b.py')
+_f_pkgm_init    = path_combine(root_testdir, _testdir, 'pkg_m', '__init__.py')
+_f_pkgm_moda    = path_combine(root_testdir, _testdir, 'pkg_m', 'mod_a.py')
+_f_pkgm_modb    = path_combine(root_testdir, _testdir, 'pkg_m', 'mod_b.py')
 write_to_file(_f_pkgm_init, 'from ImportTestDir.pkg_m.mod_b import value_b')
 write_to_file(_f_pkgm_moda, 'from ImportTestDir.pkg_m.mod_b import value_b')
 write_to_file(_f_pkgm_modb, 'value_b = "ImportTestDir.pkg_m.mod_b.value_b"')
 
-_f_pkgq_init    = path_combine(testpath.public_testdir, _testdir, 'pkg_q', '__init__.py')
-_f_pkgr_init    = path_combine(testpath.public_testdir, _testdir, 'pkg_q', 'pkg_r', '__init__.py')
-_f_pkgs_init    = path_combine(testpath.public_testdir, _testdir, 'pkg_q', 'pkg_r', 'pkg_s', '__init__.py')
-_f_pkgs_mods    = path_combine(testpath.public_testdir, _testdir, 'pkg_q', 'pkg_r', 'pkg_s', 'mod_s.py')
+_f_pkgq_init    = path_combine(root_testdir, _testdir, 'pkg_q', '__init__.py')
+_f_pkgr_init    = path_combine(root_testdir, _testdir, 'pkg_q', 'pkg_r', '__init__.py')
+_f_pkgs_init    = path_combine(root_testdir, _testdir, 'pkg_q', 'pkg_r', 'pkg_s', '__init__.py')
+_f_pkgs_mods    = path_combine(root_testdir, _testdir, 'pkg_q', 'pkg_r', 'pkg_s', 'mod_s.py')
 write_to_file(_f_pkgq_init)
 write_to_file(_f_pkgr_init)
 write_to_file(_f_pkgs_init)
@@ -440,9 +447,9 @@ def test_importwinform():
 
 @skip("win32")
 def test_copyfrompackages():
-    _f_pkg1 = path_combine(testpath.public_testdir, 'StandAlone\\Packages1.py')
-    _f_pkg2 = path_combine(testpath.public_testdir, 'StandAlone\\Packages2.py')
-    _f_mod  = path_combine(testpath.public_testdir, 'StandAlone\\ModPath\\IronPythonTest.py')
+    _f_pkg1 = path_combine(root_testdir, 'StandAlone\\Packages1.py')
+    _f_pkg2 = path_combine(root_testdir, 'StandAlone\\Packages2.py')
+    _f_mod  = path_combine(root_testdir, 'StandAlone\\ModPath\\IronPythonTest.py')
     write_to_file(_f_pkg1, '''
 import sys
 sys.path.append(sys.path[0] + '\\..')
@@ -509,9 +516,9 @@ AreEqual(id2, id3)
     
     
     _imfp    = 'impmodfrmpkg'
-    _f_imfp_init = path_combine(testpath.public_testdir, _imfp, "__init__.py")
-    _f_imfp_mod  = path_combine(testpath.public_testdir, _imfp, "mod.py")
-    _f_imfp_start = path_combine(testpath.public_testdir, "imfpstart.tpy")
+    _f_imfp_init = path_combine(root_testdir, _imfp, "__init__.py")
+    _f_imfp_mod  = path_combine(root_testdir, _imfp, "mod.py")
+    _f_imfp_start = path_combine(root_testdir, "imfpstart.tpy")
     
     write_to_file(_f_imfp_init, "")
     write_to_file(_f_imfp_mod, "")
@@ -571,10 +578,10 @@ else:
     AreEqual(launch_ironpython(_f_imfp_start), 0)
 
     _recimp = 'recimp'
-    _f_recimp_init = path_combine(testpath.public_testdir, _recimp, "__init__.py")
-    _f_recimp_a = path_combine(testpath.public_testdir, _recimp, "a.py")
-    _f_recimp_b = path_combine(testpath.public_testdir, _recimp, "b.py")
-    _f_recimp_start = path_combine(testpath.public_testdir, "recimpstart.tpy")
+    _f_recimp_init = path_combine(root_testdir, _recimp, "__init__.py")
+    _f_recimp_a = path_combine(root_testdir, _recimp, "a.py")
+    _f_recimp_b = path_combine(root_testdir, _recimp, "b.py")
+    _f_recimp_start = path_combine(root_testdir, "recimpstart.tpy")
     
     write_to_file(_f_recimp_init, "from a import *")
     write_to_file(_f_recimp_a, "import b")
@@ -584,7 +591,7 @@ else:
     AreEqual(launch_ironpython(_f_recimp_start), 0)
 
 def test_import_inside_exec():
-    _f_module = path_combine(testpath.public_testdir, 'another.py')
+    _f_module = path_combine(root_testdir, 'another.py')
     write_to_file(_f_module, 'a1, a2, a3, _a4 = 1, 2, 3, 4')
     
     d = {}
@@ -631,11 +638,11 @@ def _with_assemblies_dir():
 def test_import_compiled_module_VARIOUS_IMPORT_STMT():
     if _with_assemblies_dir(): return
     
-    _delete_compiled(testpath.public_testdir)
+    _delete_compiled(root_testdir)
 
     NUM = 10
     for x in range(NUM):
-        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, 'compiled%s.py' % x)
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(root_testdir, 'compiled%s.py' % x)
         
     write_to_file(_f_compiled0, "def f0(): return 567")
 
@@ -680,7 +687,7 @@ def test_import_compiled_module_VARIOUS_IMPORT_STMT():
 def test_import_compiled_module_NEWER_SOURCE_CAN_RUN_STANDALONE():
     if _with_assemblies_dir(): return
     
-    _delete_compiled(testpath.public_testdir)
+    _delete_compiled(root_testdir)
     _local_copy_path1 = path_combine(testpath.public_testdir, "ironpython.dll")
     _local_copy_path2 = path_combine(testpath.public_testdir, "ironmath.dll")
     
@@ -713,11 +720,11 @@ def test_import_compiled_module_NEWER_SOURCE_CAN_RUN_STANDALONE():
 def test_import_compiled_module_RECURSIVE_IMPORT(): 
     if _with_assemblies_dir(): return
 
-    _delete_compiled(testpath.public_testdir)
+    _delete_compiled(root_testdir)
     
     NUM = 5
     for x in range(NUM):
-        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, 'compiled%s.py' % x)
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(root_testdir, 'compiled%s.py' % x)
 
     write_to_file(_f_compiled0, "import compiled1\nx = 1234\ndef f0(): return compiled1.y+x")
     write_to_file(_f_compiled1, "import compiled0\ny = 5678\ndef f1(): return compiled0.x+y")
@@ -749,11 +756,11 @@ def test_import_compiled_module_RECURSIVE_IMPORT():
 def test_import_compiled_module_PACKAGE(): 
     if _with_assemblies_dir(): return
 
-    _delete_compiled(testpath.public_testdir)
+    _delete_compiled(root_testdir)
     
     compdir1, compdir2 = "compdir1", "compdir2" 
-    f1 = path_combine(testpath.public_testdir, compdir1)
-    f2 = path_combine(testpath.public_testdir, compdir2)
+    f1 = path_combine(root_testdir, compdir1)
+    f2 = path_combine(root_testdir, compdir2)
     
     if directory_exists(f1): _delete_compiled(f1)
     if directory_exists(f2): _delete_compiled(f2)
@@ -765,15 +772,15 @@ def test_import_compiled_module_PACKAGE():
     write_to_file(_f_compiled_dir2, "")
     
     for x in "a":
-        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, compdir1, 'compiled%s.py' % x)
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(root_testdir, compdir1, 'compiled%s.py' % x)
     write_to_file(_source('a'), 'a = 7654')
     
     for x in "x":
-        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, compdir2, 'compiled%s.py' % x)
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(root_testdir, compdir2, 'compiled%s.py' % x)
     write_to_file(_source('x'), 'x = 4567')
 
     for x in range(6):
-        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(testpath.public_testdir, 'compiled%s.py' % x)
+        sys.modules[__name__].__dict__["_f_compiled%s" % x] = path_combine(root_testdir, 'compiled%s.py' % x)
     write_to_file(_source(0), 'import compdir1\nimport compdir1.compileda\n')
     write_to_file(_source(1), 'import compdir1.compileda\nprint compdir1.compileda.a\nfrom compdir1.compileda import a\nprint a')
     write_to_file(_source(2), 'from compdir1 import compileda\nprint compileda.a')
