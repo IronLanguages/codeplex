@@ -528,7 +528,7 @@
                 <File Id="File_test_thread.py" Name="TTHREAD.PY" LongName="test_thread.py" />
                 <File Id="File_test_threadsafety.py" Name="TTHREADS.PY" LongName="test_threadsafety.py" />
                 <File Id="File_test_time.py" Name="TTIME.PY" LongName="test_time.py" />
-                <File Id="File_test_traceback.py" Name="TTRACEBAC.PY" LongName="test_traceback.py" />
+                <File Id="File_test_traceback.py" Name="TTRACBAC.PY" LongName="test_traceback.py" />
                 <File Id="File_test_tuple.py" Name="TTUPLE.PY" LongName="test_tuple.py" />
                 <File Id="File_test_unicode.py" Name="TUNICODE.PY" LongName="test_unicode.py" />
                 <File Id="File_test_weakref.py" Name="TWEAKREF.PY" LongName="test_weakref.py" />
