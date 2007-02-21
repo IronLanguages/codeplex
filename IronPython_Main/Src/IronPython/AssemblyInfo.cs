@@ -24,7 +24,7 @@ using System.Security;
 // associated with an assembly.
 //
 [assembly: AssemblyTitle("IronPython")]
-[assembly: AssemblyDescription("IronPython 1.1a1")]
+[assembly: AssemblyDescription("IronPython 1.1b1")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("IronPython")]
