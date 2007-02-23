@@ -477,6 +477,7 @@
                 <File Id="File_test_formatting.py" Name="TFORMATT.PY" LongName="test_formatting.py" />
                 <File Id="File_test_function.py" Name="TFUNCTIO.PY" LongName="test_function.py" />
                 <File Id="File_test_future.py" Name="TFUTURE.PY" LongName="test_future.py" />
+				<File Id="File_test_gc.py" Name="TGC.PY" LongName="test_gc.py" />
                 <File Id="File_test_generator.py" Name="TGENERAT.PY" LongName="test_generator.py" />
                 <File Id="File_test_genericmeth.py" Name="TGENERIC.PY" LongName="test_genericmeth.py" />
                 <File Id="File_test_help.py" Name="testhelp.PY" LongName="test_help.py" />
