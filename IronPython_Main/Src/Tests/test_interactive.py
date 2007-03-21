@@ -230,6 +230,13 @@ def test_partial_dicts():
     response = ipi.ExecuteLine("}")
     Assert("{'joe': 42, 3: 45}" in response)
     
+    #CodePlex Work Item 5904
+    #ipi.ExecutePartialLine("{")
+    #ipi.ExecutePartialLine("")
+    #ipi.ExecutePartialLine("")
+    #response = ipi.ExecuteLine("}")
+    #Assert("{}" in response)
+
     ipi.End()
 
 ###########################################################
