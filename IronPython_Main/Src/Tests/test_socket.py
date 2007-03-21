@@ -307,37 +307,16 @@ def test_getaddrinfo():
     
     #negative cases
     AssertError(socket.gaierror, socket.getaddrinfo, "should never work.dfkdfjkkjdfkkdfjkdjf", 0)    
-    
     #CodePlex Work Item 5445
-    #"1" is a nonsense hostname/IP address
-    #try:
-    #    socket.getaddrinfo("1", 0)    
-    #    raise Exception("Shouldn't have worked")
-    #except socket.gaierror:
-    #    pass
-    
+    #AssertError(socket.gaierror, socket.getaddrinfo, "1", 0)    
     AssertError(socket.gaierror, socket.getaddrinfo, ".", 0)    
-    
-    #CodePlex Work Item 5445
-    #IP accepts floats where ints are needed (2nd param)
-    try:
-        socket.getaddrinfo("127.0.0.1", 3.14, 0, 0, 0, 0)    
-        raise Exception("Shouldn't have worked")
-    except socket.error:
-        pass
-    
+    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 3.14, 0, 0, 0, 0)       
     AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, -1, 0, 0, 0)    
-    
-    #CodePlex Work Item 5445
-    #Socket type param (4th param) is out of range
-    try:
-        socket.getaddrinfo("127.0.0.1", 0, 0, -1, 0, 0)    
-        raise Exception("Shouldn't have worked")
-    except socket.error:
-        pass    
-    
-    #CodePlex Work Item 5446
-    #socket.getaddrinfo("127.0.0.1", 0, 0, 0, 1000000, 0)
+    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, 0, -1, 0, 0) 
+
+    socket.getaddrinfo("127.0.0.1", 0, 0, 0, 1000000, 0)
+    socket.getaddrinfo("127.0.0.1", 0, 0, 0, -1000000, 0)
+    socket.getaddrinfo("127.0.0.1", 0, 0, 0, 0, 0)
     
 def test_getnameinfo():
     '''

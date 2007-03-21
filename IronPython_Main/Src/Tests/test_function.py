@@ -714,6 +714,20 @@ def test_func_flags():
 def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)
     Assert((x.co_flags & 8192) == 8192)
+    
+    #CodePlex Work Item 5641 - test co_filename
+    names = [   "", ".", "1", "\n", " ", "@", "%^",
+                "a", "A", "Abc", "aBC", "filename.py",
+                "longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
+                """
+                stuff
+                more stuff
+                last stuff
+                """
+                ]
+    for name in names:
+        AreEqual(compile("print 2/3", name, "exec", 8192).co_filename,
+                 name)
 
 def test_filename():
     c = compile("x = 2", "test", "exec")
