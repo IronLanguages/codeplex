@@ -1299,7 +1299,7 @@ namespace IronPython.Runtime.Types {
     /// backing Hashtable as it is immutable and all keys are in ExtraKeys.
     /// </summary>
     [PythonType(typeof(Dict))]
-    public class ProxyDictionary : CustomSymbolDict {
+    public class ProxyDictionary : CustomSymbolDict, IMapping {
         private const int EXPANSION = 2;
 
         private int[] symbols;
@@ -1372,5 +1372,38 @@ namespace IronPython.Runtime.Types {
         public static object fromkeys(DynamicType cls, object seq, object value) {
             return Dict.FromKeys(cls, seq, value);
         }
+
+        #region IMapping Members
+
+        object IMapping.this[object key] {
+            get {
+                string str;
+                if (Converter.TryConvertToString(key, out str)) {
+                    return this[SymbolTable.StringToId(str)];
+                }
+                throw Ops.KeyError("'{0}'", key);
+            }
+            set {
+                throw Ops.TypeError("can't set '{0}' in dictproxy", key.ToString());
+            }
+        }
+
+        void IMapping.DeleteItem(object key) {
+            throw Ops.TypeError("can't delete '{0}' from dictproxy", key.ToString());
+        }
+
+        #endregion
+
+        #region IPythonContainer Members
+
+        int IPythonContainer.GetLength() {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        bool IPythonContainer.ContainsValue(object value) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        #endregion
     }
 }

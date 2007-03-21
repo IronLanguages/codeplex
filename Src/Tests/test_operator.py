@@ -565,4 +565,7 @@ def test_sanity():
     operator.__setslice__(t_list, 0, 0, [9])
     AreEqual(t_list, [9,1, 2,3])
 
+def test_contains():
+    AreEqual(operator.__contains__("abc", "c"), True)
+
 run_test(__name__)

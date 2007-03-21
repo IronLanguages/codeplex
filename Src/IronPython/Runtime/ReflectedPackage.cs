@@ -355,8 +355,10 @@ namespace IronPython.Runtime {
         }
 
         internal static Type[] LoadTypesFromAssembly(Assembly asm) {
-            if (asm is System.Reflection.Emit.AssemblyBuilder) {
-                // assembly builders don't support GetExportedTypes, always call GetTypes on them.
+            try {
+                return Compiler.Options.PrivateBinding ? asm.GetTypes() : asm.GetExportedTypes();
+            } catch (NotSupportedException) {
+                // AssemblyBuilders don't support GetExportedTypes
                 if (!Compiler.Options.PrivateBinding) {
                     return Array.FindAll(asm.GetTypes(), delegate(Type t) {
                         return t.IsPublic;
@@ -364,7 +366,6 @@ namespace IronPython.Runtime {
                 }
                 return asm.GetTypes();
             }
-            return Compiler.Options.PrivateBinding ? asm.GetTypes() : asm.GetExportedTypes();
         }
 
         #endregion

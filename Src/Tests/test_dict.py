@@ -779,6 +779,5 @@ def test_contains():
     AreEqual("nothing" in md, False)
     AreEqual("stuff" in md, True)
     AreEqual(ContainsDict.was_called, True)
-    
 
 run_test(__name__)

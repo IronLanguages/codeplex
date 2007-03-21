@@ -258,6 +258,10 @@ def test_getaddrinfo():
             ("127.0.0.1", 0, 0, 0, 0, 1) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
     }
     
+    tmp = socket.getaddrinfo("127.0.0.1", 0, 0, 0, -100000, 0)
+    tmp = socket.getaddrinfo("127.0.0.1", 0, 0, 0, 100000, 0)
+    tmp = socket.getaddrinfo("127.0.0.1", 0, 0, 0, 0, 0)
+
     #just try them as-is
     for params,value in joe.iteritems():
         addrinfo = socket.getaddrinfo(*params)
@@ -316,21 +320,21 @@ def test_getaddrinfo():
     
     #CodePlex Work Item 5445
     #IP accepts floats where ints are needed (2nd param)
-    #try:
-    #    socket.getaddrinfo("127.0.0.1", 3.14, 0, 0, 0, 0)    
-    #    raise Exception("Shouldn't have worked")
-    #except socket.error:
-    #    pass
+    try:
+        socket.getaddrinfo("127.0.0.1", 3.14, 0, 0, 0, 0)    
+        raise Exception("Shouldn't have worked")
+    except socket.error:
+        pass
     
     AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, -1, 0, 0, 0)    
     
     #CodePlex Work Item 5445
     #Socket type param (4th param) is out of range
-    #try:
-    #    socket.getaddrinfo("127.0.0.1", 0, 0, -1, 0, 0)    
-    #    raise Exception("Shouldn't have worked")
-    #except socket.error:
-    #    pass    
+    try:
+        socket.getaddrinfo("127.0.0.1", 0, 0, -1, 0, 0)    
+        raise Exception("Shouldn't have worked")
+    except socket.error:
+        pass    
     
     #CodePlex Work Item 5446
     #socket.getaddrinfo("127.0.0.1", 0, 0, 0, 1000000, 0)

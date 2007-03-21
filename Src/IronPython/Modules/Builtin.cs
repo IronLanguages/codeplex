@@ -267,7 +267,9 @@ namespace IronPython.Modules {
             } else {
                 throw Ops.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
             }
-            return new FunctionCode(compiledCode, cflags);
+            FunctionCode res = new FunctionCode(compiledCode, cflags);
+            res.SetFilename(filename);
+            return res;
         }
 
         [PythonName("compile")]
@@ -653,7 +655,27 @@ namespace IronPython.Modules {
                 if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}\n\n", pf.Name, pf.Module.ModuleName);
 
                 AppendIndent(doc, indent);
-                doc.AppendFormat("{0}({1})\n", pf.Name, String.Join(", ", pf.ArgNames));
+                FunctionCode fc = pf.FunctionCode as FunctionCode;
+
+                int specialCnt = 0;
+                if ((fc.Flags & (int)FunctionCode.FuncCodeFlags.VarArgs) != 0) specialCnt++;
+                if ((fc.Flags & (int)FunctionCode.FuncCodeFlags.KwArgs) != 0) specialCnt++;
+
+                doc.Append(pf.Name);
+                doc.Append('(');
+                doc.Append(String.Join(", ", pf.ArgNames, 0, pf.ArgNames.Length - specialCnt));
+                if ((fc.Flags & (int)FunctionCode.FuncCodeFlags.VarArgs) != 0) {
+                    if (pf.ArgNames.Length - specialCnt != 0) doc.Append(", ");
+                    doc.Append('*');
+                    doc.Append(pf.ArgNames[pf.ArgNames.Length - specialCnt]);
+                }
+                if ((fc.Flags & (int)FunctionCode.FuncCodeFlags.KwArgs) != 0) {
+                    if (pf.ArgNames.Length - 1 != 0) doc.Append(", ");
+                    doc.Append("**");
+                    doc.Append(pf.ArgNames[pf.ArgNames.Length-1]);
+                }
+                doc.Append(")\n");
+
                 string pfDoc = Converter.ConvertToString(pf.Documentation);
                 if (!String.IsNullOrEmpty(pfDoc)) {
                     AppendMultiLine(doc, pfDoc, indent);

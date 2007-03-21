@@ -39,6 +39,7 @@ namespace IronPython.Compiler {
         private ExternalLineMapping savedExternal;
         private Stack<FunctionDefinition> functions;
         private bool fromFutureAllowed = true;
+        private bool allowingIncomplete;
         private string privatePrefix;
 
 
@@ -1674,7 +1675,7 @@ namespace IronPython.Compiler {
                     ret.SetLoc(GetExternal(), start, GetEnd());
                     return ret;
                 default:
-                    ReportSyntaxError(t, ErrorCodes.SyntaxError, false);
+                    ReportSyntaxError(t, ErrorCodes.SyntaxError, allowingIncomplete);
 
                     // error node
                     ret = new ErrorExpression();
@@ -2165,22 +2166,29 @@ namespace IronPython.Compiler {
             Location oEnd = GetEnd();
 
             List<SliceExpression> l = new List<SliceExpression>();
-            while (true) {
-                if (MaybeEat(TokenKind.RightBrace)) {
-                    break;
-                }
-                Expression e1 = ParseTest();
-                Eat(TokenKind.Colon);
-                Expression e2 = ParseTest();
-                SliceExpression se = new SliceExpression(e1, e2, null);
-                se.SetLoc(GetExternal(), e1.Start, e2.End);
-                l.Add(se);
+            bool prevAllow = allowingIncomplete;
+            try {
+                allowingIncomplete = true;
+                while (true) {
+                    if (MaybeEat(TokenKind.RightBrace)) {
+                        break;
+                    }
+                    Expression e1 = ParseTest();
+                    Eat(TokenKind.Colon);
+                    Expression e2 = ParseTest();
+                    SliceExpression se = new SliceExpression(e1, e2, null);
+                    se.SetLoc(GetExternal(), e1.Start, e2.End);
+                    l.Add(se);
 
-                if (!MaybeEat(TokenKind.Comma)) {
-                    Eat(TokenKind.RightBrace);
-                    break;
+                    if (!MaybeEat(TokenKind.Comma)) {
+                        Eat(TokenKind.RightBrace);
+                        break;
+                    }
                 }
+            } finally {
+                allowingIncomplete = prevAllow;
             }
+
             Location cStart = GetStart();
             Location cEnd = GetEnd();
 

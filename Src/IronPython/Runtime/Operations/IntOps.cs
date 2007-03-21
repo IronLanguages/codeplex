@@ -210,11 +210,29 @@ namespace IronPython.Runtime.Operations {
         public static object Make(DynamicType cls, string s, int radix) {
             ValidateType(cls);
 
+            // radix 16 allows a 0x preceding it... We either need a whole new
+            // integer parser, or special case it here.
+            if (radix == 16) {
+                s = TrimRadix(s);
+            }
+
             //try {
                 return LiteralParser.ParseIntegerSign(s, radix);
             /*} catch (ArgumentException e) {
                 throw Runtime.Exceptions.ExceptionConverter.UpdateForRethrow(Ops.ValueError(e.Message));
             }*/
+        }
+
+        internal static string TrimRadix(string s) {
+            for (int i = 0; i < s.Length; i++) {
+                if (Char.IsWhiteSpace(s[i])) continue;
+
+                if (s[i] == '0' && i < s.Length - 1 && s[i + 1] == 'x') {
+                    s = s.Substring(i + 2);
+                }
+                break;
+            }
+            return s;
         }
 
         [PythonName("__new__")]

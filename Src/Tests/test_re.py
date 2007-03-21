@@ -72,7 +72,7 @@ def test_sanity_re():
     AreEqual(re.split("(abc){1}", "abcxyz"), ['', 'abc', 'xyz'])
     AreEqual(re.split("(abc){1}", "abc", 0), ['', 'abc', ''])
     #CodePlex Work Item 6265
-    #AreEqual(re.split("(abc){1}", "abc", maxsplit=0), ['', 'abc', ''])
+    AreEqual(re.split("(abc){1}", "abc", maxsplit=0), ['', 'abc', ''])
     
     #findall
     AreEqual(re.findall("(abc){1}", ""), [])

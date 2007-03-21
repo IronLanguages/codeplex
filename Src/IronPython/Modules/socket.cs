@@ -697,7 +697,6 @@ namespace IronPython.Modules {
 
         #region Public API
 
-        [Documentation("")]
         [PythonName("getaddrinfo")]
         public static List GetAddrInfo(
             string host,
@@ -707,26 +706,27 @@ namespace IronPython.Modules {
             [DefaultParameterValue((int)ProtocolType.IP)] int proto,
             [DefaultParameterValue((int)SocketFlags.None)] int flags
         ) {
-            int numericPort;
-            /* Disabled because GetServiceByName is not implemented
-            string serviceName;
-            if (port == null) {
-                numericPort = 0;
-            } else if (Converter.TryConvertToInt32(port, out numericPort)) {
-                // nop
-            } else if (Converter.TryConvertToString(port, out serviceName)) {
-                numericPort = GetServiceByName(serviceName, null);
-            }
-            */
+            int numericPort = 0;
 
-            if (!Converter.TryConvertToInt32(port, out numericPort)) {
+            string sport;
+            if (port is int) {
+                numericPort = (int)port;
+            } else if ((sport = port as string) != null) {
+                if (!Int32.TryParse(sport, out numericPort)) {
+                    // Disabled because GetServiceByName is not implemented
+                    // numericPort = GetServiceByName(sport, null);
+                    throw MakeException(gaierror, "getaddrinfo - invalid port string");
+                }
+            } else if (port == null) {
                 numericPort = 0;
+            } else {
+                throw MakeException(gaierror, "getaddrinfo - invalid port, expected int or str");
             }
 
             if (socktype != 0) {
                 // we just use this to validate; socketType isn't actually used
                 System.Net.Sockets.SocketType socketType = (System.Net.Sockets.SocketType)Enum.ToObject(typeof(System.Net.Sockets.SocketType), socktype);
-                if (!Enum.IsDefined(typeof(System.Net.Sockets.SocketType), socketType)) {
+                if (socketType == System.Net.Sockets.SocketType.Unknown || !Enum.IsDefined(typeof(System.Net.Sockets.SocketType), socketType)) {
                     throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.SocketNotSupported, "getaddrinfo failed"));
                 }
             }
@@ -735,9 +735,6 @@ namespace IronPython.Modules {
             if (!Enum.IsDefined(typeof(AddressFamily), addressFamily)) {
                 throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.AddressFamilyNotSupported, "getaddrinfo failed"));
             }
-
-            // Again, we just validate, but don't actually use protocolType
-            ProtocolType protocolType = (ProtocolType)Enum.ToObject(typeof(ProtocolType), proto);
 
             IPAddress[] ips = HostToAddresses(host, addressFamily);
 
@@ -1441,6 +1438,9 @@ namespace IronPython.Modules {
                 IPAddress addr;
                 if (IPAddress.TryParse(host, out addr)) {
                     if (family == AddressFamily.Unspecified || family == addr.AddressFamily) {
+                        if (family == AddressFamily.InterNetwork && host.Split('.').Length != 4)
+                            throw MakeException(gaierror, "getaddrinfo failed - incorrect address format");
+
                         return new IPAddress[] { addr };
                     }
                     // Incorrect family will raise exception below

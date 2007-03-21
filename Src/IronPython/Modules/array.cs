@@ -24,6 +24,7 @@ using IronPython.Runtime.Operations;
 using System.Diagnostics;
 using System.IO;
 using IronPython.Runtime.Calls;
+using IronMath;
 
 [assembly: PythonModule("array", typeof(IronPython.Modules.ArrayModule))]
 
@@ -56,10 +57,10 @@ namespace IronPython.Modules {
                     case 'u': data = new ArrayData<char>(); break;
                     case 'h': data = new ArrayData<short>(); break;
                     case 'H': data = new ArrayData<ushort>(); break;
+                    case 'l':
                     case 'i': data = new ArrayData<int>(); break;
+                    case 'L':
                     case 'I': data = new ArrayData<uint>(); break;
-                    case 'l': data = new ArrayData<long>(); break;
-                    case 'L': data = new ArrayData<ulong>(); break;
                     case 'f': data = new ArrayData<float>(); break;
                     case 'd': data = new ArrayData<double>(); break;
                     default:
@@ -284,7 +285,23 @@ namespace IronPython.Modules {
             public virtual object this[int index] {
                 [PythonName("__getitem__")]
                 get {
-                    return data.GetData(Ops.FixIndex(index, data.Length));
+                    object val = data.GetData(Ops.FixIndex(index, data.Length));
+                    switch (TypeCode) {
+                        case 'b': return (int)(sbyte)val; 
+                        case 'B': return (int)(byte)val; 
+                        case 'c':
+                        case 'u': return new string((char)val, 1);
+                        case 'h': return (int)(short)val; 
+                        case 'H': return (int)(ushort)val;
+                        case 'l': return BigInteger.Create((int)val);
+                        case 'i': return val;
+                        case 'L': return BigInteger.Create((uint)val);
+                        case 'I': return (int)(uint)val;
+                        case 'f': return (double)(float)val;
+                        case 'd': return val; 
+                        default:
+                            throw Ops.ValueError("Bad type code (expected one of 'c', 'b', 'B', 'u', 'H', 'h', 'i', 'I', 'l', 'L', 'f', 'd')");
+                    }
                 }
                 [PythonName("__setitem__")]
                 set {
@@ -507,10 +524,10 @@ namespace IronPython.Modules {
                         case 'u': bw.Write((char)data.GetData(i)); break;
                         case 'h': bw.Write((short)data.GetData(i)); break;
                         case 'H': bw.Write((ushort)data.GetData(i)); break;
+                        case 'l':
                         case 'i': bw.Write((int)data.GetData(i)); break;
+                        case 'L':
                         case 'I': bw.Write((uint)data.GetData(i)); break;
-                        case 'l': bw.Write((long)data.GetData(i)); break;
-                        case 'L': bw.Write((ulong)data.GetData(i)); break;
                         case 'f': bw.Write((float)data.GetData(i)); break;
                         case 'd': bw.Write((double)data.GetData(i)); break;
                     }                    
@@ -532,9 +549,9 @@ namespace IronPython.Modules {
                         case 'h': value = br.ReadInt16(); break;
                         case 'H': value = br.ReadUInt16(); break;
                         case 'i': value = br.ReadInt32(); break;
-                        case 'I': value = br.ReadUInt32(); break;
-                        case 'l': value = br.ReadInt64(); break;
-                        case 'L': value = br.ReadUInt64(); break;
+                        case 'I': value = br.ReadUInt32(); break;                            
+                        case 'l': value = br.ReadInt32(); break;
+                        case 'L': value = br.ReadUInt32(); break;
                         case 'f': value = br.ReadSingle(); break;
                         case 'd': value = br.ReadDouble(); break;
                         default: throw new InvalidOperationException(); // should never happen
@@ -695,7 +712,7 @@ namespace IronPython.Modules {
                 for (int i = 0; i < data.Length; i++) {
                     if (TypeCode == 'c') sb.Append((char)data.GetData(i));
                     else {
-                        sb.Append(Ops.Repr(data.GetData(i)).ToString());
+                        sb.Append(Ops.Repr(this[i]).ToString());
                         sb.Append(", ");
                     }
                 }

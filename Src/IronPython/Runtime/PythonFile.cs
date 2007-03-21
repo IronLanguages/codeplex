@@ -1025,6 +1025,17 @@ namespace IronPython.Runtime {
             PythonFileManager.Remove(this);
         }
 
+        [PythonVersion(2, 5), PythonName("__enter__")]
+        public object Enter() {
+            ThrowIfClosed();
+            return this;
+        }
+
+        [PythonVersion(2, 5), PythonName("__exit__")]
+        public void Exit(params object [] excinfo) {
+            Close();
+        }
+
         [PythonName("close")]
         public virtual object Close() {
             Dispose(true);

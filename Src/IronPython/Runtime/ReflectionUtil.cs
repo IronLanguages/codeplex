@@ -371,8 +371,15 @@ namespace IronPython.Runtime {
                 }
 
                 if (needComma) ret.Append(", ");
-                ret.Append(GetPythonTypeName(pi.ParameterType));
-                ret.Append(" ");
+
+                if (pi.IsDefined(typeof(ParamArrayAttribute), false)) { 
+                    ret.Append("*"); 
+                } else if (pi.IsDefined(typeof(ParamDictAttribute), false)) { 
+                    ret.Append("**"); 
+                } else {
+                    ret.Append(GetPythonTypeName(pi.ParameterType));
+                    ret.Append(" ");
+                }
                 ret.Append(pi.Name);
                 needComma = true;
             }
