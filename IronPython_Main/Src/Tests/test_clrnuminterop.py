@@ -26,11 +26,7 @@ TODO:
 '''
 
 from lib.assert_util import *
-
-if is_cli==False:
-    from sys import exit
-    exit(0)
-    
+   
 import System
 import clr
       
@@ -59,6 +55,123 @@ py_float_types   = ["float"]
 #TODO - special case complex???
 py_types = py_integer_types + py_float_types
 
+bug_operands = []
+unsupported_operands = [                                                  
+                         "System.Decimal+long",
+                         "long+System.Decimal",
+                         "System.Decimal-long",
+                         "long-System.Decimal",
+                         "System.Decimal*long",
+                         "long*System.Decimal",
+                         
+                         "System.Decimal/System.Double",
+                         "System.Decimal/long",
+                         "System.Decimal/float",
+                         "System.Double/System.Decimal",
+                         "long/System.Decimal",
+                         "float/System.Decimal",
+                                                  
+                         "System.Decimal//System.Byte", 
+                         "System.Decimal//System.SByte", 
+                         "System.Decimal//System.Int16", 
+                         "System.Decimal//System.UInt16", 
+                         "System.Decimal//System.Int32", 
+                         "System.Decimal//System.UInt32", 
+                         "System.Decimal//System.Int64", 
+                         "System.Decimal//System.UInt64", 
+                         "System.Decimal//System.Decimal", 
+                         "System.Decimal//int", 
+                         "System.Decimal//long",
+                         "System.Byte//System.Decimal",
+                         "System.SByte//System.Decimal",
+                         "System.Int16//System.Decimal",
+                         "System.UInt16//System.Decimal",
+                         "System.Int32//System.Decimal",
+                         "System.UInt32//System.Decimal",
+                         "System.Int64//System.Decimal",
+                         "System.UInt64//System.Decimal",
+                         "System.Decimal//System.Decimal",
+                         "int//System.Decimal",
+                         "long//System.Decimal",
+                         
+                         "System.Decimal**System.Byte", 
+                         "System.Decimal**System.SByte", 
+                         "System.Decimal**System.Int16", 
+                         "System.Decimal**System.UInt16", 
+                         "System.Decimal**System.Int32", 
+                         "System.Decimal**System.UInt32", 
+                         "System.Decimal**System.Int64", 
+                         "System.Decimal**System.UInt64", 
+                         "System.Decimal**System.Decimal", 
+                         "System.Decimal**System.Double", 
+                         "System.Decimal**int", 
+                         "System.Decimal**long",
+                         "System.Decimal**float", 
+                         "System.Byte**System.Decimal",
+                         "System.SByte**System.Decimal",
+                         "System.Int16**System.Decimal",
+                         "System.UInt16**System.Decimal",
+                         "System.Int32**System.Decimal",
+                         "System.UInt32**System.Decimal",
+                         "System.Int64**System.Decimal",
+                         "System.UInt64**System.Decimal",
+                         "System.Decimal**System.Decimal",
+                         "System.Double**System.Decimal",
+                         "int**System.Decimal",
+                         "long**System.Decimal",
+                         "float**System.Decimal",
+                         
+                         "System.Decimal%long",
+                         "long%System.Decimal",
+                            ] + bug_operands
+
+#CodePlex Work Item  5682
+known_bugs =   [
+                "System.Single<=System.Byte",
+                "System.Single<=System.SByte",
+                "System.Single<=System.Int16",
+                "System.Single<=System.UInt16",
+                "System.Single<=System.Int32",
+                "System.Single<=System.UInt32",
+                "System.Single<=System.Int64",
+                "System.Single<=System.UInt64",
+                "System.Single<=int",
+                "System.Single<=long",
+                
+                "System.Single>=System.Byte",
+                "System.Single>=System.SByte",
+                "System.Single>=System.Int16",
+                "System.Single>=System.UInt16",
+                "System.Single>=System.Int32",
+                "System.Single>=System.UInt32",
+                "System.Single>=System.Int64",
+                "System.Single>=System.UInt64",
+                "System.Single>=int",
+                "System.Single>=long",
+                
+                "System.Single<System.Byte",
+                "System.Single<System.SByte",
+                "System.Single<System.Int16",
+                "System.Single<System.UInt16",
+                "System.Single<System.Int32",
+                "System.Single<System.UInt32",
+                "System.Single<System.Int64",
+                "System.Single<System.UInt64",
+                "System.Single<int",
+                "System.Single<long",
+                
+                "System.Single>System.Byte",
+                "System.Single>System.SByte",
+                "System.Single>System.Int16",
+                "System.Single>System.UInt16",
+                "System.Single>System.Int32",
+                "System.Single>System.UInt32",
+                "System.Single>System.Int64",
+                "System.Single>System.UInt64",
+                "System.Single>int",
+                "System.Single>long",
+               ]
+
 #------------------------------------------------------------------------------
 def num_ok_for_type(number, proposed_type):
     '''
@@ -77,12 +190,15 @@ def num_ok_for_type(number, proposed_type):
         return True
     return False
             
-            
+
 #------------------------------------------------------------------------------
 def _test_interop_set(clr_types, py_types, test_cases):
     '''
     Helper function which permutes Python/CLR types onto test cases
     '''
+    global unsupported_operands
+    global known_bugs
+    
     #each test case
     for leftop, op, rightop, expected_value in test_cases:
         
@@ -121,19 +237,25 @@ def _test_interop_set(clr_types, py_types, test_cases):
             without blowing up the rest of the test.
             '''
             expression_str = left_type + "("+ left_op +") " + str(op) + " " + right_type + "("+ right_op +")"
+            
+            #if it's supposedly unsupported...make sure
+            if unsupported_operands.count(left_type + op + right_type)>0: 
+                AssertError(TypeError, eval, expression_str)
+                return
+                
             try:
                 expression = eval(expression_str)
             except TypeError, e:
                 print "TYPE BUG:", expression_str
-                return
-
-            #CodePlex Work Item 5682
-            #TODO: once 5682 gets closed, remove the try/except clause here.                
+                raise
+            
             try:
                 AreEqual(expression, expected)
-            except AssertionError, e:
-                print "ASSERTION BUG:", expression_str, ";  EXPECTED:", str(expected)
-                return
+            except:
+                if known_bugs.count(left_type + op + right_type)>0:
+                    return
+                raise
+            
             
         #CLR-CLR           
         for x in leftop_clr_types:
