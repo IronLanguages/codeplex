@@ -433,6 +433,15 @@ try:
 finally:
     pass
 
+
+#CodePlex Work Item 7982
+#Just make sure these don't throw
+print "^L"
+temp = 7
+print temp        
+
+print "No ^L's..."
+
 # keep this at the end of the file, do not insert anything below this line
 
 def endoffile():
