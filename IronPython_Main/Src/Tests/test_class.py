@@ -1547,6 +1547,16 @@ def test_slots_multiple():
         __slots__=()
     C().x = "hello"
     
+def test_override_container_methods():
+    for x in (dict, list, tuple):
+        class C(x):
+            def __len__(self): return 42
+            def __contains__(self, other): 
+                return other == "abc"
+            
+        AreEqual(len(C()), 42)
+        AreEqual('abc' in C(), True)
+        
 def test_dictproxy_access():
     def f():
         int.__dict__[0] = 0

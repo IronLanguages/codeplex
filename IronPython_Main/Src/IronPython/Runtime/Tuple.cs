@@ -136,15 +136,11 @@ namespace IronPython.Runtime {
 
         #region ISequence Members
         [PythonName("__len__")]
-        public int GetLength() {
+        public virtual int GetLength() {
             return data.Length;
         }
 
         [PythonName("__contains__")]
-        public object ContainsValueWrapper(object item) {
-            return Ops.Bool2Object(ContainsValue(item));
-        }
-
         public virtual bool ContainsValue(object item) {
             return ArrayOps.Contains(data, data.Length, item);
         }
