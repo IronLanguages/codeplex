@@ -71,7 +71,6 @@ def test_sanity_re():
     AreEqual(re.split("(abc){1}", ""), [''])
     AreEqual(re.split("(abc){1}", "abcxyz"), ['', 'abc', 'xyz'])
     AreEqual(re.split("(abc){1}", "abc", 0), ['', 'abc', ''])
-    #CodePlex Work Item 6265
     AreEqual(re.split("(abc){1}", "abc", maxsplit=0), ['', 'abc', ''])
     
     #findall
@@ -148,8 +147,7 @@ def test_sanity_re_pattern():
     AreEqual(pattern.split(""), [''])
     AreEqual(pattern.split("abcxyz"), ['', 'abc', 'xyz'])
     AreEqual(pattern.split("abc", 0), ['', 'abc', ''])
-    #CodePlex Work Item 6265
-    #AreEqual(pattern.split("abc", maxsplit=0), ['', 'abc', ''])
+    AreEqual(pattern.split("abc", maxsplit=0), ['', 'abc', ''])
     
     #findall
     AreEqual(pattern.findall(""), [])
