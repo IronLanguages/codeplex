@@ -209,12 +209,12 @@ namespace IronPython.Runtime {
         #region IPythonContainer Members
 
         [PythonName("__len__")]
-        public int GetLength() {
+        public virtual int GetLength() {
             return DictOps.Length(this);
         }
 
         [PythonName("__contains__")]
-        public bool ContainsValue(object value) {
+        public virtual bool ContainsValue(object value) {
             return DictOps.Contains(this, value);
         }
 
@@ -463,7 +463,7 @@ namespace IronPython.Runtime {
         }
 
         int ICollection.Count {
-            get { return data.Count; }
+            get { return GetLength(); }
         }
 
         bool ICollection.IsSynchronized {
