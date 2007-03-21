@@ -13,6 +13,7 @@
 #
 ######################################################################################
 
+
 from lib.assert_util import *
 items = 0
 
@@ -814,5 +815,21 @@ def test_stdtypes_dict():
                 #CodePlex Work Item 8892
                 if temp_key==None: continue
                 raise e
+    
+#CodePlex Work Item 5712    
+def test_main_dict():
+    import __main__
+    #just make sure this doesn't throw...
+    t_list = []
+    for w in __main__.__dict__: t_list.append(w)
+    
+    #CodePlex Work Item 8961
+    if not is_cli:
+        t_list.sort()
+        g_list = globals().keys()
+        g_list.sort()
+        AreEqual(t_list, g_list)
+    
+    
         
 run_test(__name__)

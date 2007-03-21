@@ -53,39 +53,28 @@ globals().Add(temp)
 lib.assert_util.AreEqual(globals()["d"], int(3))
     
 #--Keys
-temp = [x for x in globals().Keys]
+temp = [temp for temp in globals().Keys]
 temp.sort()
 lib.assert_util.AreEqual(temp,
                          ['System', '__builtins__', '__name__', 'a', 'assert_util', 'b', 'c', 'd', 'gc', 'lib', 'sys', 'temp'])
     
 
-#CodePlex Work Item 6706
-#This affects non-hosted environments as well.
-#For now just ensure this does not throw
-globals().Values
 #--Values
-#temp = [x for x in globals().Values if callable(x)==False]
-#temp.sort()
-#lib.assert_util.AreEqual(temp, 
-#         [None, None, 2, 3, 'blah', 'optimo', 'temp_opt_model.py'])
+temp = [temp for temp in globals().Values ]
+temp.sort()
+lib.assert_util.AreEqual(temp.count(2), 1)
+lib.assert_util.AreEqual(temp.count(None), 1)
+lib.assert_util.AreEqual(temp.count('blah'), 1)
+lib.assert_util.AreEqual(temp.count(3), 1)
+lib.assert_util.AreEqual(temp.count('defaultModule'), 1)
+lib.assert_util.AreEqual(len(temp), 12)
 
-#CodePlex Work Item 6706
-#This affects non-hosted environments as well.
-#For now just ensure this does not throw
-globals().GetEnumerator()
+
 #--GetEnumerator
-#ator = globals().GetEnumerator()
-#temp = [ele.Key for ele in ator]
-#temp.sort()
-#lib.assert_util.AreEqual(temp,
-#         ['System', '__builtins__', '__name__', 'a', 'assert_util', 'b', 'c', 'd', 'gc', 'lib', 'sys', 'temp'])
-
-#CodePlex Work Item 6706
-#ator = globals().GetEnumerator()
-#temp = [ele.Value for ele in ator if callable(ele.Value)==False]
-#temp.sort()
-#lib.assert_util.AreEqual(temp,
-#         [None, None, 2, 3, 'blah', 'optimo', 'temp_opt_model.py'])
+temp = [temp for temp in globals().GetEnumerator()]
+temp.sort()
+lib.assert_util.AreEqual(temp,
+         ['System', '__builtins__', '__name__', 'a', 'assert_util', 'b', 'c', 'd', 'gc', 'lib', 'sys', 'temp'])
       
 #--Contains
 temp = System.Collections.Generic.KeyValuePair[object,object]("b", None)
@@ -140,7 +129,7 @@ lib.assert_util.AreEqual(globals().ContainsObjectKey(1), False)
 #lib.assert_util.AreEqual(globals().fromkeys([1, 2]), {1: None, 2: None})
     
 #--Count
-lib.assert_util.AreEqual(globals().Count, 13)
+lib.assert_util.AreEqual(globals().Count, 12)
 
 
 #--IsReadOnly
