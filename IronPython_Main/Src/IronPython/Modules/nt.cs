@@ -138,7 +138,7 @@ namespace IronPython.Modules {
 
         [PythonName("mkdir")]
         public static void MakeDirectory(string path) {
-            if (Directory.Exists(path)) throw Ops.IOError("directory already exists");
+            if (Directory.Exists(path)) throw Ops.OSError("directory already exists");
 
             try {
                 Directory.CreateDirectory(path);
@@ -149,7 +149,7 @@ namespace IronPython.Modules {
 
         [PythonName("mkdir")]
         public static void MakeDirectory(string path, int mode) {
-            if (Directory.Exists(path)) throw Ops.IOError("directory already exists");
+            if (Directory.Exists(path)) throw Ops.OSError("directory already exists");
             // we ignore mode
 
             try {

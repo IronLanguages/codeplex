@@ -120,6 +120,7 @@ namespace IronPython.Runtime.Exceptions {
                     new ExceptionMapping("OverflowWarning",typeof(PythonOverflowWarningException)),
                     new ExceptionMapping("RuntimeWarning",typeof(PythonRuntimeWarningException)),
                     new ExceptionMapping("FutureWarning",typeof(PythonFutureWarningException)),
+                    new ExceptionMapping("ImportWarning",typeof(PythonImportWarningException)),
                 }),
             })            
         };
@@ -194,7 +195,7 @@ namespace IronPython.Runtime.Exceptions {
             ExceptionInit(new Tuple(false, new object[] { self, encoding, @object, start, end, reason }));
 
             Ops.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("encoding"), encoding);
-            Ops.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("@object"), @object);
+            Ops.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("object"), @object);
             Ops.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("start"), start);
             Ops.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("end"), end);
             Ops.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("reason"), reason);

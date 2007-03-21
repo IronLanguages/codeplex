@@ -24,11 +24,14 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using System.Security;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {
     [PythonType("thread")]
     public static class PythonThread {
+        private static int stackSize;
+
         #region Public API Surface
         public static object LockType = Ops.GetDynamicTypeFromType(typeof(Lock));
         public static object error = ExceptionConverter.CreatePythonException("error", "thread");
@@ -52,7 +55,14 @@ namespace IronPython.Modules {
             Tuple tupArgs = args as Tuple;
             if (tupArgs == null) throw Ops.TypeError("2nd arg must be a tuple");
 
-            Thread t = new Thread(new ThreadObj(context, function, tupArgs, null).Start);
+
+            Thread t;
+            if (stackSize != 0) {
+                t = new Thread(new ThreadObj(context, function, tupArgs, null).Start, stackSize);
+            } else {
+                t = new Thread(new ThreadObj(context, function, tupArgs, null).Start);
+            }
+            
             t.Start();
 
             return t.ManagedThreadId;
@@ -80,6 +90,19 @@ namespace IronPython.Modules {
             return Thread.CurrentThread.ManagedThreadId;
         }
 
+        [PythonName("stack_size")]
+        public static int StackSize() {
+            return stackSize;
+        }
+
+        [PythonName("stack_size")]
+        public static int StackSize(int size) {
+            if (size < 256 * 1024) throw Ops.ValueError("size too small: {0}", size);
+
+            stackSize = size;
+            return stackSize;
+        }
+
         // deprecated synonyms, wrappers over preferred names...
         [Documentation("start_new(function, [args, [kwDict]]) -> thread id\nCreates a new thread running the given function")]
         [PythonName("start_new")]
@@ -103,6 +126,17 @@ namespace IronPython.Modules {
         public class Lock {
             AutoResetEvent blockEvent;
             Thread curHolder;
+
+            [PythonVersion(2, 5), PythonName("__enter__")]
+            public object Enter() {
+                Acquire();
+                return this;
+            }
+
+            [PythonVersion(2, 5), PythonName("__exit__")]
+            public void Exit(params object []args){
+                Release();
+            }
 
             [PythonName("acquire")]
             public object Acquire() {

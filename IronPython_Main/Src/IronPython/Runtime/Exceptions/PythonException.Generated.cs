@@ -159,6 +159,15 @@ namespace IronPython.Runtime.Exceptions {
     }
 
 
+    [PythonType("ImportWarning")]
+    [Serializable]
+    public class PythonImportWarningException : PythonWarningException {
+        public PythonImportWarningException() : base() { }
+        public PythonImportWarningException(string msg) : base(msg) { }
+        public PythonImportWarningException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
+
     [PythonType("RuntimeWarning")]
     [Serializable]
     public class PythonRuntimeWarningException : PythonWarningException {

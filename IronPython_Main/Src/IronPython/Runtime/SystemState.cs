@@ -36,6 +36,7 @@ namespace IronPython.Runtime {
 
     [PythonType(typeof(PythonModule))]
     public class SystemState : ICustomAttributes, IDisposable {
+        [PythonHiddenField]
         public Encoding DefaultEncoding;
 
         private IAttributesDictionary __dict__;

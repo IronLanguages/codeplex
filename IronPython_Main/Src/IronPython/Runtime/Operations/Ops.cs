@@ -292,7 +292,11 @@ namespace IronPython.Runtime.Operations {
             if (fo != null) {
                 if (fo is FunctionN == false) {
                     maxArgCnt = fo.ArgCount;
-                    minArgCnt = fo.ArgCount - fo.FunctionDefaults.Count;
+                    if (fo.FunctionDefaults != null) {
+                        minArgCnt = fo.ArgCount - fo.FunctionDefaults.Count;
+                    } else {
+                        minArgCnt = fo.ArgCount;
+                    }
 
                     // take into account unbound methods / bound methods
                     if (m != null) {

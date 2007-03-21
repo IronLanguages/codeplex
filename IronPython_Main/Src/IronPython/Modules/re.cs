@@ -158,9 +158,9 @@ namespace IronPython.Modules {
             return Split(ValidatePattern(pattern), ValidateString(@string, "string"), 0);
         }
         [PythonName("split")]
-        public static object Split(object pattern, object @string, int maxSplit) {
+        public static object Split(object pattern, object @string, int maxsplit) {
             return new RE_Pattern(ValidatePattern(pattern)).Split(ValidateString(@string, "string"),
-                maxSplit);
+                maxsplit);
         }
 
         [PythonName("sub")]
@@ -336,10 +336,10 @@ namespace IronPython.Modules {
             }
 
             [PythonName("split")]
-            public object Split(object @string, int maxSplit) {
+            public object Split(object @string, int maxsplit) {
                 List result = new List();
                 // fast path for negative maxSplit ( == "make no splits")
-                if (maxSplit < 0)
+                if (maxsplit < 0)
                     result.AddNoLock(@string);
                 else {
                     // iterate over all matches
@@ -360,7 +360,7 @@ namespace IronPython.Modules {
                         // update lastPos, nSplits
                         lastPos = m.Index + m.Length;
                         nSplits++;
-                        if (nSplits == maxSplit)
+                        if (nSplits == maxsplit)
                             break;
                     }
                     // add tail following last match

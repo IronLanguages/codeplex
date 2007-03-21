@@ -36,6 +36,14 @@ if is_cli:
         
         sys.stdout = sys.__stdout__
 
+        sys.stdout = stdout_reader()
+        
+        help(System.String.Format)
+        x = sys.stdout.text
+        
+        sys.stdout = sys.__stdout__
+        Assert(x.find('Format(str format, *args)') != -1)
+        
 def test_module():
     import time
     sys.stdout = stdout_reader()
@@ -61,6 +69,22 @@ def test_userfunction():
     
     Assert(x.find('my help is useful') != -1)
     
+def test_splat():
+    def foo(*args): pass
+    
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(*args)') != -1)
+    
+    def foo(**kwargs): pass
+    
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(**kwargs)') != -1)
     
 def test_builtinfunction():
     sys.stdout = stdout_reader()

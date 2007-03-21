@@ -2188,6 +2188,10 @@ namespace IronPython.Runtime.Operations {
             return new PythonAssertionErrorException(string.Format(format, args));
         }
 
+        public static Exception ImportWarning(string format, params object[] args) {
+            return new PythonImportWarningException(string.Format(format, args));
+        }
+
         public static Exception RuntimeWarning(string format, params object[] args) {
             return new PythonRuntimeWarningException(string.Format(format, args));
         }

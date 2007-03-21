@@ -243,6 +243,12 @@ AssertError(SyntaxError, compile, "x <= ", "Error", "single")
 AssertError(IndentationError, compile, "class C:\nx=2\n", "Error", "exec")
 AssertError(IndentationError, compile, "class C:\n\n", "Error", "single")
 
+#allow \f
+compile('\f\f\f\f\fclass C:\f\f\f pass', 'ok', 'exec')
+compile('\f\f\f\f\fclass C:\n\f\f\f    print "hello"\n\f\f\f\f\f\f\f\f\f\f    print "goodbye"', 'ok', 'exec')
+compile('class C:\n\f\f\f    print "hello"\n\f\f\f\f\f\f\f\f\f\f    print "goodbye"', 'ok', 'exec')
+compile('class \f\f\f\fC:\n\f    print "hello"\n\f\f\f\f\f\f\f\f\f\f    print "goodbye"', 'ok', 'exec')
+
 # test for bug #1001 - IronPython allows an empty set of base classes as in "class C():"
 AssertError(SyntaxError, compile, "class C(): pass", "Error", "exec")
 

@@ -290,7 +290,9 @@ namespace IronPython.Compiler {
                     case EOF:
                         SetEnd();
                         return ReadEof();
-                    case ' ': case '\t': case '\f':
+                    case '\f':
+                        continue;
+                    case ' ': case '\t':
                         if (IsBeginningOfFile) {
                             SkipInitialWhitespace();
                         }
@@ -362,11 +364,11 @@ namespace IronPython.Compiler {
                 switch (ch) {
                     case ' ':
                     case '\t':
-                    case '\f':
                         continue;
                     case '#':
                     case EOF:
                     case '\n':
+                    case '\f':
                         Backup();
                         break;
                     default:
@@ -719,7 +721,7 @@ namespace IronPython.Compiler {
                 switch (ch) {
                     case ' ': spaces += 1; continue;
                     case '\t': spaces += 8-(spaces % 8); continue;
-                    case '\f': spaces += 1; continue;
+                    case '\f': continue;
                     case '\n': spaces = 0; continue;
                     case '#': return ReadEolComment(); 
                     case EOF:
@@ -754,7 +756,7 @@ namespace IronPython.Compiler {
                 switch (ch) {
                     case ' ': spaces += 1; sb.Append(' '); continue;
                     case '\t': spaces += 8-(spaces%8); sb.Append('\t'); continue;
-                    case '\f': spaces += 1; sb.Append('\f'); continue;
+                    case '\f': sb.Append('\f'); continue;
                     case '\n': spaces = 0; sb.Length = 0; continue;
                     case '#': ReadToEol(); spaces = 0; sb.Length = 0; continue;
                     case EOF:

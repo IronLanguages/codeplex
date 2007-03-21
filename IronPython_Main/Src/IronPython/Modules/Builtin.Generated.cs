@@ -69,6 +69,7 @@ namespace IronPython.Modules {
         public static object AttributeError = ExceptionConverter.GetPythonException("AttributeError");
         public static object OverflowError = ExceptionConverter.GetPythonException("OverflowError");
         public static object WindowsError = ExceptionConverter.GetPythonException("WindowsError");
+        public static object ImportWarning = ExceptionConverter.GetPythonException("ImportWarning");
 
         // *** END GENERATED CODE ***
 

@@ -328,6 +328,8 @@ namespace IronPython.Runtime {
         public static readonly SymbolId Extend = new SymbolId(ExtendId);
         ///<summary>Symbol for 'update'</summary> 
         public static readonly SymbolId Update = new SymbolId(UpdateId);
+        ///<summary>Symbol for 'func_name'</summary> 
+        public static readonly SymbolId FunctionName = new SymbolId(FunctionNameId);
 
         // *** END GENERATED CODE ***
 
@@ -495,7 +497,8 @@ namespace IronPython.Runtime {
         public const int AppendId                 = 146; // "append"
         public const int ExtendId                 = 147; // "extend"
         public const int UpdateId                 = 148; // "update"
-        public const int LastWellKnownId          = 149; // "LastWellKnown"
+        public const int FunctionNameId           = 149; // "func_name"
+        public const int LastWellKnownId          = 150; // "LastWellKnown"
 
         // *** END GENERATED CODE ***
 
@@ -663,6 +666,7 @@ namespace IronPython.Runtime {
             PublishWellKnownSymbol("append", Append);  // 146
             PublishWellKnownSymbol("extend", Extend);  // 147
             PublishWellKnownSymbol("update", Update);  // 148
+            PublishWellKnownSymbol("func_name", FunctionName);  // 149
 
             // *** END GENERATED CODE ***
 

@@ -696,6 +696,7 @@ def test_func_flags():
     def foo5(a, *args): pass
     def foo6(a, **args): pass
     def foo7(a, *args, **kwargs): pass
+    def foo8(a,b,c,d,e,f): pass
     
     AreEqual(foo0.func_code.co_flags & 12, 0)
     AreEqual(foo1.func_code.co_flags & 12, 4)
@@ -705,10 +706,35 @@ def test_func_flags():
     AreEqual(foo5.func_code.co_flags & 12, 4)
     AreEqual(foo6.func_code.co_flags & 12, 8)
     AreEqual(foo7.func_code.co_flags & 12, 12)
+    AreEqual(foo8.func_code.co_flags & 12, 0)
     
 
 def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)
     Assert((x.co_flags & 8192) == 8192)
+
+def test_filename():
+    c = compile("x = 2", "test", "exec")
+    AreEqual(c.co_filename, 'test')
+    
+def test_name():
+    def f(): pass
+    
+    f.__name__ = 'g'
+    AreEqual(f.__name__, 'g')
+    Assert(repr(f).startswith('<function g'))
+    
+    f.func_name = 'x'
+    AreEqual(f.__name__, 'x')
+    Assert(repr(f).startswith('<function x'))
+
+def test_argcount():
+    def foo(a, b, *c): pass
+    
+    AreEqual(foo.func_code.co_argcount, 2)
+
+def test_defaults():
+    def f(): pass
+    AreEqual(f.func_defaults, None)
 
 run_test(__name__)

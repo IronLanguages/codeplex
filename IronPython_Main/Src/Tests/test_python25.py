@@ -274,6 +274,16 @@ with WithInEnterExit() as wie:
         globals()["gblvar"] += 100
         
 AreEqual(globals()["gblvar"],116)
+
+import thread
+
+with thread.allocate_lock(): pass
+
+with file('abc.txt', 'w'):
+    pass
+    
+import nt
+nt.unlink('abc.txt')
 '''
 
 unified_tcf ='''

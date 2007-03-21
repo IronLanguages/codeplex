@@ -32,7 +32,11 @@ namespace IronPython.Hosting {
 
         IDictionary<string, object> dict; // the underlying dictionary
 
-        internal StringDictionaryAdapterDict(IDictionary<string, object> d) {
+        public StringDictionaryAdapterDict()
+            : this(new Dictionary<string, object>()) {
+        }
+
+        public StringDictionaryAdapterDict(IDictionary<string, object> d) {
             dict = d;
         }
 
@@ -59,8 +63,11 @@ namespace IronPython.Hosting {
 
         [PythonName("__iter__")]
         public IEnumerator GetEnumerator() {
-            return dict.GetEnumerator();
+            List<KeyValuePair<string, object>> dictValues = new List<KeyValuePair<string,object>>(dict);
+
+            foreach(KeyValuePair<string, object> o in dictValues) yield return o.Key;
         }
+
         #endregion
 
         #region IAttributesDictionary Members
@@ -264,7 +271,7 @@ namespace IronPython.Hosting {
         }
 
         public ICollection<object> Values {
-            get { return dict.Values; }
+            get { return new List<object>(dict.Values); }
         }
 
         public object this[object key] {

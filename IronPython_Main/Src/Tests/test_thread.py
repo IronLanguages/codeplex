@@ -69,3 +69,14 @@ if is_cli:
     
     sys.stdout = so
     sys.stderr = se
+
+def test_stack_size():
+    import sys
+    if (sys.version_info[0] == 2 and sys.version_info[1] > 4) or sys.version_info[0] > 2:
+        import thread
+        AreEqual(thread.stack_size(512*1024), 512*1024)
+        def temp(): pass
+        thread.start_new_thread(temp, ())
+        AreEqual(thread.stack_size(1024*1024), 1024*1024)
+
+run_test(__name__)

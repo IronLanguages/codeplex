@@ -1547,6 +1547,12 @@ def test_slots_multiple():
         __slots__=()
     C().x = "hello"
     
+def test_dictproxy_access():
+    def f():
+        int.__dict__[0] = 0
+        
+    AssertError(TypeError, f)
+
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals
     

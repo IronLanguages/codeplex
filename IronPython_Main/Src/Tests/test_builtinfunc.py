@@ -245,6 +245,10 @@ def test_len():
     class foo(object): pass
     
     AssertError(TypeError, len, foo())
-    
+
+def test_int_ctor():
+    AreEqual(int('0x10', 16), 16)
+    AreEqual(long('0x10', 16), 16L)
+
 run_test(__name__)
 
