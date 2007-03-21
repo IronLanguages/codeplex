@@ -50,6 +50,36 @@ def test_sanity():
 def test_padding_len():
     AreEqual(struct.unpack('4xi','\x00\x01\x02\x03\x01\x00\x00\x00'), (1,))
 
+#CodePlex Work Item 3092
+def test_3092():
+    #TODO: need far more testing on this!
+
+    for format in [ "i", "I", "l", "L"]:    
+        mem = "\x01\x00\x00\x00" * 8
+        AreEqual(len(mem), 32)
+    
+        fmt = "<8" + format
+        AreEqual(struct.calcsize(fmt), 32)
+        AreEqual(struct.unpack(fmt, mem), (1,)*8)
+    
+        fmt = "<2" + format + "4x5" + format
+        AreEqual(struct.calcsize(fmt), 32)
+        AreEqual(struct.unpack(fmt, mem), (1,)*7)
+        
+        fmt = "<" + format + format + "4x5" + format
+        AreEqual(struct.calcsize(fmt), 32)
+        AreEqual(struct.unpack(fmt, mem), (1,)*7)
+
+        fmt = "<32x"
+        AreEqual(struct.calcsize(fmt), 32)
+        AreEqual(struct.unpack(fmt, mem), ())
+    
+        fmt = "<28x" + format
+        AreEqual(struct.calcsize(fmt), 32)
+        AreEqual(struct.unpack(fmt, mem), (1,))
+    
+
+
 def test_negative():
     AssertError(struct.error, struct.pack, 'x', 1)
     AssertError(struct.error, struct.unpack, 'hh', struct.pack('h', 1))
