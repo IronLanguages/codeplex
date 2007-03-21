@@ -209,6 +209,27 @@ def test_partial_dicts():
     ipi.ExecutePartialLine("    2:2")
     response = ipi.ExecuteLine("}")
     Assert("{2: 2}" in response)
+    
+    ipi.ExecutePartialLine("{")
+    response = ipi.ExecuteLine("}")
+    Assert("{}" in response)
+    
+    ipi.ExecutePartialLine("a = {")
+    ipi.ExecutePartialLine("    None:2")
+    ipi.ExecutePartialLine(" , ")
+    ipi.ExecuteLine("}")
+    response = ipi.ExecuteLine("a")
+    Assert("{None: 2}" in response)
+    
+    ipi.ExecutePartialLine("{")
+    ipi.ExecutePartialLine("'joe'")
+    ipi.ExecutePartialLine(": ")
+    ipi.ExecutePartialLine("       42")
+    ipi.ExecutePartialLine(",")
+    ipi.ExecutePartialLine("3:45")
+    response = ipi.ExecuteLine("}")
+    Assert("{'joe': 42, 3: 45}" in response)
+    
     ipi.End()
 
 ###########################################################

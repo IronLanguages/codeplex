@@ -277,6 +277,15 @@ AreEqual(globals()["gblvar"],116)
 
 import thread
 
+temp_lock = thread.allocate_lock()
+Assert(hasattr(temp_lock, "__enter__"))
+Assert(hasattr(temp_lock, "__exit__"))
+Assert(not temp_lock.locked())
+with temp_lock:
+    Assert(temp_lock.locked())
+Assert(not temp_lock.locked())
+
+
 with thread.allocate_lock(): pass
 
 with file('abc.txt', 'w'):
@@ -1249,6 +1258,19 @@ if isPython25:
         result = launch_ironpython_changing_extensions(tempfile, ["-X:Python25"])
         AreEqual(result, 0)
         delete_files(tempfile)
+        
+    #CodePlex Work Item 5602
+    def test_importwarning():
+        import exceptions
+        exc_list = []
+        exc_list.append(exceptions.ImportWarning())
+        exc_list.append(exceptions.ImportWarning("some message"))
+        
+        for exc in exc_list:
+            try:
+                raise exc
+            except exceptions.ImportWarning, e:
+                pass
 
 run_test(__name__)
 
@@ -1257,5 +1279,3 @@ if not isPython25:
         result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_python25.py"), ["-X:Python25"])
         AreEqual(result, 0)
     
-    
-
