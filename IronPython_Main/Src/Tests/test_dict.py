@@ -763,4 +763,22 @@ def test_key_error():
         except KeyError, e:
             AreEqual(e.args[0], key)
 
+#CodePlex Work Item 7426
+@skip("cli")
+def test_contains():
+    class ContainsDict(dict):
+        was_called = False
+        def __contains__(self, key):
+            ContainsDict.was_called = True
+            return dict.__contains__(self, key)
+
+    md = ContainsDict()
+    md["stuff"] = 1
+    
+    AreEqual(ContainsDict.was_called, False)
+    AreEqual("nothing" in md, False)
+    AreEqual("stuff" in md, True)
+    AreEqual(ContainsDict.was_called, True)
+    
+
 run_test(__name__)
