@@ -780,4 +780,39 @@ def test_contains():
     AreEqual("stuff" in md, True)
     AreEqual(ContainsDict.was_called, True)
 
+
+def test_stdtypes_dict():
+    temp_types = [  int,
+                    long,
+                    float,
+                    complex,
+                    bool,
+                    str,
+                    unicode,
+                    basestring,
+                    list,
+                    tuple,
+                    xrange,
+                    dict,
+                    set,
+                    frozenset,
+                    type,
+                    object,
+                    file ] #+ [eval("types." + x) for x in dir(types) if x.endswith("Type")]
+    
+    temp_keys = [ None, -1, 0, 1, 2.34, "", "None", int, object, test_stdtypes_dict, [], (None,)]
+    
+    for temp_type in temp_types:
+        for temp_key in temp_keys:
+            try:
+                temp_type.__dict__[temp_key] = 0
+                raise "Should have been an exception for " + str(temp_type)
+            except TypeError, e:
+                pass
+            except Exception, e:
+                print "Failed on", temp_type, "type using", temp_key, "as the key:", e
+                #CodePlex Work Item 8892
+                if temp_key==None: continue
+                raise e
+        
 run_test(__name__)
