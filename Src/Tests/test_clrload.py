@@ -74,7 +74,7 @@ AreEqual(s, '(' + ',\r\n'.join(map((lambda x:'<'+x.ToString()+'>'), refs)) + ')\
 import System
 def get_gac():
         process = System.Diagnostics.Process()
-        process.StartInfo.FileName = "gacutil.exe"
+        process.StartInfo.FileName = System.IO.Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "gacutil.exe")
         process.StartInfo.Arguments = "/nologo /l"
         process.StartInfo.CreateNoWindow = True
         process.StartInfo.UseShellExecute = False

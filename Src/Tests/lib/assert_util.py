@@ -27,6 +27,11 @@ if is_cli:
     import System
     is_cli32, is_cli64 = (System.IntPtr.Size == 4), (System.IntPtr.Size == 8)
 
+is_orcas = False
+if is_cli:
+    import clr, System
+    is_orcas = len(clr.GetClrType(System.Reflection.Emit.DynamicMethod).GetConstructors()) == 8
+    
 def usage(code, msg=''):
     print sys.modules['__main__'].__doc__ or 'No doc provided'
     if msg: print 'Error message: "%s"' % msg
