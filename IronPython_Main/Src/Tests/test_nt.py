@@ -18,15 +18,19 @@ from lib.file_util import *
 
 import nt
 
-nt.mkdir('dir_create_test')
-AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 1)
 
-nt.rmdir('dir_create_test')
-AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 0)
+#mkdir,listdir,rmdir,getcwd
+def test_mkdir():
+    nt.mkdir('dir_create_test')
+    AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 1)
 
-AreEqual(nt.environ.has_key('COMPUTERNAME') or nt.environ.has_key('computername'), True)
+    nt.rmdir('dir_create_test')
+    AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 0)
 
-AssertError(nt.error, nt.stat, 'doesnotexist.txt')
+    AreEqual(nt.environ.has_key('COMPUTERNAME') or nt.environ.has_key('computername'), True)
+
+    AssertError(nt.error, nt.stat, 'doesnotexist.txt')
+
 
 def test_environ():
     non_exist_key      = "_NOT_EXIST_"
@@ -61,18 +65,54 @@ def test_environ():
     
     AreEqual(type(nt.environ), type({}))
     
+#startfile
+def test_startfile():
+    AssertError(WindowsError, nt.startfile, "not_exist_file.txt")
 
-AssertError(WindowsError, nt.startfile, "not_exist_file.txt")
+#chdir tests
+def test_chdir():
+    currdir = nt.getcwd()
+    nt.mkdir('tsd')
+    nt.chdir('tsd')
+    AreEqual(currdir+'\\tsd', nt.getcwd())
+    nt.chdir(currdir)
+    AreEqual(currdir, nt.getcwd())
+    nt.rmdir('tsd')
+    
+    #the directory is empty or does not exist
+    AssertError(OSError, lambda:nt.chdir(''))
+    AssertError(OSError, lambda:nt.chdir('tsd'))
 
-currdir = nt.getcwd()
-nt.mkdir('tsd')
-nt.chdir('tsd')
-AreEqual(currdir+'\\tsd', nt.getcwd())
-nt.chdir(currdir)
-AreEqual(currdir, nt.getcwd())
-nt.rmdir('tsd')
-AssertError(OSError, lambda:nt.chdir(''))
-AssertError(OSError, lambda:nt.chdir('tsd'))
+#fdopen tests
+def test_fdopen():
+    # fd = 0 
+    result = 0
+    result = nt.fdopen(0,"r",1024)
+    Assert(result!=0,"1,The file object was not returned correctly") 
+   
+
+    # some arguments were omitted
+    result = 0 
+    result = nt.fdopen(2,"w")
+    Assert(result!=0,"2,The file object was not returned correctly") 
+
+    #The file descriptor is not valid  
+    AssertError(OSError,nt.fdopen,3)
+    
+    #CodePlex Work Item #8617
+    #The file mode does not exist
+    #AssertError(ValueError,nt.fdopen,0,"p")
+    
+#fstat tests
+def test_fstat():
+    result = 0
+    #CodePlex Work Item #8618
+    #result = nt.fstat(1)
+    #Assert(result!=0,"0,The file stat object was not returned correctly") 
+    
+    #invalid file descriptor
+    AssertError(OSError,nt.fstat,3)
+    AssertError(OSError,nt.fstat,-1)
 
 # chmod tests:
 # BUG 828,830
@@ -197,7 +237,7 @@ nt.chmod('tmpfile.tmp', 256)
 nt.chmod('tmpfile.tmp', 128)
 nt.unlink('tmpfile.tmp')
 
-
+    
 def test_utime():
     f = file('temp_file_does_not_exist.txt', 'w')
     f.close()
@@ -292,7 +332,9 @@ def test_putenv():
     #AssertError(TypeError, nt.putenv, "ABC", None)
     AssertError(TypeError, nt.putenv, 1, "xyz")
     AssertError(TypeError, nt.putenv, "ABC", 1)
-    
+  
+  
+#environ tests    
 def test_spawnle():
     '''
     '''
@@ -353,4 +395,6 @@ def test_spawnve():
     AssertError(TypeError, nt.spawnve, nt.P_WAIT, ping_cmd , ["ping", "/?"], {1: "xyz"})
     AssertError(TypeError, nt.spawnve, nt.P_WAIT, ping_cmd , ["ping", "/?"], {"abc": 1})
     
+        
 run_test(__name__)
+
