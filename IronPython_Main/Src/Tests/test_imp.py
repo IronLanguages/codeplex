@@ -19,7 +19,7 @@ from lib.file_util import *
 import sys
 import imp
 
-
+            
 def test_imp_new_module():
     x = imp.new_module('abc')
     sys.modules['abc'] = x
@@ -39,6 +39,13 @@ def test_imp_basic():
 _testdir = "ImpTest"
 _imptestdir = path_combine(testpath.public_testdir, _testdir)
 _f_init = path_combine(_imptestdir, "__init__.py")
+
+temp_name = ["nt",
+             "nt.P_WAIT",
+             "nt.chmod",
+             "sys.path",
+             "xxxx"
+            ]
 
 def test_imp_package():
     write_to_file(_f_init, "my_name = 'imp package test'")
@@ -160,5 +167,89 @@ def test_module_dict():
     AreEqual(type({}), type(currentModule.__dict__))
     AreEqual(isinstance(currentModule.__dict__, dict), True)
 
+#test release_lock,lock_held,acquire_lock
+def test_lock():
+    i=0
+    while i<5:
+        i+=1
+        if not imp.lock_held():
+            AssertError(RuntimeError,imp.release_lock)
+            imp.acquire_lock()
+        else:
+            imp.release_lock()
+       
+
+# test is_frozen 
+def test_is_frozen():
+    for name in temp_name:
+        f = imp.is_frozen(name)
+        if f:
+            Fail("result should be False")
+            
+# test init_frozen
+def test_init_frozen():
+    for name in temp_name:
+        f = imp.init_frozen(name)
+        if f != None :
+            Fail("return object should be None!")
+    
+# is_builtin
+def test_is_builtin():
+   
+    AreEqual(imp.is_builtin("xxx"),0)
+    AreEqual(imp.is_builtin("12324"),0)
+    AreEqual(imp.is_builtin("&*^^"),0)
+    
+    AreEqual(imp.is_builtin("dir"),0)
+    AreEqual(imp.is_builtin("__doc__"),0)
+    AreEqual(imp.is_builtin("__name__"),0)
+    
+    AreEqual(imp.is_builtin("_locle"),0)
+    
+    AreEqual(imp.is_builtin("cPickle"),1)
+    AreEqual(imp.is_builtin("_random"),1)
+    AreEqual(imp.is_builtin("nt"),1)
+    AreEqual(imp.is_builtin("thread"),1)
+    
+    
+    # there are a several differences between ironpython and cpython
+    if is_cli:
+        AreEqual(imp.is_builtin("copy_reg"),1)
+        AreEqual(imp.is_builtin("sys"),0)
+        AreEqual(imp.is_builtin("__builtin__"),1)
+    else:
+        AreEqual(imp.is_builtin("copy_reg"),0)
+        AreEqual(imp.is_builtin("sys"),-1)
+        AreEqual(imp.is_builtin("__builtin__"),-1)
+        
+    
+ 
+#init_builtin           
+def test_init_builtin():
+    r  = imp.init_builtin("c_Pickle")
+    AreEqual(r,None)
+    
+    r  = imp.init_builtin("2345")
+    AreEqual(r,None)
+    r  = imp.init_builtin("xxxx")
+    AreEqual(r,None)
+    r  = imp.init_builtin("^$%$#@")
+    AreEqual(r,None)
+    
+    r  = imp.init_builtin("_locale")
+    Assert(r!=None)
+    
+#test SEARCH_ERROR, PY_SOURCE,PY_COMPILED,C_EXTENSION,PY_RESOURCE,PKG_DIRECTORY,C_BUILTIN,PY_FROZEN,PY_CODERESOURCE
+def test_flags():
+    AreEqual(imp.SEARCH_ERROR,0)
+    AreEqual(imp.PY_SOURCE,1)
+    AreEqual(imp.PY_COMPILED,2)
+    AreEqual(imp.C_EXTENSION,3)
+    AreEqual(imp.PY_RESOURCE,4)
+    AreEqual(imp.PKG_DIRECTORY,5)
+    AreEqual(imp.C_BUILTIN,6)
+    AreEqual(imp.PY_FROZEN,7)
+    AreEqual(imp.PY_CODERESOURCE,8)
+    
 run_test(__name__)
 delete_all_f(__name__)

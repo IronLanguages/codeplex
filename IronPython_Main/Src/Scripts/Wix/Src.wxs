@@ -495,6 +495,7 @@
                 <File Id="File_test_kwarg.py" Name="TKWARG.PY" LongName="test_kwarg.py" />
                 <File Id="File_test_list.py" Name="TLIST.PY" LongName="test_list.py" />
                 <File Id="File_test_listcomp.py" Name="TLISTCOM.PY" LongName="test_listcomp.py" />
+				<File Id="File_test_locale.py" Name="TLOCALE.PY" LongName="test_locale.py" />
                 <File Id="File_test_marshal.py" Name="TMARSHAL.PY" LongName="test_marshal.py" />
                 <File Id="File_test_math.py" Name="TMATH.PY" LongName="test_math.py" />
                 <File Id="File_test_memory.py" Name="TMEMORY.PY" LongName="test_memory.py" />
