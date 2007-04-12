@@ -63,6 +63,13 @@ unsupported_operands = [
                          "long-System.Decimal",
                          "System.Decimal*long",
                          "long*System.Decimal",
+                         "System.Single+System.Decimal",
+                         "System.Decimal+System.Single",
+                         "System.Single-System.Decimal",
+                         "System.Decimal-System.Single",
+                         "System.Single*System.Decimal",
+                         "System.Decimal*System.Single",
+                         
                          
                          "System.Decimal/System.Double",
                          "System.Decimal/long",
@@ -70,6 +77,8 @@ unsupported_operands = [
                          "System.Double/System.Decimal",
                          "long/System.Decimal",
                          "float/System.Decimal",
+                         "System.Single/System.Decimal",
+                         "System.Decimal/System.Single",
                                                   
                          "System.Decimal//System.Byte", 
                          "System.Decimal//System.SByte", 
@@ -79,6 +88,7 @@ unsupported_operands = [
                          "System.Decimal//System.UInt32", 
                          "System.Decimal//System.Int64", 
                          "System.Decimal//System.UInt64", 
+                         "System.Decimal//System.Single", 
                          "System.Decimal//System.Decimal", 
                          "System.Decimal//int", 
                          "System.Decimal//long",
@@ -90,6 +100,7 @@ unsupported_operands = [
                          "System.UInt32//System.Decimal",
                          "System.Int64//System.Decimal",
                          "System.UInt64//System.Decimal",
+                         "System.Single//System.Decimal",
                          "System.Decimal//System.Decimal",
                          "int//System.Decimal",
                          "long//System.Decimal",
@@ -103,6 +114,7 @@ unsupported_operands = [
                          "System.Decimal**System.Int64", 
                          "System.Decimal**System.UInt64", 
                          "System.Decimal**System.Decimal", 
+                         "System.Decimal**System.Single", 
                          "System.Decimal**System.Double", 
                          "System.Decimal**int", 
                          "System.Decimal**long",
@@ -116,6 +128,7 @@ unsupported_operands = [
                          "System.Int64**System.Decimal",
                          "System.UInt64**System.Decimal",
                          "System.Decimal**System.Decimal",
+                         "System.Single**System.Decimal",
                          "System.Double**System.Decimal",
                          "int**System.Decimal",
                          "long**System.Decimal",
@@ -123,10 +136,20 @@ unsupported_operands = [
                          
                          "System.Decimal%long",
                          "long%System.Decimal",
+                         "System.Decimal%System.Single",
+                         "System.Single%System.Decimal",
                             ] + bug_operands
 
 #CodePlex Work Item  5682
 known_bugs =   [
+                "System.UInt32==System.Single",
+                "System.UInt64==System.Single",
+                "long==System.Single",
+                "System.UInt32!=System.Single",
+                "System.UInt64!=System.Single",
+                "long!=System.Single",
+                
+
                 "System.Single<=System.Byte",
                 "System.Single<=System.SByte",
                 "System.Single<=System.Int16",
@@ -137,6 +160,17 @@ known_bugs =   [
                 "System.Single<=System.UInt64",
                 "System.Single<=int",
                 "System.Single<=long",
+                
+                "System.Byte<=System.Single",
+                "System.SByte<=System.Single",
+                "System.Int16<=System.Single",
+                "System.UInt16<=System.Single",
+                "System.Int32<=System.Single",
+                "System.UInt32<=System.Single",
+                "System.Int64<=System.Single",
+                "System.UInt64<=System.Single",
+                "int<=System.Single",
+                "long<=System.Single",
                 
                 "System.Single>=System.Byte",
                 "System.Single>=System.SByte",
@@ -149,6 +183,17 @@ known_bugs =   [
                 "System.Single>=int",
                 "System.Single>=long",
                 
+                "System.Byte>=System.Single",
+                "System.SByte>=System.Single",
+                "System.Int16>=System.Single",
+                "System.UInt16>=System.Single",
+                "System.Int32>=System.Single",
+                "System.UInt32>=System.Single",
+                "System.Int64>=System.Single",
+                "System.UInt64>=System.Single",
+                "int>=System.Single",
+                "long>=System.Single",
+                
                 "System.Single<System.Byte",
                 "System.Single<System.SByte",
                 "System.Single<System.Int16",
@@ -160,6 +205,17 @@ known_bugs =   [
                 "System.Single<int",
                 "System.Single<long",
                 
+                "System.Byte<System.Single",
+                "System.SByte<System.Single",
+                "System.Int16<System.Single",
+                "System.UInt16<System.Single",
+                "System.Int32<System.Single",
+                "System.UInt32<System.Single",
+                "System.Int64<System.Single",
+                "System.UInt64<System.Single",
+                "int<System.Single",
+                "long<System.Single",
+                
                 "System.Single>System.Byte",
                 "System.Single>System.SByte",
                 "System.Single>System.Int16",
@@ -170,6 +226,17 @@ known_bugs =   [
                 "System.Single>System.UInt64",
                 "System.Single>int",
                 "System.Single>long",
+                
+                "System.Byte>System.Single",
+                "System.SByte>System.Single",
+                "System.Int16>System.Single",
+                "System.UInt16>System.Single",
+                "System.Int32>System.Single",
+                "System.UInt32>System.Single",
+                "System.Int64>System.Single",
+                "System.UInt64>System.Single",
+                "int>System.Single",
+                "long>System.Single",
                ]
 
 #------------------------------------------------------------------------------
@@ -182,12 +249,19 @@ def num_ok_for_type(number, proposed_type):
     if proposed_type=="long":
         #arbitrary precision
         return True
-    elif proposed_type=="float":
+    if proposed_type=="float":
         #arbitrary precision
+        return True
+    if proposed_type=="System.Single":
+        #Hack for CodePlex Work Item 5682
         return True
     
     if number >= eval(proposed_type + ".MinValue") and number <= eval(proposed_type + ".MaxValue"):
         return True
+    #must give it another shot...maybe the operator is broken
+    if eval(proposed_type + ".MinValue") <= number and eval(proposed_type + ".MaxValue") >= number:
+        return True
+        
     return False
             
 
@@ -224,7 +298,7 @@ def _test_interop_set(clr_types, py_types, test_cases):
         rightop_clr_values = [eval(x + "(" + rightop + ")") for x in rightop_clr_types]
                     
         #------------------------------------------------------------------
-        #create a list of values where each element is the lefthand operand
+        #create a list of values where each element is the righthand operand
         #converted to a Python type
         rightop_py_types = [x for x in py_types if num_ok_for_type(py_right, x)]
         rightop_py_values = [eval(x + "(" + rightop + ")") for x in rightop_py_types]
@@ -251,9 +325,12 @@ def _test_interop_set(clr_types, py_types, test_cases):
             
             try:
                 AreEqual(expression, expected)
+                if known_bugs.count(left_type + op + right_type)>0:
+                    raise "NO BUG FOR: " + expression_str
             except:
                 if known_bugs.count(left_type + op + right_type)>0:
                     return
+                print expression_str
                 raise
             
             
@@ -261,7 +338,7 @@ def _test_interop_set(clr_types, py_types, test_cases):
         for x in leftop_clr_types:
             for y in rightop_clr_types:
                 assertionHelper(x, leftop, op, y, rightop, expected_value)             
-                             
+                
         #CLR-PY
         for x in leftop_clr_types:
             for y in rightop_py_types:
@@ -464,6 +541,65 @@ def test_bitwiseshift():
     Test bitwise and shifting operations.
     '''
     _test_interop_set(clr_integer_types, py_integer_types, bitwise_test_cases) 
+
+
+def test_sanity():
+    '''
+    Make sure that numbers within the constraints of the numerical types
+    are allowed.
+    '''
+    temp_list = [   ["System.Byte", 0, 255],
+                    ["System.SByte", -128, 127],
+                    ["System.Byte", 0, 255],
+                    ["System.Int16", -32768, 32767],
+                    ["System.UInt16", 0, 65535],
+                    ["System.Int32", -2147483648, 2147483647],
+                    ["System.UInt32", 0, 4294967295],
+                    ["System.Int64", -9223372036854775808L, 9223372036854775807L],
+                    ["System.UInt64", 0, 18446744073709551615],
+                    ["System.Single", -3.40282e+038, 3.40282e+038],
+                    ["System.Double", -1.79769313486e+308, 1.79769313486e+308],
+                    ["System.Decimal", -79228162514264337593543950335, 79228162514264337593543950335],
+                    ["int", -2147483648, 2147483647]
+                ]
+                
+    for num_type, small_val, large_val in temp_list:
+        #CodePlex Work Item 5682
+        if num_type!="System.Single":
+            Assert(num_ok_for_type(1, num_type))
+    
+        #Minimum value
+        Assert(num_ok_for_type(small_val, num_type))
+        Assert(num_ok_for_type(small_val + 1, num_type))
+        Assert(num_ok_for_type(small_val + 2, num_type))
+        
+        #Maximum value
+        Assert(num_ok_for_type(large_val, num_type))
+        Assert(num_ok_for_type(large_val - 1, num_type))
+        Assert(num_ok_for_type(large_val - 2, num_type))
+        
+        #Negative cases
+        if num_type!="System.Single" and num_type!="System.Double" and num_type!="System.Decimal":
+            Assert(not num_ok_for_type(small_val - 1, num_type))
+            Assert(not num_ok_for_type(small_val - 2, num_type))
+            Assert(not num_ok_for_type(large_val + 1, num_type))
+            Assert(not num_ok_for_type(large_val + 2, num_type))
+        
+    #Special cases
+    Assert(num_ok_for_type(0, "long"))
+    Assert(num_ok_for_type(1, "long"))
+    Assert(num_ok_for_type(-1, "long"))
+    Assert(num_ok_for_type(5, "long"))
+    Assert(num_ok_for_type(-92233720368547758080000L, "long"))
+    Assert(num_ok_for_type( 18446744073709551615000L, "long"))
+    
+    Assert(num_ok_for_type(0.0, "float"))
+    Assert(num_ok_for_type(1.0, "float"))
+    Assert(num_ok_for_type(-1.0, "float"))
+    Assert(num_ok_for_type(3.14, "float"))
+    Assert(num_ok_for_type(-92233720368547758080000.0, "float"))
+    Assert(num_ok_for_type( 18446744073709551615000.0, "float"))
+    
 
 
 run_test(__name__)
