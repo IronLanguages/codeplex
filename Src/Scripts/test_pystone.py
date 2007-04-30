@@ -13,8 +13,20 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+""" This provides a more convenient harness for running this
+    benchmark and collecting separate timings for each component.
+"""
 
-class C: pass
+import sys, nt
+sys.path.append([nt.environ[x] for x in nt.environ.keys() if x.lower() == "merlin_root"][0] + "\\..\\External\\Languages\\IronPython20\\24\\Lib\\Test")
+
+def test_main(type="short"):
+    import pystone
+    loops = { "full": 50000, "short" : 50000, "medium" : 250000, "long" : 1000000 }[type]
+    pystone.main(loops)
+
+if __name__=="__main__":
+    kind = "short"
+    if len(sys.argv) > 1: kind = sys.argv[1]
+    test_main(kind)

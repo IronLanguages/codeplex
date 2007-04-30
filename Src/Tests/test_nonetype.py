@@ -15,6 +15,10 @@
 
 from lib.assert_util import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
-
-class C: pass
+def test_trival():
+    AreEqual(type(None), None.__class__)
+    AreEqual(str(None), None.__str__())
+    AreEqual(repr(None), None.__repr__())
+    None.__init__('abc')
+    
+run_test(__name__)

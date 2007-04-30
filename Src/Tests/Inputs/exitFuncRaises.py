@@ -13,8 +13,9 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+import sys
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+def foo():
+	raise Exception
 
-class C: pass
+sys.exitfunc = foo

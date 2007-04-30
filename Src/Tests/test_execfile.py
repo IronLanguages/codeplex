@@ -15,6 +15,26 @@
 
 from lib.assert_util import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+if is_cli:
+    def test_sanity():
+        root = testpath.public_testdir
+    
+        execfile(root + "/Inc/toexec.py")
+        execfile(root + "/Inc/toexec.py")
+        #execfile(root + "/doc.py")
+        execfile(root + "/Inc/toexec.py")
 
-class C: pass
+def test_negative():
+    AssertError(TypeError, execfile, None) # arg must be string
+    AssertError(TypeError, execfile, [])
+    AssertError(TypeError, execfile, 1)
+    AssertError(TypeError, execfile, "somefile", "")
+
+def test_scope():
+    root = testpath.public_testdir
+    z = 10
+    execfile(root + "/Inc/execfile_scope.py")
+    
+
+run_test(__name__)
+

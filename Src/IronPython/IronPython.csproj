@@ -1,0 +1,194 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{95289EA9-5778-489D-AB48-F81F2CE2DA32}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>IronPython</RootNamespace>
+    <AssemblyName>IronPython</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\Bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\Bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FxCop|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\Bin\FxCop\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <CodeAnalysisRules>-Microsoft.Design#CA2210;-Microsoft.Design#CA1014;-Microsoft.Usage#CA2209</CodeAnalysisRules>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>..\..\Bin\Silverlight Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;SILVERLIGHT</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <NoStdLib>true</NoStdLib>
+    <NoWarn>618</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
+    <OutputPath>bin\Silverlight Release\</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
+    <NoWarn>618</NoWarn>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" Condition=" !('$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release') " />
+    <Reference Include="mscorlib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release' ">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(ProgramFiles)\Microsoft Silverlightmscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="System, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release' ">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(ProgramFiles)\Microsoft SilverlightSystem.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Compiler\Ast\AndExpression.cs" />
+    <Compile Include="Compiler\Ast\Arg.cs" />
+    <Compile Include="Compiler\Ast\AssertStatement.cs" />
+    <Compile Include="Compiler\Ast\AssignmentStatement.cs" />
+    <Compile Include="Compiler\Ast\AstGenerator.cs" />
+    <Compile Include="Compiler\Ast\AugmentedAssignStatement.cs" />
+    <Compile Include="Compiler\Ast\BackQuoteExpression.cs" />
+    <Compile Include="Compiler\Ast\BinaryExpression.cs" />
+    <Compile Include="Compiler\Ast\BreakStatement.cs" />
+    <Compile Include="Compiler\Ast\CallExpression.cs" />
+    <Compile Include="Compiler\Ast\ClassDefinition.cs" />
+    <Compile Include="Compiler\Ast\ConditionalExpression.cs" />
+    <Compile Include="Compiler\Ast\ConstantExpression.cs" />
+    <Compile Include="Compiler\Ast\ContinueStatement.cs" />
+    <Compile Include="Compiler\Ast\DelStatement.cs" />
+    <Compile Include="Compiler\Ast\DictionaryExpression.cs" />
+    <Compile Include="Compiler\Ast\DottedName.cs" />
+    <Compile Include="Compiler\Ast\EmptyStatement.cs" />
+    <Compile Include="Compiler\Ast\ErrorExpression.cs" />
+    <Compile Include="Compiler\Ast\ExecStatement.cs" />
+    <Compile Include="Compiler\Ast\Expression.cs" />
+    <Compile Include="Compiler\Ast\ExpressionStatement.cs" />
+    <Compile Include="Compiler\Ast\ForStatement.cs" />
+    <Compile Include="Compiler\Ast\FromImportStatement.cs" />
+    <Compile Include="Compiler\Ast\FunctionDefinition.cs" />
+    <Compile Include="Compiler\Ast\GeneratorExpression.cs" />
+    <Compile Include="Compiler\Ast\GlobalStatement.cs" />
+    <Compile Include="Compiler\Ast\IfStatement.cs" />
+    <Compile Include="Compiler\Ast\IfStatementTest.cs" />
+    <Compile Include="Compiler\Ast\ImportStatement.cs" />
+    <Compile Include="Compiler\Ast\IndexExpression.cs" />
+    <Compile Include="Compiler\Ast\LambdaExpression.cs" />
+    <Compile Include="Compiler\Ast\ListComprehension.cs" />
+    <Compile Include="Compiler\Ast\ListComprehensionFor.cs" />
+    <Compile Include="Compiler\Ast\ListComprehensionIf.cs" />
+    <Compile Include="Compiler\Ast\ListExpression.cs" />
+    <Compile Include="Compiler\Ast\MemberExpression.cs" />
+    <Compile Include="Compiler\Ast\NameExpression.cs" />
+    <Compile Include="Compiler\Ast\Node.cs" />
+    <Compile Include="Compiler\Ast\OrExpression.cs" />
+    <Compile Include="Compiler\Ast\Parameter.cs" />
+    <Compile Include="Compiler\Ast\ParenthesisExpression.cs" />
+    <Compile Include="Compiler\Ast\PrintStatement.cs" />
+    <Compile Include="Compiler\Ast\PythonAst.cs" />
+    <Compile Include="Compiler\Ast\PythonNameBinder.cs" />
+    <Compile Include="Compiler\Ast\PythonOperator.cs" />
+    <Compile Include="Compiler\Ast\RaiseStatement.cs" />
+    <Compile Include="Compiler\Ast\ReturnStatement.cs" />
+    <Compile Include="Compiler\Ast\ScopeStatement.cs" />
+    <Compile Include="Compiler\Ast\SequenceExpression.cs" />
+    <Compile Include="Compiler\Ast\SliceExpression.cs" />
+    <Compile Include="Compiler\Ast\Statement.cs" />
+    <Compile Include="Compiler\Ast\SuiteStatement.cs" />
+    <Compile Include="Compiler\Ast\TryStatement.cs" />
+    <Compile Include="Compiler\Ast\TupleExpression.cs" />
+    <Compile Include="Compiler\Ast\UnaryExpression.cs" />
+    <Compile Include="Compiler\Ast\Variables.cs" />
+    <Compile Include="Compiler\Ast\PythonWalker.Generated.cs" />
+    <Compile Include="Compiler\Ast\WhileStatement.cs" />
+    <Compile Include="Compiler\Ast\WithStatement.cs" />
+    <Compile Include="Compiler\Ast\YieldStatement.cs" />
+    <Compile Include="Compiler\Generation\PythonCodeDomCodeGen.cs" />
+    <Compile Include="Compiler\PythonTokenCategorizer.cs" />
+    <Compile Include="Compiler\CompilerException.cs" />
+    <Compile Include="Compiler\Parser.cs" />
+    <Compile Include="Compiler\Token.cs" />
+    <Compile Include="Compiler\Tokenizer.cs" />
+    <Compile Include="Compiler\Tokenizer.Generated.cs" />
+    <Compile Include="Compiler\TokenKind.Generated.cs" />
+    <Compile Include="Hosting\ErrorCodes.cs" />
+    <Compile Include="Hosting\PythonCommandLine.cs" />
+    <Compile Include="Hosting\ModuleOptions.cs" />
+    <Compile Include="Hosting\PythonConsoleOptions.cs" />
+    <Compile Include="Hosting\PythonEngineOptions.cs" />
+    <Compile Include="Hosting\PythonErrorSink.cs" />
+    <Compile Include="Hosting\ResourceFile.cs" />
+    <Compile Include="Hosting\PythonLanguageProvider.cs" />
+    <Compile Include="Hosting\PythonOptionsParser.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Compiler\Generation\PythonScriptCompiler.cs" />
+    <Compile Include="Hosting\PythonEngine.cs" />
+    <Compile Include="Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Runtime\OutputWriter.cs" />
+    <Compile Include="Runtime\PythonOps.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Scripting.Vestigial\Microsoft.Scripting.Vestigial.csproj">
+      <Project>{90E6D8C8-3E09-498E-9058-2E2FB1151C36}</Project>
+      <Name>Microsoft.Scripting.Vestigial</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
+      <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
+      <Name>Microsoft.Scripting</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Lib\site.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources.resx">
+      <SubType>Designer</SubType>
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

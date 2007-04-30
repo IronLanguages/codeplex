@@ -13,8 +13,19 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+import sys
+import clr
+from System.IO import Path, Directory, FileInfo
 
-class C: pass
+dir = Path.Combine(sys.prefix, 'DLLs')
+if Directory.Exists(dir):
+    sys.path.append(dir)
+    files = Directory.GetFiles(dir)
+    for file in files:
+        if file.lower().endswith('.dll'):
+            try:
+                clr.AddReference(FileInfo(file).Name)
+            except:
+                pass
+

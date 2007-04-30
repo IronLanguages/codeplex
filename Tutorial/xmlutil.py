@@ -13,8 +13,13 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
-
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
-
-class C: pass
+def Walk(xml):
+    yield xml
+    if hasattr(xml, "Attributes"):
+        attrs = xml.Attributes
+        if attrs:
+            for attr in attrs:
+                yield attr
+    for child in xml:
+        for c in Walk(child):
+            yield c

@@ -13,8 +13,23 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+import clr
+clr.AddReferenceByPartialName("System.Windows.Forms")
+clr.AddReferenceByPartialName("System.Drawing")
+from System.Windows.Forms import *
+from System.Drawing import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+f = Form()
+font = Font("Verdana", 15)
+f.Text = "My First Interactive Application"
 
-class C: pass
+def click(f, a):
+    l = Label(Text = "Hello")
+    l.AutoSize = True
+    l.Location = a.Location
+    l.Font = font
+    f.Controls.Add(l)
+
+f.Click += click
+
+Application.Run(f)

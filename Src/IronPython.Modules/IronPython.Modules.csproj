@@ -1,0 +1,118 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{155CE436-1669-4A48-8095-410F2430237F}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>IronPython.Modules</RootNamespace>
+    <AssemblyName>IronPython.Modules</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\Bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\Bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>..\..\Bin\Silverlight Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;SILVERLIGHT</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <NoStdLib>true</NoStdLib>
+    <NoWarn>618</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Release' ">
+    <OutputPath>..\..\Bin\Silverlight Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <NoWarn>618</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" Condition=" !('$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release') " />
+    <Reference Include="mscorlib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release' ">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(ProgramFiles)\Microsoft Silverlightmscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="System.dll, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release' ">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(ProgramFiles)\Microsoft SilverlightSystem.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="binascii.cs" />
+    <Compile Include="codecs.cs" />
+    <Compile Include="collections.cs" />
+    <Compile Include="copy_reg.cs" />
+    <Compile Include="cPickle.cs" />
+    <Compile Include="cStringIO.cs" />
+    <Compile Include="datetime.cs" />
+    <Compile Include="errno.cs" />
+    <Compile Include="Exceptions.cs" />
+    <Compile Include="Exceptions.Generated.cs" />
+    <Compile Include="gc.cs" />
+    <Compile Include="imp.cs" />
+    <Compile Include="IterTools.cs" />
+    <Compile Include="locale.cs" />
+    <Compile Include="marshal.cs" />
+    <Compile Include="math.cs" />
+    <Compile Include="math.Generated.cs" />
+    <Compile Include="md5.cs" />
+    <Compile Include="nt.cs" />
+    <Compile Include="operator.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="re.cs" />
+    <Compile Include="select.cs" />
+    <Compile Include="sha.cs" />
+    <Compile Include="socket.cs" />
+    <Compile Include="struct.cs" />
+    <Compile Include="thread.cs" />
+    <Compile Include="time.cs" />
+    <Compile Include="_random.cs" />
+    <Compile Include="_sre.cs" />
+    <Compile Include="_weakref.cs" />
+    <Compile Include="_weakref.Generated.cs" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Scripting.Vestigial\Microsoft.Scripting.Vestigial.csproj">
+      <Project>{90E6D8C8-3E09-498E-9058-2E2FB1151C36}</Project>
+      <Name>Microsoft.Scripting.Vestigial</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
+      <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
+      <Name>Microsoft.Scripting</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\IronPython\IronPython.csproj">
+      <Project>{95289EA9-5778-489D-AB48-F81F2CE2DA32}</Project>
+      <Name>IronPython %28Languages\IronPython\IronPython%29</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
