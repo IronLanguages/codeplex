@@ -44,6 +44,21 @@ def file_exists(file):
         return True
     except: 
         return False
+        
+def file_exists_in_path(file):
+    full_path = [nt.environ[x] for x in nt.environ.keys() if x.lower() == "path"]
+    if len(full_path)==0:
+        return False
+    else:
+        full_path = full_path[0]
+    
+    for path in [nt.getcwd()] + full_path.split(";"):
+        path = path.lstrip().rstrip()
+        if file_exists(path + "\\" + file) == True:
+            return True
+    
+    return False
+        
 
 # need consider .. and . later
 def fullpath(path):

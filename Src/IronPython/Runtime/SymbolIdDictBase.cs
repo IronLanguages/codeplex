@@ -175,6 +175,8 @@ namespace IronPython.Runtime {
 
         [PythonName("__eq__")]
         public virtual object RichEquals(object other) {
+            if (Object.ReferenceEquals(other, this)) return Ops.TRUE;
+
             IAttributesDictionary oth = other as IAttributesDictionary;
             IAttributesDictionary ths = this as IAttributesDictionary;
             if (oth == null) return Ops.FALSE;
@@ -254,6 +256,6 @@ namespace IronPython.Runtime {
             return ToString();
         }
 
-        #endregion
+        #endregion        
     }
 }

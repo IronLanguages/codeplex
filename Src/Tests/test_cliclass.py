@@ -453,7 +453,7 @@ End Class
     """)
         f.close()
         
-        name = '%s\\vbproptest%f.dll' % (nt.environ['TEMP'], r.random())
+        name = '%s\\vbproptest%f.dll' % (testpath.temporary_dir, r.random())
         x = run_vbc('/target:library vbproptest1.vb "/out:%s"' % name)        
         AreEqual(x, 0)
         import clr
@@ -519,21 +519,22 @@ def test_interface_abstract_events():
         a.MyRaise()
         AreEqual(UseEvent.Called, False)
 
-def test_dynamic_assembly_ref():
-    # verify we can add a reference to a dynamic assembly, and
-    # then create an instance of that type
-    class foo(object): pass
-    import clr
-    clr.AddReference(foo().GetType().Assembly)
-    import IronPython.NewTypes.System
-    for x in dir(IronPython.NewTypes.System):
-        if x.startswith('Object_'):
-            t = getattr(IronPython.NewTypes.System, x)
-            x = t(foo)
-            break
-    else:
-        # we should have found our type
-        AssertUnreachable()
+if not is_orcas:
+    def test_dynamic_assembly_ref():
+        # verify we can add a reference to a dynamic assembly, and
+        # then create an instance of that type
+        class foo(object): pass
+        import clr
+        clr.AddReference(foo().GetType().Assembly)
+        import IronPython.NewTypes.System
+        for x in dir(IronPython.NewTypes.System):
+            if x.startswith('Object_'):
+                t = getattr(IronPython.NewTypes.System, x)
+                x = t(foo)
+                break
+        else:
+            # we should have found our type
+            AssertUnreachable()
 
 def test_virtual_event():
     # inherit from a class w/ a virtual event and a

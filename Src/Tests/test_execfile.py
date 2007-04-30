@@ -15,24 +15,20 @@
 
 from lib.assert_util import *
 
-def main():
-    root = testpath.public_testdir
-
-    execfile(root + "/Inc/toexec.py")
-    execfile(root + "/Inc/toexec.py")
-    execfile(root + "/doc.py")
-    execfile(root + "/Inc/toexec.py")
-
-if __name__ == "__main__":
-    __name__ = "execfile"
-    main()
+if is_cli: 
+    def test_sanity():
+        root = testpath.public_testdir
+    
+        execfile(root + "/Inc/toexec.py")
+        execfile(root + "/Inc/toexec.py")
+        #execfile(root + "/doc.py")
+        execfile(root + "/Inc/toexec.py")
 
 def test_negative():
     AssertError(TypeError, execfile, None) # arg must be string
     AssertError(TypeError, execfile, [])
     AssertError(TypeError, execfile, 1)
     AssertError(TypeError, execfile, "somefile", "")
-
 
 run_test(__name__)
 

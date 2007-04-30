@@ -23,6 +23,7 @@ using System.Diagnostics;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
+using System.Runtime.InteropServices;
 
 [assembly: PythonModule("re", typeof(IronPython.Modules.PythonRegex))]
 namespace IronPython.Modules {
@@ -117,43 +118,7 @@ namespace IronPython.Modules {
             RE_Pattern pat = new RE_Pattern(ValidatePattern(pattern), flags);
             ValidateString(@string, "string");
 
-            MatchCollection mc = pat.FindAllWorker(@string, 0, @string.Length);
-            object[] matches = new object[mc.Count];
-            int numgrps = pat.re.GetGroupNumbers().Length;
-            for (int i = 0; i < mc.Count; i++) {
-                if (numgrps > 2) { // CLR gives us a "bonus" group of 0 - the entire expression
-                    //  at this point we have more than one group in the pattern;
-                    //  need to return a list of tuples in this case
-
-                    //  for each match item in the matchcollection, create a tuple representing what was matched
-                    //  e.g. findall("(\d+)|(\w+)", "x = 99y") == [('', 'x'), ('99', ''), ('', 'y')]
-                    //  in the example above, ('', 'x') did not match (\d+) as indicated by '' but did 
-                    //  match (\w+) as indicated by 'x' and so on...
-                    int k = 0;
-                    ArrayList tpl = new ArrayList();
-                    foreach (Group g in mc[i].Groups) {
-                        //  here also the CLR gives us a "bonus" match as the first item which is the 
-                        //  group that was actually matched in the tuple e.g. we get 'x', '', 'x' for 
-                        //  the first match object...so we'll skip the first item when creating the 
-                        //  tuple
-                        if (k++ != 0) {
-                            tpl.Add(g.Value);
-                        }
-                    }
-                    matches[i] = Tuple.Make(tpl);
-                } else if (numgrps == 2) {
-                    //  at this point we have exactly one group in the pattern (including the "bonus" one given 
-                    //  by the CLR 
-                    //  skip the first match since that contains the entire match and not the group match
-                    //  e.g. re.findall(r"(\w+)\s+fish\b", "green fish") will have "green fish" in the 0 
-                    //  index and "green" as the (\w+) group match
-                    matches[i] = mc[i].Groups[1].Value;
-                } else {
-                    matches[i] = mc[i].Value;
-                }
-            }
-
-            return new List(matches);
+            return pat.FindAll(@string, 0, @string.Length);
         }
 
         [PythonName("finditer")]
@@ -193,9 +158,9 @@ namespace IronPython.Modules {
             return Split(ValidatePattern(pattern), ValidateString(@string, "string"), 0);
         }
         [PythonName("split")]
-        public static object Split(object pattern, object @string, int maxSplit) {
+        public static object Split(object pattern, object @string, int maxsplit) {
             return new RE_Pattern(ValidatePattern(pattern)).Split(ValidateString(@string, "string"),
-                maxSplit);
+                maxsplit);
         }
 
         [PythonName("sub")]
@@ -260,7 +225,7 @@ namespace IronPython.Modules {
             }
 
             [PythonName("match")]
-            public RE_Match Match(object text, int pos, int endpos) {
+            public RE_Match Match(object text, [DefaultParameterValue(0)] int pos, int endpos) {
                 string input = ValidateString(text, "text");
                 return RE_Match.makeMatch(
                     re.Match(input.Substring(0, endpos), pos),
@@ -300,10 +265,39 @@ namespace IronPython.Modules {
             [PythonName("findall")]
             public object FindAll(object @string, int pos, object endpos) {
                 MatchCollection mc = FindAllWorker(ValidateString(@string, "text"), pos, endpos);
-
                 object[] matches = new object[mc.Count];
+                int numgrps = re.GetGroupNumbers().Length;
                 for (int i = 0; i < mc.Count; i++) {
-                    matches[i] = mc[i].Value;
+                    if (numgrps > 2) { // CLR gives us a "bonus" group of 0 - the entire expression
+                        //  at this point we have more than one group in the pattern;
+                        //  need to return a list of tuples in this case
+
+                        //  for each match item in the matchcollection, create a tuple representing what was matched
+                        //  e.g. findall("(\d+)|(\w+)", "x = 99y") == [('', 'x'), ('99', ''), ('', 'y')]
+                        //  in the example above, ('', 'x') did not match (\d+) as indicated by '' but did 
+                        //  match (\w+) as indicated by 'x' and so on...
+                        int k = 0;
+                        ArrayList tpl = new ArrayList();
+                        foreach (Group g in mc[i].Groups) {
+                            //  here also the CLR gives us a "bonus" match as the first item which is the 
+                            //  group that was actually matched in the tuple e.g. we get 'x', '', 'x' for 
+                            //  the first match object...so we'll skip the first item when creating the 
+                            //  tuple
+                            if (k++ != 0) {
+                                tpl.Add(g.Value);
+                            }
+                        }
+                        matches[i] = Tuple.Make(tpl);
+                    } else if (numgrps == 2) {
+                        //  at this point we have exactly one group in the pattern (including the "bonus" one given 
+                        //  by the CLR 
+                        //  skip the first match since that contains the entire match and not the group match
+                        //  e.g. re.findall(r"(\w+)\s+fish\b", "green fish") will have "green fish" in the 0 
+                        //  index and "green" as the (\w+) group match
+                        matches[i] = mc[i].Groups[1].Value;
+                    } else {
+                        matches[i] = mc[i].Value;
+                    }
                 }
 
                 return new List(matches);
@@ -342,10 +336,10 @@ namespace IronPython.Modules {
             }
 
             [PythonName("split")]
-            public object Split(object @string, int maxSplit) {
+            public object Split(object @string, int maxsplit) {
                 List result = new List();
                 // fast path for negative maxSplit ( == "make no splits")
-                if (maxSplit < 0)
+                if (maxsplit < 0)
                     result.AddNoLock(@string);
                 else {
                     // iterate over all matches
@@ -366,7 +360,7 @@ namespace IronPython.Modules {
                         // update lastPos, nSplits
                         lastPos = m.Index + m.Length;
                         nSplits++;
-                        if (nSplits == maxSplit)
+                        if (nSplits == maxsplit)
                             break;
                     }
                     // add tail following last match
@@ -508,6 +502,7 @@ namespace IronPython.Modules {
             RE_Pattern pattern;
             private Match m;
             private string text;
+            private int lastindex = -1;
 
             #region Internal makers
             internal static RE_Match make(Match m, RE_Pattern pattern, string input) {
@@ -526,11 +521,6 @@ namespace IronPython.Modules {
                 this.m = m;
                 this.pattern = pattern;
                 this.text = text;
-                for (int i = 0; i < m.Groups.Count; i++) {
-                    if (m.Groups[i].Captures.Count > 0) {
-                        lastindex = i;
-                    }
-                }
             }
             #endregion
 
@@ -612,8 +602,6 @@ namespace IronPython.Modules {
                 return Ops.MakeTuple(ret);
             }
 
-            public object lastindex;
-
             [PythonName("expand")]
             public object Expand(object template) {
                 string strTmp = ValidateString(template, "template");
@@ -674,13 +662,12 @@ namespace IronPython.Modules {
 
             [PythonName("span")]
             public object Span() {
-                return Tuple.MakeTuple(m.Groups[0].Index, m.Groups[0].Index + m.Groups[0].Length);
+                return Tuple.MakeTuple(this.Start(), this.End());
             }
 
             [PythonName("span")]
             public object Span(object group) {
-                int groupInt = GetGroupIndex(group);
-                return Tuple.MakeTuple(m.Groups[groupInt].Index, m.Groups[groupInt].Index + m.Groups[groupInt].Length);
+                return Tuple.MakeTuple(this.Start(group), this.End(group));
             }
 
             public int Position {
@@ -715,6 +702,58 @@ namespace IronPython.Modules {
                 [PythonName("re")]
                 get {
                     return pattern;
+                }
+            }
+
+            public object LastIndex {
+                [PythonName("lastindex")]
+                get {
+                    //   -1 : initial value of lastindex
+                    //    0 : no match found
+                    //other : the true lastindex
+
+                    // Match.Groups contains "lower" level matched groups, which has to be removed
+                    if (lastindex == -1) {
+                        int i = 1;
+                        while (i < m.Groups.Count) {
+                            if (m.Groups[i].Success) {
+                                lastindex = i;
+                                int start = m.Groups[i].Index;
+                                int end = start + m.Groups[i].Length;
+                                i++;
+
+                                // skip any group which fall into the range [start, end], 
+                                // no matter match succeed or fail
+                                while (i < m.Groups.Count && (m.Groups[i].Index < end)) {
+                                    i++;
+                                }
+                            } else {
+                                i++;
+                            }
+                        }
+
+                        if (lastindex == -1) {
+                            lastindex = 0;
+                        }
+                    }
+
+                    if (lastindex == 0) {
+                        return null;
+                    } else {
+                        return lastindex;
+                    }
+                }
+            }
+
+            public object LastGroup {
+                [PythonName("lastgroup")]
+                get {
+                    if (LastIndex == null) return null;
+
+                    // when group was not explicitly named, RegEx assigns the number as name
+                    // This is different from C-Python, which returns None in such cases
+
+                    return this.pattern.re.GroupNameFromNumber((int)LastIndex);
                 }
             }
             #endregion

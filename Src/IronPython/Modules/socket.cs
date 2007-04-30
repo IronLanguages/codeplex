@@ -87,7 +87,7 @@ namespace IronPython.Modules {
             private const int DefaultSocketType = (int)System.Net.Sockets.SocketType.Stream;
             private const int DefaultProtocolType = (int)ProtocolType.Unspecified;
 
-            private Socket socket;
+            internal Socket socket;
             private WeakRefTracker weakRefTracker = null;
 
             #endregion
@@ -315,6 +315,16 @@ namespace IronPython.Modules {
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
+            }
+
+            [Documentation("makefile([mode[, bufsize]]) -> file object\n\n"
+                + "Return a regular file object corresponding to the socket.  The mode\n"
+                + "and bufsize arguments are as for the built-in open() function.")]
+            [PythonName("makefile")]
+            public PythonFile MakeFile([DefaultParameterValue("r")]string mode, [DefaultParameterValue(8192)]int bufSize) {
+                if (bufSize == -1) bufSize = 8192;
+                socket.SendBufferSize = socket.ReceiveBufferSize = bufSize;
+                return new PythonFile(new NetworkStream(socket), System.Text.Encoding.Default, mode);
             }
 
             [Documentation("recv(bufsize[, flags]) -> string\n\n"
@@ -670,9 +680,9 @@ namespace IronPython.Modules {
         #region Fields
 
         public static IPythonType error = ExceptionConverter.CreatePythonException("error", "socket");
-        public static IPythonType herror = ExceptionConverter.CreatePythonException("herror", "socket", error);
-        public static IPythonType gaierror = ExceptionConverter.CreatePythonException("gaierror", "socket", error);
-        public static IPythonType timeout = ExceptionConverter.CreatePythonException("timeout", "socket", error);
+        public static IPythonType herror = ExceptionConverter.CreatePythonException( "herror", "socket", error);
+        public static IPythonType gaierror = ExceptionConverter.CreatePythonException( "gaierror", "socket", error);
+        public static IPythonType timeout = ExceptionConverter.CreatePythonException( "timeout", "socket", error);
 
         private static int? DefaultTimeout = null; // in milliseconds
 
@@ -687,36 +697,36 @@ namespace IronPython.Modules {
 
         #region Public API
 
-        [Documentation("")]
         [PythonName("getaddrinfo")]
         public static List GetAddrInfo(
             string host,
             object port,
-            [DefaultParameterValue((int)AddressFamily.InterNetwork)] int family,
+            [DefaultParameterValue((int)AddressFamily.Unspecified)] int family,
             [DefaultParameterValue(0)] int socktype,
             [DefaultParameterValue((int)ProtocolType.IP)] int proto,
             [DefaultParameterValue((int)SocketFlags.None)] int flags
         ) {
-            int numericPort;
-            /* Disabled because GetServiceByName is not implemented
-            string serviceName;
-            if (port == null) {
-                numericPort = 0;
-            } else if (Converter.TryConvertToInt32(port, out numericPort)) {
-                // nop
-            } else if (Converter.TryConvertToString(port, out serviceName)) {
-                numericPort = GetServiceByName(serviceName, null);
-            }
-            */
+            int numericPort = 0;
 
-            if (!Converter.TryConvertToInt32(port, out numericPort)) {
+            string sport;
+            if (port is int) {
+                numericPort = (int)port;
+            } else if ((sport = port as string) != null) {
+                if (!Int32.TryParse(sport, out numericPort)) {
+                    // Disabled because GetServiceByName is not implemented
+                    // numericPort = GetServiceByName(sport, null);
+                    throw MakeException(gaierror, "getaddrinfo - invalid port string");
+                }
+            } else if (port == null) {
                 numericPort = 0;
+            } else {
+                throw MakeException(gaierror, "getaddrinfo - invalid port, expected int or str");
             }
 
             if (socktype != 0) {
                 // we just use this to validate; socketType isn't actually used
                 System.Net.Sockets.SocketType socketType = (System.Net.Sockets.SocketType)Enum.ToObject(typeof(System.Net.Sockets.SocketType), socktype);
-                if (!Enum.IsDefined(typeof(System.Net.Sockets.SocketType), socketType)) {
+                if (socketType == System.Net.Sockets.SocketType.Unknown || !Enum.IsDefined(typeof(System.Net.Sockets.SocketType), socketType)) {
                     throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.SocketNotSupported, "getaddrinfo failed"));
                 }
             }
@@ -725,15 +735,6 @@ namespace IronPython.Modules {
             if (!Enum.IsDefined(typeof(AddressFamily), addressFamily)) {
                 throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.AddressFamilyNotSupported, "getaddrinfo failed"));
             }
-            if (addressFamily == AddressFamily.Unspecified) {
-                addressFamily = AddressFamily.InterNetwork;
-            }
-
-            // Again, we just validate, but don't actually use protocolType
-            ProtocolType protocolType = (ProtocolType)Enum.ToObject(typeof(ProtocolType), proto);
-            if (!Enum.IsDefined(typeof(ProtocolType), protocolType)) {
-                throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.ProtocolNotSupported, "getaddrinfo failed"));
-            }
 
             IPAddress[] ips = HostToAddresses(host, addressFamily);
 
@@ -741,7 +742,7 @@ namespace IronPython.Modules {
 
             foreach (IPAddress ip in ips) {
                 results.Add(Tuple.MakeTuple(
-                    (int)addressFamily,
+                    (int)ip.AddressFamily,
                     socktype,
                     proto,
                     "",
@@ -936,9 +937,10 @@ namespace IronPython.Modules {
 
             if (hostEntry.AddressList.Length > 1) {
                 throw MakeException(error, "sockaddr resolved to multiple addresses");
-            } else if (hostEntry.AddressList.Length < 1) {
-                throw MakeException(error, "sockaddr resolved to zero addresses");
-            }
+            } else
+                if (hostEntry.AddressList.Length < 1) {
+                    throw MakeException(error, "sockaddr resolved to zero addresses");
+                }
 
             if ((flags & (int)NI_NUMERICHOST) != 0) {
                 resultHost = hostEntry.AddressList[0].ToString();
@@ -1418,7 +1420,7 @@ namespace IronPython.Modules {
         /// not the same as the specified family. gaierror is also raised if the hostname cannot be
         /// converted to an IP address (e.g. through a name lookup failure).
         /// </summary>
-        private static IPAddress HostToAddress(string host, AddressFamily? family) {
+        private static IPAddress HostToAddress(string host, AddressFamily family) {
             return HostToAddresses(host, family)[0];
         }
 
@@ -1430,20 +1432,23 @@ namespace IronPython.Modules {
         /// not the same as the specified family. gaierror is also raised if the hostname cannot be
         /// converted to an IP address (e.g. through a name lookup failure).
         /// </summary>
-        private static IPAddress[] HostToAddresses(string host, AddressFamily? family) {
+        private static IPAddress[] HostToAddresses(string host, AddressFamily family) {
             host = ConvertSpecialAddresses(host);
-            IPAddress addr;
             try {
+                IPAddress addr;
                 if (IPAddress.TryParse(host, out addr)) {
-                    if (family == null || addr.AddressFamily == family.Value) {
-                        return new IPAddress[]{ addr };
+                    if (family == AddressFamily.Unspecified || family == addr.AddressFamily) {
+                        if (family == AddressFamily.InterNetwork && host.Split('.').Length != 4)
+                            throw MakeException(gaierror, "getaddrinfo failed - incorrect address format");
+
+                        return new IPAddress[] { addr };
                     }
                     // Incorrect family will raise exception below
                 } else {
                     IPHostEntry hostEntry = Dns.GetHostEntry(host);
                     List<IPAddress> addrs = new List<IPAddress>();
                     foreach (IPAddress ip in hostEntry.AddressList) {
-                        if (family == null || ip.AddressFamily == family.Value) {
+                        if (family == AddressFamily.Unspecified || family == ip.AddressFamily) {
                             addrs.Add(ip);
                         }
                     }

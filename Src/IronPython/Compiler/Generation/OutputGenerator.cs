@@ -141,14 +141,24 @@ namespace IronPython.Compiler.Generation {
                 cg.EmitCall(typeof(ICallerContext), "set_TrueDivision");
             }
 
+            Slot dummySlot = null;
             // Emit a try/catch block  for TraceBack support, except for simple return statements
-            if (!(body is ReturnStatement))
-                cg.EmitTraceBackTryBlockStart();
+            if (!(body is ReturnStatement)) {
+                // Try block may yield, but we are not interested in the isBlockYielded value
+                // hence push a dummySlot to pass the Assertion.
+                dummySlot = cg.GetLocalTmp(typeof(object));
+
+                cg.EmitTraceBackTryBlockStart(dummySlot);
+                cg.FuncOrClassName = "<module>";
+                cg.EmitSetTraceBackUpdateStatus(false);
+            }
 
             gs.Emit(cg);
 
             if (!(body is ReturnStatement)) {
-                cg.EmitTraceBackFaultBlock("Initialize", context.SourceFile);
+                // free up the dummySlot
+                cg.FreeLocalTmp(dummySlot);
+                cg.EmitTraceBackFaultBlock();
                 cg.EmitPosition(Location.None, Location.None);
                 cg.EmitReturn(null);
             }
@@ -291,6 +301,7 @@ namespace IronPython.Compiler.Generation {
         internal static CodeGen GenerateModuleInitialize(CompilerContext context, GlobalSuite gs, TypeGen tg, bool staticTypes, CustomModuleInit customInit) {
             CodeGen ncg = tg.DefineMethodOverride(typeof(CompiledModule).GetMethod("Initialize", BindingFlags.Public | BindingFlags.Instance));
             ncg.Context = context;
+            ncg.EmitSetTraceBackUpdateStatus(false);
 
             ncg.Names = CodeGen.CreateStaticFieldNamespace(tg);
 

@@ -14,18 +14,23 @@
 ######################################################################################
 
 from lib.assert_util import *
+from lib.file_util import *
 
 import nt
 
-nt.mkdir('dir_create_test')
-AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 1)
 
-nt.rmdir('dir_create_test')
-AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 0)
+#mkdir,listdir,rmdir,getcwd
+def test_mkdir():
+    nt.mkdir('dir_create_test')
+    AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 1)
 
-AreEqual(nt.environ['COMPUTERNAME'] != None, True)
+    nt.rmdir('dir_create_test')
+    AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 0)
 
-AssertError(nt.error, nt.stat, 'doesnotexist.txt')
+    AreEqual(nt.environ.has_key('COMPUTERNAME') or nt.environ.has_key('computername'), True)
+
+    AssertError(nt.error, nt.stat, 'doesnotexist.txt')
+
 
 def test_environ():
     non_exist_key      = "_NOT_EXIST_"
@@ -59,20 +64,55 @@ def test_environ():
         AreEqual(System.Environment.GetEnvironmentVariable(non_exist_key), None)
     
     AreEqual(type(nt.environ), type({}))
+    
+#startfile
+def test_startfile():
+    AssertError(WindowsError, nt.startfile, "not_exist_file.txt")
+
+#chdir tests
+def test_chdir():
+    currdir = nt.getcwd()
+    nt.mkdir('tsd')
+    nt.chdir('tsd')
+    AreEqual(currdir+'\\tsd', nt.getcwd())
+    nt.chdir(currdir)
+    AreEqual(currdir, nt.getcwd())
+    nt.rmdir('tsd')
+    
+    #the directory is empty or does not exist
+    AssertError(OSError, lambda:nt.chdir(''))
+    AssertError(OSError, lambda:nt.chdir('tsd'))
+
+#fdopen tests
+def test_fdopen():
+    # fd = 0 
+    result = 0
+    result = nt.fdopen(0,"r",1024)
+    Assert(result!=0,"1,The file object was not returned correctly") 
    
-test_environ()
 
-AssertError(WindowsError, nt.startfile, "not_exist_file.txt")
+    # some arguments were omitted
+    result = 0 
+    result = nt.fdopen(2,"w")
+    Assert(result!=0,"2,The file object was not returned correctly") 
 
-currdir = nt.getcwd()
-nt.mkdir('tsd')
-nt.chdir('tsd')
-AreEqual(currdir+'\\tsd', nt.getcwd())
-nt.chdir(currdir)
-AreEqual(currdir, nt.getcwd())
-nt.rmdir('tsd')
-AssertError(OSError, lambda:nt.chdir(''))
-AssertError(OSError, lambda:nt.chdir('tsd'))
+    #The file descriptor is not valid  
+    AssertError(OSError,nt.fdopen,3)
+    
+    #CodePlex Work Item #8617
+    #The file mode does not exist
+    #AssertError(ValueError,nt.fdopen,0,"p")
+    
+#fstat tests
+def test_fstat():
+    result = 0
+    #CodePlex Work Item #8618
+    #result = nt.fstat(1)
+    #Assert(result!=0,"0,The file stat object was not returned correctly") 
+    
+    #invalid file descriptor
+    AssertError(OSError,nt.fstat,3)
+    AssertError(OSError,nt.fstat,-1)
 
 # chmod tests:
 # BUG 828,830
@@ -87,20 +127,32 @@ AssertError(OSError, lambda:nt.chdir('tsd'))
 ################################################################################################
 # popen/popen2/popen3 tests
 
-# open a pipe just for reading...
-x = nt.popen('ping 127.0.0.1', 'r')
-text = x.read()
-Assert(text.lower().index('pinging') != -1)
-AreEqual(x.close(), None)
+def test_popen():
+    # open a pipe just for reading...
+    pipe_modes = [["ping 127.0.0.1", "r"],
+                  ["ping 127.0.0.1"]]
+    if is_cli:
+        pipe_modes.append(["ping 127.0.0.1", ""])
+        
+    for args in pipe_modes:
+        x = nt.popen(*args)
+        text = x.read()
+        Assert(text.lower().index('pinging') != -1)
+        AreEqual(x.close(), None)
 
-# bug 1146
-#x = nt.popen('sort', 'w')
-#x.write('hello\nabc\n')
-#AreEqual(x.close(), None)
+    #write to a pipe
+    x = nt.popen('sort', 'w')
+    x.write('hello\nabc\n')
+    x.close()
 
+    # bug 1146
+    #x = nt.popen('sort', 'w')
+    #x.write('hello\nabc\n')
+    #AreEqual(x.close(), None)
 
-# once w/ default mode
-# once w/ no mode specified
+    # once w/ default mode
+    AssertError(ValueError, nt.popen, "ping 127.0.0.1", "a")
+
 
 # once w/ no mode
 stdin, stdout = nt.popen2('sort')
@@ -185,7 +237,7 @@ nt.chmod('tmpfile.tmp', 256)
 nt.chmod('tmpfile.tmp', 128)
 nt.unlink('tmpfile.tmp')
 
-
+    
 def test_utime():
     f = file('temp_file_does_not_exist.txt', 'w')
     f.close()
@@ -195,5 +247,154 @@ def test_utime():
     y = nt.stat('temp_file_does_not_exist.txt')
     AreEqual(x[7], y[7])
     AreEqual(x[8], y[8])
+
+def test_tempnam():
+    '''
+    '''
+    #sanity checks
+    AreEqual(type(nt.tempnam()), str)
+    AreEqual(type(nt.tempnam("garbage name should still work")), str)
+    #BUG - "" does not work
+    #AreEqual(type(nt.tempnam("", "pre")), str)
     
-test_utime()
+    #Very basic case
+    joe = nt.tempnam()
+    last_dir = joe.rfind("\\")
+    temp_dir = joe[:last_dir+1]
+    Assert(directory_exists(temp_dir))
+    Assert(not file_exists(joe))
+    
+    #Basic case where we give it an existing directory and ensure
+    #it uses that directory
+    joe = nt.tempnam(get_temp_dir())
+    last_dir = joe.rfind("\\")
+    temp_dir = joe[:last_dir+1]
+    Assert(directory_exists(temp_dir))
+    Assert(not file_exists(joe))
+    # The next line is not guaranteed to be true in some scenarios. 
+    #AreEqual(nt.stat(temp_dir.strip("\\")), nt.stat(get_temp_dir()))
+    
+    #few random prefixes
+    prefix_names = ["", "a", "1", "_", ".", "sillyprefix", 
+                    "                                ", 
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    ]
+    #test a few directory names that shouldn't really work
+    dir_names = ["b", "2", "_", ".", "anotherprefix", 
+                 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                 None]
+    
+    for dir_name in dir_names:
+        #just try the directory name on it's own
+        joe = nt.tempnam(dir_name)
+        last_dir = joe.rfind("\\")
+        temp_dir = joe[:last_dir+1]
+        Assert(directory_exists(temp_dir))
+        Assert(not file_exists(joe))
+        Assert(temp_dir != dir_name)
+            
+        #now try every prefix
+        for prefix_name in prefix_names:
+            joe = nt.tempnam(dir_name, prefix_name)
+            last_dir = joe.rfind("\\")
+            temp_dir = joe[:last_dir+1]
+            file_name = joe[last_dir+1:]
+            Assert(directory_exists(temp_dir))
+            Assert(not file_exists(joe))
+            Assert(temp_dir != dir_name)
+            Assert(file_name.startswith(prefix_name))
+        
+def test_times():
+    '''
+    '''
+    #simple sanity check
+    utime, stime, zero1, zero2, zero3 = nt.times()
+    Assert(utime>0)
+    Assert(stime>0)
+    AreEqual(zero1, 0)
+    AreEqual(zero2, 0)
+    #BUG - according to the specs this should be 0 for Windows
+    #AreEqual(zero3, 0)
+    
+    
+def test_putenv():
+    '''
+    '''
+    #simple sanity check
+    nt.putenv("IPY_TEST_ENV_VAR", "xyz")
+       
+    #ensure it really does what it claims to do
+    #TODO
+    
+    #negative cases
+    AssertError(TypeError, nt.putenv, None, "xyz")
+    #BUG
+    #AssertError(TypeError, nt.putenv, "ABC", None)
+    AssertError(TypeError, nt.putenv, 1, "xyz")
+    AssertError(TypeError, nt.putenv, "ABC", 1)
+  
+  
+#environ tests    
+def test_spawnle():
+    '''
+    '''
+    #BUG?
+    #CPython nt has no spawnle function
+    if is_cli == False:
+        return
+    
+    ping_cmd = nt.environ["windir"] + "\system32\ping" 
+    
+    #simple sanity check
+    nt.spawnle(nt.P_WAIT, ping_cmd , "ping", "/?", {})
+    #BUG - the first parameter of spawnle should be "ping"
+    #nt.spawnle(nt.P_WAIT, ping_cmd , "ping", "127.0.0.1", {})
+    #BUG - even taking "ping" out, multiple args do not work
+    #pid = nt.spawnle(nt.P_NOWAIT, ping_cmd ,  "-n", "15", "-w", "1000", "127.0.0.1", {})
+    
+    #negative cases
+    AssertError(TypeError, nt.spawnle, nt.P_WAIT, ping_cmd , "ping", "/?", None)
+    AssertError(TypeError, nt.spawnle, nt.P_WAIT, ping_cmd , "ping", "/?", {1: "xyz"})
+    AssertError(TypeError, nt.spawnle, nt.P_WAIT, ping_cmd , "ping", "/?", {"abc": 1})
+    
+def test_tmpfile():
+    '''
+    '''
+    #sanity check
+    joe = nt.tmpfile()
+    AreEqual(type(joe), file)
+    joe.close()
+    
+def test_waitpid():
+    '''
+    '''
+    #sanity check    
+    #the usage of spawnle is a bug in this case that should be fixed in IP, 
+    #but since this test is for waitpid it's basically OK
+    #ping_cmd = nt.environ["windir"] + "\system32\ping" 
+    #pid = nt.spawnle(nt.P_NOWAIT, ping_cmd ,  "-n", "5", "-w", "1000", "127.0.0.1", {})
+    #new_pid, exit_stat = nt.waitpid(pid, 0)
+    
+    #negative cases
+    #BUG - should be an OSError instead of a ValueError
+    #AssertError(OSError, nt.waitpid, -1234, 0)
+    AssertError(TypeError, nt.waitpid, "", 0)
+    
+def test_spawnve():
+    '''
+    '''
+    ping_cmd = nt.environ["windir"] + "\system32\ping" 
+    
+    #simple sanity checks
+    nt.spawnve(nt.P_WAIT, ping_cmd, ["ping", "/?"], {})
+    nt.spawnve(nt.P_WAIT, ping_cmd, ["ping", "127.0.0.1"], {})
+    nt.spawnve(nt.P_WAIT, ping_cmd, ["ping", "-n", "15", "-w", "1000", "127.0.0.1"], {})
+    
+    #negative cases
+    AssertError(TypeError, nt.spawnve, nt.P_WAIT, ping_cmd , ["ping", "/?"], None)
+    AssertError(TypeError, nt.spawnve, nt.P_WAIT, ping_cmd , ["ping", "/?"], {1: "xyz"})
+    AssertError(TypeError, nt.spawnve, nt.P_WAIT, ping_cmd , ["ping", "/?"], {"abc": 1})
+    
+        
+run_test(__name__)
+

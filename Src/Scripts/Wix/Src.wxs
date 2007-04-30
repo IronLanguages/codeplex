@@ -193,6 +193,7 @@
                 <File Id="File_marshal.cs" Name="marshal.cs" />
                 <File Id="File_math.cs" Name="math.cs" />
                 <File Id="File_math.generated.cs" Name="mathgen.cs" LongName = "math.Generated.cs" />
+                <File Id="File_md5.cs" Name="md5.cs" />
                 <File Id="File_nt.cs" Name="nt.cs" />
                 <File Id="File_operator.cs" Name="operator.cs" />
                 <File Id="File_ModExceptions.cs" Name="EXCEPS.CS" LongName="Exceptions.cs" />
@@ -201,6 +202,8 @@
                 <File Id="File_thread.cs" Name="thread.cs" />
                 <File Id="File_time.cs" Name="time.cs" />
                 <File Id="File_random.cs" Name="_random.cs" />
+                <File Id="File_select.cs" Name="select.cs" />
+                <File Id="File_sha.cs" Name="sha.cs" />
                 <File Id="File_socket.cs" Name="socket.cs" />
                 <File Id="File_sre.cs" Name="_sre.cs" />
                 <File Id="File_struct.cs" Name="struct.cs" />
@@ -435,7 +438,8 @@
                 <File Id="File_iprun.py" Name="iprun.py" />
                 <File Id="File_pretest.py" Name="pretest.py" />
                 <File Id="File_run.py" Name="run.py" />
-                <File Id="File_test_array.py" Name="TARRAY.PY" LongName="test_array.py" />
+				<File Id="File_RunAgainstCpy.py" Name="TRACPY.PY" LongName="RunAgainstCpy.py" />
+			    <File Id="File_test_array.py" Name="TARRAY.PY" LongName="test_array.py" />
                 <File Id="File_test_assert.py" Name="TASSERT.PY" LongName="test_assert.py"/>
                 <File Id="File_test_attr.py" Name="TATTR.PY" LongName="test_attr.py" />
                 <File Id="File_test_attrinjector.py" Name="TATTRINJ.PY" LongName="test_attrinjector.py" />
@@ -452,8 +456,10 @@
                 <File Id="File_test_clrexception.py" Name="TCLREXCE.PY" LongName="test_clrexception.py" />
                 <File Id="File_test_clrload.py" Name="TCLRLOAD.PY" LongName="test_clrload.py" />
                 <File Id="File_test_clrload2.py" Name="TCLRLD2.PY" LongName="test_clrload2.py" />
+				<File Id="File_test_codecs.py" Name="TCODECS.PY" LongName="test_codecs.py" />
                 <File Id="File_test_codedom.py" Name="TCODEDOM.PY" LongName="test_codedom.py" />
                 <File Id="File_test_cominterop.py" Name="TCOMINTE.PY" LongName="test_cominterop.py" />
+                <File Id="File_test_clrnuminterop.py" Name="TCLRNUMI.PY" LongName="test_clrnuminterop.py" />
                 <File Id="File_test_complex.py" Name="TCOMPLEX.PY" LongName="test_complex.py" />
                 <File Id="File_test_conditional.py" Name="TCONDTNL.PY" LongName="test_conditional.py" />
                 <File Id="File_test_datetime.py" Name="TDATETIM.PY" LongName="test_datetime.py" />
@@ -471,6 +477,7 @@
                 <File Id="File_test_formatting.py" Name="TFORMATT.PY" LongName="test_formatting.py" />
                 <File Id="File_test_function.py" Name="TFUNCTIO.PY" LongName="test_function.py" />
                 <File Id="File_test_future.py" Name="TFUTURE.PY" LongName="test_future.py" />
+				<File Id="File_test_gc.py" Name="TGC.PY" LongName="test_gc.py" />
                 <File Id="File_test_generator.py" Name="TGENERAT.PY" LongName="test_generator.py" />
                 <File Id="File_test_genericmeth.py" Name="TGENERIC.PY" LongName="test_genericmeth.py" />
                 <File Id="File_test_help.py" Name="testhelp.PY" LongName="test_help.py" />
@@ -488,6 +495,7 @@
                 <File Id="File_test_kwarg.py" Name="TKWARG.PY" LongName="test_kwarg.py" />
                 <File Id="File_test_list.py" Name="TLIST.PY" LongName="test_list.py" />
                 <File Id="File_test_listcomp.py" Name="TLISTCOM.PY" LongName="test_listcomp.py" />
+				<File Id="File_test_locale.py" Name="TLOCALE.PY" LongName="test_locale.py" />
                 <File Id="File_test_marshal.py" Name="TMARSHAL.PY" LongName="test_marshal.py" />
                 <File Id="File_test_math.py" Name="TMATH.PY" LongName="test_math.py" />
                 <File Id="File_test_memory.py" Name="TMEMORY.PY" LongName="test_memory.py" />
@@ -522,6 +530,7 @@
                 <File Id="File_test_thread.py" Name="TTHREAD.PY" LongName="test_thread.py" />
                 <File Id="File_test_threadsafety.py" Name="TTHREADS.PY" LongName="test_threadsafety.py" />
                 <File Id="File_test_time.py" Name="TTIME.PY" LongName="test_time.py" />
+                <File Id="File_test_traceback.py" Name="TTRACBAC.PY" LongName="test_traceback.py" />
                 <File Id="File_test_tuple.py" Name="TTUPLE.PY" LongName="test_tuple.py" />
                 <File Id="File_test_unicode.py" Name="TUNICODE.PY" LongName="test_unicode.py" />
                 <File Id="File_test_weakref.py" Name="TWEAKREF.PY" LongName="test_weakref.py" />

@@ -56,6 +56,9 @@ def run_sbs_test(l):
     print "----------------------------------------"
     print " Tests ran: " + str(success + failure), " Success: " + str(success)  + " Failure:   " + str(failure)
     print "----------------------------------------"
+    
+    if failure:
+        raise AssertionError, "Failed"
 
 def run(type="long", tests = "full", compare=True):
     if type in ["short", "medium"]:

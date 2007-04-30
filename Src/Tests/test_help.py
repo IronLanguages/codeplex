@@ -21,8 +21,7 @@ class stdout_reader:
         self.text = ''
     def write(self, text):
         self.text += text
-        
-
+    
 if is_cli:
     def test_z_cli_tests():    # runs last to prevent tainting the module w/ CLR names
         import clr
@@ -33,9 +32,18 @@ if is_cli:
         sys.stdout = stdout_reader()
         
         help(WriteOnly)
+        help(System.IO.Compression)
         
         sys.stdout = sys.__stdout__
 
+        sys.stdout = stdout_reader()
+        
+        help(System.String.Format)
+        x = sys.stdout.text
+        
+        sys.stdout = sys.__stdout__
+        Assert(x.find('Format(str format, *args)') != -1)
+        
 def test_module():
     import time
     sys.stdout = stdout_reader()
@@ -61,6 +69,66 @@ def test_userfunction():
     
     Assert(x.find('my help is useful') != -1)
     
+def test_splat():
+    def foo(*args): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(*args)') != -1)
+    #CodePlex Work Item 6735
+    #Assert(x.find('Help on function foo in module __main__:') != -1)
+    
+    def foo(**kwargs): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(**kwargs)') != -1)
+
+    def foo(*args, **kwargs): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(*args, **kwargs)') != -1)
+    
+    def foo(a, *args): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(a, *args)') != -1)
+    
+    def foo(a, *args, **kwargs): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(a, *args, **kwargs)') != -1)
+    
+    def foo(a=7): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    #CodePlex Work Item 6735
+    #Assert(x.find('foo(a=7') != -1)
+    
+    def foo(a=[3]): a.append(7)
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    #CodePlex Work Item 6735
+    #Assert(x.find('foo(a=[3]') != -1)
+    foo()
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    #CodePlex Work Item 6735
+    #Assert(x.find('foo(a=[3, 7]') != -1)
     
 def test_builtinfunction():
     sys.stdout = stdout_reader()
@@ -75,7 +143,45 @@ def test_user_class():
         """this documentation is going to make the world a better place"""
                         
     sys.stdout = stdout_reader()
+    
+    class TClass(object):
+        '''
+        Some TClass doc...
+        '''
+        def __init__(self, p1, *args, **argkw):
+            '''
+            Some constructor doc...
+            
+            p1 does something
+            args does something
+            argkw does something
+            '''
+            self.member = 1
+            
+        def plainMethod(self):
+            '''
+            Doc here
+            '''
+            pass
+            
+        def plainMethodEmpty(self):
+            '''
+            '''
+            pass
+            
+        def plainMethodNone(self):
+            pass
+    
     help(foo)
+    
+    #sanity checks. just make sure no execeptions
+    #are thrown
+    help(TClass)
+    help(TClass.__init__)
+    help(TClass.plainMethod)
+    help(TClass.plainMethodEmpty)
+    help(TClass.plainMethodNone)
+    
     x = sys.stdout.text
     sys.stdout = sys.__stdout__
         
@@ -145,5 +251,6 @@ def test_str():
     sys.stdout = sys.__stdout__
     
     Assert(x.find('Return the absolute value of the argument.') != -1)
+    
     
 run_test(__name__)

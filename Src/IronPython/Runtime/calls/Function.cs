@@ -87,7 +87,11 @@ namespace IronPython.Runtime.Calls {
             [PythonName("co_argcount")]
             get {
                 if (compiledCode != null) return 0;
-                return func.ArgNames.Length;
+                int argCnt = func.ArgNames.Length;
+                if ((this.Flags & (int)FuncCodeFlags.VarArgs) != 0) argCnt--;
+                if ((this.Flags & (int)FuncCodeFlags.KwArgs) != 0) argCnt--;
+                
+                return argCnt;
             }
         }
 
@@ -126,17 +130,15 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public object Flags {
+        public int Flags {
             [PythonName("co_flags")]
             get {
                 FuncCodeFlags res = flags;
-                FunctionN funcN = func as FunctionN;
                 FunctionX funcX = func as FunctionX;
                 if (funcX != null) {
                     if ((funcX.Flags & FunctionAttributes.KeywordDictionary) != 0) res |= FuncCodeFlags.KwArgs;
                     if ((funcX.Flags & FunctionAttributes.ArgumentList) != 0) res |= FuncCodeFlags.VarArgs;
                 }
-                else if (funcN != null) res |= FuncCodeFlags.VarArgs;
 
                 return (int)res;
             }
@@ -274,6 +276,10 @@ namespace IronPython.Runtime.Calls {
 
             throw Ops.TypeError("bad code");
         }
+
+        public override string ToString() {
+            return string.Format("<code object {0} at {1:X8}, file \"{2}\", line {3}", "?", base.GetHashCode(), filename, lineNo);
+        }
     }
 
     /// <summary>
@@ -289,7 +295,7 @@ namespace IronPython.Runtime.Calls {
         internal static bool EnforceRecursion = false;    // true to enforce maximum depth, false otherwise
 
         #region instance members
-        private readonly string name;
+        private string name;
         private readonly string[] argNames;
         private readonly object[] defaults;
 
@@ -331,6 +337,8 @@ namespace IronPython.Runtime.Calls {
         public Tuple FunctionDefaults {
             [PythonName("func_defaults")]
             get {
+                if (defaults.Length == 0) return null;
+
                 return new Tuple(defaults);
             }
         }
@@ -340,11 +348,19 @@ namespace IronPython.Runtime.Calls {
             get {
                 return name;
             }
+            [PythonName("func_name")]
+            set {
+                name = value;
+            }
         }
         public string Name {
             [PythonName("__name__")]
             get {
                 return name;
+            }
+            [PythonName("__name__")]
+            set {
+                name = value;
             }
         }
 
@@ -352,6 +368,9 @@ namespace IronPython.Runtime.Calls {
             [PythonName("func_doc")]
             get {
                 return Documentation;
+            }
+            set {
+                Documentation = value;
             }
         }
 
@@ -570,6 +589,9 @@ namespace IronPython.Runtime.Calls {
             if (name == SymbolTable.Dict) {
                 value = EnsureDict();
                 return true;
+            } else if (name == SymbolTable.Name || name == SymbolTable.FunctionName) {
+                value = this.name;
+                return true;
             }
 
             if (dict != null) {
@@ -595,6 +617,8 @@ namespace IronPython.Runtime.Calls {
                     throw Ops.TypeError("__dict__ must be set to dictionary");
                 }
                 dict = d;
+            } else if(name == SymbolTable.Name || name == SymbolTable.FunctionName) {
+                this.name = Converter.ConvertToString(value);
             } else {
                 EnsureDict()[name] = value;
             }

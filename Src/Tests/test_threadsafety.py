@@ -97,7 +97,7 @@ if is_cli:
         writerAlive = True
         readerAlive = True
         
-        a = Thread(reader)
+        a = Thread(ThreadStart(reader))
         a.IsBackground = True
         a.Start()
         
@@ -105,13 +105,13 @@ if is_cli:
             b = []
             index = 0
             for wr in writerWorker:
-                th = Thread(writer(wr, index))
+                th = Thread(ThreadStart(writer(wr, index)))
                 th.IsBackground = True
                 th.Start()        
                 b.append(th)
                 index = index + 1
         else:
-            b = [Thread(writer(writerWorker, 0))]
+            b = [Thread(ThreadStart(writer(writerWorker, 0)))]
             b[0].IsBackground = True
             b[0].Start()
         

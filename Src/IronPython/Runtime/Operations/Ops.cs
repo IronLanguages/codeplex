@@ -61,7 +61,6 @@ namespace IronPython.Runtime.Operations {
         // The cache for dynamically generated delegates.
         private static Publisher<DelegateSignatureInfo, MethodInfo> dynamicDelegates = new Publisher<DelegateSignatureInfo, MethodInfo>();
 
-
         public static object[] MakeArray(object o1) { return new object[] { o1 }; }
         public static object[] MakeArray(object o1, object o2) { return new object[] { o1, o2 }; }
 
@@ -293,7 +292,11 @@ namespace IronPython.Runtime.Operations {
             if (fo != null) {
                 if (fo is FunctionN == false) {
                     maxArgCnt = fo.ArgCount;
-                    minArgCnt = fo.ArgCount - fo.FunctionDefaults.Count;
+                    if (fo.FunctionDefaults != null) {
+                        minArgCnt = fo.ArgCount - fo.FunctionDefaults.Count;
+                    } else {
+                        minArgCnt = fo.ArgCount;
+                    }
 
                     // take into account unbound methods / bound methods
                     if (m != null) {
@@ -403,6 +406,11 @@ namespace IronPython.Runtime.Operations {
 
 
         public static object In(object x, object y) {
+            IPythonContainer ipc = y as IPythonContainer;
+            if (ipc != null) {
+                return Bool2Object(ipc.ContainsValue(x));
+            }
+
             if (y is IDictionary) {
                 return Bool2Object(((IDictionary)y).Contains(x));
             }
@@ -1391,7 +1399,7 @@ namespace IronPython.Runtime.Operations {
                 } else {
                     largs = new List<object>(args);
                     if (argsTuple != null) {
-                        largs.InsertRange(args.Length - names.Length, (Tuple)argsTuple);
+                        largs.InsertRange(args.Length - names.Length, Tuple.Make(argsTuple));
                     }
                 }
 
@@ -1558,12 +1566,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static void DelIndex(object o, object index) {
-            if (index == null) {
-                throw Ops.TypeError("index must be integer or slice");
-            }
-
             IMutableSequence seq = o as IMutableSequence;
             if (seq != null) {
+                if (index == null) {
+                    throw Ops.TypeError("index must be integer or slice");
+                }
+
                 Slice slice;
                 if (index is int) {
                     seq.DeleteItem((int)index);
@@ -1877,7 +1885,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         // from spam import *
-        public static void ImportStar(PythonModule mod, string fullName) {
+        public static void ImportStar(ICallerContext context, string fullName) {
+            PythonModule mod = context.Module;
+
             Debug.Assert(typeof(PythonModule).IsAssignableFrom(mod.GetType()), "Got non-PythonModule passed to Ops");
 
             object newmod = Importer.Import(mod, fullName, List.MakeList("*"));
@@ -1892,7 +1902,7 @@ namespace IronPython.Runtime.Operations {
                         if (name == null) continue;
 
                         SymbolId fieldId = SymbolTable.StringToId(name);
-                        mod.SetImportedAttr(mod, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
+                        Ops.SetIndexId(context.Locals, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
                     }
                     return;
                 }
@@ -1906,7 +1916,7 @@ namespace IronPython.Runtime.Operations {
                     if (name[0] == '_') continue;
 
                     SymbolId fieldId = SymbolTable.StringToId(name);
-                    mod.SetImportedAttr(mod, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
+                    Ops.SetIndexId(context.Locals, fieldId, GetAttr(DefaultContext.Default, newmod, fieldId));
                 }
             }
         }
@@ -1918,14 +1928,21 @@ namespace IronPython.Runtime.Operations {
         internal static IronPython.Hosting.PythonEngine compiledEngine;
 
         public static PythonModule InitializeModule(CompiledModule compiledModule, string fullName, string[] references) {
+            Assembly userCodeAsm = compiledModule.GetType().Assembly;
+            string location = userCodeAsm.Location;
+            string directory = Path.GetDirectoryName(location);
+
             if (compiledEngine == null) {
                 compiledEngine = new IronPython.Hosting.PythonEngine();
 
-                compiledEngine.Sys.prefix = System.IO.Path.GetDirectoryName(fullName);
-                compiledEngine.Sys.executable = fullName;
+                compiledEngine.Sys.prefix = directory;
+                compiledEngine.Sys.executable = Path.Combine(directory, "ipy.exe");
                 compiledEngine.Sys.exec_prefix = compiledEngine.Sys.prefix;
 
                 compiledEngine.AddToPath(Environment.CurrentDirectory);
+                if (directory != Environment.CurrentDirectory) {
+                    compiledEngine.AddToPath(directory);
+                }
             }
 
             if (references != null) {
@@ -1934,7 +1951,8 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            compiledEngine.LoadAssembly(compiledModule.GetType().Assembly);
+            compiledEngine.LoadAssembly(userCodeAsm);
+
             PythonModule module = compiledModule.Load(fullName, (InitializeModule)null, compiledEngine.Sys);
             compiledEngine.Sys.modules[fullName] = module;
             return module;
@@ -2091,6 +2109,12 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
+        public static void Raise(Object exc) {
+            Debug.Assert(exc.GetType() == typeof(Tuple));
+            Tuple exception = exc as Tuple;
+            Raise(exception[0], exception[1], exception[2]);
+        }
+
         public static void Raise(object type, object value, object traceback) {
             // non-reraise.
             // type is the type of exception to throwo or an instance.  If it 
@@ -2150,18 +2174,23 @@ namespace IronPython.Runtime.Operations {
             systemState.ClearException();
         }
 
-        public static void UpdateTraceBack(ICallerContext context, string funcName, string filename, int line) {
-            TraceBack curTrace = SystemState.RawTraceBack;
-            if (curTrace == null || !curTrace.IsUserSupplied) {
-                PythonFunction fx = new Function0(context.Module, funcName, null, new string[0], Ops.EMPTY);
+        public static void UpdateTraceBack(ICallerContext context, string filename, int line, string funcName, ref bool notHandled) {
+            if (notHandled == false) {
+                notHandled = true;
 
-                TraceBackFrame tbf = new TraceBackFrame(context.Globals, context.Locals, fx.FunctionCode);
-                ((FunctionCode)fx.FunctionCode).SetFilename(filename);
-                ((FunctionCode)fx.FunctionCode).SetLineNumber(line);
-                TraceBack tb = new TraceBack(curTrace, tbf);
-                tb.SetLine(line);
+                TraceBack curTrace = SystemState.RawTraceBack;
 
-                SystemState.RawTraceBack = tb;
+                if (curTrace == null || !curTrace.IsUserSupplied) {
+                    PythonFunction fx = new Function0(context.Module, funcName, null, new string[0], Ops.EMPTY);
+
+                    TraceBackFrame tbf = new TraceBackFrame(context.Globals, context.Locals, fx.FunctionCode);
+                    ((FunctionCode)fx.FunctionCode).SetFilename(filename);
+                    ((FunctionCode)fx.FunctionCode).SetLineNumber(line);
+                    TraceBack tb = new TraceBack(curTrace, tbf);
+                    tb.SetLine(line);
+
+                    SystemState.RawTraceBack = tb;
+                }
             }
         }
 
@@ -2264,6 +2293,19 @@ namespace IronPython.Runtime.Operations {
 
         public static Exception ValueError(string format, params object[] args) {
             return new ArgumentException(string.Format(format, args));
+        }
+
+        public static Exception KeyError(object key) {
+            // create the .NET & Python exception, setting the Arguments on the
+            // python exception to the invalid key
+            Exception res = new KeyNotFoundException(string.Format("{0}", key));
+
+            Ops.SetAttr(DefaultContext.Default,
+                ExceptionConverter.ToPython(res),
+                SymbolTable.Arguments,
+                Tuple.MakeTuple(key));
+
+            return res;
         }
 
         public static Exception KeyError(string format, params object[] args) {

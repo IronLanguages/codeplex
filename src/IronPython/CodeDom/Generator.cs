@@ -885,15 +885,48 @@ namespace IronPython.CodeDom {
 
             WriteLine("# begin snippet member " + Indent.ToString() + CurrentTypeName);
 
-            string[] lines = e.Text.Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            foreach (string line in lines) {
-                WriteLine(line);
-            }
+            WriteSnippetWorker(e.Text);
+
             WriteLine("# end snippet member");
 
             Indent = oldIndent;
 
             
+        }
+
+        /// <summary>
+        /// Checks to see if the given code matches our current indentation level.
+        /// </summary>
+        private bool IsProperlyIndented(string []lines) {            
+            string tabbedIndent = IndentString.Replace("    ", "\t");
+
+            for (int i = 0; i < lines.Length; i++) {
+                for (int j = 0; j < Indent; j++) {
+                    if (lines[i].Length == 0 || lines[i][0] == '#') continue;
+                    
+                    if (lines[i].Length < IndentString.Length*IndentString.Length) return false;
+
+                    int offset = 0;
+                    for (int k = 0; k < Indent; k++) {
+                        if (String.Compare(lines[i], offset, IndentString, 0, IndentString.Length) == 0)
+                            offset += IndentString.Length;
+                        else if (String.Compare(lines[i], offset, tabbedIndent, 0, tabbedIndent.Length) == 0)
+                            offset += tabbedIndent.Length;
+                        else
+                            return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private void WriteSnippetWorker(string text) {
+            string[] lines = text.Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            bool isProperlyIndented = IsProperlyIndented(lines);
+
+            foreach (string line in lines) {
+                WriteLine(line, isProperlyIndented);
+            }
         }
 
         protected override void GenerateSnippetStatement(CodeSnippetStatement e) {
@@ -904,10 +937,8 @@ namespace IronPython.CodeDom {
 
             WriteLine("# Snippet Statement");
 
-            string[] lines = e.Value.Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            foreach (string line in lines) {
-                WriteLine(line);
-            }
+            WriteSnippetWorker(e.Value);
+
             WriteLine("# End Snippet Statement");
 
 
@@ -1338,7 +1369,8 @@ namespace IronPython.CodeDom {
             Write("#ExternalSource(\"");
             Write(e.FileName);
             Write("\",");
-            Write(e.LineNumber);
+            // adjust by 1 for the comment we add in for each snippet member or statement
+            Write(e.LineNumber+1);  
             WriteLine(")");
         }
         #endregion
@@ -1700,9 +1732,14 @@ namespace IronPython.CodeDom {
         }
 
         private void Write(string txt) {
+            Write(txt, false);
+        }
+
+        private void Write(string txt, bool preserveSpaces) {
             // enforce consistent indenting - we always use 4 spaces for indentation
             // regardless of what the user provided as this guarantees the code compiles.  The
             // user could provide String.Empty for Indent which breaks Python code.
+
             int prevIndent = Indent;
             Indent = 0;
             string[] lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
@@ -1710,10 +1747,12 @@ namespace IronPython.CodeDom {
             for (int i = 0; i < lines.Length; i++) {
                 if (i != 0) {
                     WriteLineTargetBuffer(String.Empty);
-                    for (int j = 0; j < prevIndent; j++) WriteTargetBuffer(IndentString);
-                    col = prevIndent * 4;
+                    if (!preserveSpaces) {
+                        for (int j = 0; j < prevIndent; j++) WriteTargetBuffer(IndentString);
+                        col = prevIndent * 4;
+                    }
                     row++;
-                } else if (col == 0) {
+                } else if (col == 0 && !preserveSpaces) {
                     for (int j = 0; j < prevIndent; j++) WriteTargetBuffer(IndentString);
                     col = prevIndent * 4;
                 }
@@ -1725,6 +1764,10 @@ namespace IronPython.CodeDom {
         }
 
         private void WriteLine(string txt) {
+            WriteLine(txt, false);
+        }
+
+        private void WriteLine(string txt, bool preserveSpaces) {
             // enforce consistent indenting - we always use 4 spaces for indentation
             // regardless of what the user provided as this guarantees the code compiles.  The
             // user could provide String.Empty for Indent which breaks Python code.
@@ -1733,7 +1776,7 @@ namespace IronPython.CodeDom {
             Indent = 0;
             string[] lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
             for (int i = 0; i < lines.Length; i++) {
-                if (col == 0) {
+                if (col == 0 && !preserveSpaces) {
                     for (int j = 0; j < prevIndent; j++) WriteTargetBuffer(IndentString);
                 }
 

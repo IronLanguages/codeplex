@@ -200,34 +200,58 @@ namespace IronPython.CodeDom {
             filename = path;
             line = span.StartLine;
 
-            int lineDelta = 0;
-            // get updated line info...
-            for (int i = Math.Min(span.StartLine-1, lines.Length - 1); i >= 0; i--) {
-                int extSrc;
-                if ((extSrc = lines[i].IndexOf("#ExternalSource")) != -1) {
-                    filename = lines[i].Substring(extSrc + 17);
-                    for (int j = 0; j < filename.Length; j++) {
-                        if (filename[j] == '\\') {
-                            if ((j + 1 < filename.Length) && filename[j] == '"')
-                                j++;
-                        } else if (filename[j] == '"') {
-                            filename = filename.Substring(0, j);
-                            break;
-                        }
-                    }
+            // two passes: 1st search up for the external source, stopping at any EndExternal
+            // source regions.  If we don't find it there, search down (stopping again at any
+            // EndExternal blocks).  We do this because sometimes our line number information
+            // isn't entirely what we'd want it to be.  We fix it in CodeDom today and will fix
+            // the parser later.
+            for (int pass = 0; pass < 2; pass++) {
+                int lineDelta = 0;
+                int extSrcOffset = 2; // minus 2 removes external source info
+                int dir = -1;
+                int startLine;
 
-                    Debug.Assert(lines[i].LastIndexOf(',') != -1);
-                    string lineNo = lines[i].Substring(lines[i].LastIndexOf(',') + 1);
-                    for (int j = 0; j < lineNo.Length; j++) {
-                        if (!Char.IsDigit(lineNo[j])) {
-                            line = Convert.ToInt32(lineNo.Substring(0, j)) + (lineDelta-2); // minus 2 removes external source info
-                        }
-                    }
-                    break;
-                } else if (lines[i].IndexOf("#End ExternalSource") != -1) {
-                    break;
+                switch(pass) {
+                    case 0:
+                        startLine = Math.Min(span.StartLine - 1, lines.Length - 1);
+                        break;
+                    case 1:
+                        startLine = span.StartLine + 1;
+                        dir = 1;
+                        extSrcOffset = 0;
+                        break;
+                    default:
+                        throw new InvalidOperationException();  // impossible
                 }
-                lineDelta++;
+
+                // get updated line info...
+                for (int i = startLine; i >= 0 && i < lines.Length; i += dir) {
+                    int extSrc;
+                    if ((extSrc = lines[i].IndexOf("#ExternalSource")) != -1) {
+                        filename = lines[i].Substring(extSrc + 17);
+                        for (int j = 0; j < filename.Length; j++) {
+                            if (filename[j] == '\\') {
+                                if ((j + 1 < filename.Length) && filename[j] == '"')
+                                    j++;
+                            } else if (filename[j] == '"') {
+                                filename = filename.Substring(0, j);
+                                break;
+                            }
+                        }
+
+                        Debug.Assert(lines[i].LastIndexOf(',') != -1);
+                        string lineNo = lines[i].Substring(lines[i].LastIndexOf(',') + 1);
+                        for (int j = 0; j < lineNo.Length; j++) {
+                            if (!Char.IsDigit(lineNo[j])) {
+                                line = Convert.ToInt32(lineNo.Substring(0, j)) + (lineDelta - extSrcOffset);
+                            }
+                        }
+                        return;
+                    } else if (lines[i].IndexOf("#End ExternalSource") != -1) {
+                        break;
+                    }
+                    lineDelta++;
+                }
             }
         }
 

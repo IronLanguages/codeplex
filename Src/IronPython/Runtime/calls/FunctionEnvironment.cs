@@ -176,7 +176,7 @@ namespace IronPython.Runtime.Calls {
         public FunctionEnvironmentNDictionary(int size, FunctionEnvironmentDictionary parent, IModuleEnvironment context, SymbolId[] names, SymbolId[] outer)
             : base(parent, context, names, outer) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Temporary, "FuncEnv " + size.ToString());
-            Debug.Assert(names.Length == size);
+            Debug.Assert(names.Length <= size);
             this.environmentValues = new object[size];
         }
 
@@ -220,7 +220,6 @@ namespace IronPython.Runtime.Calls {
         public static object fromkeys(DynamicType cls, object seq, object value) {
             return Dict.FromKeys(cls, seq, value);
         }
-
 
     }
 }

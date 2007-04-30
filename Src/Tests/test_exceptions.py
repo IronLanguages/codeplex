@@ -70,24 +70,23 @@ if is_cli:
         pass
 
 def divide(a, b) :
-    s = 0
     try:
         c = a / b
+        Fail("Expected ZeroDivisionError for %r / %r == %r" % (a, b, c))
     except ZeroDivisionError:
-        s = 1
-    Assert(s == 1)
-    s = 0
+        pass
+
     try:
         c = a % b
+        Fail("Expected ZeroDivisionError for %r %% %r == %r" % (a, b, c))
     except ZeroDivisionError:
-        s = 1
-    Assert(s == 1)
-    s = 0
+        pass
+
     try:
         c = a // b
+        Fail("Expected ZeroDivisionError for %r // %r == %r" % (a, b, c))
     except ZeroDivisionError:
-        s = 1
-    Assert(s == 1)
+        pass
 
 
 big0 = 9999999999999999999999999999999999999999999999999999999999999999999999
@@ -329,14 +328,11 @@ if is_cli:
         import sys
         if (sys.exc_traceback != None):
             x = dir(sys.exc_traceback)
-            x.sort()
-            AreEqual(x,  ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'])
+            Assert(set(x) > set(['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next']))
             try:
                 raise "foo", "Msg", sys.exc_traceback
             except "foo", X:
                 pass
-    
-                      
     
     try:
         raise Exception(3,4,5)
@@ -664,7 +660,8 @@ def test_break_and_continue():
     AreEqual(test_outer_for_with_finally(state, True), 42)
     AreEqual(state.finallyCalled, True)
 
-def test_throw_from_compiled_clionly():
+@skip("win32")
+def test_throw_from_compiled():
     def bar(): return 1 + 'abc'
     unique_string = "<this is unique string>"
     c = compile('bar()', unique_string, 'single')
@@ -673,11 +670,46 @@ def test_throw_from_compiled_clionly():
     except: x= sys.exc_info()
     Assert(unique_string in str(x[1].clsException))
 
-def test_serializable_clionly():
+@skip("win32")
+def test_serializable():
     import clr        
     import System
     path = clr.GetClrType(ExceptionsTest).Assembly.Location
     mbro = System.AppDomain.CurrentDomain.CreateInstanceFromAndUnwrap(path, "IronPythonTest.EngineTest")
-    AssertError(AssertionError, mbro.Run, 'raise AssertionError')      
+    AssertError(AssertionError, mbro.Run, 'raise AssertionError')
+    
+def test_sanity():
+    '''
+    Sanity checks to ensure all exceptions implemented can be created/thrown/etc
+    in the standard ways.
+    '''
+    #build up a list of all valid exceptions
+    import exceptions
+    #special cases - do not test these like everything else
+    special_types = [ "UnicodeTranslateError", "UnicodeEncodeError", "UnicodeDecodeError"]
+    exception_types = [ x for x in exceptions.__dict__.keys() if x.startswith("__")==False and special_types.count(x)==0]
+    exception_types = [ eval("exceptions." + x) for x in exception_types]
+    
+    #run a few sanity checks
+    for exception_type in exception_types:
+        except_list = [exception_type(), exception_type("a single param"), exception_type("a single param", "another param")]
+        
+        for t_except in except_list:
+            try:
+                raise t_except
+            except exception_type, e:
+                pass
+            
+            str_except = str(t_except)
+            
+            #there is no __getstate__ method of CPython exceptions...
+            if is_cli:
+                t_except.__getstate__()
+    
+    #special cases
+    exceptions.UnicodeEncodeError("1", u"2", 3, 4, "e")
+    #CodePlex Work Item 356
+    #AssertError(TypeError, exceptions.UnicodeDecodeError, "1", u"2", 3, 4, "e")
+    exceptions.UnicodeDecodeError("1", "2", 3, 4, "e")
         
 run_test(__name__)

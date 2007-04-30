@@ -39,7 +39,7 @@ excs = collect_excs()
 pythonExcs = ['ImportError', 'RuntimeError', 'UnicodeTranslateError', 'PendingDeprecationWarning', 'EnvironmentError',
               'LookupError', 'OSError', 'DeprecationWarning', 'UnicodeError', 'FloatingPointError', 'ReferenceError',
               'NameError', 'OverflowWarning', 'FutureWarning',
-              'AssertionError', 'RuntimeWarning',
+              'AssertionError', 'ImportWarning', 'RuntimeWarning',
               'KeyboardInterrupt', 'UserWarning', 'SyntaxWarning', 'UnboundLocalError', 'Warning']
 
 

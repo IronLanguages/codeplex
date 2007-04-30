@@ -959,7 +959,5 @@ namespace IronPython.Runtime.Types {
         public static object fromkeys(DynamicType cls, object seq, object value) {
             return Dict.FromKeys(cls, seq, value);
         }
-
-
     }
 }

@@ -22,12 +22,8 @@ from assert_util import testpath, is_cli
 one_arg_params = ("-X:Optimize", "-W", "-c", "-X:MaxRecursion", "-X:AssembliesDir")
 
 def launch(executable, *params):
-    if is_cli:
-        return nt.spawnl(0, executable, *params)
-    else:
-        l = [ executable ]
-        for param in params: l.append(param)
-        return nt.spawnv(0, executable, l)
+    l = [ executable ] + list(params)
+    return nt.spawnv(0, executable, l)
 
 def launch_ironpython(pyfile, *args):
     t = (pyfile, )
@@ -76,11 +72,12 @@ def launch_ironpython_changing_extensions(test, add=[], remove=[], additionalScr
                 else :
                     del final[pos]
         
-    params = tuple(final)
-    params += (test,)
-    params += additionalScriptParams
+    params = [sys.executable]
+    params.extend(final)
+    params.append(test)
+    params.extend(additionalScriptParams)
     
-    return nt.spawnl(0, sys.executable, *params)
+    return nt.spawnv(0, sys.executable, params)
 
 def run_tool(cmd, args=""):
     import System

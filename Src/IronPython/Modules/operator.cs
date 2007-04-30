@@ -305,7 +305,7 @@ namespace IronPython.Modules {
         }
         [PythonName("__contains__")]
         public static object OperatorContains(object a, object b) {
-            return Ops.In(a, b);
+            return Ops.In(b, a);
         }
 
         [PythonName("countOf")]

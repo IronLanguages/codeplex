@@ -34,6 +34,8 @@ namespace IronPython.Runtime {
     /// Importer class - used for importing modules.  Used by Ops and __builtin__
     /// </summary>
     public static class Importer {
+        private static DateTime dtIronPython = new FileInfo(typeof(Importer).Assembly.Location).LastWriteTimeUtc;
+
         #region Internal API Surface
 
         /// <summary>
@@ -376,27 +378,95 @@ namespace IronPython.Runtime {
         }
 
         private static object ImportFromPath(SystemState state, string name, string fullName, List path) {
-            object ret = null;
+            PythonModule ret = null;
             foreach (object dirname in path) {
                 string str;
                 if (Converter.TryConvertToString(dirname, out str)) {  // ignore non-string
                     string pathname = Path.Combine(str, name);
 
-                    if (Directory.Exists(pathname)) {
-                        if (File.Exists(Path.Combine(pathname, "__init__.py"))) {
-                            ret = LoadPackageFromSource(state, fullName, pathname);
-                            break;
-                        }
-                    }
-
-                    string filename = pathname + ".py";
-                    if (File.Exists(filename)) {
-                        ret = LoadModuleFromSource(state, fullName, filename);
+                    if (TryLoadPackage(state, fullName, pathname, out ret))
                         break;
-                    }
+
+                    if (TryLoadModule(state, fullName, pathname, out ret))
+                        break;
                 }
             }
             return ret;
+        }
+
+        internal static bool ShouldLoadPreCompiledModule(string binary, string source) {
+            if (Options.ImportCompiledModule == false)
+                return false;
+
+            if (File.Exists(binary) == false)
+                return false;
+
+            DateTime dtModule = new FileInfo(binary).LastWriteTimeUtc;
+            if (dtModule < dtIronPython)
+                return false;
+
+            if (File.Exists(source)) {
+                DateTime dtSource = new FileInfo(source).LastWriteTimeUtc;
+                if (dtModule < dtSource)
+                    return false;
+            }
+
+            return true;
+        }
+
+        // Returning True: such module/file found, and TryLoadXXX should finish.
+        private static bool TryLoadPackage(SystemState state, string fullName, string pathName, out PythonModule ret) {
+            if (!Directory.Exists(pathName)) {
+                ret = null;
+                return false;
+            }
+
+            string binary = Path.Combine(pathName, "__init__.exe");
+            string source = Path.Combine(pathName, "__init__.py");
+
+            bool loadBinary = ShouldLoadPreCompiledModule(binary, source);
+            bool loadSource = File.Exists(source);
+
+            if (loadBinary || loadSource) {
+                PythonModule pmod;
+                if (loadBinary) {
+                    pmod = LoadPreCompiled(state, fullName, binary);
+                    pmod.Filename = binary;
+                } else {
+                    pmod = LoadFromSource(state, fullName, source);
+                    pmod.Filename = source;
+                }
+                pmod.ModuleName = fullName;
+                pmod.SetImportedAttr(DefaultContext.Default, SymbolTable.Path, Ops.MakeList(Path.GetFullPath(pathName)));
+                ret = InitializeModule(fullName, pmod);
+                return true;
+            } else {
+                ret = null;
+                return false;
+            }
+        }
+
+        private static bool TryLoadModule(SystemState state, string fullName, string pathName, out PythonModule ret) {
+            string binary = pathName + ".exe";
+            string source = pathName + ".py";
+
+            PythonModule pmod = null;
+
+            if (ShouldLoadPreCompiledModule(binary, source)) {
+                pmod = LoadPreCompiled(state, fullName, binary);
+                pmod.Filename = binary;
+            } else if (File.Exists(source)) {
+                pmod = LoadFromSource(state, fullName, source);
+                pmod.Filename = source;
+            } else {
+                ret = null;
+                return false;
+            }
+
+            pmod.ModuleName = fullName;
+
+            ret = InitializeModule(fullName, pmod);
+            return true;
         }
 
         private static PythonModule LoadFromSource(SystemState state, string fullName, string fileName) {
@@ -404,12 +474,21 @@ namespace IronPython.Runtime {
             Parser parser = Parser.FromFile(state, context);
             Statement s = parser.ParseFileInput();
 
-            PythonModule pmod = OutputGenerator.GenerateModule(state, context, s, fullName);
+            return OutputGenerator.GenerateModule(state, context, s, fullName);
+        }
 
-            pmod.Filename = fileName;
-            pmod.ModuleName = fullName;
+        internal static PythonModule LoadPreCompiled(SystemState state, string fullName, string fileName) {
+            Assembly asm = Assembly.LoadFile(Path.GetFullPath(fileName));
+            Type[] types = asm.GetTypes();
 
-            return pmod;
+            // TODO: temporary way to make sure this is pre-compiled module
+            if (types.Length != 1) {
+                throw Ops.SystemError("{0} is not pre-compiled module; try again after deleting it.", fileName);
+            }
+
+            Type type = types[0];
+            CompiledModule cm = Activator.CreateInstance(type) as CompiledModule;
+            return cm.Load(fullName, new InitializeModule(cm.Initialize), state);
         }
 
         /// <summary>
@@ -442,21 +521,7 @@ namespace IronPython.Runtime {
                 if (!success) pmod.SystemState.modules.Remove(fullName);
             }
 
-
             return pmod;
-        }
-
-        private static PythonModule LoadModuleFromSource(SystemState state, string fullName, string fileName) {
-            PythonModule mod = LoadFromSource(state, fullName, fileName);
-            return InitializeModule(fullName, mod);
-        }
-
-        private static object LoadPackageFromSource(SystemState state, string fullName, string dirname) {
-            string fullPath = Path.GetFullPath(dirname);
-            List __path__ = Ops.MakeList(fullPath);
-            PythonModule mod = LoadFromSource(state, fullName, Path.Combine(dirname, "__init__.py"));
-            mod.SetImportedAttr(DefaultContext.Default, SymbolTable.Path, __path__);
-            return InitializeModule(fullName, mod);
         }
 
         private static List ResolveSearchPath(PythonModule mod, out string baseName) {

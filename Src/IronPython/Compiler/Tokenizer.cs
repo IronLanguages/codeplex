@@ -16,6 +16,7 @@
 using System;
 using System.Text;
 using System.Diagnostics;
+using System.Collections.Generic;
 
 using IronPython.Runtime;
 using IronPython.Hosting;
@@ -70,6 +71,30 @@ namespace IronPython.Compiler {
     }
 
     /// <summary>
+    /// Represents a mapping from an internal source region to an external one.
+    /// </summary>
+    internal class ExternalLineMapping {
+        private string originalFileName;
+        private Location start;
+        private int externalLine;
+
+        public int ExternalLine {
+            get { return externalLine; }
+            set { externalLine = value; }
+        }
+
+        public Location Start {
+            get { return start; }
+            set { start = value; }
+        }
+
+        public string OriginalFileName {
+            get { return originalFileName; }
+            set { originalFileName = value; }
+        }
+    }
+
+    /// <summary>
     /// Summary description for Tokenizer.
     /// </summary>
 
@@ -107,6 +132,8 @@ namespace IronPython.Compiler {
         // Compiler context
         private CompilerContext context;
         private SystemState systemState;
+
+        private ExternalLineMapping curLineMapping;
 
         public Tokenizer(SystemState state, CompilerContext context, char[] data)
             : this(data, false, state, context) {
@@ -235,6 +262,16 @@ namespace IronPython.Compiler {
             set { current = value; }
         }
 
+        /// <summary>
+        /// Gets the current external line information
+        /// </summary>
+        internal ExternalLineMapping ExternalLineLocation {
+            get {
+                return curLineMapping;
+            }
+        }
+
+
         public Token Next() {
             if (pendingDedents != 0) {
                 if (pendingDedents == -1) {
@@ -253,7 +290,9 @@ namespace IronPython.Compiler {
                     case EOF:
                         SetEnd();
                         return ReadEof();
-                    case ' ': case '\t': case '\f':
+                    case '\f':
+                        continue;
+                    case ' ': case '\t':
                         if (IsBeginningOfFile) {
                             SkipInitialWhitespace();
                         }
@@ -325,11 +364,11 @@ namespace IronPython.Compiler {
                 switch (ch) {
                     case ' ':
                     case '\t':
-                    case '\f':
                         continue;
                     case '#':
                     case EOF:
                     case '\n':
+                    case '\f':
                         Backup();
                         break;
                     default:
@@ -682,9 +721,9 @@ namespace IronPython.Compiler {
                 switch (ch) {
                     case ' ': spaces += 1; continue;
                     case '\t': spaces += 8-(spaces % 8); continue;
-                    case '\f': spaces += 1; continue;
+                    case '\f': continue;
                     case '\n': spaces = 0; continue;
-                    case '#': ReadToEol(); spaces = 0; continue;
+                    case '#': return ReadEolComment(); 
                     case EOF:
                         SetIndent(0, null);
                         return Tokens.NewLineToken;
@@ -717,7 +756,7 @@ namespace IronPython.Compiler {
                 switch (ch) {
                     case ' ': spaces += 1; sb.Append(' '); continue;
                     case '\t': spaces += 8-(spaces%8); sb.Append('\t'); continue;
-                    case '\f': spaces += 1; sb.Append('\f'); continue;
+                    case '\f': sb.Append('\f'); continue;
                     case '\n': spaces = 0; sb.Length = 0; continue;
                     case '#': ReadToEol(); spaces = 0; sb.Length = 0; continue;
                     case EOF:
@@ -773,31 +812,99 @@ namespace IronPython.Compiler {
         }
 
         private Token ReadEolComment() {
-            StringBuilder comment = null;
-            if (verbatim) comment = new StringBuilder();
+            StringBuilder comment = new StringBuilder();
+            string commentStr;
+
             while (true) {
                 int ch = NextChar();
                 switch (ch) {
                     case '\n':
-                        SetEnd();
+                        SetEnd();                        
+                        commentStr = comment.ToString();
+
+                        MarkExternalSource(commentStr);
+
                         if (verbatim) {
-                            return new CommentToken(comment.ToString());
+                            return new CommentToken(commentStr);
                         } else {
                             return ReadNewline();
                         }
-
                     case EOF:
                         SetEnd(1);
+                        commentStr = comment.ToString();
+
+                        MarkExternalSource(commentStr);
+
                         if (verbatim) {
-                            return new CommentToken(comment.ToString());
+                            return new CommentToken(commentStr);
                         } else {
                             return ReadEof();
                         }
                     default:
-                        if (verbatim) comment.Append((char)ch);
+                        comment.Append((char)ch);
                         break;
                 }
             }
+        }
+
+        private void MarkExternalSource(string commentStr) {
+            if (curLineMapping == null && commentStr.StartsWith("ExternalSource")) {
+                // start of an external source mapping
+                string filename;
+                int lineNo;
+                if (TryParseLineMapping(commentStr, out filename, out lineNo)) {
+                    curLineMapping = new ExternalLineMapping();
+                    curLineMapping.Start = endLoc;
+                    curLineMapping.OriginalFileName = filename;
+                    curLineMapping.ExternalLine = lineNo;
+                }
+            } else if (curLineMapping != null && commentStr.StartsWith("End ExternalSource")) {
+                // end of an external source mapping
+                curLineMapping = null;
+            } 
+        }
+
+        /// <summary>
+        /// Attempts to parse #ExternalSource comment from comment text and extract the filename
+        /// and line number information.
+        /// </summary>
+        internal static bool TryParseLineMapping(string text, out string filename, out int lineNo){
+            // Format is:
+            // ExternalSource("filename", lineNo)
+            int extSource = text.IndexOf("ExternalSource");
+            if (extSource != -1) {
+                filename = text.Substring(extSource + 16);
+                for (int j = 0; j < filename.Length; j++) {
+                    if (filename[j] == '\\') {
+                        if ((j + 1 < filename.Length) && filename[j] == '"')
+                            j++;
+                    } else if (filename[j] == '"') {
+                        filename = filename.Substring(0, j);
+                        break;
+                    }
+                }
+
+                int lastComma = text.LastIndexOf(',');
+                if (lastComma != -1) {
+
+                    string strLineNo = text.Substring(lastComma + 1);
+                    for (int j = 0; j < strLineNo.Length; j++) {
+                        // we allow negative line starts due to extra output CodeDom generates
+                        // after the #ExternalSource comment.
+                        if (!Char.IsDigit(strLineNo[j]) && 
+                            !Char.IsWhiteSpace(strLineNo[j]) &&
+                            strLineNo[j] != '-') {      
+                            if (Int32.TryParse(strLineNo.Substring(0, j), out lineNo))
+                                return true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            filename = null;
+            lineNo = -1;
+            return false;
         }
 
         private Token ReadEof() {

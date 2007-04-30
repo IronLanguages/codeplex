@@ -180,7 +180,7 @@ namespace IronPythonConsole {
                 } else {
                     return RunFile(engine, fileName);
                 }
-            } catch (System.Threading.ThreadAbortException tae) {
+            } catch (System.Threading.ThreadAbortException tae) {                
                 if (tae.ExceptionState is PythonKeyboardInterruptException) {
                     Thread.ResetAbort();
                 }
@@ -208,6 +208,7 @@ namespace IronPythonConsole {
                     case "-X:Frames": Options.Frames = true; break;
                     case "-X:GenerateAsSnippets": Options.GenerateModulesAsSnippets = true; break;
                     case "-X:ILDebug": Options.ILDebug = true; break;
+                    case "-X:NotImportCompiled": Options.ImportCompiledModule = false; break;
                     case "-c":
                         args.RemoveAt(0);
                         if (args.Count == 0) {
@@ -329,6 +330,7 @@ namespace IronPythonConsole {
             Console.WriteLine("  -X:Frames              Generate custom frames");
             Console.WriteLine("  -X:GenerateAsSnippets  Generate code to run in snippet mode");
             Console.WriteLine("  -X:ILDebug             Output generated IL code to a text file for debugging");
+            Console.WriteLine("  -X:NotImportCompiled   Never import pre-compiled modules");
             Console.WriteLine("  -X:MaxRecursion        Set the maximum recursion level");
             Console.WriteLine("  -X:MTA                 Run in multithreaded apartment");
             Console.WriteLine("  -X:NoOptimize          Disable optimized methods");

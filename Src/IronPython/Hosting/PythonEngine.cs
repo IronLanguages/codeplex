@@ -103,7 +103,7 @@ namespace IronPython.Hosting {
 
         public static string VersionString {
             get {
-                return String.Format("IronPython {0} ({1}) on .NET {2}", GetInformationalVersion(), GetFileVersion(), Environment.Version);
+                return String.Format("{0} ({1}) on .NET {2}", GetInformationalVersion(), GetFileVersion(), Environment.Version);
             }
         }
 
@@ -161,7 +161,7 @@ namespace IronPython.Hosting {
         }
 
         public void InitializeModules(string prefix, string executable, string version) {
-            Sys.version = version;
+            Sys.SetVersion(version);
             Sys.prefix = prefix;
             Sys.executable = executable;
             Sys.exec_prefix = prefix;
@@ -781,7 +781,7 @@ namespace IronPython.Hosting {
             Expression e = p.ParseTestListAsExpression();
             ReturnStatement ret = new ReturnStatement(e);
             int lineCnt = expression.Split('\n').Length;
-            ret.SetLoc(new Location(lineCnt, 0), new Location(lineCnt, 10));
+            ret.SetLoc(null, new Location(lineCnt, 0), new Location(lineCnt, 10));
             CodeGen cg = CreateDelegateWorker<TDelegate>(ret, parameters);
 
             return delegate(EngineModule engineModule) {
@@ -820,11 +820,16 @@ namespace IronPython.Hosting {
                 }
             }
 
+            Slot dummySlot = null;
             // finally emit the function into the method, if we
             // have ref/out params then we wrap it in a try/finally
             // that updates them before the function ends.
             if (fixers != null) {
-                cg.PushTryBlock();
+                // Try block may yield, but we are not interested in the isBlockYielded value
+                // hence push a dummySlot to pass the Assertion.
+                dummySlot = cg.GetLocalTmp(typeof(object));
+
+                cg.PushTryBlock(dummySlot);
                 cg.BeginExceptionBlock();
             }
 
@@ -833,7 +838,7 @@ namespace IronPython.Hosting {
             if (fixers != null) {
                 cg.PopTargets();
                 Slot returnVar = cg.GetLocalTmp(typeof(int));
-                cg.PushFinallyBlock(returnVar);
+                cg.PushFinallyBlock(returnVar, dummySlot);
                 cg.BeginFinallyBlock();
 
                 foreach (ReturnFixer rf in fixers) {
@@ -842,6 +847,7 @@ namespace IronPython.Hosting {
 
                 cg.EndExceptionBlock();
                 cg.PopTargets();
+                cg.FreeLocalTmp(dummySlot);
             }
             cg.Finish();
             return cg;
@@ -1051,8 +1057,8 @@ namespace IronPython.Hosting {
         }
 
         private static string GetInformationalVersion() {
-            AssemblyInformationalVersionAttribute attribute = GetAssemblyAttribute<AssemblyInformationalVersionAttribute>();
-            return attribute != null ? attribute.InformationalVersion : "";
+            AssemblyDescriptionAttribute attribute = GetAssemblyAttribute<AssemblyDescriptionAttribute>();
+            return attribute != null ? attribute.Description : "";
         }
 
         private static string GetFileVersion() {

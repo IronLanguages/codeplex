@@ -52,7 +52,6 @@ IronPythonTests = {
                 '''
                 test_interactive
                 test_stdconsole
-                test_superconsole
                 ''',
             'hosting':
                 '''
@@ -62,6 +61,7 @@ IronPythonTests = {
             'modules':
                 '''
                 test_binascii
+                test_codecs
                 test_cStringIO
                 test_cPickle
                 test_datetime
@@ -86,7 +86,6 @@ IronPythonTests = {
                 test_clrexception
                 test_clrload
                 test_clrload2
-                test_cominterop
                 test_delegate
                 test_dllsite
                 test_event
@@ -139,6 +138,17 @@ IronPythonTests = {
                 '''
                 ''',
         }
+
+ConsoleInputTests = {
+            'cominterop':
+                '''
+                test_cominterop
+                ''',
+            'superconsole':
+                '''
+                test_superconsole
+                ''',
+}
         
 MiscTests = {
             'parrot':
@@ -230,6 +240,7 @@ LibraryTests = {
                 mailbox
                 mailcap
                 markupbase
+                md5
                 mhlib
                 mimetools
                 mimetypes
@@ -279,6 +290,7 @@ LibraryTests = {
                 sched
                 sets
                 sgmllib
+                sha
                 shelve
                 shlex
                 shutil
@@ -387,6 +399,7 @@ MathTests = {
 RegressionTests = {
             'regression-nochange': 
                 '''
+                test.test_asynchat
                 test.test_atexit
                 test.test_augassign
                 test.test_binop
@@ -419,6 +432,7 @@ RegressionTests = {
                 test.test_locale
                 test.test_macpath
                 test.test_math
+                test.test_md5
                 test.test_ntpath
                 test.test_operations
                 test.test_operator
@@ -431,11 +445,13 @@ RegressionTests = {
                 test.test_queue
                 test.test_rfc822
                 test.test_urlparse
+                test.test_sha
                 test.test_sgmllib
                 test.test_shlex
                 test.test_slice
                 test.test_string
                 test.test_struct
+                test.test_sundry
                 test.test_syntax
                 test.test_textwrap
                 test.test_thread
@@ -470,7 +486,7 @@ RegressionTests = {
     "test.test_scope",      # Bugs 961, 962
     "test.test_set",        # weakref, itertools, and pickling not supported
     "test.test_sort",       # finalizer (__del__)
-    "test.test_socket",     # accept() timeouts, getservbyname(), makefile(), select module are skipped
+    "test.test_socket",     # accept() timeouts, getservbyname(), makefile()
     "test.test_str",        # formatting disabled in string_tests, need to import encodings manually
     "test.test_stringio",   # IP doesn't support buffer, iter(StringIO()) is wrapped IEnumerator
     "test.test_traceback",  # generates files aren't collected, need to close manually
@@ -498,28 +514,22 @@ CompatTests = {
 }             
         
 LibraryExpectedFailures = {
-        "CGIHTTPServer"      : "No module named select",
         "_LWPCookieJar"      : "Cannot import name LWPCookieJar",
         "_MozillaCookieJar"  : "Cannot import name MozillaCookieJar",
         "__phello__.foo"     : "No module named __phello__.foo",
         "_strptime"          : "'module' object has no attribute 'struct_time'",
-        "asynchat"           : "No module named select",
-        "asyncore"           : "No module named select",
         "csv"                : "No module named _csv",
         "dbhash"             : "No module named _bsddb",
         "gzip"               : "No module named zlib",
-        "pty"                : "No module named select",
+        "pty"                : "No module named termios",
         "reconvert"          : "No module named regex", 
         "regsub"             : "No module named regex", 
         "rlcompleter"        : "No module named readline",
-        "smtpd"              : "No module named select",
         "stringprep"         : "No module named unicodedata",
-        "subprocess"         : "No module named select",
+        "subprocess"         : "No module named fcntl",
         "symtable"           : "No module named _symtable",
-        "telnetlib"          : "No module named select",
         "tty"                : "No module named termios",
-        "tzparse"            : "'TZ'",
-        "urllib2"            : "No module named md5",
+        "tzparse"            : "TZ",
     }
 
 if __name__ == '__main__':

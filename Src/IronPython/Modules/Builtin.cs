@@ -32,6 +32,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Hosting;
 
 using IronMath;
+using System.IO;
 
 [assembly: PythonModule("__builtin__", typeof(IronPython.Modules.Builtin))]
 namespace IronPython.Modules {
@@ -83,6 +84,23 @@ namespace IronPython.Modules {
             if (ret == null) {
                 throw Ops.ImportError("No module named {0}", name);
             }
+
+            PythonModule mod = ret as PythonModule;
+            if (mod != null && from != null) {
+                string strAttrName;
+                object attrValue;
+                foreach (object attrName in from) {
+                    if (Converter.TryConvertToString(attrName, out strAttrName) && strAttrName != null) {
+                        try {
+                            attrValue = Ops.ImportOneFrom(context, mod, strAttrName);
+                        } catch (PythonImportErrorException) {
+                            continue;
+                        }
+                        mod.SetImportedAttr(context, SymbolTable.StringToId(strAttrName), attrValue);
+                    }
+                }
+            }
+
             return ret;
         }
 
@@ -249,7 +267,9 @@ namespace IronPython.Modules {
             } else {
                 throw Ops.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
             }
-            return new FunctionCode(compiledCode, cflags);
+            FunctionCode res = new FunctionCode(compiledCode, cflags);
+            res.SetFilename(filename);
+            return res;
         }
 
         [PythonName("compile")]
@@ -523,6 +543,9 @@ namespace IronPython.Modules {
             string strVal;
             PythonModule pm;
             OldClass oc;
+            ReflectedField rf;
+            ReflectedProperty rp;
+            ReflectedEvent re;
 
             if (doced.Contains(o)) return;  // document things only once
             doced.Add(o);
@@ -607,11 +630,52 @@ namespace IronPython.Modules {
                 doc.Append("(...)\n");
 
                 AppendMultiLine(doc, bf.Documentation, indent + 1);
+            } else if ((rf = o as ReflectedField) != null) {
+                if (indent == 0) doc.AppendFormat("Help on field {0}\n\n", rf.Name);
+                AppendIndent(doc, indent);
+                doc.Append("Field ");
+                doc.AppendLine(rf.Name);
+
+                if (rf.Documentation != null) AppendMultiLine(doc, rf.Documentation, indent + 1);
+            } else if ((rp = o as ReflectedProperty) != null) {
+                if (indent == 0) doc.AppendFormat("Help on property {0}\n\n", rp.Name);
+                AppendIndent(doc, indent);
+                doc.Append("Property ");
+                doc.AppendLine(rp.Name);
+
+                if (rp.Documentation != null) AppendMultiLine(doc, rp.Documentation, indent + 1);
+            } else if ((re = o as ReflectedEvent) != null) {
+                if (indent == 0) doc.AppendFormat("Help on event {0}\n\n", re.Name);
+                AppendIndent(doc, indent);
+                doc.Append("Event ");
+                doc.AppendLine(re.Name);
+
+                if (re.Documentation != null) AppendMultiLine(doc, re.Documentation, indent + 1);
             } else if ((pf = o as PythonFunction) != null) {
                 if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}\n\n", pf.Name, pf.Module.ModuleName);
 
                 AppendIndent(doc, indent);
-                doc.AppendFormat("{0}({1})\n", pf.Name, String.Join(", ", pf.ArgNames));
+                FunctionCode fc = pf.FunctionCode as FunctionCode;
+
+                int specialCnt = 0;
+                if ((fc.Flags & (int)FunctionCode.FuncCodeFlags.VarArgs) != 0) specialCnt++;
+                if ((fc.Flags & (int)FunctionCode.FuncCodeFlags.KwArgs) != 0) specialCnt++;
+
+                doc.Append(pf.Name);
+                doc.Append('(');
+                doc.Append(String.Join(", ", pf.ArgNames, 0, pf.ArgNames.Length - specialCnt));
+                if ((fc.Flags & (int)FunctionCode.FuncCodeFlags.VarArgs) != 0) {
+                    if (pf.ArgNames.Length - specialCnt != 0) doc.Append(", ");
+                    doc.Append('*');
+                    doc.Append(pf.ArgNames[pf.ArgNames.Length - specialCnt]);
+                }
+                if ((fc.Flags & (int)FunctionCode.FuncCodeFlags.KwArgs) != 0) {
+                    if (pf.ArgNames.Length - 1 != 0) doc.Append(", ");
+                    doc.Append("**");
+                    doc.Append(pf.ArgNames[pf.ArgNames.Length-1]);
+                }
+                doc.Append(")\n");
+
                 string pfDoc = Converter.ConvertToString(pf.Documentation);
                 if (!String.IsNullOrEmpty(pfDoc)) {
                     AppendMultiLine(doc, pfDoc, indent);
@@ -1252,10 +1316,24 @@ namespace IronPython.Modules {
 
             if (module.Filename == null) return Importer.ReloadBuiltin(module);
 
-            CompilerContext cc = new CompilerContext(module.Filename);
-            Parser parser = Parser.FromFile(module.SystemState, cc);
-            Statement s = parser.ParseFileInput();
-            PythonModule pmod = OutputGenerator.GenerateModule(module.SystemState, cc, s, module.ModuleName, "__" + System.Threading.Interlocked.Increment(ref reloadCounter));
+            PythonModule pmod;
+
+            bool reloadBinary = false;
+            bool binaryLoaded = string.Compare(Path.GetExtension(module.Filename), ".exe", true) == 0;
+
+            if (binaryLoaded) {
+                string source = Path.ChangeExtension(module.Filename, ".py");
+                reloadBinary = Importer.ShouldLoadPreCompiledModule(module.Filename, source);
+            }
+
+            if (reloadBinary) {
+                pmod = Importer.LoadPreCompiled(module.SystemState, module.ModuleName, module.Filename);
+            } else {
+                CompilerContext cc = new CompilerContext(module.Filename);
+                Parser parser = Parser.FromFile(module.SystemState, cc);
+                Statement s = parser.ParseFileInput();
+                pmod = OutputGenerator.GenerateModule(module.SystemState, cc, s, module.ModuleName, "__" + System.Threading.Interlocked.Increment(ref reloadCounter));
+            }
 
             foreach (KeyValuePair<object, object> attr in module.__dict__) {
                 if (pmod.__dict__.ContainsObjectKey(attr.Key)) continue;

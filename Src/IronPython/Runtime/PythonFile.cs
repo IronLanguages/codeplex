@@ -118,8 +118,20 @@ namespace IronPython.Runtime {
                 data = buffer;
             } else
                 data = new byte[size];
-            int count = stream.Read(data, 0, size);
-            return PackDataIntoString(data, count);
+
+            int leftCount = size;
+            int offset = 0;
+            while (true) {
+                int count = stream.Read(data, offset, leftCount);
+                if (count <= 0) break;
+                leftCount -= count;
+                if (leftCount <= 0) break;
+                offset += count;
+            }
+
+            System.Diagnostics.Debug.Assert(leftCount >= 0);
+
+            return PackDataIntoString(data, size - leftCount);
         }
 
         // Read until the end of the stream and return the result as a single string.
@@ -134,8 +146,6 @@ namespace IronPython.Runtime {
                     break;
                 sb.Append(PackDataIntoString(buffer, count));
                 totalcount += count;
-                if (count < BufferSize)
-                    break;
             }
             if (sb.Length == 0)
                 return String.Empty;
@@ -793,10 +803,11 @@ namespace IronPython.Runtime {
 
         // Map a python mode string into a PythonFileMode.
         private static PythonFileMode MapFileMode(String mode) {
-            if (mode.EndsWith("b"))
+            // Assume "mode" is in reasonable good shape, since we checked it in "Make"
+            if (mode.Contains("b"))
                 return PythonFileMode.Binary;
 
-            if (mode == "rU" || mode == "U")
+            if (mode.Contains("U"))
                 return PythonFileMode.UniversalNewline;
 
             // Must be platform specific text mode. Work out which line termination the platform
@@ -823,6 +834,12 @@ namespace IronPython.Runtime {
             return Make(context, cls, name, mode, -1);
         }
 
+        //
+        // Here are the mode rules for IronPython "file":
+        //          (r|a|w|rU|U|Ur) [ [+][b|t] | [b|t][+] ]
+        // 
+        // Seems C-Python allows "b|t" at the beginning too.
+        // 
         [PythonName("__new__")]
         public static PythonFile Make(ICallerContext context, DynamicType cls, string name, string mode, int bufsize) {
             FileShare fshare = FileShare.ReadWrite;
@@ -834,14 +851,31 @@ namespace IronPython.Runtime {
                 throw Ops.TypeError("file name must be string, found NoneType");
             }
 
-            bool seekEnd = false;
-            if (mode.EndsWith("b"))
-                mode = mode.Substring(0, mode.Length - 1);
+            if (mode == null) {
+                throw Ops.TypeError("mode must be string, not None");
+            }
 
-            if (mode == "r" || mode == "rU" || mode == "U") {
+            if (mode == string.Empty) {
+                throw Ops.ValueError("empty mode string");
+            }
+
+            bool seekEnd = false;
+
+            int modeLen = mode.Length;
+            char lastChar = mode[modeLen - 1];
+            if (lastChar == 't' || lastChar == 'b')
+                mode = mode.Substring(0, modeLen - 1);
+            else if (lastChar == '+' && modeLen >= 2) {
+                char secondToLastChar = mode[modeLen - 2];
+                if (secondToLastChar == 't' || secondToLastChar == 'b') {
+                    mode = mode.Substring(0, modeLen - 2) + "+";
+                }
+            }
+
+            if (mode == "r" || mode == "rU" || mode == "U" || mode == "Ur") {
                 fmode = FileMode.Open; faccess = FileAccess.Read;
-            } else if (mode == "r+") {
-                fmode = FileMode.Open; faccess = FileAccess.ReadWrite; 
+            } else if (mode == "r+" || mode == "rU+" || mode == "U+" || mode == "Ur+") {
+                fmode = FileMode.Open; faccess = FileAccess.ReadWrite;
             } else if (mode == "w") {
                 fmode = FileMode.Create; faccess = FileAccess.Write;
             } else if (mode == "w+") {
@@ -852,7 +886,7 @@ namespace IronPython.Runtime {
                 fmode = FileMode.OpenOrCreate; faccess = FileAccess.ReadWrite;
                 seekEnd = true;
             } else {
-                throw new NotImplementedException("bad mode: " + mode);
+                throw new NotImplementedException("bad mode: " + inMode);
             }
 
             try {
@@ -989,6 +1023,17 @@ namespace IronPython.Runtime {
 
             isclosed = true;
             PythonFileManager.Remove(this);
+        }
+
+        [PythonVersion(2, 5), PythonName("__enter__")]
+        public object Enter() {
+            ThrowIfClosed();
+            return this;
+        }
+
+        [PythonVersion(2, 5), PythonName("__exit__")]
+        public void Exit(params object [] excinfo) {
+            Close();
         }
 
         [PythonName("close")]
@@ -1150,7 +1195,7 @@ namespace IronPython.Runtime {
                 ResetForWrite();
 
                 int bytesWritten = writer.Write(s);
-                if (reader != null)
+                if (reader != null && stream.CanSeek)
                     reader.Position += bytesWritten;
                 Flush();
             } else {

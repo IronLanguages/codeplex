@@ -165,7 +165,7 @@ def RunGeneratedExe(file):
     oldDir = System.Environment.CurrentDirectory
     try:
         System.Environment.CurrentDirectory = targetdir
-        retval = nt.spawnl(0, file)
+        retval = nt.spawnl(0, file, file)
     except Exception, e:
         print "exception while running: %s" %e
         retval = 1

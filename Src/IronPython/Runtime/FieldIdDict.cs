@@ -79,16 +79,6 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        [PythonClassMethod("fromkeys")]
-        public static object fromkeys(DynamicType cls, object seq) {
-            return Dict.FromKeys(cls, seq, null);
-        }
-
-        [PythonClassMethod("fromkeys")]
-        public static object fromkeys(DynamicType cls, object seq, object value) {
-            return Dict.FromKeys(cls, seq, value);
-        }
-
         #region IDictionary<object, object> Members
 
         void IDictionary<object, object>.Add(object key, object value) {
@@ -292,15 +282,17 @@ namespace IronPython.Runtime {
         #region IEnumerable<KeyValuePair<object,object>> Members
 
         IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
-            foreach (KeyValuePair<SymbolId, object> o in data) {
-                if (o.Key == SymbolTable.ObjectKeys) continue;
-                yield return new KeyValuePair<object, object>(SymbolTable.IdToString(o.Key), o.Value);
-            }
+            lock (this) {
+                foreach (KeyValuePair<SymbolId, object> o in data) {
+                    if (o.Key == SymbolTable.ObjectKeys) continue;
+                    yield return new KeyValuePair<object, object>(SymbolTable.IdToString(o.Key), o.Value);
+                }
 
-            Dictionary<object, object> objData = GetObjectKeysDictionaryIfExists();
-            if (objData != null) {
-                foreach (KeyValuePair<object, object> o in objData) {
-                    yield return o;
+                Dictionary<object, object> objData = GetObjectKeysDictionaryIfExists();
+                if (objData != null) {
+                    foreach (KeyValuePair<object, object> o in objData) {
+                        yield return o;
+                    }
                 }
             }
         }
@@ -476,6 +468,16 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq) {
+            return Dict.FromKeys(cls, seq, null);
+        }
+
+        [PythonClassMethod("fromkeys")]
+        public static object fromkeys(DynamicType cls, object seq, object value) {
+            return Dict.FromKeys(cls, seq, value);
+        }
 
     }
 }

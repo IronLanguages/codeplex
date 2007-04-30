@@ -18,12 +18,13 @@ from lib.assert_util import *
 import time
 
 def test_strftime():
-    x = time.strftime('%x %X', time.localtime())
+    t = time.localtime()
+    x = time.strftime('%x %X', t)
     
     Assert(len(x) > 3)
     
-    x1 = time.strftime('%x', time.localtime())
-    x2 = time.strftime('%X', time.localtime())
+    x1 = time.strftime('%x', t)
+    x2 = time.strftime('%X', t)
     
     Assert(len(x1) > 1)
     Assert(len(x2) > 1)
@@ -44,6 +45,13 @@ def test_strptime():
     AreEqual(d[5], 0)
     AreEqual(d[6], 0)
     AreEqual(d[7], 184)
+    
+    #CodePlex Work Item 2557
+    AreEqual((2006, 7, 3, 7, 24, 0, 0, 184, -1), time.strptime("%07/03/06 07:24:00", "%%%c"))
+    if not is_cli:
+        AreEqual((1900, 6, 1, 0, 0, 0, 4, 152, -1), time.strptime("%6", "%%%m"))
+        
+    
     # CPY & IPY differ on daylight savings time for this parse
         
     AssertError(ValueError, time.strptime, "July 3, 2006 At 0724 GMT", "%B %x, %Y At %H%M GMT")

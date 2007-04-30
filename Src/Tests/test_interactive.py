@@ -198,6 +198,46 @@ def test_partial_lists():
     response = ipi.ExecuteLine("]")
     Assert("[1, 2]" in response)
     ipi.End()
+    
+##########################################################
+# Support partial dicts
+def test_partial_dicts():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    ipi.ExecutePartialLine("{2:2")
+    ipi.ExecutePartialLine("  ,")
+    ipi.ExecutePartialLine("    2:2")
+    response = ipi.ExecuteLine("}")
+    Assert("{2: 2}" in response)
+    
+    ipi.ExecutePartialLine("{")
+    response = ipi.ExecuteLine("}")
+    Assert("{}" in response)
+    
+    ipi.ExecutePartialLine("a = {")
+    ipi.ExecutePartialLine("    None:2")
+    ipi.ExecutePartialLine(" , ")
+    ipi.ExecuteLine("}")
+    response = ipi.ExecuteLine("a")
+    Assert("{None: 2}" in response)
+    
+    ipi.ExecutePartialLine("{")
+    ipi.ExecutePartialLine("'joe'")
+    ipi.ExecutePartialLine(": ")
+    ipi.ExecutePartialLine("       42")
+    ipi.ExecutePartialLine(",")
+    ipi.ExecutePartialLine("3:45")
+    response = ipi.ExecuteLine("}")
+    Assert("{'joe': 42, 3: 45}" in response)
+    
+    #CodePlex Work Item 5904
+    #ipi.ExecutePartialLine("{")
+    #ipi.ExecutePartialLine("")
+    #ipi.ExecutePartialLine("")
+    #response = ipi.ExecuteLine("}")
+    #Assert("{}" in response)
+
+    ipi.End()
 
 ###########################################################
 # Some whitespace wackiness
@@ -273,7 +313,14 @@ def test_comments():
     AreEqual(response, "100\r\n200")
     ipi.End()
     
-
+def test_global_values():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    ipi.ExecuteLine("import clr")
+    response = ipi.ExecuteLine("[x for x in globals().Values]")
+    Assert(response.startswith('['))
+    d = eval(ipi.ExecuteLine("globals().fromkeys(['a', 'b'], 'c')"))
+    AreEqual(d, {'a':'c', 'b':'c'})
 
 def test_console_input_output():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)

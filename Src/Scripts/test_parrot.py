@@ -19,7 +19,8 @@
 """
 
 from time import clock
-import sys
+import sys, nt
+sys.path.append(nt.environ['merlin_root'] + "\\..\\External\\Languages\\IronPython11\\Perf\\parrot")
 
 def test_main(type="short"):
     oldRecursionDepth = sys.getrecursionlimit()

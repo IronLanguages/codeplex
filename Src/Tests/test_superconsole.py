@@ -139,6 +139,12 @@ if doRun:
     superConsole.SendKeys('while True: pass{ENTER}{ENTER}')
     superConsole.SendKeys('^(c)')
 
+# check that Ctrl-C breaks an infinite loop (the test is that subsequent things actually appear)
+    superConsole.SendKeys('def foo{(}{)}:{ENTER}try:{ENTER}while True: pass{ENTER}{BACKSPACE}except KeyboardInterrupt:{ENTER}print "caught"{ENTER}{BACKSPACE}{ENTER}print "after"{ENTER}{BACKSPACE}{ENTER}foo{(}{)}{ENTER}')    
+    sleep(2)
+    superConsole.SendKeys('^(c)')
+    testRegex += 'caughtafter'
+
 # Test Case #8: tab insertion
 ###########################################
     superConsole.SendKeys('print "x{TAB}{TAB}y"{ENTER}')

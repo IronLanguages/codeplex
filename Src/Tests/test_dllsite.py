@@ -14,9 +14,10 @@
 ######################################################################################
 
 from lib.assert_util import *
+from sys import exit
+
 if not is_cli:
     #bail
-    from sys import exit
     exit(0)
 
 from System.IO          import Directory
@@ -138,7 +139,7 @@ def uniqueDLLNames():
     createAssembly("", "WHITESPACE", 1, default_filename="a A")
     
     temp = ""
-    for i in xrange(0, 20):
+    for i in xrange(0, 15):
         temp = temp + "aaaaaaaaaa"
     createAssembly("", "BIGFILENAME", 1, default_filename=temp)   
     
@@ -344,10 +345,12 @@ def main():
     Directory.SetCurrentDirectory(ORIG_DIR)
     
     from lib.process_util import launch_ironpython
-    launch_ironpython("dllsite.py", "OKtoRun")
+    ret_val = launch_ironpython("dllsite.py", "OKtoRun")
 
     cleanUp()
     
+    exit(ret_val)
     
 if __name__=="__main__":
     main()
+    

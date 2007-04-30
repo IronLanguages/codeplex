@@ -152,12 +152,16 @@ namespace IronPython.Runtime.Operations {
 
         [PythonName("__new__")]
         public static object Make(DynamicType cls, string s, int radix) {
-            if (cls == LongType) {
-                return ParseBigIntegerSign(s, radix);
-            } else {
-                BigInteger res = ParseBigIntegerSign(s, radix);
-                return cls.ctor.Call(cls, res);
+            if (radix == 16) {
+                s = IntOps.TrimRadix(s);
             }
+
+            BigInteger res = ParseBigIntegerSign(s, radix);
+            if (cls == LongType) {
+                return res;
+            } 
+
+            return cls.ctor.Call(cls, res);            
         }
 
         private static BigInteger ParseBigIntegerSign(string s, int radix) {

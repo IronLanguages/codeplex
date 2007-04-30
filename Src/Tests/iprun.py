@@ -346,8 +346,7 @@ class RedirectTestRunner(TestRunner):
 # test configuration
 class TestConfig: 
     def __init__(self):
-        self.notRunList = [ 
-        ]        
+        self.notRunList = [ 'test_cominterop', 'test_superconsole']        
         self.name       = 'IronPythonTests'
         self.shortcut   = 'ip iron ironpython'
         self.directory  = testpath.public_testdir
@@ -474,6 +473,21 @@ class MiscTestConfig(TestConfig):
         
     def getAllTests(self):
         return self.getTestsShownInCategories()
+        
+        
+class ConsoleInputTestConfig(TestConfig):
+    def __init__(self):
+        self.notRunList = [ ]        
+        self.name       = 'ConsoleInputTests'
+        self.shortcut   = 'consinp'
+        self.directory  = testpath.public_testdir
+        self.runstep    = ImportRunStep
+        self.runner     = RedirectTestRunner
+        self.categories = categories.ConsoleInputTests
+        
+        
+    def getAllTests(self):
+        return self.getTestsShownInCategories()
 
 class LibraryTestConfig(TestConfig):
     def __init__(self):
@@ -487,7 +501,7 @@ class LibraryTestConfig(TestConfig):
 
     def getAllTests(self):
         return self.getTestsShownInCategories()
-    
+
 class RegressionTestConfig(TestConfig):
     def __init__(self):
         self.notRunList = []
@@ -507,6 +521,8 @@ class RegressionTestConfig(TestConfig):
 class CompatTestConfig(TestConfig):
     def __init__(self):
         self.notRunList = ['sbs_typeop.py']
+        if is_cli64:
+            self.notRunList.append('sbs_exceptions.py')
         self.name       = "Compatability"
         self.shortcut   = 'compat sbs'
         self.directory  = testpath.compat_testdir
@@ -522,7 +538,8 @@ class CompatTestConfig(TestConfig):
        
 def getAllConfigs(exclude=[]):
     _module = sys.modules[__name__]
-    return [ getattr(_module, x)() for x in dir(_module) if x.endswith("TestConfig") and not exclude.count(x[:-10])]
+    ret_val = [ getattr(_module, x)() for x in dir(_module) if x.endswith("TestConfig") and not exclude.count(x[:-10])]
+    return ret_val
 
 ## not used. leave it for future                    
 def getAllConfigs2():       

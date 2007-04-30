@@ -696,6 +696,8 @@ def test_func_flags():
     def foo5(a, *args): pass
     def foo6(a, **args): pass
     def foo7(a, *args, **kwargs): pass
+    def foo8(a,b,c,d,e,f): pass
+    def foo9(a,b): pass
     
     AreEqual(foo0.func_code.co_flags & 12, 0)
     AreEqual(foo1.func_code.co_flags & 12, 4)
@@ -705,10 +707,89 @@ def test_func_flags():
     AreEqual(foo5.func_code.co_flags & 12, 4)
     AreEqual(foo6.func_code.co_flags & 12, 8)
     AreEqual(foo7.func_code.co_flags & 12, 12)
+    AreEqual(foo8.func_code.co_flags & 12, 0)
+    AreEqual(foo9.func_code.co_flags & 12, 0)
     
 
 def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)
     Assert((x.co_flags & 8192) == 8192)
+    
+    #CodePlex Work Item 5641 - test co_filename
+    names = [   "", ".", "1", "\n", " ", "@", "%^",
+                "a", "A", "Abc", "aBC", "filename.py",
+                "longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
+                """
+                stuff
+                more stuff
+                last stuff
+                """
+                ]
+    for name in names:
+        AreEqual(compile("print 2/3", name, "exec", 8192).co_filename,
+                 name)
+
+def test_filename():
+    c = compile("x = 2", "test", "exec")
+    AreEqual(c.co_filename, 'test')
+    
+def test_name():
+    def f(): pass
+    
+    f.__name__ = 'g'
+    AreEqual(f.__name__, 'g')
+    Assert(repr(f).startswith('<function g'))
+    
+    f.func_name = 'x'
+    AreEqual(f.__name__, 'x')
+    Assert(repr(f).startswith('<function x'))
+
+def test_argcount():
+    def foo0(): pass
+    def foo1(*args): pass
+    def foo2(**args): pass
+    def foo3(*args, **kwargs): pass
+    def foo4(a): pass
+    def foo5(a, *args): pass
+    def foo6(a, **args): pass
+    def foo7(a, *args, **kwargs): pass
+    def foo8(a,b,c,d,e,f): pass
+    def foo9(a,b): pass
+    
+    AreEqual(foo0.func_code.co_argcount, 0)
+    AreEqual(foo1.func_code.co_argcount, 0)
+    AreEqual(foo2.func_code.co_argcount, 0)
+    AreEqual(foo3.func_code.co_argcount, 0)
+    AreEqual(foo4.func_code.co_argcount, 1)
+    AreEqual(foo5.func_code.co_argcount, 1)
+    AreEqual(foo6.func_code.co_argcount, 1)
+    AreEqual(foo7.func_code.co_argcount, 1)
+    AreEqual(foo8.func_code.co_argcount, 6)
+    AreEqual(foo9.func_code.co_argcount, 2)
+
+def test_defaults():
+    defaults = [None, object, int, [], 3.14, [3.14], (None,), "a string"]
+    for default in defaults:
+        def helperFunc(): pass
+        AreEqual(helperFunc.func_defaults, None)
+        AreEqual(helperFunc.func_defaults, None)
+    
+        def helperFunc1(a): pass
+        AreEqual(helperFunc1.func_defaults, None)
+        AreEqual(helperFunc1.func_defaults, None)
+        
+        
+        def helperFunc2(a=default): pass
+        AreEqual(helperFunc2.func_defaults, (default,))
+        helperFunc2(a=7)
+        AreEqual(helperFunc2.func_defaults, (default,))
+        
+        
+        def helperFunc3(a, b=default, c=[42]): c.append(b)
+        AreEqual(helperFunc3.func_defaults, (default, [42]))
+        helperFunc3("stuff")
+        AreEqual(helperFunc3.func_defaults, (default, [42, default]))
+    
+    
 
 run_test(__name__)

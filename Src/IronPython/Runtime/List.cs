@@ -132,16 +132,12 @@ namespace IronPython.Runtime {
         #region IPythonContainer Members
 
         [PythonName("__len__")]
-        public int GetLength() {
+        public virtual int GetLength() {
             return size;
         }
 
         [PythonName("__contains__")]
-        public object ContainsValueWrapper(object value) {
-            return Ops.Bool2Object(ContainsValue(value));
-        }
-
-        public bool ContainsValue(object value) {
+        public virtual bool ContainsValue(object value) {
             lock (this) {
                 for (int i = 0; i < size; i++) {
                     object thisIndex = data[i];

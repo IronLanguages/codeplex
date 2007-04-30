@@ -20,14 +20,163 @@
 from lib.assert_util import *
 import sys
 import IronPython
+import System
+#------------------------------------------------------------------------------
+#--GLOBALS
 pe = IronPython.Hosting.PythonEngine()
 
+
+#Ensure we can manipulate globals() from within a PythonEngine
+globals_test = '''
+a = 2
+
+lib.assert_util.AreEqual(globals()["a"], 2)
+lib.assert_util.AreEqual(type(globals()), dict)
+
+#--ToString
+#Just verify type for now.  This string will generally contain unique
+#file paths
+lib.assert_util.AreEqual(type(globals().ToString()), str)
+
+#--IsFixedSize
+lib.assert_util.AreEqual(globals().IsFixedSize, False)
+
+#--Add
+globals()["b"] = None
+lib.assert_util.AreEqual(globals()["b"], None)
+    
+globals().Add("c", "blah")
+lib.assert_util.AreEqual(globals()["c"], "blah")
+    
+temp = System.Collections.Generic.KeyValuePair[object,object]("d", int(3))
+globals().Add(temp)
+lib.assert_util.AreEqual(globals()["d"], int(3))
+    
+#--Keys
+temp = [temp for temp in globals().Keys]
+temp.sort()
+lib.assert_util.AreEqual(temp,
+                         ['System', '__builtins__', '__name__', 'a', 'assert_util', 'b', 'c', 'd', 'gc', 'lib', 'sys', 'temp'])
+    
+
+#--Values
+temp = [temp for temp in globals().Values ]
+temp.sort()
+lib.assert_util.AreEqual(temp.count(2), 1)
+lib.assert_util.AreEqual(temp.count(None), 1)
+lib.assert_util.AreEqual(temp.count('blah'), 1)
+lib.assert_util.AreEqual(temp.count(3), 1)
+lib.assert_util.AreEqual(temp.count('defaultModule'), 1)
+lib.assert_util.AreEqual(len(temp), 12)
+
+
+#--GetEnumerator
+temp = [temp for temp in globals().GetEnumerator()]
+temp.sort()
+lib.assert_util.AreEqual(temp,
+         ['System', '__builtins__', '__name__', 'a', 'assert_util', 'b', 'c', 'd', 'gc', 'lib', 'sys', 'temp'])
+      
+#--Contains
+temp = System.Collections.Generic.KeyValuePair[object,object]("b", None)
+lib.assert_util.Assert(globals().Contains(temp))
+
+temp = System.Collections.Generic.KeyValuePair[object,object]("c", "blah")
+lib.assert_util.Assert(globals().Contains(temp))
+
+#CodePlex Work Item 6703
+#temp = System.Collections.Generic.KeyValuePair[object,object]("d", int(3))
+#lib.assert_util.Assert(globals().Contains(temp))
+
+temp = System.Collections.Generic.KeyValuePair[object,object]("e", "blah")
+lib.assert_util.Assert(globals().Contains(temp)==False)
+
+#--ContainsKey
+lib.assert_util.Assert(globals().ContainsKey("a"))
+lib.assert_util.Assert(globals().ContainsKey("b"))
+lib.assert_util.Assert(globals().ContainsKey("c"))
+lib.assert_util.Assert(globals().ContainsKey("d"))
+lib.assert_util.Assert(globals().ContainsKey("e")==False) 
+
+#--TryGetValue
+lib.assert_util.AreEqual(globals().TryGetValue("a"), (True, 2))
+lib.assert_util.AreEqual(globals().TryGetValue("b"), (True, None))
+lib.assert_util.AreEqual(globals().TryGetValue("c"), (True, "blah"))
+lib.assert_util.AreEqual(globals().TryGetValue("d"), (True, int(3)))
+lib.assert_util.AreEqual(globals().TryGetValue("e"), (False, None)) 
+
+#--TryGetObjectValue
+lib.assert_util.AreEqual(globals().TryGetObjectValue("a"), (True, 2))
+lib.assert_util.AreEqual(globals().TryGetObjectValue("b"), (True, None))
+lib.assert_util.AreEqual(globals().TryGetObjectValue("c"), (True, "blah"))
+lib.assert_util.AreEqual(globals().TryGetObjectValue("d"), (True, int(3)))
+lib.assert_util.AreEqual(globals().TryGetObjectValue("e"), (False, None)) 
+lib.assert_util.AreEqual(globals().TryGetObjectValue(None), (False, None)) 
+lib.assert_util.AreEqual(globals().TryGetObjectValue(1), (False, None)) 
+
+#--ContainsObjectKey
+lib.assert_util.AreEqual(globals().ContainsObjectKey("a"), True)
+lib.assert_util.AreEqual(globals().ContainsObjectKey("b"), True)
+lib.assert_util.AreEqual(globals().ContainsObjectKey("c"), True)
+lib.assert_util.AreEqual(globals().ContainsObjectKey("d"), True)
+lib.assert_util.AreEqual(globals().ContainsObjectKey("e"), False) 
+lib.assert_util.AreEqual(globals().ContainsObjectKey(None), False) 
+lib.assert_util.AreEqual(globals().ContainsObjectKey(1), False) 
+
+#CodePlex Work Item 6704
+#This occurs from normal interactive sessions as well
+#--fromkeys
+#lib.assert_util.AreEqual(globals().fromkeys([1, 2], 3), {1: 3, 2: 3})
+#lib.assert_util.AreEqual(globals().fromkeys([1, 2]), {1: None, 2: None})
+    
+#--Count
+lib.assert_util.AreEqual(globals().Count, 12)
+
+
+#--IsReadOnly
+lib.assert_util.Assert(not globals().IsReadOnly)
+            
+#--CopyTo
+lib.assert_util.AssertError(NotImplementedError,
+                            globals().CopyTo,
+                            None, 3)
+            
+#--SymbolAttributes
+globals().SymbolAttributes
+
+#--UnderlyingDictionary
+globals().UnderlyingDictionary
+
+#--Remove
+lib.assert_util.Assert(globals().ContainsKey("d"))
+globals().Remove("d")
+lib.assert_util.Assert(globals().ContainsKey("d")==False)
+
+lib.assert_util.Assert(globals().ContainsKey("c"))
+globals().Remove(System.Collections.Generic.KeyValuePair[object,object]("c", "blah"))
+lib.assert_util.Assert(globals().ContainsKey("c")==False)
+    
+#--Clear!
+globals().Clear()
+if [x for x in globals().Keys]!=[] or globals().Count!=0:
+    raise Exception("globals() not empty")
+    
+#--clear!
+#just call it (this funtion is the same as Clear). 
+#at this point lib.* is gone!
+globals()["something"] = 1
+globals().clear()
+if [x for x in globals().Keys]!=[] or globals().Count!=0:
+    raise Exception("globals() not empty")
+'''
+
+#------------------------------------------------------------------------------
+#--TEST FUNCTIONS
 def test_trivial():
     Assert(IronPython.Hosting.PythonEngine.Version != "")
 
 
 def test_version():
-    """ test that the assembly versions are the same as 1.0 release for compatibility."""
+    """ test that the assembly versions are the same as 1.1 release for compatibility."""
     import clr
     import System
 
@@ -38,9 +187,9 @@ def test_version():
         av = asm.GetName().Version
         Assert(av != None)
         AreEqual(av.Major, 1)
-        AreEqual(av.Minor, 0)
-        AreEqual(av.Build, 60816)
-        AreEqual(av.Revision, 1877)
+        AreEqual(av.Minor, 1)
+        AreEqual(av.Build, 0)
+        AreEqual(av.Revision, 0)
 
 def test_coverage():
     # 1. fasteval 
@@ -75,7 +224,7 @@ if not hasattr(System.Security.Cryptography, 'CryptographicAttributeObject'):
     Assert(not hasattr(System.Security.Cryptography, 'CryptographicAttributeObject'))
 
 # tests wrote in C# EngineTest.cs
-def test_engine():
+def test_engine_from_csharp():
     load_iron_python_test()
     import IronPythonTest
     et = IronPythonTest.EngineTest()
@@ -307,10 +456,334 @@ def test_CreateLambda_Division():
     result = ex(100000)
     Assert(result < 1)
 
+#------------------------------------------------------------------------------
+def generate_nb_test():
+    '''
+    Helper function which generates a test in the form of a single string
+    to ensure that locals() and globals() work as expected when executed
+    directly from PythonEngines.  To be more precise, this function returns
+    a slightly modified version of test_namebinding.py in string format.
+    '''
+    DEBUG = False
+     
+    #get the test we want to run.
+    f = open(testpath.public_testdir + "\\test_namebinding.py", "r")
+    lines = f.readlines()
+    f.close()
+    
+    #strip out imports. PythonEngine does not really work
+    #with these at the moment
+    lines.remove("from lib.assert_util import *\n")
+    lines.remove("from collections import *\n")
+    lines.remove("    import System\n")
+    lines.remove("    from System import GC\n")
+    lines.remove("    import gc\n")
+
+    if DEBUG:
+        #Add them back in a format that works better with
+        #hosted environments
+        lines.insert(0, "import lib\n")
+        lines.insert(0, "import lib.assert_util\n")
+        lines.insert(1, "import System\n")
+        lines.insert(2, "import gc\n")
+    
+    #fix some namespace issues
+    lines = [x.replace("AreEqual(", "lib.assert_util.AreEqual(") for x in lines]
+    lines = [x.replace("Assert(", "lib.assert_util.Assert(") for x in lines]
+    lines = [x.replace("AssertError(", "lib.assert_util.AssertError(") for x in lines]
+    lines = [x.replace("GC.", "System.GC.") for x in lines]
+    
+    #For debugging purposes the file is written out to disk.
+    #This is just to verify it can be run normally.
+    if DEBUG:
+        f = open(testpath.public_testdir + "\\temp_nb.py", "w")
+        f.writelines(lines)
+        f.close()
+    
+    #convert the list of strings into a single string
+    ret_val = ""
+    for line in lines:
+        ret_val = ret_val + line
+        
+    return ret_val
+    
+#------------------------------------------------------------------------------
+def test_engine_from_python():
+    '''
+    Tests a PythonEngine from IP.  At the moment this is just intended
+    to hit anything that test_engine_from_csharp is missing.
+    '''
+    temp = IronPython.Hosting.PythonEngine()
+    #CodePlex Work Item 6707
+    #Assert(temp.Sys.prefix!=None)
+    
+    #CodePlex Work Item 6708
+    #Assert(temp.Import("from sys import winver")!=None)
+    
+    #--Hit IronPython.Hosting.StringDictionary.AdapterDict
+    
+    #Partially because of CodePlex Work Item 6707, we need a helper
+    #function to import external Python modules
+    def get_pe():
+        '''
+        Helper function returns a new PythonEngine with the appropriate
+        Imports
+        '''
+        import sys
+        ret_val = IronPython.Hosting.PythonEngine()
+        ret_val.Import("sys")
+        ret_val.Execute("sys.path = " + str(sys.path))
+        ret_val.Execute("sys.prefix = '" + sys.prefix + "'")
+        ret_val.Import("lib")
+        ret_val.Import("lib.assert_util")
+        ret_val.Import("System")
+        ret_val.Import("gc")
+        
+        return ret_val
+    
+    #test globals() manipulation
+    temp = get_pe()
+    temp.Execute(globals_test)
+    
+    #Merlin Work Item 170204
+    #test_namebinding.py
+    #temp = get_pe()
+    #name_binding_test = generate_nb_test()
+    #temp.Execute(name_binding_test)
+    
+    
+    #--FormatException---------
+    def a():
+        raise System.Exception()
+
+    def b():
+        try:
+            a()
+        except System.Exception, e:
+            raise System.Exception("second", e)
+
+    def c():
+        try:
+            b()
+        except System.Exception, e:
+            x = System.Exception("first", e)
+        return x
+    
+    #No options
+    options = IronPython.Hosting.EngineOptions()
+    temp = IronPython.Hosting.PythonEngine(options)
+    
+    exc_string = temp.FormatException(System.Exception("first", 
+                                                       System.Exception("second", 
+                                                                        System.Exception())))
+    AreEqual(exc_string, 'Traceback (most recent call last):\r\nException: first\r\n')
+    exc_string = temp.FormatException(c())
+    AreEqual(exc_string.count(" File "), 4)
+    AreEqual(exc_string.count(" line "), 4)
+    
+    #CLR Exceptions option
+    options = IronPython.Hosting.EngineOptions()
+    options.ShowClrExceptions = True
+    temp = IronPython.Hosting.PythonEngine(options)
+    
+    exc_string = temp.FormatException(System.Exception("first", 
+                                                       System.Exception("second", 
+                                                                        System.Exception())))
+    AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
+    exc_string = temp.FormatException(c())
+    AreEqual(exc_string.count(" File "), 4)
+    AreEqual(exc_string.count(" line "), 4)
+    Assert(exc_string.endswith("CLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n"))
+    
+    #Detailed Exceptions
+    options = IronPython.Hosting.EngineOptions()
+    options.ExceptionDetail = True
+    temp = IronPython.Hosting.PythonEngine(options)
+    
+    #CodePlex Work Item 6710
+    #exc_string = temp.FormatException(System.Exception("first", System.Exception("second", System.Exception())))
+    #AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
+    #exc_string = temp.FormatException(c())
+    #AreEqual(exc_string.count(" File "), 4)
+    #AreEqual(exc_string.count(" line "), 4)
+    #Assert(exc_string.endswith("CLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n"))
+
+#------------------------------------------------------------------------------
+def test_optimized_engine_module():
+    '''
+    Tests Optmized EngineModules
+    '''
+    temp = IronPython.Hosting.PythonEngine()
+    
+    opt_module_name = "optimo"
+    opt_module_filename = testpath.temporary_dir + "temp_opt_model.py"
+    
+    #list of optimized engine modules which we'll run some generic 
+    #tests on
+    oem_list = []
+    
+    #create a temporary Python module
+    opt_module = '''
+a = 1
+def A():
+    global a
+    #print a
+    a = a * 2
+A()
+    '''
+    
+    f = open(opt_module_filename, "w")
+    print >> f, opt_module
+    f.close()
+    
+    oem = temp.CreateOptimizedModule(opt_module_filename, opt_module_name, True)
+    Assert(oem.ToString().find(oem.Name)!=-1)
+    oem.Execute()
+    oem_list.append(oem)
+        
+    oem = temp.CreateOptimizedModule(opt_module_filename, opt_module_name, False)
+    oem.Execute()
+    oem_list.append(oem)
+    
+    #--TEST GLOBALS
+    for oem in oem_list:
+        AssertError(SystemError, oem.Execute)
+        play_with_oem_globals(oem.Globals)
+    
+#---------------------------------------------------------------------------------
+def play_with_oem_globals(oem_globals):
+    '''
+    Helper function used to test an optimized engine module's Globals property.
+    '''
+    #the caller should have set "a" to 2.
+    AreEqual(oem_globals["a"], 2)
+    
+    #--ToString
+    AreEqual(type(oem_globals.ToString()), str)
+    
+    #--Add
+    oem_globals["b"] = None
+    AreEqual(oem_globals["b"], None)
+    
+    oem_globals.Add("c", "blah")
+    AreEqual(oem_globals["c"], "blah")
+    
+    temp = System.Collections.Generic.KeyValuePair[str,object]("d", int(3))
+    oem_globals.Add(temp)
+    AreEqual(oem_globals["d"], int(3))
+    
+    #--Keys
+    temp = [x for x in oem_globals.Keys]
+    #special case must be removed
+    if temp.count("__doc__")==1:
+        temp.remove('__doc__')
+    temp.sort()
+    AreEqual(temp, 
+             ['A', '__builtins__', '__file__', '__name__', 'a', 'b', 'c', 'd'])
+    
+    #--Values
+    temp = [x for x in oem_globals.Values if callable(x)==False]
+    #strip out the path where temp_opt_model.py exists
+    for i in range(len(temp)):
+        if type(temp[i])==str and temp[i].endswith("temp_opt_model.py"):
+            temp[i] = "temp_opt_model.py"
+    #special case must be removed
+    if temp.count(None)==2:
+        temp.remove(None)
+    temp.sort()
+    AreEqual(temp, 
+             [None, 2, 3, 'blah', 'optimo', 'temp_opt_model.py'])
+    
+    #--GetEnumerator
+    ator = oem_globals.GetEnumerator()
+    temp = [ele.Key for ele in ator]
+    #special case must be removed
+    if temp.count("__doc__")==1:
+        temp.remove('__doc__')
+    temp.sort()
+    AreEqual(temp,
+             ['A', '__builtins__', '__file__', '__name__', 'a', 'b', 'c', 'd'])
+    
+    #CodePlex Work Item 6711
+    #We should just be able to call 'ator.DoReset()' instead
+    #of generating another enumerator.
+    #ator.DoReset()
+    ator = oem_globals.GetEnumerator()
+    temp = [ele.Value for ele in ator if callable(ele.Value)==False]
+    #strip out the path where temp_opt_model.py exists
+    for i in range(len(temp)):
+        if type(temp[i])==str and temp[i].endswith("temp_opt_model.py"):
+            temp[i] = "temp_opt_model.py"
+    #special case must be removed
+    if temp.count(None)==2:
+        temp.remove(None)
+    temp.sort()
+    AreEqual(temp,
+             [None, 2, 3, 'blah', 'optimo', 'temp_opt_model.py'])
+    
+    #--Contains
+    temp = System.Collections.Generic.KeyValuePair[str,object]("b", None)
+    Assert(oem_globals.Contains(temp))
+    
+    temp = System.Collections.Generic.KeyValuePair[str,object]("c", "blah")
+    Assert(oem_globals.Contains(temp))
+    
+    #CodePlex Work Item 6703
+    #temp = System.Collections.Generic.KeyValuePair[str,object]("d", int(3))
+    #Assert(oem_globals.Contains(temp))
+    
+    temp = System.Collections.Generic.KeyValuePair[str,object]("e", "blah")
+    Assert(oem_globals.Contains(temp)==False)
+    
+    #--ContainsKey
+    temp_list = [("a", 1), ("b", 1), ("c", 1), ("d", 1), ("e", 0)]
+    for key, expect in temp_list:
+        AreEqual(oem_globals.ContainsKey(key), expect)
+    
+    #--TryGetValue
+    temp_dict = {"a" : (True, 2),
+                 "b": (True, None), 
+                 "c": (True, "blah"), 
+                 "d": (True, int(3)), 
+                 "e": (False, None)}
+    for key in temp_dict.keys():
+        AreEqual(oem_globals.TryGetValue(key), temp_dict[key])
+    
+    #--Count
+    if oem_globals.ContainsKey("__doc__"):
+        AreEqual(oem_globals.Count, 9)
+    else:
+        AreEqual(oem_globals.Count, 8)
+    
+    #--IsReadOnly
+    Assert(not oem_globals.IsReadOnly)
+            
+    #CopyTo
+    AssertError(NotImplementedError,
+                oem_globals.CopyTo,
+                None, 3)
+    
+    #--Remove
+    Assert(oem_globals.ContainsKey("d"))
+    oem_globals.Remove("d")
+    Assert(oem_globals.ContainsKey("d")==False)
+    
+    Assert(oem_globals.ContainsKey("c"))
+    oem_globals.Remove(System.Collections.Generic.KeyValuePair[str,object]("c", "blah"))
+    Assert(oem_globals.ContainsKey("c")==False)
+    
+    #--Clear!
+    oem_globals.Clear()
+    AreEqual(oem_globals.Count, 0)
+    AreEqual([x for x in oem_globals.Keys], [])
+    AreEqual([x for x in oem_globals.Values], [])
+    
+#---------------------------------------------------------------
     
 def test_interactive_input():
     x = pe.ParseInteractiveInput("""x = "abc\\
 """, True)
     AreEqual(x, False)
 
-run_test(__name__)
+if __name__=="__main__":
+    run_test(__name__)

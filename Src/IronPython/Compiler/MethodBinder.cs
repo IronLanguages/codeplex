@@ -354,6 +354,50 @@ namespace IronPython.Compiler {
         }
 
 
+        public enum ParameterComparison {
+            /// <summary>
+            /// The two parameters are both better than each other.   This occurs when both
+            /// parameters have a non-narrowing conversion to each others types.
+            /// </summary>
+            Conflict,
+            /// <summary>
+            /// The first parameter is better
+            /// </summary>
+            First,
+            /// <summary>
+            /// The second parameter is better.
+            /// </summary>
+            Second,
+            /// <summary>
+            /// The two parameters are of the same type
+            /// </summary>
+            Same,
+            /// <summary>
+            /// Neither parameter is better and there are no conflicts.
+            /// </summary>
+            Neither
+        }
+
+        public static ParameterComparison CompareParameterTypes(Type t1, Type t2) {
+            if (t1 == t2) return ParameterComparison.Same;
+
+            if (Converter.CanConvertFrom(t2, t1, NarrowingLevel.None)) {
+                if (Converter.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
+                    return ParameterComparison.Conflict;
+                } else {
+                    return ParameterComparison.Second;
+                }
+            }
+            if (Converter.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
+                return ParameterComparison.First;
+            }
+
+            // Special additional rules to order numeric value types
+            if (Converter.PreferConvert(t1, t2)) return ParameterComparison.Second;
+            else if (Converter.PreferConvert(t2, t1)) return ParameterComparison.First;
+
+            return ParameterComparison.Neither;
+        }
         class Parameter {
             protected Type type;
             public Parameter(Type type) {
@@ -375,26 +419,10 @@ namespace IronPython.Compiler {
                 }
             }
 
-            public int? CompareTo(Parameter other) {
+            public ParameterComparison CompareTo(Parameter other) {
                 Type t1 = Type;
                 Type t2 = other.Type;
-                if (t1 == t2) return 0;
-                if (Converter.CanConvertFrom(t2, t1, NarrowingLevel.None)) {
-                    if (Converter.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
-                        return null;
-                    } else {
-                        return -1;
-                    }
-                }
-                if (Converter.CanConvertFrom(t1, t2, NarrowingLevel.None)) {
-                    return +1;
-                }
-
-                // Special additional rules to order numeric value types
-                if (Converter.PreferConvert(t1, t2)) return -1;
-                else if (Converter.PreferConvert(t2, t2)) return +1;
-
-                return null;
+                return CompareParameterTypes(t1, t2);
             }
 
             public virtual object ConvertFrom(object arg) {
@@ -441,26 +469,26 @@ namespace IronPython.Compiler {
             }
         }
 
-
-
-        private static int? CompareParameters(IList<Parameter> parameters1, IList<Parameter> parameters2) {
-            int? ret = 0;
+        private static ParameterComparison CompareParameters(IList<Parameter> parameters1, IList<Parameter> parameters2) {
+            ParameterComparison ret = ParameterComparison.Same;
             for (int i = 0; i < parameters1.Count; i++) {
                 Parameter p1 = parameters1[i];
                 Parameter p2 = parameters2[i];
-                int? cmp = p1.CompareTo(p2);
+                ParameterComparison cmp = p1.CompareTo(p2);
                 switch (ret) {
-                    case 0:
+                    case ParameterComparison.Same:
                         ret = cmp; break;
-                    case +1:
-                        if (cmp == -1) return null;
+                    case ParameterComparison.First:
+                        if (cmp == ParameterComparison.Second) return ParameterComparison.Conflict;
                         break;
-                    case -1:
-                        if (cmp == +1) return null;
+                    case ParameterComparison.Second:
+                        if (cmp == ParameterComparison.First) return ParameterComparison.Conflict;
                         break;
-                    case null:
-                        if (cmp != 0) ret = cmp;
+                    case ParameterComparison.Neither:
+                    case ParameterComparison.Conflict:
+                        if (cmp != ParameterComparison.Same) ret = cmp;
                         break;
+
                     default:
                         throw new InvalidOperationException();
                 }
@@ -984,8 +1012,9 @@ namespace IronPython.Compiler {
             }
 
             public int CompareTo(MethodTarget other, CallType callType) {
-                int? cmpParams = CompareParameters(this.parameters, other.parameters);
-                if (cmpParams == +1 || cmpParams == -1) return (int)cmpParams;
+                ParameterComparison cmpParams = CompareParameters(this.parameters, other.parameters);
+                if (cmpParams == ParameterComparison.First) return 1;
+                if (cmpParams == ParameterComparison.Second) return -1;
 
                 int ret = CompareEqualParameters(other);
                 if (ret != 0) return ret;
@@ -1241,7 +1270,7 @@ namespace IronPython.Compiler {
 
             public void Add(MethodTarget target) {
                 for (int i = 0; i < targets.Count; i++) {
-                    if (CompareParameters(targets[i].parameters, target.parameters) == 0) {
+                    if (CompareParameters(targets[i].parameters, target.parameters) == ParameterComparison.Same) {
                         switch (targets[i].CompareEqualParameters(target)) {
                             case -1:
                                 // the new method is strictly better than the existing one so remove the existing one

@@ -22,6 +22,7 @@ using System.Diagnostics;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 
 [assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
@@ -65,7 +66,7 @@ namespace IronPython.Modules {
                 throw Ops.TypeError("expected struct_time or None");
             }
 
-            return dt.ToString("ddd MMM dd hh:mm:ss yyyy", null);
+            return dt.ToString("ddd MMM dd HH:mm:ss yyyy", null);
         }
 
         [PythonName("clock")]
@@ -121,7 +122,7 @@ namespace IronPython.Modules {
 
             long intSeconds = GetDateTimeFromObject(seconds);
 
-            return GetDateTimeTuple(new DateTime(intSeconds * TimeSpan.TicksPerSecond, DateTimeKind.Utc));
+            return GetDateTimeTuple(new DateTime(intSeconds * TimeSpan.TicksPerSecond).ToUniversalTime());
         }
 
         [PythonName("mktime")]
@@ -180,7 +181,7 @@ namespace IronPython.Modules {
                                 formats[i] = "%" + formatInfo[i].Text;
                             } else {
                                 formats[i] = formatInfo[i].Text;
-                            } 
+                            }
                             break;
                     }
                 }
@@ -201,7 +202,6 @@ namespace IronPython.Modules {
 
             return GetDateTimeTuple(res);
         }
-
         internal static string FormatTime(string format, DateTime dt) {
             bool postProc;
             List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, false, out postProc);
@@ -276,6 +276,27 @@ namespace IronPython.Modules {
 
             public FormatInfoType Type;
             public string Text;
+
+            public override string ToString() {
+                return string.Format("{0}:{1}", Type, Text);
+            }
+        }
+
+        // temporary solution
+        private static void AddTime(List<FormatInfo> newFormat) {
+            newFormat.Add(new FormatInfo("HH"));
+            newFormat.Add(new FormatInfo(FormatInfoType.UserText, ":"));
+            newFormat.Add(new FormatInfo("mm"));
+            newFormat.Add(new FormatInfo(FormatInfoType.UserText, ":"));
+            newFormat.Add(new FormatInfo("ss"));
+        }
+
+        private static void AddDate(List<FormatInfo> newFormat) {
+            newFormat.Add(new FormatInfo("MM"));
+            newFormat.Add(new FormatInfo(FormatInfoType.UserText, "/"));
+            newFormat.Add(new FormatInfo("dd"));
+            newFormat.Add(new FormatInfo(FormatInfoType.UserText, "/"));
+            newFormat.Add(new FormatInfo("yy"));
         }
 
         private static List<FormatInfo> PythonFormatToCLIFormat(string format, bool forParse, out bool postProcess) {
@@ -291,10 +312,10 @@ namespace IronPython.Modules {
                         case 'A': newFormat.Add(new FormatInfo("dddd")); break;
                         case 'b': newFormat.Add(new FormatInfo("MMM")); break;
                         case 'B': newFormat.Add(new FormatInfo("MMMM")); break;
-                        case 'c': 
-                            newFormat.Add(new FormatInfo(FormatInfoType.SimpleFormat, "d"));
+                        case 'c':
+                            AddDate(newFormat);
                             newFormat.Add(new FormatInfo(FormatInfoType.UserText, " "));
-                            newFormat.Add(new FormatInfo(FormatInfoType.SimpleFormat, "t")); 
+                            AddTime(newFormat);
                             break;
                         case 'd':
                             // if we're parsing we want to use the less-strict
@@ -302,18 +323,23 @@ namespace IronPython.Modules {
                             if (forParse) newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, "d"));
                             else newFormat.Add(new FormatInfo("dd"));
                             break;
-                        case 'H': newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, "H")); break;
+                        case 'H': newFormat.Add(new FormatInfo("HH")); break;
                         case 'I': newFormat.Add(new FormatInfo("hh")); break;
                         case 'm': newFormat.Add(new FormatInfo("MM")); break;
                         case 'M': newFormat.Add(new FormatInfo("mm")); break;
-                        case 'p': newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, "t")); break;
+                        case 'p':
+                            newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, "t"));
+                            newFormat.Add(new FormatInfo(FormatInfoType.UserText, "M"));
+                            break;
                         case 'S': newFormat.Add(new FormatInfo("ss")); break;
                         case 'w': newFormat.Add(new FormatInfo("ddd")); break;       // weekday name
-                        case 'x': newFormat.Add(new FormatInfo(FormatInfoType.CustomFormat, PythonLocale.currentLocale.Time.DateTimeFormat.ShortDatePattern)); break;
-                        case 'X': newFormat.Add(new FormatInfo(FormatInfoType.SimpleFormat, "t")); break;
+                        case 'x':
+                            AddDate(newFormat); break;
+                        case 'X':
+                            AddTime(newFormat);
+                            break;
                         case 'y': newFormat.Add(new FormatInfo("yy")); break;
                         case 'Y': newFormat.Add(new FormatInfo("yyyy")); break;
-                        case 'Z': newFormat.Add(new FormatInfo("zzz")); break;
                         case '%': newFormat.Add(new FormatInfo("\\%")); break;
 
                         // format conversions not defined by the CLR.  We leave
@@ -321,7 +347,15 @@ namespace IronPython.Modules {
                         case 'j': newFormat.Add(new FormatInfo("\\%j")); postProcess = true; break; // day of year
                         case 'W': newFormat.Add(new FormatInfo("\\%W")); postProcess = true; break;
                         case 'U': newFormat.Add(new FormatInfo("\\%U")); postProcess = true; break; // week number
-                        default: throw Ops.ValueError("invalid formatting character: {0}", format[i]);
+                        case 'z':
+                        case 'Z':
+                            // TODO: 
+                            // 'z' for offset
+                            // 'Z' for time zone name; could be from PythonTimeZoneInformation
+                            newFormat.Add(new FormatInfo(FormatInfoType.UserText, ""));
+                            break;
+                        default:
+                            newFormat.Add(new FormatInfo(FormatInfoType.UserText, "")); break;
                     }
                 } else {
                     if (newFormat.Count == 0 || newFormat[newFormat.Count - 1].Type != FormatInfoType.UserText)
@@ -334,17 +368,43 @@ namespace IronPython.Modules {
             return newFormat;
         }
 
+        // weekday: Monday is 0, Sunday is 6
+        internal static int Weekday(DateTime dt) {
+            if (dt.DayOfWeek == DayOfWeek.Sunday) return 6;
+            else return (int)dt.DayOfWeek - 1;
+        }
+
+        // isoweekday: Monday is 1, Sunday is 7
+        internal static int IsoWeekday(DateTime dt) {
+            if (dt.DayOfWeek == DayOfWeek.Sunday) return 7;
+            else return (int)dt.DayOfWeek;
+        }
 
         internal static Tuple GetDateTimeTuple(DateTime dt) {
-            int doy;
+            return GetDateTimeTuple(dt, null);
+        }
+        internal static Tuple GetDateTimeTuple(DateTime dt, PythonDateTime.PythonTimeZoneInformation tz) {
+            return GetDateTimeTuple(dt, tz, false);
+        }
+        internal static StructTime GetDateTimeTuple(DateTime dt, PythonDateTime.PythonTimeZoneInformation tz, bool utc) {
+            int last;
+            if (utc) {
+                last = 0;
+            } else {
+                if (tz == null) {
+                    last = -1;
+                } else {
+                    PythonDateTime.PythonTimeDelta delta = tz.DaylightSavingTime(dt);
+                    PythonDateTime.ThrowIfInvalid(delta, "dst");
+                    if (delta == null) {
+                        last = -1;
+                    } else {
+                        last = delta.NonZero() ? 1 : 0;
+                    }
+                }
+            }
 
-            // Python DOY is off-by-one from ours
-            if (dt.DayOfWeek == DayOfWeek.Sunday)
-                doy = 6;
-            else
-                doy = (int)(dt.DayOfWeek - 1);
-
-            return Tuple.MakeTuple(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, doy, dt.DayOfYear, dt.IsDaylightSavingTime() ? 1 : 0);
+            return new StructTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, Weekday(dt), dt.DayOfYear, last);
         }
 
         private static DateTime GetDateTimeFromTuple(Tuple t) {
@@ -380,6 +440,86 @@ namespace IronPython.Modules {
             if (sw == null) {
                 sw = new Stopwatch();
                 sw.Start();
+            }
+        }
+
+        [PythonType("struct_time")]
+        public class StructTime : Tuple {
+            public object Year {
+                [PythonName("tm_year")]
+                get { return data[0]; }
+            }
+            public object Month {
+                [PythonName("tm_mon")]
+                get { return data[1]; }
+            }
+            public object Day {
+                [PythonName("tm_mday")]
+                get { return data[2]; }
+            }
+            public object Hour {
+                [PythonName("tm_hour")]
+                get { return data[3]; }
+            }
+            public object Minute {
+                [PythonName("tm_min")]
+                get { return data[4]; }
+            }
+            public object Second {
+                [PythonName("tm_sec")]
+                get { return data[5]; }
+            }
+            public object DayOfWeek {
+                [PythonName("tm_wday")]
+                get { return data[6]; }
+            }
+            public object DayOfYear {
+                [PythonName("tm_yday")]
+                get { return data[7]; }
+            }
+            public object IsDaylightSavingTime {
+                [PythonName("tm_isdst")]
+                get { return data[8]; }
+            }
+
+            internal StructTime(int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst)
+                : base(new object[] { year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst }) {
+            }
+
+            [PythonName("__new__")]
+            public static StructTime Make(DynamicType cls, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
+                if (cls == Ops.GetDynamicTypeFromType(typeof(StructTime))) {
+                    return new StructTime(year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst);
+                } else {
+                    StructTime st = cls.ctor.Call(cls, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst) as StructTime;
+                    if (st == null) 
+                        throw Ops.TypeError("{0} is not a subclass of time.struct_time", cls);
+                    return st;
+                }
+            }
+
+            [PythonName("__reduce__")]
+            public Tuple Reduce() {
+                return Tuple.MakeTuple(StructTimeType, Tuple.MakeTuple(Year, Month, Day, Hour, Minute, Second, DayOfWeek, DayOfYear, IsDaylightSavingTime));
+            }
+
+            [PythonName("__getnewargs__")]
+            public static object GetNewArgs(int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
+                return Tuple.MakeTuple(StructTime.Make(StructTimeType, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst));
+            }
+
+            internal static DynamicType s_structTimeType;
+            internal static DynamicType StructTimeType {
+                get {
+                    if (s_structTimeType == null) {
+                        s_structTimeType = Ops.GetDynamicTypeFromType(typeof(StructTime));
+                    }
+                    return s_structTimeType;
+                }
+            }
+
+            public override DynamicType GetDynamicType() {
+                return StructTimeType;
             }
         }
     }

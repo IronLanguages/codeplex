@@ -95,14 +95,14 @@ namespace IronPython.Runtime {
             }
         }
 
-        private readonly object[] data;
+        internal readonly object[] data;
         private readonly bool expandable;
 
         public Tuple(object o) {
             this.data = MakeItems(o);
         }
 
-        private Tuple(object[] items) {
+        protected Tuple(object[] items) {
             this.data = items;
         }
 
@@ -136,15 +136,11 @@ namespace IronPython.Runtime {
 
         #region ISequence Members
         [PythonName("__len__")]
-        public int GetLength() {
+        public virtual int GetLength() {
             return data.Length;
         }
 
         [PythonName("__contains__")]
-        public object ContainsValueWrapper(object item) {
-            return Ops.Bool2Object(ContainsValue(item));
-        }
-
         public virtual bool ContainsValue(object item) {
             return ArrayOps.Contains(data, data.Length, item);
         }
@@ -352,7 +348,7 @@ namespace IronPython.Runtime {
 
         #region IDynamicObject Members
 
-        public DynamicType GetDynamicType() {
+        public virtual DynamicType GetDynamicType() {
             return TypeCache.Tuple;
         }
 

@@ -452,6 +452,95 @@ Eg. The following will call the overload of WriteLine that takes an int argument
             }
         }
 
+        internal bool ContainsOverlappingTarget(MethodInfo mi) {            
+            int reduced;
+            ParameterInfo[] pis = GetReducedParameters(mi.GetParameters(), out reduced);
+
+            Type[] genArgs = mi.GetGenericArguments();
+
+            foreach (MethodBase existing in Targets) {
+                // let the method binder sort out static/non-statics & collisions within a type at runtime               
+                if (mi.DeclaringType == existing.DeclaringType || mi.IsStatic != existing.IsStatic) continue;
+
+                Type[] exGenArgs = existing.GetGenericArguments();
+                if (exGenArgs.Length != genArgs.Length) continue;
+
+                int exReduced;
+                ParameterInfo[] exPis = GetReducedParameters(existing.GetParameters(), out exReduced);
+                if (exPis.Length < pis.Length) continue;
+
+                // check if argument types match, if at least one differs there's no conflict.
+                if (ParametersTypesCollide(pis, exPis)) {
+                    if (exReduced != reduced) {
+                        // differ by out params, user can disambiguate w/ Reference[T]
+                        continue;
+                    }
+
+                    bool match = true;
+                    // if our existing signature is longer, and has optional parameters for all additional
+                    // arguments then we prefer the existing one.
+                    for (int i = pis.Length; i < exPis.Length; i++) {
+                        if (!exPis[i].IsOptional && exPis[i].DefaultValue == DBNull.Value) {
+                            match = false;
+                            break;
+                        }
+                    }
+
+                    if (!match) continue;
+
+                    // still a match: check if we differ by generic arguments
+                    for (int i = 0; i < genArgs.Length; i++) {
+                        if (genArgs[i] != exGenArgs[i]) {
+                            match = false;
+                            break;
+                        }
+                    }
+
+                    if (match) return true;
+                }
+            }
+            return false;
+        }
+
+        private static ParameterInfo[] GetReducedParameters(ParameterInfo[] pis, out int reduceCount) {
+            reduceCount = 0;
+            List<ParameterInfo> byrefReduced = null;
+            for (int i = 0; i < pis.Length; i++) {
+                if (pis[i].IsOut && !pis[i].IsIn) {
+                    if (byrefReduced == null) {
+                        byrefReduced = new List<ParameterInfo>(pis.Length);
+                        for (int j = 0; j < i; j++) byrefReduced.Add(pis[i]);
+                    }
+                    reduceCount++;
+                } else if (byrefReduced != null) {
+                    byrefReduced.Add(pis[i]);
+                }
+            }
+            if (byrefReduced != null) return byrefReduced.ToArray();
+            return pis;
+        }
+
+        private static bool ParametersTypesCollide(ParameterInfo[] pis, ParameterInfo[] exPis) {
+            Debug.Assert(exPis.Length >= pis.Length);
+
+            MethodBinder.ParameterComparison result = MethodBinder.ParameterComparison.Same;
+            for (int i = 0; i < pis.Length; i++) {
+                Type t1 = pis[i].ParameterType;
+                Type t2 = exPis[i].ParameterType;
+
+                MethodBinder.ParameterComparison cmp = MethodBinder.CompareParameterTypes(t1, t2);
+                switch (result) {
+                    case MethodBinder.ParameterComparison.Same: result = cmp; break;
+                    case MethodBinder.ParameterComparison.Conflict: if (cmp != MethodBinder.ParameterComparison.Same) result = cmp; break;
+                    case MethodBinder.ParameterComparison.First: if (cmp == MethodBinder.ParameterComparison.Second) return true; break;
+                    case MethodBinder.ParameterComparison.Second: if (cmp == MethodBinder.ParameterComparison.First) return true; break;
+                    case MethodBinder.ParameterComparison.Neither: break;
+                }
+            }
+
+            // either they match (0), or t1 is better than t2 and t2 is better than t1 (null)
+            return result == MethodBinder.ParameterComparison.Same || result == MethodBinder.ParameterComparison.Conflict;
+        }
 
         #endregion
 

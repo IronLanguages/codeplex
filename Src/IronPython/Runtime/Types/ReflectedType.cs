@@ -61,6 +61,7 @@ namespace IronPython.Runtime.Types {
         public ReflectedType effectivePythonType;
 
         private static Hashtable operatorTable;
+        private static DocumentationDescriptor globalDesc = new DocumentationDescriptor();
 
         private IAttributesInjector prependedAttrs;
         private IAttributesInjector appendedAttrs;
@@ -162,6 +163,8 @@ namespace IronPython.Runtime.Types {
                 else rm = existingMember as BuiltinFunction;
 
                 if (rm != null) {
+                    if (rm.ContainsOverlappingTarget(mi)) return;
+
                     rm.FunctionType |= ft;
                     rm.AddMethod(mi);
 
@@ -347,26 +350,46 @@ namespace IronPython.Runtime.Types {
 
         private void AddDocumentation() {
             if (!dict.ContainsKey(SymbolTable.Doc)) {
-                dict[SymbolTable.Doc] = GetDocumentation();
+                dict[SymbolTable.Doc] = globalDesc;
             }
         }
 
+        class DocumentationDescriptor : IDescriptor {
+
+            #region IDescriptor Members
+
+            public object GetAttribute(object instance, object owner) {
+                ReflectedType rt = owner as ReflectedType;
+                if (owner == null) return null;
+
+                return rt.GetDocumentation();
+            }
+
+            #endregion
+        }
+
         private string GetDocumentation() {
+            // Python documentation
             object[] docAttr = type.GetCustomAttributes(typeof(DocumentationAttribute), false);
             if (docAttr != null && docAttr.Length > 0) {
                 return ((DocumentationAttribute)docAttr[0]).Value;
             }
 
-            BuiltinFunction newMeth = ctor as BuiltinFunction;
-            if (newMeth == null) {
-                if (type.IsEnum) return ReflectionUtil.CreateEnumDoc(type);
-
-                return null;
+            // Auto Doc (XML or otherwise)
+            string autoDoc = ReflectionUtil.CreateAutoDoc(type);
+            if (autoDoc == null) {
+                autoDoc = String.Empty;
+            } else {
+                autoDoc += Environment.NewLine + Environment.NewLine;
             }
+
+            // Simple generated helpbased on ctor, if available.
+            BuiltinFunction newMeth = ctor as BuiltinFunction;
+            if (newMeth == null) return autoDoc;
 
             // strip off function name & cls parameter and just
             // display as plain type
-            return newMeth.Documentation.Replace("__new__(cls)", Name + "()").Replace("__new__(cls, ", Name + "(");
+            return autoDoc + newMeth.Documentation.Replace("__new__(cls)", Name + "()").Replace("__new__(cls, ", Name + "(");
         }
 
         private string GetName(Type type) {
@@ -862,6 +885,8 @@ namespace IronPython.Runtime.Types {
 
                     AddDocumentation();
 
+                    AddInheritedStaticMethods(defaultMembers, bf);
+
                     if (!dict.ContainsKey(SymbolTable.Dict)) {
                         dict[SymbolTable.Dict] = new DictWrapper(this);
                     }
@@ -870,6 +895,25 @@ namespace IronPython.Runtime.Types {
                     AddModule();
 
                     dict = new ProxyDictionary(dict.SymbolAttributes);
+                }
+            }
+        }
+
+        private void AddInheritedStaticMethods(MemberInfo[] defaultMembers, BindingFlags bf) {
+            if (type != typeof(object)) {
+                Type curType = type.BaseType;
+                while (curType != null && curType != typeof(object) && curType != typeof(ValueType)) {
+                    foreach (MethodInfo mi in curType.GetMethods(bf & ~BindingFlags.Instance)) {
+                        // Only inherit op_Implicit.  
+                        if (!mi.IsSpecialName || mi.Name != "op_Implicit") continue;
+
+                        string name;
+                        NameType nt = NameConverter.TryGetName(this, mi, out name);
+                        if (nt != NameType.PythonMethod) {
+                            AddReflectedMethod(mi, defaultMembers);
+                        }
+                    }
+                    curType = curType.BaseType;
                 }
             }
         }
@@ -1255,7 +1299,7 @@ namespace IronPython.Runtime.Types {
     /// backing Hashtable as it is immutable and all keys are in ExtraKeys.
     /// </summary>
     [PythonType(typeof(Dict))]
-    public class ProxyDictionary : CustomSymbolDict {
+    public class ProxyDictionary : CustomSymbolDict, IMapping {
         private const int EXPANSION = 2;
 
         private int[] symbols;
@@ -1328,5 +1372,38 @@ namespace IronPython.Runtime.Types {
         public static object fromkeys(DynamicType cls, object seq, object value) {
             return Dict.FromKeys(cls, seq, value);
         }
+
+        #region IMapping Members
+
+        object IMapping.this[object key] {
+            get {
+                string str;
+                if (Converter.TryConvertToString(key, out str)) {
+                    return this[SymbolTable.StringToId(str)];
+                }
+                throw Ops.KeyError("'{0}'", key);
+            }
+            set {
+                throw Ops.TypeError("can't set '{0}' in dictproxy", key.ToString());
+            }
+        }
+
+        void IMapping.DeleteItem(object key) {
+            throw Ops.TypeError("can't delete '{0}' from dictproxy", key.ToString());
+        }
+
+        #endregion
+
+        #region IPythonContainer Members
+
+        int IPythonContainer.GetLength() {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        bool IPythonContainer.ContainsValue(object value) {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
+        #endregion
     }
 }

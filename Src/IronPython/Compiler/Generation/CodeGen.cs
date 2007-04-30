@@ -70,6 +70,7 @@ namespace IronPython.Compiler.Generation {
             Try,
             Finally,
             Catch,
+            Else,
             With,
             LoopInFinally
         }
@@ -80,7 +81,7 @@ namespace IronPython.Compiler.Generation {
         public Nullable<Label> leaveLabel;
         private TargetBlockType blockType;
         public readonly Slot finallyReturns;
-        public Slot isTryYielded;
+        public Slot isBlockYielded;
 
         public TargetBlockType BlockType {
             get {
@@ -92,13 +93,13 @@ namespace IronPython.Compiler.Generation {
             : this(breakLabel, continueLabel, TargetBlockType.Normal, null, null) {
         }
 
-        public Targets(Label breakLabel, Label continueLabel, TargetBlockType blockType, Slot finallyReturns, Slot isTryYielded) {
+        public Targets(Label breakLabel, Label continueLabel, TargetBlockType blockType, Slot finallyReturns, Slot isBlockYielded) {
             this.breakLabel = breakLabel;
             this.continueLabel = continueLabel;
             this.blockType = blockType;
             this.finallyReturns = finallyReturns;
-            this.isTryYielded = isTryYielded;
             this.leaveLabel = null;
+            this.isBlockYielded = isBlockYielded;
         }
     }
 
@@ -109,6 +110,7 @@ namespace IronPython.Compiler.Generation {
         public List<object> staticData;
         private int staticDataIndex;
         private ISymbolDocumentWriter debugSymbolWriter;
+        private Dictionary<string, ISymbolDocumentWriter> externalDebugSymbolWriters;
 
         internal readonly MethodBase methodInfo;
         private readonly ILGenerator ilg;
@@ -130,6 +132,9 @@ namespace IronPython.Compiler.Generation {
         private Slot contextSlot;               // caller context
         private Slot currentLineSlot;           // slot used for tracking the current source line
 
+        private Slot currentTraceBackUpdateStatusSlot;      
+        private string funcOrClassName;
+
         public ArgSlot[] argumentSlots;
         private CompilerContext context;
 
@@ -138,7 +143,7 @@ namespace IronPython.Compiler.Generation {
 
         internal const int FinallyExitsNormally = 0;
         internal const int BranchForReturn = 1;
-        internal const int BranchForBreak  = 2;
+        internal const int BranchForBreak = 2;
         internal const int BranchForContinue = 3;
 
 
@@ -175,6 +180,25 @@ namespace IronPython.Compiler.Generation {
             WriteSignature(mi.Name, paramTypes);
         }
 
+        private ISymbolDocumentWriter GetDebugWriter(string filename) {
+            if (!EmitDebugInfo) return null;
+
+            if (externalDebugSymbolWriters == null) externalDebugSymbolWriters = new Dictionary<string, ISymbolDocumentWriter>();
+
+            ISymbolDocumentWriter res;
+            if (externalDebugSymbolWriters.TryGetValue(filename, out res))
+                return res;
+
+            res = assemblyGen.myModule.DefineDocument(filename,
+                Guid.Empty,
+                SymLanguageVendor.Microsoft,
+                SymDocumentType.Text);
+
+            externalDebugSymbolWriters[filename] = res;
+
+            return res;
+        }
+
         public override string ToString() {
             return methodInfo.ToString();
         }
@@ -201,6 +225,11 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
+        public string FuncOrClassName {
+            get { return (funcOrClassName == null) ? "<module>" : funcOrClassName; }
+            set { funcOrClassName = value; }
+        }
+
         public Targets.TargetBlockType BlockType {
             get {
                 if (targets.Count == 0) return Targets.TargetBlockType.Normal;
@@ -214,12 +243,12 @@ namespace IronPython.Compiler.Generation {
                 (targets.Peek()).breakLabel != Targets.NoLabel);
         }
 
-        public void PushExceptionBlock(Targets.TargetBlockType type, Slot returnFlag, Slot isTryYielded) {
+        public void PushExceptionBlock(Targets.TargetBlockType type, Slot returnFlag, Slot isBlockYielded) {
             if (targets.Count == 0) {
-                targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag, isTryYielded));
+                targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag, isBlockYielded));
             } else {
                 Targets t = targets.Peek();
-                targets.Push(new Targets(t.breakLabel, t.continueLabel, type, returnFlag ?? t.finallyReturns, isTryYielded));
+                targets.Push(new Targets(t.breakLabel, t.continueLabel, type, returnFlag ?? t.finallyReturns, isBlockYielded ?? t.isBlockYielded));
             }
         }
 
@@ -227,12 +256,12 @@ namespace IronPython.Compiler.Generation {
             PushExceptionBlock(Targets.TargetBlockType.With, null, isTryYielded);
         }
 
-        public void PushTryBlock() {
-            PushExceptionBlock(Targets.TargetBlockType.Try, null, null);
+        public void PushTryBlock(Slot isTryYielded) {
+            PushExceptionBlock(Targets.TargetBlockType.Try, null, isTryYielded);
         }
 
-        public void PushFinallyBlock(Slot returnFlag) {
-            PushExceptionBlock(Targets.TargetBlockType.Finally, returnFlag, null);
+        public void PushFinallyBlock(Slot returnFlag, Slot isFinallyYielded) {
+            PushExceptionBlock(Targets.TargetBlockType.Finally, returnFlag, isFinallyYielded);
         }
 
         public void PushTargets(Label breakTarget, Label continueTarget) {
@@ -244,8 +273,13 @@ namespace IronPython.Compiler.Generation {
                 if (bt == Targets.TargetBlockType.Finally) {
                     bt = Targets.TargetBlockType.LoopInFinally;
                 }
-                targets.Push(new Targets(breakTarget, continueTarget, bt, t.finallyReturns, null));
+                targets.Push(new Targets(breakTarget, continueTarget, bt, t.finallyReturns, t.isBlockYielded));
             }
+        }
+
+        public void PopTargets(Targets.TargetBlockType type) {
+            Targets t = targets.Pop();
+            Debug.Assert(t.BlockType == type);
         }
 
         public void PopTargets() {
@@ -263,6 +297,7 @@ namespace IronPython.Compiler.Generation {
                     break;
                 case Targets.TargetBlockType.Try:
                 case Targets.TargetBlockType.With:
+                case Targets.TargetBlockType.Else:
                 case Targets.TargetBlockType.Catch:
                     for (int i = targets.Count - 1; i >= 0; i--) {
                         if (targets[i].BlockType == Targets.TargetBlockType.Finally) {
@@ -277,7 +312,7 @@ namespace IronPython.Compiler.Generation {
                     if (finallyIndex == -1) {
                         Emit(OpCodes.Leave, t.breakLabel);
                     } else {
-                        if(!targets[finallyIndex].leaveLabel.HasValue)
+                        if (!targets[finallyIndex].leaveLabel.HasValue)
                             targets[finallyIndex].leaveLabel = DefineLabel();
 
                         EmitInt(CodeGen.BranchForBreak);
@@ -304,6 +339,7 @@ namespace IronPython.Compiler.Generation {
                     break;
                 case Targets.TargetBlockType.Try:
                 case Targets.TargetBlockType.With:
+                case Targets.TargetBlockType.Else:
                 case Targets.TargetBlockType.Catch:
                     Emit(OpCodes.Leave, t.continueLabel);
                     break;
@@ -329,6 +365,7 @@ namespace IronPython.Compiler.Generation {
 
                     goto case Targets.TargetBlockType.Try;
                 case Targets.TargetBlockType.Try:
+                case Targets.TargetBlockType.Else:
                     // with has it's own finally block, so no need to search...
                     for (int i = targets.Count - 1; i >= 0; i--) {
                         if (targets[i].BlockType == Targets.TargetBlockType.Finally) {
@@ -350,7 +387,7 @@ namespace IronPython.Compiler.Generation {
                         // need to leave into the inner most finally block,
                         // the finally block will fall through and check
                         // the return value.
-                        if(!targets[finallyIndex].leaveLabel.HasValue)
+                        if (!targets[finallyIndex].leaveLabel.HasValue)
                             targets[finallyIndex].leaveLabel = DefineLabel();
 
                         EmitInt(CodeGen.BranchForReturn);
@@ -366,6 +403,9 @@ namespace IronPython.Compiler.Generation {
                         if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void)) {
                             returnBlock.returnValue.EmitSet(this);
                         }
+                        // Assert check ensures that those who pushed the block with finallyReturns as null 
+                        // should not yield in their blocks.
+                        Debug.Assert(t.finallyReturns != null);
                         EmitInt(CodeGen.BranchForReturn);
                         t.finallyReturns.EmitSet(this);
                         Emit(OpCodes.Endfinally);
@@ -380,6 +420,7 @@ namespace IronPython.Compiler.Generation {
                 returnBlock.returnValue.EmitGet(this);
             }
         }
+
 
         public void EmitReturn(Expression expr) {
             if (yieldLabels != null) {
@@ -406,10 +447,19 @@ namespace IronPython.Compiler.Generation {
         }
 
         public void EmitYield(Expression expr, int index, Label label) {
-            if (BlockType == Targets.TargetBlockType.With) {
-                Targets t = targets.Peek();
-                EmitConstantBoxed(true);
-                t.isTryYielded.EmitSet(this);
+            Targets t = targets.Peek();
+
+            if (BlockType != Targets.TargetBlockType.Normal) {
+                // Assert that those who pushed the block with this variable as null 
+                // must not yield in thier blocks
+                Debug.Assert(t.isBlockYielded != null);
+                EmitFieldGet(typeof(Ops).GetField("TRUE"));
+                t.isBlockYielded.EmitSet(this);
+            }
+            // catch block must clear the exception before yielding            
+            if (BlockType == Targets.TargetBlockType.Catch) {
+                EmitCallerContext();
+                EmitCall(typeof(Ops), "ClearException", new Type[] { typeof(ICallerContext) });
             }
 
             Emit(OpCodes.Ldarg_1);
@@ -426,7 +476,24 @@ namespace IronPython.Compiler.Generation {
             MarkLabel(label);
         }
 
+
+        public void EmitPosition(Node node) {
+            if (node.IsExternal) {
+                if (node.ExternalStart.Line > 0 && node.ExternalEnd.Line > 0) {
+                    EmitPosition(GetDebugWriter(node.ExternalInfo.OriginalFileName),
+                        node.ExternalStart,
+                        node.ExternalEnd);
+                }
+            } else {
+                EmitPosition(node.Start, node.End);
+            }
+        }
+
         public void EmitPosition(Location start, Location end) {
+            EmitPosition(debugSymbolWriter, start, end);
+        }
+
+        private void EmitPosition(ISymbolDocumentWriter symWriter, Location start, Location end) {
             EmitCurrentLine(start.Line);
 
             if (!EmitDebugInfo) return;
@@ -434,7 +501,7 @@ namespace IronPython.Compiler.Generation {
             Debug.Assert(start.Line != 0 && end.Line != 0);
 
             MarkSequencePoint(
-                debugSymbolWriter,
+                symWriter,
                 start.Line, start.Column + 1,
                 end.Line, end.Column + 1
                 );
@@ -578,6 +645,8 @@ namespace IronPython.Compiler.Generation {
         }
 
         public void Finish() {
+            Debug.Assert(targets.Count == 0);
+
             if (returnBlockCreated) {
                 MarkLabel(returnBlock.returnStart);
                 if (CompilerHelpers.GetReturnType(methodInfo) != typeof(void))
@@ -1176,6 +1245,11 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
+        public void EmitUnbox(Type type) {
+            Emit(OpCodes.Unbox_Any, type);
+        }
+
+
         private void EmitRawEnum(object value) {
             switch (((Enum)value).GetTypeCode()) {
                 case TypeCode.Int32: EmitRawConstant((int)value); break;
@@ -1427,15 +1501,33 @@ namespace IronPython.Compiler.Generation {
             ilg.EmitWriteLine(value);
         }
 
-        internal void EmitTraceBackTryBlockStart() {
+        internal void EmitSetTraceBackUpdateStatus(bool handled) {
             if (Options.TraceBackSupport) {
-                // push a try for traceback support
-                PushTryBlock();
-                BeginExceptionBlock();
+                if (currentTraceBackUpdateStatusSlot == null) {
+                    currentTraceBackUpdateStatusSlot = GetNamedLocal(typeof(bool), "tbstatus");
+                }
+
+                EmitInt(handled ? 1 : 0);
+                currentTraceBackUpdateStatusSlot.EmitSet(this);
             }
         }
 
-        internal void EmitTraceBackFaultBlock(string name, string filename) {
+        internal void EmitGetTraceBackUpdateStatusAddr() {
+            if (currentTraceBackUpdateStatusSlot != null) {
+                currentTraceBackUpdateStatusSlot.EmitGetAddr(this);
+            } else {
+                Debug.Fail("No TraceBack update status slot");
+            }
+        }
+
+        internal void EmitTraceBackTryBlockStart(Slot slot) {
+            if (Options.TraceBackSupport) {
+                // push a try for traceback support
+                PushTryBlock(slot);
+                BeginExceptionBlock();
+            }
+        }
+        internal void EmitTraceBackFaultBlock() {
             if (Options.TraceBackSupport) {
                 // push a fault block (runs only if there's an exception, doesn't handle the exception)
                 PopTargets();
@@ -1445,11 +1537,7 @@ namespace IronPython.Compiler.Generation {
                     BeginFaultBlock();
                 }
 
-                EmitCallerContext();
-                EmitString(name);
-                EmitString(filename);
-                EmitGetCurrentLine();
-                EmitCall(typeof(Ops), "UpdateTraceBack");
+                EmitCallUpdateTraceBack();
 
                 // end the exception block
                 if (IsDynamicMethod) {
@@ -1458,6 +1546,18 @@ namespace IronPython.Compiler.Generation {
                 EndExceptionBlock();
             }
         }
+
+        internal void EmitCallUpdateTraceBack() {
+            if (Options.TraceBackSupport) {
+                EmitCallerContext();
+                EmitString(Context.SourceFile);
+                EmitGetCurrentLine();
+                EmitString(FuncOrClassName);
+                EmitGetTraceBackUpdateStatusAddr();
+                EmitCall(typeof(Ops), "UpdateTraceBack");
+            }
+        }
+
         #endregion
 
         #region IL Debugging Support

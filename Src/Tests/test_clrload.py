@@ -74,7 +74,7 @@ AreEqual(s, '(' + ',\r\n'.join(map((lambda x:'<'+x.ToString()+'>'), refs)) + ')\
 import System
 def get_gac():
         process = System.Diagnostics.Process()
-        process.StartInfo.FileName = "gacutil.exe"
+        process.StartInfo.FileName = System.IO.Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "gacutil.exe")
         process.StartInfo.Arguments = "/nologo /l"
         process.StartInfo.CreateNoWindow = True
         process.StartInfo.UseShellExecute = False
@@ -161,8 +161,8 @@ try:
     a.close()
 
 
-    result = nt.spawnl(0, csc, "/target:library", "/nologo", "/out:"+tmp+'test2.dll', tmp+'test2.cs')
-    result = nt.spawnl(0, csc, "/target:library", "/nologo", "/r:" + tmp + 'test2.dll', "/out:"+tmp+'test1.dll', tmp+'test1.cs')
+    result = nt.spawnv(0, csc, (csc, "/target:library", "/nologo", "/out:"+tmp+'test2.dll', tmp+'test2.cs'))
+    result = nt.spawnv(0, csc, (csc, "/target:library", "/nologo", "/r:" + tmp + 'test2.dll', "/out:"+tmp+'test1.dll', tmp+'test1.cs'))
     
     clr.AddReferenceToFile('test1')
     
@@ -261,3 +261,40 @@ AssertError(AttributeError, f)
 del x.BarNamespace.Bar
 AssertError(AttributeError, lambda: x.BarNamespace.Bar)
 
+
+#CodePlex Work Item 3078
+def test_3078():
+    from System.IO import Directory
+    from System.IO import File
+    from Microsoft.CSharp          import CSharpCodeProvider
+    from System.CodeDom.Compiler   import CompilerParameters
+    
+    
+    #create the C# file
+    file_name = Directory.GetCurrentDirectory() + "\\FooIdenticalNS.cs"
+    file = open(file_name, "w")
+    print >> file, 'namespace FooIdenticalNS { public class FooIdenticalNS {} }'
+    file.close()
+
+    #compile the file    
+    cp = CompilerParameters()
+    cp.GenerateExecutable = False
+    cp.OutputAssembly = file_name.split(".cs")[0] + ".dll"
+    cp.GenerateInMemory = False
+    cp.TreatWarningsAsErrors = False
+    cp.IncludeDebugInformation = True
+    cp.ReferencedAssemblies.Add("IronPython.dll")
+    cr = CSharpCodeProvider().CompileAssemblyFromFile(cp, file_name) 
+    
+    #now for the real test
+    import clr
+    clr.AddReferenceToFile("FooIdenticalNS.dll")
+    import FooIdenticalNS
+    Assert(not (FooIdenticalNS is FooIdenticalNS.FooIdenticalNS))
+    Assert(FooIdenticalNS != FooIdenticalNS.FooIdenticalNS)
+
+    #cleanup
+    File.Delete(file_name)
+    File.Delete(file_name.split(".cs")[0] + ".pdb")
+
+test_3078()

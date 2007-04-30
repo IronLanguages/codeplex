@@ -15,9 +15,11 @@
 
 from lib.assert_util import *
 import sys
-from System import Environment
-
-enablePython25 = "-X:Python25" in Environment.GetCommandLineArgs()
+if is_cli:
+    from System import Environment
+    enablePython25 = "-X:Python25" in Environment.GetCommandLineArgs()
+else:
+    enablePython25 = False
 
 try:
 	c = compile("""

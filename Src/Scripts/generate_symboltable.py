@@ -141,6 +141,7 @@ fieldList = [
     ('append', 'Append'),
     ('extend', 'Extend'),
     ('update', 'Update'),
+    ('func_name', 'FunctionName'),
 
     ('LastWellKnown', 'LastWellKnown')
     ]
