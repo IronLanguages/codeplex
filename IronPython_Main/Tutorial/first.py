@@ -13,8 +13,13 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+def add(a, b):
+    "add(a, b) -> returns a + b"
+    return a + b
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+def factorial(n):
+    "factorial(n) -> returns factorial of n"
+    if n <= 1: return 1
+    return n * factorial(n-1)
 
-class C: pass
+hi = "Hello from IronPython!"

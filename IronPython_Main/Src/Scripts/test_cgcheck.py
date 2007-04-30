@@ -13,8 +13,30 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+def test_main(level='full'):
+    import sys
+    old_args = sys.argv
+    sys.argv = ['checkonly']
 
-class C: pass
+    generators = [
+        'generate_alltypes',
+        'generate_calls', 
+        'generate_convert', 
+        'generate_dynsites',
+        'generate_environment', 
+        'generate_exceptions', 
+        'generate_math', 
+        'generate_ops',
+        'generate_walker',
+        'generate_typecache',
+        ]
+
+    for gen in generators:
+            print "Running", gen
+            __import__(gen)
+            
+    sys.argv = old_args
+    
+if __name__=="__main__":
+    test_main()    

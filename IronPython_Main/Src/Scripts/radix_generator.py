@@ -13,8 +13,20 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+max_uint = 0xffffffffl
+print max_uint
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+digits = ['0','0']
+radii = ['0','0']
+for i in range(2, 37):
+    p = 1
+    while i**(p+1) <= max_uint:
+        p = p+1
+    print i, p, i**p
+    digits.append(str(p))
+    radii.append(str(i**p))
+print digits, radii
 
-class C: pass
+print ", ".join(digits)
+print ", ".join(radii)
+

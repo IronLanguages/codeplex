@@ -1,0 +1,375 @@
+#####################################################################################
+#
+#  Copyright (c) Microsoft Corporation. All rights reserved.
+#
+# This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+# copy of the license can be found in the License.html file at the root of this distribution. If 
+# you cannot locate the  Microsoft Permissive License, please send an email to 
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# by the terms of the Microsoft Permissive License.
+#
+# You must not remove this notice, or any other, from this software.
+#
+#
+#####################################################################################
+
+### make this file platform neutral as much as possible
+
+import sys
+
+is_silverlight = sys.platform == 'silverlight'
+is_cli = sys.platform == 'cli' 
+
+if not is_silverlight:
+    import nt
+    from file_util import *
+    
+from type_util import types
+
+is_cli32, is_cli64 = False, False
+if is_cli or is_silverlight: 
+    import System
+    is_cli32, is_cli64 = (System.IntPtr.Size == 4), (System.IntPtr.Size == 8)
+
+is_orcas = False
+if is_cli:
+    import clr, System
+    is_orcas = len(clr.GetClrType(System.Reflection.Emit.DynamicMethod).GetConstructors()) == 8
+
+def usage(code, msg=''):
+    print sys.modules['__main__'].__doc__ or 'No doc provided'
+    if msg: print 'Error message: "%s"' % msg
+    sys.exit(code)
+
+if not is_silverlight:
+    def get_environ_variable(key):
+        l = [nt.environ[x] for x in nt.environ.keys() if x.lower() == key.lower()]
+        if l: return l[0]
+        else: return None
+
+    def get_temp_dir():
+        temp = get_environ_variable("TEMP")
+        if temp == None: temp = get_environ_variable("TMP")
+        if (temp == None) or (' ' in temp) : 
+            temp = r"C:\temp"
+        return temp
+    
+    ironpython_dlls = [
+        "Microsoft.Scripting.Vestigial.dll",
+        "Microsoft.Scripting.dll",
+        "Microsoft.Scripting.Internal.dll",
+        "IronPython.Modules.dll",
+        "IronPython.dll",
+    ]
+
+    def copy_ironpython_dlls(targetdir):
+        import System
+        for dll in ironpython_dlls:
+            src = System.IO.Path.Combine(sys.prefix, dll)
+            dst = System.IO.Path.Combine(targetdir, dll)
+            try: System.IO.File.Copy(src, dst, True)
+            except: pass
+
+    def remove_ironpython_dlls(targetdir):
+        import System
+        for dll in ironpython_dlls:
+            dst = System.IO.Path.Combine(targetdir, dll)
+            try: System.IO.File.Delete(dst)
+            except: pass
+
+if is_silverlight:
+    class testpath:
+        rowan_root      = 'E:\\IP\\Main\\' #hack: should be set somewhere else
+        ip_root             = rowan_root + r"Languages\IronPython"
+        public_testdir      = ip_root + r'Tests'
+        compat_testdir      = ip_root + r'Tests\compat'
+        test_inputs_dir     = (ip_root + r'Tests\Inputs')
+        script_testdir      = (ip_root + r'Scripts')
+        
+        sys.prefix = ip_root
+        sys.path.append(public_testdir)
+
+else:
+    class testpath:
+        # find the ironpython root directory
+        rowan_root          = get_environ_variable("merlin_root")
+
+        basePyDir = 'Languages\\IronPython'
+        if not rowan_root:
+            basePyDir = 'Src\\'
+            rowan_root = sys.prefix
+            if rowan_root.endswith("\\Bin\\Debug"):
+                rowan_root = rowan_root[:-10]
+            elif rowan_root.endswith("\\Bin\\Release"):
+                rowan_root = rowan_root[:-12]
+            else:
+                raise AssertionError("Cannot find merlin_root environment variable")
+
+        # get some directories and files
+        ip_root             = path_combine(rowan_root, basePyDir)
+        external_dir        = path_combine(rowan_root, r'..\External\Languages\IronPython20')
+        public_testdir      = path_combine(ip_root, r'Tests')
+        compat_testdir      = path_combine(ip_root, r'Tests\compat')
+        test_inputs_dir     = path_combine(ip_root, r'Tests\Inputs')
+        script_testdir      = path_combine(ip_root, r'Scripts')
+
+        math_testdir        = path_combine(external_dir, r'Math')
+        parrot_testdir      = path_combine(external_dir, r'parrotbench')
+        lib_testdir         = path_combine(external_dir, r'24\Lib')
+        private_testdir     = path_combine(external_dir, r'24\Lib\test')
+
+        temporary_dir   = path_combine(get_temp_dir(), "IronPython")
+        ensure_directory_present(temporary_dir)
+        
+        iron_python_test_dll        = path_combine(sys.prefix, 'IronPythonTest.dll')
+
+        if is_cli: 
+            ipython_executable  = sys.executable
+            cpython_executable  = path_combine(external_dir, r'24\python.exe')
+        else: 
+            ipython_executable  = path_combine(sys.prefix, r'ipy.exe')
+            cpython_executable  = sys.executable
+        
+        #team_dir            = path_combine(ip_root, r'Team')
+        #team_profile        = path_combine(team_dir, r'settings.py')
+        #
+        #my_name             = nt.environ.get(r'USERNAME', None)
+        #my_dir              = my_name and path_combine(team_dir, my_name) or None
+        #my_profile          = my_dir and path_combine(my_dir, r'settings.py') or None
+    
+
+class formatter:
+    Number         = 60
+    TestNameLen    = 40
+    SeparatorEqual = '=' * Number
+    Separator1     = '#' * Number
+    SeparatorMinus = '-' * Number
+    SeparatorStar  = '*' * Number
+    SeparatorPlus  = '+' * Number
+    Space4         = ' ' * 4
+    Greater4       = '>' * 4
+
+# helper functions for sys.path
+_saved_syspath = []
+def perserve_syspath(): 
+    _saved_syspath[:] = list(set(sys.path))
+    
+def restore_syspath():  
+    sys.path = _saved_syspath[:]
+
+# test support 
+def Fail(m):  raise AssertionError(m)
+
+def Assert(c, m = "Assertion failed"):
+    if not c: raise AssertionError(m)
+
+def AssertUnreachable(m = None):
+    if m: Assert(False, "Unreachable code reached: "+m)
+    else: Assert(False, "Unreachable code reached")
+
+def AreEqual(a, b):
+    Assert(a == b, "expected %r, but found %r" % (b, a))
+
+def SequencesAreEqual(a, b, m=None):
+    Assert(len(a) == len(b), m or 'sequence lengths differ: expected %d, but found %d' % (len(b), len(a)))
+    for i in xrange(len(a)):
+        Assert(a[i] == b[i], m or 'sequences differ at index %d: expected %r, but found %r' % (i, b[i], a[i]))
+
+def AlmostEqual(a, b):
+    Assert(round(a-b, 6) == 0, "expected %r and %r almost same" % (a, b))    
+    
+def AssertError(exc, func, *args):
+    try:        func(*args)
+    except exc: return
+    else :      Fail("Expected %r but got no exception" % exc)
+
+# Check that the exception is raised with the provided message
+
+def AssertErrorWithMessage(exc, expectedMessage, func, *args):
+    Assert(expectedMessage, "expectedMessage cannot be null")
+    try:   func(*args)
+    except exc, inst:
+        Assert(expectedMessage == inst.__str__(), \
+               "Exception %r message (%r) does not contain %r" % (type(inst), inst.__str__(), expectedMessage))
+    else:  Assert(False, "Expected %r but got no exception" % exc)
+
+# Check that the exception is raised with the provided message, where the message
+# differs on IronPython and CPython
+
+def AssertErrorWithMessages(exc, ironPythonMessage, cpythonMessage, func, *args):
+    if is_cli or is_silverlight:
+        expectedMessage = ironPythonMessage
+    else:
+        expectedMessage = cpythonMessage
+
+    Assert(expectedMessage, "expectedMessage cannot be null")
+    try:   func(*args)
+    except exc, inst:
+        Assert(expectedMessage == inst.__str__(), \
+               "Exception %r message (%r) does not contain %r" % (type(inst), inst.__str__(), expectedMessage))
+    else:  Assert(False, "Expected %r but got no exception" % exc)
+
+# Check that the exception is raised with the provided message, where the message
+# is matches using a regular-expression match
+if is_silverlight:
+    def load_iron_python_test(*args):
+        import clr
+        if args: 
+            return clr.LoadAssembly("IronPythonTest")
+        else: 
+            clr.AddReference("IronPythonTest")
+else:
+    def AssertErrorWithMatch(exc, expectedMessage, func, *args):
+        import re
+        Assert(expectedMessage, "expectedMessage cannot be null")
+        try:   func(*args)
+        except exc, inst:
+            Assert(re.compile(expectedMessage).match(inst.__str__()), \
+                   "Exception %r message (%r) does not contain %r" % (type(inst), inst.__str__(), expectedMessage))
+        else:  Assert(False, "Expected %r but got no exception" % exc)
+
+    def load_iron_python_test(*args):
+        import clr
+        if args: 
+            return clr.LoadAssemblyFromFileWithPath(testpath.iron_python_test_dll)
+        else: 
+            clr.AddReferenceToFileAndPath(testpath.iron_python_test_dll)
+
+    def load_iron_python_dll():
+        import clr
+        clr.AddReferenceToFileAndPath(path_combine(sys.prefix, "IronPython.dll"))
+    def GetTotalMemory():
+        import System
+        # 3 collect calls to ensure collection
+        for x in range(3):
+            System.GC.Collect()
+            System.GC.WaitForPendingFinalizers()
+        return System.GC.GetTotalMemory(True)
+
+
+def _do_nothing(*args): 
+    for arg in args:
+        print arg
+    pass
+
+class disabled:
+    def __init__(self, reason):
+        self.reason = reason
+    def __call__(self, f):
+        return _do_nothing("Skipping disabled test %s. (Reason: %s)" % (f.func_name, self.reason))
+    
+class skip:
+    def __init__(self, *platforms):
+        if len(platforms) == 1 and isinstance(platforms[0], str): 
+            self.platforms = platforms[0].split()
+        else: 
+            self.platforms = platforms
+    def __call__(self, f):
+        #hack: skip  questionable tests:
+        if is_silverlight and 'silverlightbug?' in self.platforms:
+            msg = '... TODO, investigate Silverlight failure @ %s' % f.func_name
+            return _do_nothing(msg)
+        elif is_silverlight and 'silverlight' in self.platforms:
+            msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
+            return _do_nothing(msg)
+        
+        if sys.platform in self.platforms: 
+            msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
+            return _do_nothing(msg)
+        elif ("orcas" in self.platforms) and is_orcas:
+            msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
+            return _do_nothing(msg)
+        else: 
+            return f
+   
+class runonly: 
+    def __init__(self, *platforms):
+        if len(platforms) == 1 and isinstance(platforms[0], str): 
+            self.platforms = platforms[0].split()
+        else: 
+            self.platforms = platforms
+    def __call__(self, f):
+        if "orcas" in self.platforms and is_orcas:
+            return f
+        elif "silverlight" in self.platforms and is_silverlight:
+            return f
+        elif sys.platform in self.platforms:
+            return f
+        else: 
+            return _do_nothing('... Decorated with @runonly(%s), Skipping %s ...' % (self.platforms, f.func_name))
+
+@runonly('win32 silverlight cli')
+def _func(): pass
+
+# method could be used to skip rest of test
+def skiptest(*args):
+    #hack: skip  questionable tests:
+    if is_silverlight and 'silverlightbug?' in args:
+        print '... TODO, whole test module is skipped for Silverlight failure. Need to investigate...' 
+        exit_module()
+    elif is_silverlight and 'silverlight' in args:
+        print '... %s, skipping whole test module...' % sys.platform
+        exit_module()
+    
+    if sys.platform in args: 
+        print '... %s, skipping whole test module...' % sys.platform
+        exit_module()
+
+def exit_module():
+    #Have to catch exception for below call. Any better way to exit?
+    sys.exit(0)
+
+def print_failures(failures):
+    print
+    for failure in failures:
+        name, (extype, ex, tb) = failure
+        print '------------------------------------'
+        print "Test %s failed throwing %s (%s)" % (name, str(extype), str(ex))            
+        while tb:
+            print ' ... %s in %s line %d' % (tb.tb_frame.f_code.co_name, tb.tb_frame.f_code.co_filename, tb.tb_lineno)
+            tb = tb.tb_next	
+        print
+    
+        if is_cli:
+            if '-X:ExceptionDetail' in System.Environment.GetCommandLineArgs():
+                print 'CLR Exception: ',
+                ex = ex.clsException
+                print ex
+        
+def run_test(mod_name, noOutputPlease=False):
+    import sys
+    module = sys.modules[mod_name]
+    stdout = sys.stdout
+    stderr = sys.stderr
+    failures = []
+    for name in dir(module): 
+        obj = getattr(module, name)
+        if isinstance(obj, type(_do_nothing)) or isinstance(obj, type(_func)) :
+            if name.endswith("_clionly") and not is_cli: continue
+            if name.startswith("test_"): 
+                if not noOutputPlease and (mod_name == '__main__'): 
+                    print ">>> testing %-40s" % name,
+                #obj()
+                #catches the error and exit at the end of each test
+                try:
+                    try:
+                        obj()
+                    finally:
+                        # restore std-in / std-err incase the test corrupted it                
+                        sys.stdout = stdout
+                        sys.stderr = stderr
+                    if not is_silverlight:
+                        print
+                        
+                except:
+                    failures.append( (name, sys.exc_info()) )
+                    print "FAIL (%s)" % str(sys.exc_info()[0])
+        
+    if failures:
+        print_failures(failures)
+        
+        sys.exit(len(failures))
+
+def run_class(mod_name, verbose=False): 
+    pass
+    

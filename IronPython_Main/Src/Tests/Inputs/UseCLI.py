@@ -13,8 +13,12 @@
 #
 #####################################################################################
 
+import clr
+clr.AddReference('System.Windows.Forms')
+from System.Windows.Forms import Form, Control
+
 from lib.assert_util import *
+load_iron_python_test()
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
 
-class C: pass
+from IronPythonTest import NestedClass

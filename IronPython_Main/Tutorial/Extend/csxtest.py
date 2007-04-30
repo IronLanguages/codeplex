@@ -13,8 +13,41 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+# Task 1
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+import clr
+clr.AddReferenceToFile("csextend.dll")
+import Simple
+dir(Simple)
+s = Simple(10)
+print s
 
-class C: pass
+# Task 2
+
+import clr
+clr.AddReferenceToFile("csextend.dll")
+import Simple
+dir(Simple)
+s = Simple(10)
+for i in s: print i
+
+# Task 3
+
+import clr
+clr.AddReferenceToFile("csextend.dll")
+import Simple
+dir(Simple)
+a = Simple(10)
+b = Simple(20)
+a + b
+
+# Task 4
+
+import clr
+clr.AddReferenceToFile("csextend.dll")
+import Simple
+a = Simple(10)
+def X(i):
+    return i + 100
+
+a.Transform(X)

@@ -13,8 +13,6 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+x = 1
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
-
-class C: pass
+if (1==1):

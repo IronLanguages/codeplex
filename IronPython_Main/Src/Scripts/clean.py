@@ -13,8 +13,28 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+import os
 
-class C: pass
+def is_binary(filename):
+    root, ext = os.path.splitext(filename)
+    return ext in ['.pyc', '.pyo', '.pdb', '.exe', '.dll', '.projdata']
+
+def do_dir(dirname):
+    if dirname == BIN_DIR: return
+
+    for file in os.listdir(dirname):
+        filename = os.path.join(dirname, file)
+        if os.path.isdir(filename):
+            do_dir(filename)
+        elif is_binary(filename):
+            print 'deleting', filename
+            os.remove(filename)
+
+TOP_DIR = "c:\\IronPython-0.7"
+BIN_DIR = os.path.join(TOP_DIR, "bin")
+
+do_dir(TOP_DIR)
+
+
+

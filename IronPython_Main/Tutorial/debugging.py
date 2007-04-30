@@ -13,8 +13,8 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+import first
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
-
-class C: pass
+print first.add(1, 2)
+print first.add("Iron", "Python")
+print first.factorial(10)

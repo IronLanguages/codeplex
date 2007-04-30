@@ -13,8 +13,11 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+import clr
+clr.AddReferenceToFile("csextend.dll")
+import Simple
+a = Simple(10)
+def X(i):
+    return i + 100
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
-
-class C: pass
+a.Transform(X)

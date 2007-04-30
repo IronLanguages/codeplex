@@ -1,0 +1,348 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Permissive License, please send an email to 
+ * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Permissive License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
+using System;
+
+using System.Collections;
+using System.Collections.Generic;
+
+using System.Reflection;
+using System.Reflection.Emit;
+
+using System.Security.Permissions;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Math;
+
+namespace Microsoft.Scripting.Internal.Generation {
+    public class TypeGen {
+        private readonly AssemblyGen _myAssembly;
+        private readonly TypeBuilder _myType;
+        private Slot _contextSlot;
+        private ConstructorBuilder _initializer; // The .cctor() of the type
+        private CodeGen _initGen; // The IL generator for the .cctor()
+        private Dictionary<object, Slot> _constants = new Dictionary<object, Slot>();
+        private Dictionary<SymbolId, Slot> _indirectSymbolIds = new Dictionary<SymbolId, Slot>();
+        private List<TypeGen> _nestedTypeGens = new List<TypeGen>();
+        private ConstructorBuilder _defaultCtor;
+        private ActionBinder _binder;
+
+        public TypeGen(AssemblyGen myAssembly, TypeBuilder myType) {
+            this._myAssembly = myAssembly;
+            this._myType = myType;
+        }
+
+        public override string ToString() {
+            return _myType.ToString();
+        }
+
+        /// <summary>
+        /// Gets the CodeGen associated with the Type Initializer (cctor) creating it if necessary.
+        /// </summary>
+        public CodeGen TypeInitializer {
+            get {
+                if (_initializer == null) {
+                    _initializer = _myType.DefineTypeInitializer();
+                    _initGen = CreateCodeGen(_initializer, _initializer.GetILGenerator(), Utils.Reflection.EmptyTypes);
+                }
+                return _initGen;
+            }
+        }
+
+        public CodeGen CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes) {
+            return CreateCodeGen(mi, ilg, paramTypes, null);
+        }
+
+        public CodeGen CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes, ConstantPool constantPool) {
+            CodeGen ret = new CodeGen(this, _myAssembly, mi, ilg, paramTypes, constantPool);
+            if (_binder != null) ret.Binder = _binder;
+            if (_contextSlot != null) ret.ContextSlot = _contextSlot;
+            return ret;
+        }
+
+        public Type FinishType() {
+            if (_initGen != null) _initGen.Emit(OpCodes.Ret);
+
+            Type ret = _myType.CreateType();
+            foreach (TypeGen ntb in _nestedTypeGens) {
+                ntb.FinishType();
+            }
+            //Console.WriteLine("finished: " + ret.FullName);
+            return ret;
+        }
+
+        public ConstructorBuilder DefaultConstructor {
+            get {
+                return _defaultCtor;
+            }
+            set {
+                _defaultCtor = value;
+            }
+        }
+
+        public ActionBinder Binder {
+            get {
+                return _binder;
+            }
+            set {
+                _binder = value;
+            }
+        }
+
+        public TypeGen DefineNestedType(string name, Type parent) {
+            TypeBuilder tb = _myType.DefineNestedType(name, TypeAttributes.NestedPublic);
+            tb.SetParent(parent);
+            TypeGen ret = new TypeGen(_myAssembly, tb);
+            _nestedTypeGens.Add(ret);
+
+            ret.AddCodeContextField();
+
+            return ret;
+        }
+
+        public void AddCodeContextField() {
+            FieldBuilder contextField = _myType.DefineField(CodeContext.ContextFieldName,
+                    typeof(CodeContext),
+                    FieldAttributes.Public | FieldAttributes.Static);
+            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(new Type[0]), Runtime.Operations.Ops.EmptyObjectArray));
+            _contextSlot = new StaticFieldSlot(contextField);
+        }
+
+        public Slot AddField(Type fieldType, string name) {
+            FieldBuilder fb = _myType.DefineField(name, fieldType, FieldAttributes.Public);
+            return new FieldSlot(new ThisSlot(_myType), fb);
+        }
+        public Slot AddStaticField(Type fieldType, string name) {
+            FieldBuilder fb = _myType.DefineField(name, fieldType, FieldAttributes.Public | FieldAttributes.Static);
+            return new StaticFieldSlot(fb);
+        }
+
+        public Slot AddStaticField(Type fieldType, FieldAttributes attributes, string name) {
+            FieldBuilder fb = _myType.DefineField(name, fieldType, attributes | FieldAttributes.Static);
+            return new StaticFieldSlot(fb);
+        }
+
+        public CodeGen DefineExplicitInterfaceImplementation(MethodInfo baseMethod) {
+            if (baseMethod == null) throw new ArgumentNullException("baseMethod");
+
+            MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
+            attrs |= MethodAttributes.NewSlot | MethodAttributes.Final;
+
+            MethodBuilder mb = _myType.DefineMethod(
+                baseMethod.DeclaringType.Name + "." + baseMethod.Name,
+                attrs,
+                baseMethod.ReturnType,
+                CompilerHelpers.GetTypes(baseMethod.GetParameters()));
+            CodeGen ret = CreateCodeGen(mb, mb.GetILGenerator(), CompilerHelpers.GetTypes(baseMethod.GetParameters()));
+            ret.MethodToOverride = baseMethod;
+            return ret;
+        }
+
+        public PropertyBuilder DefineProperty(string name, PropertyAttributes attrs, Type returnType) {
+            return _myType.DefineProperty(name, attrs, returnType, new Type[0]);
+        }
+
+        private const MethodAttributes MethodAttributesToEraseInOveride =
+            MethodAttributes.Abstract | MethodAttributes.ReservedMask;
+
+        public CodeGen DefineMethodOverride(MethodAttributes extraAttrs, MethodInfo baseMethod) {
+            if (baseMethod == null) throw new ArgumentNullException("baseMethod");
+
+            MethodAttributes finalAttrs = (baseMethod.Attributes & ~MethodAttributesToEraseInOveride) | extraAttrs;
+            MethodBuilder mb = _myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType,
+                CompilerHelpers.GetTypes(baseMethod.GetParameters()));
+            CodeGen ret = CreateCodeGen(mb, mb.GetILGenerator(), CompilerHelpers.GetTypes(baseMethod.GetParameters()));
+            ret.MethodToOverride = baseMethod;
+            return ret;
+        }
+
+        public CodeGen DefineMethodOverride(MethodInfo baseMethod) {
+            return DefineMethodOverride((MethodAttributes)0, baseMethod);
+        }
+
+        public CodeGen DefineMethod(string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
+            return DefineMethod(CompilerHelpers.PublicStatic, name, retType, paramTypes, paramNames, null, null, constantPool);
+        }
+
+        public CodeGen DefineMethod(MethodAttributes attrs, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, 
+            object[] defaultVals, CustomAttributeBuilder[] cabs, ConstantPool constantPool) {
+            if (paramTypes == null) throw new ArgumentNullException("paramTypes");
+            if (paramNames == null) {
+                if (defaultVals != null) throw new ArgumentException("must provide paramNames when providing defaultVals");
+                if (cabs != null) throw new ArgumentException("must provide paramNames when providing cabs");
+            } else {
+                if (paramTypes.Count != paramNames.Count) {
+                    throw new ArgumentException("Must provide same number of paramNames as paramTypes");
+                }
+                if (defaultVals != null && defaultVals.Length > paramNames.Count) {
+                    throw new ArgumentException("Provided more defaultValues than parameters");
+                }
+                if (cabs != null && cabs.Length > paramNames.Count) {
+                    throw new ArgumentException("Provided more custom attributes than parameters");
+                }
+            }
+
+            Type[] parameterTypes = CompilerHelpers.MakeParamTypeArray(paramTypes, constantPool);
+
+            MethodBuilder mb = _myType.DefineMethod(name, attrs, retType, parameterTypes);
+            CodeGen res = CreateCodeGen(mb, mb.GetILGenerator(), parameterTypes, constantPool);
+
+            if (paramNames == null) return res;
+#if SILVERLIGHT
+            for (int i = 0; i < paramNames.Count; i++) {
+                // parameters are index from 1.
+                ParameterBuilder pb = res.DefineParameter(i + 1, ParameterAttributes.None, paramNames[i]);
+                if (defaultVals != null && i < defaultVals.Length && defaultVals[i] != DBNull.Value) {
+                    pb.SetConstant(defaultVals[i]);
+                }
+
+                if (cabs != null && i < cabs.Length && cabs[i] != null) {
+                    pb.SetCustomAttribute(cabs[i]);
+                }
+            }
+
+#else
+            // TODO: Consolidate the SILVERLIGHT and non-SILVERLIGHT code paths
+            // parameters are index from 1, with constant pool we need to skip the first arg
+            int offset = constantPool != null ? 2 : 1;
+            for (int i = 0; i < paramNames.Count; i++) {
+                ParameterBuilder pb = res.DefineParameter(i + offset, ParameterAttributes.None, paramNames[i]);
+                if (defaultVals != null && i < defaultVals.Length && defaultVals[i] != DBNull.Value) {
+                    pb.SetConstant(defaultVals[i]);
+                }
+
+                if (cabs != null && i < cabs.Length && cabs[i] != null) {
+                    pb.SetCustomAttribute(cabs[i]);
+                }
+            }
+#endif
+            return res;
+        }
+
+        public CodeGen DefineMethod(MethodAttributes attrs, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames) {
+            return DefineMethod(attrs, name, retType, paramTypes, paramNames, null, null, null);
+        }
+
+        public CodeGen DefineConstructor(Type[] paramTypes) {
+            ConstructorBuilder cb = _myType.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, paramTypes);
+            return CreateCodeGen(cb, cb.GetILGenerator(), paramTypes);
+        }
+
+        public CodeGen DefineStaticConstructor() {
+            ConstructorBuilder cb = _myType.DefineTypeInitializer();
+            return CreateCodeGen(cb, cb.GetILGenerator(), Utils.Reflection.EmptyTypes);
+        }
+
+        public void SetCustomAttribute(Type type, object[] values) {
+            if (type == null) throw new ArgumentNullException("type");
+
+            Type[] types = new Type[values.Length];
+            for (int i = 0; i < types.Length; i++) {
+                if (values[i] != null) {
+                    types[i] = values[i].GetType();
+                } else {
+                    types[i] = typeof(object);
+                }
+            }
+            CustomAttributeBuilder cab = new CustomAttributeBuilder(type.GetConstructor(types), values);
+
+            _myType.SetCustomAttribute(cab);
+        }
+
+        /// <summary>
+        /// Constants
+        /// </summary>
+
+        public Slot GetOrMakeConstant(object value) {
+            if (value is CompilerConstant) {
+                return GetOrMakeConstant((CompilerConstant)value);
+            }
+            return GetOrMakeConstant(value, typeof(object));
+        }
+
+        public Slot GetOrMakeConstant(CompilerConstant value) {
+            Slot ret;
+            if (_constants.TryGetValue(value, out ret)) return ret;
+
+            string name = "c$" + value.Name + "$" + _constants.Count;
+
+            FieldBuilder fb = _myType.DefineField(name, value.Type, FieldAttributes.Static | FieldAttributes.InitOnly);
+            ret = new StaticFieldSlot(fb);
+
+            value.EmitCreation(TypeInitializer);
+            _initGen.EmitFieldSet(fb);
+
+            _constants[value] = ret;
+            return ret;
+        }
+
+        public Slot GetOrMakeConstant(object value, Type type) {
+            Slot ret;
+            if (_constants.TryGetValue(value, out ret)) return ret;
+
+            // Create a name like "c$3.141592$712"
+            string symbolicName = value.ToString();
+            if (symbolicName.Length > 20)
+                symbolicName = symbolicName.Substring(0, 20);
+            string name = "c$" + symbolicName + "$" + _constants.Count;
+
+            FieldBuilder fb = _myType.DefineField(name, type, FieldAttributes.Static | FieldAttributes.InitOnly);
+            ret = new StaticFieldSlot(fb);
+
+            TypeInitializer.EmitConstantBoxed(value);
+            _initGen.EmitFieldSet(fb);
+
+            _constants[value] = ret;
+            return ret;
+        }
+
+        public void EmitIndirectedSymbol(CodeGen cg, SymbolId id) {
+            Slot value;
+            if (!_indirectSymbolIds.TryGetValue(id, out value)) {
+                // create field, emit fix-up...
+
+                value = AddStaticField(typeof(int), FieldAttributes.Private, "symbol_" + SymbolTable.IdToString(id));
+                CodeGen init = TypeInitializer;
+                Slot localTmp = init.GetLocalTmp(typeof(SymbolId));
+                init.EmitString((string)SymbolTable.IdToString(id));
+                init.EmitCall(typeof(SymbolTable), "StringToId");
+                localTmp.EmitSet(init);
+                localTmp.EmitGetAddr(init);
+                init.EmitPropertyGet(typeof(SymbolId), "Id");
+                value.EmitSet(init);
+
+                init.FreeLocalTmp(localTmp);
+                _indirectSymbolIds[id] = value;
+            }
+
+            value.EmitGet(cg);
+            cg.EmitNew(typeof(SymbolId), new Type[] { typeof(int) });
+        }
+
+
+        public AssemblyGen AssemblyGen {
+            get { return _myAssembly; }
+        }
+
+        public TypeBuilder TypeBuilder {
+            get { return _myType; }
+        }
+
+        public Slot ContextSlot {
+            get { return _contextSlot; }
+        }
+    }
+}

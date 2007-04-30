@@ -13,8 +13,14 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+x = 1
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+class C(object):
+    def __init__(self):
+        self.attr = 1
+        raise "Hello"
 
-class C: pass
+c = C()
+
+# We will never get to this statement
+y = 1

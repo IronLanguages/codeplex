@@ -13,8 +13,25 @@
 #
 #####################################################################################
 
+import sys
 from lib.assert_util import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+load_iron_python_test()
+from IronPythonTest import *
 
-class C: pass
+def test_attributes_injector():
+    # load XML Dom
+    x = AttrInjectorTest.LoadXml('<root><foo>foo text</foo><bar><baz>baz text</baz></bar></root>')
+
+    # access injected attributes
+
+    AreEqual(x.GetType().Name, 'XmlElement')
+    AreEqual(x.foo.GetType().Name, 'String')
+    AreEqual(x.foo, 'foo text')
+
+    AreEqual(x.GetType().Name, 'XmlElement')
+    AreEqual(x.bar.GetType().Name, 'XmlElement')
+    AreEqual(x.bar.baz.GetType().Name, 'String')
+    AreEqual(x.bar.baz, 'baz text')
+
+test_attributes_injector()

@@ -15,6 +15,11 @@
 
 from lib.assert_util import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+# types are always true.
+def test_types():    
+    for x in [str, int, long, float, bool]:
+        if not x: 
+            Fail("should be true: %r", x)
 
-class C: pass
+
+run_test(__name__)

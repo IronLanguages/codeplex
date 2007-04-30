@@ -15,6 +15,31 @@
 
 from lib.assert_util import *
 
-Assert(__name__ in  ["__main__", "test_execfile"], __name__)
+Assert('abc' in 'abcd')
 
-class C: pass
+class C:
+    x = "Hello"
+    def __contains__(self, y):
+        return self.x == y;
+
+
+class D:
+    x = (1,2,3,4,5,6,7,8,9,10)
+    def __getitem__(self, y):
+        return self.x[y];
+
+
+h = "Hello"
+c = C()
+Assert(c.__contains__("Hello"))
+Assert(c.__contains__(h))
+Assert(not (c.__contains__('abc')))
+
+Assert(h in c)
+Assert("Hello" in c)
+
+d = D()
+Assert(1 in d)
+Assert(not(11 in d))
+
+#***** Above code are from 'InTest' *****
