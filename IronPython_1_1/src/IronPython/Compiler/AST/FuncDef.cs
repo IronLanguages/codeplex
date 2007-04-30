@@ -199,11 +199,19 @@ namespace IronPython.Compiler.Ast {
             cg.Emit(OpCodes.Castclass, typeof(FunctionCode));
             cg.Emit(OpCodes.Dup);
             functionCode.EmitSet(cg);
-            cg.EmitInt(this.Start.Line);
+            if (IsExternal) {
+                cg.EmitInt(this.ExternalStart.Line);
+            } else {
+                cg.EmitInt(this.Start.Line);
+            }
             cg.EmitCall(typeof(FunctionCode), "SetLineNumber");
 
             functionCode.EmitGet(cg);
-            cg.EmitString(this.filename);
+            if (IsExternal) {
+                cg.EmitString(ExternalInfo.OriginalFileName);
+            } else {
+                cg.EmitString(this.filename);
+            }
             cg.EmitCall(typeof(FunctionCode), "SetFilename");
 
             // Only codegen the call into SetFlags if there are flags to set.
@@ -272,22 +280,20 @@ namespace IronPython.Compiler.Ast {
                 PromoteLocalsToEnvironment();
             }
 
-            // Try block may yield, but we are not interested in the isBlockYielded value
-            // hence push a dummySlot to pass the Assertion.
-            Slot dummySlot = methodCodeGen.GetLocalTmp(typeof(object));
-
-            methodCodeGen.EmitTraceBackTryBlockStart(dummySlot);
-
             // emit the actual body
             if (yieldCount > 0) {
                 EmitGeneratorBody(methodCodeGen, initCodeGen);
             } else {
-                EmitFunctionBody(methodCodeGen, initCodeGen);
-            }
-            // free up dummySlot
-            methodCodeGen.FreeLocalTmp(dummySlot);
-            methodCodeGen.EmitTraceBackFaultBlock(name.GetString(), filename);
+                Slot dummySlot = methodCodeGen.GetLocalTmp(typeof(object));
+                methodCodeGen.EmitTraceBackTryBlockStart(dummySlot);
+                methodCodeGen.FuncOrClassName = name.ToString();
+                methodCodeGen.EmitSetTraceBackUpdateStatus(false);
 
+                EmitFunctionBody(methodCodeGen, initCodeGen);
+
+                methodCodeGen.FreeLocalTmp(dummySlot);
+                methodCodeGen.EmitTraceBackFaultBlock();
+            }
         }
 
         private bool NeedsWrapperMethod() {
@@ -356,6 +362,8 @@ namespace IronPython.Compiler.Ast {
             ncg.Context = cg.Context;
 
             PromoteLocalsToEnvironment();
+            ncg.FuncOrClassName = name.ToString();
+            ncg.EmitSetTraceBackUpdateStatus(false);
 
             // Namespace without er factory - all locals must exist ahead of time
             ncg.Names = new Namespace(null);
@@ -615,7 +623,7 @@ namespace IronPython.Compiler.Ast {
             public override void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg) {
                 switch (state) {
                     case State.Try:
-                        if(isPython24TryFinallyStmt)
+                        if (isPython24TryFinallyStmt)
                             cg.Context.AddError("cannot yield from try block with finally", ys);
                         else
                             stmt.AddTryYieldTarget(yt.FixForTryCatchFinally(cg));
@@ -675,8 +683,8 @@ namespace IronPython.Compiler.Ast {
 
         public override bool Walk(TryStatement node) {
             TryBlock tb = null;
-            
-            if(!Options.Python25 && node.Handlers == null) 
+
+            if (!Options.Python25 && node.Handlers == null)
                 tb = new TryBlock(node, true);
             else
                 tb = new TryBlock(node, false);
