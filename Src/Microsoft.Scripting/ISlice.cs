@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Internal {
+namespace Microsoft.Scripting {
     /// <summary>
     /// A useful interface for taking slices of numeric arrays, inspired by Python's Slice objects.
     /// </summary>

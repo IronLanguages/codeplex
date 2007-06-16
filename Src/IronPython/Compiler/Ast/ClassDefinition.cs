@@ -17,9 +17,10 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 
+using IronPython.Runtime;
+
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class ClassDefinition : ScopeStatement {
@@ -28,11 +29,9 @@ namespace IronPython.Compiler.Ast {
         private readonly Statement _body;
         private readonly Expression[] _bases;
 
-        private PythonReference _reference;   // reference corresponding to the class name
-
-        private PythonReference _nameReference;       // reference to the __name__ in the global context (module name)
-        private PythonReference _docReference;        // reference for the __doc__ attribute
-        private PythonReference _modReference;        // reference for the __module__ attribute
+        private PythonVariable _variable;           // Variable corresponding to the class name
+        private PythonVariable _modVariable;        // Variable for the the __module__ (module name)
+        private PythonVariable _docVariable;        // Variable for the __doc__ attribute
 
         private MSAst.CodeBlock _block;
 
@@ -59,31 +58,48 @@ namespace IronPython.Compiler.Ast {
             get { return _body; }
         }
 
-        public PythonReference Reference {
-            set { _reference = value; }
+        internal PythonVariable Variable {
+            get { return _variable; }
+            set { _variable = value; }
         }
 
-        public PythonReference NameReference {
-            get { return _nameReference; }
-            set { _nameReference = value; }
+        internal PythonVariable ModVariable {
+            get { return _modVariable;}
+            set { _modVariable = value; }
         }
 
-        public PythonReference DocReference {
-            set { _docReference = value; }
-        }
-
-        public PythonReference ModReference {
-            set { _modReference = value; }
+        internal PythonVariable DocVariable {
+            get { return _docVariable; }
+            set { _docVariable = value; }
         }
 
         protected override MSAst.CodeBlock Block {
             get { return _block; }
         }
 
+        internal override PythonVariable BindName(SymbolId name) {
+            PythonVariable variable;
+
+            // Python semantics: The variables bound local in the class
+            // scope are accessed by name - the dictionary behavior of classes
+            if (TryGetVariable(name, out variable)) {
+                return variable.Kind == MSAst.Variable.VariableKind.Local ? null : variable;
+            }
+
+            // Try to bind in outer scopes
+            for (ScopeStatement parent = Parent; parent != null; parent = parent.Parent) {
+                if (parent.TryBindOuter(name, out variable)) {
+                    return variable;
+                }
+            }
+
+            return null;
+        }
+
         internal override MSAst.Statement Transform(AstGenerator ag) {
             Debug.Assert(_block == null);
 
-            MSAst.CodeBlock block = new MSAst.CodeBlock(SymbolTable.IdToString(_name), new MSAst.Parameter[0], null);
+            MSAst.CodeBlock block = new MSAst.CodeBlock(SymbolTable.IdToString(_name));
             block.IsVisible = false;
 
             _block = block;
@@ -97,12 +113,12 @@ namespace IronPython.Compiler.Ast {
             CreateVariables(block);
 
             // Create the body
-            AstGenerator body = new AstGenerator(block, ag);
+            AstGenerator body = new AstGenerator(block, ag.Context);
             MSAst.Statement bodyStmt = body.Transform(_body);
             MSAst.Statement modStmt = new MSAst.ExpressionStatement(
                 new MSAst.BoundAssignment(
-                    _modReference.Reference,
-                    new MSAst.BoundExpression(_nameReference.Reference),
+                    _modVariable.Variable,
+                    new MSAst.BoundExpression(GetGlobalScope().EnsureGlobalVariable(Symbols.Name, true).Variable),
                     Operators.None
                 )
             );
@@ -111,7 +127,7 @@ namespace IronPython.Compiler.Ast {
             if (_body.Documentation != null) {
                 docStmt = new MSAst.ExpressionStatement(
                     new MSAst.BoundAssignment(
-                        _docReference.Reference,
+                        _docVariable.Variable,
                         new MSAst.ConstantExpression(_body.Documentation),
                         Operators.None
                     )
@@ -119,7 +135,7 @@ namespace IronPython.Compiler.Ast {
             } else {
                 docStmt = new MSAst.EmptyStatement();
             }
-             
+
             MSAst.Statement returnStmt = new MSAst.ReturnStatement(new MSAst.CodeContextExpression());
             block.Body = new MSAst.BlockStatement(
                 new MSAst.Statement[] {
@@ -142,7 +158,7 @@ namespace IronPython.Compiler.Ast {
                 });
 
             return new MSAst.ExpressionStatement(
-                new MSAst.BoundAssignment(_reference.Reference, classDef, Operators.None),
+                new MSAst.BoundAssignment(_variable.Variable, classDef, Operators.None),
                 new SourceSpan(Start, Header)
             );
         }
@@ -168,17 +184,32 @@ namespace IronPython.Compiler.Ast {
             foreach (Statement stmt in stmts.Statements) {
                 FunctionDefinition def = stmt as FunctionDefinition;
                 if (def != null && def.Name == SymbolTable.StringToId("__init__")) {
-                    return string.Join(",", SelfNameFinder.FindNames(def.Body));
+                    return string.Join(",", SelfNameFinder.FindNames(def));
                 }
             }
             return "";
         }
 
         private class SelfNameFinder : PythonWalker {
-            public static string[] FindNames(Statement body) {
-                SelfNameFinder finder = new SelfNameFinder();
-                body.Walk(finder);
-                return SymbolTable.IdsToStrings(new List<SymbolId>(finder._names.Keys));
+            private readonly FunctionDefinition _function;
+            private readonly Parameter _self;
+
+            public SelfNameFinder(FunctionDefinition function, Parameter self) {
+                _function = function;
+                _self = self;
+            }
+
+            public static string[] FindNames(FunctionDefinition function) {
+                Parameter[] parameters = function.Parameters;
+
+                if (parameters.Length > 0) {
+                    SelfNameFinder finder = new SelfNameFinder(function, parameters[0]);
+                    function.Body.Walk(finder);
+                    return SymbolTable.IdsToStrings(new List<SymbolId>(finder._names.Keys));
+                } else {
+                    // no point analyzing function with no parameters
+                    return new String[0];
+                }
             }
 
             private Dictionary<SymbolId, bool> _names = new Dictionary<SymbolId,bool>();
@@ -187,10 +218,12 @@ namespace IronPython.Compiler.Ast {
                 NameExpression ne = expr as NameExpression;
                 if (ne == null) return false;
 
-                MSAst.Variable var = ne.Reference.Reference.Variable;
-                if (var == null) return false;
+                PythonVariable variable;
+                if (_function.TryGetVariable(ne.Name, out variable) && variable == _self.Variable) {
+                    return true;
+                }
 
-                return var.Kind == MSAst.Variable.VariableKind.Parameter && var.Parameter == 0;
+                return false;
             }
 
             // Don't recurse into class or function definitions

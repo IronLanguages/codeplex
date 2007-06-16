@@ -20,9 +20,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 
-using Microsoft.Scripting;
-
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
 
     /// <summary>
     /// Base class for all other slot factories.  Supports creating either strongly typed
@@ -30,13 +28,6 @@ namespace Microsoft.Scripting.Internal.Generation {
     /// </summary>
     public abstract class SlotFactory {
         private Dictionary<SymbolId, Slot> _fields = new Dictionary<SymbolId, Slot>();
-
-        /// <summary>
-        /// Gets or creates a new slot with the given name of type object.
-        /// </summary>
-        public Slot MakeSlot(SymbolId name) {
-            return MakeSlot(name, typeof(object));
-        }
 
         /// <summary>
         /// Gets or creates a new slot with the given name of the specified type.
@@ -155,7 +146,7 @@ namespace Microsoft.Scripting.Internal.Generation {
             // tmpLocal = ((tupleDictType)codeContext.Scope.GlobalScope.GetDictionary(context)).Tuple
             cg.EmitCodeContext();
             cg.EmitPropertyGet(typeof(CodeContext), "Scope");
-            cg.EmitPropertyGet(typeof(Scope), "GlobalScope");
+            cg.EmitPropertyGet(typeof(Scope), "ModuleScope");
             cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(TupleType));
 
             Slot tmpLocal = cg.GetLocalTmp(TupleType);

@@ -16,7 +16,7 @@
 using System;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     sealed class GlobalNamedStorage : Storage {
         private readonly SymbolId _name;
         private readonly Type _type;

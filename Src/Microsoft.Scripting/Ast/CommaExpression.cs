@@ -18,9 +18,9 @@ using System.Diagnostics;
 using System.Reflection.Emit;
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Expression that represents list of expressions.
     /// The value of the CommaExpression is the expression identified by the index
@@ -29,7 +29,12 @@ namespace Microsoft.Scripting.Internal.Ast {
         private IList<Expression> _expressions;
         private int _valueIndex;
 
-        public CommaExpression(IList<Expression> expressions, int valueIndex) {
+        public CommaExpression(IList<Expression> expressions, int valueIndex)
+            : this(expressions, valueIndex, SourceSpan.None) {
+        }
+
+        public CommaExpression(IList<Expression> expressions, int valueIndex, SourceSpan span)
+            : base(span) {
             if (expressions == null) {
                 throw new ArgumentNullException("expressions");
             }
@@ -48,6 +53,7 @@ namespace Microsoft.Scripting.Internal.Ast {
             _valueIndex = valueIndex;
         }
 
+
         public IList<Expression> Expressions {
             get { return _expressions; }
         }
@@ -56,42 +62,26 @@ namespace Microsoft.Scripting.Internal.Ast {
             get { return _valueIndex; }
         }
 
-        public CommaExpression(IList<Expression> expressions, int valueIndex, SourceSpan span)
-            : base(span) {
-            if (expressions == null) {
-                throw new ArgumentNullException("expressions");
+        /// <summary>
+        /// The expression type is the type of the expression being selected.
+        /// </summary>
+        public override Type ExpressionType {
+            get {
+                return _expressions[_valueIndex].ExpressionType;
             }
-            if (valueIndex < 0 || valueIndex >= expressions.Count) {
-                throw new ArgumentOutOfRangeException("valueIndex");
-            }
-
-            // At this point we know that there is at least 1 expression
-            Debug.Assert(expressions.Count > 0);
-
-            _expressions = expressions;
-            _valueIndex = valueIndex;
         }
 
         public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
-        }
-
-        public override void EmitAs(CodeGen cg, Type asType) {
             for (int index = 0; index < _expressions.Count; index++) {
                 Expression current = _expressions[index];
-                // Emit the expression
 
-                if (index == _valueIndex) {
-                    if (current != null) {
-                        // This is the expression that is our value
-                        current.EmitAs(cg, asType);
-                    } else if (asType != typeof(void)) {
-                        cg.EmitMissingValue(asType);
-                    }
-                } else if (current != null) {
-                    // We do not need the value of this expression
-                    // Hopefully constant expressions can optimize themselves away
-                    current.EmitAs(cg, typeof(void));
+                // Emit the expression
+                current.Emit(cg);
+
+                // If we don't want the expression just emitted as the result,
+                // pop it off of the stack, unless it is a void expression.
+                if (index != _valueIndex && current.ExpressionType != typeof(void)) {
+                    cg.Emit(OpCodes.Pop);
                 }
             }
         }

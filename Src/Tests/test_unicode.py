@@ -36,4 +36,20 @@ def test_raw_unicode_escape_dashes():
 
     Assert(ok, "dashes and underscores should be interchangable")
 
+#CodePlex Work Item 6010
+@skip("silverlight")
+def test_unicode_error():
+    
+    from _codecs import register_error
+    def handler(ex): 
+        AreEqual(ex.object, u'\uac00')
+        return (u"", ex.end)
+    register_error("test_unicode_error", handler)
+    
+    supported_modes = [ 'cp1252','ascii', 'utf-8', 'latin-1', 'iso-8859-1', 'utf-16-le', 'raw-unicode-escape']
+    for mode in supported_modes:  unichr(0xac00).encode(mode, "test_unicode_error")
+
+
+
+
 run_test(__name__)

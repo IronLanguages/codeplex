@@ -13,7 +13,6 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Internal;
 using System;
 using Microsoft.Scripting.Shell;
 

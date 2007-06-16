@@ -32,7 +32,7 @@ namespace Microsoft.Scripting.Generation {
             get { return _target.GetType(); }
         }
 
-        public override void EmitCreation(Microsoft.Scripting.Internal.Generation.CodeGen cg) {
+        public override void EmitCreation(CodeGen cg) {
             Debug.Assert(!(_target.Method is DynamicMethod));
 
             ConstructorInfo ci = _target.GetType().GetConstructor(new Type[] { typeof(object), typeof(IntPtr) });

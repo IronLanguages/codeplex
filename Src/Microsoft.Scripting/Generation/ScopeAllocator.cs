@@ -19,9 +19,9 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Namespaces can be nested to get lexical scoping. Python looks up name as follows.
     /// 

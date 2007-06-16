@@ -17,11 +17,12 @@ using System;
 using System.Reflection;
 using System.Diagnostics;
 using System.Collections.Generic;
-
-using Microsoft.Scripting.Types;
 using System.Reflection.Emit;
 
-namespace Microsoft.Scripting.Internal.Generation {
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Ast;
+
+namespace Microsoft.Scripting.Generation {
     public static class CompilerHelpers {
         public static MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
        
@@ -61,7 +62,9 @@ namespace Microsoft.Scripting.Internal.Generation {
         }
 
         public static bool IsParamsMethod(MethodBase method) {
-            ParameterInfo[] pis = method.GetParameters();
+            return IsParamsMethod(method.GetParameters());
+        }
+        public static bool IsParamsMethod(ParameterInfo[] pis) {
             return pis.Length > 0 && (IsParamArray(pis[pis.Length - 1]));
         }
 
@@ -189,13 +192,12 @@ namespace Microsoft.Scripting.Internal.Generation {
             return ret.ToArray();
         }
 
-        public static void EmitStackTraceTryBlockStart(CodeGen cg, Slot slot) {
+        public static void EmitStackTraceTryBlockStart(CodeGen cg) {
             if (cg == null) throw new ArgumentNullException("cg");
-            if (slot == null) throw new ArgumentNullException("slot");
 
             if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
                 // push a try for traceback support
-                cg.PushTryBlock(slot);
+                cg.PushTryBlock();
                 cg.BeginExceptionBlock();
             }
         }
@@ -222,7 +224,7 @@ namespace Microsoft.Scripting.Internal.Generation {
                     cg.EmitCall(typeof(MethodBase), "GetMethodFromHandle", new Type[]{typeof(RuntimeMethodHandle)});
                 }
                 cg.EmitString(name);
-                cg.EmitString(GetSourceDisplayName(sourceUnit));
+                cg.EmitString(sourceUnit.DisplayName);
                 cg.EmitGetCurrentLine();
                 cg.EmitCall(typeof(RuntimeHelpers), "UpdateStackTrace");
 
@@ -234,28 +236,8 @@ namespace Microsoft.Scripting.Internal.Generation {
             }
         }
 
-        public static string GetSourceDisplayName(SourceUnit sourceUnit) {
-            SourceFileUnit sfu = sourceUnit as SourceFileUnit;
-            if (sfu != null) {
-                return sfu.Path;
-            }
-            return sourceUnit.Name;
-        }
-
         #region CodeGen Creation Support
 
-#if SILVERLIGHT
-        internal static CodeGen CreateDebuggableDynamicCodeGenerator(CompilerContext context, string name, Type retType, IList<Type> paramTypes, ConstantPool constantPool) {
-            TypeGen tg = ScriptDomainManager.CurrentManager.Snippets.DefineDebuggableType(name, context.SourceUnit);
-            CodeGen cg = tg.DefineMethod("Initialize", retType, paramTypes, null, constantPool);
-
-            tg.AddCodeContextField();
-            cg.DynamicMethod = true;
-
-            return cg;
-        }
-#else
-        // TODO: Consolidate the SILVERLIGHT and non-SILVERLIGHT code paths
         internal static CodeGen CreateDebuggableDynamicCodeGenerator(CompilerContext context, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
             TypeGen tg = ScriptDomainManager.CurrentManager.Snippets.DefineDebuggableType(name, context.SourceUnit);
             CodeGen cg = tg.DefineMethod("Initialize", retType, paramTypes, paramNames, constantPool);
@@ -265,7 +247,6 @@ namespace Microsoft.Scripting.Internal.Generation {
 
             return cg;
         }
-#endif
 
         /// <summary>
         /// 
@@ -283,16 +264,6 @@ namespace Microsoft.Scripting.Internal.Generation {
             CodeGen cg;
 
             if (NeedDebuggableDynamicCodeGenerator(context)) {
-#if SILVERLIGHT
-                cg = CreateDebuggableDynamicCodeGenerator(
-                    context,
-                    context.SourceUnit.Name,
-                    typeof(object),
-                    new Type[] { typeof(CodeContext) },
-                    new ConstantPool()
-                );
-#else
-                // TODO: Consolidate the SILVERLIGHT and non-SILVERLIGHT code paths
                 cg = CreateDebuggableDynamicCodeGenerator(
                     context,
                     context.SourceUnit.Name,
@@ -301,7 +272,6 @@ namespace Microsoft.Scripting.Internal.Generation {
                     null,
                     new ConstantPool()
                 );
-#endif
             } else {
                 cg = CreateDynamicCodeGenerator(
                     context.SourceUnit.Name,
@@ -351,14 +321,54 @@ namespace Microsoft.Scripting.Internal.Generation {
                 case Operators.GreaterThanOrEqual: return true;
                 case Operators.Equal: return true;
                 case Operators.NotEqual: return true;
+                case Operators.Compare: return true;
             }
             return false;
         }
 
+        // TODO remove this method as we move from DynamicType to Type
         public static DynamicType[] ObjectTypes(object[] args) {
             DynamicType[] types = new DynamicType[args.Length];
             for (int i = 0; i < args.Length; i++) {
                 types[i] = DynamicHelpers.GetDynamicType(args[i]);
+            }
+            return types;
+        }
+
+        // TODO remove this method as we move from DynamicType to Type
+        public static Type ConvertToType(DynamicType dynamicType) {
+            if (dynamicType.IsNull) {
+                return None.Type;
+            } else {
+                return dynamicType.UnderlyingSystemType;
+            }
+        }
+
+        // TODO remove this method as we move from DynamicType to Type
+        public static Type[] ConvertToTypes(DynamicType[] dynamicTypes) {
+            Type[] types = new Type[dynamicTypes.Length];
+            for (int i = 0; i < dynamicTypes.Length; i++) {
+                types[i] = ConvertToType(dynamicTypes[i]);
+            }
+            return types;
+        }
+
+        /// <summary>
+        /// Returns the System.Type for any object, including null.  The type of null
+        /// is represented by None.Type and all other objects just return the 
+        /// result of Object.GetType
+        /// </summary>
+        public static Type GetType(object obj) {
+            return obj == null ? None.Type : obj.GetType();
+        }
+
+        /// <summary>
+        /// Simply returns a Type[] from calling GetType on each element of args.
+        /// </summary>
+        public static Type[] GetTypes(object[] args) {
+            Type[] types = new Type[args.Length];
+            for (int i = 0; i < args.Length; i++) {
+                types[i] = GetType(args[i]);
             }
             return types;
         }
@@ -377,6 +387,33 @@ namespace Microsoft.Scripting.Internal.Generation {
 
         public static bool CanOptimizeField(FieldInfo fi) {
             return fi.IsPublic && fi.DeclaringType.IsVisible;
+        }
+
+        public static ElemType[] PrependArray<ElemType>(ElemType param, ElemType[] parameters) {
+            ElemType[] res = new ElemType[parameters.Length + 1];
+            Array.Copy(parameters, 0, res, 1, parameters.Length);
+            res[0] = param;
+            return res;
+        }
+
+        public static ElemType[] RemoveFirst<ElemType>(ElemType[] array) {
+            ElemType[] res = new ElemType[array.Length - 1];
+            Array.Copy(array, 1, res, 0, res.Length);
+            return res;
+        }
+
+        public static void SwapLastTwo<ElemType>(ElemType[] array) {
+            ElemType temp = array[array.Length - 1];
+            array[array.Length - 1] = array[array.Length - 2];
+            array[array.Length - 2] = temp;
+        }
+
+        internal static void CreateYieldLabels(CodeGen cg, List<YieldTarget> targets) {
+            if (targets != null) {
+                foreach (YieldTarget yt in targets) {
+                    yt.EnsureLabel(cg);
+                }
+            }
         }
     }
 }

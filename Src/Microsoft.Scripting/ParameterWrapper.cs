@@ -72,8 +72,8 @@ namespace Microsoft.Scripting {
             get { return _type; }
         }
 
-        public virtual bool HasConversionFrom(DynamicType ty, NarrowingLevel allowNarrowing) {
-            if (ty.IsNull) {
+        public bool HasConversionFrom(Type ty, NarrowingLevel allowNarrowing) {
+            if (ty == None.Type) {
                 if (_prohibitNull) return false;
 
                 if (Type.IsGenericType && Type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
@@ -81,9 +81,22 @@ namespace Microsoft.Scripting {
                 }
                 return !Type.IsValueType;
             } else {
-                return _binder.CanConvertFrom(ty.UnderlyingSystemType, Type, allowNarrowing);
+                return _binder.CanConvertFrom(ty, Type, allowNarrowing);
             }
         }
+
+        //public bool HasConversionFrom(DynamicType ty, NarrowingLevel allowNarrowing) {
+        //    if (ty.IsNull) {
+        //        if (_prohibitNull) return false;
+
+        //        if (Type.IsGenericType && Type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+        //            return true;
+        //        }
+        //        return !Type.IsValueType;
+        //    } else {
+        //        return _binder.CanConvertFrom(ty.UnderlyingSystemType, Type, allowNarrowing);
+        //    }
+        //}
 
         public int? CompareTo(ParameterWrapper other) {
             Type t1 = Type;

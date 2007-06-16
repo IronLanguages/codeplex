@@ -17,11 +17,7 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
-using Microsoft.Scripting;
 using System.Collections.Generic;
-
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Internal.Generation;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>

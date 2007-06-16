@@ -14,9 +14,8 @@
  * ***************************************************************************/
 
 using System.Collections;
-using Microsoft.Scripting.Internal;
-using MSAst = Microsoft.Scripting.Internal.Ast;
 using Microsoft.Scripting;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class ForStatement : Statement {
@@ -57,7 +56,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
             // Temporary variable for the IEnumerator object
-            MSAst.VariableReference enumerator = ag.MakeGeneratorTemp(
+            MSAst.Variable enumerator = ag.MakeGeneratorTemp(
                 SymbolTable.StringToId("foreach_enumerator"),
                 typeof(IEnumerator)
             );
@@ -83,13 +82,13 @@ namespace IronPython.Compiler.Ast {
             walker.PostWalk(this);
         }
 
-        internal static MSAst.Statement TransformForStatement(AstGenerator ag, MSAst.VariableReference enumerator,
+        internal static MSAst.Statement TransformForStatement(AstGenerator ag, MSAst.Variable enumerator,
                                                     Expression list, Expression left, Statement body,
                                                     Statement else_, SourceSpan span, SourceLocation header) {
             return TransformForStatement(ag, enumerator, list, left, ag.Transform(body), else_, span, header);
         }
 
-        internal static MSAst.Statement TransformForStatement(AstGenerator ag, MSAst.VariableReference enumerator,
+        internal static MSAst.Statement TransformForStatement(AstGenerator ag, MSAst.Variable enumerator,
                                                     Expression list, Expression left, MSAst.Statement body,
                                                     Statement else_, SourceSpan span, SourceLocation header) {
             // enumerator = PythonOps.GetEnumeratorForIteration(list)

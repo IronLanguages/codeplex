@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class IfStatementTest : Node {
         private readonly SourceLocation _header;
         private readonly Expression _test;

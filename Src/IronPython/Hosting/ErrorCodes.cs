@@ -13,15 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
-using System.Text;
-
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
 
 namespace IronPython.Hosting {
     public static class ErrorCodes {

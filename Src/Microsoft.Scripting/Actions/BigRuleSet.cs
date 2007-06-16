@@ -15,14 +15,16 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting.Actions {
 
     internal class BigRuleSet {
-        private LanguageContext _context;
+        private CodeContext _context;
         private Dictionary<Type, object> _trees = new Dictionary<Type,object>();
 
-        public BigRuleSet(LanguageContext context) {
+        public BigRuleSet(CodeContext context) {
+            Debug.Assert(context != null);
             _context = context;
         }
 

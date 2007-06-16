@@ -20,6 +20,7 @@ using System.Text;
 using IronPython.Runtime;
 
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
 
 [assembly: PythonModule("cStringIO", typeof(IronPython.Modules.PythonStringIO))]
 namespace IronPython.Modules {
@@ -167,8 +168,8 @@ namespace IronPython.Modules {
 
     [PythonType("cStringIO")]
     public static class PythonStringIO {
-        public static object InputType = Ops.GetDynamicType(typeof(StringI));
-        public static object OutputType = Ops.GetDynamicType(typeof(StringO));
+        public static object InputType = DynamicHelpers.GetDynamicType(typeof(StringI));
+        public static object OutputType = DynamicHelpers.GetDynamicType(typeof(StringO));
 
         [PythonType("StringI")]
         public class StringI {
@@ -215,7 +216,7 @@ namespace IronPython.Modules {
             public string Next() {
                 ThrowIfClosed();
                 if (sr.EOF) {
-                    throw Ops.StopIteration();
+                    throw PythonOps.StopIteration();
                 }
                 return ReadLine();
             }
@@ -304,7 +305,7 @@ namespace IronPython.Modules {
 
             private void ThrowIfClosed() {
                 if (Closed) {
-                    throw Ops.ValueError("I/O operation on closed file");
+                    throw PythonOps.ValueError("I/O operation on closed file");
                 }
             }
         }
@@ -360,7 +361,7 @@ namespace IronPython.Modules {
                 ThrowIfClosed();
                 FixStreams();
                 if (sr.EOF) {
-                    throw Ops.StopIteration();
+                    throw PythonOps.StopIteration();
                 }
                 return ReadLine();
             }
@@ -471,11 +472,11 @@ namespace IronPython.Modules {
             [PythonName("writelines")]
             public void WriteLines(object o) {
                 ThrowIfClosed();
-                IEnumerator e = Ops.GetEnumerator(o);
+                IEnumerator e = PythonOps.GetEnumerator(o);
                 while (e.MoveNext()) {
                     string s = e.Current as string;
                     if (s == null) {
-                        throw Ops.ValueError("string expected");
+                        throw PythonOps.ValueError("string expected");
                     }
                     Write(s);
                 }
@@ -493,7 +494,7 @@ namespace IronPython.Modules {
 
             private void ThrowIfClosed() {
                 if (Closed) {
-                    throw Ops.ValueError("I/O operation on closed file");
+                    throw PythonOps.ValueError("I/O operation on closed file");
                 }
             }
         }

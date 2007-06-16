@@ -17,8 +17,9 @@ using System;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using MSAst = Microsoft.Scripting.Ast;
+
 using IronPython.Runtime;
-using MSAst = Microsoft.Scripting.Internal.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class Arg : Node {

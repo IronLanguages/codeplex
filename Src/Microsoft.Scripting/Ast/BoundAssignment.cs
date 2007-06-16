@@ -14,30 +14,46 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using System.Diagnostics;
+using System.Reflection.Emit;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class BoundAssignment : Expression {
-        private readonly VariableReference _vr;
+        private readonly Variable _variable;
         private readonly Expression _value;
         private readonly Operators _op;
         private bool _defined;
 
-        public BoundAssignment(VariableReference vr, Expression value, Operators op)
-            : this(vr, value, op, SourceSpan.None) {
+        // implementation detail.
+        private VariableReference _vr;
+
+        public BoundAssignment(Variable variable, Expression value, Operators op)
+            : this(variable, value, op, SourceSpan.None) {
         }
 
-        public BoundAssignment(VariableReference vr, Expression value, Operators op, SourceSpan span)
+        public BoundAssignment(Variable variable, Expression value, Operators op, SourceSpan span)
             : base(span) {
-            if (vr == null) throw new ArgumentNullException("vr");
+            if (variable == null) throw new ArgumentNullException("variable");
             if (value == null) throw new ArgumentNullException("value");
-            _vr = vr;
+            _variable = variable;
             _value = value;
             _op = op;
         }
 
-        public VariableReference Reference {
+        public Variable Variable {
+            get { return _variable; }
+        }
+
+        internal VariableReference Ref {
             get { return _vr; }
+            set {
+                Debug.Assert(value != null);
+                Debug.Assert(value.Variable == _variable);
+                Debug.Assert(_vr == null || (object)_vr == (object)value);
+                _vr = value;
+            }
         }
 
         public Expression Value {
@@ -53,21 +69,22 @@ namespace Microsoft.Scripting.Internal.Ast {
             set { _defined = value; }
         }
 
-        public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
+        public override Type ExpressionType {
+            get {
+                return _variable.Type;
+            }
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
+        public override void Emit(CodeGen cg) {
             if (_op == Operators.None) {
-                _value.EmitAs(cg, _value.ExpressionType);
-                cg.EmitConvert(_value.ExpressionType, _vr.Slot.Type);
+                _value.EmitAs(cg, _vr.Slot.Type);
             } else {
                 cg.EmitInPlaceOperator(
                     _op,
-                    _vr.Type,
+                    _variable.Type,
                     delegate (CodeGen _cg, Type _as) {
-                        _cg.EmitGet(_vr.Slot, _vr.Name, !_defined);
-                        _cg.EmitConvert(_vr.Type, _as);
+                        _cg.EmitGet(_vr.Slot, _variable.Name, !_defined);
+                        _cg.EmitConvert(_variable.Type, _as);
                     },
                     _value.ExpressionType,
                     _value.EmitAs
@@ -75,26 +92,23 @@ namespace Microsoft.Scripting.Internal.Ast {
                 cg.EmitConvert(typeof(object), _vr.Slot.Type);
             }
 
-            if (asType == typeof(void)) {
-                _vr.Slot.EmitSet(cg);
-            } else if (_vr.Slot is LocalSlot || _vr.Slot is ArgSlot) {
-                _vr.Slot.EmitSet(cg);
-                _vr.Slot.EmitGet(cg);
-                cg.EmitConvert(_vr.Slot.Type, asType);
-            } else {
-                Slot tmp = cg.GetLocalTmp(_vr.Slot.Type);
-                tmp.EmitSet(cg);
-                tmp.EmitGet(cg);
-                _vr.Slot.EmitSet(cg);
-                tmp.EmitGet(cg);
-                cg.EmitConvert(tmp.Type, asType);
-                cg.FreeLocalTmp(tmp);
-            }
+            cg.Emit(OpCodes.Dup);
+            _vr.Slot.EmitSet(cg);
         }
 
         public override object Evaluate(CodeContext context) {
-            object result = _value.Evaluate(context);
-            RuntimeHelpers.SetName(context, _vr.Name, result);
+            object result;
+            if (_op == Operators.None) { // Just an assignment
+                result = _value.Evaluate(context);
+            } else {
+                //TODO: is constructing an ActionExpression on the fly really necessary?
+                ActionExpression action = ActionExpression.Operator(
+                    _op, _variable.Type,
+                    BoundExpression.Defined(_variable), _value);
+                result = action.Evaluate(context);
+            }
+            
+            RuntimeHelpers.SetName(context, _variable.Name, result);
             return result;
         }
 
@@ -106,16 +120,17 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         #region Factory methods
-        public static BoundAssignment Assign(VariableReference vr, Expression value) {
-            return Assign(vr, value, SourceSpan.None);
+
+        public static BoundAssignment Assign(Variable variable, Expression value) {
+            return OpAssign(variable, value, Operators.None, SourceSpan.None);
         }
 
-        public static BoundAssignment Assign(VariableReference vr, Expression value, SourceSpan span) {
-            return OpAssign(vr, value, Operators.None, span);
+        public static BoundAssignment Assign(Variable variable, Expression value, SourceSpan span) {
+            return OpAssign(variable, value, Operators.None, span);
         }
 
-        public static BoundAssignment OpAssign(VariableReference vr, Expression value, Operators op, SourceSpan span) {
-            return new BoundAssignment(vr, value, op, span);
+        public static BoundAssignment OpAssign(Variable variable, Expression value, Operators op, SourceSpan span) {
+            return new BoundAssignment(variable, value, op, span);
         }
 
         #endregion

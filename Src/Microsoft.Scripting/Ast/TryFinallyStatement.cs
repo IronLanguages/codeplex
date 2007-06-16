@@ -15,25 +15,26 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// A simple static try/finally statement.  
     /// 
-    /// TODO: Remove TryStatement and switch to all static exception handling.
+    /// TODO: Remove DynamicTryStatement and switch to all static exception handling.
     /// </summary>
     public class TryFinallyStatement : Statement {
         private Statement _body;
         private Statement _finallyBody;
 
-        private TryFinallyStatement(Statement body, Statement finallyBody) {
+        private TryFinallyStatement(Statement body, Statement finallyBody)
+            : base(SourceSpan.None) {
             _body = body;
             _finallyBody = finallyBody;
         }
 
-        public override void Emit(Microsoft.Scripting.Internal.Generation.CodeGen cg) {
-            cg.PushTryBlock(null);
+        public override void Emit(CodeGen cg) {
+            cg.PushTryBlock();
             cg.BeginExceptionBlock();
 
             _body.Emit(cg);

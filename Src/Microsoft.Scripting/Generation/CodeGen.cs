@@ -26,13 +26,12 @@ using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.Globalization;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
 
     public delegate void EmitArrayHelper(int index);
 
@@ -75,6 +74,7 @@ namespace Microsoft.Scripting.Internal.Generation {
         private TextWriter _ilOut;
 
         private bool _generator;                    // true if emitting generator, false otherwise
+        private Slot _gotoRouter;                   // Slot that stores the number of the label to go to.
 
         public const int FinallyExitsNormally = 0;
         public const int BranchForReturn = 1;
@@ -117,7 +117,22 @@ namespace Microsoft.Scripting.Internal.Generation {
 
             EmitLineInfo = ScriptDomainManager.Options.DynamicStackTraceSupport;
             WriteSignature(mi, paramTypes);
+
+#if !DEBUG
         }
+#else
+            PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "CodeGen " + GetPerfTrackName(mi));
+        }
+
+        private string GetPerfTrackName(MethodBase mi) {
+            for (int i = 0; i < mi.Name.Length; i++) {
+                if (!Char.IsLetter(mi.Name[i])) {
+                    return mi.Name.Substring(0, i);
+                }
+            }
+            return mi.Name;
+        }
+#endif
 
         public override string ToString() {
             return _methodInfo.ToString();
@@ -138,8 +153,7 @@ namespace Microsoft.Scripting.Internal.Generation {
             }
         }
 
-        // TODO: Make internal once the callers are in the same dll.
-        public bool IsGenerator {
+        internal bool IsGenerator {
             get { return _generator; }
             set { _generator  = value; }
         }
@@ -183,50 +197,42 @@ namespace Microsoft.Scripting.Internal.Generation {
             }
         }
 
+        public const int GotoRouterNone = -1;
+        public const int GotoRouterYielding = -2;
+
+        public Slot GotoRouter {
+            get { return _gotoRouter; }
+            set { _gotoRouter = value; }
+        }
+
         public bool InLoop() {
             return (_targets.Count != 0 &&
                 (_targets.Peek()).breakLabel != Targets.NoLabel);
         }
 
-        public void PushExceptionBlock(TargetBlockType type, Slot returnFlag, Slot isBlockYielded) {
-            Debug.Assert(isBlockYielded == null || isBlockYielded.Type == typeof(int));
-
+        public void PushExceptionBlock(TargetBlockType type, Slot returnFlag) {
             if (_targets.Count == 0) {
-                _targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag, isBlockYielded, null));
+                _targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag, null));
             } else {
                 Targets t = _targets.Peek();
-                _targets.Push(new Targets(t.breakLabel, t.continueLabel, type, returnFlag ?? t.finallyReturns, isBlockYielded ?? t.isBlockYielded, null));
+                _targets.Push(new Targets(t.breakLabel, t.continueLabel, type, returnFlag ?? t.finallyReturns, null));
             }
         }
 
-        public void PushWithTryBlock(Slot isTryYielded) {
-            Debug.Assert(isTryYielded == null || isTryYielded.Type == typeof(int));
-
-            PushExceptionBlock(TargetBlockType.With, null, isTryYielded);
-        }
-
-        public void PushTryBlock(Slot isTryYielded) {
-            Debug.Assert(isTryYielded == null || isTryYielded.Type == typeof(int));
-
-            PushExceptionBlock(TargetBlockType.Try, null, isTryYielded);
-        }
-
-        public void PushFinallyBlock(Slot returnFlag, Slot isFinallyYielded) {
-            Debug.Assert(isFinallyYielded == null || isFinallyYielded.Type == typeof(int));
-
-            PushExceptionBlock(TargetBlockType.Finally, returnFlag, isFinallyYielded);
+        public void PushTryBlock() {
+            PushExceptionBlock(TargetBlockType.Try, null);
         }
 
         public void PushTargets(Nullable<Label> breakTarget, Nullable<Label> continueTarget, Statement statement) {
             if (_targets.Count == 0) {
-                _targets.Push(new Targets(breakTarget, continueTarget, BlockType, null, null, statement));
+                _targets.Push(new Targets(breakTarget, continueTarget, BlockType, null, statement));
             } else {
                 Targets t = _targets.Peek();
                 TargetBlockType bt = t.BlockType;
                 if (bt == TargetBlockType.Finally) {
                     bt = TargetBlockType.LoopInFinally;
                 }
-                _targets.Push(new Targets(breakTarget, continueTarget, bt, t.finallyReturns, t.isBlockYielded, statement));
+                _targets.Push(new Targets(breakTarget, continueTarget, bt, t.finallyReturns, statement));
             }
         }
 
@@ -263,7 +269,6 @@ namespace Microsoft.Scripting.Internal.Generation {
                         throw new InvalidOperationException();
                     break;
                 case TargetBlockType.Try:
-                case TargetBlockType.With:
                 case TargetBlockType.Else:
                 case TargetBlockType.Catch:
                     for (int i = _targets.Count - 1; i >= 0; i--) {
@@ -311,7 +316,6 @@ namespace Microsoft.Scripting.Internal.Generation {
                         throw new InvalidOperationException();
                     break;
                 case TargetBlockType.Try:
-                case TargetBlockType.With:
                 case TargetBlockType.Else:
                 case TargetBlockType.Catch:
                     if (t.continueLabel.HasValue)
@@ -344,8 +348,7 @@ namespace Microsoft.Scripting.Internal.Generation {
                             break;
                         }
                     }
-                    goto case TargetBlockType.With;
-                case TargetBlockType.With:
+
                     EnsureReturnBlock();
                     Debug.Assert(_returnBlock.HasValue);
                     if (CompilerHelpers.GetReturnType(_methodInfo) != typeof(void)) {
@@ -384,15 +387,6 @@ namespace Microsoft.Scripting.Internal.Generation {
                         break;
                     }
             }
-        }
-
-
-        public void EmitTestTrue(Expression e) {
-            e.EmitAs(this, typeof(bool));
-        }
-
-        public void EmitTestTrue() {
-            EmitConvertFromObject(typeof(bool));
         }
 
         /// <summary>
@@ -531,30 +525,30 @@ namespace Microsoft.Scripting.Internal.Generation {
             EmitReturn();
         }
 
-        public void EmitYield(Expression expr, int index, Label label) {
+        internal void EmitYield(Expression expr, YieldTarget target) {
             if (expr == null) throw new ArgumentNullException("expr");
 
-            if (BlockType != TargetBlockType.Normal) {
-                Targets t = _targets.Peek();
-                // Assert that those who pushed the block with this variable as null 
-                // must not yield in thier blocks
-                Debug.Assert(t.isBlockYielded != null);
-                Emit(OpCodes.Ldc_I4_1);
-                t.isBlockYielded.EmitSet(this);
-            }
-
             EmitSetGeneratorReturnValue(expr);
-            EmitUpdateGeneratorLocation(index);
+            EmitUpdateGeneratorLocation(target.Index);
+
+            // Mark that we are yielding, which will ensure we skip
+            // all of the finally bodies that are on the way to exit
+
+            EmitInt(GotoRouterYielding);
+            GotoRouter.EmitSet(this);
 
             EmitInt(1);
             EmitReturn();
 
-            MarkLabel(label);
+            MarkLabel(target.EnsureLabel(this));
+            // Reached the routing destination, set router to GotoRouterNone
+            EmitInt(GotoRouterNone);
+            GotoRouter.EmitSet(this);
         }
 
         private void EmitSetGeneratorReturnValue(Expression expr) {
             ArgumentSlots[1].EmitGet(this);
-            EmitExprOrNull(expr);
+            EmitExprAsObjectOrNull(expr);
             Emit(OpCodes.Stind_Ref);
         }
 
@@ -629,17 +623,17 @@ namespace Microsoft.Scripting.Internal.Generation {
             return new LocalSlot(lb, this);
         }
 
-        public void FreeLocalTmp(Slot slot) {
-            Debug.Assert(!_freeSlots.Contains(slot));
-            _freeSlots.Add(slot);
+        internal void FreeLocalTmp(Slot slot) {
+            if (slot != null) {
+                Debug.Assert(!_freeSlots.Contains(slot));
+                _freeSlots.Add(slot);
+            }
         }
 
-        public Slot CopyTopOfStack(Type type) {
-            if (type == typeof(void)) return new VoidSlot();
-
+        internal Slot DupAndStoreInTemp(Type type) {
+            Debug.Assert(type != typeof(void));
             this.Emit(OpCodes.Dup);
             Slot ret = GetLocalTmp(type);
-            this.EmitConvertFromObject(type);
             ret.EmitSet(this);
             return ret;
         }
@@ -743,20 +737,6 @@ namespace Microsoft.Scripting.Internal.Generation {
             }
         }
 
-        public void EmitSet(Slot slot) {
-            if (slot == null) {
-                throw new ArgumentNullException("slot");
-            }
-            slot.EmitSet(this);
-        }
-
-        public void EmitDel(Slot slot, SymbolId name, bool check) {
-            if (slot == null) {
-                throw new ArgumentNullException("slot");
-            }
-            slot.EmitDelete(this, name, check);
-        }
-
         public virtual void EmitGetCurrentLine() {
             if (_currentLineSlot != null) {
                 _currentLineSlot.EmitGet(this);
@@ -826,7 +806,7 @@ namespace Microsoft.Scripting.Internal.Generation {
             if (_environmentSlot != null) {
                 _environmentSlot.EmitGet(this);
             } else {
-                EmitExprOrNull(null);
+                EmitNull();
             }
         }
 
@@ -836,9 +816,12 @@ namespace Microsoft.Scripting.Internal.Generation {
             Emit(OpCodes.Ldarg_0);
         }
 
-        public void EmitExprOrNull(Expression e) {
-            if (e == null) Emit(OpCodes.Ldnull);
-            else e.Emit(this);
+        public void EmitExprAsObjectOrNull(Expression e) {
+            if (e == null) {
+                Emit(OpCodes.Ldnull);
+            } else {
+                e.EmitAsObject(this);
+            }
         }
 
         /// <summary>
@@ -865,7 +848,7 @@ namespace Microsoft.Scripting.Internal.Generation {
             for (int i = 0; i < items.Count; i++) {
                 Emit(OpCodes.Dup);
                 EmitInt(i);
-                EmitRawConstant(items[i]);
+                EmitConstant(items[i]);
                 EmitStoreElement(typeof(T));
             }
         }
@@ -916,29 +899,11 @@ namespace Microsoft.Scripting.Internal.Generation {
         }
 
         public void EmitArgAddr(int i) {
-
-            if (_methodInfo == null || !_methodInfo.IsStatic) {
-                if (i == Int32.MaxValue) throw new InvalidOperationException(Resources.InvalidOperation_TooManyArguments);
-
-                i += 1; // making room for this
-            }
-            EmitTrueArgAddr(i);
-        }
-
-        public void EmitTrueArgAddr(int i) {
             if (i >= -128 && i <= 127) {
                 Emit(OpCodes.Ldarga_S, i);
             } else {
                 this.Emit(OpCodes.Ldarga, i);
             }
-        }
-
-        //[Obsolete("Replace string with SymbolId")]
-        public void EmitSymbolId(string name) {
-            if (name == null) throw new ArgumentNullException("name");
-
-            SymbolId id = SymbolTable.StringToId(name);
-            EmitSymbolId(id);
         }
 
         /// <summary>
@@ -959,12 +924,6 @@ namespace Microsoft.Scripting.Internal.Generation {
             }
         }
 
-        public void EmitSymbolIdInt(string name) {
-            if (name == null) throw new ArgumentNullException("name");
-
-            EmitSymbolIdId(SymbolTable.StringToId(name));
-        }
-
         public void EmitSymbolIdId(SymbolId id) {
             if (DynamicMethod) {
                 EmitInt(id.Id);
@@ -976,51 +935,6 @@ namespace Microsoft.Scripting.Internal.Generation {
                 EmitPropertyGet(typeof(SymbolId), "Id");
                 FreeLocalTmp(slot);
             }
-        }
-
-        public void EmitSymbolIdArray(IList<SymbolId> items) {
-            if (items == null) throw new ArgumentNullException("items");
-
-            EmitInt(items.Count);
-            Emit(OpCodes.Newarr, typeof(SymbolId));
-            for (int i = 0; i < items.Count; i++) {
-                Emit(OpCodes.Dup);
-                EmitInt(i);
-                Emit(OpCodes.Ldelema, typeof(SymbolId));
-                EmitSymbolIdId(items[i]);
-                Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
-            }
-        }
-
-        [CLSCompliant(false)]
-        public void EmitUInt(uint i)
-        {
-            EmitInt((int)i);
-            Emit(OpCodes.Conv_U4);
-        }
-
-        public void EmitInt(int i) {
-            OpCode c;
-            switch (i) {
-                case -1: c = OpCodes.Ldc_I4_M1; break;
-                case 0: c = OpCodes.Ldc_I4_0; break;
-                case 1: c = OpCodes.Ldc_I4_1; break;
-                case 2: c = OpCodes.Ldc_I4_2; break;
-                case 3: c = OpCodes.Ldc_I4_3; break;
-                case 4: c = OpCodes.Ldc_I4_4; break;
-                case 5: c = OpCodes.Ldc_I4_5; break;
-                case 6: c = OpCodes.Ldc_I4_6; break;
-                case 7: c = OpCodes.Ldc_I4_7; break;
-                case 8: c = OpCodes.Ldc_I4_8; break;
-                default:
-                    if (i >= -128 && i <= 127) {
-                        Emit(OpCodes.Ldc_I4_S, (byte)i);
-                    } else {
-                        Emit(OpCodes.Ldc_I4, i);
-                    }
-                    return;
-            }
-            Emit(c);
         }
 
         public void EmitPropertyGet(Type type, string name) {
@@ -1069,6 +983,7 @@ namespace Microsoft.Scripting.Internal.Generation {
                 Emit(OpCodes.Ldfld, fi);
             }
         }
+
         public void EmitFieldSet(FieldInfo fi) {
             if (fi == null) throw new ArgumentNullException("fi");
 
@@ -1128,11 +1043,6 @@ namespace Microsoft.Scripting.Internal.Generation {
             EmitCall(type.GetMethod(name, paramTypes));
         }
 
-        public void EmitCallDelegate(Delegate @delegate) {
-            if (@delegate == null) throw new ArgumentNullException("delegate");
-            EmitCall(@delegate.Method);
-        }
-
         public delegate void EmitAsHelper(CodeGen cg, Type asType);
 
         public void EmitInPlaceOperator(Operators op, Type leftType, EmitAsHelper leftEmit,
@@ -1179,13 +1089,6 @@ namespace Microsoft.Scripting.Internal.Generation {
             if (name == SymbolId.Empty) throw new ArgumentException(Resources.EmptySymbolId, "name");
 
             EmitString(SymbolTable.IdToString(name));
-        }
-
-        public void EmitType(TypeGen typeGen) {
-            if (typeGen == null) throw new ArgumentNullException("typeGen");
-
-            Emit(OpCodes.Ldtoken, typeGen.TypeBuilder);
-            EmitCall(typeof(Type), "GetTypeFromHandle");
         }
 
         public void EmitType(Type type) {
@@ -1297,14 +1200,23 @@ namespace Microsoft.Scripting.Internal.Generation {
             if (type == null) throw new ArgumentNullException("type");
 
             if (type.IsValueType) {
-                if (type == typeof(int) || type == typeof(uint)) Emit(OpCodes.Stelem_I4);
-                else if (type == typeof(short) || type == typeof(ushort)) Emit(OpCodes.Stelem_I2);
-                else if (type == typeof(long) || type == typeof(ulong)) Emit(OpCodes.Stelem_I8);
-                else if (type == typeof(char)) Emit(OpCodes.Stelem_I2);
-                else if (type == typeof(bool)) Emit(OpCodes.Stelem_I4);
-                else if (type == typeof(float)) Emit(OpCodes.Stelem_R4);
-                else if (type == typeof(double)) Emit(OpCodes.Stelem_R8);
-                else Emit(OpCodes.Stelem, type);
+                if (type == typeof(int) || type == typeof(uint)) {
+                    Emit(OpCodes.Stelem_I4);
+                } else if (type == typeof(short) || type == typeof(ushort)) {
+                    Emit(OpCodes.Stelem_I2);
+                } else if (type == typeof(long) || type == typeof(ulong)) {
+                    Emit(OpCodes.Stelem_I8);
+                } else if (type == typeof(char)) {
+                    Emit(OpCodes.Stelem_I2);
+                } else if (type == typeof(bool)) {
+                    Emit(OpCodes.Stelem_I4);
+                } else if (type == typeof(float)) {
+                    Emit(OpCodes.Stelem_R4);
+                } else if (type == typeof(double)) {
+                    Emit(OpCodes.Stelem_R8);
+                } else {
+                    Emit(OpCodes.Stelem, type);
+                }
             } else {
                 Emit(OpCodes.Stelem_Ref);
             }
@@ -1320,32 +1232,182 @@ namespace Microsoft.Scripting.Internal.Generation {
             Emit(OpCodes.Ldstr, (string)value);
         }
 
-        public void EmitStringOrNull(string value) {
-            if (value == null) Emit(OpCodes.Ldnull);
-            else EmitString(value);
+        #region Support for emitting constants
+
+        public void EmitBoolean(bool value) {
+            if (value) {
+                Emit(OpCodes.Ldc_I4_1);
+            } else {
+                Emit(OpCodes.Ldc_I4_0);
+            }
         }
 
-        public void EmitConstant(CompilerConstant value) {
-            if (value == null) {
-                EmitConstant((object)null);
+        public void EmitChar(char value) {
+            EmitInt(value);
+            Emit(OpCodes.Conv_U2);
+        }
+
+        public void EmitByte(byte value) {
+            EmitInt(value);
+            Emit(OpCodes.Conv_U1);
+        }
+
+        private void EmitSByte(sbyte value) {
+            EmitInt(value);
+            Emit(OpCodes.Conv_I1);
+        }
+
+        private void EmitShort(short value) {
+            EmitInt(value);
+            Emit(OpCodes.Conv_I2);
+        }
+
+        private void EmitUShort(ushort value) {
+            EmitInt(value);
+            Emit(OpCodes.Conv_U2);
+        }
+
+        public void EmitInt(int value) {
+            OpCode c;
+            switch (value) {
+                case -1: c = OpCodes.Ldc_I4_M1; break;
+                case 0: c = OpCodes.Ldc_I4_0; break;
+                case 1: c = OpCodes.Ldc_I4_1; break;
+                case 2: c = OpCodes.Ldc_I4_2; break;
+                case 3: c = OpCodes.Ldc_I4_3; break;
+                case 4: c = OpCodes.Ldc_I4_4; break;
+                case 5: c = OpCodes.Ldc_I4_5; break;
+                case 6: c = OpCodes.Ldc_I4_6; break;
+                case 7: c = OpCodes.Ldc_I4_7; break;
+                case 8: c = OpCodes.Ldc_I4_8; break;
+                default:
+                    if (value >= -128 && value <= 127) {
+                        Emit(OpCodes.Ldc_I4_S, (byte)value);
+                    } else {
+                        Emit(OpCodes.Ldc_I4, value);
+                    }
+                    return;
+            }
+            Emit(c);
+        }
+
+        [CLSCompliant(false)]
+        public void EmitUInt(uint i) {
+            EmitInt((int)i);
+            Emit(OpCodes.Conv_U4);
+        }
+
+        public void EmitLong(long value) {
+            Emit(OpCodes.Ldc_I8, value);
+        }
+
+        private void EmitULong(ulong value) {
+            Emit(OpCodes.Ldc_I8, (long)value);
+            Emit(OpCodes.Conv_U8);
+        }
+
+        private void EmitDouble(double value) {
+            Emit(OpCodes.Ldc_R8, value);
+        }
+
+        private void EmitEnum(object value) {
+            Debug.Assert(value != null);
+            Debug.Assert(value.GetType().IsEnum);
+
+            switch (((Enum)value).GetTypeCode()) {
+                case TypeCode.Int32:
+                    EmitInt((int)value);
+                    break;
+                case TypeCode.Int64:
+                    EmitLong((long)value);
+                    break;
+                case TypeCode.Int16:
+                    EmitShort((short)value);
+                    break;
+                case TypeCode.UInt32:
+                    EmitUInt((uint)value);
+                    break;
+                case TypeCode.UInt64:
+                    EmitULong((ulong)value);
+                    break;
+                case TypeCode.SByte:
+                    EmitSByte((sbyte)value);
+                    break;
+                case TypeCode.UInt16:
+                    EmitUShort((ushort)value);
+                    break;
+                case TypeCode.Byte:
+                    EmitByte((byte)value);
+                    break;
+                default:
+                    throw new NotImplementedException(String.Format(CultureInfo.CurrentCulture, Resources.NotImplemented_EnumEmit, value.GetType(), value));
+            }
+        }
+
+        private void EmitComplex(Complex64 value) {
+            if (value.Real != 0.0) {
+                Emit(OpCodes.Ldc_R8, value.Real);
+                if (value.Imag != 0.0) {
+                    Emit(OpCodes.Ldc_R8, value.Imag);
+                    EmitCall(typeof(Complex64), "Make");
+                } else {
+                    EmitCall(typeof(Complex64), "MakeReal");
+                }
+            } else {
+                Emit(OpCodes.Ldc_R8, value.Imag);
+                EmitCall(typeof(Complex64), "MakeImaginary");
+            }
+        }
+
+        private void EmitBigInteger(BigInteger value) {
+            int ival;
+            if (value.AsInt32(out ival)) {
+                EmitInt(ival);
+                EmitCall(typeof(BigInteger), "Create", new Type[] { typeof(int) });
+                return;
+            }
+            long lval;
+            if (value.AsInt64(out lval)) {
+                Emit(OpCodes.Ldc_I8, lval);
+                EmitCall(typeof(BigInteger), "Create", new Type[] { typeof(long) });
                 return;
             }
 
-            if (!CacheConstants) {
-                //TODO cache these so that we use the same slot for the same values
-                _constantPool.AddData(value.Create()).EmitGet(this);
-                return;
-            }
-
-            _typeGen.GetOrMakeConstant(value).EmitGet(this);
+            EmitInt(value.Sign);
+            EmitArray(value.GetBits());
+            EmitNew(typeof(BigInteger), new Type[] { typeof(short), typeof(uint[]) });
+            return;
         }
 
+        #endregion
+
+        /// <summary>
+        /// The main entry to the constant emitting.
+        /// This will handle constant caching and compiler constants.
+        /// Constants will be left on the execution stack as their direct type.
+        /// </summary>
+        /// <param name="value">Constant to be emitted</param>
         public void EmitConstant(object value) {
-            if (!CacheConstants) {
-                EmitConstantBoxed(value);
-                return;
+            CompilerConstant cc = value as CompilerConstant;
+
+            if (cc != null) {
+                if (CacheConstants) {
+                    EmitCompilerConstantCache(cc);
+                } else {
+                    EmitCompilerConstantNoCache(cc);
+                }
+            } else {
+                if (CacheConstants) {
+                    EmitConstantCache(value);
+                } else {
+                    EmitConstantNoCache(value);
+                }
             }
-            
+        }
+
+        private void EmitConstantCache(object value) {
+            Debug.Assert(!(value is CompilerConstant));
+
             string strVal;
             if (value == null) {
                 EmitNull();
@@ -1357,103 +1419,73 @@ namespace Microsoft.Scripting.Internal.Generation {
             }
         }
 
+        internal void EmitConstantNoCache(object value) {
+            Debug.Assert(!(value is CompilerConstant));
 
-        public Slot GetOrMakeConstant(object value, Type type) {
-            return _typeGen.GetOrMakeConstant(value, type);
-        }
+            string strVal;
+            BigInteger bi;
+            string[] sa;
 
-        public void EmitConstantBoxed(object value) {
-            EmitRawConstant(value);
-            if (value != null) {
-                Type t = value.GetType();
-                EmitConvertToObject(t);
+            if (value == null) {
+                EmitNull();
+            } else if (value is int) {
+                EmitInt((int)value);
+            } else if (value is double) {
+                EmitDouble((double)value);
+            } else if (value is long) {
+                EmitLong((long)value);
+            } else if (value is Complex64) {
+                EmitComplex((Complex64)value);
+            } else if (!Object.ReferenceEquals((bi = value as BigInteger), null)) {
+                EmitBigInteger(bi);
+            } else if ((strVal = value as string) != null) {
+                EmitString(strVal);
+            } else if (value is bool) {
+                EmitBoolean((bool)value);
+            } else if ((sa = value as string[]) != null) {
+                EmitArray(sa);
+            } else if (value is Missing) {
+                Emit(OpCodes.Ldsfld, typeof(Missing).GetField("Value"));
+            } else if (value.GetType().IsEnum) {
+                EmitEnum(value);
+            } else if (value is uint) {
+                EmitUInt((uint)value);
+            } else if (value is char) {
+                EmitChar((char)value);
+            } else if (value is byte) {
+                EmitByte((byte)value);
+            } else if (value is sbyte) {
+                EmitSByte((sbyte)value);
+            } else if (value is short) {
+                EmitShort((short)value);
+            } else if (value is ushort) {
+                EmitUShort((ushort)value);
+            } else if (value is ulong) {
+                EmitULong((ulong)value);
+            } else if (value is SymbolId) {
+                EmitSymbolId((SymbolId)value);
+            } else if (value is Type) {
+                EmitType((Type)value);
+            } else if (value is RuntimeTypeHandle) {
+                Emit(OpCodes.Ldtoken, Type.GetTypeFromHandle((RuntimeTypeHandle)value));
+            } else {
+                throw new NotImplementedException("generate: " + value + " type: " + value.GetType());
             }
         }
 
-        public void EmitRawConstant(object value) {
-            if (value is CompilerConstant) {
-                ((CompilerConstant)value).EmitCreation(this);
+        private void EmitCompilerConstantCache(CompilerConstant value) {
+            Debug.Assert(value != null);
+            Debug.Assert(_typeGen != null);
+            _typeGen.GetOrMakeCompilerConstant(value).EmitGet(this);
+        }
+
+        private void EmitCompilerConstantNoCache(CompilerConstant value) {
+            Debug.Assert(value != null);
+            if (_constantPool != null) {
+                //TODO cache these so that we use the same slot for the same values
+                _constantPool.AddData(value.Create()).EmitGet(this);
             } else {
-                string strVal;
-                BigInteger bi;
-                string[] sa;
-
-                if (value == null) {
-                    EmitNull();
-                } else if (value is int) {
-                    EmitInt((int)value);
-                } else if (value is double) {
-                    Emit(OpCodes.Ldc_R8, (double)value);
-                } else if (value is long) {
-                    Emit(OpCodes.Ldc_I8, (long)value);
-                } else if (value is Complex64) {
-                    Complex64 c = (Complex64)value;
-                    if (c.Real != 0.0) throw new NotImplementedException();
-                    Emit(OpCodes.Ldc_R8, c.Imag);
-                    EmitCall(typeof(Complex64), "MakeImaginary");
-                } else if (!Object.ReferenceEquals((bi = value as BigInteger), null)) {
-                    int ival;
-                    if (bi.AsInt32(out ival)) {
-                        EmitInt(ival);
-                        EmitCall(typeof(BigInteger), "Create", new Type[] { typeof(int) });
-                        return;
-                    }
-                    long lval;
-                    if (bi.AsInt64(out lval)) {
-                        Emit(OpCodes.Ldc_I8, lval);
-                        EmitCall(typeof(BigInteger), "Create", new Type[] { typeof(long) });
-                        return;
-                    }
-
-                    EmitInt(bi.Sign);
-                    EmitArray(bi.GetBits());
-                    EmitNew(typeof(BigInteger), new Type[] { typeof(short), typeof(uint[]) });
-                    return;
-                } else if ((strVal = value as string) != null) {
-                    EmitString(strVal);
-                } else if (value is bool) {
-                    if ((bool)value) {
-                        Emit(OpCodes.Ldc_I4_1);
-                    } else {
-                        Emit(OpCodes.Ldc_I4_0);
-                    }
-                } else if ((sa = value as string[]) != null) {
-                    EmitArray(sa);
-                } else if (value is Missing) {
-                    // parameter marked as Optional gets single Missing
-                    // instance as parameter.
-                    Emit(OpCodes.Ldsfld, typeof(Missing).GetField("Value"));
-                } else if (value.GetType().IsEnum) {
-                    EmitRawEnum((Enum)value);
-                } else if (value is uint) {
-                    EmitUInt((uint)value);
-                } else if (value is char) {
-                    EmitInt((int)(char)value);
-                    Emit(OpCodes.Conv_U2);
-                } else if (value is byte) {
-                    EmitInt((int)(byte)value);
-                    Emit(OpCodes.Conv_U1);
-                } else if (value is sbyte) {
-                    EmitInt((int)(sbyte)value);
-                    Emit(OpCodes.Conv_I1);
-                } else if (value is short) {
-                    EmitInt((int)(short)value);
-                    Emit(OpCodes.Conv_I2);
-                } else if (value is ushort) {
-                    EmitInt((int)(ushort)value);
-                    Emit(OpCodes.Conv_U2);
-                } else if (value is ulong) {
-                    Emit(OpCodes.Ldc_I8, (long)(ulong)value);
-                    Emit(OpCodes.Conv_U8);
-                } else if (value is SymbolId) {
-                    EmitSymbolId((SymbolId)value);
-                } else if (value is Type) {
-                    EmitType((Type)value);
-                } else if (value is RuntimeTypeHandle) {
-                    Emit(OpCodes.Ldtoken, Type.GetTypeFromHandle((RuntimeTypeHandle)value));
-                } else {
-                    throw new NotImplementedException("generate: " + value + " type: " + value.GetType());
-                }
+                value.EmitCreation(this);
             }
         }
 
@@ -1461,23 +1493,6 @@ namespace Microsoft.Scripting.Internal.Generation {
             if (type == null) throw new ArgumentNullException("type");
 
             Emit(OpCodes.Unbox_Any, type);
-        }
-
-        private void EmitRawEnum(object value) {
-            if (value == null) throw new ArgumentNullException("value");
-
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.Int32: EmitRawConstant((int)value); break;
-                case TypeCode.Int64: EmitRawConstant((long)value); break;
-                case TypeCode.Int16: EmitRawConstant((short)value); break;
-                case TypeCode.UInt32: EmitRawConstant((uint)value); break;
-                case TypeCode.UInt64: EmitRawConstant((ulong)value); break;
-                case TypeCode.SByte: EmitRawConstant((sbyte)value); break;
-                case TypeCode.UInt16: EmitRawConstant((ushort)value); break;
-                case TypeCode.Byte: EmitRawConstant((byte)value); break;
-                default:
-                    throw new NotImplementedException(String.Format(CultureInfo.CurrentCulture, Resources.NotImplemented_EnumEmit, value.GetType(), value));
-            }
         }
 
         public void EmitMissingValue(Type type) {
@@ -1633,12 +1648,7 @@ namespace Microsoft.Scripting.Internal.Generation {
                 res = _typeGen.DefineMethod(name, retType, paramTypes, paramNames, constantPool);
             } else {
                 if (CompilerHelpers.NeedDebuggableDynamicCodeGenerator(_context)) {
-#if SILVERLIGHT
-                    res = CompilerHelpers.CreateDebuggableDynamicCodeGenerator(_context, name, retType, paramTypes, constantPool);
-#else
-                    // TODO: Consolidate the SILVERLIGHT and non-SILVERLIGHT code paths
                     res = CompilerHelpers.CreateDebuggableDynamicCodeGenerator(_context, name, retType, paramTypes, paramNames, constantPool);
-#endif
                 } else {
                     res = CompilerHelpers.CreateDynamicCodeGenerator(name, retType, paramTypes, constantPool);
                 }
@@ -1648,19 +1658,13 @@ namespace Microsoft.Scripting.Internal.Generation {
             return res;
         }
 
-        public TypeGen DefineHelperType(string name, Type parent) {
-            if (!DynamicMethod) {
-                return _typeGen.DefineNestedType(name, parent);
-            } else {
-                return _assemblyGen.DefinePublicType(name, parent);
-            }
-        }
-
         #region ILGenerator methods
 
         public void BeginCatchBlock(Type exceptionType) {
+            WriteIL("}} catch ({0}) {{", exceptionType.FullName);
             _ilg.BeginCatchBlock(exceptionType);
         }
+
         public Label BeginExceptionBlock() {
             WriteIL(" try {");
             return _ilg.BeginExceptionBlock();
@@ -1675,68 +1679,84 @@ namespace Microsoft.Scripting.Internal.Generation {
             WriteIL("} finally {");
             _ilg.BeginFinallyBlock();
         }
+
         public LocalBuilder DeclareLocal(Type localType) {
             LocalBuilder lb = _ilg.DeclareLocal(localType);
             WriteIL(String.Format("Local: {0}, {1}", lb.LocalIndex, localType));
             return lb;
         }
+
         public Label DefineLabel() {
             return _ilg.DefineLabel();
         }
+
         public void Emit(OpCode opcode) {
             WriteIL(opcode);
             _ilg.Emit(opcode);
         }
+
         public void Emit(OpCode opcode, byte arg) {
             WriteIL(opcode, arg);
             _ilg.Emit(opcode, arg);
         }
+
         public void Emit(OpCode opcode, ConstructorInfo con) {
             WriteIL(opcode, con);
             _ilg.Emit(opcode, con);
         }
+
         public void Emit(OpCode opcode, double arg) {
             WriteIL(opcode, arg);
             _ilg.Emit(opcode, arg);
         }
+
         public void Emit(OpCode opcode, FieldInfo field) {
             WriteIL(opcode, field);
             _ilg.Emit(opcode, field);
         }
+        
         public void Emit(OpCode opcode, float arg) {
             WriteIL(opcode, arg);
             _ilg.Emit(opcode, arg);
         }
+        
         public void Emit(OpCode opcode, int arg) {
             WriteIL(opcode, arg);
             _ilg.Emit(opcode, arg);
         }
+        
         public void Emit(OpCode opcode, Label label) {
             WriteIL(opcode, label);
             _ilg.Emit(opcode, label);
         }
+        
         public void Emit(OpCode opcode, Label[] labels) {
             WriteIL(opcode, labels);
             _ilg.Emit(opcode, labels);
         }
+        
         public void Emit(OpCode opcode, LocalBuilder local) {
             WriteIL(opcode, local);
             _ilg.Emit(opcode, local);
         }
+        
         public void Emit(OpCode opcode, long arg) {
             WriteIL(opcode, arg);
             _ilg.Emit(opcode, arg);
         }
+        
         public void Emit(OpCode opcode, MethodInfo meth) {
             WriteIL(opcode, meth);
             _ilg.Emit(opcode, meth);
         }
+        
         [CLSCompliant(false)]
         public void Emit(OpCode opcode, sbyte arg)
         {
             WriteIL(opcode, arg);
             _ilg.Emit(opcode, arg);
         }
+        
         public void Emit(OpCode opcode, short arg) {
             WriteIL(opcode, arg);
             _ilg.Emit(opcode, arg);
@@ -1753,14 +1773,17 @@ namespace Microsoft.Scripting.Internal.Generation {
             WriteIL(opcode, str);
             _ilg.Emit(opcode, str);
         }
+        
         public void Emit(OpCode opcode, Type cls) {
             WriteIL(opcode, cls);
             _ilg.Emit(opcode, cls);
         }
+        
         public void EmitCall(OpCode opcode, MethodInfo methodInfo, Type[] optionalParameterTypes) {
             WriteIL(opcode, methodInfo, optionalParameterTypes);
             _ilg.EmitCall(opcode, methodInfo, optionalParameterTypes);
         }
+        
         public void EndExceptionBlock() {
             if (_targets.Count > 0) {
                 Targets t = _targets.Peek();
@@ -1773,10 +1796,12 @@ namespace Microsoft.Scripting.Internal.Generation {
             WriteIL(" }");
             _ilg.EndExceptionBlock();
         }
+        
         public void MarkLabel(Label loc) {
             WriteIL(loc);
             _ilg.MarkLabel(loc);
         }
+        
         public void MarkSequencePoint(ISymbolDocumentWriter document, int startLine, int startColumn, int endLine, int endColumn) {
             if (_context != null) {
                 startLine = _context.SourceUnit.MapLine(startLine);
@@ -1784,6 +1809,7 @@ namespace Microsoft.Scripting.Internal.Generation {
             }
             _ilg.MarkSequencePoint(document, startLine, startColumn, endLine, endColumn);
         }
+        
         public void EmitWriteLine(string value) {
             _ilg.EmitWriteLine(value);
         }
@@ -1988,6 +2014,7 @@ namespace Microsoft.Scripting.Internal.Generation {
         private static int GetLabelId(Label l) {
             return l.GetHashCode();
         }
+
         #endregion
 
         [Conditional("DEBUG")]
@@ -2149,18 +2176,24 @@ namespace Microsoft.Scripting.Internal.Generation {
             }
         }
 
-        public Slot GetTemporarySlot(string name, Type type) {
+        internal Slot GetTemporarySlot(Type type) {
             Slot temp;
-            
+
             if (IsGenerator) {
                 temp = _allocator.GetGeneratorTemp();
                 if (type != typeof(object)) {
                     temp = new CastSlot(temp, type);
                 }
             } else {
-                temp = GetNamedLocal(type, name);
+                temp = GetLocalTmp(type);
             }
             return temp;
+        }
+
+        internal void FreeTemporarySlot(Slot temp) {
+            if (!IsGenerator) {
+                FreeLocalTmp(temp);
+            }
         }
     }
 }

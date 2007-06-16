@@ -15,10 +15,10 @@
 
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class NullArgBuilder : ArgBuilder {
         public NullArgBuilder() { }
 
@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Internal.Generation {
         }
 
         public override void Generate(CodeGen cg, IList<Slot> argSlots) {
-            cg.EmitRawConstant(null);
+            cg.EmitNull();
         }
 
         public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {

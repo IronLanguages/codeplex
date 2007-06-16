@@ -51,8 +51,13 @@ namespace Microsoft.Scripting {
         /// Deletes the value stored in the slot from the instance.
         /// </summary>
         /// <returns>true if the value was deleted, false if it can't be deleted</returns>
-        public virtual bool TryDeleteValue(CodeContext context, object instance, DynamicMixin owner) {
-            return false;
+        public virtual bool TryDeleteValue(CodeContext context, object instance, DynamicMixin owner) {            
+            object dummy;
+            return DynamicHelpers.GetDynamicType(this).TryInvokeBinaryOperator(context,
+                Operators.DeleteDescriptor,
+                this,
+                instance ?? owner,
+                out dummy);
         }
 
         public virtual bool IsVisible(CodeContext context, DynamicMixin owner) {

@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class ConstantExpression : Expression {
         private readonly object _value;
 
@@ -35,19 +35,14 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         public override Type ExpressionType {
             get {
-                if (_value == null) return typeof(object);
+                if (_value == null) {
+                    return typeof(object);
+                }
+                CompilerConstant cc = _value as CompilerConstant;
+                if (cc != null) {
+                    return cc.Type;
+                }
                 return _value.GetType();
-            }
-        }
-
-        public override void EmitAs(CodeGen cg, Type asType) {
-            if (asType.IsAssignableFrom(ExpressionType)) {
-                cg.EmitRawConstant(_value);
-                cg.EmitCast(ExpressionType, asType);
-            } else if (_value == null && !asType.IsValueType) {
-                cg.EmitNull();
-            } else {
-                base.EmitAs(cg, asType);
             }
         }
 

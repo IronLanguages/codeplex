@@ -16,17 +16,6 @@
 from lib.assert_util import *
 import sys
 
-#TODO: host may provide the options
-#silverlightbug? enablePython25 is set to False now. Missing coverage?
-if is_cli:
-    from System import Environment
-    enablePython25 = "-X:Python25" in Environment.GetCommandLineArgs()
-else:
-    enablePython25 = False
-
-try:
-	c = compile("""
-
 # Simple conditional true case
 Assert(100 if 1 else 200 == 100)
 
@@ -107,15 +96,3 @@ try:
 	list = [f for f in 1, (lambda x: x if x >= 0 else -1)]
 except e:
 	Assert(False, e.msg)
-""","","exec")
-
-	if not enablePython25:
-		Assert(False,"Python 2.5 feature is enabled in lower version of Python")
-
-except SyntaxError,e:
-	if enablePython25:
-		print e.msg
-	else:
-		pass
-except e:
-	print e.msg

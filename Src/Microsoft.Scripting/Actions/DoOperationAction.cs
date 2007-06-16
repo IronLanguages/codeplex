@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -22,7 +22,7 @@ namespace Microsoft.Scripting.Actions {
         private Operators _operation;
 
         public static DoOperationAction Make(string operation) {
-            Operators op = (Operators)typeof(Operators).GetField(operation).GetValue(null);
+            Operators op = (Operators)Enum.Parse(typeof(Operators), operation, false);
             return Make(op);
         }
         

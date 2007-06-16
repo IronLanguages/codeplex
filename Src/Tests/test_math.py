@@ -67,15 +67,15 @@ AssertError(TypeError, (lambda:(5j*[])))
 AreEqual(pow(2, 1000000000, 2147483647 + 10), 511677409)
 AreEqual(pow(2, 2147483647*2147483647, 2147483647*2147483647), 297528129805479806)
 
-for i in range(1, 100, 7):
+for i in range(-100, 100, 7):
     l = long(i)
     Assert(type(i) == int)
     Assert(type(l) == long)
-    for exp in [17, 2863, 234857, 1435435, 234636554, 2147483647]:
+    for exp in [1, 17, 2863, 234857, 1435435, 234636554, 2147483647]:
         lexp = long(exp)
         Assert(type(exp) == int)
         Assert(type(lexp) == long)
-        for mod in [7, 5293, 23745, 232474276, 534634665, 2147483647]:
+        for mod in [-7, -5293, -2147483647, 7, 5293, 23745, 232474276, 534634665, 2147483647]:
             lmod = long(mod)
             Assert(type(mod) == int)
             Assert(type(lmod) == long)
@@ -85,14 +85,26 @@ for i in range(1, 100, 7):
 
             AreEqual(ir, lr)
             
-            ir = pow(i, 0, mod)
-            lr = pow(l, 0L, lmod)
-
-            AreEqual(ir, 1)
-            AreEqual(lr, 1)
-
+            for zero in [0, 0L]:
+                ir = pow(i, zero, mod)
+                lr = pow(l, zero, lmod)
+                
+                if mod > 0:
+                    AreEqual(ir, 1)
+                    AreEqual(lr, 1)
+                else:
+                    AreEqual(ir, mod+1)
+                    AreEqual(lr, mod+1)
         AssertError(ValueError, pow, i, exp, 0)
         AssertError(ValueError, pow, l, lexp, 0L)
+
+    
+    for exp in [0, 0L]:
+        for mod in [-1,1,-1L,1L]:
+            ir = pow(i, exp, mod)
+            lr = pow(l, exp, mod)
+            AreEqual(ir, 0)
+            AreEqual(lr, 0)
 
 class powtest:
     def __pow__(self, exp, mod = None):

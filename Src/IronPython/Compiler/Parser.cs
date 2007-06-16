@@ -28,8 +28,7 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Compiler.Ast;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 
 namespace IronPython.Compiler {
@@ -40,7 +39,7 @@ namespace IronPython.Compiler {
     public class Parser : IDisposable { // TODO: remove IDisposable
         // immutable properties:
         private readonly Tokenizer _tokenizer;
-        
+
         // mutable properties:
         private ErrorSink _errors;
         private ParserSink _sink;
@@ -67,7 +66,7 @@ namespace IronPython.Compiler {
             }
             set {
                 if (value == null) throw new ArgumentNullException("value");
-                _errors = value; 
+                _errors = value;
             }
         }
 
@@ -80,7 +79,7 @@ namespace IronPython.Compiler {
                 _sink = value;
             }
         }
-        
+
         private bool AllowWithStatement {
             get { return (_languageFeatures & PythonLanguageFeatures.AllowWithStatement) == PythonLanguageFeatures.AllowWithStatement; }
         }
@@ -89,17 +88,13 @@ namespace IronPython.Compiler {
             get { return (_languageFeatures & PythonLanguageFeatures.TrueDivision) == PythonLanguageFeatures.TrueDivision; }
         }
 
-        private bool SyntaxV25 {
-            get { return (_languageFeatures & PythonLanguageFeatures.SyntaxV25) == PythonLanguageFeatures.SyntaxV25; }
-        }
-
         #region Construction
 
         public Parser(Tokenizer tokenizer, ErrorSink errorSink, ParserSink parserSink, PythonLanguageFeatures languageFeatures) {
             if (tokenizer == null) throw new ArgumentNullException("tokenizer");
             if (errorSink == null) throw new ArgumentNullException("errorSink");
             if (parserSink == null) throw new ArgumentNullException("parserSink");
-            
+
             _tokenizer = tokenizer;
             _errors = errorSink;
             _sink = parserSink;
@@ -110,7 +105,7 @@ namespace IronPython.Compiler {
         public static Parser CreateParser(CompilerContext context, PythonEngineOptions options) {
             return CreateParser(context, options, false);
         }
-        
+
         public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim) {
             if (context == null) throw new ArgumentNullException("context");
             if (options == null) throw new ArgumentNullException("options");
@@ -171,12 +166,15 @@ namespace IronPython.Compiler {
                 throw new InvalidOperationException("Parsing already started. Use Restart to start again.");
 
             _parsingStarted = true;
-            
+
             FetchLookahead();
         }
 
         private SourceLocation GetEnd() {
             Debug.Assert(_token.Token != null, "No token fetched");
+            if (_token.Token.Kind == TokenKind.EndOfFile) {
+                return SourceSpan.None.End;
+            }
             return _token.Span.End;
         }
 
@@ -186,7 +184,7 @@ namespace IronPython.Compiler {
         }
 
         private SourceSpan GetSpan() {
-            Debug.Assert(_token.Token != null, "No token fetched"); 
+            Debug.Assert(_token.Token != null, "No token fetched");
             return _token.Span;
         }
 
@@ -195,7 +193,7 @@ namespace IronPython.Compiler {
             FetchLookahead();
             return _token.Token;
         }
-        
+
         private Token PeekToken() {
             return _lookahead.Token;
         }
@@ -441,7 +439,7 @@ namespace IronPython.Compiler {
             bool isEmptyStmt = false;
 
             properties = InteractiveCodeProperties.None;
-                        
+
             try {
                 StartParsing();
                 Statement ret = InternalParseInteractiveInput(out parsingMultiLineCmpdStmt, out isEmptyStmt);
@@ -531,7 +529,7 @@ namespace IronPython.Compiler {
 
         public Expression ParseExpression() {
             // TODO: move from source unit  .TrimStart(' ', '\t')
-            
+
             return ParseTestListAsExpression();
         }
 
@@ -574,7 +572,7 @@ namespace IronPython.Compiler {
                 case TokenKind.KeywordFor:
                     return ParseForStmt();
                 case TokenKind.KeywordTry:
-                    return ParseTryStmt();
+                    return ParseTryStatement();
                 case TokenKind.At:
                     return ParseDecoratedFuncDef();
                 case TokenKind.KeywordDef:
@@ -848,9 +846,9 @@ namespace IronPython.Compiler {
                 fromFuture = true;
                 foreach (SymbolId name in names) {
                     if (name == Symbols.Division) {
-                        _languageFeatures |= PythonLanguageFeatures.TrueDivision; 
-                    } else if (SyntaxV25 && name == Symbols.WithStmt) {
-                        _languageFeatures |= PythonLanguageFeatures.AllowWithStatement; 
+                        _languageFeatures |= PythonLanguageFeatures.TrueDivision;
+                    } else if (name == Symbols.WithStmt) {
+                        _languageFeatures |= PythonLanguageFeatures.AllowWithStatement;
                     } else if (name == Symbols.NestedScopes) {
                     } else if (name == Symbols.Generators) {
                     } else {
@@ -1027,9 +1025,6 @@ namespace IronPython.Compiler {
             Expression[] bases = new Expression[0];
             if (MaybeEat(TokenKind.LeftParenthesis)) {
                 List<Expression> l = ParseTestList();
-                if (!SyntaxV25 && l.Count == 0) {
-                    ReportSyntaxError(_lookahead);
-                }
                 bases = l.ToArray();
                 Eat(TokenKind.RightParenthesis);
             }
@@ -1212,7 +1207,7 @@ namespace IronPython.Compiler {
                     Expression ret = ParseSublist(names);
                     Eat(TokenKind.RightParenthesis);
                     TupleExpression tret = ret as TupleExpression;
-                    
+
                     if (tret != null) {
                         parameter = new SublistParameter(position, tret);
                     } else {
@@ -1444,37 +1439,44 @@ namespace IronPython.Compiler {
         //          )
 
 
-        private Statement ParseTryStmt() {
+        private Statement ParseTryStatement() {
             Eat(TokenKind.KeywordTry);
             SourceLocation start = GetStart();
             SourceLocation mid = GetEnd();
             Statement body = ParseSuite();
             Statement finallySuite = null;
-            TryStatementHandler[] handlers = null;
             Statement elseSuite = null;
             Statement ret;
 
             if (MaybeEat(TokenKind.KeywordFinally)) {
                 finallySuite = ParseSuite();
-                TryStatement tfs = new TryStatement(body, handlers, elseSuite, finallySuite);
+                TryStatement tfs = new TryStatement(body, null, elseSuite, finallySuite);
                 tfs.Header = mid;
                 ret = tfs;
             } else {
-                List<TryStatementHandler> l = new List<TryStatementHandler>();
+                List<TryStatementHandler> handlers = new List<TryStatementHandler>();
+                TryStatementHandler dh = null;
                 do {
-                    l.Add(ParseTryStmtHandler());
+                    TryStatementHandler handler = ParseTryStmtHandler();
+                    handlers.Add(handler);
+
+                    if (dh != null) {
+                        ReportSyntaxError(dh.Start, dh.End, "default 'except' must be last");
+                    }
+                    if (handler.Test == null) {
+                        dh = handler;
+                    }
                 } while (PeekToken().Kind == TokenKind.KeywordExcept);
-                handlers = l.ToArray();
 
                 if (MaybeEat(TokenKind.KeywordElse)) {
                     elseSuite = ParseSuite();
                 }
 
-                if (SyntaxV25 && MaybeEat(TokenKind.KeywordFinally)) {
+                if (MaybeEat(TokenKind.KeywordFinally)) {
                     finallySuite = ParseSuite();
                 }
 
-                TryStatement ts = new TryStatement(body, handlers, elseSuite, finallySuite);
+                TryStatement ts = new TryStatement(body, handlers.ToArray(), elseSuite, finallySuite);
                 ts.Header = mid;
                 ret = ts;
             }
@@ -1520,7 +1522,7 @@ namespace IronPython.Compiler {
                 }
                 Statement[] stmts = l.ToArray();
                 SuiteStatement ret = new SuiteStatement(stmts);
-                ret.SetLoc(stmts[0].Start, GetEnd());
+                ret.SetLoc(stmts[0].Start, stmts[stmts.Length - 1].End);
                 return ret;
             } else {
                 //  simple_stmt NEWLINE
@@ -1530,8 +1532,6 @@ namespace IronPython.Compiler {
             }
         }
 
-
-
         // Python 2.5 -> old_test: or_test | old_lambdef
         private Expression ParseOldTest() {
             if (MaybeEat(TokenKind.KeywordLambda)) {
@@ -1540,15 +1540,8 @@ namespace IronPython.Compiler {
             return ParseOrTest();
         }
 
-
-
         // Python2.5 -> test: or_test ['if' or_test 'else' test] | lambdef
         private Expression ParseTest() {
-
-            if (!SyntaxV25) {
-                return ParseOldTest();
-            }
-
             if (MaybeEat(TokenKind.KeywordLambda)) {
                 return FinishLambdef();
             }
@@ -2210,11 +2203,7 @@ namespace IronPython.Compiler {
             Eat(TokenKind.KeywordIn);
 
             Expression test = null;
-            if (SyntaxV25) {
-                test = ParseOrTest();
-            } else {
-                test = ParseTest();
-            }
+            test = ParseOrTest();
 
             ForStatement gef = new ForStatement(lhs, test, null, null);
             SourceLocation end = GetEnd();
@@ -2345,11 +2334,7 @@ namespace IronPython.Compiler {
             Eat(TokenKind.KeywordIn);
 
             Expression list = null;
-            if (SyntaxV25) {
-                list = ParseTestListAsSafeExpr();
-            } else {
-                list = ParseTestListAsExpr(false);
-            }
+            list = ParseTestListAsSafeExpr();
 
             ListComprehensionFor ret = new ListComprehensionFor(lhs, list);
 
@@ -2395,33 +2380,33 @@ namespace IronPython.Compiler {
 
         private static bool NeverTestToken(Token t) {
             switch (t.Kind) {
-                case TokenKind.AddEqual: 
-                case TokenKind.SubtractEqual: 
-                case TokenKind.MultiplyEqual: 
-                case TokenKind.DivideEqual: 
-                case TokenKind.ModEqual: 
-                case TokenKind.BitwiseAndEqual: 
-                case TokenKind.BitwiseOrEqual: 
-                case TokenKind.XorEqual: 
-                case TokenKind.LeftShiftEqual: 
-                case TokenKind.RightShiftEqual: 
-                case TokenKind.PowerEqual: 
-                case TokenKind.FloorDivideEqual: 
+                case TokenKind.AddEqual:
+                case TokenKind.SubtractEqual:
+                case TokenKind.MultiplyEqual:
+                case TokenKind.DivideEqual:
+                case TokenKind.ModEqual:
+                case TokenKind.BitwiseAndEqual:
+                case TokenKind.BitwiseOrEqual:
+                case TokenKind.XorEqual:
+                case TokenKind.LeftShiftEqual:
+                case TokenKind.RightShiftEqual:
+                case TokenKind.PowerEqual:
+                case TokenKind.FloorDivideEqual:
 
-                case TokenKind.Indent: 
-                case TokenKind.Dedent: 
-                case TokenKind.NewLine: 
-                case TokenKind.Semicolon: 
+                case TokenKind.Indent:
+                case TokenKind.Dedent:
+                case TokenKind.NewLine:
+                case TokenKind.Semicolon:
 
-                case TokenKind.Assign: 
-                case TokenKind.RightBrace: 
-                case TokenKind.RightBracket: 
-                case TokenKind.RightParenthesis: 
+                case TokenKind.Assign:
+                case TokenKind.RightBrace:
+                case TokenKind.RightBracket:
+                case TokenKind.RightParenthesis:
 
-                case TokenKind.Comma: 
+                case TokenKind.Comma:
 
-                case TokenKind.KeywordFor: 
-                case TokenKind.KeywordIn: 
+                case TokenKind.KeywordFor:
+                case TokenKind.KeywordIn:
                 case TokenKind.KeywordIf:
                     return true;
 
@@ -2497,7 +2482,7 @@ namespace IronPython.Compiler {
             return function;
         }
 
-#endregion
+        #endregion
 
         #region IDisposable Members
 

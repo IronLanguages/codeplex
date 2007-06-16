@@ -18,8 +18,6 @@ using System.Reflection;
 using System.Diagnostics;
 using Microsoft.Scripting;
 
-using Microsoft.Scripting.Internal.Generation;
-
 namespace Microsoft.Scripting.Generation {
 
     sealed class IndexEnvironmentReference : Storage {

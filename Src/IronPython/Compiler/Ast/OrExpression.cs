@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class OrExpression : Expression {
@@ -37,7 +37,7 @@ namespace IronPython.Compiler.Ast {
             get { return _right; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return new MSAst.OrExpression(
                 ag.Transform(_left),
                 ag.Transform(_right),

@@ -18,9 +18,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 
 namespace Microsoft.Scripting.Generation {

@@ -14,18 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class IndexAssignment : Expression {
         private readonly Expression _target;
         private readonly Expression _index;
         private readonly Expression _value;
         private readonly Operators _op;
-
-        public IndexAssignment(Expression target, Expression index, Expression value, Operators op)
-            : this(target, index, value, op, SourceSpan.None) {
-        }
 
         public IndexAssignment(Expression target, Expression index, Expression value, Operators op, SourceSpan span)
             : base(span) {
@@ -55,23 +51,19 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
-        }
-
-        public override void EmitAs(CodeGen cg, Type asType) {
             Slot targetTmp = null, indexTmp = null;
             if (_op == Operators.None) {
-                _value.Emit(cg);
+                _value.EmitAsObject(cg);
             } else {
                 cg.EmitInPlaceOperator(
                     _op,
                     this.ExpressionType,
                     delegate(CodeGen _cg, Type _asType) {
                         _cg.EmitCodeContext();
-                        _target.Emit(_cg);
-                        targetTmp = _cg.CopyTopOfStack(typeof(object));
-                        _index.Emit(_cg);
-                        indexTmp = _cg.CopyTopOfStack(typeof(object));
+                        _target.EmitAsObject(_cg);
+                        targetTmp = _cg.DupAndStoreInTemp(typeof(object));
+                        _index.EmitAsObject(_cg);
+                        indexTmp = _cg.DupAndStoreInTemp(typeof(object));
                         _cg.EmitCall(typeof(RuntimeHelpers), "GetIndex");
                         _cg.EmitConvertFromObject(_asType);
                     },
@@ -80,20 +72,17 @@ namespace Microsoft.Scripting.Internal.Ast {
                 );
             }
 
-            Slot result = cg.CopyTopOfStack(asType);
             if (targetTmp != null) {
                 targetTmp.EmitGet(cg);
                 cg.FreeLocalTmp(targetTmp);
                 indexTmp.EmitGet(cg);
                 cg.FreeLocalTmp(indexTmp);
             } else {
-                _target.Emit(cg);
-                _index.Emit(cg);
+                _target.EmitAsObject(cg);
+                _index.EmitAsObject(cg);
             }
             cg.EmitCodeContext();
             cg.EmitCall(typeof(RuntimeHelpers), "SetIndex");
-            result.EmitGet(cg);
-            cg.FreeLocalTmp(result);
         }
 
         public override void Walk(Walker walker) {
@@ -106,12 +95,19 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         public static IndexAssignment SimpleAssign(Expression target, Expression index, Expression value) {
-            return new IndexAssignment(target, index, value, Operators.None);
+            return OpAssign(target, index, value, Operators.None, SourceSpan.None);
         }
 
-        public static IndexAssignment SimpleAssign(SourceSpan span, Expression target, Expression index, Expression value) {
-            return new IndexAssignment(target, index, value, Operators.None, SourceSpan.None);
+        public static IndexAssignment SimpleAssign(Expression target, Expression index, Expression value, SourceSpan span) {
+            return OpAssign(target, index, value, Operators.None, span);
         }
 
+        public static IndexAssignment OpAssign(Expression target, Expression index, Expression value, Operators op) {
+            return OpAssign(target, index, value, op, SourceSpan.None);
+        }
+
+        public static IndexAssignment OpAssign(Expression target, Expression index, Expression value, Operators op, SourceSpan span) {
+            return new IndexAssignment(target, index, value, op, span);
+        }
     }
 }

@@ -18,10 +18,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using System.Diagnostics;
-using Microsoft.Scripting.Shell;
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
+using Microsoft.Scripting.Shell;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -43,7 +41,7 @@ namespace Microsoft.Scripting.Hosting {
         // TODO:
         OptionsParser GetOptionsParser(); // TODO
         CommandLine GetCommandLine(); // TODO
-        IConsole GetConsole(IScriptEngine engine, ConsoleOptions options); // TODO
+        IConsole GetConsole(CommandLine commandLine, IScriptEngine engine, ConsoleOptions options); // TODO
        
         // generic interface:
         ServiceType GetService<ServiceType>(params object[] args) where ServiceType : class;
@@ -128,12 +126,12 @@ namespace Microsoft.Scripting.Hosting {
 
         // TODO:
 
-        public virtual IConsole GetConsole(IScriptEngine engine, ConsoleOptions options) {
+        public virtual IConsole GetConsole(CommandLine commandLine, IScriptEngine engine, ConsoleOptions options) {
             if (engine == null) throw new ArgumentNullException("engine");
             if (options == null) throw new ArgumentNullException("options");
 
             if (options.TabCompletion) {
-                return CreateSuperConsole(engine, options.ColorfulConsole);
+                return CreateSuperConsole(commandLine, engine, options.ColorfulConsole);
             } else {
                 return new BasicConsole(engine, options.ColorfulConsole);
             }
@@ -142,9 +140,9 @@ namespace Microsoft.Scripting.Hosting {
         // The advanced console functions are in a special non-inlined function so that 
         // dependencies are pulled in only if necessary.
         [MethodImplAttribute(MethodImplOptions.NoInlining)]
-        private static IConsole CreateSuperConsole(IScriptEngine engine, bool isColorful) {
+        private static IConsole CreateSuperConsole(CommandLine commandLine, IScriptEngine engine, bool isColorful) {
             Debug.Assert(engine != null);
-            return new SuperConsole(engine, isColorful);
+            return new SuperConsole(commandLine, engine, isColorful);
         }
 
         // generic interface:
@@ -162,7 +160,7 @@ namespace Microsoft.Scripting.Hosting {
             }
             
             if (service_type == typeof(IConsole)) {
-                return (ServiceType)GetConsole(GetArg<ScriptEngine>(args, 0, false), GetArg<ConsoleOptions>(args, 1, false));
+                return (ServiceType)GetConsole(GetArg<CommandLine>(args, 0, false), GetArg<ScriptEngine>(args, 1, false), GetArg<ConsoleOptions>(args, 2, false));
             }
 
             if (service_type == typeof(CommandLine)) {

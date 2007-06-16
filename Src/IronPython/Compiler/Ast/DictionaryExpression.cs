@@ -13,8 +13,9 @@
  *
  * ***************************************************************************/
 
+using System;
 using IronPython.Runtime;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 using Operators = Microsoft.Scripting.Operators;
 
 namespace IronPython.Compiler.Ast {
@@ -29,7 +30,7 @@ namespace IronPython.Compiler.Ast {
             get { return _items; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             // 1. Create temp for the result
             MSAst.BoundExpression dictionary = null;
             dictionary = ag.MakeTempExpression("dictionary", typeof(PythonDictionary), Span);
@@ -42,7 +43,7 @@ namespace IronPython.Compiler.Ast {
 
             // 3. Create the dictionary by calling MakeDict(_items.Length)
             parts[0] = new MSAst.BoundAssignment(
-                dictionary.Reference,
+                dictionary.Variable,
                 new MSAst.MethodCallExpression(
                     AstGenerator.GetHelperMethod("MakeDict"),
                     null,
@@ -67,8 +68,8 @@ namespace IronPython.Compiler.Ast {
                     setter,
                     dictionary,
                     new MSAst.Expression[] {
-                        ag.TransformOrConstantNull(slice.SliceStart),
-                        ag.TransformOrConstantNull(slice.SliceStop)
+                        ag.TransformOrConstantNull(slice.SliceStart, typeof(object)),
+                        ag.TransformOrConstantNull(slice.SliceStop, typeof(object))
                     },
                     Span);
             }

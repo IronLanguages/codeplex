@@ -58,6 +58,22 @@ namespace Microsoft.Scripting.Actions {
             return genType.MakeGenericType(types);
         }
 
+        public static object Execute(CodeContext context, ActionBinder binder, Action action, params object[] args) {
+            // TODO: this leaks the $arg names into the current scope.
+            for (int i = 0; i < args.Length; i++) {
+                context.Scope.SetName(SymbolTable.StringToId("$arg" + i.ToString()), args[i]);
+            }
+            switch (args.Length) {
+                case 1: return binder.GetRule<DynamicSiteTarget<object, object>>(action, args).Target.Execute(context);
+                case 2: return binder.GetRule<DynamicSiteTarget<object, object, object>>(action, args).Target.Execute(context);
+                case 3: return binder.GetRule<DynamicSiteTarget<object, object, object, object>>(action, args).Target.Execute(context);
+                case 4: return binder.GetRule<DynamicSiteTarget<object, object, object, object, object>>(action, args).Target.Execute(context);
+                case 5: return binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object>>(action, args).Target.Execute(context);
+                case 6: return binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object, object>>(action, args).Target.Execute(context);
+            }
+            throw new ArgumentException("requires 1-6 arguments");
+        }
+
         private class UninitializedTargetHelper<T0, T1, T2, T3, T4, T5, Tret> {
             public Tret Invoke1(DynamicSite<T0, Tret> site, CodeContext context, T0 arg0) {
                 return site.UpdateBindingAndInvoke(context, arg0);

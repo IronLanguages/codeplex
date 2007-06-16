@@ -77,14 +77,17 @@ def gen_scripting_walker(cw):
     nodes = get_ast(
         clr.LoadAssemblyByPartialName("Microsoft.Scripting"),
         [
-            "Microsoft.Scripting.Internal.Ast.Expression",
-            "Microsoft.Scripting.Internal.Ast.Statement",
-            "Microsoft.Scripting.Internal.Ast.Node"
+            "Microsoft.Scripting.Ast.Expression",
+            "Microsoft.Scripting.Ast.Statement",
+            "Microsoft.Scripting.Ast.Node"
         ]
     )
     gen_walker(cw, nodes, "Walker", None, "Scripting", "true")
-    gen_newline(cw)
-    gen_walker(cw, nodes, "WalkerNonRecursive", "Walker", "Scripting", "false")
+    
+    # Do not create the non-recursive walker, currently it is not used.
+    # if it is needed in the future, simply uncomment the following code
+    #gen_newline(cw)
+    #gen_walker(cw, nodes, "WalkerNonRecursive", "Walker", "Scripting", "false")
 
 
 def gen_python_walker(cw):

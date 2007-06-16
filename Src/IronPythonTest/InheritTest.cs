@@ -153,6 +153,57 @@ namespace IronPythonTest {
         }
     }
 
+    public class NewClass : BaseClass {
+        public new MySize size;
+
+        public NewClass()
+            : base(-1, -1) {
+        }
+
+        public NewClass(int width, int height) : base(-1, -1) {
+            size.height = height;
+            size.width = width;
+        }
+
+        public new void GetWidthAndHeight(out int height, out int width) {
+            height = size.height * 2 + 1;
+            width = size.width * 2 + 1;
+        }
+
+        public new int Area {
+            get {
+                return (size.width * size.height) * 2;
+            }
+        }
+
+        public new virtual MySize Size {
+            get {
+                return new MySize(size.width+1, size.height+1);
+            }
+            set {
+                size = value;
+            }
+        }
+
+        public new virtual int Height {
+            get {
+                return size.height*2 + 1;
+            }
+            set {
+                size.height = value/2 + 1;
+            }
+        }
+
+        public new virtual int Width {
+            get {
+                return size.width*2 + 1;
+            }
+            set {
+                size.width = value/2 + 1;
+            }
+        }
+    }
+
     public class UnaryClass {
         public int value;
 

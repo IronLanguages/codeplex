@@ -66,6 +66,9 @@ if is_cli or is_silverlight:
     AreEqual(x, y)
 
 # Disallow assignment to empty list
+#When #10643 gets fixed, it will be necessary to remove the AssertError calls
+#below and replace them with the actual assignments which are allowed in 2.5.
+@skip("win32", "CodePlex Work Item 10643")
 def test_assign_to_empty():
     y = []
     AssertError(SyntaxError, compile, "[] = y", "Error", "exec")

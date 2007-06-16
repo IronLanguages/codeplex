@@ -17,10 +17,8 @@ using System;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
-
-using MSAst = Microsoft.Scripting.Internal.Ast;
 using Microsoft.Scripting.Actions;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class AssertStatement : Statement {
@@ -60,7 +58,7 @@ namespace IronPython.Compiler.Ast {
                                 null,
                                 new MSAst.Expression[] {
                                     _message != null ?
-                                        _message.Transform(ag) :
+                                        ag.TransformAsObject(_message) :
                                         new MSAst.ConstantExpression(null)
                                 },
                                 Span
@@ -72,16 +70,15 @@ namespace IronPython.Compiler.Ast {
                 },
                 null,
                 Span
-                );
+            );
         }
 
         private MSAst.Expression MakeNotTest(AstGenerator ag) {
-            return new MSAst.ActionExpression(
-                DoOperationAction.Make(Operators.Not),
-                new MSAst.Expression[] {
-                    ag.Transform(_test),
-                },
-                _test.Span
+            return MSAst.ActionExpression.Operator(
+                _test.Span,
+                Operators.Not,
+                typeof(bool),
+                ag.Transform(_test)
             );
         }
 

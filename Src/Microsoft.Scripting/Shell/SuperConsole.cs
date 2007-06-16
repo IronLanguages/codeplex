@@ -211,8 +211,14 @@ namespace Microsoft.Scripting.Shell {
         /// </summary>
         private IScriptEngine _engine;
 
-        public SuperConsole(IScriptEngine engine, bool colorful)
+        /// <summary>
+        /// The command line that this console is attached to.
+        /// </summary>
+        private CommandLine _commandLine;
+
+        public SuperConsole(CommandLine commandLine, IScriptEngine engine, bool colorful)
             : base(engine, colorful) {
+            this._commandLine = commandLine;
             this._engine = engine;
         }
 
@@ -247,7 +253,7 @@ namespace Microsoft.Scripting.Shell {
                 }
 
                 try {
-                    object value = _engine.Evaluate(String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}", attr));
+                    object value = _engine.Evaluate(String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}", attr), _commandLine.Module);
                     IEnumerable<string> result = _engine.GetObjectMemberNames(value);
                     _options.Root = root;
                     foreach (string option in result) {
@@ -605,7 +611,7 @@ namespace Microsoft.Scripting.Shell {
     }
 #else
     public sealed class SuperConsole : BasicConsole {
-        public SuperConsole(IScriptEngine engine, bool isColorful)
+        public SuperConsole(CommandLine commandLine, IScriptEngine engine, bool isColorful)
             : base(engine, isColorful) {
         }
     }

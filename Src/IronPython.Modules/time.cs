@@ -65,7 +65,7 @@ namespace IronPython.Modules {
             } else if (time == null) {
                 dt = DateTime.Now;
             } else {
-                throw Ops.TypeError("expected struct_time or None");
+                throw PythonOps.TypeError("expected struct_time or None");
             }
 
             return dt.ToString("ddd MMM dd HH:mm:ss yyyy", null);
@@ -170,7 +170,7 @@ namespace IronPython.Modules {
                     res = new DateTime(1900, 1, 1);
                     res = res.AddDays(Int32.Parse(@string) * 7);
                 } else {
-                    throw Ops.ValueError("cannot parse %j, %W, or %U w/ other values");
+                    throw PythonOps.ValueError("cannot parse %j, %W, or %U w/ other values");
                 }
             } else {
                 string[] formats = new string[formatInfo.Count];
@@ -200,7 +200,7 @@ namespace IronPython.Modules {
                         res = DateTime.Parse(@string, PythonLocale.currentLocale.Time.DateTimeFormat);
                     }
                 } catch (FormatException e) {
-                    throw Ops.ValueError(e.Message + Environment.NewLine + "data=" + @string + ", fmt=" + format + ", to: " + String.Join("", formats));
+                    throw PythonOps.ValueError(e.Message + Environment.NewLine + "data=" + @string + ", fmt=" + format + ", to: " + String.Join("", formats));
                 }
             }
 
@@ -224,25 +224,18 @@ namespace IronPython.Modules {
             }
 
             if (postProc) {
-                res = res.Replace("%j", dt.DayOfYear.ToString());  // day of the year (1 - 366)
+                res = res.Replace("%j", dt.DayOfYear.ToString("D03"));  // day of the year (001 - 366)
 
-                int dayOffset = 0;
                 // figure out first day of the year...
                 DateTime first = new DateTime(dt.Year, 1, 1);
-                switch (first.DayOfWeek) {
-                    case DayOfWeek.Sunday: dayOffset = 0; break;
-                    case DayOfWeek.Monday: dayOffset = 1; break;
-                    case DayOfWeek.Tuesday: dayOffset = 2; break;
-                    case DayOfWeek.Wednesday: dayOffset = 3; break;
-                    case DayOfWeek.Thursday: dayOffset = 4; break;
-                    case DayOfWeek.Friday: dayOffset = 5; break;
-                    case DayOfWeek.Saturday: dayOffset = 6; break;
-                }
+                int weekOneSunday = (7 - (int)first.DayOfWeek) % 7;
+                int dayOffset = (8 - (int)first.DayOfWeek) % 7;
 
                 // week of year  (sunday first day, 0-53), all days before Sunday are 0
-                res = res.Replace("%U", (1 + ((dt.DayOfYear - dayOffset) / 7)).ToString());
+                res = res.Replace("%U", (((dt.DayOfYear + 6 - weekOneSunday) / 7)).ToString());
                 // week number of year (monday first day, 0-53), all days before Monday are 0
-                res = res.Replace("%W", (1 + ((dt.DayOfYear - (dayOffset + 1)) / 7)).ToString());
+                res = res.Replace("%W", (((dt.DayOfYear + 6 - dayOffset) / 7)).ToString());                
+                res = res.Replace("%w", ((int)dt.DayOfWeek).ToString());
             }
             return res.ToString();
         }
@@ -255,11 +248,11 @@ namespace IronPython.Modules {
 
             double dblVal;
             if (Converter.TryConvertToDouble(seconds, out dblVal)) {
-                if (dblVal > Int64.MaxValue || dblVal < Int64.MinValue) throw Ops.ValueError("unreasonable date/time");
+                if (dblVal > Int64.MaxValue || dblVal < Int64.MinValue) throw PythonOps.ValueError("unreasonable date/time");
                 return (long)dblVal;
             }
 
-            throw Ops.TypeError("expected int, got {0}", Ops.GetDynamicType(seconds));
+            throw PythonOps.TypeError("expected int, got {0}", DynamicHelpers.GetDynamicType(seconds));
         }
 
         enum FormatInfoType {
@@ -310,7 +303,7 @@ namespace IronPython.Modules {
 
             for (int i = 0; i < format.Length; i++) {
                 if (format[i] == '%') {
-                    if (i + 1 == format.Length) throw Ops.ValueError("badly formatted string");
+                    if (i + 1 == format.Length) throw PythonOps.ValueError("badly formatted string");
 
                     switch (format[++i]) {
                         case 'a': newFormat.Add(new FormatInfo("ddd")); break;
@@ -337,7 +330,6 @@ namespace IronPython.Modules {
                             newFormat.Add(new FormatInfo(FormatInfoType.UserText, "M"));
                             break;
                         case 'S': newFormat.Add(new FormatInfo("ss")); break;
-                        case 'w': newFormat.Add(new FormatInfo("ddd")); break;       // weekday name
                         case 'x':
                             AddDate(newFormat); break;
                         case 'X':
@@ -352,6 +344,7 @@ namespace IronPython.Modules {
                         case 'j': newFormat.Add(new FormatInfo("\\%j")); postProcess = true; break; // day of year
                         case 'W': newFormat.Add(new FormatInfo("\\%W")); postProcess = true; break;
                         case 'U': newFormat.Add(new FormatInfo("\\%U")); postProcess = true; break; // week number
+                        case 'w': newFormat.Add(new FormatInfo("\\%w")); postProcess = true; break; // weekday number
                         case 'z':
                         case 'Z':
                             // !!!TODO: 
@@ -421,16 +414,16 @@ namespace IronPython.Modules {
         }
 
         private static int[] ValidateDateTimeTuple(Tuple t) {
-            if (t.Count != MaxIndex) throw Ops.TypeError("expected tuple of length {0}", MaxIndex);
+            if (t.Count != MaxIndex) throw PythonOps.TypeError("expected tuple of length {0}", MaxIndex);
 
             int[] ints = new int[MaxIndex];
             for (int i = 0; i < MaxIndex; i++) {
                 ints[i] = Converter.ConvertToInt32(t[i]);
             }
 
-            if (ints[YearIndex] < DateTime.MinValue.Year || ints[YearIndex] <= minYear) throw Ops.ValueError("year is too low");
-            if (ints[YearIndex] > DateTime.MaxValue.Year) throw Ops.ValueError("year is too high");
-            if (ints[WeekdayIndex] < 0 || ints[WeekdayIndex] >= 7) throw Ops.ValueError("day of week is outside of 0-6 range");
+            if (ints[YearIndex] < DateTime.MinValue.Year || ints[YearIndex] <= minYear) throw PythonOps.ValueError("year is too low");
+            if (ints[YearIndex] > DateTime.MaxValue.Year) throw PythonOps.ValueError("year is too high");
+            if (ints[WeekdayIndex] < 0 || ints[WeekdayIndex] >= 7) throw PythonOps.ValueError("day of week is outside of 0-6 range");
             return ints;
         }
 
@@ -452,7 +445,7 @@ namespace IronPython.Modules {
 
         [PythonType("struct_time")]
         public class StructTime : Tuple {
-            private static DynamicType _StructTimeType = Ops.GetDynamicTypeFromType(typeof(StructTime));
+            private static DynamicType _StructTimeType = DynamicHelpers.GetDynamicTypeFromType(typeof(StructTime));
 
             public object Year {
                 [PythonName("tm_year")]
@@ -502,7 +495,7 @@ namespace IronPython.Modules {
                 } else {
                     StructTime st = cls.CreateInstance(context, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst) as StructTime;
                     if (st == null)
-                        throw Ops.TypeError("{0} is not a subclass of time.struct_time", cls);
+                        throw PythonOps.TypeError("{0} is not a subclass of time.struct_time", cls);
                     return st;
                 }
             }

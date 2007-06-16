@@ -15,9 +15,9 @@
 
 using System;
 
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Actions;
+using MSAst = Microsoft.Scripting.Ast;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -63,15 +63,15 @@ namespace IronPython.Compiler.Ast {
             return false;
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             MSAst.Arg[] args = ag.Transform(_args);
             bool callOk = true;
             if (_callAction && args.Length < 6) {
                 MSAst.Expression[] argVals = new MSAst.Expression[args.Length + 1];
                 int i = 1;
-                argVals[0] = _target.Transform(ag);
+                argVals[0] = ag.Transform(_target);
                 foreach (MSAst.Arg arg in args) {
-                    if (arg.Kind == Microsoft.Scripting.Internal.Ast.Arg.ArgumentKind.Named) {
+                    if (arg.Kind == MSAst.Arg.ArgumentKind.Named) {
                         callOk = false;
                         break;
                     }
@@ -80,12 +80,14 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 if (callOk) {
-                    return new MSAst.ActionExpression(
+                    return MSAst.ActionExpression.Call(
+                        Span,
                         CallAction.Make(args),
-                        argVals,
-                        Span);
+                        type,
+                        argVals
+                    );
                 }
-            } 
+            }
 
             return new MSAst.CallExpression(
                 ag.Transform(_target),

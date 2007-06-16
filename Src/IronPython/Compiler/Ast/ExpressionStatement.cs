@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class ExpressionStatement : Statement {
@@ -36,7 +36,7 @@ namespace IronPython.Compiler.Ast {
                     null,
                     AstGenerator.GetHelperMethod("PrintExpressionValue"),
                     new MSAst.CodeContextExpression(),
-                    expression
+                    AstGenerator.ConvertIfNeeded(expression, typeof(object))
                 );
             }
 

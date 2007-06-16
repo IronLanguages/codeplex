@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class BackQuoteExpression : Expression {
@@ -28,14 +28,13 @@ namespace IronPython.Compiler.Ast {
             get { return _expression; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
-            return new MSAst.MethodCallExpression(
-                AstGenerator.GetHelperMethod("Repr"),   // method
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
+            return MSAst.MethodCallExpression.Call(
+                Span,                                   // span
                 null,                                   // instance
-                new MSAst.Expression[] {                // args
-                    ag.Transform(_expression)
-                },
-                Span);                                  // span
+                AstGenerator.GetHelperMethod("Repr"),   // method
+                ag.TransformAsObject(_expression)       // args
+            );                                  
         }
 
         public override void Walk(PythonWalker walker) {

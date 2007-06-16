@@ -55,6 +55,7 @@ public class DynamicSite<%(ts)s> : DynamicSite {
                 _rules = newRules;
                 _target = newTarget;
             }
+            if (newRules != EmptyRuleSet<DynamicSiteTarget<%(ts)s>>.FixedInstance) return newTarget(this, context, %(targs)s);
         }
 
         return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, %(targs)s);
@@ -94,6 +95,7 @@ public class FastDynamicSite<%(ts)s> : FastDynamicSite {
                 _rules = newRules;
                 _target = newTarget;
             }
+            return newTarget(this, %(targs)s);
         }
 
         return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, %(targs)s);
@@ -172,10 +174,27 @@ def gen_uninitialized_helper(cw, mod):
     commas = ','*(MaxTypes-1)
     cw.write(uninitialized_helper, mod=mod, maxtypes=MaxTypes, commas=commas)
 
+def gen_execute(cw):
+    cw.enter_block("public static object Execute(CodeContext context, ActionBinder binder, Action action, params object[] args)")
+    cw.write('// TODO: this leaks the $arg names into the current scope.')
+    cw.enter_block('for (int i = 0; i < args.Length; i++)')
+    cw.write('context.Scope.SetName(SymbolTable.StringToId("$arg" + i.ToString()), args[i]);')
+    cw.exit_block()
+    cw.enter_block("switch (args.Length)")
+    for i in range(MaxSiteArity):
+        typeargs = ", ".join(['object'] * (i+2))
+        cw.write("case %d: return binder.GetRule<DynamicSiteTarget<%s>>(action, args).Target.Execute(context);" % ((i+1), typeargs))
+    cw.exit_block()
+    cw.write('throw new ArgumentException("requires 1-6 arguments");')
+    cw.exit_block()
+    cw.write('')
+
 
 def gen_helpers(cw):
     gen_maker(cw, "")
     gen_maker(cw, "Fast")
+    
+    gen_execute(cw)
     
     gen_uninitialized_type(cw)
     

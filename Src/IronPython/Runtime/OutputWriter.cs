@@ -20,6 +20,7 @@ using System.Text;
 using IronPython.Runtime.Operations;
 
 using Microsoft.Scripting;
+using IronPython.Hosting;
 
 namespace IronPython.Runtime {
     sealed class OutputWriter : TextWriter {
@@ -47,7 +48,7 @@ namespace IronPython.Runtime {
             try {
                 PythonOps.PrintWithDestNoNewline(Sink, value);
             } catch (Exception e) {
-                PythonOps.Print(SystemState.Instance.Engine.FormatException(e));
+                PythonOps.Print(PythonEngine.CurrentEngine.FormatException(e));
             }
         }
 
@@ -60,7 +61,7 @@ namespace IronPython.Runtime {
         }
 
         public override void Flush() {
-            Ops.Invoke(Sink, SymbolTable.StringToId("flush"));
+            PythonOps.Invoke(Sink, SymbolTable.StringToId("flush"));
         }
     }
 }

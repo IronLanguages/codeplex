@@ -14,11 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
 
-namespace Microsoft.Scripting.Internal {
+namespace Microsoft.Scripting {
     /// <summary>
     /// Represents an ops-extension method which is added as an operator.
     /// 

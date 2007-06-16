@@ -13,7 +13,6 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Internal;
 using System;
 using Microsoft.Scripting;
 using System.Collections.Generic;
@@ -22,14 +21,23 @@ using Microsoft.Scripting.Hosting;
 namespace IronPython {
 
     [CLSCompliant(true)]
+    public enum PythonDivisionOptions {
+        Old,
+        New,
+        Warn,
+        WarnAll
+    }
+
+    [CLSCompliant(true)]
     [Serializable]
-    public /* TODO: sealed*/ class PythonEngineOptions : EngineOptions {
+    public sealed class PythonEngineOptions : EngineOptions {
 
         private string[] _arguments = Utils.Array.EmptyStrings;
         private bool _skipFistSourceLine;
         private List<string> _warningFilters;
         private int _maximumRecursion = Int32.MaxValue;
         private Severity _indentationInconsistencySeverity;
+        private PythonDivisionOptions _division;
         
         /// <summary>
         /// Skip the first line of the code to execute. This is useful for executing Unix scripts which
@@ -66,6 +74,14 @@ namespace IronPython {
         public Severity IndentationInconsistencySeverity {
             get { return _indentationInconsistencySeverity; }
             set { _indentationInconsistencySeverity = value; }
+        }
+
+        /// <summary>
+        /// The division options (old, new, warn, warnall)
+        /// </summary>
+        public PythonDivisionOptions DivisionOptions {
+            get { return _division; }
+            set { _division = value; }
         }
 
         public new PythonEngineOptions Clone() {

@@ -22,10 +22,9 @@ using System.Collections.Generic;
 using System.Globalization;
 
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class ScopeStatement : Statement {
         private Expression _scope;
         private Statement _body;
@@ -42,7 +41,8 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        public ScopeStatement(Expression scope, Statement body) {
+        public ScopeStatement(Expression scope, Statement body)
+            : base(SourceSpan.None) {
             _scope = scope;
             _body = body;
         }

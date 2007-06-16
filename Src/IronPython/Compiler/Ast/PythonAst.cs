@@ -17,18 +17,17 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+using IronPython.Runtime;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal.Generation;
-using MSAst = Microsoft.Scripting.Internal.Ast;
-using VariableKind = Microsoft.Scripting.Internal.Ast.Variable.VariableKind;
+using Microsoft.Scripting.Generation;
+using MSAst = Microsoft.Scripting.Ast;
+using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
 
 namespace IronPython.Compiler.Ast {
     public class PythonAst : ScopeStatement {
         private Statement _body;
         private bool _module;
-
-        private PythonReference _doc;
-        private PythonReference _name;
+        private PythonVariable _docVariable;
 
         /// <summary>
         /// The globals that free variables in the functions bind to,
@@ -57,14 +56,9 @@ namespace IronPython.Compiler.Ast {
             get { return _module; }
         }
 
-        public PythonReference DocReference {
-            get { return _doc; }
-            set { _doc = value; }
-        }
-
-        public PythonReference NameReference {
-            get { return _name; }
-            set { _name = value; }
+        internal PythonVariable DocVariable {
+            get { return _docVariable; }
+            set { _docVariable = value; }
         }
 
         protected override MSAst.CodeBlock Block {
@@ -82,46 +76,57 @@ namespace IronPython.Compiler.Ast {
             if (variables != null) {
                 foreach (KeyValuePair<SymbolId, PythonVariable> kv in variables) {
                     if (kv.Value.Scope == this) {
-                        block.AddVariable(kv.Value.Transform(block));
+                        kv.Value.Transform(block);
                     }
                 }
             }
         }
 
-        // TODO: Rename !!! (BindNonGlobalFreeVariable) or something
-        internal PythonVariable EnsureGlobalVariable(SymbolId name) {
+        internal PythonVariable EnsureGlobalVariable(SymbolId name, bool transform) {
             PythonVariable variable;
-            if (TryGetDefinition(name, out variable)) {
+            if (TryGetVariable(name, out variable)) {
                 // use the current one if it is global only
                 if (variable.Kind == VariableKind.Global) {
                     return variable;
                 }
             }
 
-            // TODO: Following code is almost the same as DefineModuleLocal, unify
-            if (_moduleGlobals == null) {
-                _moduleGlobals = new Dictionary<SymbolId, PythonVariable>();
-            }
-            if (!_moduleGlobals.TryGetValue(name, out variable)) {
-                variable = new PythonVariable(name, this);
-                variable.Kind = VariableKind.Global;
-                _moduleGlobals[name] = variable;
-            }
-            Debug.Assert(variable.Kind == VariableKind.Global);
-            return variable;
+            return CreateModuleVariable(ref _moduleGlobals, name, VariableKind.Global, transform);
         }
 
-        internal PythonVariable DefineModuleLocal(SymbolId name) {
-            if (_moduleLocals == null) {
-                _moduleLocals = new Dictionary<SymbolId, PythonVariable>();
-            }
+        internal override PythonVariable BindName(SymbolId name) {
             PythonVariable variable;
-            if (!_moduleLocals.TryGetValue(name, out variable)) {
-                variable = new PythonVariable(name, this);
-                variable.Kind = VariableKind.Local;
-                _moduleLocals[name] = variable;
+
+            // First try variables local to this scope
+            if (TryGetVariable(name, out variable)) {
+                return variable;
             }
-            Debug.Assert(variable.Kind == VariableKind.Local);
+
+            // Create module level local for the unbound name
+            return CreateModuleVariable(ref _moduleLocals, name, VariableKind.Local, false);
+        }
+
+        /// <summary>
+        /// This method is called in name binding phase, in which case the variables don't need to be
+        /// immediately transformed, and during the transformation phase, in which case the variables
+        /// owned by the given scope have already been transformed so any additional variable needs
+        /// to be transformed explicitly here.
+        /// </summary>
+        private PythonVariable CreateModuleVariable(ref Dictionary<SymbolId, PythonVariable> dict, SymbolId name, VariableKind kind, bool transform) {
+            PythonVariable variable;
+            if (dict == null) {
+                dict = new Dictionary<SymbolId, PythonVariable>();
+            }
+            if (!dict.TryGetValue(name, out variable)) {
+                variable = new PythonVariable(name, kind, this);
+                if (transform) {
+                    // If called during the transformation phase, we have the _block
+                    Debug.Assert(_block != null);
+                    variable.Transform(_block);
+                }
+                dict[name] = variable;
+            }
+            Debug.Assert(variable.Kind == kind);
             return variable;
         }
 
@@ -130,48 +135,40 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.CodeBlock TransformToAst(AstGenerator ag, CompilerContext context) {
-            if (_block == null) {
-                string name;
-                if (_name == null) {
-                    name = context.SourceUnit.Name ?? "<undefined>";
-                } else {
-                    name = SymbolTable.IdToString(_name.Name);
-                }
+            string name = context.SourceUnit.Name ?? "<undefined>";
+            MSAst.CodeBlock ast = MSAst.CodeBlock.MakeCodeBlock(name, _body.Span);
+            ast.IsGlobal = true;
 
-                MSAst.CodeBlock ast = MSAst.CodeBlock.MakeCodeBlock(name, null, _body.Span);
-                ast.IsGlobal = true;
+            _block = ast;
 
-                _block = ast;
+            // Create the variables
+            CreateVariables(ast);
 
-                // Publish the variables and references
-                CreateVariables(ast);
+            // Use the PrintExpression value for the body (global level code)
+            AstGenerator body = new AstGenerator(ast, ag.Context, ag.PrintExpressions);
 
-                // Use the PrintExpression value for the body (global level code)
-                AstGenerator body = new AstGenerator(ast, ag, ag.PrintExpressions);
+            MSAst.Statement bodyStmt = body.Transform(_body);
+            MSAst.Statement docStmt;
 
-                MSAst.Statement bodyStmt = body.Transform(_body);
-
-                MSAst.Statement docStmt;
-                if (_module && _body.Documentation != null) {
-                    docStmt = new MSAst.ExpressionStatement(
-                        new MSAst.BoundAssignment(
-                            _doc.Reference,
-                            new MSAst.ConstantExpression(_body.Documentation),
-                            Operators.None
-                        )
-                    );
-                } else {
-                    docStmt = new MSAst.EmptyStatement();
-                }
-
-                ast.Body = new MSAst.BlockStatement(
-                    new MSAst.Statement[] {
-                        docStmt,
-                        bodyStmt,
-                    }
+            if (_module && _body.Documentation != null) {
+                docStmt = new MSAst.ExpressionStatement(
+                    new MSAst.BoundAssignment(
+                        _docVariable.Variable,
+                        new MSAst.ConstantExpression(_body.Documentation),
+                        Operators.None
+                    )
                 );
+            } else {
+                docStmt = new MSAst.EmptyStatement();
             }
-            return _block;
+
+            ast.Body = new MSAst.BlockStatement(
+                new MSAst.Statement[] {
+                    docStmt,
+                    bodyStmt,
+                }
+            );
+            return ast;
         }
 
         public override void Walk(PythonWalker walker) {

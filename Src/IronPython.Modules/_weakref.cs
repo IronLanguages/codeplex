@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+
 using Microsoft.Scripting;
 
 using IronPython.Runtime;
@@ -25,21 +26,20 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Internal;
 
 [assembly: PythonModule("_weakref", typeof(IronPython.Modules.PythonWeakRef))]
 namespace IronPython.Modules {
     [PythonType("weakref")]
     public static class PythonWeakRef {
         static PythonWeakRef() {
-            Ops.SaveDynamicType(typeof(PythonWeakRefProxy),
+            DynamicType.SetDynamicType(typeof(PythonWeakRefProxy),
                 ProxyDynamicTypeBuilder.Build(typeof(PythonWeakRefProxy)));
 
-            Ops.SaveDynamicType(typeof(PythonCallableWeakRefProxy),
+            DynamicType.SetDynamicType(typeof(PythonCallableWeakRefProxy),
                 ProxyDynamicTypeBuilder.Build(typeof(PythonCallableWeakRefProxy)));
 
-            ProxyType = Ops.GetDynamicTypeFromType(typeof(PythonWeakRefProxy));
-            CallableProxyType = Ops.GetDynamicTypeFromType(typeof(PythonCallableWeakRefProxy));
+            ProxyType = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonWeakRefProxy));
+            CallableProxyType = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonCallableWeakRefProxy));
         }
 
         internal static IWeakReferenceable ConvertToWeakReferenceable(object obj) {
@@ -50,15 +50,15 @@ namespace IronPython.Modules {
             // to track it's weak references
             DynamicType dt = obj as DynamicType;
             if (dt != null) {
-                PythonTypeContext ctx = dt.GetContextTag(DefaultContext.PythonContext) as PythonTypeContext;
+                PythonTypeContext ctx = dt.GetContextTag(PythonContext.Id) as PythonTypeContext;
                 if (ctx == null) {
                     ctx = new PythonTypeContext();
-                    dt.SetContextTag(DefaultContext.PythonContext, ctx);
+                    dt.SetContextTag(PythonContext.Id, ctx);
                 }
 
                 return (PythonTypeContext)ctx;
             }
-            throw Ops.TypeError("cannot create weak reference to '{0}' object", Ops.GetPythonTypeName(obj));
+            throw PythonOps.TypeError("cannot create weak reference to '{0}' object", PythonOps.GetPythonTypeName(obj));
         }
 
         [PythonName("getweakrefcount")]
@@ -71,7 +71,7 @@ namespace IronPython.Modules {
             return PythonWeakReference.GetWeakRefs(@object);
         }
 
-        public static object @ref = Ops.GetDynamicTypeFromType(typeof(PythonWeakReference));
+        public static object @ref = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonWeakReference));
 
         [PythonName("proxy")]
         public static object Proxy(object @object) {
@@ -79,7 +79,7 @@ namespace IronPython.Modules {
         }
         [PythonName("proxy")]
         public static object Proxy(object @object, object callback) {
-            if (Ops.IsCallable(@object)) {
+            if (PythonOps.IsCallable(@object)) {
                 return PythonCallableWeakRefProxy.MakeNew(@object, callback);
             } else {
                 return PythonWeakRefProxy.MakeNew(@object, callback);
@@ -88,7 +88,7 @@ namespace IronPython.Modules {
 
         public static object CallableProxyType;
         public static object ProxyType;
-        public static object ReferenceType = Ops.GetDynamicTypeFromType(typeof(PythonWeakReference));
+        public static object ReferenceType = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonWeakReference));
         public static object ReferenceError = ExceptionConverter.GetPythonException("ReferenceError");
 
 
@@ -103,7 +103,7 @@ namespace IronPython.Modules {
             public static object MakeNew(CodeContext context, DynamicType cls, object @object) {
                 IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
-                if (cls == Ops.GetDynamicTypeFromType(typeof(PythonWeakReference))) {
+                if (cls == DynamicHelpers.GetDynamicTypeFromType(typeof(PythonWeakReference))) {
                     WeakRefTracker wrt = iwr.GetWeakRef();
                     if (wrt != null) {
                         for (int i = 0; i < wrt.HandlerCount; i++) {
@@ -122,7 +122,7 @@ namespace IronPython.Modules {
             [PythonName("__new__")]
             public static object MakeNew(CodeContext context, DynamicType cls, object @object, object callback) {
                 if (callback == null) return MakeNew(context, cls, @object);
-                if (cls == Ops.GetDynamicTypeFromType(typeof(PythonWeakReference))) {
+                if (cls == DynamicHelpers.GetDynamicTypeFromType(typeof(PythonWeakReference))) {
                     return new PythonWeakReference(@object, callback);
                 } else {
                     return cls.CreateInstance(context, @object, callback);
@@ -195,17 +195,17 @@ namespace IronPython.Modules {
             #region ICallableWithCodeContext Members
 
             public object Call(CodeContext context, params object[] args) {
-                if (args.Length > 0) throw Ops.TypeError("__call__() takes exactly 0 arguments ({0} given)", args.Length);
+                if (args.Length > 0) throw PythonOps.TypeError("__call__() takes exactly 0 arguments ({0} given)", args.Length);
 
                 if (!target.IsAlive) {
-                    throw Ops.ReferenceError("weak object has gone away");
+                    throw PythonOps.ReferenceError("weak object has gone away");
                 }
                 try {
                     object res = target.Target;
                     GC.KeepAlive(this);
                     return res;
                 } catch (InvalidOperationException) {
-                    throw Ops.ReferenceError("weak object has gone away");
+                    throw PythonOps.ReferenceError("weak object has gone away");
                 }
             }
 
@@ -216,7 +216,7 @@ namespace IronPython.Modules {
             int IValueEquality.GetValueHashCode() {
                 if (!fHasHash) {
                     object refObj = target.Target;
-                    if (refObj == null) throw Ops.TypeError("weak object has gone away");
+                    if (refObj == null) throw PythonOps.TypeError("weak object has gone away");
                     GC.KeepAlive(this);
                     hashVal = refObj.GetHashCode();
                     fHasHash = true;
@@ -257,11 +257,11 @@ namespace IronPython.Modules {
             private static bool RefEquals(CodeContext context, object x, object y) {
                 object ret;
 
-                ret = Ops.GetDynamicType(x).InvokeBinaryOperator(context, Operators.Equal, x, y);
-                if (ret != Ops.NotImplemented) return (bool)ret;
+                ret = DynamicHelpers.GetDynamicType(x).InvokeBinaryOperator(context, Operators.Equal, x, y);
+                if (ret != PythonOps.NotImplemented) return (bool)ret;
 
-                ret = Ops.GetDynamicType(y).InvokeBinaryOperator(context, Operators.Equal, y, x);
-                if (ret != Ops.NotImplemented) return (bool)ret;
+                ret = DynamicHelpers.GetDynamicType(y).InvokeBinaryOperator(context, Operators.Equal, y, x);
+                if (ret != PythonOps.NotImplemented) return (bool)ret;
 
                 return x.Equals(y);
             }
@@ -325,7 +325,7 @@ namespace IronPython.Modules {
             object GetObject() {
                 object res;
                 if (!TryGetObject(out res)) {
-                    throw Ops.ReferenceError("weakly referenced object no longer exists");
+                    throw PythonOps.ReferenceError("weakly referenced object no longer exists");
                 }
                 return res;
             }
@@ -356,6 +356,12 @@ namespace IronPython.Modules {
                 }
             }
 
+            bool ISuperDynamicObject.HasDictionary {
+                get {
+                    return (GetObject() as ISuperDynamicObject).HasDictionary;
+                }
+            }
+
             IAttributesCollection ISuperDynamicObject.SetDict(IAttributesCollection dict) {
                 return (GetObject() as ISuperDynamicObject).SetDict(dict);
             }
@@ -372,9 +378,9 @@ namespace IronPython.Modules {
 
             #region IDynamicObject Members
 
-            DynamicType IDynamicObject.DynamicType {
+            DynamicType ISuperDynamicObject.DynamicType {
                 get {
-                    return Ops.GetDynamicTypeFromType(typeof(PythonWeakRefProxy));
+                    return DynamicHelpers.GetDynamicTypeFromType(typeof(PythonWeakRefProxy));
                 }
             }
 
@@ -394,7 +400,7 @@ namespace IronPython.Modules {
                 GC.KeepAlive(this);
                 return String.Format("<weakproxy at {0} to {1} at {2}>",
                     IdDispenser.GetId(this),
-                    Ops.GetPythonTypeName(obj),
+                    PythonOps.GetPythonTypeName(obj),
                     IdDispenser.GetId(obj));
             }
 
@@ -405,17 +411,17 @@ namespace IronPython.Modules {
 
             public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
                 object o = GetObject();
-                return Ops.TryGetAttr(context, o, name, out value);
+                return PythonOps.TryGetAttr(context, o, name, out value);
             }
 
             public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
                 object o = GetObject();
-                return Ops.TryGetBoundAttr(context, o, name, out value);
+                return PythonOps.TryGetBoundAttr(context, o, name, out value);
             }
 
             public void SetCustomMember(CodeContext context, SymbolId name, object value) {
                 object o = GetObject();
-                Ops.SetAttr(context, o, name, value);
+                PythonOps.SetAttr(context, o, name, value);
             }
 
             public bool DeleteCustomMember(CodeContext context, SymbolId name) {
@@ -432,12 +438,12 @@ namespace IronPython.Modules {
                     return new List();
                 }
 
-                return Ops.GetAttrNames(context, o);
+                return PythonOps.GetAttrNames(context, o);
             }
 
             public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
                 object o = GetObject();
-                return Ops.GetAttrDict(context, o);
+                return PythonOps.GetAttrDict(context, o);
             }
 
             #endregion
@@ -452,19 +458,19 @@ namespace IronPython.Modules {
 
             #region IValueEquality Members
             public int GetValueHashCode() {
-                throw Ops.TypeErrorForUnhashableType("weakproxy");
+                throw PythonOps.TypeErrorForUnhashableType("weakproxy");
             }
 
             public bool ValueEquals(object other) {
                 PythonWeakRefProxy wrp = other as PythonWeakRefProxy;
-                if (wrp != null) return Ops.EqualRetBool(GetObject(), wrp.GetObject());
+                if (wrp != null) return PythonOps.EqualRetBool(GetObject(), wrp.GetObject());
 
-                return Ops.EqualRetBool(GetObject(), other);
+                return PythonOps.EqualRetBool(GetObject(), other);
             }
 
             public bool ValueNotEquals(object other) {
                 PythonWeakRefProxy wrp = other as PythonWeakRefProxy;
-                if (wrp != null) return !Ops.EqualRetBool(GetObject(), wrp.GetObject());
+                if (wrp != null) return !PythonOps.EqualRetBool(GetObject(), wrp.GetObject());
 
                 return PythonSites.NotEqualRetBool(GetObject(), other);
             }
@@ -540,7 +546,7 @@ namespace IronPython.Modules {
             object GetObject() {
                 object res;
                 if (!TryGetObject(out res)) {
-                    throw Ops.ReferenceError("weakly referenced object no longer exists");
+                    throw PythonOps.ReferenceError("weakly referenced object no longer exists");
                 }
                 return res;
             }
@@ -566,6 +572,12 @@ namespace IronPython.Modules {
                 }
             }
 
+            bool ISuperDynamicObject.HasDictionary {
+                get {
+                    return (GetObject() as ISuperDynamicObject).HasDictionary;
+                }
+            }
+
             IAttributesCollection ISuperDynamicObject.SetDict(IAttributesCollection dict) {
                 return (GetObject() as ISuperDynamicObject).SetDict(dict);
             }
@@ -582,9 +594,9 @@ namespace IronPython.Modules {
 
             #region IDynamicObject Members
 
-            DynamicType IDynamicObject.DynamicType {
+            DynamicType ISuperDynamicObject.DynamicType {
                 get {
-                    return Ops.GetDynamicTypeFromType(typeof(PythonCallableWeakRefProxy));
+                    return DynamicHelpers.GetDynamicTypeFromType(typeof(PythonCallableWeakRefProxy));
                 }
             }
 
@@ -603,7 +615,7 @@ namespace IronPython.Modules {
                 GC.KeepAlive(this);
                 return String.Format("<weakproxy at {0} to {1} at {2}>",
                     IdDispenser.GetId(this),
-                    Ops.GetPythonTypeName(obj),
+                    PythonOps.GetPythonTypeName(obj),
                     IdDispenser.GetId(obj));
             }
 
@@ -612,7 +624,7 @@ namespace IronPython.Modules {
             #region ICallableWithCodeContext Members
 
             object ICallableWithCodeContext.Call(CodeContext context, object[] args) {
-                return Ops.CallWithContext(context, GetObject(), args);
+                return PythonOps.CallWithContext(context, GetObject(), args);
             }
 
             #endregion
@@ -620,7 +632,7 @@ namespace IronPython.Modules {
             #region IFancyCallable Members
 
             object IFancyCallable.Call(CodeContext context, object[] args, string[] names) {
-                return Ops.CallWithKeywordArgs(context, GetObject(), args, names);
+                return PythonOps.CallWithKeywordArgs(context, GetObject(), args, names);
             }
 
             #endregion
@@ -629,17 +641,17 @@ namespace IronPython.Modules {
 
             public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
                 object o = GetObject();
-                return Ops.TryGetAttr(context, o, name, out value);
+                return PythonOps.TryGetAttr(context, o, name, out value);
             }
 
             public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
                 object o = GetObject();
-                return Ops.TryGetBoundAttr(context, o, name, out value);
+                return PythonOps.TryGetBoundAttr(context, o, name, out value);
             }
 
             public void SetCustomMember(CodeContext context, SymbolId name, object value) {
                 object o = GetObject();
-                Ops.SetAttr(context, o, name, value);
+                PythonOps.SetAttr(context, o, name, value);
             }
 
             public bool DeleteCustomMember(CodeContext context, SymbolId name) {
@@ -656,12 +668,12 @@ namespace IronPython.Modules {
                     return new List();
                 }
 
-                return Ops.GetAttrNames(context, o);
+                return PythonOps.GetAttrNames(context, o);
             }
 
             public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
                 object o = GetObject();
-                return Ops.GetAttrDict(context, o);
+                return PythonOps.GetAttrDict(context, o);
             }
 
             #endregion
@@ -677,14 +689,14 @@ namespace IronPython.Modules {
             #region IValueEquality Members
 
             public int GetValueHashCode() {
-                throw Ops.TypeErrorForUnhashableType("weakcallableproxy");
+                throw PythonOps.TypeErrorForUnhashableType("weakcallableproxy");
             }
 
             public bool ValueEquals(object other) {
                 PythonCallableWeakRefProxy wrp = other as PythonCallableWeakRefProxy;
                 if (wrp != null) return GetObject().Equals(wrp.GetObject());
 
-                return Ops.EqualRetBool(GetObject(), other);
+                return PythonOps.EqualRetBool(GetObject(), other);
             }
 
             public bool ValueNotEquals(object other) {
@@ -732,9 +744,9 @@ namespace IronPython.Modules {
             IProxyObject proxy = instance as IProxyObject;
 
             if (proxy == null)
-                throw Ops.TypeError("descriptor for {0} object doesn't apply to {1} object",
-                    Ops.StringRepr(type.Name),
-                    Ops.StringRepr(Ops.GetDynamicType(instance).Name));
+                throw PythonOps.TypeError("descriptor for {0} object doesn't apply to {1} object",
+                    PythonOps.StringRepr(type.Name),
+                    PythonOps.StringRepr(DynamicTypeOps.GetName(instance)));
 
             return new GenericMethodWrapper(name, proxy);
         }
@@ -745,8 +757,8 @@ namespace IronPython.Modules {
 
         public string ToCodeString(CodeContext context) {
             return String.Format("<slot wrapper {0} of {1} objects>",
-                Ops.StringRepr(SymbolTable.IdToString(name)),
-                Ops.StringRepr(type.Name));
+                PythonOps.StringRepr(SymbolTable.IdToString(name)),
+                PythonOps.StringRepr(type.Name));
         }
 
         #endregion
@@ -762,11 +774,11 @@ namespace IronPython.Modules {
             IProxyObject proxy = instance as IProxyObject;
 
             if (proxy == null)
-                throw Ops.TypeError("descriptor for {0} object doesn't apply to {1} object",
-                    Ops.StringRepr(type.Name),
-                    Ops.StringRepr(Ops.GetDynamicType(instance).Name));
+                throw PythonOps.TypeError("descriptor for {0} object doesn't apply to {1} object",
+                    PythonOps.StringRepr(type.Name),
+                    PythonOps.StringRepr(DynamicTypeOps.GetName(instance)));
 
-            if (!Ops.GetDynamicType(proxy.Target).TryGetBoundMember(context, proxy.Target, name, out value))
+            if (!DynamicHelpers.GetDynamicType(proxy.Target).TryGetBoundMember(context, proxy.Target, name, out value))
                 return false;
 
             value = new GenericMethodWrapper(name, proxy);
@@ -790,7 +802,7 @@ namespace IronPython.Modules {
 
         [OperatorMethod]
         public object Call(CodeContext context, params object[] args) {
-            return Ops.InvokeWithContext(context, target.Target, name, args);
+            return PythonOps.InvokeWithContext(context, target.Target, name, args);
         }
 
         #endregion
@@ -800,12 +812,12 @@ namespace IronPython.Modules {
         [OperatorMethod]
         public object Call(CodeContext context, object[] args, string[] names) {
             object targetMethod;
-            if (!Ops.GetDynamicType(target.Target).TryGetBoundMember(context, target.Target, name, out targetMethod))
-                throw Ops.AttributeError("type {0} has no attribute {1}",
-                    Ops.GetDynamicType(target.Target),
+            if (!DynamicHelpers.GetDynamicType(target.Target).TryGetBoundMember(context, target.Target, name, out targetMethod))
+                throw PythonOps.AttributeError("type {0} has no attribute {1}",
+                    DynamicHelpers.GetDynamicType(target.Target),
                     SymbolTable.IdToString(name));
 
-            return Ops.CallWithKeywordArgs(context, targetMethod, args, names);
+            return PythonOps.CallWithKeywordArgs(context, targetMethod, args, names);
         }
 
         #endregion

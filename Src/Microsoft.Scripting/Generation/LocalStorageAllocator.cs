@@ -15,7 +15,7 @@
 
 using System;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     sealed class LocalStorageAllocator : StorageAllocator {
         private SlotFactory _factory;
 

@@ -269,7 +269,7 @@ class test_exceptions(object):
                 for statefulGuy in stateful:
                     yield test(ch, statefulGuy(ch, yieldState))
                 
-                if (tryOrCatchCount + finallyCnt) <= 1:
+                if finallyCnt == 0:
                     yield test(ch, yield_generator(ch, yieldState))
                 
                 if test in (for_loop_maker,  while_loop_maker):

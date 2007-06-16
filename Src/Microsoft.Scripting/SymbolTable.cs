@@ -128,5 +128,15 @@ namespace Microsoft.Scripting {
             }
             return ret;
         }
+
+        public static bool StringHasId(string symbol) {
+            if (symbol == null) {
+                throw new ArgumentNullException(Resources.NameMustBeString);
+            }
+
+            lock (_lockObj) {
+                return _idDict.ContainsKey(symbol);
+            }
+        }
     }
 }

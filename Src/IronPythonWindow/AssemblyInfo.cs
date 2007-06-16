@@ -75,4 +75,4 @@ using System.Security;
 [assembly: SecurityTransparent]
 [assembly: CLSCompliant(false)]
 [assembly: ComVisible(false)]
-[assembly: AssemblyFileVersion("2.0.10427.02")]
+[assembly: AssemblyFileVersion("2.0.0.0")]

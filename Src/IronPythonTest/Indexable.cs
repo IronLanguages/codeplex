@@ -85,7 +85,11 @@ namespace IronPythonTest {
     }
 
     public class Indexable {
+#if !SILVERLIGHT
         System.Collections.Hashtable ht = new System.Collections.Hashtable();
+#else
+        Dictionary<object, object> ht = new Dictionary<object,object>();
+#endif
 
         public string this[int index] {
             get {
@@ -313,7 +317,11 @@ namespace IronPythonTest {
     }
 
     public class MultipleIndexes {
-        private System.Collections.Hashtable ht = new System.Collections.Hashtable();
+#if !SILVERLIGHT
+        System.Collections.Hashtable ht = new System.Collections.Hashtable();
+#else
+        Dictionary<object, object> ht = new Dictionary<object, object>();
+#endif
 
         public object this[object i] {
             get {
@@ -518,8 +526,8 @@ namespace IronPythonTest {
             }
         }
     }
-
-
+    
+#if !SILVERLIGHT // TODO: this doesn't seem to be used anywhere--remove?
     public class UsePythonDictAsHashtable {
         Hashtable table;
 
@@ -571,4 +579,5 @@ namespace IronPythonTest {
             return sum;
         }
     }
+#endif
 }

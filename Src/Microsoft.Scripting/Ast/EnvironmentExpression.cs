@@ -12,13 +12,16 @@
  *
  *
  * ***************************************************************************/
-using System;
 
-namespace Microsoft.Scripting.Internal.Ast {
+using System;
+using Microsoft.Scripting.Generation;
+
+namespace Microsoft.Scripting.Ast {
     public class EnvironmentExpression : Expression {
         private Type _expressionType;
-                
-        public EnvironmentExpression(Type expressionType) {
+
+        public EnvironmentExpression(Type expressionType)
+            : base(SourceSpan.None) {
             _expressionType = expressionType;
         }
 
@@ -28,7 +31,7 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
         
-        public override void Emit(Microsoft.Scripting.Internal.Generation.CodeGen cg) {
+        public override void Emit(CodeGen cg) {
             cg.EmitEnvironmentOrNull();
         }
 

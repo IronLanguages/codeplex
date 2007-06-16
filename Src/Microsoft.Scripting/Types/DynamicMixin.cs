@@ -50,8 +50,7 @@ namespace Microsoft.Scripting {
         private CreateTypeSlot _slotCreator;                // used for creating default value slot (used for Python user types so we can implement user-defined descriptor protocol).
         private List<object> _contextTags;                  // tag info specific to the context
         private int _version = GetNextVersion();            // version of the type
-        private bool _isNull = false;                       // does this type represent nulls
-        private static DynamicType _nullType;
+        private static DynamicType _nullType = DynamicHelpers.GetDynamicTypeFromType(typeof(None));
 
 
         public const int DynamicVersion = Int32.MinValue;   // all lookups should be dynamic
@@ -70,6 +69,12 @@ namespace Microsoft.Scripting {
             }
             return Interlocked.Increment(ref MasterVersion);
         }
+
+        protected void UpdateVersion() {
+            if (_version != DynamicVersion) {
+                _version = GetNextVersion();
+            }
+        }
                 
         #region Constructors
 
@@ -78,7 +83,6 @@ namespace Microsoft.Scripting {
         /// the DynamicMixinBuilder.
         /// </summary>
         public DynamicMixin() {
-            _dict = new Dictionary<SymbolId, SlotInfo>();
             _resolutionOrder = new List<DynamicMixin>(1);
             _resolutionOrder.Add(this);
         }
@@ -474,7 +478,7 @@ namespace Microsoft.Scripting {
             }
 
             object dummy;
-            return TryInvokeTernaryOperator(context, Operators.SetMember, instance, name, value, out dummy);
+            return TryInvokeTernaryOperator(context, Operators.SetMember, instance, SymbolTable.IdToString(name), value, out dummy);
         }
 
         public bool TryDeleteMember(CodeContext context, object instance, SymbolId name) {
@@ -510,6 +514,16 @@ namespace Microsoft.Scripting {
 
                 return iac.Remove(name);
             }
+
+            try {
+                object value;
+                if (TryInvokeBinaryOperator(context, Operators.DeleteMember, instance, name.ToString(), out value)) {
+                    return true;
+                }
+            } catch (MissingMemberException) {
+                //!!! when do we let the user see this exception?
+            }
+
 
             return false;
         }
@@ -874,11 +888,7 @@ namespace Microsoft.Scripting {
         }
 
         public bool IsNull {
-            get { return _isNull; }
-            set {
-                _nullType = (DynamicType)this;
-                _isNull = value; 
-            }
+            get { return Object.ReferenceEquals(this, _nullType); }
         }
 
         /// <summary>
@@ -891,7 +901,9 @@ namespace Microsoft.Scripting {
                 return _resolutionOrder;
             }
             internal set {
-                _resolutionOrder = new List<DynamicMixin>(value);
+                lock (SyncRoot) {
+                    _resolutionOrder = new List<DynamicMixin>(value);
+                }
             }
         }
         
@@ -927,10 +939,11 @@ namespace Microsoft.Scripting {
         #endregion
 
         public TryGetMemberCustomizer CustomBoundGetter {
-            get {
+            get {                
                 return _getboundmem;
             }
             set {
+                _version = (value != null) ? DynamicVersion : GetNextVersion();
                 _getboundmem = value;
             }
         }
@@ -977,6 +990,8 @@ namespace Microsoft.Scripting {
         /// <param name="slot"></param>
         /// <param name="context">the context the slot is added for</param>
         internal void AddSlot(ContextId context, SymbolId name, DynamicTypeSlot slot) {
+            EnsureDict();
+
             SlotInfo si;
             if (!_dict.TryGetValue(name, out si)) {
                 if (context == ContextId.Empty) {
@@ -1007,7 +1022,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         internal bool RemoveSlot(ContextId context, SymbolId name) {
             SlotInfo si;
-            if (_dict.TryGetValue(name, out si)) {
+            if (_dict != null && _dict.TryGetValue(name, out si)) {
                 if (si.SlotValues != null && si.SlotValues.Count > context.Id && si.SlotValues[context.Id] != null) {
                     si.SlotValues[context.Id] = null;
                     return true;
@@ -1156,7 +1171,10 @@ namespace Microsoft.Scripting {
         }
 
         internal object SyncRoot {
-            get { return _dict; }
+            get { 
+                // TODO: This is un-ideal, we should lock on something private.
+                return this; 
+            }
         }
 
         public event EventHandler<DynamicTypeChangedEventArgs> OnChange;
@@ -1221,10 +1239,21 @@ namespace Microsoft.Scripting {
         internal void Initialize() {
             if (_builder == null) return;
 
+            EnsureDict();
+
             InitializeWorker();
 
             if (_getboundmem != null || _setmem != null || _delmem != null) {
                 _version = DynamicVersion;
+            }
+        }
+
+        private void EnsureDict() {
+            if (_dict == null) {
+                Interlocked.CompareExchange<Dictionary<SymbolId, SlotInfo>>(
+                    ref _dict,
+                    new Dictionary<SymbolId, SlotInfo>(),
+                    null);
             }
         }
 

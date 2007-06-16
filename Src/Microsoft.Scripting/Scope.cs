@@ -397,7 +397,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Gets the outer-most scope associated with this scope.  
         /// </summary>
-        public Scope GlobalScope {
+        public Scope ModuleScope {
             get {
                 Scope cur = this;
                 while (cur.Parent != null) cur = cur.Parent;

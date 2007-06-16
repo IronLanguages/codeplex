@@ -17,6 +17,7 @@ import clr
 clr.AddReferenceByPartialName("System.Windows.Forms")
 clr.AddReferenceByPartialName("System.Drawing")
 clr.AddReferenceByPartialName("IronPython")
+clr.AddReferenceByPartialName("Microsoft.Scripting")
 
 from System.Drawing import Size
 from System.Windows.Forms import Form, Application

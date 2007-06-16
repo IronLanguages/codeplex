@@ -84,7 +84,7 @@ namespace IronPython.Hosting {
         }
         
         private ScriptModule CreateMainModule() {
-            ModuleOptions trueDiv = (ScriptDomainManager.Options.Division == DivisionOption.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
+            ModuleOptions trueDiv = (Engine.Options.DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
             ScriptModule module = Engine.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule);
 
             // TODO: 
@@ -135,13 +135,15 @@ namespace IronPython.Hosting {
             string site = Assembly.GetEntryAssembly().Location;
             site = Path.Combine(Path.GetDirectoryName(site), "Lib");
             Engine.AddToPath(site);
-#endif
+            
             try {
                 // TODO: do better
                 Engine.Execute("import site", Module);
             } catch (Exception e) {
                 Console.Write(Engine.FormatException(e), Style.Error);
             }
+#endif
+
         }
 
         #endregion
@@ -275,7 +277,7 @@ namespace IronPython.Hosting {
         private int RunFileWorker(string fileName) {
             try {
                 // TODO: move to compiler options
-                ScriptDomainManager.Options.AssemblyGenAttributes |= Microsoft.Scripting.Internal.Generation.AssemblyGenAttributes.EmitDebugInfo;
+                ScriptDomainManager.Options.AssemblyGenAttributes |= Microsoft.Scripting.Generation.AssemblyGenAttributes.EmitDebugInfo;
                 
                 ScriptModule engineModule = Engine.CreateOptimizedModule(fileName, "__main__", true, 
                     Engine.Options.SkipFirstSourceLine);

@@ -16,7 +16,7 @@
 using System;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// NamedFrameSlot represens a global variables (or builtin) of CompiledCode _code executing 
     /// in the context of a CodeContext. They have to be looked up by name at runtime.

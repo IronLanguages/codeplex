@@ -17,6 +17,17 @@ import sys
 import common
 
 def exactly_same(s1, s2):
+
+    #CodePlex Work Item #10782
+    #CPython 2.5 wraps exception types with "<type 'someexception'> whereas IP 
+    #does not.
+    if s1!=s2 and s1.startswith("<type '") and not s2.startswith("<type '"):
+        if s2.find(" ") >= 0:
+            s2 = s2.replace(" ", "'> ", 1)    
+        else:
+            s2 = s2 + "'>"
+        s2 = "<type '" + s2
+        
     return s1 == s2
     
 def ignore(s1, s2): 
@@ -80,6 +91,7 @@ rules = {
           "except_divide"   : both_contain_any_string("divi", "complex"), 
           "time"            : ignore,  
           "unexpected"      : exactly_same, 
+          "except"          : exactly_same, 
         }
 
 def remove_newline(s):
@@ -138,8 +150,8 @@ def compare(file1, file2, output=sys.stdout):
             fail_cnt += 1
             continue
         
-        c1 = l1[pos1+lsep:]
-        c2 = l2[pos2+lsep:]
+        c1 = l1[pos1+lsep+1:]
+        c2 = l2[pos2+lsep+1:]
         
         if rules[r1](c1, c2) == False:
             dump_lines("different output")

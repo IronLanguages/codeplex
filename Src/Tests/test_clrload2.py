@@ -31,6 +31,8 @@ def test_clrload2():
             sys.path.append(p + "\\Inputs")
             break
 
+@skip("silverlight")
+def test_nested_classes():
     import UseCLI
 
     UseCLI.Form().Controls.Add(UseCLI.Control())
@@ -41,9 +43,13 @@ def test_clrload2():
     
     tc = UseCLI.NestedClass.InnerClass.TripleNested()
     
+    # This will use TypeCollision
+    gc1 = UseCLI.NestedClass.InnerGenericClass[int]()
+    gc2 = UseCLI.NestedClass.InnerGenericClass[int, int]()
+    
     # access methods, fields, and properties on the class w/ nesteds,
     # the nested class, and the triple nested class
-    for x in ((nc, ''), (ic, 'Inner'), (tc, 'Triple')):
+    for x in ((nc, ''), (ic, 'Inner'), (tc, 'Triple'), (gc1, "InnerGeneric"), (gc2, "InnerGeneric")):
         obj, name = x[0], x[1]
         
         AreEqual(getattr(obj, 'CallMe' + name)(), name + ' Hello World')

@@ -18,16 +18,15 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection.Emit;
 
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public enum TargetBlockType {
         Normal,
         Try,
         Finally,
         Catch,
         Else,
-        With,
         LoopInFinally
     }
 
@@ -38,7 +37,6 @@ namespace Microsoft.Scripting.Internal.Generation {
         public Nullable<Label> leaveLabel;
         private TargetBlockType _blockType;
         public readonly Slot finallyReturns;
-        public Slot isBlockYielded;
         public Statement statement;
 
         public TargetBlockType BlockType {
@@ -47,13 +45,12 @@ namespace Microsoft.Scripting.Internal.Generation {
             }
         }
 
-        public Targets(Nullable<Label> breakLabel, Nullable<Label> continueLabel, TargetBlockType blockType, Slot finallyReturns, Slot isBlockYielded, Statement statement) {
+        public Targets(Nullable<Label> breakLabel, Nullable<Label> continueLabel, TargetBlockType blockType, Slot finallyReturns, Statement statement) {
             this.breakLabel = breakLabel;
             this.continueLabel = continueLabel;
             this._blockType = blockType;
             this.finallyReturns = finallyReturns;
             this.leaveLabel = null;
-            this.isBlockYielded = isBlockYielded;
             this.statement = statement;
         }
     }

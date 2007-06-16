@@ -17,10 +17,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
 
-using Microsoft.Scripting.Internal.Ast;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
 /*
  * The data flow.
@@ -91,7 +89,7 @@ using Microsoft.Scripting.Internal.Generation;
  *  00 .. may be uninitialized
  */
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     class FlowChecker : Walker {
         private BitArray _bits;
         private Stack<BitArray> _loops;
@@ -102,14 +100,14 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         private FlowChecker(CodeBlock block) {
             List<Variable> variables = block.Variables;
-            IList<Parameter> parameters = block.Parameters;
+            List<Variable> parameters = block.Parameters;
 
             _bits = new BitArray((variables.Count + parameters.Count) * 2);
             int index = 0;
             foreach (Variable variable in variables) {
                 _indices[variable] = index++;
             }
-            foreach (Parameter parameter in parameters) {
+            foreach (Variable parameter in parameters) {
                 _indices[parameter] = index++;
             }
             _block = block;
@@ -201,7 +199,7 @@ namespace Microsoft.Scripting.Internal.Ast {
         // BoundExpression
         public override bool Walk(BoundExpression node) {
             bool defined;
-            if (TryCheckVariable(node.Reference.Variable, out defined)) {
+            if (TryCheckVariable(node.Variable, out defined)) {
                 node.IsDefined = defined;
             }
             return true;
@@ -211,12 +209,12 @@ namespace Microsoft.Scripting.Internal.Ast {
         public override bool Walk(BoundAssignment node) {
             if (node.Operator != Operators.None) {
                 bool defined;
-                if (TryCheckVariable(node.Reference.Variable, out defined)) {
+                if (TryCheckVariable(node.Variable, out defined)) {
                     node.IsDefined = defined;
                 }
             }
             node.Value.Walk(this);
-            Define(node.Reference.Variable);
+            Define(node.Variable);
             return false;
         }
 
@@ -236,14 +234,14 @@ namespace Microsoft.Scripting.Internal.Ast {
         // DelStatement
         public override bool Walk(DelStatement node) {
             bool defined;
-            if (TryCheckVariable(node.Reference.Variable, out defined)) {
+            if (TryCheckVariable(node.Variable, out defined)) {
                 node.IsDefined = defined;
             }
             return true;
         }
 
         public override void PostWalk(DelStatement node) {
-            Delete(node.Reference.Variable);
+            Delete(node.Variable);
         }
 
         // CodeBlockExpression interrupt flow analysis
@@ -253,13 +251,19 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         // CodeBlock
         public override bool Walk(CodeBlock node) {
-            foreach (Parameter p in node.Parameters) {
+            foreach (Variable p in node.Parameters) {
                 // Define the parameters
                 Define(p);
             }
             return true;
         }
 
+        // GeneratorCodeBlock
+        public override bool Walk(GeneratorCodeBlock node) {
+            return Walk((CodeBlock)node);
+        }
+
+        // DoStatement
         public override bool Walk(DoStatement node) {
             BitArray loop = new BitArray(_bits); // State at the loop entry with which the loop runs
             BitArray save = _bits;               // Save the state at loop entry
@@ -327,8 +331,8 @@ namespace Microsoft.Scripting.Internal.Ast {
             return false;
         }
 
-        // TryStatement
-        public override bool Walk(TryStatement node) {
+        // DynamicTryStatement
+        public override bool Walk(DynamicTryStatement node) {
             BitArray save = _bits;
             _bits = new BitArray(_bits);
 
@@ -342,7 +346,7 @@ namespace Microsoft.Scripting.Internal.Ast {
 
 
             if (node.Handlers != null) {
-                foreach (TryStatementHandler tsh in node.Handlers) {
+                foreach (DynamicTryStatementHandler tsh in node.Handlers) {
                     // Restore to saved state
                     _bits.SetAll(false);
                     _bits.Or(save);
@@ -353,8 +357,8 @@ namespace Microsoft.Scripting.Internal.Ast {
                     }
 
                     // Define the target
-                    if (tsh.Target != null) {
-                        Define(tsh.Target.Variable);
+                    if (tsh.Variable != null) {
+                        Define(tsh.Variable);
                     }
 
                     // Flow the body

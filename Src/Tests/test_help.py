@@ -36,6 +36,14 @@ def test_z_cli_tests():    # runs last to prevent tainting the module w/ CLR nam
     help(System.Int64)
     sys.stdout = sys.__stdout__
 
+    sys.stdout = stdout_reader()
+        
+    help(System.String.Format)
+    x = sys.stdout.text
+        
+    sys.stdout = sys.__stdout__
+    Assert(x.find('str Format(str format, object arg0)') != -1)
+        
 def test_module():
     import time
     sys.stdout = stdout_reader()
@@ -62,7 +70,68 @@ def test_userfunction():
     
     Assert(x.find('my help is useful') != -1)
     
+@disabled("CodePlex Work Item #6735")
+def test_splat():
+    def foo(*args): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(*args)') != -1)
+    #CodePlex Work Item 6735
+    #Assert(x.find('Help on function foo in module __main__:') != -1)
+    
+    def foo(**kwargs): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(**kwargs)') != -1)
 
+    def foo(*args, **kwargs): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(*args, **kwargs)') != -1)
+    
+    def foo(a, *args): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(a, *args)') != -1)
+    
+    def foo(a, *args, **kwargs): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    Assert(x.find('foo(a, *args, **kwargs)') != -1)
+    
+    def foo(a=7): pass
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    #CodePlex Work Item 6735
+    #Assert(x.find('foo(a=7') != -1)
+    
+    def foo(a=[3]): a.append(7)
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    #CodePlex Work Item 6735
+    #Assert(x.find('foo(a=[3]') != -1)
+    foo()
+    sys.stdout = stdout_reader()
+    help(foo)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    #CodePlex Work Item 6735
+    #Assert(x.find('foo(a=[3, 7]') != -1)
+    
 def test_builtinfunction():
     sys.stdout = stdout_reader()
     help(abs)

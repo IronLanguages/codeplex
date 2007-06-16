@@ -98,7 +98,7 @@ def gen_typecache(cw):
 		if x.typeType != 'DynamicType': cast = '(%s)' % x.typeType
 		else: cast = ""
 		
-		cw.write("if (%s == null) %s = %sOps.GetDynamicTypeFromType(typeof(%s));" % (x.name, x.name, cast, x.type))
+		cw.write("if (%s == null) %s = %sDynamicHelpers.GetDynamicTypeFromType(typeof(%s));" % (x.name, x.name, cast, x.type))
 		cw.write("return %s;" % x.name)
 		cw.exit_block()
 		cw.exit_block()

@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class Arg : Node {
         public enum ArgumentKind {
             Simple,

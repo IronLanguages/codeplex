@@ -16,27 +16,29 @@
 using System;
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Provides binding semantics for a language.  This include conversions as well as support
-    /// for producing rules for actions.  These optimized rules for are used for calling methods, 
+    /// for producing rules for actions.  These optimized rules are used for calling methods, 
     /// performing operators, and getting members using the ActionBinder's conversion semantics.
     /// </summary>
     public abstract class ActionBinder {
-        private CodeContext _context;
+        private readonly CodeContext _context;
 
-        private Dictionary<Action, BigRuleSet> _rules = new Dictionary<Action,BigRuleSet>();
+        private readonly Dictionary<Action, BigRuleSet> _rules = new Dictionary<Action,BigRuleSet>();
 
         protected ActionBinder(CodeContext context) {
+            if (context == null) throw new ArgumentNullException("context");
+
             this._context = context;
         }
 
         public CodeContext Context {
             get { return _context; }
-            set { _context = value; }
         }
 
         /// <summary>
@@ -52,7 +54,7 @@ namespace Microsoft.Scripting.Actions {
             BigRuleSet ruleSet;
             lock (_rules) {
                 if (!_rules.TryGetValue(action, out ruleSet)) {
-                    ruleSet = new BigRuleSet(_context.LanguageContext);
+                    ruleSet = new BigRuleSet(_context);
                     _rules[action] = ruleSet;
                 }
             }
@@ -62,7 +64,16 @@ namespace Microsoft.Scripting.Actions {
                 return rule;
             }
 
-            rule = MakeRule<T>(action, args);
+            IDynamicObject ndo = args[0] as IDynamicObject;
+            if (ndo != null) {
+                rule = ndo.GetRule<T>(action, _context, args);
+            }
+
+            rule = rule ?? MakeRule<T>(action, args);
+            Debug.Assert(rule != null);
+#if DEBUG
+            AstWriter.DumpRule(rule);
+#endif
             ruleSet.AddRule(rule);
             return rule;
         }
@@ -70,18 +81,36 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Gets a rule for the provided action and arguments and executes it without compiling.
         /// </summary>
-        public object Execute(Action action, object[] args) {
-            throw new NotImplementedException(); //GetRule(action, args).
+        public object Execute(CodeContext cc, Action action, object[] args) {
+            return DynamicSiteHelpers.Execute(cc, this, action, args);
         }
 
         /// <summary>
         /// Produces a rule for the specified Action for the given arguments.
+        /// 
+        /// The default implementation can produce rules for standard .NET types.  Languages should
+        /// override this and provide any custom behavior they need and fallback to the default
+        /// implementation if no custom behavior is required.
         /// </summary>
         /// <typeparam name="T">The type of the DynamicSite the rule is being produced for.</typeparam>
         /// <param name="action">The Action that is being performed.</param>
         /// <param name="args">The arguments to the action as provided from the call site at runtime.</param>
         /// <returns></returns>
-        protected abstract StandardRule<T> MakeRule<T>(Action action, object[] args);
+        protected virtual StandardRule<T> MakeRule<T>(Action action, object[] args) {
+            switch (action.Kind) {
+                case ActionKind.Call:
+                    return new CallBinderHelper<T>(_context, (CallAction)action).MakeRule(args);
+                case ActionKind.GetMember:
+                    return new GetMemberBinderHelper<T>(_context.LanguageContext.Binder, (GetMemberAction)action).MakeNewRule(args);
+                case ActionKind.SetMember:
+                    return new SetMemberBinderHelper<T>(_context.LanguageContext.Binder, (SetMemberAction)action).MakeNewRule(args);
+                case ActionKind.CreateInstance:
+                    return new CreateInstanceBinderHelper<T>(_context, (CreateInstanceAction)action).MakeRule(args);
+                case ActionKind.DoOperation:
+                default:
+                    throw new NotImplementedException(action.ToString());
+            }
+        }
 
         /// <summary>
         /// Emits the code to convert an arbitrary object to the specified type.
@@ -110,5 +139,14 @@ namespace Microsoft.Scripting.Actions {
         /// Converts the provided expression to the given type.  The expression is safe to evaluate multiple times.
         /// </summary>
         public abstract Expression ConvertExpression(Expression expr, Type toType);
+
+        /// <summary>
+        /// Gets the return value when an object contains out / by-ref parameters.  
+        /// </summary>
+        /// <param name="args">The values of by-ref and out parameters that the called method produced.  This includes the normal return
+        /// value if the method does not return void.</param>
+        public virtual object GetByRefArray(object[] args) {
+            return args;
+        }
     }
 }

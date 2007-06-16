@@ -16,6 +16,8 @@
 using System;
 using System.IO;
 
+using Microsoft.Scripting.Ast;
+
 namespace IronPython.Compiler {
 
     /// <summary>
@@ -25,13 +27,13 @@ namespace IronPython.Compiler {
     /// </summary>
     [Serializable]
     public class CompilerException : Exception {
-        private readonly Microsoft.Scripting.Internal.Ast.Node _node;
+        private readonly Node _node;
         private readonly string _filename;
 
         public CompilerException() {
         }
 
-        public CompilerException(string message, Microsoft.Scripting.Internal.Ast.Node node, string filename)
+        public CompilerException(string message, Node node, string filename)
             : base(message) {
             _node = node;
             _filename = filename;
@@ -45,7 +47,7 @@ namespace IronPython.Compiler {
             : base(message, innerException) {
         }
 
-        public Microsoft.Scripting.Internal.Ast.Node Node {
+        public Node Node {
             get { return _node; }
         }
 

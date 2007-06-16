@@ -13,8 +13,9 @@
  *
  * ***************************************************************************/
 
+using System;
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class IndexExpression : Expression {
@@ -34,7 +35,7 @@ namespace IronPython.Compiler.Ast {
             get { return _index; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return new MSAst.IndexExpression(
                 ag.Transform(_target),
                 ag.Transform(_index),

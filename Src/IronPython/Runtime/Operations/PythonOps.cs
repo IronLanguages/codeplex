@@ -1,0 +1,2489 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Permissive License, please send an email to 
+ * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Permissive License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
+using System;
+using System.Threading;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using System.IO;
+
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Diagnostics;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
+using IronPython.Compiler;
+using IronPython.Compiler.Generation;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Actions;
+using IronPython.Hosting;
+
+namespace IronPython.Runtime.Operations {
+
+    /// <summary>
+    /// Contains functions that are called directly from
+    /// generated code to perform low-level runtime functionality.
+    /// </summary>
+    public static partial class PythonOps {
+        #region Shared static data
+
+        private static List<object> InfiniteRepr {
+            get {
+                return ThreadStatics.Ops_InfiniteRepr;
+            }
+            set {
+                ThreadStatics.Ops_InfiniteRepr = value;
+            }
+        }
+
+        /// <summary> Singleton NotImplemented object of NotImplementedType.  Initialized after type has been created in static constructor </summary>
+        public static readonly object NotImplemented;
+        public static readonly object Ellipsis;
+
+        /// <summary> Dictionary of error handlers for string codecs. </summary>
+        private static Dictionary<string, object> errorHandlers = new Dictionary<string, object>();
+        /// <summary> Table of functions used for looking for additional codecs. </summary>
+        private static List<object> searchFunctions = new List<object>();
+        /// <summary> stored for copy_reg module, used for reduce protocol </summary>
+        public static BuiltinFunction NewObject;
+        /// <summary> stored for copy_reg module, used for reduce protocol </summary>
+        public static BuiltinFunction PythonReconstructor;
+
+        private static FastDynamicSite<object, object, int> CompareSite = new FastDynamicSite<object, object, int>(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
+
+        #endregion
+
+        static PythonOps() {
+#if !SILVERLIGHT
+            // register Python COM type builder until COM type builder can move down...
+            ReflectedTypeBuilder.RegisterAlternateBuilder(delegate(Type t) {
+                if (ComObject.Is__ComObject(t)) {
+                    return ComTypeBuilder.ComType;
+                }
+                return null;
+            });
+#endif
+
+            DynamicTypeBuilder.TypeInitialized += new EventHandler<TypeCreatedEventArgs>(PythonTypeCustomizer.OnTypeInit);
+
+            MakeDynamicTypesTable();
+                        
+            NotImplemented = NotImplementedTypeOps.CreateInstance();
+            Ellipsis = EllipsisTypeOps.CreateInstance();
+            NoneTypeOps.InitInstance();
+        }
+
+        public static BigInteger MakeIntegerFromHex(string s) {
+            return LiteralParser.ParseBigInteger(s, 16);
+        }
+
+        public static PythonDictionary MakeDict(int size) {
+            return new PythonDictionary(size);
+        }
+
+        public static bool IsCallable(object o) {
+            return IsCallable(DefaultContext.Default, o);
+        }
+
+        public static bool IsCallable(CodeContext context, object o) {
+            if (o is ICallableWithCodeContext) {
+                return true;
+            }
+
+            return PythonOps.HasAttr(context, o, Symbols.Call);
+        }
+
+        public static bool IsTrue(object o) {
+            return Converter.ConvertToBoolean(o);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1002:DoNotExposeGenericLists")]
+        public static List<object> GetReprInfinite() {
+            if (InfiniteRepr == null) {
+                InfiniteRepr = new List<object>();
+            }
+            return InfiniteRepr;
+        }
+
+#if !SILVERLIGHT
+        
+        internal static object LookupEncodingError(string name) {
+            if (errorHandlers.ContainsKey(name))
+                return errorHandlers[name];
+            else
+                throw PythonOps.LookupError("unknown error handler name '{0}'", name);
+        }
+
+        internal static void RegisterEncodingError(string name, object handler) {
+            if(!PythonOps.IsCallable(handler))
+                throw PythonOps.TypeError("handler must be callable");
+
+            errorHandlers[name] = handler;
+        }
+
+#endif
+        
+        internal static Tuple LookupEncoding(string encoding) {
+            for (int i = 0; i < searchFunctions.Count; i++) {
+                object res = PythonCalls.Call(searchFunctions[i], encoding);
+                if (res != null) return (Tuple)res;
+            }
+
+            throw PythonOps.LookupError("unknown encoding: {0}", encoding);
+        }
+
+        internal static void RegisterEncoding(object search_function) {
+            if(!PythonOps.IsCallable(search_function))
+                throw PythonOps.TypeError("search_function must be callable");
+
+            searchFunctions.Add(search_function);
+        }
+
+        //!!! Temporarily left in so this checkin won't collide with Converter changes
+        internal static string GetClassName(object obj) {
+            return GetPythonTypeName(obj);
+        }
+
+        internal static string GetPythonTypeName(object obj) {
+            OldInstance oi = obj as OldInstance;
+            if (oi != null) return oi.__class__.__name__.ToString();
+            else return DynamicTypeOps.GetName(DynamicHelpers.GetDynamicType(obj));
+        }
+
+        public static string StringRepr(object o) {
+            return StringRepr(DefaultContext.Default, o);
+        }
+
+        public static string StringRepr(CodeContext context, object o) {
+            if (o == null) return "None";
+
+            string s = o as string;
+            if (s != null) return StringOps.Quote(s);
+            if (o is int) return o.ToString();
+            if (o is long) return ((long)o).ToString() + "L";
+            if (o is BigInteger) return ((BigInteger)o).ToString() + "L";
+            if (o is double) return DoubleOps.ToString((double)o);
+            if (o is float) return DoubleOps.ToString((float)o);
+
+            PerfTrack.NoteEvent(PerfTrack.Categories.Temporary, "Repr " + o.GetType().FullName);
+
+            // could be a container object, we need to detect recursion, but only
+            // for our own built-in types that we're aware of.  The user can setup
+            // infinite recursion in their own class if they want.
+            ICodeFormattable f = o as ICodeFormattable;
+            if (f != null) {
+                List<object> infinite = GetAndCheckInfinite(o);
+                if (infinite == null) return GetInfiniteRepr(o);
+                int index = infinite.Count;
+                infinite.Add(o);
+                try {
+                    return f.ToCodeString(context);
+                } finally {
+                    System.Diagnostics.Debug.Assert(index == infinite.Count - 1);
+                    infinite.RemoveAt(index);
+                }
+            }
+
+            Array a = o as Array;
+            if (a != null) {
+                List<object> infinite = GetAndCheckInfinite(o);
+                if (infinite == null) return GetInfiniteRepr(o);
+                int index = infinite.Count;
+                infinite.Add(o);
+                try {
+                    return ArrayOps.CodeRepresentation(a);
+                } finally {
+                    System.Diagnostics.Debug.Assert(index == infinite.Count - 1);
+                    infinite.RemoveAt(index);
+                }
+            }
+
+            return DynamicHelpers.GetDynamicType(o).InvokeUnaryOperator(context, Operators.CodeRepresentation, o) as string;
+        }
+
+        private static List<object> GetAndCheckInfinite(object o) {
+            List<object> infinite = GetReprInfinite();
+            foreach (object o2 in infinite) {
+                if (o == o2) {
+                    return null;
+                }
+            }
+            return infinite;
+        }
+
+        private static string GetInfiniteRepr(object o) {
+            object keys;
+            return o is List ? "[...]" :
+                o is PythonDictionary ? "{...}" :
+                PythonOps.TryGetBoundAttr(o, Symbols.Keys, out keys) ? "{...}" : // user dictionary
+                "...";
+        }
+
+        public static string ToString(object o) {
+            if (o == null) return "None";
+            if (o is double) return DoubleOps.ToString((double)o);
+            if (o is float) return DoubleOps.ToString((float)o);
+            if (o is Array) return StringRepr(o);
+
+            object res;
+            if (!DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default,
+                Operators.ConvertToString,
+                o,
+                out res))
+                throw PythonOps.TypeError("cannot invoke __str__");
+
+            return (string)res;
+        }
+
+
+        public static object Repr(object o) {
+            return StringRepr(o);
+        }
+
+        internal static bool IsCallable(object o, int expArgCnt, out int minArgCnt, out int maxArgCnt) {
+            // if we have a python function make sure it's compatible...
+            PythonFunction fo = o as PythonFunction;
+
+            Method m = o as Method;
+            if (m != null) {
+                fo = m.Function as PythonFunction;
+            }
+
+            minArgCnt = 0;
+            maxArgCnt = 0;
+
+            if (fo != null) {
+                if (fo is FunctionN == false) {
+                    maxArgCnt = fo.ArgCount;
+                    minArgCnt = fo.ArgCount - fo.FunctionDefaults.Count;
+
+                    // take into account unbound methods / bound methods
+                    if (m != null) {
+                        if (m.Self != null) {
+                            maxArgCnt--;
+                            minArgCnt--;
+                        }
+                    }
+
+                    // the target is no good for this delegate - we don't have enough
+                    // parameters.
+                    if (expArgCnt < minArgCnt || expArgCnt > maxArgCnt)
+                        return false;
+                }
+            }
+
+            return o != null;
+        }
+
+        public static object Plus(object o) {
+            object ret;
+
+            if (o is int) return o;
+            else if (o is double) return o;
+            else if (o is BigInteger) return o;
+            else if (o is Complex64) return o;
+            else if (o is long) return o;
+            else if (o is float) return o;
+            else if (o is bool) return RuntimeHelpers.Int32ToObject((bool)o ? 1 : 0);
+            else if (PythonOps.TryInvokeOperator(DefaultContext.Default,
+                Operators.Positive,
+                o,
+                out ret))
+                return ret;
+
+            if (DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Positive, o, out ret) &&
+                ret != PythonOps.NotImplemented)
+                return ret;
+
+            throw PythonOps.TypeError("bad operand type for unary +");
+        }
+
+        public static object Negate(object o) {
+            if (o is int) return Int32Ops.Negate((int)o);
+            else if (o is double) return DoubleOps.Negate((double)o);
+            else if (o is long) return Int64Ops.Negate((long)o);
+            else if (o is BigInteger) return BigIntegerOps.Negate((BigInteger)o);
+            else if (o is Complex64) return -(Complex64)o;
+            else if (o is float) return DoubleOps.Negate((float)o);
+            else if (o is bool) return RuntimeHelpers.Int32ToObject((bool)o ? -1 : 0);
+
+            object ret;
+            if (DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Negate, o, out ret) &&
+                ret != PythonOps.NotImplemented)
+                return ret;
+
+            throw PythonOps.TypeError("bad operand type for unary -");
+        }
+
+        public static bool IsSubClass(DynamicType c, object typeinfo) {
+            if (c == null) throw PythonOps.TypeError("issubclass: arg 1 must be a class");
+            if (typeinfo == null) throw PythonOps.TypeError("issubclass: arg 2 must be a class");
+
+            Tuple pt = typeinfo as Tuple;
+            if (pt != null) {
+                // Recursively inspect nested tuple(s)
+                foreach (object o in pt) {
+                    if (IsSubClass(c, o)) return true;
+                }
+                return false;
+            }
+
+            OldClass oc = typeinfo as OldClass;
+            if (oc != null) {
+                return c.IsSubclassOf(oc.TypeObject);
+            }
+
+            object bases;
+            DynamicType dt = typeinfo as DynamicType;
+            if (dt == null) {
+                if (!PythonOps.TryGetBoundAttr(typeinfo, Symbols.Bases, out bases)) {
+                    //!!! deal with classes w/ just __bases__ defined.
+                    throw PythonOps.TypeErrorForBadInstance("issubclass(): {0} is not a class nor a tuple of classes", typeinfo);
+                }
+
+                IEnumerator ie = PythonOps.GetEnumerator(bases);
+                while (ie.MoveNext()) {
+                    DynamicType baseType = ie.Current as DynamicType;
+
+                    if (baseType == null) {
+                        OldClass ocType = ie.Current as OldClass;
+                        if (ocType == null) throw PythonOps.TypeError("expected type, got {0}", DynamicHelpers.GetDynamicType(ie.Current));
+
+                        baseType = ocType.TypeObject;
+                    }
+
+                    if (c.IsSubclassOf(baseType)) return true;
+                }
+                return false;
+            }
+
+            return c.IsSubclassOf(dt);
+        }
+
+        public static bool IsInstance(object o, object typeinfo) {
+            if (typeinfo == null) throw PythonOps.TypeError("isinstance: arg 2 must be a class, type, or tuple of classes and types");
+
+            Tuple tt = typeinfo as Tuple;
+            if (tt != null) {
+                foreach (object type in tt) {
+                    if (IsInstance(o, type)) return true;
+                }
+                return false;
+            }
+
+            if (typeinfo is OldClass) {
+                // old instances are strange - they all share a common type
+                // of instance but they can "be subclasses" of other
+                // OldClass's.  To check their types we need the actual
+                // instance.
+                OldInstance oi = o as OldInstance;
+                if (oi != null) return oi.__class__.IsSubclassOf(typeinfo);
+            }
+
+            DynamicType odt = DynamicHelpers.GetDynamicType(o);
+            if (IsSubClass(odt, typeinfo)) {
+                return true;
+            }
+
+            object cls;
+            if (PythonOps.TryGetBoundAttr(o, Symbols.Class, out cls) &&
+                (!object.ReferenceEquals(odt, cls))) {
+                return IsSubclassSlow(cls, typeinfo);
+            }
+            return false;
+        }
+
+        private static bool IsSubclassSlow(object cls, object typeinfo) {
+            Debug.Assert(typeinfo != null);
+            if (cls == null) return false;
+
+            // Same type
+            if (cls.Equals(typeinfo)) {
+                return true;
+            }
+
+            // Get bases
+            object bases;
+            if (!PythonOps.TryGetBoundAttr(cls, Symbols.Bases, out bases)) {
+                return false;   // no bases, cannot be subclass
+            }
+            Tuple tbases = bases as Tuple;
+            if (tbases == null) {
+                return false;   // not a tuple, cannot be subclass
+            }
+
+            foreach (object baseclass in tbases) {
+                if (IsSubclassSlow(baseclass, typeinfo)) return true;
+            }
+
+            return false;
+        }
+        
+        public static object OnesComplement(object o) {
+            if (o is int) return ~(int)o;
+            if (o is long) return ~(long)o;
+            if (o is BigInteger) return ~((BigInteger)o);
+            if (o is bool) return RuntimeHelpers.Int32ToObject((bool)o ? -2 : -1);
+
+            object ret;
+            if (DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.OnesComplement, o, out ret) &&
+                ret != PythonOps.NotImplemented)
+                return ret;
+
+
+            throw PythonOps.TypeError("bad operand type for unary ~");
+        }
+
+        public static object Not(object o) {
+            return IsTrue(o) ? RuntimeHelpers.False : RuntimeHelpers.True;
+        }
+
+        public static object Is(object x, object y) {
+            return x == y ? RuntimeHelpers.True : RuntimeHelpers.False;
+        }
+
+        public static bool IsRetBool(object x, object y) {
+            return x == y;
+        }
+
+        public static object IsNot(object x, object y) {
+            return x != y ? RuntimeHelpers.True : RuntimeHelpers.False;
+        }
+
+        public static bool IsNotRetBool(object x, object y) {
+            return x != y;
+        }
+
+        public static object In(object x, object y) {
+            if (y is IDictionary) {
+                return RuntimeHelpers.BooleanToObject(((IDictionary)y).Contains(x));
+            }
+
+            if (y is IList) {
+                return RuntimeHelpers.BooleanToObject(((IList)y).Contains(x));
+            }
+
+            if (y is IList<object>) {
+                return RuntimeHelpers.BooleanToObject(((IList<object>)y).Contains(x));
+            }
+           
+            string ys;
+            if ((ys = y as string) != null) {
+                string s = x as string;
+                if (s == null) {
+                    if (x is char) {
+                        return (ys.IndexOf((char)x) != -1) ? RuntimeHelpers.True : RuntimeHelpers.False;
+                    }
+                    throw TypeError("'in <string>' requires string as left operand");
+                }
+                return ys.Contains(s) ? RuntimeHelpers.True : RuntimeHelpers.False;
+            }
+
+            if (y is char) {
+                return In(x, y.ToString());
+            }
+
+            object contains;
+            if (PythonOps.TryInvokeOperator(DefaultContext.Default,
+                Operators.Contains,
+                y,
+                x,
+                out contains)) {
+                return PythonOps.IsTrue(contains) ? RuntimeHelpers.True : RuntimeHelpers.False;
+            }
+
+            IEnumerator e = GetEnumerator(y);
+            while (e.MoveNext()) {
+                if (PythonOps.EqualRetBool(e.Current, x)) return RuntimeHelpers.True;
+            }
+
+            return RuntimeHelpers.False;
+        }
+
+        public static bool InRetBool(object x, object y) {
+            if (y is IDictionary) {
+                return ((IDictionary)y).Contains(x);
+            }
+
+            if (y is IList) {
+                return ((IList)y).Contains(x);
+            }
+
+            if (y is string) {
+                string s = x as string;
+                if (s == null) {
+                    throw TypeError("'in <string>' requires string as left operand");
+                }
+                return ((string)y).Contains(s);
+            }
+
+            object contains;
+            if (PythonOps.TryInvokeOperator(DefaultContext.Default,
+                Operators.Contains,
+                y,
+                x,
+                out contains)) {
+                return PythonOps.IsTrue(contains);
+            }
+
+            IEnumerator e = GetEnumerator(y);
+            while (e.MoveNext()) {
+                if (PythonOps.EqualRetBool(e.Current, x)) return true;
+            }
+
+            return false;
+        }
+
+        public static object NotIn(object x, object y) {
+            return Not(In(x, y));  //???
+        }
+
+        public static bool NotInRetBool(object x, object y) {
+            return !InRetBool(x, y);  //???
+        }
+
+        //        public static object DynamicHelpers.GetDynamicType1(object o) {
+        //            IConvertible ic = o as IConvertible;
+        //            if (ic != null) {
+        //                switch (ic.GetTypeCode()) {
+        //                    case TypeCode.Int32: return "int";
+        //                    case TypeCode.Double: return "double";
+        //                    default: throw new NotImplementedException();
+        //                }
+        //            } else {
+        //                throw new NotImplementedException();
+        //            }
+        //        }
+        //
+        //        private static object[] oas = new object[] { "int", "double" };
+        //
+        //        public static object DynamicHelpers.GetDynamicType2(object o) {
+        //            Type ty = o.GetType();
+        //            int hc = ty.GetHashCode();
+        //
+        //            return oas[hc%1];
+        //        }
+
+        // TODO: Remove this method, assemblies get registered as packages?
+        private static void MakeDynamicTypesTable() {
+            DynamicHelpers.RegisterAssembly(Assembly.GetExecutingAssembly());
+
+            // TODO: Remove impersonation
+            DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(typeof(SymbolDictionary))).SetImpersonationType(typeof(PythonDictionary));
+
+            // TODO: Contest specific MRO?
+            DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(typeof(bool))).AddInitializer(delegate(DynamicMixinBuilder builder) {
+                DynamicTypeBuilder dtb = (DynamicTypeBuilder)builder;
+                builder.SetResolutionOrder(new DynamicType[]{
+                    TypeCache.Boolean,
+                    TypeCache.Int32,
+                    TypeCache.Object});
+                dtb.SetBases(new DynamicType[] { TypeCache.Int32 });
+            });
+        }
+                
+        public static bool EqualIsTrue(object x, int y) {
+            if (x is int) return ((int)x) == y;
+
+            return EqualRetBool(x, y);
+        }
+
+        internal delegate T MultiplySequenceWorker<T>(T self, int count);
+
+        /// <summary>
+        /// Wraps up all the semantics of multiplying sequences so that all of our sequences
+        /// don't duplicate the same logic.  When multiplying sequences we need to deal with
+        /// only multiplying by valid sequence types (ints, not floats), support coercion
+        /// to integers if the type supports it, not multiplying by None, and getting the
+        /// right semantics for multiplying by negative numbers and 1 (w/ and w/o subclasses).
+        /// 
+        /// This function assumes that it is only called for case where count is not implicitly
+        /// coercible to int so that check is skipped.
+        /// </summary>
+        internal static object MultiplySequence<T>(MultiplySequenceWorker<T> multiplier, T sequence, object count, bool isForward) {
+            if (isForward && count != null) {
+                object ret;
+                if (PythonOps.TryInvokeOperator(DefaultContext.Default, Operators.ReverseMultiply, count, sequence, out ret)) {
+                    if (ret != NotImplemented) return ret;
+                }
+            }
+
+            int icount = Converter.ConvertToInt32(count);
+            if (icount < 0) icount = 0;
+            return multiplier(sequence, icount);
+        }
+
+        private static FastDynamicSite<object, object, object> EqualSharedSite =
+            new FastDynamicSite<object, object, object>(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equal));
+
+        public static object Equal(object x, object y) {
+            return EqualSharedSite.Invoke(x, y);
+        }
+        private static FastDynamicSite<object, object, bool> EqualBooleanSharedSite =
+            new FastDynamicSite<object, object, bool>(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equal));
+
+        public static bool EqualRetBool(object x, object y) {
+            //TODO just can't seem to shake these fast paths
+            if (x is int && y is int) { return ((int)x) == ((int)y); }
+            if (x is double && y is double) { return ((double)x) == ((double)y); }
+            if (x is string && y is string) { return ((string)x).Equals((string)y); }
+
+            return EqualBooleanSharedSite.Invoke(x, y);
+        }
+
+        public static int Compare(object x, object y) {
+            return Compare(DefaultContext.Default, x, y);
+        }
+
+        public static int Compare(CodeContext context, object x, object y) {
+            if (x == y) return 0;
+
+            return CompareSite.Invoke(x, y);
+        }
+
+        public static object CompareEqual(int res) {
+            return res == 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+        }
+
+        public static object CompareNotEqual(int res) {
+            return res == 0 ? RuntimeHelpers.False : RuntimeHelpers.True;
+        }
+
+        public static object CompareGreaterThan(int res) {
+            return res > 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+        }
+
+        public static object CompareGreaterThanOrEqual(int res) {
+            return res >= 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+        }
+
+        public static object CompareLessThan(int res) {
+            return res < 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+        }
+
+        public static object CompareLessThanOrEqual(int res) {
+            return res <= 0 ? RuntimeHelpers.True : RuntimeHelpers.False;
+        }
+
+        public static bool CompareTypesEqual(object x, object y) {
+            return PythonOps.CompareTypes(x, y) == 0;
+        }
+
+        public static bool CompareTypesNotEqual(object x, object y) {
+            return PythonOps.CompareTypes(x, y) != 0;
+        }
+
+        public static bool CompareTypesGreaterThan(object x, object y) {
+            return PythonOps.CompareTypes(x, y) > 0;
+        }
+
+        public static bool CompareTypesLessThan(object x, object y) {
+            return PythonOps.CompareTypes(x, y) < 0;
+        }
+
+        public static bool CompareTypesGreaterThanOrEqual(object x, object y) {
+            return PythonOps.CompareTypes(x, y) >= 0;
+        }
+
+        public static bool CompareTypesLessThanOrEqual(object x, object y) {
+            return PythonOps.CompareTypes(x, y) <= 0;
+        }
+
+        public static int CompareTypes(object x, object y) {
+            if (x == null && y == null) return 0;
+            if (x == null) return -1;
+            if (y == null) return 1;
+
+            string name1, name2;
+            int diff;
+
+            if (DynamicHelpers.GetDynamicType(x) != DynamicHelpers.GetDynamicType(y)) {
+                if (x.GetType() == typeof(OldInstance)) {
+                    name1 = ((OldInstance)x).__class__.Name;
+                    if (y.GetType() == typeof(OldInstance)) {
+                        name2 = ((OldInstance)y).__class__.Name;
+                    } else {
+                        // old instances are always less than new-style classes
+                        return -1;
+                    }
+                } else if (y.GetType() == typeof(OldInstance)) {
+                    // old instances are always less than new-style classes
+                    return 1;
+                } else {
+                    name1 = DynamicTypeOps.GetName(x);
+                    name2 = DynamicTypeOps.GetName(y);
+                }
+                diff = String.CompareOrdinal(name1, name2);
+            } else {
+                diff = (int)(IdDispenser.GetId(x) - IdDispenser.GetId(y));
+            }
+
+            if (diff < 0) return -1;
+            if (diff == 0) return 0;
+            return 1;
+        }
+
+        public static object GreaterThanHelper(CodeContext context, object self, object other) {
+            return InternalCompare(context, Operators.GreaterThan, self, other);
+        }
+
+        public static object LessThanHelper(CodeContext context, object self, object other) {
+            return InternalCompare(context, Operators.LessThan, self, other);
+        }
+
+        public static object GreaterThanOrEqualHelper(CodeContext context, object self, object other) {
+            return InternalCompare(context, Operators.GreaterThanOrEqual, self, other);
+        }
+
+        public static object LessThanOrEqualHelper(CodeContext context, object self, object other) {
+            return InternalCompare(context, Operators.LessThanOrEqual, self, other);
+        }
+
+        public static object InternalCompare(CodeContext context, Operators op, object self, object other) {
+            object ret;
+            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(context, op, self, other, out ret))
+                return ret;
+
+            return PythonOps.NotImplemented;
+        }
+
+        public static object RichEqualsHelper(object self, object other) {
+            object res;
+
+            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.Equal, self, other, out res))
+                return res;
+
+            return PythonOps.NotImplemented;
+        }
+
+        public static int CompareToZero(object value) {
+            double val;
+            if (Converter.TryConvertToDouble(value, out val)) {
+                if (val > 0) return 1;
+                if (val < 0) return -1;
+                return 0;
+            }
+            throw PythonOps.TypeErrorForBadInstance("unable to compare type {0} with 0 ", value);
+        }
+
+        public static int CompareArrays(object[] data0, int size0, object[] data1, int size1) {
+            int size = Math.Min(size0, size1);
+            for (int i = 0; i < size; i++) {
+                int c = PythonOps.Compare(data0[i], data1[i]);
+                if (c != 0) return c;
+            }
+            if (size0 == size1) return 0;
+            return size0 > size1 ? +1 : -1;
+        }
+
+        public static object PowerMod(object x, object y, object z) {
+            object ret;
+            if (z == null) return PythonSites.Power(x, y);
+            if (x is int && y is int && z is int) {
+                ret = Int32Ops.Power((int)x, (int)y, (int)z);
+                if (ret != NotImplemented) return ret;
+            } else if (x is BigInteger) {
+                ret = BigIntegerOps.Power((BigInteger)x, y, z);
+                if (ret != NotImplemented) return ret;
+            }
+
+            if (x is Complex64 || y is Complex64 || z is Complex64) {
+                throw PythonOps.ValueError("complex modulo");
+            }
+
+            if (DynamicHelpers.GetDynamicType(x).TryInvokeTernaryOperator(DefaultContext.Default, Operators.Power, x, y, z, out ret) && ret != PythonOps.NotImplemented)
+                return ret;
+
+            throw PythonOps.TypeErrorForBinaryOp("power with modulus", x, y);
+        }
+
+        public static ICollection GetCollection(object o) {
+            ICollection ret = o as ICollection;
+            if (ret != null) return ret;
+
+            List<object> al = new List<object>();
+            IEnumerator e = GetEnumerator(o);
+            while (e.MoveNext()) al.Add(e.Current);
+            return al;
+        }
+
+        public static IEnumerator GetEnumerator(object o) {
+            IEnumerator ie;
+            if (!Converter.TryConvertToIEnumerator(o, out ie)) {
+                throw PythonOps.TypeError("{0} is not enumerable", StringRepr(o));
+            }
+            return ie;
+        }
+
+        public static IEnumerator GetEnumeratorForUnpack(object enumerable) {
+            IEnumerator ie;
+            if (!Converter.TryConvertToIEnumerator(enumerable, out ie)) {
+                throw PythonOps.TypeError("unpack non-sequence of type {0}",
+                    StringRepr(DynamicTypeOps.GetName(enumerable)));
+            }
+            return ie;
+        }
+
+        public static long Id(object o) {
+            return IdDispenser.GetId(o);
+        }
+
+        public static string HexId(object o) {
+            return string.Format("0x{0:X16}", Id(o));
+        }
+
+        public static int SimpleHash(object o) {
+            // must stay in sync w/ Ops.Hash!  This is just the version w/o RichEquality checks
+            if (o is int) return (int)o;
+            if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
+            if (o is double) return (int)(double)o;
+            if (o == null) return NoneTypeOps.HashCode;
+            if (o is char) return new String((char)o, 1).GetHashCode();
+
+            return o.GetHashCode();
+        }
+
+        public static int Hash(object o) {
+            // must stay in sync w/ Ops.SimpleHash!  This is just the version w/ RichEquality checks
+            if (o is int) return (int)o;
+            if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
+            if (o is double) return (int)(double)o;
+            if (o == null) return NoneTypeOps.HashCode;
+            if (o is char) return new String((char)o, 1).GetHashCode();
+
+            IValueEquality ipe = o as IValueEquality;
+            if (ipe != null) {
+                // invoke operator dynamically to go through protocol wrapper override, if defined.
+                object ret;
+                DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default,
+                    Operators.ValueHash,
+                    o,
+                    out ret);
+                if (ret != PythonOps.NotImplemented) {
+                    return Converter.ConvertToInt32(ret);
+                }
+            }
+
+            return o.GetHashCode();
+        }
+
+        public static object Hex(object o) {
+            if (o is int) return Int32Ops.Hex((int)o);
+            else if (o is BigInteger) return BigIntegerOps.Hex((BigInteger)o);
+
+            object hex;
+            if(PythonOps.TryInvokeOperator(DefaultContext.Default,
+                Operators.ConvertToHex,
+                o,
+                out hex)) {            
+                if (!(hex is string) && !(hex is ExtensibleString))
+                    throw PythonOps.TypeError("hex expected string type as return, got {0}", PythonOps.StringRepr(DynamicTypeOps.GetName(hex)));
+
+                return hex;
+            }
+            throw TypeError("hex() argument cannot be converted to hex");
+        }
+
+        public static object Oct(object o) {
+            if (o is int) {
+                return Int32Ops.Oct((int)o);
+            } else if (o is BigInteger) {
+                return BigIntegerOps.Oct((BigInteger)o);
+            }
+
+            object octal;
+            if(PythonOps.TryInvokeOperator(DefaultContext.Default,
+                Operators.ConvertToOctal,
+                o,
+                out octal)) {            
+                if (!(octal is string) && !(octal is ExtensibleString))
+                    throw PythonOps.TypeError("hex expected string type as return, got {0}", PythonOps.StringRepr(DynamicTypeOps.GetName(octal)));
+
+                return octal;
+            }
+            throw TypeError("oct() argument cannot be converted to octal");
+        }
+
+        public static int Length(object o) {
+            string s = o as String;
+            if (s != null) return s.Length;
+
+            ISequence seq = o as ISequence;
+            if (seq != null) return seq.GetLength();
+
+            ICollection ic = o as ICollection;
+            if (ic != null) return ic.Count;
+
+            object objres;
+            if (!DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Length, o, out objres))
+                throw PythonOps.TypeError("len() of unsized object");
+            int res = (int)objres;
+            if (res < 0) {
+                throw PythonOps.ValueError("__len__ should return >= 0, got {0}", res);
+            }
+            return res;
+        }
+
+        public static object CallWithContext(CodeContext context, object func, params object[] args) {
+            ICallableWithCodeContext icc = func as ICallableWithCodeContext;
+            if (icc != null) return icc.Call(context, args);
+
+            return SlowCallWithContext(context, func, args);
+        }
+
+        private static object SlowCallWithContext(CodeContext context, object func, object[] args) {
+            PerfTrack.NoteEvent(PerfTrack.Categories.OperatorInvoke, new KeyValuePair<Operators, DynamicType>(Operators.Call, DynamicHelpers.GetDynamicType(func)));
+
+            object res;
+            if (!DynamicHelpers.GetDynamicType(func).TryInvokeBinaryOperator(context, Operators.Call, func, args, out res))
+                throw PythonOps.TypeError("{0} is not callable", DynamicHelpers.GetDynamicType(func));
+
+            return res;
+        }
+
+        /// <summary>
+        /// Supports calling of functions that require an explicit 'this'
+        /// Currently, we check if the function object implements the interface 
+        /// that supports calling with 'this'. If not, the 'this' object is dropped
+        /// and a normal call is made.
+        /// </summary>
+        public static object CallWithContextAndThis(CodeContext context, object func, object instance, params object[] args) {
+
+            ICallableWithThis icc = func as ICallableWithThis;
+            if (icc != null) {
+                return icc.Call(context, instance, args);
+            } else {
+                // drop the 'this' and make the call
+                return CallWithContext(context, func, args);
+            }
+        }
+
+        public static object ToPythonType(DynamicMixin dt) {
+            if (dt != null && dt != TypeCache.Object) {
+                DynamicTypeSlot ret;
+                if (dt.TryLookupSlot(DefaultContext.Default, Symbols.Class, out ret) &&
+                    ret.GetType() == typeof(DynamicTypeValueSlot)) {
+                    object tmp;
+                    if (ret.TryGetValue(DefaultContext.Default, null, dt, out tmp)) {
+                        return tmp;
+                    }
+                }
+            }
+            return dt;
+        }
+
+        public static object CallWithArgsTupleAndContext(CodeContext context, object func, object[] args, object argsTuple) {
+            Tuple tp = argsTuple as Tuple;
+            if (tp != null) {
+                object[] nargs = new object[args.Length + tp.Count];
+                for (int i = 0; i < args.Length; i++) nargs[i] = args[i];
+                for (int i = 0; i < tp.Count; i++) nargs[i + args.Length] = tp[i];
+                return CallWithContext(context, func, nargs);
+            }
+
+            List allArgs = List.MakeEmptyList(args.Length + 10);
+            allArgs.AddRange(args);
+            IEnumerator e = PythonOps.GetEnumerator(argsTuple);
+            while (e.MoveNext()) allArgs.AddNoLock(e.Current);
+
+            return CallWithContext(context, func, allArgs.GetObjectArray());
+        }
+       
+        public static object CallWithArgsTupleAndKeywordDictAndContext(CodeContext context, object func, object[] args, string[] names, object argsTuple, object kwDict) {
+            IDictionary kws = kwDict as IDictionary;
+            if (kws == null && kwDict != null) throw PythonOps.TypeError("argument after ** must be a dictionary");
+
+            if ((kws == null || kws.Count == 0) && names.Length == 0) {
+                List<object> largs = new List<object>(args);
+                if (argsTuple != null) {
+                    foreach(object arg in PythonOps.GetCollection(argsTuple))
+                        largs.Add(arg);
+                }
+                return CallWithContext(context, func, largs.ToArray());
+            } else {
+                List<object> largs;
+
+                if (argsTuple != null && args.Length == names.Length) {
+                    Tuple tuple = argsTuple as Tuple;
+                    if (tuple == null) tuple = new Tuple(argsTuple);
+
+                    largs = new List<object>(tuple);
+                    largs.AddRange(args);
+                } else {
+                    largs = new List<object>(args);
+                    if (argsTuple != null) {
+                        largs.InsertRange(args.Length - names.Length, Tuple.Make(argsTuple));
+                    }
+                }
+
+                List<string> lnames = new List<string>(names);
+
+                if (kws != null) {
+                    IDictionaryEnumerator ide = kws.GetEnumerator();
+                    while (ide.MoveNext()) {
+                        lnames.Add((string)ide.Key);
+                        largs.Add(ide.Value);
+                    }
+                }
+
+                // fast path
+                IFancyCallable ic = func as IFancyCallable;
+                if (ic != null) {
+                    return ic.Call(context, largs.ToArray(), lnames.ToArray());
+                } 
+
+                // slow path
+                object ret;
+                if (DynamicHelpers.GetDynamicType(func).TryInvokeBinaryOperator(context, Operators.Call, func, new KwCallInfo(largs.ToArray(), lnames.ToArray()), out ret))
+                    return ret;
+
+                throw new Exception("this object is not callable with keyword parameters");                
+            }
+        }
+
+        public static object CallWithKeywordArgs(CodeContext context, object func, object[] args, string[] names) {
+            IFancyCallable ic = func as IFancyCallable;
+            if (ic != null) return ic.Call(context, args, names);
+
+            object ret;
+            if(DynamicHelpers.GetDynamicType(func).TryInvokeBinaryOperator(context, Operators.Call, func, new KwCallInfo(args, names), out ret)) {
+                return ret;
+            }
+
+            throw PythonOps.TypeError("{0} object is not callable", DynamicHelpers.GetDynamicType(func));
+        }
+
+        public static object CallWithArgsTuple(object func, object[] args, object argsTuple) {
+            Tuple tp = argsTuple as Tuple;
+            if (tp != null) {
+                object[] nargs = new object[args.Length + tp.Count];
+                for (int i = 0; i < args.Length; i++) nargs[i] = args[i];
+                for (int i = 0; i < tp.Count; i++) nargs[i + args.Length] = tp[i];
+                return PythonCalls.Call(func, nargs);
+            }
+
+            List allArgs = List.MakeEmptyList(args.Length + 10);
+            allArgs.AddRange(args);
+            IEnumerator e = PythonOps.GetEnumerator(argsTuple);
+            while (e.MoveNext()) allArgs.AddNoLock(e.Current);
+
+            return PythonCalls.Call(func, allArgs.GetObjectArray());
+        }
+
+        public static object GetIndex(object o, object index) {
+            ISequence seq = o as ISequence;
+            if (seq != null) {
+                Slice slice;
+                if (index is int) return seq[(int)index];
+                else if ((slice = index as Slice) != null) {
+                    if (slice.Step == null) {
+                        int start, stop;
+                        slice.DeprecatedFixed(o, out start, out stop);
+
+                        return seq.GetSlice(start, stop);
+                    }
+
+                    return seq[slice];
+                }
+                //???
+            }
+
+            string s = o as string;
+            if (s != null) {
+                if (index is int) return StringOps.GetItem(s, (int)index);
+                else if (index is Slice) return StringOps.GetItem(s, (Slice)index);
+                //???
+            }
+
+            IMapping map = o as IMapping;
+            if (map != null) {
+                return map[index];
+            }
+            return SlowGetIndex(o, index);
+        }
+
+        private static object SlowGetIndex(object o, object index) {
+            object ret;
+            IDictionary<object, object> dict = o as IDictionary<object, object>;
+            if (dict != null) {
+                if (dict.TryGetValue(index, out ret)) return ret;
+            } 
+            
+            Array array = o as Array;
+            if (array != null) {
+                return ArrayOps.GetIndex(array, index);
+            }
+
+            IList list = o as IList;
+            if (list != null) {
+                int val;
+                if (Converter.TryConvertToInt32(index, out val)) {
+                    return list[val];
+                }
+            }
+
+            DynamicType dt = o as DynamicType;
+            if (dt != null) {
+                if (dt == TypeCache.Array) {
+                    Type[] types = TypeHelpers.GetTypesFromTuple(index);
+                    if (types.Length != 1) throw PythonOps.TypeError("expected single type");
+
+                    return DynamicHelpers.GetDynamicTypeFromType(types[0].MakeArrayType());
+                } else {
+                    Tuple tindex = index as Tuple;
+                    if (tindex == null) {
+                        DynamicType dti = index as DynamicType;
+                        if (dti != null) {
+                            tindex = Tuple.MakeTuple(dti);
+                        } else {
+                            throw PythonOps.TypeError("__getitem__ expected tuple, got {0}", PythonOps.StringRepr(DynamicTypeOps.GetName(index)));
+                        }
+                    }
+
+                    DynamicType[] dta = new DynamicType[tindex.Count];
+                    for (int i = 0; i < tindex.Count; i++) {
+                        dta[i] = (DynamicType)tindex[i];
+                    }
+
+                    return DynamicHelpers.GetDynamicTypeFromType(dt.MakeGenericType(dta));
+                }
+            }
+
+            BuiltinFunction bf = o as BuiltinFunction;
+            if (bf != null) {
+                return PythonBuiltinFunctionOps.GetItem(bf, index);
+            }
+
+            if (DynamicHelpers.GetDynamicType(o).TryInvokeBinaryOperator(DefaultContext.Default, Operators.GetItem, o, index, out ret)) {
+                return ret;
+            }
+
+            throw PythonOps.AttributeError("{0} object has no attribute '__getitem__'",
+                PythonOps.StringRepr(DynamicTypeOps.GetName(o)));
+        }
+
+        public static void SetIndexId(object o, SymbolId index, object value) {
+            IAttributesCollection ad;
+            if ((ad = o as IAttributesCollection) != null) {
+                ad[index] = value;
+            } else {
+                SetIndex(o, SymbolTable.IdToString(index), value);
+            }
+        }
+
+        public static void SetIndex(object o, object index, object value) {
+            IMutableSequence seq = o as IMutableSequence;
+            if (seq != null) {
+                Slice slice;
+
+                if (index is int) {
+                    seq[(int)index] = value;
+                    return;
+                } else if ((slice = index as Slice) != null) {
+                    if (slice.Step == null) {
+                        SetDeprecatedSlice(o, value, seq, slice);
+                    } else {
+                        seq[slice] = value;
+                    }
+
+                    return;
+                }
+                //???
+            }
+
+            IMapping map = o as IMapping;
+            if (map != null) {
+                map[index] = value;
+                return;
+            }
+
+            SlowSetIndex(o, index, value);
+        }
+
+        private static void SetDeprecatedSlice(object o, object value, IMutableSequence seq, Slice slice) {
+            int start, stop;
+            slice.DeprecatedFixed(o, out start, out stop);
+
+            seq.SetSlice(start, stop, value);
+        }
+
+        private static void SlowSetIndex(object o, object index, object value) {
+            Array array = o as Array;
+            if (array != null) {
+                ArrayOps.SetIndex(array, index, value);
+                return;
+            }
+
+            IList list = o as IList;
+            if (list != null) {
+                int val;
+                if (Converter.TryConvertToInt32(index, out val)) {
+                    list[val] = value;
+                    return;
+                }
+            }
+
+            object ret;
+            if (!DynamicHelpers.GetDynamicType(o).TryInvokeTernaryOperator(DefaultContext.Default, Operators.SetItem, o, index, value, out ret)) {
+                throw PythonOps.AttributeError("{0} object has no attribute '__setitem__'",
+                    PythonOps.StringRepr(DynamicTypeOps.GetName(o)));
+            }
+        }
+
+        public static void DelIndex(object o, object index) {
+            IMutableSequence seq = o as IMutableSequence;
+            if (seq != null) {
+                if (index == null) {
+                    throw PythonOps.TypeError("index must be integer or slice");
+                }
+
+                Slice slice;
+                if (index is int) {
+                    seq.DeleteItem((int)index);
+                    return;
+                } else if ((slice = index as Slice) != null) {
+                    if (slice.Step == null) {
+                        int start, stop;
+                        slice.DeprecatedFixed(o, out start, out stop);
+
+                        seq.DeleteSlice(start, stop);
+                    } else
+                        seq.DeleteItem((Slice)index);
+
+                    return;
+                }
+            }
+
+            IMapping map = o as IMapping;
+            if (map != null) {
+                map.DeleteItem(index);
+                return;
+            }
+
+            object ret;
+            if (!DynamicHelpers.GetDynamicType(o).TryInvokeBinaryOperator(DefaultContext.Default, Operators.DeleteItem, o, index, out ret)) {
+                throw PythonOps.AttributeError("{0} object has no attribute '__delitem__'",
+                    PythonOps.StringRepr(DynamicTypeOps.GetName(o)));
+            }
+        }
+
+        public static object GetNamespace(CodeContext context, Assembly asm, string nameSpace) {
+            object res;
+            if (!DynamicHelpers.GetDynamicTypeFromType(typeof(Assembly)).TryGetBoundMember(context, asm, SymbolTable.StringToId(nameSpace), out res)) {
+                throw new InvalidOperationException("bad assembly");
+            }
+            return res;
+        }
+
+        public static bool TryGetAttr(object o, SymbolId name, out object ret) {
+            return TryGetAttr(DefaultContext.Default, o, name, out ret);
+        }
+
+        public static bool TryGetAttr(CodeContext context, object o, SymbolId name, out object ret) {
+            ICustomMembers ids = o as ICustomMembers;
+            if (ids != null) {
+                if (ids.TryGetCustomMember(context, name, out ret)) {
+                    return true;
+                }
+
+                //!!! should go into DynamicType ICustomAttributes implementation, but we don't have
+                // the type cache to do this... (see GetAttr for more info)
+                if (o.GetType() != typeof(DynamicType) && !o.GetType().IsSubclassOf(typeof(ExtensibleType))) 
+                    return false;
+            }
+            
+            if (DynamicHelpers.GetDynamicType(o).TryGetMember(context, o, name, out ret)) {
+                //!!! needs to go (should be bulit-in to DynamicType)
+                return true;
+            }
+            return false;
+        }
+
+        public static bool TryGetBoundAttr(object o, SymbolId name, out object ret) {
+            return TryGetBoundAttr(DefaultContext.Default, o, name, out ret);
+        }
+
+        public static bool TryGetBoundAttr(CodeContext context, object o, SymbolId name, out object ret) {
+            ICustomMembers icm = o as ICustomMembers;
+            if (icm != null) {
+                if (icm.TryGetBoundCustomMember(context, name, out ret)) {
+                    return true;
+                }
+
+                //!!! should go into DynamicType ICustomAttributes implementation, but we don't have
+                // the type cache to do this... (see GetAttr for more info)
+                if (o.GetType() != typeof(DynamicType) && !o.GetType().IsSubclassOf(typeof(ExtensibleType)))
+                    return false;
+            }
+
+            if (DynamicHelpers.GetDynamicType(o).TryGetBoundMember(context, o, name, out ret)) {
+                //!!! needs to go (should be bulit-in to DynamicType)
+                return true;
+            }
+            return false;
+        }
+
+        public static bool HasAttr(CodeContext context, object o, SymbolId name) {
+            object dummy;
+            try {
+                return TryGetAttr(context, o, name, out dummy);
+            } catch {
+                return false;
+            }
+        }
+
+        public static object GetAttr(CodeContext context, object o, SymbolId name) {
+            ICustomMembers ifca = o as ICustomMembers;
+            object ret;
+
+            if (ifca != null) {
+                if (ifca.TryGetCustomMember(context, name, out ret)) {
+                    //!!! needs to go (should be bulit-in to DynamicType)
+                    return ret;                    
+                }
+                //!!! this DynamicType check can go away when the typecache
+                // lives in Microsoft.Scripting & DynamicType's CustomAttrs
+                // implementation can look in type
+                if (o.GetType() == typeof(DynamicType) || o.GetType().IsSubclassOf(typeof(ExtensibleType))) {
+                    // we have an instance of a class that is built w/
+                    // a meta-class.  We need to check the metaclasses
+                    // properties as well, which ICustomAttrs didn't do.
+                    // we'll fall through to GetAttr (we should probably
+                    // do special overrides in NewTypeMaker instead)
+                } else if (o is OldClass) {
+                    throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
+                        ((OldClass)o).Name, SymbolTable.IdToString(name));
+                } else {
+                    throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetDynamicType(o).Name, SymbolTable.IdToString(name));
+                }
+            }
+
+            // fall through to normal case...
+            return DynamicHelpers.GetDynamicType(o).GetMember(context, o, name);
+        }
+
+        public static object GetBoundAttr(CodeContext context, object o, SymbolId name) {
+            ICustomMembers icm = o as ICustomMembers;
+            if (icm != null) {
+                object value;
+                if (icm.TryGetBoundCustomMember(context, name, out value)) {
+                    return value;
+                }
+                //!!! this DynamicType check can go away when the typecache
+                // lives in Microsoft.Scripting & DynamicType's CustomAttrs
+                // implementation can look in type
+                if (o.GetType() == typeof(DynamicType) || o.GetType().IsSubclassOf(typeof(ExtensibleType))) {
+                    // we have an instance of a class that is built w/
+                    // a meta-class.  We need to check the metaclasses
+                    // properties as well, which ICustomAttrs didn't do.
+                    // we'll fall through to GetAttr (we should probably
+                    // do special overrides in NewTypeMaker instead)
+                } else if (o is OldClass) {
+                    throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
+                        ((OldClass)o).Name, SymbolTable.IdToString(name));
+                } else {
+                    throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicTypeOps.GetName(DynamicHelpers.GetDynamicType(o)), SymbolTable.IdToString(name));
+                }
+            }
+
+            return DynamicHelpers.GetDynamicType(o).GetBoundMember(context, o, name);
+        }
+
+        public static void ObjectSetAttribute(CodeContext context, object o, SymbolId name, object value) {
+            ICustomMembers ids = o as ICustomMembers;
+
+            if (ids != null) {
+                try {
+                    ids.SetCustomMember(context, name, value);
+                } catch (InvalidOperationException) {
+                    throw AttributeErrorForMissingAttribute(o, name);
+                }
+                return;
+            }
+
+            if (!DynamicHelpers.GetDynamicType(o).TrySetNonCustomMember(context, o, name, value))
+                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetDynamicType(o), name);
+        }
+
+        public static void ObjectDeleteAttribute(CodeContext context, object o, SymbolId name) {
+            ICustomMembers ifca = o as ICustomMembers;
+            if (ifca != null) {
+                try {
+                    ifca.DeleteCustomMember(context, name);
+                } catch (InvalidOperationException) {
+                    throw AttributeErrorForMissingAttribute(o, name);
+                }
+                return;
+            }
+
+            object dummy;
+            if (!DynamicHelpers.GetDynamicType(o).TryInvokeBinaryOperator(context, Operators.DeleteDescriptor, o, name, out dummy)) {                
+                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetDynamicType(o), name);
+            }
+        }
+
+        public static object ObjectGetAttribute(CodeContext context, object o, SymbolId name) {
+            ICustomMembers ifca = o as ICustomMembers;
+            if (ifca != null) {
+                object ret;
+                if (ifca.TryGetBoundCustomMember(context, name, out ret)) return ret;
+                //!!! this DynamicType check can go away when the typecache
+                // lives in Microsoft.Scripting & DynamicType's CustomAttrs
+                // implementation can look in type
+                if (o.GetType() == typeof(DynamicType)) {
+                    // we have an instance of a class that is built w/
+                    // a meta-class.  We need to check the metaclasses
+                    // properties as well, which ICustomAttrs didn't do.
+                    // we'll fall through to GetBoundAttr (we should probably
+                    // do special overrides in NewTypeMaker instead)
+                } else if (o is OldClass) {
+                    throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
+                        ((OldClass)o).Name, SymbolTable.IdToString(name));
+                } else {
+                    throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetDynamicType(o).Name, SymbolTable.IdToString(name));
+                }
+            }
+
+            object value;
+            if (DynamicHelpers.GetDynamicType(o).TryGetNonCustomMember(context, o, name, out value)) {
+                return value;
+            }            
+
+            throw PythonOps.AttributeErrorForMissingAttribute(DynamicHelpers.GetDynamicType(o).Name, name);
+        }
+
+        public static void SetAttr(CodeContext context, object o, SymbolId name, object value) {
+            ICustomMembers ids = o as ICustomMembers;
+
+            if (ids != null) {
+                try {
+                    ids.SetCustomMember(context, name, value);
+                } catch (InvalidOperationException) {
+                    throw AttributeErrorForMissingAttribute(o, name);
+                }
+                return;
+            }
+
+            if (!DynamicHelpers.GetDynamicType(o).TrySetMember(context, o, name, value))
+                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetDynamicType(o), name);
+        }
+
+        public static Exception AttributeErrorForMissingOrReadonly(CodeContext context, DynamicType dt, SymbolId name) {
+            DynamicTypeSlot dts;
+            if (dt.TryResolveSlot(context, name, out dts)) {
+                throw PythonOps.AttributeErrorForReadonlyAttribute(DynamicTypeOps.GetName(dt), name);
+            }
+
+            throw PythonOps.AttributeErrorForMissingAttribute(DynamicTypeOps.GetName(dt), name);
+        }
+
+        public static Exception AttributeErrorForMissingAttribute(object o, SymbolId name) {
+            DynamicType dt = o as DynamicType;
+            if (dt != null)
+                return PythonOps.AttributeErrorForMissingAttribute(dt.Name, name);
+
+            return AttributeErrorForReadonlyAttribute(DynamicTypeOps.GetName(o), name);
+        }
+
+
+        public static IList<object> GetAttrNames(CodeContext context, object o) {
+            ICustomMembers ids = o as ICustomMembers;
+
+            if (ids != null) {
+                return ids.GetCustomMemberNames(context);
+            }
+
+            List res = new List();
+            foreach(SymbolId x in DynamicHelpers.GetDynamicType(o).GetMemberNames(context, o))
+                res.AddNoLock(SymbolTable.IdToString(x));
+
+            //!!! ugly, we need to check fro non-SymbolID keys
+            ISuperDynamicObject dyno = o as ISuperDynamicObject;
+            if (dyno != null) {
+                IAttributesCollection iac = dyno.Dict;
+                if (iac != null) {
+                    foreach (object id in iac.Keys) {
+                        if (!res.Contains(id)) res.Add(id);
+                    }
+                }
+            }
+
+            return res;
+        }
+
+        public static IDictionary<object, object> GetAttrDict(CodeContext context, object o) {
+            ICustomMembers ids = o as ICustomMembers;
+            if (ids != null) {
+                return ids.GetCustomMemberDictionary(context);
+            }
+
+            IAttributesCollection iac = DynamicHelpers.GetDynamicType(o).GetMemberDictionary(context, o);
+            if (iac != null) {
+                return iac.AsObjectKeyedDictionary();
+            }
+            throw PythonOps.AttributeErrorForMissingAttribute(DynamicTypeOps.GetName(o), Symbols.Dict);
+        }
+
+        /// <summary>
+        /// Called from generated code emitted by NewTypeMaker.
+        /// </summary>
+        public static void CheckInitializedAttribute(object o, object self, string name) {
+            if (o == Uninitialized.Instance) {
+                throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'",
+                    DynamicHelpers.GetDynamicType(self),
+                    name);
+            }
+        }
+        
+        /// <summary>
+        /// Handles the descriptor protocol - checks for our internal implementation,
+        /// then calls the version that works on user-types
+        /// </summary>
+        public static object GetDescriptor(object o, object instance, object type) {
+            PythonFunction f = o as PythonFunction;
+            if (f != null) return f.GetAttribute(instance, type);
+
+            return GetUserDescriptor(o, instance, type);
+        }
+
+        /// <summary>
+        /// Handles the descriptor protocol for user-defined objects that may implement __get__
+        /// </summary>
+        public static object GetUserDescriptor(object o, object instance, object context) {
+            if (o != null && o.GetType() == typeof(OldInstance)) return o;   // only new-style classes can have descriptors
+
+            // slow, but only encountred for user defined descriptors.
+            PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "__get__");
+            object ret;
+            if (TryInvokeOperator(DefaultContext.Default,
+                Operators.GetDescriptor,
+                o,
+                instance,
+                context,
+                out ret))
+                return ret;
+
+            return o;
+        }
+
+        /// <summary>
+        /// Handles the descriptor protocol for user-defined objects that may implement __set__
+        /// </summary>
+        public static bool TrySetUserDescriptor(object o, object instance, object value) {
+            if (o != null && o.GetType() == typeof(OldInstance)) return false;   // only new-style classes have descriptors
+
+            // slow, but only encountred for user defined descriptors.
+            PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "__set__");
+
+            object dummy;
+            return TryInvokeOperator(DefaultContext.Default,
+                Operators.SetDescriptor,
+                o,
+                instance,
+                value,
+                out dummy);
+        }
+
+        /// <summary>
+        /// Handles the descriptor protocol for user-defined objects that may implement __delete__
+        /// </summary>
+        public static bool TryDeleteUserDescriptor(object o, object instance) {
+            if (o != null && o.GetType() == typeof(OldInstance)) return false;   // only new-style classes can have descriptors
+
+            // slow, but only encountred for user defined descriptors.
+            PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "__delete__");
+
+            object dummy;
+            return TryInvokeOperator(DefaultContext.Default,
+                Operators.DeleteDescriptor,
+                o,
+                instance,
+                out dummy);
+        }
+
+        public static object Invoke(object target, SymbolId name, params object[] args) {
+            return PythonCalls.Call(PythonOps.GetBoundAttr(DefaultContext.Default, target, name), args);
+        }
+
+        public static object InvokeWithContext(CodeContext context, object target, SymbolId name, params object[] args) {
+            return PythonOps.CallWithContext(context, PythonOps.GetBoundAttr(context, target, name), args);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public static bool TryInvokeOperator(CodeContext context, Operators name, object target, out object ret) {
+            return DynamicHelpers.GetDynamicType(target).TryInvokeUnaryOperator(context, name, target, out ret);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public static bool TryInvokeOperator(CodeContext context, Operators name, object target, object other, out object ret) {
+            return DynamicHelpers.GetDynamicType(target).TryInvokeBinaryOperator(context, name, target, other, out ret);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
+        public static bool TryInvokeOperator(CodeContext context, Operators name, object target, object value1, object value2, out object ret) {
+            return DynamicHelpers.GetDynamicType(target).TryInvokeTernaryOperator(context, name, target, value1, value2, out ret);
+        }
+
+        private static FastDynamicSite<object, object> _flushSite = new FastDynamicSite<object, object>(DefaultContext.Default, CallAction.Simple);
+        private static FastDynamicSite<object, string, object> _writeSite = new FastDynamicSite<object, string, object>(DefaultContext.Default, CallAction.Simple);
+
+        public static void Write(object f, string text) {
+            SystemState state = SystemState.Instance;
+
+            if (f == null) f = state.stdout;
+            if (f == null || f == Uninitialized.Instance) throw PythonOps.RuntimeError("lost sys.std_out");
+
+            _writeSite.Invoke(PythonOps.GetAttr(DefaultContext.Default, f, Symbols.ConsoleWrite), text);
+            object flush;
+            if(PythonOps.TryGetAttr(DefaultContext.Default, f, SymbolTable.StringToId("flush"), out flush)) {
+                _flushSite.Invoke(flush);
+            }
+        }
+
+        private static object ReadLine(object f) {
+            if (f == null || f == Uninitialized.Instance) throw PythonOps.RuntimeError("lost sys.std_in");
+            return PythonOps.Invoke(f, Symbols.ConsoleReadLine);
+        }
+
+        public static void WriteSoftspace(object f) {
+            if (CheckSoftspace(f)) {
+                SetSoftspace(f, RuntimeHelpers.False);
+                Write(f, " ");
+            }
+        }
+
+        public static void SetSoftspace(object f, object value) {
+            PythonOps.SetAttr(DefaultContext.Default, f, Symbols.Softspace, value);
+        }
+
+        public static bool CheckSoftspace(object f) {
+            object result;
+            if (PythonOps.TryGetBoundAttr(f, Symbols.Softspace, out result)) return PythonOps.IsTrue(result);
+            return false;
+        }
+
+        // Must stay here for now because libs depend on it.
+        public static void Print(object o) {
+            SystemState state = SystemState.Instance;
+
+            PrintWithDest(state.stdout, o);
+        }
+
+        public static void PrintNoNewline(object o) {
+            SystemState state = SystemState.Instance;
+
+            PrintWithDestNoNewline(state.stdout, o);
+        }
+
+        public static void PrintWithDest(object dest, object o) {
+            PrintWithDestNoNewline(dest, o);
+            Write(dest, "\n");
+        }
+
+        public static void PrintWithDestNoNewline(object dest, object o) {
+            WriteSoftspace(dest);
+            Write(dest, o == null ? "None" : ToString(o));
+        }
+
+        public static object ReadLineFromSrc(object src) {
+            return ReadLine(src);
+        }
+
+        public static Delegate CreateDynamicDelegate(DynamicMethod meth, Type delegateType, object target) {
+            // Always close delegate around its own instance of the frame
+            return meth.CreateDelegate(delegateType, target);
+        }
+
+        public static double CheckMath(double v) {
+            if (double.IsInfinity(v)) {
+                throw PythonOps.OverflowError("math range error");
+            } else if (double.IsNaN(v)) {
+                throw PythonOps.ValueError("math domain error");
+            } else {
+                return v;
+            }
+        }
+
+        public static object IsMappingType(CodeContext context, object o) {
+            if (o is IMapping || o is PythonDictionary || o is IDictionary<object, object> || o is IAttributesCollection) {
+                return RuntimeHelpers.True;
+            }
+            object getitem;
+            if (PythonOps.TryGetBoundAttr(context, o, Symbols.GetItem, out getitem)) {
+                if (!context.ModuleContext.ShowCls) {
+                    // in standard Python methods aren't mapping types, therefore
+                    // if the user hasn't broken out of that box yet don't treat 
+                    // them as mapping types.
+                    if (o is BuiltinFunction) return RuntimeHelpers.False;
+                }
+                return RuntimeHelpers.True;
+            }
+            return RuntimeHelpers.False;
+        }
+
+        public static int FixSliceIndex(int v, int len) {
+            if (v < 0) v = len + v;
+            if (v < 0) return 0;
+            if (v > len) return len;
+            return v;
+        }
+
+        public static void FixSlice(int length, object start, object stop, object step,
+                                    out int ostart, out int ostop, out int ostep, out int ocount) {
+            if (step == null) {
+                ostep = 1;
+            } else {
+                ostep = Converter.ConvertToSliceIndex(step);
+                if (ostep == 0) {
+                    throw PythonOps.ValueError("step cannot be zero");
+                }
+            }
+
+            if (start == null) {
+                ostart = ostep > 0 ? 0 : length - 1;
+            } else {
+                ostart = Converter.ConvertToSliceIndex(start);
+                if (ostart < 0) {
+                    ostart += length;
+                    if (ostart < 0) {
+                        ostart = ostep > 0 ? Math.Min(length, 0) : Math.Min(length - 1, -1);
+                    }
+                } else if (ostart >= length) {
+                    ostart = ostep > 0 ? length : length - 1;
+                }
+            }
+
+            if (stop == null) {
+                ostop = ostep > 0 ? length : -1;
+            } else {
+                ostop = Converter.ConvertToSliceIndex(stop);
+                if (ostop < 0) {
+                    ostop += length;
+                    if (ostop < 0) {
+                        ostop = Math.Min(length, -1);
+                    }
+                } else if (ostop > length) {
+                    ostop = length;
+                }
+            }
+
+            ocount = ostep > 0 ? (ostop - ostart + ostep - 1) / ostep
+                               : (ostop - ostart + ostep + 1) / ostep;
+        }
+
+        public static int FixIndex(int v, int len) {
+            if (v < 0) {
+                v += len;
+                if (v < 0) {
+                    throw PythonOps.IndexError("index out of range: {0}", v - len);
+                }
+            } else if (v >= len) {
+                throw PythonOps.IndexError("index out of range: {0}", v);
+            }
+            return v;
+        }
+
+        #region CLS Compatible exception factories
+
+        public static Exception ValueError(string format, params object[] args) {
+            return new ArgumentException(string.Format(format, args));
+        }
+
+        public static Exception KeyError(object key) {
+            // create the .NET & Python exception, setting the Arguments on the
+            // python exception to the invalid key
+            Exception res = new KeyNotFoundException(string.Format("{0}", key));
+            
+            PythonOps.SetAttr(DefaultContext.Default,
+                ExceptionConverter.ToPython(res),
+                Symbols.Arguments,
+                Tuple.MakeTuple(key));
+
+            return res;
+        }
+
+        public static Exception KeyError(string format, params object[] args) {
+            return new KeyNotFoundException(string.Format(format, args));
+        }
+
+        public static Exception StopIteration(string format, params object[] args) {
+            return new StopIterationException(string.Format(format, args));
+        }
+
+        public static Exception UnicodeEncodeError(string format, params object[] args) {
+#if SILVERLIGHT // EncoderFallbackException and DecoderFallbackException
+            throw new NotImplementedException();
+#else
+            return new System.Text.DecoderFallbackException(string.Format(format, args));
+#endif
+        }
+
+        public static Exception UnicodeDecodeError(string format, params object[] args) {
+#if SILVERLIGHT // EncoderFallbackException and DecoderFallbackException
+            throw new NotImplementedException();
+#else
+            return new System.Text.EncoderFallbackException(string.Format(format, args));
+#endif
+        }
+
+        public static Exception IOError(Exception inner) {
+            return new System.IO.IOException(inner.Message, inner);
+        }
+
+        public static Exception IOError(string format, params object[] args) {
+            return new System.IO.IOException(string.Format(format, args));
+        }
+
+        public static Exception EofError(string format, params object[] args) {
+            return new System.IO.EndOfStreamException(string.Format(format, args));
+        }
+
+        public static Exception StandardError(string format, params object[] args) {
+            return new SystemException(string.Format(format, args));
+        }
+
+        public static Exception ZeroDivisionError(string format, params object[] args) {
+            return new DivideByZeroException(string.Format(format, args));
+        }
+
+        public static Exception SystemError(string format, params object[] args) {
+            return new SystemException(string.Format(format, args));
+        }
+
+        public static Exception TypeError(string format, params object[] args) {
+            return new ArgumentTypeException(string.Format(format, args));
+        }
+
+        public static Exception IndexError(string format, params object[] args) {
+            return new System.IndexOutOfRangeException(string.Format(format, args));
+        }
+
+        public static Exception MemoryError(string format, params object[] args) {
+            return new OutOfMemoryException(string.Format(format, args));
+        }
+
+        public static Exception ArithmeticError(string format, params object[] args) {
+            return new ArithmeticException(string.Format(format, args));
+        }
+
+        public static Exception NotImplementedError(string format, params object[] args) {
+            return new NotImplementedException(string.Format(format, args));
+        }
+
+        public static Exception AttributeError(string format, params object[] args) {
+            return new MissingMemberException(string.Format(format, args));
+        }
+
+        public static Exception OverflowError(string format, params object[] args) {
+            return new System.OverflowException(string.Format(format, args));
+        }
+        public static Exception WindowsError(string format, params object[] args) {
+#if !SILVERLIGHT // System.ComponentModel.Win32Exception
+            return new System.ComponentModel.Win32Exception(string.Format(format, args));
+#else
+            return new System.SystemException(string.Format(format, args));
+#endif
+        }
+
+        public static Exception SystemExit() {
+            return new PythonSystemExitException();
+        }
+
+        public static Exception SyntaxError(string msg, string filename, int line, int column, string lineText, int errorCode, Severity severity) {
+            return new SyntaxErrorException(msg, filename, line, column, lineText, errorCode, severity);
+        }
+
+        public static Exception IndentationError(string msg, string filename, int line, int column, string lineText, int errorCode, Severity severity) {
+            return new PythonIndentationError(msg, filename, line, column, lineText, errorCode, severity);
+        }
+
+        public static Exception TabError(string msg, string filename, int line, int column, string lineText, int errorCode, Severity severity) {
+            return new PythonTabError(msg, filename, line, column, lineText, errorCode, severity);
+        }
+
+
+        #endregion
+
+
+        public static Exception StopIteration() {
+            return StopIteration("");
+        }
+
+        public static Exception InvalidType(object o, RuntimeTypeHandle handle) {
+            System.Diagnostics.Debug.Assert(ScriptDomainManager.Options.GenerateSafeCasts);
+            Type type = Type.GetTypeFromHandle(handle);
+            return TypeError("Object {0} is not of type {1}", o == null ? "None" : o, type);
+        }
+
+        public static Exception ZeroDivisionError() {
+            return ZeroDivisionError("Attempted to divide by zero.");
+        }
+
+        // If you do "(a, b) = (1, 2, 3, 4)"
+        public static Exception ValueErrorForUnpackMismatch(int left, int right) {
+            System.Diagnostics.Debug.Assert(left != right);
+
+            if (left > right)
+                return ValueError("need more than {0} values to unpack", right);
+            else
+                return ValueError("too many values to unpack");
+        }
+
+        public static Exception NameError(SymbolId name) {
+            return new UnboundNameException(string.Format("name {0} is not defined", SymbolTable.IdToString(name)));
+        }
+
+
+        // If an unbound method is called without a "self" argument, or a "self" argument of a bad type
+        public static Exception TypeErrorForUnboundMethodCall(string methodName, Type methodType, object instance) {
+            return TypeErrorForUnboundMethodCall(methodName, DynamicHelpers.GetDynamicTypeFromType(methodType), instance);
+        }
+
+        public static Exception TypeErrorForUnboundMethodCall(string methodName, DynamicType methodType, object instance) {
+            string message = string.Format("unbound method {0}() must be called with {1} instance as first argument (got {2} instead)",
+                                           methodName, methodType.Name, DynamicHelpers.GetDynamicType(instance).Name);
+            return TypeError(message);
+        }
+
+        // If a method is called with an incorrect number of arguments
+        // You should use TypeErrorForUnboundMethodCall() for unbound methods called with 0 arguments
+        public static Exception TypeErrorForArgumentCountMismatch(string methodName, int expectedArgCount, int actualArgCount) {
+            return TypeError("{0}() takes exactly {1} argument{2} ({3} given)",
+                             methodName, expectedArgCount, expectedArgCount == 1 ? "" : "s", actualArgCount);
+        }
+
+        public static Exception TypeErrorForTypeMismatch(string expectedTypeName, object instance) {
+            return TypeError("expected {0}, got {1}", expectedTypeName, PythonOps.GetPythonTypeName(instance));
+        }
+
+        // If hash is called on an instance of an unhashable type
+        public static Exception TypeErrorForUnhashableType(string typeName) {
+            return TypeError(typeName + " objects are unhashable");
+        }
+
+        internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, DynamicType type, Type newType) {
+            return TypeError("{0}: '{1}' object layout differs from '{2}'", prefix, type.Name, newType);
+        }
+
+        public static Exception TypeErrorForNonStringAttribute() {
+            return TypeError("attribute name must be string");
+        }
+
+        internal static Exception TypeErrorForBadInstance(string template, object instance) {
+            return TypeError(template, PythonOps.GetPythonTypeName(instance));
+        }
+
+        public static Exception TypeErrorForBinaryOp(string opSymbol, object x, object y) {
+            throw PythonOps.TypeError("unsupported operand type(s) for {0}: '{1}' and '{2}'",
+                                opSymbol, GetPythonTypeName(x), GetPythonTypeName(y));
+        }
+
+        public static Exception TypeErrorForUnaryOp(string opSymbol, object x) {
+            throw PythonOps.TypeError("unsupported operand type for {0}: '{1}'",
+                                opSymbol, GetPythonTypeName(x));
+        }
+        public static Exception TypeErrorForDefaultArgument(string message) {
+            return PythonOps.TypeError(message);
+        }
+
+        public static Exception AttributeErrorForReadonlyAttribute(string typeName, SymbolId attributeName) {
+            // CPython uses AttributeError for all attributes except "__class__"
+            if (attributeName == Symbols.Class)
+                return PythonOps.TypeError("can't delete __class__ attribute");
+
+            return PythonOps.AttributeError("attribute '{0}' of '{1}' object is read-only", SymbolTable.IdToString(attributeName), typeName);
+        }
+
+        public static Exception AttributeErrorForBuiltinAttributeDeletion(string typeName, SymbolId attributeName) {
+            return PythonOps.AttributeError("cannot delete attribute '{0}' of builtin type '{1}'", SymbolTable.IdToString(attributeName), typeName);
+        }
+
+        public static Exception MissingInvokeMethodException(object o, string name) {
+            if (o is OldClass) {
+                throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
+                    ((OldClass)o).Name, name);
+            } else {
+                throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", GetPythonTypeName(o), name);
+            }
+        }
+
+        public static Exception AttributeErrorForMissingAttribute(string typeName, SymbolId attributeName) {
+            return PythonOps.AttributeError("'{0}' object has no attribute '{1}'", typeName, SymbolTable.IdToString(attributeName));
+        }
+
+        public static void InitializeForFinalization(object newObject) {
+            IWeakReferenceable iwr = newObject as IWeakReferenceable;
+            Debug.Assert(iwr != null);
+
+            InstanceFinalizer nif = new InstanceFinalizer(newObject);
+            iwr.SetFinalizer(new WeakRefTracker(nif, nif));
+        }
+
+        private static object FindMetaclass(CodeContext context, Tuple bases, IAttributesCollection dict) {
+            // If dict['__metaclass__'] exists, it is used. 
+            object ret;
+            if (dict.TryGetValue(Symbols.MetaClass, out ret) && ret != null) return ret;
+
+            //Otherwise, if there is at least one base class, its metaclass is used
+            for (int i = 0; i < bases.Count; i++) {
+                if (!(bases[i] is OldClass)) return DynamicHelpers.GetDynamicType(bases[i]);
+            }
+
+            //Otherwise, if there's a global variable named __metaclass__, it is used.
+            if (context.Scope.ModuleScope.TryLookupName(context.LanguageContext, Symbols.MetaClass, out ret) && ret != null) {
+                return ret;
+            }
+
+            //Otherwise, the classic metaclass (types.ClassType) is used.
+            return TypeCache.OldInstance;
+        }
+
+        public static object MakeClass(CodeContext context, string name, object[] bases, string selfNames, Delegate body) {
+            CodeContext bodyContext;
+            CallTarget0 target = body as CallTarget0;
+            if (target != null) {
+                bodyContext = (CodeContext)target();
+            } else {
+                bodyContext = (CodeContext)((CallTargetWithContext0)body)(context);
+            }
+
+            IAttributesCollection vars = bodyContext.Scope.Dict;
+
+            foreach (object dt in bases) {
+                if (dt is TypeCollision) {
+                    object[] newBases = new object[bases.Length];
+                    for (int i = 0; i < bases.Length; i++) {
+                        TypeCollision tc = bases[i] as TypeCollision;
+                        if (tc != null) {
+                            if (tc.NonGenericType == null) {
+                                throw PythonOps.TypeError("cannot derive from open generic types " + Builtin.Repr(tc).ToString());
+                            }
+                            newBases[i] = DynamicHelpers.GetDynamicTypeFromType(tc.NonGenericType);
+                        } else {
+                            newBases[i] = bases[i];
+                        }
+                    }
+                    bases = newBases;
+                    break;
+                }
+            }
+            Tuple tupleBases = Tuple.MakeTuple(bases);
+
+            object metaclass = FindMetaclass(context, tupleBases, vars);
+            if (metaclass == TypeCache.OldInstance)
+                return new OldClass(name, tupleBases, vars, selfNames);
+            if (metaclass == TypeCache.DynamicType)
+                return UserTypeBuilder.Build(context, name, tupleBases, vars);
+
+            // eg:
+            // def foo(*args): print args            
+            // __metaclass__ = foo
+            // class bar: pass
+            // calls our function...
+            return PythonOps.CallWithContext(context, metaclass, name, tupleBases, vars);
+        }
+
+        /// <summary>
+        /// Python runtime helper for raising assertions. Used by AssertStatement.
+        /// </summary>
+        /// <param name="msg">Object representing the assertion message</param>
+        public static void RaiseAssertionError(object msg) {
+            string message = PythonOps.ToString(msg);
+            if (message == null) {
+                throw PythonOps.AssertionError(String.Empty, RuntimeHelpers.EmptyObjectArray);
+            } else {
+                throw PythonOps.AssertionError("{0}", new object[] { message });
+            }
+        }
+
+        /// <summary>
+        /// Support for with statement
+        /// </summary>
+        public static Tuple ExtractSysExcInfo(CodeContext context) {
+            return SystemState.Instance.ExceptionInfo(context);
+        }
+      
+        /// <summary>
+        /// Python runtime helper to create instance of Python List object.
+        /// </summary>
+        /// <returns>New instance of List</returns>
+        public static List MakeList() {
+            return List.MakeEmptyList(10);
+        }
+
+        /// <summary>
+        /// Python runtime helper to create a populated instnace of Python List object.
+        /// </summary>
+        /// <param name="items"></param>
+        /// <returns></returns>
+        public static List MakeList(params object[] items) {
+            return List.MakeList(items);
+        }
+
+        /// <summary>
+        /// Python runtime helper to create an instance of Tuple
+        /// </summary>
+        /// <param name="items"></param>
+        /// <returns></returns>
+        public static Tuple MakeTuple(params object[] items) {
+            return Tuple.MakeTuple(items);
+        }
+
+        /// <summary>
+        /// Python runtime helper to create an instance of an expandable tuple,
+        /// tuple which can be expanded into individual elements for use in the
+        /// context:    x[1, 2, 3]
+        /// when calling .NET indexers
+        /// </summary>
+        /// <param name="items"></param>
+        /// <returns></returns>
+        public static Tuple MakeExpandableTuple(params object[] items) {
+            return Tuple.MakeExpandableTuple(items);
+        }
+
+        /// <summary>
+        /// Python Runtime Helper for enumerator unpacking (tuple assignments, ...)
+        /// Creates enumerator from the input parameter e, and then extracts 
+        /// expected number of values, returning them as array
+        /// </summary>
+        /// <param name="e">object to enumerate</param>
+        /// <param name="expected">expected number of objects to extract from the enumerator</param>
+        /// <returns>
+        /// array of objects (.Lengh == expected) if exactly expected objects are in the enumerator.
+        /// Otherwise throws exception
+        /// </returns>
+        public static object[] GetEnumeratorValues(object e, int expected) {
+            IEnumerator ie = PythonOps.GetEnumeratorForUnpack(e);
+
+            int count = 0;
+            object[] values = new object[expected];
+
+            while (count < expected) {
+                if (!ie.MoveNext()) {
+                    throw PythonOps.ValueErrorForUnpackMismatch(expected, count);
+                }
+                values[count] = ie.Current;
+                count++;
+            }
+
+            if (ie.MoveNext()) {
+                throw PythonOps.ValueErrorForUnpackMismatch(expected, count + 1);
+            }
+
+            return values;
+        }
+
+        /// <summary>
+        /// Python runtime helper to create instance of Slice object
+        /// </summary>
+        /// <param name="start">Start of the slice.</param>
+        /// <param name="stop">End of the slice.</param>
+        /// <param name="step">Step of the slice.</param>
+        /// <returns>Slice</returns>
+        public static object MakeSlice(object start, object stop, object step) {
+            return new Slice(start, stop, step);
+        }
+
+        public static Exception MakeException(CodeContext context, object type, object value, object traceback) {
+            PythonContext pc = (PythonContext)context.LanguageContext;
+            return pc.MakeException(type, value, traceback);
+        }
+
+        #region Print support        
+
+        /// <summary>
+        /// Prints newline into default standard output
+        /// </summary>
+        public static void PrintNewline() {
+            SystemState state = SystemState.Instance;
+            PrintNewlineWithDest(state.stdout);
+        }
+
+        /// <summary>
+        /// Prints newline into specified destination. Sets softspace property to false.
+        /// </summary>
+        /// <param name="dest"></param>
+        public static void PrintNewlineWithDest(object dest) {
+            PythonOps.Write(dest, "\n");
+            PythonOps.SetSoftspace(dest, RuntimeHelpers.False);
+        }
+
+        /// <summary>
+        /// Prints value into default standard output with Python comma semantics.
+        /// </summary>
+        /// <param name="o"></param>
+        public static void PrintComma(object o) {
+            PrintCommaWithDest(SystemState.Instance.stdout, o);
+        }
+
+        /// <summary>
+        /// Prints value into specified destination with Python comma semantics.
+        /// </summary>
+        /// <param name="dest"></param>
+        /// <param name="o"></param>
+        public static void PrintCommaWithDest(object dest, object o) {
+            PythonOps.WriteSoftspace(dest);
+            string s = o == null ? "None" : PythonOps.ToString(o);
+
+            PythonOps.Write(dest, s);
+            PythonOps.SetSoftspace(dest, !s.EndsWith("\n"));
+        }        
+
+        /// <summary>
+        /// Handles output of the expression statement.
+        /// Prints the value and sets the __builtin__._
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="value"></param>
+        public static void PrintExpressionValue(CodeContext context, object value) {
+            if (value != null) {
+                Print(PythonOps.StringRepr(value));
+                SystemState.Instance.BuiltinModuleInstance.SetCustomMember(context, Symbols.Underscore, value);
+            }
+        }
+
+        #endregion
+
+        #region Import support
+
+        /// <summary>
+        /// Called from generated code for:
+        /// 
+        /// import spam.eggs
+        /// </summary>
+        public static object ImportTop(CodeContext context, string fullName) {
+            return PythonEngine.CurrentEngine.Importer.Import(context, fullName, null);
+        }
+
+        /// <summary>
+        /// Python helper method called from generated code for:
+        /// 
+        /// import spam.eggs as ham
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="fullName"></param>
+        /// <returns></returns>
+        public static object ImportBottom(CodeContext context, string fullName) {
+            object module = PythonEngine.CurrentEngine.Importer.Import(context, fullName, null);
+
+            if (fullName.IndexOf('.') >= 0) {
+                // Extract bottom from the imported module chain
+                string[] parts = fullName.Split('.');
+
+                for (int i = 1; i < parts.Length; i++) {
+                    module = PythonOps.GetBoundAttr(context, module, SymbolTable.StringToId(parts[i]));
+                }
+            }
+            return module;
+        }
+
+        /// <summary>
+        /// Called from generated code for:
+        /// 
+        /// from spam import eggs1, eggs2 
+        /// </summary>
+        public static object ImportWithNames(CodeContext context, string fullName, string[] names) {
+            return PythonEngine.CurrentEngine.Importer.Import(context, fullName, List.Make(names));
+        }
+
+
+        /// <summary>
+        /// Imports one element from the module in the context of:
+        /// 
+        /// from module import a, b, c, d
+        /// 
+        /// Called repeatedly for all elements being imported (a, b, c, d above)
+        /// </summary>
+        public static object ImportFrom(CodeContext context, object module, string name) {
+            return PythonEngine.CurrentEngine.Importer.ImportFrom(context, module, name);
+        }
+
+        /// <summary>
+        /// Called from generated code for:
+        /// 
+        /// from spam import *
+        /// </summary>
+        public static void ImportStar(CodeContext context, string fullName) {
+            object newmod = PythonEngine.CurrentEngine.Importer.Import(context, fullName, List.MakeList("*"));
+
+            ScriptModule pnew = newmod as ScriptModule;
+            if (pnew != null) {
+                object all;
+                if (pnew.TryGetBoundCustomMember(context, Symbols.All, out all)) {
+                    IEnumerator exports = PythonOps.GetEnumerator(all);
+
+                    while (exports.MoveNext()) {
+                        string name = exports.Current as string;
+                        if (name == null) continue;
+
+                        SymbolId fieldId = SymbolTable.StringToId(name);
+                        context.Scope.SetName(fieldId, PythonOps.GetBoundAttr(context, newmod, fieldId));
+                    }
+                    return;
+                }
+            }
+
+            foreach (object o in PythonOps.GetAttrNames(context, newmod)) {
+                if (o != null) {
+                    if (!(o is string)) throw PythonOps.TypeErrorForNonStringAttribute();
+                    string name = o as string;
+                    if (name.Length == 0) continue;
+                    if (name[0] == '_') continue;
+
+                    SymbolId fieldId = SymbolTable.StringToId(name);
+
+                    context.Scope.SetName(fieldId, PythonOps.GetBoundAttr(context, newmod, fieldId));
+                }
+            }
+        }
+
+        #endregion
+
+        #region Exec
+
+        /// <summary>
+        /// Unqualified exec statement support.
+        /// A Python helper which will be called for the statement:
+        /// 
+        /// exec code
+        /// </summary>
+        public static void UnqualifiedExec(CodeContext context, object code) {
+            IAttributesCollection locals = null;
+            IAttributesCollection globals = null;
+
+            // if the user passes us a tuple we'll extract the 3 values out of it            
+            Tuple codeTuple = code as Tuple;
+            if (codeTuple != null && codeTuple.Count > 0 && codeTuple.Count <= 3) {
+                code = codeTuple[0];
+
+                if (codeTuple.Count > 1 && codeTuple[1] != null) {
+                    globals = codeTuple[1] as IAttributesCollection;
+                    if (globals == null) throw PythonOps.TypeError("globals must be dictionary or none");
+                }
+
+                if (codeTuple.Count > 2 && codeTuple[2] != null) {
+                    locals = codeTuple[2] as IAttributesCollection;
+                    if (locals == null) throw PythonOps.TypeError("locals must be dictionary or none");
+                } else {
+                    locals = globals;
+                }
+            }
+
+            QualifiedExec(context, code, globals, locals);
+        }
+
+        /// <summary>
+        /// Qualified exec statement support,
+        /// Python helper which will be called for the statement:
+        /// 
+        /// exec code in globals [, locals ]
+        /// </summary>
+        public static void QualifiedExec(CodeContext context, object code, IAttributesCollection globals, object locals) {
+            PythonFile pf;
+            Stream cs;
+
+            bool line_feed = true;
+
+            // TODO: use SourceUnitReader when available
+            if ((pf = code as PythonFile) != null) {
+                List lines = pf.ReadLines();
+
+                StringBuilder fullCode = new StringBuilder();
+                for (int i = 0; i < lines.Count; i++) {
+                    fullCode.Append(lines[i]);
+                }
+
+                code = fullCode.ToString();
+            } else if ((cs = code as Stream) != null) {
+
+                using (StreamReader reader = new StreamReader(cs)) { // TODO: encoding? 
+                    code = reader.ReadToEnd();
+                }
+
+                line_feed = false;
+            }
+
+            string str_code = code as string;
+
+            if (str_code != null) {
+                ScriptEngine engine = PythonEngine.CurrentEngine;
+                SourceCodeUnit code_unit = new SourceCodeUnit(engine, str_code);
+                // in accordance to CPython semantics:
+                code_unit.DisableLineFeedLineSeparator = line_feed;
+
+                ScriptCode sc = PythonModuleOps.CompileFlowTrueDivision(code_unit, context.LanguageContext);
+                code = new FunctionCode(sc);
+            }
+
+            FunctionCode fc = code as FunctionCode;
+            if (fc == null) {
+                throw PythonOps.TypeError("arg 1 must be a string, file, Stream, or code object");
+            }
+
+            if (locals == null) locals = globals;
+            if (globals == null) globals = new GlobalsDictionary(context.Scope);
+
+            if (locals != null && PythonOps.IsMappingType(context, locals) != RuntimeHelpers.True) {
+                throw PythonOps.TypeError("exec: arg 3 must be mapping or None");
+            }
+
+            if (!globals.ContainsKey(Symbols.Builtins)) {
+                globals[Symbols.Builtins] = SystemState.Instance.modules["__builtin__"];
+            }
+
+            IAttributesCollection attrLocals = Builtin.GetAttrLocals(context, locals);
+
+            Microsoft.Scripting.Scope scope = new Microsoft.Scripting.Scope(new Microsoft.Scripting.Scope(globals), attrLocals);
+
+            fc.Call(context, scope);
+        }
+
+        #endregion        
+
+        public static IEnumerator GetEnumeratorForIteration(object enumerable) {
+            IEnumerator ie;
+            if (!Converter.TryConvertToIEnumerator(enumerable, out ie)) {
+                throw PythonOps.TypeError("iteration over non-sequence of type {0}",
+                    PythonOps.StringRepr(DynamicHelpers.GetDynamicType(enumerable)));
+            }
+            return ie;
+        }
+
+        public static LanguageContext GetLanguageContext() {
+            return DefaultContext.Default.LanguageContext;
+        }
+
+        public static object PushExceptionHandler(CodeContext context, Exception clrException) {
+            return RuntimeHelpers.PushExceptionHandler(context, clrException);
+        }
+
+        public static void PopExceptionHandler(CodeContext context) {
+            RuntimeHelpers.PopExceptionHandler(context);
+        }
+
+        public static object CheckException(CodeContext context, object exception, object test) {
+            return RuntimeHelpers.CheckException(context, exception, test);
+        }
+    }
+}

@@ -15,7 +15,7 @@
 
 using System;
 using System.Diagnostics;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 using Operators = Microsoft.Scripting.Operators;
 
 namespace IronPython.Compiler.Ast {

@@ -17,11 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
-
 using System.Diagnostics;
-using Microsoft.Scripting.Internal;
+
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -38,6 +36,7 @@ namespace Microsoft.Scripting {
             /// a new Categories entry and rename all your temporary entries.
             /// </summary>
             Temporary,
+            ReflectedTypes,
             Exceptions,     // exceptions thrown
             Properties,     // properties got or set
             Fields,         // fields got or set
@@ -47,12 +46,21 @@ namespace Microsoft.Scripting {
             DictInvoke,     // Dictionary accesses
             OperatorInvoke, // Invoking an operator against a DynamicType
             OverAllocate,   // a spot where we have an un-ideal algorithm that needs to allocate more than necessary
+            Count
 
         }
 
         private static int totalEvents = 0;
-        private static Dictionary<string, int> events = new Dictionary<string, int>();
+        private static Dictionary<Categories, Dictionary<string, int>> _events = new Dictionary<Categories, Dictionary<string, int>>();
         private static Dictionary<Categories, int> summaryStats = new Dictionary<Categories, int>();
+
+        static PerfTrack() {
+            // We do not use Enum.GetValues here since it is n ot available in SILVERLIGHT 
+            for(int i = 0; i < (int)Categories.Count; i++) {
+                Categories c = (Categories)i;
+                _events[c] = new Dictionary<string, int>();
+            }
+        }
 
 #if !SILVERLIGHT // Stopwatch
         public static void PerfTest(CodeContext context, FastCallable o, int count) {
@@ -78,8 +86,20 @@ namespace Microsoft.Scripting {
             Console.WriteLine("---- Performance Details ----");
             Console.WriteLine();
 
-            foreach (KeyValuePair<string, int> kvp in events) {
-                Console.WriteLine("{0} {1}", kvp.Key, kvp.Value);
+            foreach (KeyValuePair<Categories, Dictionary<string, int>> kvpCategories in _events) {
+                Console.WriteLine("Category : " + kvpCategories.Key);
+                List<KeyValuePair<string, int>> catInfo = new List<KeyValuePair<string, int>>();
+                foreach (KeyValuePair<string, int> kvp in kvpCategories.Value) {
+                    catInfo.Add(kvp);
+                }
+
+                catInfo.Sort(delegate(KeyValuePair<string, int> x, KeyValuePair<string, int> y) {
+                    return x.Value - y.Value;
+                });
+                foreach (KeyValuePair<string, int> kvp in catInfo) {
+                    Console.WriteLine("{0} {1}", kvp.Key, kvp.Value);
+                }
+                Console.WriteLine();
             }
 
             Console.WriteLine();
@@ -115,14 +135,15 @@ namespace Microsoft.Scripting {
         public static void NoteEvent(Categories category, object key) {
             if (!ScriptDomainManager.Options.TrackPerformance) return;
 
+            Dictionary<string, int> categoryEvents = _events[category];
             totalEvents++;
-            lock (events) {
+            lock (categoryEvents) {
                 string name = key.ToString();
                 Exception ex = key as Exception;
                 if (ex != null) name = ex.GetType().ToString();
                 int v;
-                if (!events.TryGetValue(name, out v)) events[name] = 1;
-                else events[name] = v + 1;
+                if (!categoryEvents.TryGetValue(name, out v)) categoryEvents[name] = 1;
+                else categoryEvents[name] = v + 1;
 
                 if (!summaryStats.TryGetValue(category, out v)) summaryStats[category] = 1;
                 else summaryStats[category] = v + 1;

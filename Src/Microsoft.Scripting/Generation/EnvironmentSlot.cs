@@ -14,10 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Slot that holds onto the environment for a method.  The environment supports both
     /// getting members and emitting a dictionary which contains the members of the environment.

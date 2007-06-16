@@ -13,9 +13,8 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Internal;
-using MSAst = Microsoft.Scripting.Internal.Ast;
 using Microsoft.Scripting;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class WhileStatement : Statement {
@@ -54,7 +53,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
             return new MSAst.LoopStatement(
-                ag.Transform(_test),
+                ag.TransformAndConvert(_test, typeof(bool)),
                 null,                // increment
                 ag.Transform(_body),
                 ag.Transform(_else),

@@ -20,15 +20,14 @@ using System.Text;
 using System.IO;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
 using Microsoft.Scripting.Hosting;
 
+using IronPython;
 using IronPython.Compiler;
 using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using IronPython;
 using IronPython.Runtime.Calls;
 
 namespace IronPythonTest {
@@ -127,6 +126,28 @@ namespace IronPythonTest {
             }
         }
 
+        /// <summary>
+        /// Asserts an condition it true
+        /// </summary>
+        private static void Assert(bool condition, string msg) {
+            if (!condition) throw new Exception(String.Format("Assertion failed: {0}", msg));
+        }
+
+        private static void Assert(bool condition) {
+            if (!condition) throw new Exception("Assertion failed");
+        }
+
+        private static T AssertExceptionThrown<T>(Function f) where T : Exception {
+            try {
+                f();
+            } catch (T ex) {
+                return ex;
+            }
+
+            Assert(false, "Expecting exception '" + typeof(T) + "'.");
+            return null;
+        }
+
         // Execute
         public void ScenarioExecute() {
             ClsPart clsPart = new ClsPart();
@@ -172,6 +193,20 @@ namespace IronPythonTest {
             DefaultModule.SetVariable(clspartName, 1);
             pe.Execute("if 1 != clsPart: raise AssertionError('test failed')");
             AreEqual((int)DefaultModule.LookupVariable(clspartName), 1);
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.Execute((Microsoft.Scripting.SourceCodeUnit)null, null, null);
+            });
+
+            Microsoft.Scripting.SourceUnit su = new Microsoft.Scripting.SourceCodeUnit(pe, "");
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.Execute(su, null, null);
+            });
+
+            Microsoft.Scripting.ScriptModule sm = Microsoft.Scripting.ScriptDomainManager.CurrentManager.CreateModule("empty");
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.Execute((Microsoft.Scripting.SourceUnit)null, sm, null);
+            });
         }
 
         public void ScenarioEvaluateInAnonymousEngineModule() {
@@ -324,7 +359,7 @@ namespace IronPythonTest {
         public void ScenarioCustomDictionary() {
             CustomDictionary customGlobals = new CustomDictionary();
             ScriptModule customModule = pe.CreateModule("customContext", customGlobals, ModuleOptions.PublishModule);
-            PythonContext customContext = new PythonContext(pe, new PythonModuleContext());
+            PythonContext customContext = new PythonContext(pe);
 
             // Evaluate
             AreEqual(pe.EvaluateAs<int>("customSymbol + 1", customModule), CustomDictionary.customSymbolValue + 1);
@@ -428,6 +463,24 @@ global_variable = 300", DefaultModule, locals);
                 pe.ExecuteFileContent(Common.InputTestDirectory + "\\simpleCommand.py", module);
                 AreEqual(pe.EvaluateAs<int>("x", module), 1);
             }
+
+            ScriptModule module2 = pe.CreateModule(scenarioGCModuleName);
+            module2.SetVariable("x", "Hello");
+            pe.ExecuteFileContent(Common.InputTestDirectory + "\\simpleCommand.py", module2);
+            AreEqual(pe.EvaluateAs<int>("x", module2), 1);
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.CreateModule(null, null, ModuleOptions.None);
+            });
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.CreateModule("some_name", null, ModuleOptions.None);
+            });
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.CreateModule(null, new Dictionary<string, object>(), ModuleOptions.None);
+            });
+
         }
 
         public void ScenarioXGC() {
@@ -445,8 +498,12 @@ global_variable = 300", DefaultModule, locals);
             long finalMemory = GetTotalMemory();
             long memoryUsed = finalMemory - initialMemory;
             const long memoryThreshold = 100000;
-            if (memoryUsed > memoryThreshold)
-                throw new Exception(String.Format("ScenarioGC used {0} bytes of memory. The threshold is {1} bytes", memoryUsed, memoryThreshold));
+
+            // Skip the memory check if running with -X:StaticMethods extension
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-X:StaticMethods") == -1) {
+                if (memoryUsed > memoryThreshold)
+                    throw new Exception(String.Format("ScenarioGC used {0} bytes of memory. The threshold is {1} bytes", memoryUsed, memoryThreshold));
+            }
         }
 #endif
 
@@ -471,8 +528,23 @@ global_variable = 300", DefaultModule, locals);
             pe.Execute("def IntIntMethod(a): return a * 100");
             IntIntDelegate d = pe.EvaluateAs<IntIntDelegate>("IntIntMethod");
             AreEqual(d(2), 2 * 100);
+
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.Evaluate(null, null, null);
+            });
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.Evaluate("some_name", null, null);
+            });
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.Evaluate(null, DefaultModule, null);
+            });
+
         }
 
+#if !SILVERLIGHT
         // ExecuteFile
         public void ScenarioExecuteFile() {
             SourceUnit tempFile1, tempFile2;
@@ -504,7 +576,9 @@ global_variable = 300", DefaultModule, locals);
 
             tempFile2.Compile().Execute();
         }
+#endif
 
+#if !SILVERLIGHT
         // Bug: 542
         public void Scenario542() {
             SourceUnit tempFile1;
@@ -557,6 +631,7 @@ global_variable = 300", DefaultModule, locals);
             //pe.Execute("if C1.M() != -1: raise AssertionError('test failed')");
             //pe.Execute("if C2.M() != +1: raise AssertionError('test failed')");
         }
+#endif
 
         // Bug: 167 
         public void Scenario167() {
@@ -604,7 +679,7 @@ global_variable = 300", DefaultModule, locals);
             const string lineNumber = "raise.py:line";
 
             try {
-                SystemState.Instance.Engine.Options.ClrDebuggingEnabled = true;
+                PythonEngine.CurrentEngine.Options.ClrDebuggingEnabled = true;
                 try {
                     pe.ExecuteFileContent(Common.InputTestDirectory + "\\raise.py");
                     throw new Exception("We should not get here");
@@ -613,7 +688,7 @@ global_variable = 300", DefaultModule, locals);
                         throw new Exception("Debugging is not enabled even though Options.ClrDebuggingEnabled is specified");
                 }
 
-                SystemState.Instance.Engine.Options.ClrDebuggingEnabled = false;
+                PythonEngine.CurrentEngine.Options.ClrDebuggingEnabled = false;
                 try {
                     pe.ExecuteFileContent(Common.InputTestDirectory + "\\raise.py");
                     throw new Exception("We should not get here");
@@ -629,7 +704,7 @@ global_variable = 300", DefaultModule, locals);
                 //d = pe.CreateMethod<IntIntDelegate>("var = arg + x\nreturn var");
                 //AreEqual(d(100), 101);
             } finally {
-                SystemState.Instance.Engine.Options.ClrDebuggingEnabled = false;
+                PythonEngine.CurrentEngine.Options.ClrDebuggingEnabled = false;
             }
         }
 
@@ -642,6 +717,19 @@ global_variable = 300", DefaultModule, locals);
             // Ensure that we can set new globals in the context, and execute further code
             module.SetVariable("y", 2);
             AreEqual(3, pe.EvaluateAs<int>("x+y", module));
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.CreateOptimizedModule(null, null, false, false);
+            });
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.CreateOptimizedModule("some_name", null, false, false);
+            });
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.CreateOptimizedModule(null, "some_name", false, false);
+            });
+
         }
 
         public void ScenarioOptimizedModuleBeforeExecutingGlobalCode() {
@@ -674,7 +762,29 @@ global_variable = 300", DefaultModule, locals);
                 AreEqual(3, pe.EvaluateAs<int>("x+y", module));
             }
         }
+
 #endif
+
+        public void ScenarioErrorSinkThrowsCompilerException() {
+            bool origVal = ((PythonErrorSink)pe.GetDefaultErrorSink()).ThrowExceptionOnError;
+
+            //needed to hit IronPython.Compiler.CompilerException
+            ((PythonErrorSink)pe.GetDefaultErrorSink()).ThrowExceptionOnError = true;
+            try
+            {
+                pe.Execute("a = \"a broken string'");
+                throw new Exception("We should not reach here");
+            }
+            catch (CompilerException e) {
+                AreEqual(null, e.Filename);
+                AreEqual(null, e.Node);
+                AreEqual("Error:EOL while scanning single-quoted string at <string>1:5-1:22", e.Message);
+            }
+
+            ((PythonErrorSink)pe.GetDefaultErrorSink()).ThrowExceptionOnError = origVal;
+        }
+
+        
         // Compile and Run
         public void ScenarioCompileAndRun() {
             ClsPart clsPart = new ClsPart();
@@ -832,6 +942,7 @@ global_variable = 300", DefaultModule, locals);
             AreEqual(Encoding.Default.GetString(array, 0, array.Length), expectedText);
         }
 
+#if !SILVERLIGHT
         public void ScenarioVariableScoping() {
             Dictionary<string, object> globals = new Dictionary<string, object>();
             Dictionary<string, object> locals = new Dictionary<string, object>();
@@ -875,7 +986,7 @@ global_variable = 300", DefaultModule, locals);
             pe.Execute("del(context)", module1, locals);
             AreEqual(false, locals.ContainsKey("context"));
             AreEqual("module", pe.EvaluateAs<string>("context", module1, locals));
-            module1.Scope.GlobalScope.RemoveName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("context"));
+            module1.Scope.ModuleScope.RemoveName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("context"));
             try {
                 AreEqual("module", pe.EvaluateAs<string>("context", module1, locals));
                 Console.WriteLine("All references to context have been removed, we should get an error when looking up this name");
@@ -913,6 +1024,7 @@ global_variable = 300", DefaultModule, locals);
             locals.Remove("dir");
             AreEqual(true, pe.Evaluate("dir", module1, locals) is BuiltinFunction);
         }
+#endif
 
         public void Scenario12() {
 
@@ -964,16 +1076,16 @@ if r.sum != 110:
             string file = System.IO.Path.Combine(Common.ScriptTestDirectory, modName + ".py");
             System.IO.File.WriteAllText(file, "result = 1/2");
 
-            DivisionOption old = ScriptDomainManager.Options.Division;
+            PythonDivisionOptions old = PythonEngine.CurrentEngine.Options.DivisionOptions;
 
             try {
-                ScriptDomainManager.Options.Division = DivisionOption.Old;
+                PythonEngine.CurrentEngine.Options.DivisionOptions = PythonDivisionOptions.Old;
                 ScriptModule module = pe.CreateModule("anonymous", ModuleOptions.TrueDivision);
                 pe.Execute("import " + modName, module);
                 int res = pe.EvaluateAs<int>(modName + ".result", module);
                 AreEqual(res, 0);
             } finally {
-                ScriptDomainManager.Options.Division = old;
+                PythonEngine.CurrentEngine.Options.DivisionOptions = old;
                 try {
                     System.IO.File.Delete(file);
                 } catch { }

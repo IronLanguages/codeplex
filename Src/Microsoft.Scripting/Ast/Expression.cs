@@ -23,17 +23,14 @@ using System.Diagnostics;
 using System.Globalization;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Summary description for Expr.
     /// </summary>
     public abstract class Expression : Node {
-
-        protected Expression() {
-        }
 
         protected Expression(SourceSpan span)
             : base(span) {
@@ -44,11 +41,22 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         /// <summary>
-        /// Generates code for this expression in a value position.  This will generally
-        /// leave the value of the expression on the top of the stack typed as object.
+        /// Generates code for this expression in a value position.
+        /// This method will leave the value of the expression
+        /// on the top of the stack typed as ExpressionType.
         /// </summary>
         /// <param name="cg">Where to generate the code.</param>
         public abstract void Emit(CodeGen cg);
+
+        /// <summary>
+        /// Generates the code for the expression, leaving it on
+        /// the stack typed as object.
+        /// </summary>
+        /// <param name="cg">Where to emit the code.</param>
+        public void EmitAsObject(CodeGen cg) {
+            this.Emit(cg);  // emit as ExpressionType
+            cg.EmitConvertToObject(ExpressionType);
+        }
 
         /// <summary>
         /// Generates code for this expression in a value position.  This will leave
@@ -56,11 +64,9 @@ namespace Microsoft.Scripting.Internal.Ast {
         /// </summary>
         /// <param name="cg">Where to generate the code.</param>
         /// <param name="asType">The type to leave on top of the stack.</param>
-        public virtual void EmitAs(CodeGen cg, Type asType) {
-            if (cg == null) throw new ArgumentNullException("cg");
-
-            this.Emit(cg);
-            cg.EmitConvertFromObject(asType);
+        internal void EmitAs(CodeGen cg, Type asType) {
+            this.Emit(cg);  // emit as ExpressionType
+            cg.EmitConvert(ExpressionType, asType);
         }
 
         /// <summary>

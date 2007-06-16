@@ -15,7 +15,6 @@
 
 using System;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
 
 namespace IronPython.Compiler {
 

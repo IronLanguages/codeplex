@@ -14,8 +14,7 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class IfStatementTest : Node {
@@ -43,7 +42,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.IfStatementTest Transform(AstGenerator ag) {
             return new MSAst.IfStatementTest(
-                ag.Transform(_test),
+                ag.TransformAndConvert(_test, typeof(bool)),
                 ag.Transform(_body),
                 Span,
                 _header

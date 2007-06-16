@@ -33,6 +33,10 @@ namespace Microsoft.Scripting.Math {
             return new Complex64(real, 0.0);
         }
 
+        public static Complex64 Make(double real, double imag) {
+            return new Complex64(real, imag);
+        }
+
         public Complex64(double real)
             : this(real, 0.0) {
         }

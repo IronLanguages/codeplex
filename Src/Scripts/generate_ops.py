@@ -130,17 +130,17 @@ class Operator(Symbol):
         cw.writeline("object value;")
         cw.writeline()
         cw.enter_block("if (self.TryGetBoundCustomMember(DefaultContext.Default, Symbols.Operator%s, out value))" % self.title_name())
-        cw.writeline("object res = Ops.CallWithContext(DefaultContext.Default, value, other);")
-        cw.writeline("if(res != Ops.NotImplemented) return res;")
+        cw.writeline("object res = PythonOps.CallWithContext(DefaultContext.Default, value, other);")
+        cw.writeline("if(res != PythonOps.NotImplemented) return res;")
         cw.exit_block()	# end of TryGetBoundCustomMember
 
         cw.writeline()
         cw.writeline("OldInstance otherOc = other as OldInstance;")
         cw.enter_block("if (otherOc != null && otherOc.TryGetBoundCustomMember(DefaultContext.Default, Symbols.OperatorReverse%s, out value))" % self.title_name())
-        cw.writeline("return Ops.CallWithContext(DefaultContext.Default, value, self);")
-        cw.exit_block() # end of Ops.TryGetBoundCustomMember
+        cw.writeline("return PythonOps.CallWithContext(DefaultContext.Default, value, self);")
+        cw.exit_block() # end of PythonOps.TryGetBoundCustomMember
         
-        cw.writeline("return Ops.NotImplemented;")
+        cw.writeline("return PythonOps.NotImplemented;")
         cw.exit_block() # end method
         cw.writeline()
         
@@ -153,10 +153,10 @@ class Operator(Symbol):
         cw.writeline("object value;")
         cw.writeline()
         cw.enter_block("if (self.TryGetBoundCustomMember(DefaultContext.Default, Symbols.OperatorReverse%s, out value))" % self.title_name())
-        cw.writeline("object res = Ops.CallWithContext(DefaultContext.Default, value, other);")
-        cw.writeline("if (res != Ops.NotImplemented) return res;")
+        cw.writeline("object res = PythonOps.CallWithContext(DefaultContext.Default, value, other);")
+        cw.writeline("if (res != PythonOps.NotImplemented) return res;")
         cw.exit_block()	# end of TryGetBoundCustomMember
-        cw.writeline("return Ops.NotImplemented;")
+        cw.writeline("return PythonOps.NotImplemented;")
         cw.exit_block() # end method
         cw.writeline()
         
@@ -166,10 +166,10 @@ class Operator(Symbol):
         cw.writeline("object value;")
         cw.writeline()
         cw.enter_block("if (TryGetBoundCustomMember(DefaultContext.Default, Symbols.OperatorInPlace%s, out value))" % self.title_name())
-        cw.writeline("object res = Ops.CallWithContext(DefaultContext.Default, value, other);")
-        cw.writeline("if (res != Ops.NotImplemented) return res;")
+        cw.writeline("object res = PythonOps.CallWithContext(DefaultContext.Default, value, other);")
+        cw.writeline("if (res != PythonOps.NotImplemented) return res;")
         cw.exit_block()	# end of TryGetBoundCustomMember
-        cw.writeline("return Ops.NotImplemented;")
+        cw.writeline("return PythonOps.NotImplemented;")
         cw.exit_block() # end method
         cw.writeline()
 
@@ -191,15 +191,6 @@ class Operator(Symbol):
 
         cw.writeline("AddWrapperOperator(Symbols.%s, res);" % (self.reverse_symbol_name()))
         cw.writeline("AddWrapperOperator(Symbols.%s, res);" % (self.inplace_symbol_name()))
-
-    def genSymbolTableFieldInfo(self, cw):
-        cw.writeline("if (id == Operator%s) return GetField(\"Operator%s\");" % (self.title_name(), self.title_name()))
-        
-        if self.isCompare(): return
-        
-        cw.writeline("if (id == OperatorReverse%s) return GetField(\"OperatorReverse%s\");" % (self.title_name(), self.title_name()))
-        cw.writeline("if (id == OperatorInPlace%s) return GetField(\"OperatorInPlace%s\");" % (self.title_name(), self.title_name()))
-
 
 class Grouping(Symbol):
     def __init__(self, symbol, name, side, titleName=None):
@@ -510,13 +501,6 @@ def gen_OperatorToSymbol(cw):
         op.genOperatorToSymbol(cw)
         
 CodeGenerator("OperatorToSymbol", gen_OperatorToSymbol).doit()
-
-def gen_SymbolTable_ops_fieldinfos(cw):
-    for op in ops:
-        if not isinstance(op, Operator): continue
-        op.genSymbolTableFieldInfo(cw)
-
-CodeGenerator("Symbols - Ops FieldInfos", gen_SymbolTable_ops_fieldinfos).doit()
 
 def weakref_operators(cw):
     for op in ops:

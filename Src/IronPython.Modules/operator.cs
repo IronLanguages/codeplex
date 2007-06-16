@@ -16,11 +16,12 @@
 using System;
 using IronPython.Runtime;
 using System.Collections.Generic;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Internal;
 
 
 [assembly: PythonModule("operator", typeof(IronPython.Modules.PythonOperator))]
@@ -43,9 +44,9 @@ namespace IronPython.Modules {
             public object Call(CodeContext context, object param) {
                 string s = name as string;
                 if (s == null) {
-                    throw Ops.TypeError("attribute name must be string");
+                    throw PythonOps.TypeError("attribute name must be string");
                 }
-                return Ops.GetBoundAttr(context, param, SymbolTable.StringToId(s));
+                return PythonOps.GetBoundAttr(context, param, SymbolTable.StringToId(s));
             }
         }
 
@@ -63,13 +64,13 @@ namespace IronPython.Modules {
             [OperatorMethod]
             public object Call(object param) {
                 try {
-                    return Ops.GetIndex(param, item);
+                    return PythonOps.GetIndex(param, item);
                 } catch (IndexOutOfRangeException) {
                     throw;
                 } catch (KeyNotFoundException) {
                     throw;
                 } catch {
-                    throw Ops.TypeError("invalid parameter for itemgetter");
+                    throw PythonOps.TypeError("invalid parameter for itemgetter");
                 }
             }
         }
@@ -84,7 +85,7 @@ namespace IronPython.Modules {
         }
         [PythonName("eq")]
         public static object Equal(object a, object b) {
-            return Ops.Equal(a, b);
+            return PythonOps.Equal(a, b);
         }
         [PythonName("ne")]
         public static object NotEqual(object a, object b) {
@@ -108,7 +109,7 @@ namespace IronPython.Modules {
         }
         [PythonName("__eq__")]
         public static object OperatorEqual(object a, object b) {
-            return Ops.Equal(a, b);
+            return PythonOps.Equal(a, b);
         }
         [PythonName("__ne__")]
         public static object OperatorNotEqual(object a, object b) {
@@ -124,24 +125,24 @@ namespace IronPython.Modules {
         }
         [PythonName("not_")]
         public static object OperatorNot(object o) {
-            return Ops.Not(o);
+            return PythonOps.Not(o);
         }
         [PythonName("not__")]
         public static object OperatorNotDoubleUnderscore(object o) {
-            return Ops.Not(o);
+            return PythonOps.Not(o);
         }
         [PythonName("truth")]
         public static bool Truth(object o) {
-            return Ops.IsTrue(o);
+            return PythonOps.IsTrue(o);
         }
 
         [PythonName("is_")]
         public static object Is(object a, object b) {
-            return Ops.Is(a, b);
+            return PythonOps.Is(a, b);
         }
         [PythonName("is_not")]
         public static object IsNot(object a, object b) {
-            return Ops.IsNot(a, b);
+            return PythonOps.IsNot(a, b);
         }
         [PythonName("abs")]
         public static object Abs(CodeContext context, object o) {
@@ -185,19 +186,19 @@ namespace IronPython.Modules {
         }
         [PythonName("inv")]
         public static object Inv(object o) {
-            return Ops.OnesComplement(o);
+            return PythonOps.OnesComplement(o);
         }
         [PythonName("invert")]
         public static object Invert(object o) {
-            return Ops.OnesComplement(o);
+            return PythonOps.OnesComplement(o);
         }
         [PythonName("__inv__")]
         public static object OperatorInv(object o) {
-            return Ops.OnesComplement(o);
+            return PythonOps.OnesComplement(o);
         }
         [PythonName("__invert__")]
         public static object OperatorInvert(object o) {
-            return Ops.OnesComplement(o);
+            return PythonOps.OnesComplement(o);
         }
         [PythonName("lshift")]
         public static object LeftShift(object a, object b) {
@@ -225,11 +226,11 @@ namespace IronPython.Modules {
         }
         [PythonName("neg")]
         public static object Negate(object o) {
-            return Ops.Negate(o);
+            return PythonOps.Negate(o);
         }
         [PythonName("__neg__")]
         public static object OperatorNegate(object o) {
-            return Ops.Negate(o);
+            return PythonOps.Negate(o);
         }
         [PythonName("or_")]
         public static object Or(object a, object b) {
@@ -241,11 +242,11 @@ namespace IronPython.Modules {
         }
         [PythonName("pos")]
         public static object Plus(object o) {
-            return Ops.Plus(o);
+            return PythonOps.Plus(o);
         }
         [PythonName("__pos__")]
         public static object OperatorPlus(object o) {
-            return Ops.Plus(o);
+            return PythonOps.Plus(o);
         }
         [PythonName("pow")]
         public static object Power(object a, object b) {
@@ -297,19 +298,19 @@ namespace IronPython.Modules {
         }
         [PythonName("contains")]
         public static object Contains(object a, object b) {
-            return Ops.In(b, a);
+            return PythonOps.In(b, a);
         }
         [PythonName("__contains__")]
         public static object OperatorContains(object a, object b) {
-            return Ops.In(a, b);
+            return PythonOps.In(a, b);
         }
 
         [PythonName("countOf")]
         public static object CountOf(object a, object b) {
-            System.Collections.IEnumerator e = Ops.GetEnumerator(a);
+            System.Collections.IEnumerator e = PythonOps.GetEnumerator(a);
             int count = 0;
             while (e.MoveNext()) {
-                if (Ops.Equals(e.Current, b)) {
+                if (PythonOps.Equals(e.Current, b)) {
                     count++;
                 }
             }
@@ -317,63 +318,63 @@ namespace IronPython.Modules {
         }
         [PythonName("delitem")]
         public static void DelIndex(object a, object b) {
-            Ops.DelIndex(a, b);
+            PythonOps.DelIndex(a, b);
         }
         [PythonName("__delitem__")]
         public static void OperatorDelItem(object a, object b) {
-            Ops.DelIndex(a, b);
+            PythonOps.DelIndex(a, b);
         }
         [PythonName("delslice")]
         public static void DelIndex(object a, object b, object c) {
-            Ops.DelIndex(a, MakeSlice(b, c));
+            PythonOps.DelIndex(a, MakeSlice(b, c));
         }
 
         [PythonName("__delslice__")]
         public static void OperatorDelIndex(object a, object b, object c) {
-            Ops.DelIndex(a, MakeSlice(b, c));
+            PythonOps.DelIndex(a, MakeSlice(b, c));
         }
         [PythonName("getitem")]
         public static object GetItem(object a, object b) {
-            return Ops.GetIndex(a, b);
+            return PythonOps.GetIndex(a, b);
         }
         [PythonName("__getitem__")]
         public static object OperatorGetItem(object a, object b) {
-            return Ops.GetIndex(a, b);
+            return PythonOps.GetIndex(a, b);
         }
         [PythonName("getslice")]
         public static object GetSlice(object a, object b, object c) {
-            return Ops.GetIndex(a, MakeSlice(b, c));
+            return PythonOps.GetIndex(a, MakeSlice(b, c));
         }
 
         [PythonName("__getslice__")]
         public static object OperatorGetSlice(object a, object b, object c) {
-            return Ops.GetIndex(a, MakeSlice(b, c));
+            return PythonOps.GetIndex(a, MakeSlice(b, c));
         }
 
         [PythonName("indexOf")]
         public static object IndexOf(object a, object b) {
-            System.Collections.IEnumerator e = Ops.GetEnumerator(a);
+            System.Collections.IEnumerator e = PythonOps.GetEnumerator(a);
             int index = 0;
             while (e.MoveNext()) {
-                if (Ops.Equals(e.Current, b)) {
+                if (PythonOps.Equals(e.Current, b)) {
                     return index;
                 }
                 index++;
             }
-            throw Ops.ValueError("object not in sequence");
+            throw PythonOps.ValueError("object not in sequence");
         }
 
         [PythonName("repeat")]
         public static object Repeat(CodeContext context, object a, object b) {
             try {
-                Ops.GetEnumerator(a);
+                PythonOps.GetEnumerator(a);
             } catch {
-                throw Ops.TypeError("object can't be repeated");
+                throw PythonOps.TypeError("object can't be repeated");
             }
             try {
                 Int32Ops.Make(context, b);
             } catch {
-                throw Ops.TypeError("integer required");
+                throw PythonOps.TypeError("integer required");
             }
             return PythonSites.Multiply(a, b);
         }
@@ -389,28 +390,28 @@ namespace IronPython.Modules {
 
         [PythonName("setitem")]
         public static void SetIndex(object a, object b, object c) {
-            Ops.SetIndex(a, b, c);
+            PythonOps.SetIndex(a, b, c);
         }
         public static void OperatorSetIndex(object a, object b, object c) {
-            Ops.SetIndex(a, b, c);
+            PythonOps.SetIndex(a, b, c);
         }
         [PythonName("setslice")]
         public static void SetIndex(object a, object b, object c, object v) {
-            Ops.SetIndex(a, MakeSlice(b, c), v);
+            PythonOps.SetIndex(a, MakeSlice(b, c), v);
         }
 
         [PythonName("__setslice__")]
         public static void OperatorSetSlice(object a, object b, object c, object v) {
-            Ops.SetIndex(a, MakeSlice(b, c), v);
+            PythonOps.SetIndex(a, MakeSlice(b, c), v);
         }
         [PythonName("isCallable")]
         public static bool IsCallable(object o) {
-            return Ops.IsCallable(o);
+            return PythonOps.IsCallable(o);
         }
 
         [PythonName("isMappingType")]
         public static object IsMappingType(CodeContext context, object o) {
-            return Ops.IsMappingType(context, o);
+            return PythonOps.IsMappingType(context, o);
         }
 
         [PythonName("isNumberType")]
@@ -441,7 +442,7 @@ namespace IronPython.Modules {
         private static int SliceToInt(object o) {
             int i;
             if (Converter.TryConvertToInt32(o, out i)) return i;
-            throw Ops.TypeError("integer expected");
+            throw PythonOps.TypeError("integer expected");
         }
 
         private static object MakeSlice(object a, object b) {

@@ -16,7 +16,7 @@
 import toimport
 
 from lib.assert_util import *
-if is_silverlight==False:
+if not is_silverlight:
     from lib.file_util import *
     from lib.process_util import *
 
@@ -26,7 +26,7 @@ except ImportError: pass
 else:  Fail("should already thrown")
 
 # generate test files on the fly
-if is_silverlight==False:
+if not is_silverlight:
     _testdir    = 'ImportTestDir'
     _f_init     = path_combine(testpath.public_testdir, _testdir, '__init__.py')
     _f_error    = path_combine(testpath.public_testdir, _testdir, 'Error.py')
@@ -77,7 +77,7 @@ else:
 
 Assert(not sys.modules.__contains__("Error"))
 
-if is_silverlight==False:
+if not is_silverlight:
     from ImportTestDir import Module
 
     filename = Module.__file__.lower()
@@ -141,7 +141,7 @@ def f():
         now = time
     except NameError: pass
     else: Fail("time should be undefined")
-if is_silverlight==False:
+if not is_silverlight:
     f()
 
 try:
@@ -149,7 +149,7 @@ try:
 except NameError:  pass
 else: Fail("time should be undefined")
 
-if is_silverlight==False:
+if not is_silverlight:
     try:
         print clock
     except NameError:  pass
@@ -166,7 +166,7 @@ def f():
         now = clock
     except NameError:  pass
     else: Fail("clock should be undefined")
-if is_silverlight==False:
+if not is_silverlight:
     f()
 
 try:
@@ -174,7 +174,7 @@ try:
 except NameError:  pass
 else: Fail("time should be undefined")
 
-if is_silverlight==False:
+if not is_silverlight:
     try:
         print clock
     except NameError:  pass
@@ -187,7 +187,7 @@ def f():
     from time import clock as clock_in_closure
     g()
 
-if is_silverlight==False:
+if not is_silverlight:
     f()
 
 
@@ -319,11 +319,11 @@ def test_c2cs():
     x = ImportTestNS.Foo[int,int]()
     AreEqual(x.Test(), 'Foo<T,Y>')    
     
-if is_silverlight==False:
+if not is_silverlight:
     Assert(sys.modules.has_key("__main__"))
 
 #########################################################################################
-if is_silverlight==False:
+if not is_silverlight:
     _testdir        = 'ImportTestDir'
     _f_init2         = path_combine(testpath.public_testdir, _testdir, '__init__.py')
     _f_longpath     = path_combine(testpath.public_testdir, _testdir, 'longpath.py')
@@ -598,8 +598,8 @@ else:
     
     AreEqual(launch_ironpython(_f_recimp_start), 0)
 
-#NOT RUNNING YET
-def xtest_import_inside_exec():
+@skip("silverlight")
+def test_import_inside_exec():
     _f_module = path_combine(testpath.public_testdir, 'another.py')
     write_to_file(_f_module, 'a1, a2, a3, _a4 = 1, 2, 3, 4')
     
@@ -629,5 +629,5 @@ def xtest_import_inside_exec():
 run_test(__name__)
 
 # remove all test files
-if is_silverlight==False:
+if not is_silverlight:
     delete_all_f(__name__)

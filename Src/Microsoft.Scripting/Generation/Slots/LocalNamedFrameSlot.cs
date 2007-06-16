@@ -14,8 +14,9 @@
  * ***************************************************************************/
 
 using System;
+using System.Reflection.Emit;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class LocalNamedFrameSlot : Slot {
         private readonly Slot _frame;
         private readonly SymbolId _name;
@@ -55,6 +56,7 @@ namespace Microsoft.Scripting.Internal.Generation {
             _frame.EmitGet(cg);
             cg.EmitSymbolId(name);
             cg.EmitCall(typeof(RuntimeHelpers), "RemoveName");
+            cg.Emit(OpCodes.Pop);
         }
 
         public override Type Type {

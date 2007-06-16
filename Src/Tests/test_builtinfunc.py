@@ -15,6 +15,7 @@
 
 from lib.assert_util import *
 
+
 def test_callable():
     class C: x=1
 
@@ -245,6 +246,21 @@ def test_len():
     class foo(object): pass
     
     AssertError(TypeError, len, foo())
+
+@disabled("CodePlex 4197")
+def test_int_ctor():
+    AreEqual(int('0x10', 16), 16)
+    AreEqual(long('0x10', 16), 16L)
+   
+@disabled("BUG 148521")
+def test_type():
+    #BUG 148521
+    AreEqual(len(type.__bases__), 1)
+    AreEqual(type.__bases__[0], object)
     
+def test_globals():
+    Assert(not globals().has_key("_"))
+    AreEqual(globals().keys().count("_"), 0)
+
 run_test(__name__)
 

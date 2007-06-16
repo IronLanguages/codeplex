@@ -17,11 +17,9 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
-using Microsoft.Scripting;
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -60,7 +58,7 @@ namespace Microsoft.Scripting.Generation {
 
         public override void EmitGetStorageFromContext(CodeGen cg) {
             cg.EmitCodeContext();
-            cg.EmitPropertyGet(typeof(CodeContext), "Locals");
+            cg.EmitCall(typeof(RuntimeHelpers), "GetLocalDictionary");
             cg.Emit(OpCodes.Castclass, EnvironmentType);
             cg.EmitPropertyGet(typeof(FunctionEnvironmentNDictionary), "EnvironmentValues");
         }

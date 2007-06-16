@@ -111,7 +111,7 @@ namespace IronPython.Modules {
             public void SetState(object state) {
                 System.Random random = state as System.Random;
                 if (random != null) rnd = random;
-                else throw IronPython.Runtime.Operations.Ops.TypeError("setstate: argument must be value returned from getstate()");
+                else throw IronPython.Runtime.Operations.PythonOps.TypeError("setstate: argument must be value returned from getstate()");
             }
         }
     }

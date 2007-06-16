@@ -21,9 +21,6 @@ from lib.assert_util import *
 skiptest("silverlight")
 import sys
 
-if is_cli:
-    import clr
-
 #workaround - _socket does not appear to be in $PYTHONPATH for CPython
 #only when run from the old test suite.
 try:
@@ -199,16 +196,15 @@ OTHER_GLOBALS = {"AI_ADDRCONFIG" : 32,
                  "TCP_SYNCNT" : 7,
                  "TCP_WINDOW_CLAMP" : 10}
 
-
-    
+@skip("win32")
 def test_HandleToSocket():
-    s = socket.socket()
-    if is_cli:
-        
+    import clr
+    try:
+        s = socket.socket()
         system_socket = socket.socket.HandleToSocket(s.fileno())
         AreEqual(s.fileno(), system_socket.Handle.ToInt64())
-    s.close()
-    
+    finally:
+        s.close()
     
 def test_getprotobyname():
     '''
@@ -263,6 +259,10 @@ def test_getaddrinfo():
             ("127.0.0.1", 0, 0, 0, 0, 1) : "[(2, 0, 0, '', ('127.0.0.1', 0))]",
     }
     
+    tmp = socket.getaddrinfo("127.0.0.1", 0, 0, 0, -100000, 0)
+    tmp = socket.getaddrinfo("127.0.0.1", 0, 0, 0, 100000, 0)
+    tmp = socket.getaddrinfo("127.0.0.1", 0, 0, 0, 0, 0)
+
     #just try them as-is
     for params,value in joe.iteritems():
         addrinfo = socket.getaddrinfo(*params)
@@ -308,37 +308,18 @@ def test_getaddrinfo():
     
     #negative cases
     AssertError(socket.gaierror, socket.getaddrinfo, "should never work.dfkdfjkkjdfkkdfjkdjf", 0)    
-    
     #CodePlex Work Item 5445
-    #"1" is a nonsense hostname/IP address
-    #try:
-    #    socket.getaddrinfo("1", 0)    
-    #    raise Exception("Shouldn't have worked")
-    #except socket.gaierror:
-    #    pass
-    
+    #AssertError(socket.gaierror, socket.getaddrinfo, "1", 0)    
     AssertError(socket.gaierror, socket.getaddrinfo, ".", 0)    
-    
     #CodePlex Work Item 5445
-    #IP accepts floats where ints are needed (2nd param)
-    #try:
-    #    socket.getaddrinfo("127.0.0.1", 3.14, 0, 0, 0, 0)    
-    #    raise Exception("Shouldn't have worked")
-    #except socket.error:
-    #    pass
-    
+    #AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 3.14, 0, 0, 0, 0)       
     AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, -1, 0, 0, 0)    
-    
     #CodePlex Work Item 5445
-    #Socket type param (4th param) is out of range
-    #try:
-    #    socket.getaddrinfo("127.0.0.1", 0, 0, -1, 0, 0)    
-    #    raise Exception("Shouldn't have worked")
-    #except socket.error:
-    #    pass    
-    
-    #CodePlex Work Item 5446
-    #socket.getaddrinfo("127.0.0.1", 0, 0, 0, 1000000, 0)
+    #AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, 0, -1, 0, 0) 
+
+    socket.getaddrinfo("127.0.0.1", 0, 0, 0, 1000000, 0)
+    socket.getaddrinfo("127.0.0.1", 0, 0, 0, -1000000, 0)
+    socket.getaddrinfo("127.0.0.1", 0, 0, 0, 0, 0)
     
 def test_getnameinfo():
     '''

@@ -13,9 +13,10 @@
  *
  * ***************************************************************************/
 
+using System;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class MemberExpression : Expression {
@@ -39,13 +40,12 @@ namespace IronPython.Compiler.Ast {
             return base.ToString() + ":" + SymbolTable.IdToString(_name);
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
-            return new MSAst.ActionExpression(
-                GetMemberAction.Make(_name),
-                new MSAst.Expression[] {
-                    ag.Transform(_target)
-                },
-                Span
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
+            return MSAst.ActionExpression.GetMember(
+                Span,
+                _name,
+                type,
+                ag.Transform(_target)
             );
         }
 
@@ -54,6 +54,7 @@ namespace IronPython.Compiler.Ast {
                 return new MSAst.ExpressionStatement(
                     MSAst.ActionExpression.SetMember(
                         _name,
+                        typeof(object),
                         ag.Transform(_target),
                         right
                     ),
@@ -63,14 +64,16 @@ namespace IronPython.Compiler.Ast {
                 return MSAst.BlockStatement.Block(
                     new SourceSpan(Span.Start, right.End),
                     new MSAst.ExpressionStatement(
-                        MSAst.BoundAssignment.Assign(temp.Reference, ag.Transform(_target))),
+                        MSAst.BoundAssignment.Assign(temp.Variable, ag.Transform(_target))),
                     new MSAst.ExpressionStatement(
                         MSAst.ActionExpression.SetMember(
                             _name,
+                            typeof(object),
                             temp,
                             MSAst.ActionExpression.Operator(
                                 op,
-                                MSAst.ActionExpression.GetMember(_name, temp),
+                                typeof(object),
+                                MSAst.ActionExpression.GetMember(_name, typeof(object), temp),
                                 right
                             )
                         )

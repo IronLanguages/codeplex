@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class ConstantPool {
         private List<object> _data;
 
@@ -42,6 +42,10 @@ namespace Microsoft.Scripting.Internal.Generation {
             get { return _dataSlot; }
         }
 
+        public int Count {
+            get { return _data.Count; }
+        }
+
         public void SetCodeGen(CodeGen cg, Slot dataSlot) {
             this._cg = cg;
             this._dataSlot = dataSlot;
@@ -49,10 +53,17 @@ namespace Microsoft.Scripting.Internal.Generation {
 
         public Slot AddData(object data) {
             _data.Add(data);
-            _types.Add(data.GetType());
+            IndexSlot index = new IndexSlot(_dataSlot, _data.Count - 1);
 
-            // Use a CastSlot around an IndexSlot since we just want a cast and not a full conversion
-            return new CastSlot(new IndexSlot(_dataSlot, _data.Count - 1), data.GetType());
+            if (data != null) {
+                Type type = data.GetType();
+                _types.Add(type);
+
+                // Use a CastSlot around an IndexSlot since we just want a cast and not a full conversion
+                return new CastSlot(index, type);
+            } else {
+                return index;
+            }
         }
 
         public ConstantPool CopyData() {
@@ -61,8 +72,5 @@ namespace Microsoft.Scripting.Internal.Generation {
             ret._types = this._types;
             return ret;
         }
-
-
     }
-
 }

@@ -19,10 +19,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using System.Diagnostics;
-using Microsoft.Scripting.Shell;
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
+using Microsoft.Scripting.Shell;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -80,7 +78,7 @@ namespace Microsoft.Scripting.Hosting {
             throw new NotImplementedException("TODO");
         }
 
-        public IConsole GetConsole(IScriptEngine engine, ConsoleOptions options) {
+        public IConsole GetConsole(CommandLine commandLine, IScriptEngine engine, ConsoleOptions options) {
            throw new NotImplementedException("TODO");
         }
 

@@ -14,10 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Microsoft.Scripting.Internal {
+namespace Microsoft.Scripting {
     /// <summary>
     /// Represents an ops-extension method which is used to implement a property.
     /// </summary>

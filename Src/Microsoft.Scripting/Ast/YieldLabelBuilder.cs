@@ -15,111 +15,97 @@
 
 using System.Diagnostics;
 using System.Collections.Generic;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
-    class YieldLabelBuilder : Walker {
-        public abstract class ExceptionBlock {
-            public enum State {
+namespace Microsoft.Scripting.Ast {
+    class YieldLabelBuilder : CodeBlockWalker {
+        sealed class ExceptionBlock {
+            public enum TryStatementState {
                 Try,
                 Handler,
                 Finally,
                 Else
             };
-            public State state;
 
-            protected ExceptionBlock(State state) {
-                this.state = state;
+            private readonly DynamicTryStatement _statement;
+            private TryStatementState _state;
+
+            public ExceptionBlock(DynamicTryStatement stmt)
+                : this(TryStatementState.Try, stmt) {
             }
 
-            public abstract void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg);
-        }
+            public ExceptionBlock(TryStatementState state, DynamicTryStatement stmt) {
+                Debug.Assert(stmt != null);
 
-        public sealed class TryBlock : ExceptionBlock {
-            private TryStatement stmt;
-            private bool isPython24TryFinallyStmt;
-
-            public TryBlock(TryStatement stmt, bool isPython24TryFinallyStmt)
-                : this(stmt, State.Try, isPython24TryFinallyStmt) {
+                _state = state;
+                _statement = stmt;
             }
 
-            public TryBlock(TryStatement stmt, State state, bool isPython24TryFinallyStmt)
-                : base(state) {
-                this.stmt = stmt;
-                this.isPython24TryFinallyStmt = isPython24TryFinallyStmt;
+            internal TryStatementState State {
+                get { return _state; }
+                set { _state = value; }
             }
 
-            public override void AddYieldTarget(YieldStatement ys, YieldTarget yt, CodeGen cg) {
-                switch (state) {
-                    case State.Try:
-                        if (isPython24TryFinallyStmt)
-                            cg.Context.AddError("cannot yield from try block with finally", ys);
-                        else
-                            stmt.AddTryYieldTarget(yt.FixForTryCatchFinally(cg));
-                        break;
-                    case State.Handler:
-                        stmt.AddCatchYieldTarget(yt.FixForTryCatchFinally(cg));
-                        break;
-                    case State.Finally:
-                        stmt.AddFinallyYieldTarget(yt.FixForTryCatchFinally(cg));
-                        break;
-                    case State.Else:
-                        stmt.AddElseYieldTarget(yt.FixForTryCatchFinally(cg));
-                        break;
-
+            internal TargetLabel TopTarget {
+                get {
+                    return _statement.EnsureTopTarget();
                 }
-                ys.Label = yt.YieldContinuationTarget;
+            }
 
+            public void AddYieldTarget(TargetLabel tl, int index) {
+                switch (_state) {
+                    case TryStatementState.Try:
+                        _statement.AddTryYieldTarget(tl, index);
+                        break;
+                    case TryStatementState.Handler:
+                        _statement.AddCatchYieldTarget(tl, index);
+                        break;
+                    case TryStatementState.Finally:
+                        _statement.AddFinallyYieldTarget(tl, index);
+                        break;
+                    case TryStatementState.Else:
+                        _statement.AddElseYieldTarget(tl, index);
+                        break;
+                }
             }
         }
 
-        private Stack<ExceptionBlock> _tryBlocks = new Stack<ExceptionBlock>();
-        private List<YieldTarget> _topYields;
-        private CodeGen _cg;
+        private readonly Stack<ExceptionBlock> _tryBlocks = new Stack<ExceptionBlock>();
+        private readonly List<YieldTarget> _topTargets = new List<YieldTarget>();
+        private int _temps;
 
-        private YieldLabelBuilder(CodeGen cg) {
-            _cg = cg;
-            _topYields = new List<YieldTarget>();
+        private YieldLabelBuilder() {
         }
 
-        internal static List<YieldTarget> BuildYieldTargets(GeneratorCodeBlock code, CodeGen cg) {
-            YieldLabelBuilder b = new YieldLabelBuilder(cg);
-            code.Body.Walk(b);
-            return b._topYields;
+        internal static void BuildYieldTargets(GeneratorCodeBlock g, out List<YieldTarget> topTargets, out int temps) {
+            YieldLabelBuilder b = new YieldLabelBuilder();
+            g.Body.Walk(b);
+            topTargets = b._topTargets;
+            temps = b._temps;
         }
 
         #region AstWalker method overloads
 
-        public override bool Walk(CodeBlockExpression node) {
-            // Do not recurse into nested functions
-            return false;
-        }
-
-        public override bool Walk(TryStatement node) {
-            TryBlock tb = null;
-
-            if (!ScriptDomainManager.Options.Python25 && node.Handlers == null)
-                tb = new TryBlock(node, true);
-            else
-                tb = new TryBlock(node, false);
+        public override bool Walk(DynamicTryStatement node) {
+            ExceptionBlock tb = new ExceptionBlock(node);
 
             _tryBlocks.Push(tb);
             node.Body.Walk(this);
 
             if (node.Handlers != null) {
-                tb.state = TryBlock.State.Handler;
-                foreach (TryStatementHandler handler in node.Handlers) {
+                tb.State = ExceptionBlock.TryStatementState.Handler;
+                foreach (DynamicTryStatementHandler handler in node.Handlers) {
                     handler.Walk(this);
                 }
             }
 
             if (node.ElseStatement != null) {
-                tb.state = TryBlock.State.Else;
+                tb.State = ExceptionBlock.TryStatementState.Else;
                 node.ElseStatement.Walk(this);
             }
 
             if (node.FinallyStatement != null) {
-                tb.state = TryBlock.State.Finally;
+                tb.State = ExceptionBlock.TryStatementState.Finally;
                 node.FinallyStatement.Walk(this);
             }
 
@@ -129,20 +115,28 @@ namespace Microsoft.Scripting.Internal.Ast {
             return false;
         }
 
+        public override void PostWalk(DynamicTryStatement node) {
+            _temps += node.GetGeneratorTempCount();
+        }
+
         public override void PostWalk(YieldStatement node) {
             // Assign the yield statement index for codegen
-            node.Index = _topYields.Count;
+            int index = _topTargets.Count;
+            TargetLabel label = new TargetLabel();
+            node.Target = new YieldTarget(index, label);
 
-            _topYields.Add(new YieldTarget(_cg.DefineLabel()));
+            foreach (ExceptionBlock eb in _tryBlocks) {
+                eb.AddYieldTarget(label, index);
 
-            if (_tryBlocks.Count == 0) {
-                node.Label = _topYields[node.Index].TopBranchTarget;
-            } else if (_tryBlocks.Count == 1) {
-                ExceptionBlock eb = _tryBlocks.Peek();
-                eb.AddYieldTarget(node, _topYields[node.Index], _cg);
-            } else {
-                _cg.Context.AddError("yield nested too deep in", node);
+                // From enclosing lexical scopes, one must jump
+                // to the try block label in order to jump to any
+                // of the enclosed yield targets.
+                label = eb.TopTarget;
             }
+
+            // Insert the top target to the top yields
+            Debug.Assert(_topTargets.Count == index);
+            _topTargets.Add(new YieldTarget(index, label));
         }
 
         #endregion

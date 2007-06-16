@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 using System;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal;
 using IronPython.Hosting;
 
 internal sealed class PythonWindowsConsoleHost : ConsoleHost {

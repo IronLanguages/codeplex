@@ -14,15 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.Threading;
 using System.Reflection;
+using System.Diagnostics;
 using System.Globalization;
+using System.Collections.Generic;
 
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Internal.Generation;
 using Microsoft.Scripting.Hosting;
-using System.Threading;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -39,15 +39,30 @@ namespace Microsoft.Scripting {
         public const string ContextFieldName = "__global_context";
 
         /// <summary> can be any dictionary or IMapping. </summary>        
-        private Scope _scope;
-        private LanguageContext _context;
+        private readonly Scope _scope;
+        private readonly LanguageContext _languageContext;
+        private ModuleContext _moduleContext; // internally mutable, optional (shouldn't be used when not set)
 
-        public CodeContext(CodeContext parent, IAttributesCollection locals) :
-            this(new Scope(parent.Scope, locals), parent.LanguageContext) {            
+        public CodeContext(CodeContext parent, IAttributesCollection locals) 
+            : this(new Scope(parent.Scope, locals), parent.LanguageContext, parent.ModuleContext) {            
         }
 
-        public CodeContext(Scope scope, LanguageContext context) {
-            _context = context;
+        public CodeContext(Scope scope, LanguageContext languageContext, ModuleContext moduleContext) {
+            Utils.Assert.NotNull(scope, languageContext, moduleContext);
+
+            _languageContext = languageContext;
+            _moduleContext = moduleContext;
+            _scope = scope;
+        }
+
+        /// <summary>
+        /// Called only from OptimizedModuleGenerator. ModuleContext will be set later.
+        /// </summary>
+        internal CodeContext(Scope scope, LanguageContext languageContext) {
+            Utils.Assert.NotNull(scope, languageContext);
+
+            _languageContext = languageContext;
+            _moduleContext = null;
             _scope = scope;
         }
 
@@ -61,17 +76,21 @@ namespace Microsoft.Scripting {
 
         public LanguageContext LanguageContext {
             get {
-                return _context;
+                return _languageContext;
             }
         }
 
-        /// <summary>
-        /// TODO: Remove me
-        /// </summary>
-        public IAttributesCollection Locals {
-            get { return Scope.Dict; }
-        }        
-        
+        public ModuleContext ModuleContext {
+            get {
+                return _moduleContext;
+            }
+            // friend: ScriptDomainManager.CreateModule
+            internal set {
+                Utils.Assert.NotNull(value);
+                _moduleContext = value;
+            }
+        }
+
         #endregion
     }   
 }

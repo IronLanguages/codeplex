@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class DynamicNewExpression : CallExpression {
         public DynamicNewExpression(Expression constructor, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs)
             : base(constructor, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs) {
@@ -40,9 +40,9 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         public override void Emit(CodeGen cg) {
             cg.EmitCodeContext();
-            Target.Emit(cg);
+            Target.EmitAsObject(cg);
             cg.EmitArray(typeof(object), Args.Count, delegate(int index) {
-                Args[index].Expression.EmitAs(cg, typeof(object));
+                Args[index].Expression.EmitAsObject(cg);
             });
             cg.EmitCall(typeof(RuntimeHelpers), "Construct",
                 new Type[] { typeof(CodeContext), typeof(object), typeof(object[]) });

@@ -84,7 +84,7 @@ namespace Microsoft.Scripting {
         /// <param name="right">The other location to compare.</param>
         /// <returns>True if the locations are not the same, False otherwise.</returns>
         public static bool operator !=(SourceLocation left, SourceLocation right) {
-            return left._index != right._index || left._line != right._line || left._column == right._column;
+            return left._index != right._index || left._line != right._line || left._column != right._column;
         }
 
         /// <summary>
@@ -179,5 +179,11 @@ namespace Microsoft.Scripting {
         public override string ToString() {
             return "(" + _line + "," + _column + ")";
         }
+
+#if DEBUG        
+        public string ToDebugString() {
+            return String.Format("({0},{1},{2})", _index, _line, _column);
+        }
+#endif
     }
 }

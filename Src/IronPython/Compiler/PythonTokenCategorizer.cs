@@ -17,9 +17,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
+using Microsoft.Scripting.Hosting;
 using IronPython.Hosting;
 
 namespace IronPython.Compiler {

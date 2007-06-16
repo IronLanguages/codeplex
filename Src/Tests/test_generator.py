@@ -210,3 +210,163 @@ def test_generator_exp():
     return (x for x,y in l)
 
 AreEqual(list(test_generator_exp()), [1, 3])
+
+def nested_yield_1():
+    try:
+        yield 1
+        try:
+            yield 2
+            yield 3
+        except:
+            raise AssertionError()
+        else:
+            yield 4
+            yield 5
+        finally:
+            yield 6
+            yield 7
+        1/0
+    except:
+        yield 8
+        yield 9
+        try:
+            yield 10
+            yield 11
+        except:
+            raise AssertionError()
+        else:
+            yield 12
+            yield 13
+        finally:
+            yield 14
+            yield 15
+        yield 32
+    else:
+        raise AssertionError()
+    finally:
+        yield 30
+        try:
+            yield 23
+            yield 24
+        except:
+            raise AssertionError()
+        else:
+            yield 25
+            yield 26
+        finally:
+            yield 27
+            yield 28
+        yield 29
+    yield 33
+
+AreEqual(list(nested_yield_1()), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 32, 30, 23, 24, 25, 26, 27, 28, 29, 33])
+
+def nested_yield_2():
+    try:
+        pass
+    except:
+        raise AssertionError()
+    else:
+        yield 1
+        try:
+            yield 2
+            yield 3
+        except:
+            raise AssertionError()
+        else:
+            yield 4
+            yield 5
+        finally:
+            yield 6
+            yield 7
+    finally:
+        yield 8
+        yield 9
+    yield 10
+    
+AreEqual(list(nested_yield_2()), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+def nested_yield_3():
+    yield 1
+    try:
+        yield 2
+        try:
+            yield 3
+            try:
+                yield 4
+                try:
+                    yield 5
+                except:
+                    pass
+                yield 6
+            except:
+                pass
+            yield 7
+        except:
+            pass
+        yield 8
+    except:
+        pass
+    yield 9
+
+AreEqual(list(nested_yield_3()), [1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+def nested_yield_4():
+    yield 1
+    try:
+        1/0
+    except:
+        yield 2
+        try:
+            yield 3
+            try:
+                yield 4
+            except:
+                pass
+        except:
+            pass
+    else:
+        raise AssertionError()
+    yield 5
+        
+AreEqual(list(nested_yield_4()), [1, 2, 3, 4, 5])
+
+
+# Generator methods with varying amounts of local state
+def lstate(size):
+    args = ''
+    for i in xrange(size-1):
+        args = args+('a%i, ' % i)
+    args = args+('a%i' % (size-1))
+
+    body = """    ret = 0
+    for i in xrange(%i):
+""" % size
+    body = body + """        exec('a%i = a%i*a%i' % (i,i,i))
+        exec('ret = a%i' % i)
+        yield ret
+"""
+    func = """def fetest(%s):
+%s""" % (args, body)
+    #print func
+    exec(func)
+
+    args = range(size)
+    exec("AreEqual(list(fetest(%s)),%s)" % (str(args)[1:-1], str([x*x for x in args])))
+
+    del(fetest)
+
+lstate(1)
+lstate(2)
+lstate(4)
+lstate(8)
+lstate(16)
+lstate(32)
+lstate(64)
+lstate(122)
+#lstate(123) #Bug 260847
+#lstate(124)
+#lstate(125)
+#lstate(128)
+#lstate(256)
+#lstate(512)

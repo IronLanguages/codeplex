@@ -114,5 +114,11 @@ namespace Microsoft.Scripting {
             // we have a bigger file.
             return (_start.Column) ^ (_end.Column << 7) ^ (_start.Line << 14) ^ (_end.Line << 23);
         }
+
+#if DEBUG
+        public string ToDebugString() {
+            return String.Format("{0}-{1}", _start.ToDebugString(), _end.ToDebugString());
+        }
+#endif
     }
 }

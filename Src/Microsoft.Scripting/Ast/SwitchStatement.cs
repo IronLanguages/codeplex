@@ -16,9 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class SwitchStatement : Statement {
         private readonly SourceLocation _header;
         private readonly Expression _testValue;
@@ -72,7 +72,7 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
 
             // Emit the test value
-            _testValue.Emit(cg);
+            _testValue.EmitAsObject(cg);
 
             // Check if jmp table can be emitted
             bool emitJumpTable = TryEmitJumpTable(cg, labels, defaultCaseLocation, defaultTarget);
@@ -105,7 +105,7 @@ namespace Microsoft.Scripting.Internal.Ast {
         // Emits the switch as if stmts
         private void EmitConditionalBranches(CodeGen cg, Label[] labels, int defaultCaseLocation) {
 
-            Slot testValueSlot = cg.GetNamedLocal(_testValue.ExpressionType, "switchTestValue");
+            Slot testValueSlot = cg.GetNamedLocal(typeof(object), "switchTestValue");
             testValueSlot.EmitSet(cg);
 
             // For all the "cases" create their conditional branches
@@ -116,7 +116,7 @@ namespace Microsoft.Scripting.Internal.Ast {
 
                     // Test for equality of case value and the test expression
                     cg.EmitCodeContext(); 
-                    _cases[i].Value.Emit(cg);
+                    _cases[i].Value.EmitAsObject(cg);
                     testValueSlot.EmitGet(cg);
                     cg.EmitCall(typeof(RuntimeHelpers), "Equal");
                     cg.Emit(OpCodes.Brtrue, labels[i]);
@@ -168,7 +168,7 @@ namespace Microsoft.Scripting.Internal.Ast {
                 }
             }
 
-            Slot testValueSlot = cg.GetNamedLocal(_testValue.ExpressionType, "switchTestValue");
+            Slot testValueSlot = cg.GetNamedLocal(typeof(object), "switchTestValue");
             testValueSlot.EmitSet(cg);
 
             // Call RuntimeHelpers.TryGetSwitchIndex(codeContext, testValue, out index)
@@ -186,7 +186,7 @@ namespace Microsoft.Scripting.Internal.Ast {
 
             // Emit the normalized index and then switch based on that
             indexSlot.EmitGet(cg);
-            cg.EmitRawConstant(min);
+            cg.EmitInt(min);
             cg.Emit(OpCodes.Sub); 
 
             cg.Emit(OpCodes.Switch, jmpLabels);

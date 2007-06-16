@@ -57,6 +57,11 @@ namespace Microsoft.Scripting.Hosting {
         protected virtual string Name { get { return null; } }
 
         protected virtual void Initialize() {
+            // A console application needs just the simple setup.
+            // The full setup is potentially expensive as it can involve loading System.Configuration.dll
+            ScriptEnvironmentSetup setup = new ScriptEnvironmentSetup(true);
+            ScriptDomainManager manager;
+            ScriptDomainManager.TryCreateLocal(setup, out manager);
         }
 
         /// <summary>
@@ -197,6 +202,8 @@ namespace Microsoft.Scripting.Hosting {
 
             IScriptEngine engine = _options.LanguageProvider.GetEngine(engine_options);
 
+            engine.SetSourceUnitSearchPaths(_options.SourceUnitSearchPaths);
+
             int result = 0;
             foreach (string file_path in _options.Files) {
                 result = RunFile(engine, new SourceFileUnit(engine, file_path, Encoding.Default));
@@ -266,7 +273,7 @@ namespace Microsoft.Scripting.Hosting {
 
             engine.SetSourceUnitSearchPaths(_options.SourceUnitSearchPaths);
 
-            IConsole console = _options.LanguageProvider.GetConsole(engine, console_options);
+            IConsole console = _options.LanguageProvider.GetConsole(command_line, engine, console_options);
 
             if (console_options.HandleExceptions) {
                 try {

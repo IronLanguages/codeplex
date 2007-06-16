@@ -14,16 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Collections.Generic;
+
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Operations;
-using System.IO;
-using Microsoft.Scripting.Internal.Generation;
 
 namespace IronPython.Hosting {
     public class PythonErrorSink : ErrorSink {
@@ -59,7 +59,7 @@ namespace IronPython.Hosting {
                     }
                 }
 
-                file_name = CompilerHelpers.GetSourceDisplayName(sourceUnit);
+                file_name = sourceUnit.DisplayName;
             }
             
             if (severity == Severity.Warning) {
@@ -68,16 +68,16 @@ namespace IronPython.Hosting {
                     message = String.Format("{0} ({1}, line {2})", message, file_name, span.Start.Line);
                 }
 
-                throw Ops.SyntaxWarning(message, file_name, span.Start.Line, span.Start.Column, line_text, severity);
+                throw PythonOps.SyntaxWarning(message, file_name, span.Start.Line, span.Start.Column, line_text, severity);
             }
 
             switch (errorCode & ErrorCodes.ErrorMask) {
                 case ErrorCodes.IndentationError:
-                    throw Ops.IndentationError(message, file_name, span.Start.Line, span.Start.Column, line_text, errorCode, severity);
+                    throw PythonOps.IndentationError(message, file_name, span.Start.Line, span.Start.Column, line_text, errorCode, severity);
                 case ErrorCodes.TabError:
-                    throw Ops.TabError(message, file_name, span.Start.Line, span.Start.Column, line_text, errorCode, severity);
+                    throw PythonOps.TabError(message, file_name, span.Start.Line, span.Start.Column, line_text, errorCode, severity);
                 default:
-                    throw Ops.SyntaxError(message, file_name, span.Start.Line, span.Start.Column, line_text, errorCode, severity);
+                    throw PythonOps.SyntaxError(message, file_name, span.Start.Line, span.Start.Column, line_text, errorCode, severity);
             }
         }
 

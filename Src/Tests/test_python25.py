@@ -18,526 +18,13 @@
 #
 
 from lib.assert_util import *
-from lib.process_util import *
+if not is_silverlight:
+    from lib.process_util import *
 
-if is_cli: 
-    from System import Environment
-    isPython25 = "-X:Python25" in System.Environment.GetCommandLineArgs()
-else:
-    import sys
-    isPython25 = ((sys.version_info[0] == 2) and (sys.version_info[1] >= 5)) or (sys.version_info[0] > 2)
+import sys
+isPython25 = ((sys.version_info[0] == 2) and (sys.version_info[1] >= 5)) or (sys.version_info[0] > 2)
 
-with_code ='''
-from __future__ import with_statement
-from lib.assert_util import *
-
-#test case with RAISE(exit consumes), YIELD, RETURN, BREAK and CONTINUE in WITH
-m = 0
-class A:
-    def __enter__(self):
-        globals()["m"] += 99 
-        return 300
-    def __exit__(self,type,value,traceback): 
-        if(type == None and value == None and traceback == None):
-            globals()["m"] += 55 
-        else:
-            globals()["m"] *= 2 
-        return 1
-
-a = A()
-
-def foo():
-    p = 100
-    for y in [1,2,3,4,5,6,7,8,9]:
-        for x in [10,20,30,40,50,60,70,80,90]:
-            with a as b:
-                p = p + 1
-                if ( x == 20 ): continue 
-                if ( x == 50 and y == 5 ):    break
-                if( x != 40 and y != 4) : yield p
-                p = p + 5
-                p = p +  x * 100
-                p = p + 1
-                if(x  % 3 == 0):
-                    raise RuntimeError("we force exception")
-                if(y == 8):
-                    globals()["m"] += p
-                    return
-                if(x  % 3  == 0 and y %3 == 0):
-                    raise RuntimeError("we force exception")
-                if ( x == 90 ): continue 
-                if ( x == 60 and y == 6 ): break
-                yield b + p 
-                p = p + 1
-try: 
-    k = foo()
-    while(k.next()):pass
-except StopIteration: AreEqual(m,427056988)
-else :Fail("Expected StopIteration but found None")
-
-# testing __enter__
-def just_a_fun(arg): return 300
-class B:
-    def __enter__(self): return "Iron", "Python", just_a_fun
-    def __exit__(self, a,b,c): pass
-
-mydict = {1: [0,1,2], 2:None }
-with B() as (mydict[1][0], mydict[2], B.myfun):
-    AreEqual((mydict[1],mydict[2],B().myfun()),(["Iron",1,2],"Python",just_a_fun(None)) )
-
-#ensure it is same outside with also
-AreEqual((mydict[1],mydict[2],B().myfun()),(["Iron",1,2],"Python",just_a_fun(None)) )
-
-# more args
-class C:
-    def __enter__(self,morearg): pass
-    def __exit__(self, a,b,c): pass
-try:
-    with C() as something: pass
-except TypeError: pass
-else :Fail("Expected TypeError but found None")
-
-#enter raises
-class D:
-    def __enter__(self): 
-        raise RuntimeError("we force an error")
-    def __exit__(self, a,b,c): pass
-
-try:
-    with D() as something: pass
-except RuntimeError: pass
-else :Fail("Expected RuntimeError but found None")
-
-#missing enter
-class MissingEnter: 
-    def __exit__(self,a,b,c): pass
-try:
-    with MissingEnter(): pass
-except AttributeError:pass
-else: Fail("Expected AttributeError but found None")
-
-# Testing __exit__
-# more args
-class E:
-    def __enter__(self): pass
-    def __exit__(self, a,b,c,d,e,f): pass
-try:
-    with E() as something: pass
-except TypeError: pass
-else :Fail("Expected TypeError but found None")
-
-# less args
-class F:
-    def __enter__(self): pass
-    def __exit__(self): pass
-try:
-    with F() as something: pass
-except TypeError: pass
-else :Fail("Expected TypeError but found None")
-
-#exit raises
-class H:
-    def __enter__(self): H.var1 = 100 
-    def __exit__(self, a,b,c): 
-        H.var2 = 200
-        raise RuntimeError("we force an error")
-
-try:
-    with H(): 
-        H.var3 = 300
-except RuntimeError: AreEqual((H.var1,H.var2,H.var3),(100,200,300))
-else :Fail("Expected RuntimeError but found None")
-
-#exit raises on successful / throwing WITH
-class Myerr1(Exception):pass
-class Myerr2(Exception):pass
-class Myerr3(Exception):pass
-class ExitRaise:
-    def __enter__(self): H.var1 = 100 
-    def __exit__(self, a,b,c):
-        if(a == None and b == None and c == None): 
-            raise Myerr1
-        raise Myerr2
-
-try:
-    with ExitRaise(): 
-        1+2+3
-except Myerr1: pass
-else :Fail("Expected Myerr1 but found None")
-
-try:
-    with ExitRaise(): 
-        raise Myerr3
-except Myerr2: pass
-else :Fail("Expected Myerr2 but found None")
-
-
-#exit propagates exception on name deletion ( covers FLOW CHECK scenario)
-class PropagateException:
-    def __enter__(self): pass
-    def __exit__(self, a,b,c): return False
-try:
-    with PropagateException() as PE:
-        del PE
-        print PE
-except NameError:pass
-else: Fail("Expected NameError but found None")
-
-try:
-    with PropagateException() as PE:
-        PE.var1 = 100
-        del PE
-        print PE
-except AttributeError:pass
-else: Fail("Expected AttributeError but found None")
-
-#exit consumes exception 
-class ConsumeException:
-    def __enter__(self): pass
-    def __exit__(self, a,b,c): return [1,2,3],{"dsad":"dsd"},"hello"
-with ConsumeException():1/0
-
-#missing exit
-class MissingExit: 
-    def __enter__(self): pass
-try:
-    with MissingEnter(): pass
-except AttributeError:pass
-else: Fail("Expected AttributeError but found None")
-
-#With Stmt under other compound statements (NO YIELD)
-
-gblvar = 0
-
-
-#inheritance
-class cxtmgr:
-    def __exit__(self, a, b, c):  
-        globals()["gblvar"] += 10
-        return False
-
-
-class inherited_cxtmgr(cxtmgr):
-    def __enter__(self): 
-        globals()["gblvar"] += 10
-        return False
-
-
-# Building up most complex TRY-CATCH-FINALLY-RAISE-WITH-CLASS combination with inheritance.
-#try->(try->(except->(with ->fun ->(try->(with->raise)->Finally(With)))))
-try: #Try
-    try: #try->try
-        globals()["gblvar"] += 1 
-        1/0
-    except ZeroDivisionError: #try->(try->except)
-        globals()["gblvar"] += 2 
-        with inherited_cxtmgr() as ic: #try->(try->(except->with(inherited)))
-            globals()["gblvar"] += 3
-            def fun_in_with(): return "Python is smart"
-            AreEqual(fun_in_with(),"Python is smart") #try->(try->(except->(with ->fun)))
-            try:                                      #try->(try->(except->(with ->fun ->try)))
-                globals()["gblvar"] += 4 
-                with inherited_cxtmgr() as inherited_cxtmgr.var: #try->(try->(except->(with ->fun ->(try->with))))
-                    globals()["gblvar"] += 5
-                    raise Myerr1  #try->(try->(except->(with ->fun ->(try->with->raise))))
-            finally:    #try->(try->(except->(with ->fun ->(try->(with->raise)->Finally))))
-                AreEqual(sys.exc_info()[0],Myerr1)
-                globals()["gblvar"] += 6 
-                class ClassInFinally:
-                    def __enter__(self): 
-                        globals()["gblvar"] +=  7
-                        return 200
-                    def __exit__(self,a,b,c):
-                        globals()["gblvar"] += 8
-                        return False # it raises
-                with ClassInFinally(): #try->(try->(except->(with ->fun ->(try->(with->raise)->Finally(With)))))
-                    globals()["gblvar"] += 9 
-except Myerr1: AreEqual(globals()["gblvar"],85)
-
-# With in __enter__ and __exit__
-gblvar = 0            
-class A: 
-    def __enter__(self):  globals()["gblvar"] += 1 ; return 100            
-    def __exit__(self,a,b,c):  globals()["gblvar"] += 2; return 200    
-
-class WithInEnterExit:
-    def __enter__(self): 
-        with A() as b:
-            globals()["gblvar"] += 3;return A()
-    def __exit__(self,a,b,c): 
-        with A() as c:
-            globals()["gblvar"] += 4; return A()
-
-AreEqual ( 1,1)
-with WithInEnterExit() as wie:
-    with wie as wie_wie:
-        globals()["gblvar"] += 100
-        
-AreEqual(globals()["gblvar"],116)
-'''
-
-unified_tcf ='''
-from lib.assert_util import *
-
-# test try-catch-finally syntax
-globals()["gblvar"] = 1
-def setvar() : globals()["gblvar"] += 1
-
-#missing except,else
-try:
-    setvar()
-
-    # missing else, finally    
-    try:1 / 0
-    except ZeroDivisionError: setvar()
-
-    # missing else    
-    try: 
-        setvar()
-        a =[]
-        a[10]
-    except ZeroDivisionError: assert(False)
-    except IndexError: setvar()
-    finally: setvar()
-finally:
-    setvar()
-AreEqual(globals()["gblvar"],7)
-
-globals()["gblvar"] = 1
-class MyErr1(Exception) :pass
-class MyErr2(Exception) :pass
-class MyErr3(Exception) :pass
-class MyErr4(Exception) :pass
-
-                                     
-def test_unified_try(myraise1,myraise2, myraise3,myraise4,myraise5,myraise6,myraise7,myraise8,myraise9):
-    try:
-        yield 1; setvar()
-        yield 2; setvar()
-        try:
-            setvar()
-            if myraise1 == "raiseInTry" :setvar(); raise MyErr1
-            if myraise1 == "outerTry" :setvar(); raise MyErr2
-            if myraise1 == "Unhandled" :setvar(); raise MyErr4
-            setvar()
-        except MyErr1:
-            setvar()
-            if myraise2 == "raiseInExcept": setvar(); raise MyErr2
-            if myraise2 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        except :setvar() # should never be executed
-        else : 
-            setvar()
-            if myraise2 == "raiseInElse": setvar(); raise MyErr2
-            if myraise2 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        finally :
-            setvar()
-            if myraise3 == "raiseInFinally":  setvar(); raise MyErr3
-            if myraise3 == "Unhandled":  setvar(); raise MyErr4
-            setvar()
-        yield 1; setvar()
-        yield 2; setvar()
-    except MyErr2:
-        yield 1; setvar()
-        yield 2; setvar()
-        try:
-            setvar()
-            if myraise4 == "raiseInTry" :setvar(); raise MyErr1
-            if myraise4 == "Unhandled" :setvar(); raise MyErr4
-            setvar()
-        except MyErr1:
-            setvar()
-            if myraise5 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        except :setvar() # should never be executed
-        else : 
-            setvar()
-            if myraise5 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        finally :
-            setvar()
-            if myraise6 == "Unhandled":  setvar(); raise MyErr4
-            setvar()
-        yield 1; setvar()
-        yield 2; setvar()
-    except MyErr3:
-        yield 1; setvar()
-        yield 2; setvar()
-        try:
-            setvar()
-            if myraise4 == "raiseInTry" :setvar(); raise MyErr1
-            if myraise4 == "Unhandled" :setvar(); raise MyErr4
-            setvar()
-        except MyErr1:
-            setvar()
-            if myraise5 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        except :setvar() # should never be executed
-        else : 
-            setvar()
-            if myraise5 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        finally :
-            setvar()
-            if myraise6 == "Unhandled":  setvar(); raise MyErr4
-            setvar()
-        yield 1; setvar()
-        yield 2; setvar()
-    else :
-        yield 1; setvar()
-        yield 2; setvar()
-        try:
-            setvar()
-            if myraise4 == "raiseInTry" :setvar(); raise MyErr1
-            if myraise4 == "Unhandled" :setvar(); raise MyErr4
-            setvar()
-        except MyErr1:
-            setvar()
-            if myraise5 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        except :setvar() # should never be executed
-        else : 
-            setvar()
-            if myraise5 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        finally :
-            setvar()
-            if myraise6 == "Unhandled":  setvar(); raise MyErr4
-            setvar()
-        yield 1; setvar()
-        yield 2; setvar()
-    finally :
-        #uncomment the following 2 lines once we have the fix for PS:1752 
-        #and accordingly adjust the final expected result value
-        #yield 1; setvar()
-        #yield 2; setvar()
-        try:
-            setvar()
-            if myraise7 == "raiseInTry" :setvar(); raise MyErr1
-            setvar()
-            if myraise7 == "Unhandled" :setvar(); raise MyErr4
-            setvar()
-        except MyErr1:
-            setvar()
-            if myraise8 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        except :setvar() # should never be executed
-        else : 
-            setvar()
-            if myraise8 == "Unhandled": setvar(); raise MyErr4
-            setvar()
-        finally :
-            setvar()
-            if myraise9 == "Unhandled":  setvar(); raise MyErr4
-            setvar()
-        #uncomment the following 2 lines once we have the fix for PS:1752 
-        #and accordingly adjust the final expected result value
-        #yield 1; setvar()
-        #yield 2; setvar()
-
-
-myraise1 = ["raiseInTry","outerTry","Unhandled","None"] 
-myraise2 = ["raiseInExcept", "raiseInElse","Unhandled","None"] 
-myraise3 = ["raiseInFinally","Unhandled","None"] 
-myraise4 = ["raiseInTry","Unhandled","None"] 
-myraise5 = ["Unhandled","None"] 
-myraise6 = ["Unhandled","None"] 
-myraise7 = ["raiseInTry","Unhandled","None"] 
-myraise8 = ["Unhandled","None"] 
-myraise9 = ["Unhandled","None"] 
-
-def fun():
-    for a in myraise1:
-        for b in myraise2:
-            for c in myraise3:
-                for d in myraise4:
-                    for e in myraise5:
-                        for f in myraise6:
-                            for g in myraise7:
-                                for h in myraise8:
-                                    for i in myraise9:
-                                        k = test_unified_try(a,b,c,d,e,f,g,h,i)
-                                        while(True):
-                                            try:
-                                                k.next()
-                                            except MyErr4: setvar();break
-                                            except StopIteration: setvar();break
-
-
-fun()
-AreEqual(globals()["gblvar"],141985)
-
-#test try-catch-finally on targets
-globals()["gblvar"]  = 1
-def test_targets(ret):
-    x = 0
-    y = 0
-    z = 0
-    setvar()
-    while( z < 6 ) :
-        z += 1
-        while( y <  8 ) :
-            y += 1
-            while( x < 20 ) :
-                x += 1
-                setvar()
-                try:
-                    setvar()
-                    if not x % 3 : setvar();continue
-                    if not x % 4 : setvar();break
-                    if not x % 5 : setvar();1 / 0
-                    if not x % 7 and ret == "try" : setvar();return
-                    setvar()
-                except:
-                    setvar()
-                    if not y % 3 : setvar();continue
-                    if not y % 4 : setvar();break
-                    if not y % 7 and ret == "except" : setvar();return
-                    setvar()
-                else:
-                    setvar()
-                    if not x % 11 : setvar();continue
-                    if not x % 13 : setvar();break
-                    if not x % 19 and ret == "else" : setvar();return
-                    setvar()
-                finally:
-                    setvar()
-                    #IPy does support continue under finally, just for CPy compatibility we do not test it here
-                    #if z % 2 : setvar();continue
-                    if not z % 2 : setvar();break
-                    if not z % 5 and ret == "finally" : setvar();return
-                    setvar()
-    setvar()
-    return
-
-ret = ["try","except","else","finally"]
-for r in ret:
-    test_targets(r)
-AreEqual(globals()["gblvar"],403)
-    
-    
-#test yield in finally
-globals()["gblvar"]  = 1
-def test_yiled_finally():
-    setvar()
-    try: setvar();1/0
-    except:setvar()
-    else: setvar()
-    finally:
-        setvar();yield 100
-        setvar();yield 100
-        setvar()
-    setvar();
-    
-try:
-    k = test_yiled_finally()
-    while(1):
-        k.next()
-except StopIteration: pass
-
-AreEqual(globals()["gblvar"],8)
-'''
+Assert(isPython25 or not is_cli)
 
 if isPython25:
 
@@ -580,8 +67,10 @@ if isPython25:
 
     def test_string_rpartition():
         AreEqual('http://www.codeplex.com/WorkItem/List.aspx?Project://Name=IronPython'.rpartition('://'), ('http://www.codeplex.com/WorkItem/List.aspx?Project','://','Name=IronPython'))
-        AreEqual('http://www.codeplex.com/WorkItem/List.aspx?ProjectName=IronPython'.rpartition('stringnotpresent'), ('http://www.codeplex.com/WorkItem/List.aspx?ProjectName=IronPython','',''))
-        AreEqual('stringisnotpresent'.rpartition('presentofcoursenot'), ('stringisnotpresent','',''))
+        #CodePlex Work Item #10648
+        if sys.platform=="win32":
+            AreEqual('http://www.codeplex.com/WorkItem/List.aspx?ProjectName=IronPython'.rpartition('stringnotpresent'), ('', '', 'http://www.codeplex.com/WorkItem/List.aspx?ProjectName=IronPython'))
+            AreEqual('stringisnotpresent'.rpartition('presentofcoursenot'), ('','', 'stringisnotpresent'))
         AreEqual(''.rpartition('stringnotpresent'), ('','',''))
         AreEqual('onlymatchingtext'.rpartition('onlymatchingtext'), ('','onlymatchingtext',''))
         AreEqual('alotoftextherethatisapartofprefixonlyprefix_nosuffix'.rpartition('_nosuffix'), ('alotoftextherethatisapartofprefixonlyprefix','_nosuffix',''))
@@ -611,7 +100,8 @@ if isPython25:
         str = prefix + sep + suffix                
 
         AreEqual(str.rpartition(sep),(prefix,sep,suffix))            
-        AreEqual(str.rpartition('nomatch'),(str,'',''))            
+        #CodePlex Work Item #10648
+        if sys.platform=="win32":  AreEqual(str.rpartition('nomatch'),('','', str))            
         AssertError(TypeError,str.rpartition,None)
         AssertError(ValueError,str.rpartition,'')
 
@@ -697,11 +187,13 @@ if isPython25:
         AssertError(TypeError, s.startswith,(A, None, m1),4, len(s))
 
             # end < start
-        AreEqual(s.startswith((m1,None),4,3), False)
-        AreEqual(s.startswith((m1,None),4,2), False)
-        AreEqual(s.startswith((n1,None),4, 3),False)
-        AreEqual(s.startswith((None, n1),4 , 3),False)
-        AreEqual(s.startswith((A, None, m1),4, 0),False)
+        #CodePlex Work Item #10646
+        if sys.platform=="win32":
+            AssertError(TypeError, s.startswith, (m1,None),4,3)
+            AssertError(TypeError, s.startswith, (m1,None),4,2)
+            AssertError(TypeError, s.startswith, (n1,None),4, 3)
+            AssertError(TypeError, s.startswith, (None, n1),4 , 3)
+            AssertError(TypeError, s.startswith, (A, None, m1),4, 0)
         
             # end == start
         AreEqual(s.startswith(("",None),4,4), True)
@@ -728,13 +220,16 @@ if isPython25:
         AreEqual(s.startswith(("here","nomatch"),-len(s) - 1, 2 ), False)
 
             # end < start
-        AreEqual(s.startswith(("string",None),-6, 10), False)
+        #CodePlex Work Item #10646
+        if sys.platform=="win32":
+            AssertError(TypeError, s.startswith, ("string",None),-6, 10)
+            AssertError(TypeError, s.startswith, ("string000",None),-6,10)
+            AssertError(TypeError, s.startswith, (None, "string"),-6, 10)
+            AssertError(TypeError, s.startswith, (A, None, "string"),-6,10)
         AreEqual(s.startswith(("stro","nomatch"),-6, 10), False)
         AreEqual(s.startswith(("strong","nomatch"),-6,10), False)
-        AreEqual(s.startswith(("string000",None),-6,10),False)
-        AreEqual(s.startswith((None, "string"),-6, 10),False)
-        AreEqual(s.startswith((A, None, "string"),-6,10),False)
-
+        
+        
             # end == start
         AssertError(TypeError,s.startswith, ("string",None),-6, len(s) -6)
         AreEqual(s.startswith(("",None),-6, len(s) -6), True)
@@ -749,13 +244,16 @@ if isPython25:
         AssertError(TypeError, s.startswith,(A, None, m1),4, -5)
 
             # end < start
-        AreEqual(s.startswith((m1,None),4,-len(s) + 1), False)
+        #CodePlex Work Item #10646    
+        if sys.platform=="win32":
+            AssertError(TypeError, s.startswith, (m1,None),4,-len(s) + 1)
+            AssertError(TypeError, s.startswith, (n1,None),4, -len(s))
+            AssertError(TypeError, s.startswith, (None, n1),4 , -len(s))
+            AssertError(TypeError, s.startswith, (A, None, m1),4, -len(s))
+        
         AreEqual(s.startswith((m1,),4,-len(s) + 1), False)
         AreEqual(s.startswith((m1,),4,-500), False)
-
-        AreEqual(s.startswith((n1,None),4, -len(s)),False)
-        AreEqual(s.startswith((None, n1),4 , -len(s)),False)
-        AreEqual(s.startswith((A, None, m1),4, -len(s)),False)
+        
         
             # end == start
         AreEqual(s.startswith(("",None),4,-len(s)  + 4), True)
@@ -784,13 +282,15 @@ if isPython25:
         AreEqual(s.startswith(("here","nomatch"),-len(s) - 1,  -len(s) + 2), False)
 
             # end < start
-        AreEqual(s.startswith(("string",None),-6, -7), False)
+        #CodePlex Work Item #10646    
+        if sys.platform=="win32":
+            AssertError(TypeError, s.startswith, ("string",None),-6, -7)
+            AssertError(TypeError, s.startswith, ("string000",None),-6,-8)
+            AssertError(TypeError, s.startswith, (None, "string"),-6, -8)
+            AssertError(TypeError, s.startswith, (A, None, "string"),-6,-8)
       
         AreEqual(s.startswith(("stro","nomatch"),-6, -8), False)
         AreEqual(s.startswith(("strong","nomatch"),-6,-8), False)
-        AreEqual(s.startswith(("string000",None),-6,-8),False)
-        AreEqual(s.startswith((None, "string"),-6, -8),False)
-        AreEqual(s.startswith((A, None, "string"),-6,-8),False)
 
             # end == start
         AreEqual(s.startswith(("string","nomatch"),-6, -6), False)
@@ -880,10 +380,12 @@ if isPython25:
         AssertError(TypeError, s.endswith,(A, None, m1),4, len(s)-6)
 
             # end < start
-        AreEqual(s.endswith((m1,None),4,3), False)
-        AreEqual(s.endswith((n1,None),4, 3),False)
-        AreEqual(s.endswith((None, n1),4 , 3),False)
-        AreEqual(s.endswith((A, None, m1),4, 0),False)
+        #CodePlex Work Item #10646  
+        if sys.platform=="win32":  
+            AssertError(TypeError, s.endswith, (m1,None),4,3)
+            AssertError(TypeError, s.endswith, (n1,None),4, 3)
+            AssertError(TypeError, s.endswith, (None, n1),4 , 3)
+            AssertError(TypeError, s.endswith, (A, None, m1),4, 0)
         
             # end == start
         AreEqual(s.endswith(("",None),4,4), True)
@@ -912,12 +414,14 @@ if isPython25:
         AssertError(TypeError, s.endswith,(A, None, "here"),-len(s),4)
 
             # end < start
-        AreEqual(s.endswith(("here",None),-len(s) + 4, 2), False)
+        #CodePlex Work Item #10646   
+        if sys.platform=="win32":  
+            AssertError(TypeError, s.endswith, ("here",None),-len(s) + 4, 2)
+            AssertError(TypeError, s.endswith, ("here000",None),-len(s) + 4, 2)
+            AssertError(TypeError, s.endswith, (None, "he"),-len(s) + 4, 2)
+            AssertError(TypeError, s.endswith, (A, None, "string"),-len(s) + 4, 2)
       
         AreEqual(s.endswith(("hera","nomatch"),-len(s) + 4, 2), False)
-        AreEqual(s.endswith(("here000",None),-len(s) + 4, 2),False)
-        AreEqual(s.endswith((None, "he"),-len(s) + 4, 2),False)
-        AreEqual(s.endswith((A, None, "string"),-len(s) + 4, 2),False)
 
             # end == start
         AssertError(TypeError,s.endswith, ("here",None),-6, len(s) -6)
@@ -933,13 +437,15 @@ if isPython25:
         AssertError(TypeError, s.endswith,(A, None, m1),4, -6)
 
             # end < start
-        AreEqual(s.endswith((m1,None),4,-len(s) + 1), False)
+        #CodePlex Work Item #10646  
+        if sys.platform=="win32":  
+            AssertError(TypeError, s.endswith, (m1,None),4,-len(s) + 1)
+            AssertError(TypeError, s.endswith, (n1,None),4, -len(s))
+            AssertError(TypeError, s.endswith, (None, n1),4 , -len(s))
+            AssertError(TypeError, s.endswith, (A, None, m1),4, -len(s))
+        
         AreEqual(s.endswith((m1,),4,-len(s) + 1), False)
         AreEqual(s.endswith((m1,),4,-500), False)
-
-        AreEqual(s.endswith((n1,None),4, -len(s)),False)
-        AreEqual(s.endswith((None, n1),4 , -len(s)),False)
-        AreEqual(s.endswith((A, None, m1),4, -len(s)),False)
         
             # end == start
         AreEqual(s.endswith(("",None),4,-len(s)  + 4), True)
@@ -968,11 +474,14 @@ if isPython25:
         AreEqual(s.endswith(("here","nomatch"),-len(s) - 1,  -len(s) + 2), False)
 
             # end < start
-        AreEqual(s.endswith(("here",None),-len(s) + 5, -len(s) + 4), False)
+        #CodePlex Work Item #10646    
+        if sys.platform=="win32":
+            AssertError(TypeError, s.endswith, ("here",None),-len(s) + 5, -len(s) + 4)
+            AssertError(TypeError, s.endswith, ("here000",None),-len(s) + 5, -len(s) + 4)
+            AssertError(TypeError, s.endswith, (None, "here"),-len(s) + 5, -len(s) + 4)
+            AssertError(TypeError, s.endswith, (A, None, "here"),-len(s) + 5, -len(s) + 4)
+        
         AreEqual(s.endswith(("hera","nomatch"),-len(s) + 5, -len(s) + 4), False)
-        AreEqual(s.endswith(("here000",None),-len(s) + 5, -len(s) + 4),False)
-        AreEqual(s.endswith((None, "here"),-len(s) + 5, -len(s) + 4),False)
-        AreEqual(s.endswith((A, None, "here"),-len(s) + 5, -len(s) + 4),False)
 
             # end == start
         AreEqual(s.endswith(("here","nomatch"),-6, -6), False)
@@ -1213,39 +722,4 @@ if isPython25:
 
         AreEqual(F({"hi":"bye"})["none"], 50)
 
-    def test_with():
-        tempfile = path_combine(testpath.public_testdir, "temp_with.py")
-        write_to_file(tempfile, with_code)
-        result = launch_ironpython_changing_extensions(tempfile, ["-X:Python25"])
-        AreEqual(result, 0)
-        delete_files(tempfile)
-
-        # nested with can not have a yield
-        class J:
-            def __enter__(self):pass
-            def __exit__(self,a,b,c):pass
-        try:
-            c = compile(
-"""def nest():
-    with J():
-        with J():
-            yield 100
-""","","exec")    
-        except SyntaxError,e: pass
-
-    def test_unified_tcf():
-        tempfile = path_combine(testpath.public_testdir, "temp_tcf.py")
-        write_to_file(tempfile, unified_tcf)
-        result = launch_ironpython_changing_extensions(tempfile, ["-X:Python25"])
-        AreEqual(result, 0)
-        delete_files(tempfile)
-
 run_test(__name__)
-
-if not isPython25: 
-    if is_cli:
-        result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_python25.py"), ["-X:Python25"])
-        AreEqual(result, 0)
-    
-    
-

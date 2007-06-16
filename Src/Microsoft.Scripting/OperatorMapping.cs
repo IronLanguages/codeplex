@@ -14,10 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Internal.Generation;
 using System.Diagnostics;
+
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting {
     public class OperatorMapping {

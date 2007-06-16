@@ -23,7 +23,7 @@ namespace Microsoft.Scripting {
             FastCallable fc = func as FastCallable;
             if (fc != null) return fc.Call(context);
 
-            return RuntimeHelpers.CallWithContext(context, func, EmptyObjectArray);
+            return RuntimeHelpers.CallWithContext(context, func, RuntimeHelpers.EmptyObjectArray);
         }
 
         public static object CallWithContext(CodeContext context, object func, object arg0) {

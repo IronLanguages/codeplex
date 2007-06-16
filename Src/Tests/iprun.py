@@ -39,7 +39,6 @@ import categories
 
 from lib.assert_util import *
 from lib.file_util import *
-import clr
 
 def my_format_exc():
     if directory_exists(testpath.lib_testdir):
@@ -346,8 +345,6 @@ class RedirectTestRunner(TestRunner):
             self.testResult.setFailure((str(e.args), my_format_exc()))
             print 'exception:', str(e.args)
             print 'traceback:', my_format_exc()
-            print e
-            print e.clsException
             if self.detailLevel == 'min':
                 self.saved_stdout.write("x(%s)" % test)
             else:

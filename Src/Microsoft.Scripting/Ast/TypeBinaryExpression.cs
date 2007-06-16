@@ -15,9 +15,9 @@
 
 using System;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
 
     public class TypeBinaryExpression : Expression {
         private readonly Expression _expression;
@@ -46,21 +46,16 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
-            _expression.Emit(cg);
+        public override void Emit(CodeGen cg) {
+            _expression.EmitAsObject(cg);
             cg.Emit(OpCodes.Isinst, _typeOperand);
             cg.Emit(OpCodes.Ldnull);
             cg.Emit(OpCodes.Cgt_Un);
-            cg.EmitConvert(ExpressionType, asType);
         }
 
         public override object Evaluate(CodeContext context) {
             return RuntimeHelpers.BooleanToObject(
                 _typeOperand.IsInstanceOfType(_expression.Evaluate(context)));
-        }
-
-        public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
         }
 
         public override void Walk(Walker walker) {

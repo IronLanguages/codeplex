@@ -46,6 +46,7 @@
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RunCodeAnalysis>false</RunCodeAnalysis>
+    <BaseAddress>1929379840</BaseAddress>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -61,7 +62,7 @@
     <NoWarn>1591,618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
-    <OutputPath>bin\Silverlight Release\</OutputPath>
+    <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
     <DocumentationFile>..\..\Bin\Silverlight Release\Microsoft.Scripting.xml</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -83,27 +84,44 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Utilities\Silverlight\x86ret\System.dll</HintPath>
     </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ActionOnCallAttribute.cs" />
     <Compile Include="Actions\AbstractObject.cs" />
     <Compile Include="Actions\Action.cs" />
     <Compile Include="Actions\ActionBinder.cs" />
     <Compile Include="Actions\BigRuleSet.cs" />
     <Compile Include="Actions\CallAction.cs" />
     <Compile Include="Actions\ConvertToAction.cs" />
+    <Compile Include="Actions\CreateInstanceAction.cs" />
+    <Compile Include="Actions\CreateInstanceBinderHelper.cs" />
     <Compile Include="Actions\DynamicSiteHelpers.Generated.cs" />
     <Compile Include="Actions\DoOperationAction.cs" />
     <Compile Include="Actions\DynamicSiteHelpers.cs" />
     <Compile Include="Actions\EmptyRuleSet.cs" />
     <Compile Include="Actions\GetMemberAction.cs" />
+    <Compile Include="Actions\GetMemberBinderHelper.cs" />
     <Compile Include="Actions\MemberAction.cs" />
     <Compile Include="Actions\RuleSet.cs" />
     <Compile Include="Actions\RuleTree.cs" />
     <Compile Include="Actions\SetMemberAction.cs" />
+    <Compile Include="Actions\SetMemberBinderHelper.cs" />
     <Compile Include="Actions\SmallRuleSet.cs" />
     <Compile Include="Actions\StandardRule.cs" />
+    <Compile Include="Actions\RuleBinder.cs" />
+    <Compile Include="AssemblyTypeNames.cs" />
+    <Compile Include="Ast\AstWriter.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
+    <Compile Include="Ast\CatchBlock.cs" />
+    <Compile Include="Ast\CodeBlockWalker.cs" />
+    <Compile Include="Ast\ConversionExpression.cs" />
+    <Compile Include="Ast\DeleteUnboundExpression.cs" />
+    <Compile Include="Ast\DynamicTryStatement.cs" />
+    <Compile Include="Ast\DynamicTryStatementHandler.cs" />
     <Compile Include="Ast\MemberAssignment.cs" />
+    <Compile Include="Ast\TryFlowAnalyzer.cs" />
     <Compile Include="Ast\TypeBinaryExpression.cs" />
     <Compile Include="Ast\StaticUnaryExpression.cs" />
     <Compile Include="Ast\CallExpression.cs" />
@@ -154,7 +172,6 @@
     <Compile Include="Ast\MethodCallExpression.cs" />
     <Compile Include="Ast\Node.cs" />
     <Compile Include="Ast\OrExpression.cs" />
-    <Compile Include="Ast\Parameter.cs" />
     <Compile Include="Ast\ParamsExpression.cs" />
     <Compile Include="Ast\ParenthesisExpression.cs" />
     <Compile Include="Ast\ReturnStatement.cs" />
@@ -165,8 +182,8 @@
     <Compile Include="Ast\SwitchStatement.cs" />
     <Compile Include="Ast\ThrowExpression.cs" />
     <Compile Include="Ast\TryStatement.cs" />
-    <Compile Include="Ast\TryStatementHandler.cs" />
-    <Compile Include="Ast\UnaryOperator.cs" />
+    <Compile Include="Ast\UnboundAssignment.cs" />
+    <Compile Include="Ast\UnboundExpression.cs" />
     <Compile Include="Ast\Variable.cs" />
     <Compile Include="Ast\VariableReference.cs" />
     <Compile Include="Ast\VoidExpression.cs" />
@@ -175,13 +192,24 @@
     <Compile Include="Ast\YieldLabelBuilder.cs" />
     <Compile Include="Ast\YieldStatement.cs" />
     <Compile Include="Ast\YieldTarget.cs" />
+    <Compile Include="BinderHelper.cs" />
+    <Compile Include="BinderType.cs" />
+    <Compile Include="BuiltinFunction.cs" />
+    <Compile Include="BuiltinFunction.Generated.cs" />
+    <Compile Include="ByRefReturnBuilder.cs" />
+    <Compile Include="Actions\CallBinderHelper.cs" />
     <Compile Include="CallTargets.cs" />
     <Compile Include="ArgumentTypeException.cs" />
     <Compile Include="CheckedDictionaryEnumerator.cs" />
+    <Compile Include="ClrModule.cs" />
+    <Compile Include="CoreReflectedTypeBuilder.cs" />
+    <Compile Include="DelegateSignatureInfo.cs" />
+    <Compile Include="DynamicTypeExtender.cs" />
+    <Compile Include="FunctionType.cs" />
     <Compile Include="Generation\DelegateConstant.cs" />
+    <Compile Include="Generation\ReturnFixer.cs" />
     <Compile Include="Generation\Slots\ArgSlot.cs" />
     <Compile Include="Generation\Slots\CastSlot.cs" />
-    <Compile Include="Generation\Slots\DynamicLookupSlot.cs" />
     <Compile Include="Generation\Slots\FieldSlot.cs" />
     <Compile Include="Generation\Slots\IndexSlot.cs" />
     <Compile Include="Generation\Slots\LazySlot.cs" />
@@ -193,13 +221,19 @@
     <Compile Include="Generation\Slots\Slot.cs" />
     <Compile Include="Generation\Slots\StaticFieldSlot.cs" />
     <Compile Include="Generation\Slots\ThisSlot.cs" />
-    <Compile Include="Generation\Slots\VoidSlot.cs" />
+    <Compile Include="Generation\StubGenerator.cs" />
     <Compile Include="Hosting\CodeDomCodeGen.cs" />
-    <Compile Include="IActionable.cs" />
     <Compile Include="IParameterSequence.cs" />
+    <Compile Include="KwArgBinder.cs" />
+    <Compile Include="ModuleContext.cs" />
+    <Compile Include="MethodBinder.cs" />
+    <Compile Include="MethodCandidate.cs" />
+    <Compile Include="NameType.cs" />
     <Compile Include="NarrowingLevel.cs" />
+    <Compile Include="None.cs" />
     <Compile Include="OperatorSlotAttribute.cs" />
     <Compile Include="ParameterWrapper.cs" />
+    <Compile Include="ParamsMethodMaker.cs" />
     <Compile Include="PositionTrackingWriter.cs" />
     <Compile Include="CompilerConstant.cs" />
     <Compile Include="CustomSymbolDictionary.cs" />
@@ -258,6 +292,15 @@
     <Compile Include="LanguageContext.cs" />
     <Compile Include="MutableTypeAttribute.cs" />
     <Compile Include="OperatorMapping.cs" />
+    <Compile Include="Publisher.cs" />
+    <Compile Include="ReflectedEvent.cs" />
+    <Compile Include="ReflectedExtensionProperty.cs" />
+    <Compile Include="ReflectedField.cs" />
+    <Compile Include="ReflectedGetterSetter.cs" />
+    <Compile Include="ReflectedIndexer.cs" />
+    <Compile Include="ReflectedPackage.cs" />
+    <Compile Include="ReflectedProperty.cs" />
+    <Compile Include="ReflectedTypeBuilder.cs" />
     <Compile Include="RuntimeHelpers.Generated.cs" />
     <Compile Include="ScopeMemberAttributes.cs" />
     <Compile Include="ModuleChangeEventArgs.cs" />
@@ -289,10 +332,12 @@
     <Compile Include="ScriptModule.Remote.cs" />
     <Compile Include="Generation\EnvironmentFactory.cs" />
     <Compile Include="Generation\GlobalAllocator.cs" />
+    <Compile Include="ScriptModuleKind.cs" />
     <Compile Include="ScriptNameAttribute.cs" />
     <Compile Include="ScriptTypeAttribute.cs" />
     <Compile Include="SourceUnitReader.cs" />
     <Compile Include="DynamicStackFrame.cs" />
+    <Compile Include="StaticExtensionMethodAttribute.cs" />
     <Compile Include="StaticThisAttribute.cs" />
     <Compile Include="SymbolDictionary.cs" />
     <Compile Include="BaseSymbolDictionary.cs" />
@@ -301,6 +346,7 @@
     <Compile Include="TransformedName.cs" />
     <Compile Include="Ast\TryFinallyStatement.cs" />
     <Compile Include="TupleDictionary.cs" />
+    <Compile Include="TypeCollision.cs" />
     <Compile Include="TypeCreatedEventArgs.cs" />
     <Compile Include="Types\DynamicType.cs" />
     <Compile Include="Types\DynamicTypeBuilder.cs" />

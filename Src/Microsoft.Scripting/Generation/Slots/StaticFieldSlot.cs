@@ -17,7 +17,7 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// A slot backed by a static field in a type
     /// </summary>

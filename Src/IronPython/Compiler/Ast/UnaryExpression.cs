@@ -13,10 +13,11 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class UnaryExpression : Expression {
@@ -37,12 +38,12 @@ namespace IronPython.Compiler.Ast {
             get { return _op; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
-            Operators op = PythonOperatorToAction(_op);
-            return new MSAst.ActionExpression(
-                DoOperationAction.Make(op),
-                new MSAst.Expression[] { ag.Transform(_expression) },
-                Span
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
+            return MSAst.ActionExpression.Operator(
+                Span,
+                PythonOperatorToAction(_op),
+                type,
+                ag.Transform(_expression)
             );
         }
 

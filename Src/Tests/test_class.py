@@ -89,6 +89,11 @@ def test_attrs():
         success = 1
     Assert(success == 1)
 
+
+############################################################
+def test_type_in():
+	AreEqual(type in (None, True, False, 1, {}, [], (), 1.0, 1L, (1+0j)), False)
+
 ############################################################
 def test_init_defaults():
     class A:
@@ -492,8 +497,10 @@ def test_check_dictionary():
             try:
                 C.__dict__ = {}
                 AssertUnreachable()
-            except TypeError:
+            except AttributeError:
                 pass
+            except TypeError:
+                print "CodePlex Work Item #10577"
         
         # replace an instance dictionary (containing non-string keys) w/ a new one.
         a.newInstanceAttr = 1
@@ -1775,13 +1782,32 @@ def test_hash_return_values():
             
             AreEqual(hash(foo()), int(retval))
     
-    # old-style classes require int return value
-    for retval in [1.0, 1.1, 1L, 1<<32]:
+    # old-style classes require int or long return value
+    for retval in [1.0, 1.1]:
         class foo:
             def __hash__(self): return retval
         
         AssertError(TypeError, hash, foo())
 
+    tests = {   1L:1,
+                2L:2,
+                1<<32: 1,
+                (1<<32)+1: 2,
+                (1<<32)-1: -2,
+                1<<34: 4,
+                1<<31: -2147483648,
+            }
+    #CodePlex Work Item #10578
+    if sys.platform!="win32":
+        print "CodePlex Work Item #10578"
+        tests = {}
+    for retval in tests.keys():
+        class foo:
+            def __hash__(self): return retval
+        
+        AreEqual(hash(foo()), tests[retval])    
+
+       
 def test_cmp_notimplemented(): 
     class foo(object):
         def __eq__(self, other):

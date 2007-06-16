@@ -13,10 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Internal;
-using MSAst = Microsoft.Scripting.Internal.Ast;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class WithStatement : Statement {
@@ -65,7 +64,7 @@ namespace IronPython.Compiler.Ast {
             // 1. mgr = (EXPR)
             MSAst.BoundExpression manager = ag.MakeTempExpression("with_manager", SourceSpan.None);
             statements[0] = AstGenerator.MakeAssignment(
-                manager.Reference,
+                manager.Variable,
                 ag.Transform(_contextManager),
                 new SourceSpan(Start, _header)
             );
@@ -73,7 +72,7 @@ namespace IronPython.Compiler.Ast {
             // 2. exit = mgr.__exit__  # Not calling it yet
             MSAst.BoundExpression exit = ag.MakeGeneratorTempExpression("with_exit", SourceSpan.None);
             statements[1] = AstGenerator.MakeAssignment(
-                exit.Reference,
+                exit.Variable,
                 new MSAst.DynamicMemberExpression(
                     manager,
                     SymbolTable.StringToId("__exit__"),
@@ -84,7 +83,7 @@ namespace IronPython.Compiler.Ast {
             // 3. value = mgr.__enter__()
             MSAst.BoundExpression value = ag.MakeTempExpression("with_value", SourceSpan.None);
             statements[2] = AstGenerator.MakeAssignment(
-                value.Reference,
+                value.Variable,
                 new MSAst.CallExpression(
                     new MSAst.DynamicMemberExpression(
                         manager,
@@ -99,20 +98,21 @@ namespace IronPython.Compiler.Ast {
             // 4. exc = True
             MSAst.BoundExpression exc = ag.MakeGeneratorTempExpression("with_exc", SourceSpan.None);
             statements[3] = AstGenerator.MakeAssignment(
-                exc.Reference,
+                exc.Variable,
                 new MSAst.ConstantExpression(true)
             );
 
             // 5. if not exit(*sys.exc_info()):
             //        raise
             MSAst.Statement if_not_exit_raise = MSAst.IfStatement.IfThen(
-                MakeNotExpression(MakeExitCall(exit)),
-                new MSAst.ExpressionStatement(new MSAst.ThrowExpression(null)));
+                MSAst.ActionExpression.Operator(Operators.Not, typeof(bool), MakeExitCall(exit)),
+                new MSAst.ExpressionStatement(new MSAst.ThrowExpression(null))
+            );
 
             // Create null argument for later use in the call to exit
             MSAst.Arg null_arg = MSAst.Arg.Simple(new MSAst.ConstantExpression(null));
 
-            statements[4] = new MSAst.TryStatement(
+            statements[4] = new MSAst.DynamicTryStatement(
                 // try statement body
                 _var != null ?
                     new MSAst.BlockStatement(
@@ -125,8 +125,8 @@ namespace IronPython.Compiler.Ast {
                     ag.Transform(_body),
 
                 // try statement handler
-                new MSAst.TryStatementHandler[] {
-                    new MSAst.TryStatementHandler(
+                new MSAst.DynamicTryStatementHandler[] {
+                    new MSAst.DynamicTryStatementHandler(
                         null,               // no test
                         null,               // no target
 
@@ -134,7 +134,7 @@ namespace IronPython.Compiler.Ast {
                             new MSAst.Statement[] {
                                 // exc = False
                                 AstGenerator.MakeAssignment(
-                                    exc.Reference,
+                                    exc.Variable,
                                     new MSAst.ConstantExpression(false)
                                 ),
 
@@ -171,13 +171,6 @@ namespace IronPython.Compiler.Ast {
             );
 
             return new MSAst.BlockStatement(statements, _body.Span);
-        }
-
-        private static MSAst.Expression MakeNotExpression(MSAst.Expression e) {
-            return new MSAst.ActionExpression(
-                DoOperationAction.Make(Operators.Not),
-                new MSAst.Expression[] { e, },
-                SourceSpan.None);
         }
 
         private MSAst.Expression MakeExitCall(MSAst.BoundExpression exit) {

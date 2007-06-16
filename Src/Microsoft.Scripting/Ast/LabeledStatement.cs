@@ -15,13 +15,14 @@
 
 using System;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class LabeledStatement : Statement {
         private readonly Statement _labeled;
-        
-        public LabeledStatement(Statement labeled) {
+
+        public LabeledStatement(Statement labeled)
+            : base(SourceSpan.None) {
             this._labeled = labeled;
         }
 

@@ -18,11 +18,12 @@
 ##
 
 from lib.assert_util import *
-from lib.file_util import *
-from lib.process_util import *
-
 import System
-privateBinding = "-X:PrivateBinding" in System.Environment.GetCommandLineArgs()
+
+if not is_silverlight:
+    privateBinding = "-X:PrivateBinding" in System.Environment.GetCommandLineArgs()
+else:
+    privateBinding = False
 
 load_iron_python_test()
 import IronPythonTest
@@ -98,5 +99,6 @@ else:
 
 run_test(__name__, noOutputPlease=True)
 
-if not privateBinding:
+if not privateBinding and not is_silverlight:
+    from lib.process_util import launch_ironpython_changing_extensions
     AreEqual(launch_ironpython_changing_extensions(__file__, add=["-X:PrivateBinding"]), 0)

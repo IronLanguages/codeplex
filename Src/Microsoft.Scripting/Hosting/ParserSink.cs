@@ -13,11 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Internal;
-
 namespace Microsoft.Scripting.Hosting {
     public class ParserSink {
 

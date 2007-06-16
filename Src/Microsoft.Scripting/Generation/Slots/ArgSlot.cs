@@ -18,7 +18,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Argument access
     /// </summary>
@@ -51,7 +51,7 @@ namespace Microsoft.Scripting.Internal.Generation {
 
             //TODO: Enable this after NameBinding fix (Bug #221245)
             //Debug.Assert(cg == this._codeGen);
-            cg.Emit(OpCodes.Ldarga, _index);
+            cg.EmitArgAddr(_index);
         }
 
         public override void EmitSet(CodeGen cg) {

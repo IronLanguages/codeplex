@@ -16,7 +16,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class ReturnBuilder {
         private Type _returnType;
 
@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Internal.Generation {
         public ReturnBuilder(Type returnType) { this._returnType = returnType; }
 
         public virtual object Build(CodeContext context, object[] args, object ret) {
-            return ret;
+            return ConvertToObject(ret);
         }
 
         public virtual int CountOutParams {
@@ -46,5 +46,15 @@ namespace Microsoft.Scripting.Internal.Generation {
                 return _returnType;
             }
         }
+
+        protected static object ConvertToObject(object ret) {
+            if (ret is bool) {
+                return RuntimeHelpers.BooleanToObject((bool)ret);
+            } else if (ret is int) {
+                return RuntimeHelpers.Int32ToObject((int)ret);
+            }
+            return ret;
+        }
+
     }
 }

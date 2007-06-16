@@ -1198,17 +1198,18 @@ namespace Microsoft.Scripting.Math {
             if (object.ReferenceEquals(mod, null)) {
                 throw new ArgumentNullException("mod");
             }
-            if (power == 0) return One;
+            
             if (power < 0) {
                 throw new ArgumentOutOfRangeException(MathResources.NonNegativePower);
             }
             BigInteger factor = this;
-            BigInteger result = One;
+            BigInteger result = One % mod; // Handle special case of power=0, mod=1
             while (power != 0) {
                 if ((power & 1) != 0) {
                     result = result * factor;
                     result = result % mod;
                 }
+                if (power == 1) break;  // avoid costly factor.Square()
                 factor = factor.Square();
                 factor = factor % mod;
                 power >>= 1;
@@ -1224,18 +1225,18 @@ namespace Microsoft.Scripting.Math {
                 throw new ArgumentNullException("mod");
             }
 
-            if (power == Zero) return One;
             if (power < 0) {
                 throw new ArgumentOutOfRangeException(MathResources.NonNegativePower);
             }
 
             BigInteger factor = this;
-            BigInteger result = One;
+            BigInteger result = One % mod;
             while (power != Zero) {
                 if (power.IsOdd()) {
                     result = result * factor;
                     result = result % mod;
                 }
+                if (power == One) break;  // avoid costly factor.Square()
                 factor = factor.Square();
                 factor = factor % mod;
                 power >>= 1;

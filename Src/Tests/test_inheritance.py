@@ -71,6 +71,63 @@ def test_cli_inheritance():
     Assert(i.ReturnSize().height == 4)
     
 @skip("win32")
+def test_cli_new_inheritance():
+    """verifies that we do the right thing with new slot's (e.g. public int new Foo { get; })"""
+    
+    class InheritedClass(NewClass):
+        def ReturnHeight(self):
+            return self.Height
+        def ReturnWidth(self):
+            return self.Width
+        def ReturnSize(self):
+            return self.Size
+        
+    for i in (InheritedClass(), NewClass()):
+        AreEqual(i.Width, 1)
+        AreEqual(i.Height, 1)
+        AreEqual(i.Size.width,  1)
+        AreEqual(i.Size.height,  1)
+        if hasattr(i, 'ReturnHeight'): 
+            AreEqual(i.ReturnHeight(),  1)
+            AreEqual(i.ReturnWidth(),  1)
+            AreEqual(i.ReturnSize().width,  1)
+            AreEqual(i.ReturnSize().height,  1)
+            
+        i.Width = 1
+        i.Height = 2
+            
+        AreEqual(i.Width,  3)
+        AreEqual(i.Height,  5)
+        AreEqual(i.Size.width,  2)
+        AreEqual(i.Size.height,  3)
+        if hasattr(i, 'ReturnHeight'): 
+            AreEqual(i.ReturnHeight(),  5)
+            AreEqual(i.ReturnWidth(),  3)
+            AreEqual(i.ReturnSize().width,  2)
+            AreEqual(i.ReturnSize().height,  3)
+            
+        s = MySize(3, 4)
+            
+        i.Size = s
+            
+        AreEqual(i.Width,  7)
+        AreEqual(i.Height,  9)
+        AreEqual(i.Size.width,  4)
+        AreEqual(i.Size.height,  5)
+        
+        if not hasattr(i, 'ReturnHeight'): 
+            # BUGBUG: We need to enable this for the inherited case.  Currently ReflectedTypeBUilder
+            # is replacing the derived size w/ the base size.
+            AreEqual(i.size.width, 3)
+            AreEqual(i.size.height, 4)
+        
+        if hasattr(i, 'ReturnHeight'): 
+            AreEqual(i.ReturnHeight(),  9)
+            AreEqual(i.ReturnWidth(),  7)
+            AreEqual(i.ReturnSize().width,  4)
+            AreEqual(i.ReturnSize().height,  5)
+    
+@skip("win32")
 def test_override_hierarchy():
     AreEqual(CliVirtualStuff().VirtualMethod(1), 10)
         

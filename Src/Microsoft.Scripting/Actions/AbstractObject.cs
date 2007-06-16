@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Actions {
 
         public static AbstractObject Make(object o) {
             if (o == null) return NullObject;
-            IDynamicObject dynObj = o as IDynamicObject;
+            ISuperDynamicObject dynObj = o as ISuperDynamicObject;
             if (dynObj != null) {
                 return new AbstractObject(o.GetType(), true, o);
             }

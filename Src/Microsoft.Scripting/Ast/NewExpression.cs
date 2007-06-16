@@ -22,16 +22,15 @@ using System.Reflection.Emit;
 
 using System.Diagnostics;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class NewExpression : Expression {
         readonly ConstructorInfo _constructor;
         readonly ReadOnlyCollection<Expression> _arguments;
 
-        public NewExpression(ConstructorInfo constructor, IList<Expression> arguments) {
-            _constructor = constructor;
-            _arguments = new ReadOnlyCollection<Expression>(arguments);
+        public NewExpression(ConstructorInfo constructor, IList<Expression> arguments)
+            : this(constructor, arguments, SourceSpan.None) {
         }
 
         public NewExpression(ConstructorInfo constructor, IList<Expression> arguments, SourceSpan span)
@@ -55,17 +54,12 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
-        }
-
-        public override void EmitAs(CodeGen cg, Type asType) {
             ParameterInfo[] pis = _constructor.GetParameters();
             Debug.Assert(pis.Length == _arguments.Count);
             for (int i=0; i < pis.Length; i++) {
                 _arguments[i].EmitAs(cg, pis[i].ParameterType);
             }
             cg.EmitNew(_constructor);
-            cg.EmitConvert(ExpressionType, asType);
         }
 
         public override void Walk(Walker walker) {

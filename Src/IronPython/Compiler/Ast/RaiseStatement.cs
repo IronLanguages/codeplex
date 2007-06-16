@@ -13,9 +13,10 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
     public class RaiseStatement : Statement {

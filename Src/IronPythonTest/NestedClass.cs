@@ -67,5 +67,39 @@ namespace IronPythonTest {
                 }
             }
         }
+
+        public class InnerGenericClass<T> {
+            public string InnerGenericField;
+
+            public string CallMeInnerGeneric() {
+                return "InnerGeneric Hello World";
+            }
+
+            public string InnerGenericProperty {
+                get {
+                    return InnerGenericField;
+                }
+                set {
+                    InnerGenericField = value;
+                }
+            }
+        }
+
+        public class InnerGenericClass<TA, TB> {
+            public string InnerGenericField;
+
+            public string CallMeInnerGeneric() {
+                return "InnerGeneric Hello World";
+            }
+
+            public string InnerGenericProperty {
+                get {
+                    return InnerGenericField;
+                }
+                set {
+                    InnerGenericField = value;
+                }
+            }
+        }
     }
 }

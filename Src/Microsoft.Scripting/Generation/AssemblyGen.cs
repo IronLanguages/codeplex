@@ -29,7 +29,7 @@ using System.Collections.Generic;
 
 using Microsoft.Scripting.Hosting;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class AssemblyGen {
         private readonly AssemblyBuilder _myAssembly;
         private ModuleBuilder _myModule;
@@ -295,7 +295,7 @@ namespace Microsoft.Scripting.Internal.Generation {
         public TypeGen DefinePublicType(string name, Type parent) {
             TypeAttributes attrs = TypeAttributes.Public;
             if (BeforeFieldInit) attrs |= TypeAttributes.BeforeFieldInit;
-            TypeBuilder tb = _myModule.DefineType(name, attrs);
+            TypeBuilder tb = _myModule.DefineType(name.Replace('+', '_'), attrs);
             tb.SetParent(parent);
             return new TypeGen(this, tb);
         }

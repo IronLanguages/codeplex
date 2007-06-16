@@ -65,13 +65,13 @@ namespace IronPython.Modules {
         }
 
         public static BuiltinFunction PythonReconstructor {
-            [PythonName("_reconstructor")] get { return Ops.PythonReconstructor; }
-            [PythonName("_reconstructor")] set { Ops.PythonReconstructor = value; }
+            [PythonName("_reconstructor")] get { return PythonOps.PythonReconstructor; }
+            [PythonName("_reconstructor")] set { PythonOps.PythonReconstructor = value; }
         }
 
         public static BuiltinFunction PythonNewObject {
-            [PythonName("__newobj__")] get { return Ops.NewObject; }
-            [PythonName("__newobj__")] set { Ops.NewObject = value; }
+            [PythonName("__newobj__")] get { return PythonOps.NewObject; }
+            [PythonName("__newobj__")] set { PythonOps.NewObject = value; }
         }
 
         static PythonCopyReg() {
@@ -133,8 +133,8 @@ namespace IronPython.Modules {
         /// Throw TypeError with a specified message if object isn't callable.
         /// </summary>
         private static void EnsureCallable(object @object, string message) {
-            if (!Ops.IsCallable(@object)) {
-                throw Ops.TypeError(message);
+            if (!PythonOps.IsCallable(@object)) {
+                throw PythonOps.TypeError(message);
             }
         }
 
@@ -143,10 +143,10 @@ namespace IronPython.Modules {
         [PythonName("pickle_complex")]
         public static Tuple ReduceComplex(CodeContext context, object complex) {
             return Tuple.MakeTuple(
-                Ops.GetDynamicTypeFromType(typeof(Complex64)),
+                DynamicHelpers.GetDynamicTypeFromType(typeof(Complex64)),
                 Tuple.MakeTuple(
-                    Ops.GetBoundAttr(context, complex, Symbols.RealPart),
-                    Ops.GetBoundAttr(context, complex, Symbols.ImaginaryPart)
+                    PythonOps.GetBoundAttr(context, complex, Symbols.RealPart),
+                    PythonOps.GetBoundAttr(context, complex, Symbols.ImaginaryPart)
                 )
             );
         }
@@ -169,15 +169,15 @@ namespace IronPython.Modules {
                 extensionRegistry[key] = code;
                 invertedRegistry[code] = key;
             } else if (keyExists && codeExists &&
-                Ops.EqualRetBool(extensionRegistry[key], code) &&
-                Ops.EqualRetBool(invertedRegistry[code], key)
+                PythonOps.EqualRetBool(extensionRegistry[key], code) &&
+                PythonOps.EqualRetBool(invertedRegistry[code], key)
             ) {
                 // nop
             } else {
                 if (keyExists) {
-                    throw Ops.ValueError("key {0} is already registered with code {1}", Ops.Repr(key), Ops.Repr(extensionRegistry[key]));
+                    throw PythonOps.ValueError("key {0} is already registered with code {1}", PythonOps.Repr(key), PythonOps.Repr(extensionRegistry[key]));
                 } else { // codeExists
-                    throw Ops.ValueError("code {0} is already in use for key {1}", Ops.Repr(code), Ops.Repr(invertedRegistry[code]));
+                    throw PythonOps.ValueError("code {0} is already in use for key {1}", PythonOps.Repr(code), PythonOps.Repr(invertedRegistry[code]));
                 }
             }
         }
@@ -193,13 +193,13 @@ namespace IronPython.Modules {
 
             if (extensionRegistry.TryGetValue(key, out existingCode) &&
                 invertedRegistry.TryGetValue(code, out existingKey) &&
-                Ops.EqualRetBool(existingCode, code) &&
-                Ops.EqualRetBool(existingKey, key)
+                PythonOps.EqualRetBool(existingCode, code) &&
+                PythonOps.EqualRetBool(existingKey, key)
             ) {
                 extensionRegistry.DeleteItem(key);
                 invertedRegistry.DeleteItem(code);
             } else {
-                throw Ops.ValueError("key {0} is not registered with code {1}", Ops.Repr(key), Ops.Repr(code));
+                throw PythonOps.ValueError("key {0} is not registered with code {1}", PythonOps.Repr(key), PythonOps.Repr(code));
             }
         }
 
@@ -212,7 +212,7 @@ namespace IronPython.Modules {
             object[] newArgs = new object[1 + args.Length];
             newArgs[0] = cls;
             for (int i = 0; i < args.Length; i++) newArgs[i + 1] = args[i];
-            return Ops.Invoke(cls, Symbols.NewInst, newArgs);
+            return PythonOps.Invoke(cls, Symbols.NewInst, newArgs);
         }
 
         [Documentation("_reconstructor(basetype, objtype, basestate) -> object\n\n"
@@ -222,8 +222,8 @@ namespace IronPython.Modules {
             )]
         [PythonName("_reconstructor")]
         public static object Reconstructor(object objType, object baseType, object baseState) {
-            object obj = Ops.Invoke(baseType, Symbols.NewInst, objType, baseState);
-            Ops.Invoke(baseType, Symbols.Init, obj, baseState);
+            object obj = PythonOps.Invoke(baseType, Symbols.NewInst, objType, baseState);
+            PythonOps.Invoke(baseType, Symbols.Init, obj, baseState);
             return obj;
         }
 
@@ -242,7 +242,7 @@ namespace IronPython.Modules {
             } catch (OverflowException) {
                 // throw below
             }
-            throw Ops.ValueError("code out of range");
+            throw PythonOps.ValueError("code out of range");
         }
 
         #endregion

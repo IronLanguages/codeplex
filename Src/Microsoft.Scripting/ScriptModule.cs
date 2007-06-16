@@ -19,7 +19,7 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
 using System.Runtime.Remoting;
@@ -60,40 +60,50 @@ namespace Microsoft.Scripting {
     /// <summary>
     /// A ScriptModule is a unit of execution for code.  It consists of a global Scope which
     /// all code executes in.  A ScriptModule can have an arbitrary initializer and arbitrary
-    /// reloader.
+    /// reloader. 
+    /// 
+    /// ScriptModule is not thread safe. Host should either lock when multiple threads could 
+    /// access the same module or should make a copy for each thread.
     /// </summary>
     public sealed class ScriptModule : IScriptModule, ICustomMembers, ILocalObject {
-        private Scope _scope;
-        private ICustomMembers _innerMod;
-        private ScriptCode[] _codeBlocks;
-        private string _name, _fileName;
-        private bool _packageImported;
-        private Dictionary<object, object> _langData;
-
         private static DynamicType ModuleType;
 
+        // WARNING: consider updating MakeCopy when adding fields
+        
+        private readonly Scope _scope;
+        private ScriptCode[] _codeBlocks;
+        private ModuleContext[] _moduleContexts; // resizable
+        private readonly ScriptModuleKind _kind;
+
+        private ICustomMembers _innerMod;
+        private string _name;
+        private string _fileName;
+        private bool _packageImported;
+        
         /// <summary>
         /// Creates a ScriptModule consisting of multiple ScriptCode blocks (possibly with each
         /// ScriptCode block belonging to a different language). 
         /// Can ONLY be called from ScriptDomainManager.CreateModule factory (due to host notification).
         /// </summary>
-        internal ScriptModule(string name, Scope scope, ScriptCode[] codeBlocks) {
+        internal ScriptModule(string name, ScriptModuleKind kind, Scope scope, ScriptCode[] codeBlocks) {
             Utils.Assert.NotNull(name, scope, codeBlocks);
             Utils.Assert.NotNull(codeBlocks);
 
             _codeBlocks = Utils.Array.Copy(codeBlocks);
             _name = name;
             _scope = scope;
+            _kind = kind;
+            _moduleContexts = ModuleContext.EmptyArray;
         }
 
         /// <summary>
         /// Perform one-time initialization on the module.
         /// </summary>
         public void Execute() {
-            Debug.Assert(Scope != null);
-
             for (int i = 0; i < _codeBlocks.Length; i++) {
-                _codeBlocks[i].Run(_scope);
+                ModuleContext moduleContext = GetModuleContext(_codeBlocks[i].LanguageContext.ContextId);
+                Debug.Assert(moduleContext != null, "ScriptCodes contained in the module are guaranteed to be associated with module contexts by SDM.CreateModule");
+                _codeBlocks[i].Run(_scope, moduleContext);
             }
         }
 
@@ -104,6 +114,12 @@ namespace Microsoft.Scripting {
             if (_codeBlocks.Length > 0) {
                 ScriptCode[] newCode = new ScriptCode[_codeBlocks.Length];
 
+                for (int i = 0; i < _moduleContexts.Length; i++) {
+                    if (_moduleContexts[i] != null) {
+                        _moduleContexts[i].ModuleReloading();
+                    }
+                }
+                
                 // get the new ScriptCode's...
                 for (int i = 0; i < _codeBlocks.Length; i++) {
                     newCode[i] = _codeBlocks[i].LanguageContext.Reload(_codeBlocks[i], this);
@@ -113,8 +129,18 @@ namespace Microsoft.Scripting {
                 // we don't clear the scope before doing this
                 _codeBlocks = newCode;
 
+                for (int i = 0; i < _moduleContexts.Length; i++) {
+                    if (_moduleContexts[i] != null) {
+                        _moduleContexts[i].ModuleReloaded();
+                    }
+                }
+
                 Execute();
             }
+        }
+
+        public ScriptCode[] GetScripts() {
+            return (ScriptCode[])_codeBlocks.Clone();
         }
 
         #region Properties
@@ -123,6 +149,10 @@ namespace Microsoft.Scripting {
         /// Event fired when a module changes.
         /// </summary>
         public event EventHandler<ModuleChangeEventArgs> ModuleChanged;
+
+        public ScriptModuleKind Kind {
+            get { return _kind; }
+        }
 
         /// <summary>
         /// Gets the context in which this module executes.
@@ -187,7 +217,7 @@ namespace Microsoft.Scripting {
 
         private static void EnsureModType() {
             // Temporary work around until we build types in Microsoft.Scripting.
-            if (ModuleType == null) ModuleType = DynamicType.GetDynamicType(typeof(ScriptModule));
+            if (ModuleType == null) ModuleType = DynamicHelpers.GetDynamicTypeFromType(typeof(ScriptModule));
         }
 
         public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
@@ -250,7 +280,7 @@ namespace Microsoft.Scripting {
 
         public IList<object> GetCustomMemberNames(CodeContext context) {
             List<object> ret;
-            if (!context.LanguageContext.ShowCls) {
+            if (!context.ModuleContext.ShowCls) {
                 ret = new List<object>();
                 foreach (KeyValuePair<object, object> kvp in Scope.GetAllItems(context.LanguageContext)) {
                     IContextAwareMember icaa = kvp.Value as IContextAwareMember;
@@ -279,7 +309,19 @@ namespace Microsoft.Scripting {
         }
 
         public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
-            return (IDictionary<object, object>)Scope.Dict;
+            Dictionary<object, object> dict = new Dictionary<object,object>();
+
+            foreach (KeyValuePair<object, object> kvp in Scope.Dict) {
+                dict[kvp.Key] = kvp.Value;
+            }
+
+            if (InnerModule != null) {
+                foreach (KeyValuePair<object, object> kvp in InnerModule.GetCustomMemberDictionary(context)) {
+                    dict[kvp.Key] = kvp.Value;
+                }
+            }
+
+            return dict;
         }
 
         #endregion
@@ -354,56 +396,28 @@ namespace Microsoft.Scripting {
         #endregion      
 
         /// <summary>
-        /// Provides access to get per-language data needed to track state about the ScriptModule.
-        /// 
-        /// Callers should use unique objects to ensure that their keys do not collide with
-        /// other languages.
+        /// Friend class: LanguageContext
         /// </summary>
-        /// <param name="key">The key for the language specific data.  Callers should use unique objects to ensure that their keys do not collide with other languages.</param>
-        /// <param name="value">The value stored with the key if the return value is true</param>
-        /// <exception cref="System.ArgumentNullException">The key parameter was null</exception>
-        public bool TryGetLanguageData(object key, out object value) {
-            if (key == null) throw new ArgumentNullException("key");
-
-            if (_langData != null) {
-                lock (_langData) {
-                    return _langData.TryGetValue(key, out value);
-                }
-            }
-
-            value = null;
-            return false;
+        /// <param name="languageContextId"></param>
+        /// <returns></returns>
+        internal ModuleContext GetModuleContext(ContextId languageContextId) {
+            return (languageContextId.Id < _moduleContexts.Length) ? _moduleContexts[languageContextId.Id] : null;
         }
 
         /// <summary>
-        /// Provides access to set per-language data needed to track state about the ScriptModule.
+        /// Friend class: LanguageContext 
+        /// Shouldn't be public since the module contexts are baked into code contexts in the case the module is optimized.
         /// </summary>
-        /// <param name="key">The key for the language specific data.  Callers should use unique objects to ensure that their keys do not collide with other languages.</param>
-        /// <param name="value">The value to be associated with the key</param>
-        /// <exception cref="System.ArgumentNullException">The key parameter was null</exception>
-        public void SetLanguageData(object key, object value) {
-            if (key == null) throw new ArgumentNullException("key");
-
-            if (_langData == null) {
-                Interlocked.CompareExchange<Dictionary<object, object>>(ref _langData, new Dictionary<object, object>(), null);
+        internal ModuleContext SetModuleContext(ContextId languageContextId, ModuleContext moduleContext) {
+            if (languageContextId.Id >= _moduleContexts.Length) {
+                Array.Resize(ref _moduleContexts, languageContextId.Id + 1);
             }
 
-            lock (_langData) {
-                _langData[key] = value;
-            }
-        }
+            ModuleContext original = Interlocked.CompareExchange<ModuleContext>(ref _moduleContexts[languageContextId.Id],
+                moduleContext,
+                null);
 
-        /// <summary>
-        /// Provides the ability to remove per-language data needed to track state about the ScriptModule.
-        /// </summary>
-        /// <param name="key">The key for the language specific data.  Callers should use unique objects to ensure that their keys do not collide with other languages.</param>
-        /// <returns>true if the key was removed, false otherwise.</returns>
-        public bool RemoveLanguageData(object key) {
-            if (_langData == null) return false;
-
-            lock (_langData) {
-                return _langData.Remove(key);
-            }
+            return original ?? moduleContext;
         }
     }
 }

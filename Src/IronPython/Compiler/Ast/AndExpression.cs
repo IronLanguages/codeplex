@@ -17,7 +17,7 @@ using System;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class AndExpression : Expression {
@@ -41,7 +41,7 @@ namespace IronPython.Compiler.Ast {
             get { return _right; }
         } 
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return new MSAst.AndExpression(
                 ag.Transform(_left),
                 ag.Transform(_right),

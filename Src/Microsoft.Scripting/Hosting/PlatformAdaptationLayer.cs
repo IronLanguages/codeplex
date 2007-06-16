@@ -26,8 +26,44 @@ namespace Microsoft.Scripting.Hosting {
 
     public class PlatformAdaptationLayer {
 
+#if SILVERLIGHT
+        private Dictionary<string, string> _assemblyFullNames = new Dictionary<string, string>();
+
         public PlatformAdaptationLayer() {
+            LoadSilverlightAssemblyNameMapping();
         }
+
+        // TODO
+        private void LoadSilverlightAssemblyNameMapping() {
+            _assemblyFullNames.Add("mscorlib", "mscorlib, Version=2.1.0.0, PublicKeyToken=b77a5c561934e089");
+            _assemblyFullNames.Add("system", "System, Version=2.1.0.0, PublicKeyToken=b77a5c561934e089");
+            _assemblyFullNames.Add("system.core", "System.Core, Version=2.1.0.0, PublicKeyToken=b77a5c561934e089");
+            _assemblyFullNames.Add("system.xml.core", "System.Xml.Core, Version=2.1.0.0, PublicKeyToken=b77a5c561934e089");
+            _assemblyFullNames.Add("system.silverlight", "System.SilverLight, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("agclr", "agclr, Version=0.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("microsoft.scripting", "Microsoft.Scripting, Version=1.0.0.100, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("microsoft.scripting.vestigial", "Microsoft.Scripting.Vestigial, Version=1.0.0.100, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("microsoft.scripting.silverlight", "Microsoft.Scripting.SilverLight, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("ironpython", "IronPython, Version=2.0.0.100, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("ironpython.modules", "IronPython.Modules, Version=2.0.0.100, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("ironpythontest", "IronPythonTest, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("microsoft.jscript.compiler", "Microsoft.JScript.Compiler, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("microsoft.jscript.runtime", "Microsoft.JScript.Runtime, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("microsoft.visualbasic.compiler", "Microsoft.VisualBasic.Compiler, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("microsoft.visualbasic.scripting", "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("microsoft.visualbasic", "Microsoft.VisualBasic, Version=8.1.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("ruby", "Ruby, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+
+        }
+
+        protected string LookupFullName(string name) {
+            AssemblyName asm = new AssemblyName(name);
+            if (asm.Version != null || asm.GetPublicKeyToken() != null || asm.GetPublicKey() != null) {
+                return name;
+            }
+            return _assemblyFullNames.ContainsKey(name.ToLower()) ? _assemblyFullNames[name.ToLower()] : name;
+        }
+#endif
 
         public virtual Assembly LoadAssembly(string name) {
 #if !SILVERLIGHT

@@ -18,9 +18,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting {
 
@@ -64,6 +64,15 @@ namespace Microsoft.Scripting {
         public string Name {
             get { return _name; }
             set { _name = value; }
+        }
+
+        /// <summary>
+        /// The name to display for this SourceUnit in stack traces.
+        /// This is the path to the source file if it is known, otherwise, it's the name.
+        /// (in practice, this means SourceFileUnit overrides DisplayName to return Path instead of Name)
+        /// </summary>
+        public virtual string DisplayName {
+            get { return _name; }
         }
 
         public IScriptEngine Engine {
@@ -376,6 +385,10 @@ namespace Microsoft.Scripting {
         }
 
         public override string SymbolDocumentName {
+            get { return _path; }
+        }
+
+        public override string DisplayName {
             get { return _path; }
         }
 

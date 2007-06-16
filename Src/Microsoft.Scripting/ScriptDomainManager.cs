@@ -14,20 +14,18 @@
  * ***************************************************************************/
 
 using System;
+using System.IO;
+using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using System.IO;
-using System.Diagnostics;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal.Generation;
 using System.Threading;
-using System.Text;
-using Microsoft.Scripting.Internal.Ast;
-using Microsoft.Scripting.Generation;
+using System.Diagnostics;
 using System.Runtime.Serialization;
+
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting {
 
@@ -38,7 +36,11 @@ namespace Microsoft.Scripting {
         public InvalidImplementationException()
             : base() {
         }
-        
+
+        public InvalidImplementationException(string message)
+            : base(message) {
+        }
+
         public InvalidImplementationException(string message, Exception e)
             : base(message, e) {
         }
@@ -139,6 +141,9 @@ namespace Microsoft.Scripting {
             }
 
             // setup provided in a configuration file:
+            // This will load System.Configuration.dll which costs ~350 KB of memory. However, this does not normally 
+            // need to be loaded in simple scenarios (like running the console hosts). Hence, the working set cost
+            // is only paid in hosted scenarios.
             ScriptConfiguration config = System.Configuration.ConfigurationManager.GetSection(ScriptConfiguration.Section) as ScriptConfiguration;
             if (config != null) {
                 // TODO:
@@ -395,6 +400,17 @@ namespace Microsoft.Scripting {
             // TODO: separate hashtable for extensions (see CodeDOM config)
             if (extension[0] != '.') extension = '.' + extension;
             return GetLanguageProvider(extension);
+        }
+
+        public bool TryGetLanguageProviderByFileExtension(string extension, out LanguageProvider provider) {
+            if (String.IsNullOrEmpty(extension)) {
+                provider = null;
+                return false;
+            }
+
+            // TODO: separate hashtable for extensions (see CodeDOM config)
+            if (extension[0] != '.') extension = '.' + extension;
+            return TryGetLanguageProvider(extension, out provider);
         }
 
         public string[] GetRegisteredFileExtensions() {
@@ -706,7 +722,9 @@ namespace Microsoft.Scripting {
         /// <c>options</c> can be <c>null</c>.
         /// <c>errorSink</c> can be <c>null</c>.
         /// </summary>
-        public ScriptModule CompileModule(string name, Scope scope, CompilerOptions options, ErrorSink errorSink, params SourceUnit[] sourceUnits) {
+        public ScriptModule CompileModule(string name, ScriptModuleKind kind, Scope scope, CompilerOptions options, ErrorSink errorSink, 
+            params SourceUnit[] sourceUnits) {
+
             if (name == null) throw new ArgumentNullException("name");
             Utils.Array.CheckNonNullElements(sourceUnits, "sourceUnits");
 
@@ -718,14 +736,14 @@ namespace Microsoft.Scripting {
                 script_codes[i] = ScriptCode.FromCompiledCode(sourceUnits[i].Compile(options, errorSink));
             }
 
-            return CreateModule(name, scope, script_codes);
+            return CreateModule(name, kind, scope, script_codes);
         }
 
         /// <summary>
-        /// Creates a module which uses a scope which is optimized for the given ScriptCode.
+        /// Module creation factory. The only way how to create a module.
         /// </summary>
         public ScriptModule CreateModule(string name, params ScriptCode[] scriptCodes) {
-            return CreateModule(name, OptimizedModuleGenerator.GenerateOptimizedCode(scriptCodes), scriptCodes);
+            return CreateModule(name, null, scriptCodes);
         }
 
         /// <summary>
@@ -743,17 +761,34 @@ namespace Microsoft.Scripting {
             return CreateModule(name, scope, ScriptCode.EmptyArray);
         }
 
+        public ScriptModule CreateModule(string name, Scope scope, params ScriptCode[] scriptCodes) {
+            return CreateModule(name, ScriptModuleKind.Default, scope, scriptCodes);
+        }
+        
         /// <summary>
         /// Module creation factory. The only way how to create a module.
         /// Modules compiled from a single source file unit get <see cref="ScriptModule.FileName"/> property set to a host 
         /// normalized full path of that source unit. The property is set to a <c>null</c> reference for other modules.
         /// <c>scope</c> can be <c>null</c>.
+        /// 
+        /// Ensures creation of module contexts for all languages whose code is assembled into the module.
         /// </summary>
-        public ScriptModule CreateModule(string name, Scope scope, params ScriptCode[] scriptCodes) {
+        public ScriptModule CreateModule(string name, ScriptModuleKind kind, Scope scope, params ScriptCode[] scriptCodes) {
             if (name == null) throw new ArgumentNullException("name");
             Utils.Array.CheckNonNullElements(scriptCodes, "scriptCodes");
 
-            ScriptModule result = new ScriptModule(name, scope ?? new Scope(), scriptCodes);
+            OptimizedModuleGenerator generator = null;
+
+            if (scope == null) {
+                if (scriptCodes.Length == 1) {
+                    generator = OptimizedModuleGenerator.Create(scriptCodes);
+                    scope = generator.GenerateScope();
+                } else {
+                    scope = new Scope();
+                }
+            }
+            
+            ScriptModule result = new ScriptModule(name, kind, scope, scriptCodes);
 
             // single source file unit modules have unique full path:
             SourceFileUnit sfu;
@@ -767,11 +802,16 @@ namespace Microsoft.Scripting {
             } else {
                 result.FileName = null;
             }
-            
-            // Initializes the module for all languages of the contained source units. 
-            // An additional initialization may take place if a code of another language is compiled against the module later.
-            foreach (ScriptCode code in scriptCodes) {
-                code.LanguageContext = code.LanguageContext.GetLanguageContextForModule(result);
+
+            // Initializes module contexts for all contained optimized script codes;
+            // Module contexts stored in optimized module's code contexts cannot be changed from now on.
+            // Such change would require the CodeContexts to be overwritten.
+            if (generator != null) {
+                generator.BindGeneratedCodeToModule(result);
+            } else {
+                foreach (ScriptCode code in scriptCodes) {
+                    code.LanguageContext.EnsureModuleContext(result);
+                }
             }
             
             _host.ModuleCreated(result);

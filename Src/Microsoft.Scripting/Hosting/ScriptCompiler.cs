@@ -21,11 +21,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Ast;
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting.Hosting;
+
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Hosting {
     public abstract class ScriptCompiler {
@@ -54,7 +53,9 @@ namespace Microsoft.Scripting.Hosting {
 
 #if !SILVERLIGHT
         // Convert a CodeDom to source code, and output the generated code and the line number mappings (if any)
-        public abstract SourceUnit ParseCodeDom(System.CodeDom.CodeObject codeDom);
+        public virtual SourceUnit ParseCodeDom(System.CodeDom.CodeObject codeDom) {
+            throw new NotImplementedException();
+        }
 #endif
 
         #endregion

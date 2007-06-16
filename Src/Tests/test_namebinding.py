@@ -842,3 +842,28 @@ class C:
         return a  # a should bind to the global a, not C.a
 
 AreEqual(C().foo(), 123)
+
+class ImportAsInClass:
+    import sys as sys_in_class
+
+class ImportInClass:
+    import sys
+
+Assert(ImportAsInClass.sys_in_class is ImportInClass.sys)
+
+class FromImportAsInClass:
+    from sys import path as sys_path
+
+class FromImportInClass:
+    from sys import path
+    
+Assert(FromImportAsInClass.sys_path is FromImportInClass.path)
+
+global_class_member = "wrong value for the global_class_member"
+
+class ClassWithGlobalMember:
+    global global_class_member
+    global_class_member = "global class member value"
+
+Assert(not hasattr(ClassWithGlobalMember, "global_class_member"), "invalid binding of global in a class")
+AreEqual(global_class_member, "global class member value")

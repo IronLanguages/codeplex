@@ -16,12 +16,11 @@
 using System;
 using System.Reflection;
 using System.Diagnostics;
-using Microsoft.Scripting;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 
-namespace IronPython.Compiler.Generation {    
+namespace Microsoft.Scripting {    
     class ModuleGlobalPropertyEnvironmentReference : PropertyEnvironmentReference {
         private static PropertyInfo _prop = typeof(ModuleGlobalWrapper).GetProperty("CurrentValue");
 

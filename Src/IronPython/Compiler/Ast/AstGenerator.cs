@@ -21,24 +21,20 @@ using System.Reflection;
 using IronPython.Runtime;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal.Generation;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Generation;
+using MSAst = Microsoft.Scripting.Ast;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
     public class AstGenerator {
         private readonly MSAst.CodeBlock _block;
-        private List<MSAst.VariableReference> _temps;
+        private List<MSAst.Variable> _temps;
         private readonly CompilerContext _context;
         private readonly bool _print;
 
-        public AstGenerator(MSAst.CodeBlock block, AstGenerator outer)
-            : this(block, outer._context, false) {
-        }
-
-        public AstGenerator(MSAst.CodeBlock block, AstGenerator outer, bool print)
-            : this(block, outer._context, print) {
+        public AstGenerator(MSAst.CodeBlock block, CompilerContext context)
+            : this(block, context, false) {
         }
 
         public AstGenerator(MSAst.CodeBlock block, CompilerContext context, bool print) {
@@ -49,23 +45,27 @@ namespace IronPython.Compiler.Ast {
 
         public MSAst.CodeBlock Block {
             get { return _block; }
-        } 
+        }
+
+        public CompilerContext Context {
+            get { return _context; }
+        }
 
         public bool PrintExpressions {
             get { return _print; }
         }
 
-        internal static MSAst.CodeBlock TransformAst(CompilerContext context, PythonAst past, bool print) {
-            return new AstGenerator(null, context, print).Transform(past);
+        internal static MSAst.CodeBlock TransformAst(CompilerContext context, PythonAst ast, bool print) {
+            return new AstGenerator(null, context, print).Transform(ast);
         }
 
         public void AddError(string message, SourceSpan span) {
             _context.AddError(message, span.Start, span.End, Severity.Error);
         }
 
-        public MSAst.VariableReference MakeTemp(SymbolId name, Type type) {
+        public MSAst.Variable MakeTemp(SymbolId name, Type type) {
             if (_temps != null) {
-                foreach (MSAst.VariableReference temp in _temps) {
+                foreach (MSAst.Variable temp in _temps) {
                     if (temp.Type == type) {
                         _temps.Remove(temp);
                         return temp;
@@ -75,7 +75,7 @@ namespace IronPython.Compiler.Ast {
             return _block.CreateTemporaryVariable(name, type);
         }
 
-        public MSAst.VariableReference MakeGeneratorTemp(SymbolId name, Type type) {
+        public MSAst.Variable MakeGeneratorTemp(SymbolId name, Type type) {
             return _block.CreateGeneratorTempVariable(name, type);
         }
 
@@ -96,31 +96,65 @@ namespace IronPython.Compiler.Ast {
         }
 
         public void FreeTemp(MSAst.BoundExpression be) {
-            FreeTemp(be.Reference);
+            FreeTemp(be.Variable);
         }
 
-        public void FreeTemp(MSAst.VariableReference temp) {
+        public void FreeTemp(MSAst.Variable temp) {
             if (_temps == null) {
-                _temps = new List<MSAst.VariableReference>();
+                _temps = new List<MSAst.Variable>();
             }
             _temps.Add(temp);
         }
 
-        internal static MSAst.Statement MakeAssignment(MSAst.VariableReference variable, MSAst.Expression right) {
+        internal static MSAst.Statement MakeAssignment(MSAst.Variable variable, MSAst.Expression right) {
             return MakeAssignment(variable, right, SourceSpan.None);
         }
 
-        internal static MSAst.Statement MakeAssignment(MSAst.VariableReference variable, MSAst.Expression right, SourceSpan span) {
+        internal static MSAst.Statement MakeAssignment(MSAst.Variable variable, MSAst.Expression right, SourceSpan span) {
             return new MSAst.ExpressionStatement(
                 new MSAst.BoundAssignment(variable, right, Operators.None, span),
                 span
             );
         }
 
+        internal static MSAst.Expression ConvertIfNeeded(MSAst.Expression expression, Type type) {
+            Debug.Assert(expression != null);
+
+            Type from = expression.ExpressionType;
+
+            // No conversion necessary
+            if (type.IsAssignableFrom(from) && (type.IsValueType == from.IsValueType)) {
+                return expression;
+            }
+
+            // Add conversion step to the AST
+            return MSAst.ConversionExpression.Convert(expression, type, expression.Span);
+        }
+
         #region Utility methods
 
         public MSAst.Expression Transform(Expression from) {
-            return from != null ? from.Transform(this) : null;
+            return Transform(from, typeof(object));
+        }
+
+        public MSAst.Expression Transform(Expression from, Type type) {
+            if (from != null) {
+                return from.Transform(this, type);
+            }
+            return null;
+        }
+
+        public MSAst.Expression TransformAsObject(Expression from) {
+            return TransformAndConvert(from, typeof(object));
+        }
+
+        public MSAst.Expression TransformAndConvert(Expression from, Type type) {
+            if (from != null) {
+                MSAst.Expression transformed = from.Transform(this, type);
+                transformed = ConvertIfNeeded(transformed, type);
+                return transformed;
+            }
+            return null;
         }
 
         public MSAst.Statement Transform(Statement from) {
@@ -131,65 +165,63 @@ namespace IronPython.Compiler.Ast {
             return from != null ? from.TransformToAst(this, _context) : null;
         }
 
-        internal MSAst.Expression TransformOrConstantNull(Expression expression) {
-            if (expression == null) {
-                return new MSAst.ConstantExpression(null);
-            } else {
-                return expression.Transform(this);
-            }
+        internal MSAst.Expression TransformOrConstantNull(Expression expression, Type type) {
+            return ConvertIfNeeded(
+                expression == null ?
+                    new MSAst.ConstantExpression(null) :
+                    expression.Transform(this, type),
+                type
+            );
         }
 
         internal MSAst.Expression[] Transform(Expression[] from) {
-            if (from == null) {
-                return null;
-            }
+            Debug.Assert(from != null);
             MSAst.Expression[] to = new MSAst.Expression[from.Length];
             for (int i = 0; i < from.Length; i++) {
-                to[i] = from[i] != null ? from[i].Transform(this) : null;
+                Debug.Assert(from[i] != null);
+                to[i] = Transform(from[i]);
             }
             return to;
         }
 
         internal MSAst.Statement[] Transform(Statement[] from) {
-            if (from == null) {
-                return null;
-            }
+            Debug.Assert(from != null);
             MSAst.Statement[] to = new MSAst.Statement[from.Length];
             for (int i = 0; i < from.Length; i++) {
-                to[i] = from[i] != null ? from[i].Transform(this) : null;
+                Debug.Assert(from[i] != null);
+                to[i] = from[i].Transform(this);
             }
             return to;
         }
 
         internal MSAst.IfStatementTest[] Transform(IfStatementTest[] from) {
-            if (from == null) {
-                return null;
-            }
+            Debug.Assert(from != null);
             MSAst.IfStatementTest[] to = new MSAst.IfStatementTest[from.Length];
             for (int i = 0; i < from.Length; i++) {
-                to[i] = from[i] != null ? from[i].Transform(this) : null;
+                Debug.Assert(from[i] != null);
+                to[i] = from[i].Transform(this);
             }
             return to;
         }
 
-        internal MSAst.TryStatementHandler[] Transform(TryStatementHandler[] from) {
+        internal MSAst.DynamicTryStatementHandler[] Transform(TryStatementHandler[] from) {
             if (from == null) {
                 return null;
             }
-            MSAst.TryStatementHandler[] to = new MSAst.TryStatementHandler[from.Length];
+            MSAst.DynamicTryStatementHandler[] to = new MSAst.DynamicTryStatementHandler[from.Length];
             for (int i = 0; i < from.Length; i++) {
-                to[i] = from[i] != null ? from[i].Transform(this) : null;
+                Debug.Assert(from[i] != null);
+                to[i] = from[i].Transform(this);
             }
             return to;
         }
 
         internal MSAst.Arg[] Transform(Arg[] from) {
-            if (from == null) {
-                return null;
-            }
+            Debug.Assert(from != null);
             MSAst.Arg[] to = new MSAst.Arg[from.Length];
             for (int i = 0; i < from.Length; i++) {
-                to[i] = from[i] != null ? from[i].Transform(this) : null;
+                Debug.Assert(from[i] != null);
+                to[i] = from[i].Transform(this);
             }
             return to;
         }

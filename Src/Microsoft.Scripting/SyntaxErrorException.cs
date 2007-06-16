@@ -17,8 +17,8 @@ using System;
 using System.Runtime.Serialization;
 using System.Text;
 
-using Microsoft.Scripting.Internal.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting {
    

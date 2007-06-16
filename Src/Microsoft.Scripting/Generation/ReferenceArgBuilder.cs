@@ -15,7 +15,7 @@
 
 using System;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class ReferenceArgBuilder : SimpleArgBuilder {
         private Type _elementType;
         public ReferenceArgBuilder(int index, Type parameterType)

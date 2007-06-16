@@ -14,35 +14,22 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using System.Diagnostics;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Reference is representation of the use(s) of the variable (_variable).
     /// It is used to resolve closures and create actual slots for the code generation using
     /// the information stored in the Binding.
     /// </summary>
-    public class VariableReference {
-        private readonly SymbolId _name;
-        private Variable _variable;
+    internal class VariableReference {
+        private readonly Variable _variable;
         private Slot _slot;
 
-        private Type _knownType;
-
-        public VariableReference(SymbolId name) {
-            _name = name;
-        }
-
-        public SymbolId Name {
-            get { return _name; }
-        }
-
-        public Type Type {
-            get {
-                // Variables dynamically resolved at runtime can be of any time,
-                // therefore typeof(object)
-                return _variable != null ? _variable.Type : typeof(object);
-            }
+        public VariableReference(Variable variable) {
+            Debug.Assert(variable != null);
+            _variable = variable;
         }
 
         /// <summary>
@@ -51,12 +38,6 @@ namespace Microsoft.Scripting.Internal.Ast {
         /// </summary>
         public Variable Variable {
             get { return _variable; }
-            set { _variable = value; }
-        }
-
-        public Type KnownType {
-            get { return _knownType; }
-            set { _knownType = value; }
         }
 
         public Slot Slot {
@@ -64,20 +45,7 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         public void CreateSlot(CodeGen cg) {
-            if (_variable == null) {
-                // Unbound variable, lookup dynamically at runtime
-                _slot = new DynamicLookupSlot(_name);
-            } else {
-                _slot = _variable.CreateSlot(cg);
-            }
-        }
-
-        public static Expression[] ReferencesToExpressions(VariableReference[] parameters) {
-            Expression[] exprs = new Expression[parameters.Length];
-            for (int i = 0; i < exprs.Length; i++) {
-                exprs[i] = BoundExpression.Defined(parameters[i]);
-            }
-            return exprs;
+            _slot = _variable.CreateSlot(cg);
         }
     }
 }

@@ -24,23 +24,24 @@ using System.Threading;
 using System.Security.Permissions;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Creates the code for an optimized module.  
     /// </summary>
-    abstract class OptimizedModuleGenerator {
+    internal abstract class OptimizedModuleGenerator {
         private ScriptCode[] _scriptCodes;
         private Dictionary<LanguageContext, ScopeAllocator> _allocators = new Dictionary<LanguageContext, ScopeAllocator>();
+        private List<CodeContext> _codeContexts = new List<CodeContext>();
 
         protected OptimizedModuleGenerator(params ScriptCode[] scriptCodes) {
             _scriptCodes = scriptCodes;
         }
 
-        public static Scope GenerateOptimizedCode(params ScriptCode[] scriptCodes) {
+        public static OptimizedModuleGenerator Create(params ScriptCode[] scriptCodes) {
             if (scriptCodes == null) throw new ArgumentNullException("scriptCodes");
             if (scriptCodes.Length == 0) throw new ArgumentException("scriptCodes", "must have at least one ScriptCode");
             if (scriptCodes.Length != 1) throw new ArgumentException("scriptCodes", "only one ScriptCode currently supported");
@@ -56,25 +57,26 @@ namespace Microsoft.Scripting.Generation {
                     new SecurityPermission(SecurityPermissionFlag.UnmanagedCode).Demand();
 
 #endif
-                    return new StaticFieldModuleGenerator(scriptCodes).Generate();
+                    return new StaticFieldModuleGenerator(scriptCodes);
 #if !SILVERLIGHT
                 } catch (SecurityException) {
                 }
 #endif
             }
 
-            return new TupleModuleGenerator(scriptCodes).Generate();
+            return new TupleModuleGenerator(scriptCodes);
         }
 
         /// <summary>
         /// Creates the methods and optimized Scope's which get associated with each ScriptCode.
         /// </summary>
-        private Scope Generate() {
+        public Scope GenerateScope() {
             List<CodeGen> cgs = GenerateScriptMethods();
             List<Scope> scopes = GenerateScriptScopes();
 
             Debug.Assert(cgs.Count == scopes.Count);
             Debug.Assert(scopes.Count == _scriptCodes.Length);
+            Debug.Assert(_codeContexts.Count == _scriptCodes.Length);
 
             List<CallTargetWithContext0> targets = new List<CallTargetWithContext0>();
             foreach (CodeGen cg in cgs) {
@@ -83,8 +85,7 @@ namespace Microsoft.Scripting.Generation {
 
             // TODO: clean this up after clarifying dynamic site initialization logic
             for (int i = 0; i < _scriptCodes.Length; i++) {
-                CodeContext cc = new CodeContext(scopes[i], _scriptCodes[i].LanguageContext);
-                Microsoft.Scripting.Actions.DynamicSiteHelpers.InitializeFields(cc, cgs[i].MethodInfo.DeclaringType);
+                Microsoft.Scripting.Actions.DynamicSiteHelpers.InitializeFields(_codeContexts[i], cgs[i].MethodInfo.DeclaringType);
             }
 
             // everything succeeded, commit the results
@@ -100,20 +101,33 @@ namespace Microsoft.Scripting.Generation {
 
         private List<Scope> GenerateScriptScopes() {
             List<Scope> scopes = new List<Scope>(_scriptCodes.Length);
-            foreach (ScriptCode sc in _scriptCodes) {
+            for (int i = 0; i < _scriptCodes.Length; i++) {
+                ScriptCode scriptCode = _scriptCodes[i];
+
                 // Force creation of names used in other script codes into all optimized dictionaries
-                ScopeAllocator allocator = _allocators[sc.LanguageContext];
-                IAttributesCollection iac = CreateLanguageDictionary(sc.LanguageContext, allocator);
+                ScopeAllocator allocator = _allocators[scriptCode.LanguageContext];
+                IAttributesCollection iac = CreateLanguageDictionary(scriptCode.LanguageContext, allocator);
                 Scope scope = new Scope(iac);
+
+                // module context is filled later:
+                CodeContext codeContext = new CodeContext(scope, scriptCode.LanguageContext);
 
                 IModuleDictionaryInitialization ici = iac as IModuleDictionaryInitialization;
                 if (ici != null) {
-                    ici.InitializeModuleDictionary(new CodeContext(scope, sc.LanguageContext));
+                    ici.InitializeModuleDictionary(codeContext);
                 }
 
                 scopes.Add(scope);
+                _codeContexts.Add(codeContext);
             }
             return scopes;
+        }
+
+        public void BindGeneratedCodeToModule(ScriptModule module) {
+            Utils.Assert.NotNull(module);
+            foreach (CodeContext codeContext in _codeContexts) {
+                codeContext.ModuleContext = codeContext.LanguageContext.EnsureModuleContext(module);
+            }
         }
 
         private List<CodeGen> GenerateScriptMethods() {
@@ -124,7 +138,12 @@ namespace Microsoft.Scripting.Generation {
                 cg.Allocator = sa;
 
                 // every module can hand it's environment to anything embedded in it.
-                cg.EnvironmentSlot = new EnvironmentSlot(new PropertySlot(cg.ContextSlot, typeof(CodeContext).GetProperty("Locals")));
+                cg.EnvironmentSlot = new EnvironmentSlot(new PropertySlot(
+                    new PropertySlot(cg.ContextSlot, 
+                        typeof(CodeContext).GetProperty("Scope")),
+                    typeof(Scope).GetProperty("Dict"))
+                );
+                                       
                 cg.Context = sc.CompilerContext;
                 sc.CodeBlock.EmitFunctionImplementation(cg);
 

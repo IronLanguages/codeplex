@@ -17,7 +17,7 @@ using System;
 using System.Reflection;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Slot that accesses a property off an object
     /// </summary>

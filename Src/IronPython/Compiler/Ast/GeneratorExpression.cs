@@ -13,7 +13,8 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using System;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class GeneratorExpression : Expression {
@@ -25,7 +26,7 @@ namespace IronPython.Compiler.Ast {
             _iterable = iterable;
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return new MSAst.CallExpression(
                 _function.TransformToFunctionExpression(ag),
                 new MSAst.Arg[] {

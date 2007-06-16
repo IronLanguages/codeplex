@@ -19,6 +19,7 @@ clr.AddReferenceByPartialName("PresentationCore")
 clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("WindowsBase")
 clr.AddReferenceByPartialName("IronPython")
+clr.AddReferenceByPartialName("Microsoft.Scripting")
 
 from math import *
 from System import *
@@ -71,7 +72,7 @@ ScriptDomainManager.CurrentManager.SetCommandDispatcher(DispatchConsoleCommand)
 def LoadXaml(filename):
     from System.IO import *
     from System.Windows.Markup import XamlReader
-    f = FileStream(filename, FileMode.Open)
+    f = FileStream(filename, FileMode.Open, FileAccess.Read)
     try:
 	element = XamlReader.Load(f)
     finally:

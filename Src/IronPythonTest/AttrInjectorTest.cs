@@ -17,19 +17,19 @@
 
 using System;
 using System.Xml;
-using Microsoft.Scripting;
+using System.Reflection;
 using System.Collections.Generic;
+
+using Microsoft.Scripting;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
-using System.Reflection;
-using Microsoft.Scripting.Internal;
 
 [assembly: ExtensionType(typeof(XmlElement), typeof(IronPythonTest.AttrInjectorTest.SimpleXmlAttrInjector))]
 namespace IronPythonTest {
     public class AttrInjectorTest {
         static AttrInjectorTest() {
-            Ops.RegisterAssembly(Assembly.GetExecutingAssembly());
+            DynamicHelpers.RegisterAssembly(Assembly.GetExecutingAssembly());
         }
 
         public static object LoadXml(string text) {
@@ -72,7 +72,7 @@ namespace IronPythonTest {
                     }
                 }
 
-                return Ops.NotImplemented;
+                return PythonOps.NotImplemented;
             }
 
         }

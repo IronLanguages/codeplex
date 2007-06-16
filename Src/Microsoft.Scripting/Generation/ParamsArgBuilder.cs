@@ -17,10 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class ParamsArgBuilder : ArgBuilder {
         private int _start;
         private int _count;

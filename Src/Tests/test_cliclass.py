@@ -180,8 +180,65 @@ def test_symbol_dict():
     CheckDictionary(OldClass)
     CheckDictionary(NewClass)
 
-def test_unbound_generic_repr():
+def test_generic_type_collision():
+    # TypeCollision is used to expose "System.IComparable" and "System.IComparable`1" as "System.IComparable"
+    
+    # repr
     AreEqual(repr(System.IComparable), "<types 'IComparable', 'IComparable[T]'>")
+
+    # Test member access
+    AreEqual(System.IComparable.CompareTo(1,1), 0)
+    AreEqual(System.IComparable.CompareTo(1,2), -1)
+    AreEqual(System.IComparable[int].CompareTo(1,1), 0)
+    AreEqual(System.IComparable[int].CompareTo(1,2), -1)
+    Assert(dir(System.IComparable).__contains__("CompareTo"))
+    Assert(vars(System.IComparable).keys().__contains__("CompareTo"))
+    
+    # converstion to Type
+    Assert(System.Type.IsAssignableFrom(System.IComparable, int))
+    import IronPythonTest
+    genericTypes = IronPythonTest.NestedClass.InnerGenericClass
+    AssertError(TypeError, System.Type.IsAssignableFrom, object, genericTypes)
+
+    # Test illegal type instantiation
+    try:
+        System.IComparable[int, int]
+    except ValueError: pass
+    else: AssertUnreachable()
+
+    try:
+        System.EventHandler(None)
+    except TypeError: pass
+    else: AssertUnreachable()
+    
+    def handler():
+        pass
+        
+    try:
+        System.EventHandler(handler)
+    except TypeError: pass
+    else: AssertUnreachable()    
+        
+    def handler(s,a):
+        pass
+
+    # Test constructor
+    AreEqual(System.EventHandler(handler).GetType(), System.Type.GetType("System.EventHandler"))
+    if not is_silverlight:
+        # GetGenericTypeDefinition is SecuritySafe, can't call on Silverlight.
+        AreEqual(System.EventHandler[System.EventArgs](handler).GetType().GetGenericTypeDefinition(), System.Type.GetType("System.EventHandler`1"))
+    
+    # Test inheritance
+    class MyComparable(System.IComparable):
+        def CompareTo(self, other):
+            return self.Equals(other)
+    myComparable = MyComparable()
+    Assert(myComparable.CompareTo(myComparable))
+    
+    try:
+        class MyDerivedClass(genericTypes): pass
+    except TypeError: pass
+    else: AssertUnreachable()
 
 def test_autodoc():
     from System.Threading import Thread, ThreadStart
@@ -636,7 +693,6 @@ def test_virtual_event():
 
 @skip("silverlight")
 def test_property_get_set():
-    import clr
     clr.AddReference("System.Drawing")
     from System.Drawing import Size
     
@@ -648,6 +704,26 @@ def test_property_get_set():
     for i in xrange(5):
         temp.Width = i
         AreEqual(temp.Width, i)    
+
+def test_constructor_function():
+    '''
+    Test to hit IronPython.Runtime.Operations.ConstructionFunctionOps.
+    '''
+    
+    t_list = [  System.DateTime.__new__,
+                ]
+                
+    if not is_silverlight:
+        t_list.append(System.AssemblyLoadEventArgs.__new__)
+    
+    for constr in t_list:
+        AreEqual(constr.__name__, "__new__")
+        AreEqual(constr.__doc__, "ConstructorFunction(builtin_function_or_method realTarget, Array[MethodBase] constructors)\r\n")
+    
+    
+    
+    
+
 
 
 run_test(__name__)

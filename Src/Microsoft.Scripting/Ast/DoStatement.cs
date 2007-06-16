@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class DoStatement : Statement {
         private readonly SourceLocation _header;
         private readonly Expression _test;
@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Internal.Ast {
             // TODO: Check if we need to emit position somewhere else also.
             cg.EmitPosition(Start, _header);
 
-            cg.EmitTestTrue(_test);
+            _test.EmitAs(cg, typeof(bool));
             cg.Emit(OpCodes.Brtrue, startTarget);
 
             cg.PopTargets();            

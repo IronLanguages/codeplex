@@ -18,10 +18,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using Microsoft.Scripting;
 using System.IO;
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -138,16 +137,16 @@ namespace Microsoft.Scripting.Hosting {
             return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CreateModule(name, compiledCodes));
         }
 
-        public IScriptModule CreateModule(string name, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes) {
-            return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CreateModule(name, dictionary, compiledCodes));
+        public IScriptModule CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes) {
+            return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CreateModule(name, kind, dictionary, compiledCodes));
         }
 
         public IScriptModule CompileModule(string name, params SourceUnit[] sourceUnits) {
             return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CompileModule(name, sourceUnits));
         }
 
-        public IScriptModule CompileModule(string name, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, params SourceUnit[] sourceUnits) {
-            return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CompileModule(name, options, errorSink, dictionary, sourceUnits));
+        public IScriptModule CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, params SourceUnit[] sourceUnits) {
+            return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CompileModule(name, kind, options, errorSink, dictionary, sourceUnits));
         }
 
         public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
@@ -175,6 +174,10 @@ namespace Microsoft.Scripting.Hosting {
             return result;
         }
 
+        public Delegate GetDelegate(object callableObject, Type delegateType, Action<Exception> exceptionHandler) {
+            // TODO:
+            throw new NotImplementedException();
+        }
     }
 }
 

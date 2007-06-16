@@ -18,7 +18,7 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Slot refers to a reference to an object. For eg, a global variable, a local variable, etc.
     /// A Slot is referred to using a Name. The Namespace is used to map a Name to a Slot.

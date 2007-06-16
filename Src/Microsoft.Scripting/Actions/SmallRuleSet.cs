@@ -19,8 +19,8 @@ using System.Reflection.Emit;
 using System.Diagnostics;
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Actions {
 

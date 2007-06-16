@@ -15,23 +15,23 @@
 
 using System.Collections.Generic;
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class ImportStatement : Statement {
         private readonly DottedName[] _names;
         private readonly SymbolId[] _asNames;
 
-        private PythonReference[] _references;
+        private PythonVariable[] _variables;
 
         public ImportStatement(DottedName[] names, SymbolId[] asNames) {
             _names = names;
             _asNames = asNames;
         }
 
-        public PythonReference[] References {
-            get { return _references; }
-            set { _references = value; }
+        internal PythonVariable[] Variables {
+            get { return _variables; }
+            set { _variables = value; }
         }
 
         public IList<DottedName> Names {
@@ -50,7 +50,7 @@ namespace IronPython.Compiler.Ast {
                     // _references[i] = PythonOps.Import(<code context>, _names[i])
                     new MSAst.ExpressionStatement(
                         new MSAst.BoundAssignment(
-                            _references[i].Reference,
+                            _variables[i].Variable,
                             MSAst.MethodCallExpression.Call(
                                 _names[i].Span,                                         // span
                                 null,                                                   // instance

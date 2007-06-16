@@ -34,9 +34,11 @@ namespace Microsoft.Scripting {
         private Type _extensionType;                        // a type that can be extended but acts like the underlying system type
         private Type _impersonationType;                    // the type we should pretend to be
         private List<ConversionInfo> _conversions;          // list of built-in conversions 
+        private List<bool> _allowKeywordCtor;               // true if a context disallows keyword args constructing the type.
+        private bool _extended;
 
-        internal static DynamicType _dynamicTypeType;
         private static Dictionary<Type, DynamicType> _dynamicTypes = new Dictionary<Type, DynamicType>();
+        internal static DynamicType _dynamicTypeType = DynamicHelpers.GetDynamicTypeFromType(typeof(DynamicType));
         private static WeakReference[] _emptyWeakRef = new WeakReference[0];
 
         public DynamicType(Type underlyingSystemType) {
@@ -69,6 +71,8 @@ namespace Microsoft.Scripting {
         /// <param name="type"></param>
         /// <param name="dynamicType"></param>
         public static DynamicType SetDynamicType(Type type, DynamicType dynamicType) {
+            if (dynamicType == null) throw new ArgumentNullException("dynamicType");
+
             lock (_dynamicTypes) {
                 // HACK: Work around until Ops doesn't have SaveDynamicType and this is entirely thread safe.
                 DynamicType res;
@@ -194,9 +198,6 @@ namespace Microsoft.Scripting {
             }
             set {
                 _underlyingSystemType = value;
-                if (value == typeof(DynamicType) && _dynamicTypeType == null) {
-                    _dynamicTypeType = this;
-                }
             }
         }
 
@@ -240,7 +241,7 @@ namespace Microsoft.Scripting {
         public bool IsInstanceOfType(object instance) {
             Initialize();
 
-            IDynamicObject dyno = instance as IDynamicObject;
+            ISuperDynamicObject dyno = instance as ISuperDynamicObject;
             if (dyno != null) {
                 return dyno.DynamicType.IsSubclassOf(this);
             }
@@ -258,6 +259,13 @@ namespace Microsoft.Scripting {
 
                 lock (_subtypes) return _subtypes.ToArray();
             }
+        }
+
+        public bool AllowConstructorArguments(ContextId context) {
+            if (_allowKeywordCtor == null) return true;
+            if (_allowKeywordCtor.Count <= context.Id) return true;
+
+            return _allowKeywordCtor[context.Id];
         }
 
         /// <summary>
@@ -304,7 +312,9 @@ namespace Microsoft.Scripting {
                         dt.AddSubType(this);
                     }
 
+                    UpdateVersion();
                     _bases = newBases;
+                    
                 }
             }
         }
@@ -357,8 +367,6 @@ namespace Microsoft.Scripting {
         /// </summary>
         public bool IsSystemType {
             get {
-                Initialize();
-
                 return (_attrs & DynamicTypeAttributes.SystemType) != 0;
             }
             internal set {
@@ -390,7 +398,7 @@ namespace Microsoft.Scripting {
         public DynamicType CanonicalDynamicType {
             get {
                 if (ImpersonationType != null) {
-                    return GetDynamicType(ImpersonationType);
+                    return DynamicHelpers.GetDynamicTypeFromType(ImpersonationType);
                 } else {
                     return this;
                 }
@@ -474,13 +482,29 @@ namespace Microsoft.Scripting {
         }
 
 
+        internal bool IsExtended {
+            get {
+                return _extended;
+            }
+            set {
+                _extended = value;
+            }
+        }
+
+        internal void DisallowConstructorKeywordArguments(ContextId context) {
+            if (_allowKeywordCtor == null) _allowKeywordCtor = new List<bool>();
+
+            while (_allowKeywordCtor.Count <= context.Id)
+                _allowKeywordCtor.Add(true);
+            _allowKeywordCtor[context.Id] = false;
+        }
+
         #region Object overrides
 
         // TODO Remove this method.  It was needed when Equals was overridden to depend on 
         // the impersonationType, but now that that's gone this can probably go as well.
+        // Currently only pickling depends on this where identity of types is checked.
         public override int GetHashCode() {
-            Initialize();
-
             if (_impersonationType == null) return ~_underlyingSystemType.GetHashCode();
 
             return ~_impersonationType.GetHashCode();

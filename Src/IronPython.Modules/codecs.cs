@@ -76,7 +76,7 @@ namespace IronPython.Modules {
                 Tuple tuple = Tuple.MakeTuple(decoded, bytes.Length - badByteCount);
                 return tuple;
             } else {
-                throw Ops.TypeErrorForBadInstance("argument 1 must be string, got {0}", input);
+                throw PythonOps.TypeErrorForBadInstance("argument 1 must be string, got {0}", input);
             }
         }
 
@@ -127,7 +127,7 @@ namespace IronPython.Modules {
                 }
                 return Tuple.MakeTuple(sb.ToString(), res.Length);
             }
-            throw Ops.TypeErrorForBadInstance("cannot decode {0}", input);
+            throw PythonOps.TypeErrorForBadInstance("cannot decode {0}", input);
         }
 
         #region ASCII Encoding
@@ -155,7 +155,7 @@ namespace IronPython.Modules {
 
         [PythonName("charbuffer_encode")]
         public static object CharBufferEncode() {
-            throw Ops.NotImplementedError("charbuffer_encode");
+            throw PythonOps.NotImplementedError("charbuffer_encode");
         }
 
         [PythonName("charmap_decode")]
@@ -167,7 +167,7 @@ namespace IronPython.Modules {
                 object val;
 
                 if (!map.TryGetValue((int)input[i], out val)) {
-                    if (errors == "strict") throw Ops.LookupError("failed to find key in mapping");
+                    if (errors == "strict") throw PythonOps.LookupError("failed to find key in mapping");
                     continue;
                 }
 
@@ -185,42 +185,42 @@ namespace IronPython.Modules {
         public static object Decode(CodeContext context, object obj) {
             Tuple t = Lookup(SystemState.Instance.GetDefaultEncoding());
 
-            return Ops.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
+            return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
         }
 
         [PythonName("decode")]
         public static object Decode(CodeContext context, object obj, string encoding) {
             Tuple t = Lookup(encoding);
 
-            return Ops.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
+            return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
         }
 
         [PythonName("decode")]
         public static object Decode(CodeContext context, object obj, string encoding, string errors) {
             Tuple t = Lookup(encoding);
 
-            return Ops.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, errors), 0);
+            return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, errors), 0);
         }
 
         [PythonName("encode")]
         public static object Encode(CodeContext context, object obj) {
             Tuple t = Lookup(SystemState.Instance.GetDefaultEncoding());
 
-            return Ops.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
+            return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
         }
 
         [PythonName("encode")]
         public static object Encode(CodeContext context, object obj, string encoding) {
             Tuple t = Lookup(encoding);
 
-            return Ops.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
+            return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
         }
 
         [PythonName("encode")]
         public static object Encode(CodeContext context, object obj, string encoding, string errors) {
             Tuple t = Lookup(encoding);
 
-            return Ops.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, errors), 0);
+            return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, errors), 0);
         }
 
         [PythonName("escape_decode")]
@@ -229,7 +229,7 @@ namespace IronPython.Modules {
             for (int i = 0; i < text.Length; i++) {
 
                 if (text[i] == '\\') {
-                    if (i == text.Length - 1) throw Ops.ValueError("\\ at end of string");
+                    if (i == text.Length - 1) throw PythonOps.ValueError("\\ at end of string");
 
                     switch (text[++i]) {
                         case 'a': res.Append((char)0x07); break;
@@ -241,7 +241,7 @@ namespace IronPython.Modules {
                         case 'f': res.Append((char)0x0c); break;
                         case 'v': res.Append((char)0x0b); break;
                         case 'x':
-                            if (i >= text.Length - 2) throw Ops.ValueError("invalid character value");
+                            if (i >= text.Length - 2) throw PythonOps.ValueError("invalid character value");
 
                             res.Append(CharToInt(text[i]) * 16 + CharToInt(text[i + 1]));
                             i += 2;
@@ -264,7 +264,7 @@ namespace IronPython.Modules {
             }
             ch = Char.ToUpper(ch);
             if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-            throw Ops.ValueError("invalid hexadecimal digit");
+            throw PythonOps.ValueError("invalid hexadecimal digit");
         }
 
         [PythonName("escape_encode")]
@@ -318,13 +318,13 @@ namespace IronPython.Modules {
 
         [PythonName("lookup")]
         public static Tuple Lookup(string encoding) {
-            return Ops.LookupEncoding(encoding);
+            return PythonOps.LookupEncoding(encoding);
         }
 
 #if !SILVERLIGHT
         [PythonName("lookup_error")]
         public static object LookupError(string name) {
-            return Ops.LookupEncodingError(name);
+            return PythonOps.LookupEncodingError(name);
         }
 #endif
 
@@ -332,12 +332,12 @@ namespace IronPython.Modules {
 
         [PythonName("mbcs_decode")]
         public static object MbcsDecode() {
-            throw Ops.NotImplementedError("mbcs_decode");
+            throw PythonOps.NotImplementedError("mbcs_decode");
         }
 
         [PythonName("mbcs_encode")]
         public static object MbcsEncode() {
-            throw Ops.NotImplementedError("mbcs_encode");
+            throw PythonOps.NotImplementedError("mbcs_encode");
         }
 
         #endregion
@@ -360,18 +360,18 @@ namespace IronPython.Modules {
 
         [PythonName("readbuffer_encode")]
         public static object ReadBufferEncode() {
-            throw Ops.NotImplementedError("readbuffer_encode");
+            throw PythonOps.NotImplementedError("readbuffer_encode");
         }
 
         [PythonName("register")]
         public static void Register(object search_function) {
-            Ops.RegisterEncoding(search_function);
+            PythonOps.RegisterEncoding(search_function);
         }
 
 #if !SILVERLIGHT
         [PythonName("register_error")]
         public static void RegisterError(string name, object handler) {
-            Ops.RegisterEncodingError(name, handler);
+            PythonOps.RegisterEncodingError(name, handler);
         }
 #endif
 
@@ -379,12 +379,12 @@ namespace IronPython.Modules {
 
         [PythonName("unicode_escape_decode")]
         public static object UnicodeEscapeDecode() {
-            throw Ops.NotImplementedError("unicode_escape_decode");
+            throw PythonOps.NotImplementedError("unicode_escape_decode");
         }
 
         [PythonName("unicode_escape_encode")]
         public static object UnicodeEscapeEncode() {
-            throw Ops.NotImplementedError("unicode_escape_encode");
+            throw PythonOps.NotImplementedError("unicode_escape_encode");
         }
 
         [PythonName("unicode_internal_decode")]
@@ -583,7 +583,7 @@ namespace IronPython.Modules {
 
         public override bool Fallback(byte[] bytesUnknown, int index) {
             if (index > 0 && index + bytesUnknown.Length != inputBytes.Length) {
-                throw Ops.UnicodeDecodeError("failed to decode bytes at index {0}", index);
+                throw PythonOps.UnicodeDecodeError("failed to decode bytes at index {0}", index);
             }
 
             // just some bad bytes at the end

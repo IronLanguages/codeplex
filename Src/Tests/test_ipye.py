@@ -22,8 +22,8 @@ import sys
 
 if not is_silverlight:
     remove_ironpython_dlls(testpath.public_testdir)
-
-load_iron_python_dll()
+    load_iron_python_dll()
+    
 import IronPython
 pe = IronPython.Hosting.PythonEngine.CurrentEngine
 
@@ -39,18 +39,16 @@ for s in dir(et):
 def test_trivial():
     Assert(IronPython.Hosting.PythonEngine.Version != "")
 
-def test_coverage():
-    # 1. fasteval 
-    
+def test_fasteval():
     global pe;
-    
+
+    # pe.Options.FastEvaluation is tested at compile time, so we need
+    # to import another module here for the option to take effect.
     save = pe.Options.FastEvaluation
     pe.Options.FastEvaluation = True
-    AreEqual(eval("None"), None)
-    AreEqual(eval("str(2)"), "2")
+    import fasteval
+    fasteval.do_fasteval_test()
     pe.Options.FastEvaluation = save
-    
-    # 2. ...
 
 def skip_test_CreateMethod():
     """Test cases specific to PythonEngine.CreateMethod<DelegateType>"""
@@ -269,5 +267,50 @@ def skip_test_CreateLambda_Division():
     result = ex(100000)
     Assert(result < 1)
 
+
+def test_error_expression():
+    '''
+    Only purpose of this test is to hit IronPython.Compiler.ErrorExpression.
+    This is not possible without creating our own error sink which does not throw
+    any exceptions from the Add method which in turn is invoked by a Parser
+    object.
+    '''
+    global pe
+    import Microsoft
     
+    if sys.executable.lower().find("\\debug\\") != -1:
+        #The debug binaries contain an assert which kills ipy.exe on the "[." 
+        #evaluation
+        return
+    
+    class TestErrorSink(Microsoft.Scripting.Hosting.ErrorSink):
+        def Add(self, su, msg, span, errorCode, severity):
+            pass
+
+    copts = pe.GetDefaultCompilerOptions()
+    scu = Microsoft.Scripting.SourceCodeUnit(pe, "[.")
+    sink = TestErrorSink()
+    cc = Microsoft.Scripting.CompilerContext(scu, copts, sink)
+    AssertError(TypeError, pe.Compiler.ParseExpressionCode, cc)
+
+def test_get_exception_message():
+    ex = System.Exception("BAD")
+    tName, tType = pe.GetExceptionMessage(ex)
+    AreEqual(tName, "Exception: BAD")
+    AreEqual(tType, "Exception")
+
+def test_script_compiler():
+    Assert(pe.ScriptCompiler!=None)  
+
+def test_publishmodule():
+    AssertError(TypeError, pe.PublishModule, None)
+
+  
+       
 run_test(__name__)
+
+
+#Make sure this runs last
+#test_dispose()
+if not is_silverlight and __name__ == "__main__":
+    pe.Dispose()

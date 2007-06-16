@@ -19,6 +19,9 @@
 ##
 
 from lib.assert_util import *
+
+skiptest("silverlight")
+
 from lib.file_util import *
 
 def always_true():
@@ -56,9 +59,10 @@ def f2(): exec(compile(code, tempfile, "exec"))
 def f3(): exec(code)
 def f4():
     if is_cli:
-        import IronPython
+        # import IronPython
         #pe = IronPython.Hosting.PythonEngine()
         #issue around py hosting py again.
+        pass
         
 always_true()
 try: 

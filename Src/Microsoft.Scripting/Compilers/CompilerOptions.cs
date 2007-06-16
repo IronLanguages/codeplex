@@ -19,18 +19,17 @@ using System.Text;
 
 namespace Microsoft.Scripting {
     
+    /// <summary>
+    /// TODO - If this class is really this simple, do we need it at all?
+    /// </summary>
     [Serializable]
-    public abstract class CompilerOptions : ICloneable {
-        // TODO: Python specific; remove when TrueDivision gets to AST statements:
-        public virtual bool PythonTrueDivision {
-            get {
-                return false;
-            }
-        }
-        
-        protected CompilerOptions() {
+    public class CompilerOptions : ICloneable {        
+        public CompilerOptions() {
         }
 
-        public abstract object Clone();
+        // TODO - Make this an abstract DeepCopy method and add a DefaultCompilerOptions
+        public virtual object Clone() {
+            return base.MemberwiseClone();
+        }
     }
 }

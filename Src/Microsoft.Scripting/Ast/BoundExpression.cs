@@ -14,31 +14,45 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using System.Diagnostics;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class BoundExpression : Expression {
-        private readonly VariableReference _vr;
+        private readonly Variable _variable;
         private bool _defined;
 
-        public BoundExpression(VariableReference vr)
-            : this(vr, SourceSpan.None) {
+        // Implementation detail
+        private VariableReference _vr;
+
+        public BoundExpression(Variable variable)
+            : this(variable, SourceSpan.None) {
         }
 
-        public BoundExpression(VariableReference vr, SourceSpan span)
+        public BoundExpression(Variable variable, SourceSpan span)
             : base(span) {
-            if (vr == null) {
-                throw new ArgumentNullException("vr");
+            if (variable == null) {
+                throw new ArgumentNullException("variable");
             }
-            _vr = vr;
+            _variable = variable;
         }
 
-        public VariableReference Reference {
+        public Variable Variable {
+            get { return _variable; }
+        }
+
+        internal VariableReference Ref {
             get { return _vr; }
+            set {
+                Debug.Assert(value.Variable == _variable);
+                // the _vr == value is true for DAGs
+                Debug.Assert(_vr == null || _vr == value);
+                _vr = value;
+            }
         }
 
         public SymbolId Name {
-            get { return _vr.Name; }
+            get { return _variable.Name; }
         }
 
         public bool IsDefined {
@@ -47,22 +61,17 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         public override Type ExpressionType {
-            get { return _vr.Type; }
+            get { return _variable.Type; }
         }
 
         public override string ToString() {
-            return "BoundExpression : " + SymbolTable.IdToString(_vr.Name);
+            return "BoundExpression : " + SymbolTable.IdToString(Name);
         }
 
         public override object Evaluate(CodeContext context) {
-            return context.Scope.LookupName(_vr.Name);
-            //return RuntimeHelpers.LookupName(context, _vr.Name);
+            return context.LanguageContext.LookupName(context, Name);
         }
 
-        public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
-        }
-        
         public override void EmitAddress(CodeGen cg, Type asType) {
             if (asType == ExpressionType) {
                 _vr.Slot.EmitGetAddr(cg);
@@ -71,12 +80,11 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
+        public override void Emit(CodeGen cg) {
             // Do not emit CheckInitialized for variables that are defined, or for temp variables.
             // Only emit CheckInitialized for variables of type object
-            bool check = !_defined && !(_vr.Variable != null && _vr.Variable.IsTemporary) && ExpressionType == typeof(object);
-            cg.EmitGet(_vr.Slot, _vr.Name, check);
-            cg.EmitConvert(ExpressionType, asType);
+            bool check = !_defined && !_variable.IsTemporary && _variable.Type == typeof(object);
+            cg.EmitGet(_vr.Slot, Name, check);
         }
 
         public override void Walk(Walker walker) {
@@ -85,8 +93,8 @@ namespace Microsoft.Scripting.Internal.Ast {
             walker.PostWalk(this);
         }
 
-        public static BoundExpression Defined(VariableReference vr) {
-            BoundExpression ret = new BoundExpression(vr);
+        public static BoundExpression Defined(Variable variable) {
+            BoundExpression ret = new BoundExpression(variable);
             ret.IsDefined = true;
             return ret;
         }

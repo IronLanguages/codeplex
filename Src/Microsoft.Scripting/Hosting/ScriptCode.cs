@@ -19,13 +19,10 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting.Internal.Ast;
-
-using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
 
 
 
@@ -38,9 +35,9 @@ namespace Microsoft.Scripting {
     public class ScriptCode {
         public static readonly ScriptCode[] EmptyArray = new ScriptCode[0];
 
-        private CodeBlock _code;
-        private LanguageContext _languageContext;
-        private CompilerContext _compilerContext;
+        private readonly CodeBlock _code;
+        private readonly LanguageContext _languageContext;
+        private readonly CompilerContext _compilerContext;
 
         private CallTargetWithContext0 _simpleTarget;
 
@@ -57,7 +54,6 @@ namespace Microsoft.Scripting {
 
         public LanguageContext LanguageContext {
             get { return _languageContext; }
-            internal set { _languageContext = value; }
         }
 
         public CompilerContext CompilerContext {
@@ -87,20 +83,25 @@ namespace Microsoft.Scripting {
             }
         }
         
-
         public void EnsureCompiled() {            
             if (_simpleTarget == null) {
-                lock (this) {
+                lock (this) { // TODO: mutex object
                     if (_simpleTarget == null) {
-                        _simpleTarget = _code.CreateDelegate<CallTargetWithContext0>(CompilerContext);
+                        _simpleTarget = _code.CreateDelegate<CallTargetWithContext0>(_compilerContext);
                     }
                 }
             }
         }
 
         private object Run(CodeContext codeContext) {
-            if (codeContext.Scope == _optimizedScope) {
-                return _optimizedTarget(new CodeContext(_optimizedScope, LanguageContext));
+            _languageContext.ModuleContextEntering(codeContext.ModuleContext);
+
+            if (_languageContext.Engine.Options.FastEvaluation) {
+                return CodeBlock.Execute(codeContext);
+            }
+            
+            if (codeContext.Scope == _optimizedScope) { // flag on scope - "IsOptimized"?
+                return _optimizedTarget(new CodeContext(_optimizedScope, _languageContext, codeContext.ModuleContext)); // TODO: why do we create a code context here?
             }
 
             EnsureCompiled();
@@ -108,17 +109,22 @@ namespace Microsoft.Scripting {
         }
 
         public object Run(ScriptModule module) {
-            return Run(new CodeContext(module.Scope, LanguageContext.GetLanguageContextForModule(module)));
+            Utils.Assert.NotNull(module);
+            
+            ModuleContext moduleContext = _languageContext.EnsureModuleContext(module);
+            return Run(new CodeContext(module.Scope, _languageContext, moduleContext));
         }
 
-        public object Run(Scope scope) {
-            return Run(new CodeContext(scope, LanguageContext));
+        public object Run(Scope scope, ModuleContext moduleContext) {
+            Utils.Assert.NotNull(scope, moduleContext);
+
+            return Run(new CodeContext(scope, _languageContext, moduleContext));
         }
 
         public override string ToString() {
             return string.Format("ScriptCode {0} from {1}", 
                 SourceUnit.Name, 
-                LanguageContext.Engine.LanguageProvider.LanguageDisplayName);
+                _languageContext.Engine.LanguageProvider.LanguageDisplayName);
         }
 
         public static ScriptCode FromCompiledCode(CompiledCode compiledCode) {

@@ -16,19 +16,71 @@
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
+    // TODO: Cleanup
+    //  1) Remove the UnaryOperator
+    //  2) Determine correct ExpressionType (sometimes _left.ExpressionType, sometimes _resultOp.ResultType)
+    //  3) Add appropriate parameter validation to make sure types all around match, MethodInfo takes correct
+    //     number of arguments, etc.
     public class ShortCircuitExpression : Expression {
-        private readonly UnaryOperator _testOp;
+        private readonly MethodInfo _testOp;
         private readonly MethodInfo _resultOp;
         private readonly Expression _left, _right;
 
-        public ShortCircuitExpression(UnaryOperator testOp, MethodInfo resultOp, Expression left, Expression right) {
-            if (testOp == null) throw new ArgumentNullException("testOp");
-            if (resultOp == null) throw new ArgumentNullException("resultOp");
-            if (left == null) throw new ArgumentNullException("left");
-            if (right == null) throw new ArgumentNullException("right");
+        public ShortCircuitExpression(MethodInfo testOp, MethodInfo resultOp, Expression left, Expression right)
+            : base(SourceSpan.None) {
+            if (testOp == null) {
+                throw new ArgumentNullException("testOp");
+            }
+            if (resultOp == null) {
+                throw new ArgumentNullException("resultOp");
+            }
+            if (left == null) {
+                throw new ArgumentNullException("left");
+            }
+            if (right == null) {
+                throw new ArgumentNullException("right");
+            }
+
+            ParameterInfo[] parameters;
+            // The testOp must be public static
+            if ((testOp.Attributes & (MethodAttributes.Public | MethodAttributes.Static)) !=
+                (MethodAttributes.Public | MethodAttributes.Static)) {
+                throw new ArgumentException("testOp must be public and static");
+            }
+            // And take exactly one parameter
+            parameters = testOp.GetParameters();
+            if (parameters.Length != 1) {
+                throw new ArgumentException("testOp must have exactly one parameter");
+            }
+            Type testType = parameters[0].ParameterType;
+
+            // The resultOp must be public static also
+            if ((resultOp.Attributes & (MethodAttributes.Public | MethodAttributes.Static)) !=
+                (MethodAttributes.Public | MethodAttributes.Static)) {
+                throw new ArgumentException("resultOp must be public static");
+            }
+
+            // And take exactly two parameters
+            parameters = resultOp.GetParameters();
+            if (parameters.Length != 2) {
+                throw new ArgumentException("resultOp must have exactly two parameters");
+            }
+
+            // The first resultOp parameter must be of the same type as testOp parameter
+            // This is perhaps too restrictive, but certainly correct.
+            if (parameters[0].ParameterType != testType) {
+                throw new ArgumentException("testOp and resultOp must have the same type of the first parameter");
+            }
+
+            // Finally, the testOp parameter type must be the same as the
+            // result type of the _resultOp. This ensures that the expression
+            // behaves consistently.
+            if (testType != resultOp.ReturnType) {
+                throw new ArgumentException("testOp parameter type must be the same as the resultOp return type");
+            }
 
             this._testOp = testOp;
             this._resultOp = resultOp;
@@ -38,11 +90,11 @@ namespace Microsoft.Scripting.Internal.Ast {
             this.End = right.End;
         }
 
-        public UnaryOperator TestOperator {
+        public MethodInfo Test {
             get { return _testOp; }
         }
 
-        public MethodInfo ResultOperator {
+        public MethodInfo Result {
             get { return _resultOp; }
         }
 
@@ -54,24 +106,46 @@ namespace Microsoft.Scripting.Internal.Ast {
             get { return _left; }
         }
 
+        public override Type ExpressionType {
+            get {
+                return _resultOp.ReturnType;
+            }
+        }
+
         public override object Evaluate(CodeContext context) {
             object left = _left.Evaluate(context);
-            if (!((bool)_testOp.Evaluate(left))) {
+            if (!((bool)_testOp.Invoke(null, new object[] { left }))) {
                 object right = _right.Evaluate(context);
-                return _resultOp.Invoke(null, new object[] { left,  right });
+                return _resultOp.Invoke(null, new object[] { left, right });
             } else {
                 return left;
             }
         }
 
         public override void Emit(CodeGen cg) {
-            _left.Emit(cg);
+            ParameterInfo[] parameters = _resultOp.GetParameters();
+
+            // Emit the left value as the ParameterType required by the
+            // resultOp (which is the same as that required by the testOp
+            // (see validation in the constructor)
+            _left.EmitAs(cg, parameters[0].ParameterType);
+
+            // Call the _testOp. It takes one parameter
             cg.Emit(OpCodes.Dup);
-            cg.EmitCall(_testOp.TargetMethod);
+            cg.EmitCall(_testOp);
+
+            // Convert the result to bool
+            cg.EmitConvert(_testOp.ReturnType, typeof(bool));
+
             Label l = cg.DefineLabel();
             cg.Emit(OpCodes.Brtrue, l);
-            _right.Emit(cg);
-            // UNDONE: EmitSite needed as well?
+
+            // Emit the right expression as the required parameter type
+            _right.EmitAs(cg, parameters[1].ParameterType);
+
+            // Call the _resultOp method. Its result type is the same
+            // as parameters[0].ParameterType so the stack is in consistent
+            // state.
             cg.EmitCall(_resultOp);
             cg.MarkLabel(l);
         }

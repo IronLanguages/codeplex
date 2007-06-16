@@ -71,7 +71,7 @@ namespace IronPython.Modules {
             } else {
                 double timeoutSeconds;
                 if (!Converter.TryConvertToDouble(timeout, out timeoutSeconds)) {
-                    throw Ops.TypeErrorForTypeMismatch("float or None", timeout);
+                    throw PythonOps.TypeErrorForTypeMismatch("float or None", timeout);
                 }
                 timeoutMicroseconds = (int) (1000000 * timeoutSeconds);
             }
@@ -114,7 +114,7 @@ namespace IronPython.Modules {
             socketToOriginal = new Dictionary<Socket, object>();
             socketList = new List();
 
-            IEnumerator cursor = Ops.GetEnumerator(sequence);
+            IEnumerator cursor = PythonOps.GetEnumerator(sequence);
             while (cursor.MoveNext()) {
                 object original = cursor.Current;
                 Socket socket = ObjectToSocket(context, original);
@@ -140,12 +140,12 @@ namespace IronPython.Modules {
             Int64 handle;
             if (!Converter.TryConvertToInt64(obj, out handle)) {
                 object userSocket = obj;
-                object filenoCallable = Ops.GetBoundAttr(context, userSocket, SymbolTable.StringToId("fileno"));
+                object filenoCallable = PythonOps.GetBoundAttr(context, userSocket, SymbolTable.StringToId("fileno"));
                 object fileno = PythonCalls.Call(filenoCallable);
                 handle = Converter.ConvertToInt64(fileno);
             }
             if (handle < 0) {
-                throw Ops.ValueError("file descriptor cannot be a negative number ({0})", handle);
+                throw PythonOps.ValueError("file descriptor cannot be a negative number ({0})", handle);
             }
             socket = PythonSocket.SocketObj.HandleToSocket(handle);
             if (socket == null) {

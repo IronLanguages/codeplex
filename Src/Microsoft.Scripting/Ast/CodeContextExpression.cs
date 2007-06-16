@@ -15,12 +15,13 @@
 
 using System;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class CodeContextExpression : Expression {
 
-        public CodeContextExpression() {
+        public CodeContextExpression()
+            : this(SourceSpan.None) {
         }
 
         public CodeContextExpression(SourceSpan span)
@@ -37,13 +38,8 @@ namespace Microsoft.Scripting.Internal.Ast {
             return context;
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
-            cg.EmitCodeContext();
-            cg.EmitConvert(ExpressionType, asType);
-        }
-
         public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
+            cg.EmitCodeContext();
         }
 
         public override void Walk(Walker walker) {

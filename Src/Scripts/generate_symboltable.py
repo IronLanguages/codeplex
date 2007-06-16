@@ -150,9 +150,4 @@ def generate_symbols(cw):
         cw.writeline("///<summary>Symbol for '%s'</summary> " % x[0])
         cw.writeline("public static readonly SymbolId %s = MakeSymbolId(\"%s\");" % (x[1],x[0]))
 
-def generate_fieldinfos(cw):
-    for x in fieldList:
-		cw.writeline("if (id == %s) return GetField(\"%s\");" % (x[1], x[1]))
-
 CodeGenerator("Symbols - Other Symbols", generate_symbols).doit()
-CodeGenerator("Symbols - Other FieldInfos", generate_fieldinfos).doit()

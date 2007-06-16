@@ -13,7 +13,7 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class SwitchCase {
         private readonly SourceLocation _header;
         private readonly Expression _value;

@@ -18,12 +18,11 @@ using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
+using MSAst = Microsoft.Scripting.Ast;
+using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
 
 using IronPython.Runtime;
-using MSAst = Microsoft.Scripting.Internal.Ast;
-using Microsoft.Scripting.Internal.Generation;
-
-using VariableKind = Microsoft.Scripting.Internal.Ast.Variable.VariableKind;
 
 /*
  * The name binding:
@@ -83,13 +82,11 @@ namespace IronPython.Compiler.Ast {
             return false;
         }
         public override bool Walk(Parameter node) {
-            _binder.DefineParameter(node.Name);
-            node.Reference = _binder.Reference(node.Name);
+            node.Variable = _binder.DefineParameter(node.Name);
             return false;
         }
         public override bool Walk(SublistParameter node) {
-            _binder.DefineParameter(node.Name);
-            node.Reference = _binder.Reference(node.Name);
+            node.Variable = _binder.DefineParameter(node.Name);
             return true;
         }
         public override bool Walk(TupleExpression node) {
@@ -108,24 +105,10 @@ namespace IronPython.Compiler.Ast {
         }
     }
 
-    [Flags]
-    enum PythonScopeFlags {
-        ContainsImportStar = 0x01,              // from module import *
-        ContainsUnqualifiedExec = 0x02,         // exec "code"
-        ContainsExec = 0x04,                    // exec in any form, both qualified or unqualified
-        ContainsNestedFreeVariables = 0x08,     // nested function with free variable
-        ContainsFreeVariables = 0x10,           // the function itself contains free variables
-        NeedsLocalsDictionary = 0x20,           // The context needs locals dictionary
-        // due to "exec" or call to dir, locals, eval, vars...
-        IsClosure = 0x40,                       // the context is a closure (references outer context's locals)
-    }
-
     class PythonNameBinder : PythonWalker {
         private PythonAst _globalScope;
         private ScopeStatement _currentScope;
-        private List<ScopeStatement> _processed = new List<ScopeStatement>();
-
-        private List<ClassDefinition> _classes;
+        private List<ScopeStatement> _scopes = new List<ScopeStatement>();
 
         #region Recursive binders
 
@@ -158,201 +141,16 @@ namespace IronPython.Compiler.Ast {
             PythonAst gs = new PythonAst(root, module);
             _currentScope = _globalScope = gs;
 
-            // Detect all local names
+            // Find all scopes and variables
             gs.Walk(this);
 
-            // Binding the free variables
-            foreach (ScopeStatement scope in _processed) {
-                BindNamesInScope(scope);
+            // Bind
+            foreach (ScopeStatement scope in _scopes) {
+                scope.Bind(this);
             }
-
-            // Bind class members, creating name based lookup if necessary.
-            BindClassMembers();
-
-            // Bind and publish the global names.
-            // This must be done after the class member binding because it can introduce new globals.
-            BindNamesInScope(_globalScope);
-
-            // Validate
-            foreach (ScopeStatement scope in _processed) {
-                if ((scope.Flags &
-                    (PythonScopeFlags.ContainsFreeVariables |
-                    PythonScopeFlags.ContainsImportStar |
-                    PythonScopeFlags.ContainsUnqualifiedExec |
-                    PythonScopeFlags.ContainsNestedFreeVariables)) == 0) {
-                    continue;
-                }
-
-                FunctionDefinition func = scope as FunctionDefinition;
-                if (func != null) {
-                    if (scope.ContainsImportStar && scope.IsClosure) {
-                        ReportSyntaxError(
-                            String.Format(
-                                System.Globalization.CultureInfo.InvariantCulture,
-                                "import * is not allowed in function '{0}' because it is a nested function",
-                                SymbolTable.IdToString(func.Name)),
-                            func);
-                    }
-                    if (scope.ContainsImportStar && func.Parent is FunctionDefinition) {
-                        ReportSyntaxError(
-                            String.Format(
-                                System.Globalization.CultureInfo.InvariantCulture,
-                                "import * is not allowed in function '{0}' because it is a nested function",
-                                SymbolTable.IdToString(func.Name)),
-                            func);
-                    }
-                    if (scope.ContainsImportStar && scope.ContainsNestedFreeVariables) {
-                        ReportSyntaxError(
-                            String.Format(
-                                System.Globalization.CultureInfo.InvariantCulture,
-                                "import * is not allowed in function '{0}' because it contains a nested function with free variables",
-                                SymbolTable.IdToString(func.Name)),
-                            func);
-                    }
-                    if (scope.ContainsUnqualifiedExec && scope.ContainsNestedFreeVariables) {
-                        ReportSyntaxError(
-                            String.Format(
-                                System.Globalization.CultureInfo.InvariantCulture,
-                                "unqualified exec is not allowed in function '{0}' it contains a nested function with free variables",
-                                SymbolTable.IdToString(func.Name)),
-                            func);
-                    }
-                    if (scope.ContainsUnqualifiedExec && scope.IsClosure) {
-                        ReportSyntaxError(
-                            String.Format(
-                                System.Globalization.CultureInfo.InvariantCulture,
-                                "unqualified exec is not allowed in function '{0}' it is a nested function",
-                                SymbolTable.IdToString(func.Name)),
-                            func);
-                    }
-                }
-
-                ClassDefinition cls = scope as ClassDefinition;
-                if (cls != null) {
-                    if (scope.ContainsImportStar) {
-                        // warning
-                    }
-                }
-            }
-
+            // Finish the globals
+            gs.Bind(this);
             return gs;
-        }
-
-        private void BindClassMembers() {
-            // if there are no classes, bail
-            if (_classes == null) {
-                return;
-            }
-
-            // Determine when name based lookup is necessary for the class members.
-            foreach (ClassDefinition c in _classes) {
-                // No dataflow here, just go for it directly
-                foreach (KeyValuePair<SymbolId, PythonReference> kv in c.References) {
-                    PythonReference r = kv.Value;
-
-                    if (r.Variable == null) {
-                        // unbound variable is ok
-                        continue;
-                    }
-
-                    if (r.Variable.Kind != VariableKind.Local ||
-                        r.Variable.Scope != c) {
-                        // only locals interest us, and since the closures haven't been
-                        // resolved, the non-local references are still marked as Local
-                        // (in the outer context) => check for locals in current context only
-                        continue;
-                    }
-
-                    // Dissociate, lookup by name
-                    r.Variable = null;
-                }
-            }
-        }
-
-        static bool TryBindInScope(ScopeStatement scope, SymbolId name, out PythonVariable variable) {
-            // only names defined in the functions can be bound to,
-            // names defined in the class can only be accessed via attribute access
-            if (scope.IsFunctionScope) {
-                return scope.TryGetDefinition(name, out variable);
-            }
-            variable = null;
-            return false;
-        }
-
-        /// <summary>
-        /// Binds names referenced in the context. Will look in the current and outer scopes to bind the name.
-        /// </summary>
-        /// <param name="context"></param>
-        void BindNamesInScope(ScopeStatement scope) {
-            if (scope.References != null) {
-                foreach (KeyValuePair<SymbolId, PythonReference> kv in scope.References) {
-                    PythonReference reference = kv.Value;
-
-                    // Already bound
-                    if (reference.Variable != null) {
-                        continue;
-                    }
-
-                    SymbolId name = kv.Key;
-                    PythonVariable variable;
-
-                    // Try to bind in the current context
-                    if (scope.TryGetDefinition(name, out variable)) {
-                        reference.Variable = variable;
-                        continue;
-                    }
-
-                    // Try to bind in outer context(s)
-                    for (ScopeStatement parent = scope.Parent; parent != null; parent = parent.Parent) {
-                        if (TryBindInScope(parent, name, out variable)) {
-                            // Found it !
-                            reference.Variable = variable;
-
-                            // Cannot delete variables referenced from nested context
-                            if (variable.Kind != VariableKind.Global) {
-                                scope.IsClosure = true;
-
-                                if ((variable.Flags & PythonVariable.PythonFlags.Deleted) != 0) {
-                                    ReportSyntaxError(
-                                        String.Format(
-                                            System.Globalization.CultureInfo.InvariantCulture,
-                                            "can not delete variable '{0}' referenced in nested context",
-                                            SymbolTable.IdToString(name)
-                                            ),
-                                        scope);
-                                }
-                            }
-
-                            // Cannot do break out of this loop and direct continue of the outer loop
-                            // must resort to goto.
-                            goto EndOfLoop;
-                        }
-                    }
-
-                    // Variable unbound in the current (or outer) scopes - completely free
-                    if (scope.IsGlobal) {
-                        // At a global level, all unbound variables are locals
-                        reference.Variable = DefineModuleLocal(name);
-                    } else {
-                        if (scope.ContainsUnqualifiedExec || scope.ContainsImportStar || scope.NeedsLocalsDictionary) {
-                            // If the context contains unqualified exec, new locals can be introduced
-                            // We introduce the locals for every free variable to optimize the name based
-                            // lookup.
-                            scope.DefineName(name);
-                        } else {
-                            // Create a global variable to bind to.
-                            reference.Variable = EnsureGlobalVariableDefinition(name);
-                        }
-                    }
-
-                EndOfLoop:
-                    ;
-                }
-            }
-        }
-
-        private PythonVariable EnsureGlobalVariableDefinition(SymbolId name) {
-            return _globalScope.EnsureGlobalVariable(name);
         }
 
         private void PushScope(ScopeStatement node) {
@@ -360,36 +158,28 @@ namespace IronPython.Compiler.Ast {
             _currentScope = node;
         }
 
-        internal void DefineName(SymbolId name) {
-            _currentScope.DefineName(name);
+        internal PythonReference Reference(SymbolId name) {
+            return _currentScope.Reference(name);
+        }
+
+        internal PythonVariable DefineName(SymbolId name) {
+            return _currentScope.EnsureVariable(name);
         }
 
         internal PythonVariable DefineModuleGlobal(SymbolId name) {
-            PythonVariable variable = _globalScope.DefineName(name);
+            PythonVariable variable = _globalScope.EnsureVariable(name);
             variable.Kind = VariableKind.Global;
             return variable;
         }
 
-        // Creates module level local variable. Even at module level,
-        // there are globals and locals
-        private PythonVariable DefineModuleLocal(SymbolId name) {
-            return _globalScope.DefineModuleLocal(name);
+        internal PythonVariable DefineParameter(SymbolId name) {
+            return _currentScope.DefineParameter(name);
         }
 
-        internal void DefineParameter(SymbolId name) {
-            _currentScope.DefineParameter(name);
-        }
-
-        internal void DefineDeleted(SymbolId name) {
-            _currentScope.DefineDeleted(name);
-        }
-
-        internal void AddTemporaryReference(PythonReference reference) {
-            _currentScope.AddTemporaryReference(reference);
-        }
-
-        internal PythonReference Reference(SymbolId name) {
-            return _currentScope.EnsureReference(name);
+        internal PythonVariable DefineDeleted(SymbolId name) {
+            PythonVariable variable = _currentScope.EnsureVariable(name);
+            variable.MarkDeleted();
+            return variable;
         }
 
         private void ReportSyntaxWarning(string message, Node node) {
@@ -405,20 +195,7 @@ namespace IronPython.Compiler.Ast {
             _context.AddError(message, node.Start, node.End, serverity, -1);
         }
 
-        private void StoreClass(ClassDefinition node) {
-            if (_classes == null) {
-                _classes = new List<ClassDefinition>();
-            }
-            _classes.Add(node);
-        }
-
         #region AstBinder Overrides
-
-        // NameExpression
-        public override bool Walk(NameExpression node) {
-            node.Reference = Reference(node.Name);
-            return true;
-        }
 
         // AssignmentStatement
         public override bool Walk(AssignmentStatement node) {
@@ -441,24 +218,16 @@ namespace IronPython.Compiler.Ast {
 
         // ClassDefinition
         public override bool Walk(ClassDefinition node) {
-            DefineName(node.Name);
-            node.Reference = Reference(node.Name);
+            node.Variable = DefineName(node.Name);
 
             // Base references are in the outer context
             foreach (Expression b in node.Bases) b.Walk(this);
 
             PushScope(node);
 
-            // get a reference to __name__ in globals
-            node.NameReference = new PythonReference(Symbols.Name);
-            node.NameReference.Variable = EnsureGlobalVariableDefinition(Symbols.Name);
-            AddTemporaryReference(node.NameReference);
-
             // define the __doc__ and the __module__
-            DefineName(Symbols.Doc);
-            node.DocReference = Reference(Symbols.Doc);
-            DefineName(Symbols.Module);
-            node.ModReference = Reference(Symbols.Module);
+            node.DocVariable = DefineName(Symbols.Doc);
+            node.ModVariable = DefineName(Symbols.Module);
 
             // Walk the body
             node.Body.Walk(this);
@@ -468,10 +237,8 @@ namespace IronPython.Compiler.Ast {
         // ClassDefinition
         public override void PostWalk(ClassDefinition node) {
             Debug.Assert(node == _currentScope);
-            _processed.Add(_currentScope);
+            _scopes.Add(_currentScope);
             _currentScope = _currentScope.Parent;
-
-            StoreClass(node);
         }
 
         // DelStatement
@@ -488,7 +255,6 @@ namespace IronPython.Compiler.Ast {
                 Debug.Assert(_currentScope != null);
                 _currentScope.ContainsUnqualifiedExec = true;
             }
-            _currentScope.ContainsExec = true;
             return true;
         }
 
@@ -516,13 +282,12 @@ namespace IronPython.Compiler.Ast {
         // FromImportStatement
         public override bool Walk(FromImportStatement node) {
             if (node.Names != FromImportStatement.Star) {
-                PythonReference[] references = new PythonReference[node.Names.Count];
+                PythonVariable[] variables = new PythonVariable[node.Names.Count];
                 for (int i = 0; i < node.Names.Count; i++) {
                     SymbolId name = node.AsNames[i] != SymbolId.Empty ? node.AsNames[i] : node.Names[i];
-                    DefineName(name);
-                    references[i] = Reference(name);
+                    variables[i] = DefineName(name);
                 }
-                node.References = references;
+                node.Variables = variables;
             } else {
                 Debug.Assert(_currentScope != null);
                 _currentScope.ContainsImportStar = true;
@@ -534,8 +299,7 @@ namespace IronPython.Compiler.Ast {
         // FunctionDefinition
         public override bool Walk(FunctionDefinition node) {
             // Name is defined in the enclosing context
-            DefineName(node.Name);
-            node.Reference = Reference(node.Name);
+            node.Variable = DefineName(node.Name);
 
             // process the default arg values in the outer context
             foreach (Parameter p in node.Parameters) {
@@ -563,48 +327,46 @@ namespace IronPython.Compiler.Ast {
         // FunctionDefinition
         public override void PostWalk(FunctionDefinition node) {
             Debug.Assert(_currentScope == node);
-            _processed.Add(_currentScope);
+            _scopes.Add(_currentScope);
             _currentScope = _currentScope.Parent;
         }
 
         // GlobalStatement
         public override bool Walk(GlobalStatement node) {
             foreach (SymbolId n in node.Names) {
-                // Create the variable in the global context and mark it as global
-                PythonVariable variable = _globalScope.DefineName(n);
-                variable.Kind = VariableKind.Global;
-
-                // Check current context for conflicting variable
                 PythonVariable conflict;
-                if (_currentScope.TryGetDefinition(n, out conflict)) {
-                    if (conflict.Kind == VariableKind.Global) {
-                        // Python allows global statement to list the same name multiple times
-                        // or to list the same name in the multiple different global statements
-
-                        // OK
-                    } else if (conflict.Kind == VariableKind.Parameter) {
-                        ReportSyntaxError(
-                            String.Format(
-                                System.Globalization.CultureInfo.InvariantCulture,
-                                "name '{0}' is a function parameter and declared global",
-                                SymbolTable.IdToString(n)),
-                            node);
-                    } else {
-                        ReportSyntaxWarning(
-                            String.Format(
-                                System.Globalization.CultureInfo.InvariantCulture,
-                                "Variable {0} assigned before global declaration",
-                                SymbolTable.IdToString(n)),
-                            node);
+                // Check current scope for conflicting variable
+                if (_currentScope.TryGetVariable(n, out conflict)) {
+                    // conflict?
+                    switch (conflict.Kind) {
+                        case VariableKind.Global:
+                            // OK
+                            break;
+                        case VariableKind.Local:
+                            ReportSyntaxWarning(
+                                String.Format(
+                                    System.Globalization.CultureInfo.InvariantCulture,
+                                    "Variable {0} assigned before global declaration",
+                                    SymbolTable.IdToString(n)
+                                ),
+                                node
+                            );
+                            break;
+                        case VariableKind.Parameter:
+                            ReportSyntaxError(
+                                String.Format(
+                                    System.Globalization.CultureInfo.InvariantCulture,
+                                    "Name '{0}' is a function parameter and declared global",
+                                    SymbolTable.IdToString(n)),
+                                node);
+                            break;
                     }
                 } else {
-                    // no previously definied variables, add it to the current context
-                    _currentScope.AddGlobalDefinition(variable);
+                    conflict = null;
                 }
 
                 // Check for the name being referenced previously. If it has been, issue warning.
-                PythonReference cref;
-                if (_currentScope.TryGetReference(n, out cref)) {
+                if (_currentScope.IsReferenced(n)) {
                     ReportSyntaxWarning(
                         String.Format(
                         System.Globalization.CultureInfo.InvariantCulture,
@@ -612,37 +374,52 @@ namespace IronPython.Compiler.Ast {
                         SymbolTable.IdToString(n)),
                     node);
                 }
+
+
+                // Create the variable in the global context and mark it as global
+                PythonVariable variable = _globalScope.EnsureVariable(n);
+                variable.Kind = VariableKind.Global;
+
+                if (conflict == null) {
+                    // no previously definied variables, add it to the current scope
+                    _currentScope.AddGlobalVariable(variable);
+                }
             }
             return true;
         }
 
-        // GlobalSuite
+        public override bool Walk(NameExpression node) {
+            node.Reference = Reference(node.Name);
+            return true;
+        }
+
+        // PythonAst
         public override bool Walk(PythonAst node) {
-            // If binding full fledged module, create references for the
-            // __doc__ and __name__ variables
             if (node.Module) {
-                node.DocReference = Reference(Symbols.Doc);
-                node.NameReference = Reference(Symbols.Name);
+                DefineName(Symbols.Name);
+                if (node.Body.Documentation != null) {
+                    node.DocVariable = DefineName(Symbols.Doc);
+                }
             }
             return true;
         }
 
-        // GlobalSuite
+        // PythonAst
         public override void PostWalk(PythonAst node) {
             // Do not add the global suite to the list of processed nodes,
             // the publishing must be done after the class local binding.
             Debug.Assert(_currentScope == node);
             _currentScope = _currentScope.Parent;
         }
+
         // ImportStatement
         public override bool Walk(ImportStatement node) {
-            PythonReference[] references = new PythonReference[node.Names.Count];
+            PythonVariable[] variables = new PythonVariable[node.Names.Count];
             for (int i = 0; i < node.Names.Count; i++) {
                 SymbolId name = node.AsNames[i] != SymbolId.Empty ? node.AsNames[i] : node.Names[i].Names[0];
-                DefineName(name);
-                references[i] = Reference(name);
+                variables[i] = DefineName(name);
             }
-            node.References = references;
+            node.Variables = variables;
             return true;
         }
 

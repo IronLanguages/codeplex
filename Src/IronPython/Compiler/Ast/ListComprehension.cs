@@ -13,8 +13,9 @@
  *
  * ***************************************************************************/
 
+using System;
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler.Ast {
@@ -39,13 +40,13 @@ namespace IronPython.Compiler.Ast {
             get { return _iterators; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             MSAst.BoundExpression list = ag.MakeTempExpression("list_comprehension_list", typeof(List), _item.Span);
 
             // 1. Initialization code - create list and store it in the temp variable
             MSAst.BoundAssignment initialize =
                 new MSAst.BoundAssignment(
-                    list.Reference,
+                    list.Variable,
                     new MSAst.MethodCallExpression(
                         AstGenerator.GetHelperMethod("MakeList", Utils.Reflection.EmptyTypes), // method
                         null,                                                                  // instance

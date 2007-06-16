@@ -18,8 +18,9 @@ using System.Text;
 using System.CodeDom;
 using System.IO;
 using System.Diagnostics;
+
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal.Ast;
 
 #if !SILVERLIGHT // requires CodeDom support
 

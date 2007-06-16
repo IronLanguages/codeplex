@@ -163,8 +163,13 @@ namespace IronPythonTest.BinderTest {
         public void M550(IDictionary<int, int> arg) { Flag.Value = 550; }
 
         // not supported (or partially)
+#if !SILVERLIGHT
         public void M600(Hashtable arg) { Flag.Value = 600; }
         public void M601(ArrayList arg) { Flag.Value = 601; }
+#else
+        public void M600(Dictionary<object, object> arg) { Flag.Value = 600; }
+        public void M601(List<object> arg) { Flag.Value = 601; }
+#endif
         public void M602(List<int> arg) { Flag.Value = 602; }
 
         // iterator support ??
