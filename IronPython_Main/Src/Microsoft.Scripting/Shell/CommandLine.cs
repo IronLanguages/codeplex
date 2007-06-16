@@ -21,15 +21,14 @@ using System.Text;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
-using SystemThread = System.Threading.Thread;
-
 using System.Diagnostics;
+
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal.Ast;
 
 namespace Microsoft.Scripting.Shell {
 
-    public abstract class CommandLine {
+    public class CommandLine {
         private IConsole _console;
         private IScriptEngine _engine;
         private ConsoleOptions _options;
@@ -38,13 +37,13 @@ namespace Microsoft.Scripting.Shell {
         protected IConsole Console { get { return _console; } }
         protected IScriptEngine Engine { get { return _engine; } }
         protected ConsoleOptions Options { get { return _options; } }
-        protected ScriptModule Module { get { return _module; } set { _module = value; } }
+        protected internal ScriptModule Module { get { return _module; } set { _module = value; } }
 
         protected virtual string Prompt { get { return Resources.ConsolePrompt; } }
         protected virtual string PromptContinuation { get { return Resources.ConsoleContinuePrompt; } } 
         protected virtual string Logo { get { return null; } }
 
-        protected CommandLine() {
+        public CommandLine() {
         }
 
         protected virtual void Initialize() {
@@ -108,11 +107,11 @@ namespace Microsoft.Scripting.Shell {
         
         #region Console
 
-        private static IConsole CreateConsole(ScriptEngine engine, bool isSuper, bool isColorful) {
+        private static IConsole CreateConsole(CommandLine commandLine, ScriptEngine engine, bool isSuper, bool isColorful) {
             Debug.Assert(engine != null);
 
             if (isSuper) {
-                return CreateSuperConsole(engine, isColorful);
+                return CreateSuperConsole(commandLine, engine, isColorful);
             } else {
                 return new BasicConsole(engine, isColorful);
             }
@@ -121,9 +120,9 @@ namespace Microsoft.Scripting.Shell {
         // The advanced console functions are in a special non-inlined function so that 
         // dependencies are pulled in only if necessary.
         [MethodImplAttribute(MethodImplOptions.NoInlining)]
-        private static IConsole CreateSuperConsole(ScriptEngine engine, bool isColorful) {
+        private static IConsole CreateSuperConsole(CommandLine commandLine, ScriptEngine engine, bool isColorful) {
             Debug.Assert(engine != null);
-            return new SuperConsole(engine, isColorful);
+            return new SuperConsole(commandLine, engine, isColorful);
         }
         
         #endregion
@@ -131,14 +130,49 @@ namespace Microsoft.Scripting.Shell {
 #if !SILVERLIGHT
         /// <summary>
         /// Runs the specified filename
+        ///
+        /// TODO minimize code duplication in overriding classes
         /// </summary>
-        protected abstract int RunFile(string filename);
+        protected virtual int RunFile(string filename) {
+            int result = 1;
+            if (Options.HandleExceptions) {
+                try {
+                    Engine.ExecuteFile(filename);
+                    result = 0;
+                } catch (Exception e) {
+                    Console.Write(Engine.FormatException(e), Style.Error);
+                }
+            } else {
+                Engine.ExecuteFile(filename);
+                result = 0;
+            }
+
+            return result;
+        }        
 #endif
 
         /// <summary>
         /// Runs a single line of text as the only input to the language.  The console exits afterwards.
+        /// 
+        /// TODO minimize code duplication in overriding classes
         /// </summary>
-        protected abstract int RunCommand(string command);
+        protected virtual int RunCommand(string command) {
+            int result = 1;
+
+            if (Options.HandleExceptions) {
+                try {
+                    Engine.ExecuteCommand(command);
+                    result = 0;
+                } catch (Exception e) {
+                    Console.Write(Engine.FormatException(e), Style.Error);
+                }
+            } else {
+                Engine.ExecuteCommand(command);
+                result = 0;
+            }
+
+            return result;
+        }
 
         protected void PrintLogo() {
             _console.Write(Logo, Style.Out);
@@ -171,14 +205,23 @@ namespace Microsoft.Scripting.Shell {
             
             int? res = null;
             do {
-                try {
+                if (Options.HandleExceptions) {
+                    try {
+                        res = TryInteractiveAction();
+#if SILVERLIGHT 
+                    } catch (Utils.Environment.ExitProcessException e) {
+                        res = e.ExitCode;
+#endif
+                    } catch (Exception e) {
+                        // There should be no unhandled exceptions in the interactive session
+                        // We catch all exceptions here, and just display it,
+                        // and keep on going
+                        _console.WriteLine(_engine.FormatException(e), Style.Error);
+                    }
+                } else {
                     res = TryInteractiveAction();
-                } catch (Exception e) {
-                    // There should be no unhandled exceptions in the interactive session
-                    // We catch all exceptions here, and just display it,
-                    // and keep on going
-                    _console.WriteLine(_engine.FormatException(e), Style.Error);
                 }
+
             } while (res == null);
 
             return res.Value;

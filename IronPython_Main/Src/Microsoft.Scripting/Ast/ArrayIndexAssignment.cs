@@ -14,26 +14,29 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class ArrayIndexAssignment : Expression{
         private readonly Expression _array;
         private readonly Expression _index;
         private readonly Expression _value;
+        private readonly Type _elementType;
 
         public ArrayIndexAssignment(Expression array, Expression index, Expression value, SourceSpan span)
             : base(span) {
             if (array == null) throw new ArgumentNullException("array");
             if (index == null) throw new ArgumentNullException("index");
             if (value == null) throw new ArgumentNullException("value");
-            if (!array.ExpressionType.IsArray) {
+            Type arrayType = array.ExpressionType;
+            if (!arrayType.IsArray) {
                 throw new NotSupportedException("Expression type of the array must be array (Type.IsArray)!");
             }
 
             _array = array;
             _index = index;
             _value = value;
+            _elementType = arrayType.GetElementType();
         }
 
         public Expression Array {
@@ -48,18 +51,17 @@ namespace Microsoft.Scripting.Internal.Ast {
             get { return _value; }
         }
 
-
-        public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
+        public override Type ExpressionType {
+            get {
+                return _elementType;
+            }
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
-            Type arrayType = _array.ExpressionType;
-            Type elementType = arrayType.IsArray ? arrayType.GetElementType() : typeof(object);
-            _value.EmitAs(cg, elementType);
+        public override void Emit(CodeGen cg) {
+            _value.EmitAs(cg, _elementType);
 
             // Save the expression value - order of evaluation is different than that of the Stelem* instruction
-            Slot temp = cg.GetLocalTmp(elementType);
+            Slot temp = cg.GetLocalTmp(_elementType);
             temp.EmitSet(cg);
 
             // Emit the array reference
@@ -69,13 +71,8 @@ namespace Microsoft.Scripting.Internal.Ast {
             // Emit the value
             temp.EmitGet(cg);
             // Store it in the array
-            cg.EmitStoreElement(elementType);
-
-            if (asType != typeof(void)) {
-                temp.EmitGet(cg);
-                cg.EmitConvert(elementType, asType);
-            }
-
+            cg.EmitStoreElement(_elementType);
+            temp.EmitGet(cg);
             cg.FreeLocalTmp(temp);
         }
 

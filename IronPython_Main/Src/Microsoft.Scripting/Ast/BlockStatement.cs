@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class BlockStatement : Statement {
         private readonly Statement[] _statements;
 

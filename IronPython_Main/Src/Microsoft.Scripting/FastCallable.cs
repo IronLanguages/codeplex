@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting {
     [Flags]

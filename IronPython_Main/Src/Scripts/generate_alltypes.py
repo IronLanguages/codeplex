@@ -183,18 +183,26 @@ try {
     return %(bigger_type)sOps.%(method_name)s((%(bigger_type)s)x, (%(bigger_type)s)y);
 }"""
 
+overflow3_body = """\
+long result = (long) x %(symbol)s y;
+if (%(type)s.MinValue <= result && result <= %(type)s.MaxValue) {
+    return %(type_to_object)s(result);
+} 
+return %(bigger_type)sOps.%(method_name)s((%(bigger_type)s)x, (%(bigger_type)s)y);
+"""
+
 unsigned_signed_body = "return %(bigger_signed)sOps.%(method_name)s((%(bigger_signed)s)x, (%(bigger_signed)s)y);"
 
 int_divide_body = "return FloorDivide(x, y);"
 float_divide_body = "return TrueDivide(x, y);"
 
 float_floor_divide_body = """\
-if (y == 0) throw Ops.ZeroDivisionError();
+if (y == 0) throw PythonOps.ZeroDivisionError();
 return (%(type)s)Math.Floor(x / y);
 """
 
 float_true_divide_body = """\
-if (y == 0) throw Ops.ZeroDivisionError();
+if (y == 0) throw PythonOps.ZeroDivisionError();
 return x / y;
 """
 
@@ -251,7 +259,9 @@ def gen_binaryops(cw, ty):
             if ty.is_float:
                 write_binop1(cw, simple_body, name, ty, symbol=symbol)
             else:
-                if ty.get_overflow_type() == bigint:
+                if ty.name == "Int32":
+                    body = overflow3_body
+                elif ty.get_overflow_type() == bigint:
                     body = overflow2_body
                 else:
                     body = overflow1_body
@@ -326,15 +336,15 @@ def gen_conversions(cw, ty):
             
             
 type_header = """\
-[StaticOpsMethod("__new__")]
+[StaticExtensionMethod("__new__")]
 public static object Make(DynamicType cls) {
     return Make(cls, default(%(type)s));
 }
 
-[StaticOpsMethod("__new__")]
+[StaticExtensionMethod("__new__")]
 public static object Make(DynamicType cls, object value) {
-    if (cls != Ops.GetDynamicTypeFromType(typeof(%(type)s))) {
-        throw Ops.TypeError("%(type)s.__new__: first argument must be %(type)s type.");
+    if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(%(type)s))) {
+        throw PythonOps.TypeError("%(type)s.__new__: first argument must be %(type)s type.");
     }
     IConvertible valueConvertible;
     if ((valueConvertible = value as IConvertible) != null) {
@@ -360,7 +370,7 @@ public static object Make(DynamicType cls, object value) {
     } else if (value is Extensible<double>) {
         return (%(type)s)((Extensible<double>)value).Value;
     }
-    throw Ops.ValueError("invalid value for %(type)s.__new__");
+    throw PythonOps.ValueError("invalid value for %(type)s.__new__");
 }"""
 
 def gen_header(cw, ty):

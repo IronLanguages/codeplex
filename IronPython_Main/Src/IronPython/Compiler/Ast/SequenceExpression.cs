@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using MSAst = Microsoft.Scripting.Internal.Ast;
-using Operators = Microsoft.Scripting.Operators;
 using Microsoft.Scripting;
+using MSAst = Microsoft.Scripting.Ast;
+using Operators = Microsoft.Scripting.Operators;
 
 namespace IronPython.Compiler.Ast {
     public abstract class SequenceExpression : Expression {
@@ -76,7 +76,7 @@ namespace IronPython.Compiler.Ast {
 
             // 2. Add the assignment "right_temp = right" into the suite/block
             statements.Add(
-                AstGenerator.MakeAssignment(right_temp.Reference, right)
+                AstGenerator.MakeAssignment(right_temp.Variable, right)
                 );
 
             // 3. Call GetEnumeratorValues on the right side (stored in temp)
@@ -94,7 +94,7 @@ namespace IronPython.Compiler.Ast {
             // 5. Assign the value of the method call (mce) into the array temp
             // And add the assignment "array_temp = Ops.GetEnumeratorValues(...)" into the block
             statements.Add(
-                AstGenerator.MakeAssignment(array_temp.Reference, mce, rightSpan)
+                AstGenerator.MakeAssignment(array_temp.Variable, mce, rightSpan)
                 );
 
             List<MSAst.Statement> sets = new List<MSAst.Statement>();            

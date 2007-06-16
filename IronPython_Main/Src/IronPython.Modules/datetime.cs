@@ -23,8 +23,8 @@ using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
@@ -83,7 +83,7 @@ namespace IronPython.Modules {
                 _microseconds = (int)(totalMicroseconds);
 
                 if (Math.Abs(_days) > MAXDAYS) {
-                    throw Ops.OverflowError("days={0}; must have magnitude <= 999999999", _days);
+                    throw PythonOps.OverflowError("days={0}; must have magnitude <= 999999999", _days);
                 }
             }
 
@@ -96,11 +96,11 @@ namespace IronPython.Modules {
                 [DefaultParameterValue(0D)] double minutes,
                 [DefaultParameterValue(0D)] double hours,
                 [DefaultParameterValue(0D)] double weeks) {
-                if (cls == Ops.GetDynamicTypeFromType(typeof(PythonTimeDelta))) {
+                if (cls == DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTimeDelta))) {
                     return new PythonTimeDelta(days, seconds, microseconds, milliseconds, minutes, hours, weeks);
                 } else {
                     PythonTimeDelta delta = cls.CreateInstance(context, days, seconds, microseconds, milliseconds, minutes, hours, weeks) as PythonTimeDelta;
-                    if (delta == null) throw Ops.TypeError("{0} is not a subclass of datetime.timedelta", cls);
+                    if (delta == null) throw PythonOps.TypeError("{0} is not a subclass of datetime.timedelta", cls);
                     return delta;
                 }
             }
@@ -202,7 +202,7 @@ namespace IronPython.Modules {
 
             [PythonName("__reduce__")]
             public Tuple Reduce() {
-                return Tuple.MakeTuple(Ops.GetDynamicTypeFromType(this.GetType()), Tuple.MakeTuple(_days, _seconds, _microseconds));
+                return Tuple.MakeTuple(DynamicHelpers.GetDynamicTypeFromType(this.GetType()), Tuple.MakeTuple(_days, _seconds, _microseconds));
             }
             [PythonName("__getnewargs__")]
             public static object GetNewArgs(int days, int seconds, int microseconds) {
@@ -242,7 +242,7 @@ namespace IronPython.Modules {
             private int CompareTo(object other) {
                 PythonTimeDelta delta = other as PythonTimeDelta;
                 if (delta == null)
-                    throw Ops.TypeError("can't compare datetime.timedelta to {0}", Ops.GetDynamicType(other));
+                    throw PythonOps.TypeError("can't compare datetime.timedelta to {0}", DynamicHelpers.GetDynamicType(other));
 
                 int res = this._days - delta._days;
                 if (res != 0) return res;
@@ -289,12 +289,12 @@ namespace IronPython.Modules {
         internal static void ThrowIfInvalid(PythonTimeDelta delta, string funcname) {
             if (delta != null) {
                 if (delta._microseconds != 0 || delta._seconds % 60 != 0) {
-                    throw Ops.ValueError("tzinfo.{0}() must return a whole number of minutes", funcname);
+                    throw PythonOps.ValueError("tzinfo.{0}() must return a whole number of minutes", funcname);
                 }
 
                 int minutes = (int)(delta.TimeSpanWithDaysAndSeconds.TotalSeconds / 60);
                 if (Math.Abs(minutes) >= 1440) {
-                    throw Ops.ValueError("tzinfo.{0}() returned {1}; must be in -1439 .. 1439", funcname, minutes);
+                    throw PythonOps.ValueError("tzinfo.{0}() returned {1}; must be in -1439 .. 1439", funcname, minutes);
                 }
             }
         }
@@ -303,38 +303,38 @@ namespace IronPython.Modules {
             switch (kind) {
                 case InputKind.Year:
                     if (value > DateTime.MaxValue.Year || value < DateTime.MinValue.Year) {
-                        throw Ops.ValueError("year is out of range");
+                        throw PythonOps.ValueError("year is out of range");
                     }
                     break;
                 case InputKind.Month:
                     if (value > 12 || value < 1) {
-                        throw Ops.ValueError("month must be in 1..12");
+                        throw PythonOps.ValueError("month must be in 1..12");
                     }
                     break;
                 case InputKind.Day:
                     // TODO: changing upper bound
                     if (value > 31 || value < 1) {
-                        throw Ops.ValueError("day is out of range for month");
+                        throw PythonOps.ValueError("day is out of range for month");
                     }
                     break;
                 case InputKind.Hour:
                     if (value > 23 || value < 0) {
-                        throw Ops.ValueError("hour must be in 0..23");
+                        throw PythonOps.ValueError("hour must be in 0..23");
                     }
                     break;
                 case InputKind.Minute:
                     if (value > 59 || value < 0) {
-                        throw Ops.ValueError("minute must be in 0..59");
+                        throw PythonOps.ValueError("minute must be in 0..59");
                     }
                     break;
                 case InputKind.Second:
                     if (value > 59 || value < 0) {
-                        throw Ops.ValueError("second must be in 0..59");
+                        throw PythonOps.ValueError("second must be in 0..59");
                     }
                     break;
                 case InputKind.Microsecond:
                     if (value > 999999 || value < 0) {
-                        throw Ops.ValueError("microsecond must be in 0..999999");
+                        throw PythonOps.ValueError("microsecond must be in 0..999999");
                     }
                     break;
             }
@@ -365,11 +365,11 @@ namespace IronPython.Modules {
 
             [PythonName("__new__")]
             public static PythonDate Make(CodeContext context, DynamicType cls, int year, int month, int day) {
-                if (cls == Ops.GetDynamicTypeFromType(typeof(PythonDate))) {
+                if (cls == DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDate))) {
                     return new PythonDate(year, month, day);
                 } else {
                     PythonDate date = cls.CreateInstance(context, year, month, day) as PythonDate;
-                    if (date == null) throw Ops.TypeError("{0} is not a subclass of datetime.date", cls);
+                    if (date == null) throw PythonOps.TypeError("{0} is not a subclass of datetime.date", cls);
                     return date;
                 }
             }
@@ -420,14 +420,14 @@ namespace IronPython.Modules {
                 try {
                     return new PythonDate(self._dateTime.AddDays(other.Days));
                 } catch {
-                    throw Ops.OverflowError("date value out of range");
+                    throw PythonOps.OverflowError("date value out of range");
                 }
             }
             public static PythonDate operator +([NotNull]PythonTimeDelta other, [NotNull]PythonDate self) {
                 try {
                     return new PythonDate(self._dateTime.AddDays(other.Days));
                 } catch {
-                    throw Ops.OverflowError("date value out of range");
+                    throw PythonOps.OverflowError("date value out of range");
                 }
             }
 
@@ -437,7 +437,7 @@ namespace IronPython.Modules {
                 try {
                     return new PythonDate(self._dateTime.AddDays(-1 * delta.Days));
                 } catch {
-                    throw Ops.OverflowError("date value out of range");
+                    throw PythonOps.OverflowError("date value out of range");
                 }
             }
             public static PythonTimeDelta operator -(PythonDate self, PythonDate other) {
@@ -450,12 +450,12 @@ namespace IronPython.Modules {
 
             [PythonName("__reduce__")]
             public virtual Tuple Reduce() {
-                return Tuple.MakeTuple(Ops.GetDynamicTypeFromType(this.GetType()), Tuple.MakeTuple(_dateTime.Year, _dateTime.Month, _dateTime.Day));
+                return Tuple.MakeTuple(DynamicHelpers.GetDynamicTypeFromType(this.GetType()), Tuple.MakeTuple(_dateTime.Year, _dateTime.Month, _dateTime.Day));
             }
 
             [PythonName("__getnewargs__")]
             public static object GetNewArgs(CodeContext context, int year, int month, int day) {
-                return Tuple.MakeTuple(PythonDate.Make(context, Ops.GetDynamicTypeFromType(typeof(PythonDate)), year, month, day));
+                return Tuple.MakeTuple(PythonDate.Make(context, DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDate)), year, month, day));
             }
 
             // instance methods
@@ -578,10 +578,10 @@ namespace IronPython.Modules {
 
             protected virtual int CompareTo(object other) {
                 if (other == null)
-                    throw Ops.TypeError("can't compare datetime.date to NoneType");
+                    throw PythonOps.TypeError("can't compare datetime.date to NoneType");
 
                 if (other.GetType() != typeof(PythonDate))
-                    throw Ops.TypeError("can't compare datetime.date to {0}", Ops.GetDynamicType(other));
+                    throw PythonOps.TypeError("can't compare datetime.date to {0}", DynamicHelpers.GetDynamicType(other));
 
                 PythonDate date = other as PythonDate;
                 return this._dateTime.CompareTo(date._dateTime);
@@ -663,7 +663,7 @@ namespace IronPython.Modules {
                     try {
                         InternalDateTime = InternalDateTime.AddMilliseconds(_lostMicroseconds / 1000 - 1);
                     } catch {
-                        throw Ops.OverflowError("date value out of range");
+                        throw PythonOps.OverflowError("date value out of range");
                     }
                     _lostMicroseconds = _lostMicroseconds % 1000 + 1000;
                 }
@@ -672,7 +672,7 @@ namespace IronPython.Modules {
                     try {
                         InternalDateTime = InternalDateTime.AddMilliseconds(_lostMicroseconds / 1000);
                     } catch {
-                        throw Ops.OverflowError("date value out of range");
+                        throw PythonOps.OverflowError("date value out of range");
                     }
                     _lostMicroseconds = _lostMicroseconds % 1000;
                 }
@@ -823,7 +823,7 @@ namespace IronPython.Modules {
 
             [PythonName("replace")]
             [Documentation("gets a new datetime object with the fields provided as keyword arguments replaced.")]
-            public object Replace([ParamDictionary]PythonDictionary dict) {
+            public object Replace([ParamDictionary]IAttributesCollection dict) {
                 int year = Year;
                 int month = Month;
                 int day = Day;
@@ -870,10 +870,10 @@ namespace IronPython.Modules {
             [PythonName("astimezone")]
             public object AsTimeZone(PythonTimeZoneInformation tz) {
                 if (tz == null)
-                    throw Ops.TypeError("astimezone() argument 1 must be datetime.tzinfo, not None");
+                    throw PythonOps.TypeError("astimezone() argument 1 must be datetime.tzinfo, not None");
 
                 if (_tz == null)
-                    throw Ops.ValueError("astimezone() cannot be applied to a naive datetime");
+                    throw PythonOps.ValueError("astimezone() cannot be applied to a naive datetime");
 
                 if (tz == _tz)
                     return this;
@@ -945,7 +945,7 @@ namespace IronPython.Modules {
                     PythonTimeDelta offset2 = other.GetUtcOffset();
 
                     if ((offset1 == null && offset2 != null) || (offset1 != null && offset2 == null))
-                        throw Ops.TypeError("can't compare offset-naive and offset-aware times");
+                        throw PythonOps.TypeError("can't compare offset-naive and offset-aware times");
 
                     return false;
                 } else {
@@ -982,11 +982,11 @@ namespace IronPython.Modules {
 
             protected override int CompareTo(object other) {
                 if (other == null)
-                    throw Ops.TypeError("can't compare datetime.datetime to NoneType");
+                    throw PythonOps.TypeError("can't compare datetime.datetime to NoneType");
 
                 PythonDateTimeCombo combo = other as PythonDateTimeCombo;
                 if (combo == null)
-                    throw Ops.TypeError("can't compare datetime.datetime to {0}", Ops.GetDynamicType(other));
+                    throw PythonOps.TypeError("can't compare datetime.datetime to {0}", DynamicHelpers.GetDynamicType(other));
 
                 if (CheckTzInfoBeforeCompare(this, combo)) {
                     int res = this.InternalDateTime.CompareTo(combo.InternalDateTime);
@@ -1162,7 +1162,7 @@ namespace IronPython.Modules {
             }
 
             [PythonName("replace")]
-            public object Replace([ParamDictionary]PythonDictionary dict) {
+            public object Replace([ParamDictionary]IAttributesCollection dict) {
                 int hour = Hour;
                 int minute = Minute;
                 int second = Second;
@@ -1254,7 +1254,7 @@ namespace IronPython.Modules {
                     PythonTimeDelta offset2 = other.GetUtcOffset();
 
                     if ((offset1 == null && offset2 != null) || (offset1 != null && offset2 == null))
-                        throw Ops.TypeError("can't compare offset-naive and offset-aware times");
+                        throw PythonOps.TypeError("can't compare offset-naive and offset-aware times");
 
                     return false;
                 } else {
@@ -1281,7 +1281,7 @@ namespace IronPython.Modules {
             private int CompareTo(object other) {
                 PythonDateTimeTime other2 = other as PythonDateTimeTime;
                 if (other2 == null)
-                    throw Ops.TypeError("can't compare datetime.time to {0}", Ops.GetDynamicType(other));
+                    throw PythonOps.TypeError("can't compare datetime.time to {0}", DynamicHelpers.GetDynamicType(other));
 
                 if (CheckTzInfoBeforeCompare(this, other2)) {
                     int res = this._timeSpan.CompareTo(other2._timeSpan);
@@ -1362,11 +1362,11 @@ namespace IronPython.Modules {
             public virtual object FromUtc(PythonDateTimeCombo dt) {
                 PythonTimeDelta dtOffset = UtcOffset(dt);
                 if (dtOffset == null)
-                    throw Ops.ValueError("fromutc: non-None utcoffset() result required");
+                    throw PythonOps.ValueError("fromutc: non-None utcoffset() result required");
 
                 PythonTimeDelta dtDst = DaylightSavingTime(dt);
                 if (dtDst == null)
-                    throw Ops.ValueError("fromutc: non-None dst() result required");
+                    throw PythonOps.ValueError("fromutc: non-None dst() result required");
 
                 PythonTimeDelta delta = dtOffset - dtDst;
                 dt = dt + delta; // convert to standard LOCAL time

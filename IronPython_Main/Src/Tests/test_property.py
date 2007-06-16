@@ -79,6 +79,22 @@ if is_cli or is_silverlight:
 	    del ArrayList.Count
 
     AssertError(AttributeError, tryDelReflectedProp)
+    
+@skip("win32")    
+def test_reflected_extension_property_ops():
+    '''
+    Test to hit IronPython.RunTime.Operations.ReflectedExtensionPropertyOps
+    '''
+    t_list = [  type(max).__dict__['__name__'],
+                type(len).__dict__['__name__'],
+                type(pow).__dict__['__name__'],
+                type(hex).__dict__['__name__'],
+                ]
+    
+    for stuff in t_list:
+        AreEqual(stuff.__doc__(), "Get: str Name(builtin_function_or_method self)\r\n")
+                
+        
 
 # define a property w/ only the doc
 
@@ -88,3 +104,5 @@ AreEqual(x.fset, None)
 AreEqual(x.fdel, None)
 AreEqual(x.__doc__, 'Holliday')
  
+
+run_test(__name__)

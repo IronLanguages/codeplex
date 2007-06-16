@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Actions {
     /// includes a target that is to be called if the rules' conditions are met.
     /// RuleSets are all immutable.
     /// </summary>
-    public abstract class RuleSet<T> {
+    internal abstract class RuleSet<T> {
         private T _target;
 
         public static RuleSet<T> EmptyRules {

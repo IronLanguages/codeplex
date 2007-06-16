@@ -13,11 +13,12 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using System;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class ErrorExpression : Expression {
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             ag.AddError("Error expression encountered", Span);
             return null;
         }

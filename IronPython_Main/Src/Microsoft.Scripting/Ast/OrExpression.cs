@@ -15,9 +15,9 @@
 
 using System;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class OrExpression : Expression {
         private readonly Expression _left, _right;
 
@@ -47,19 +47,17 @@ namespace Microsoft.Scripting.Internal.Ast {
         public override void Emit(CodeGen cg) {
             Slot lhsSlot = cg.GetLocalTmp(typeof(object));
 
-            _left.Emit(cg);
+            _left.EmitAsObject(cg);
             lhsSlot.EmitSet(cg);
             lhsSlot.EmitGet(cg);
             cg.EmitLanguageContext();
             lhsSlot.EmitGet(cg);
             cg.EmitCall(typeof(LanguageContext), "IsTrue");
-            //cg.emitNonzero(left);
             Label l = cg.DefineLabel();
             cg.Emit(OpCodes.Brtrue, l);
             cg.Emit(OpCodes.Pop);
-            _right.Emit(cg);
+            _right.EmitAsObject(cg);
             cg.MarkLabel(l);
-
             cg.FreeLocalTmp(lhsSlot);
         }
 

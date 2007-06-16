@@ -50,13 +50,16 @@
     <NoWarn>618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
-    <OutputPath>bin\Silverlight Release\</OutputPath>
+    <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
     <NoWarn>618</NoWarn>
     <NoStdLib>true</NoStdLib>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <BaseAddress>1933574144</BaseAddress>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" Condition=" !('$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release') " />
@@ -68,6 +71,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(ProgramFiles)\Microsoft SilverlightSystem.dll</HintPath>
     </Reference>
+    <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Compiler\Ast\AndExpression.cs" />
@@ -116,6 +120,7 @@
     <Compile Include="Compiler\Ast\PythonAst.cs" />
     <Compile Include="Compiler\Ast\PythonNameBinder.cs" />
     <Compile Include="Compiler\Ast\PythonOperator.cs" />
+    <Compile Include="Compiler\Ast\PythonReference.cs" />
     <Compile Include="Compiler\Ast\RaiseStatement.cs" />
     <Compile Include="Compiler\Ast\ReturnStatement.cs" />
     <Compile Include="Compiler\Ast\ScopeStatement.cs" />
@@ -126,11 +131,15 @@
     <Compile Include="Compiler\Ast\TryStatement.cs" />
     <Compile Include="Compiler\Ast\TupleExpression.cs" />
     <Compile Include="Compiler\Ast\UnaryExpression.cs" />
-    <Compile Include="Compiler\Ast\Variables.cs" />
+    <Compile Include="Compiler\Ast\PythonVariable.cs" />
     <Compile Include="Compiler\Ast\PythonWalker.Generated.cs" />
     <Compile Include="Compiler\Ast\WhileStatement.cs" />
     <Compile Include="Compiler\Ast\WithStatement.cs" />
     <Compile Include="Compiler\Ast\YieldStatement.cs" />
+    <Compile Include="Compiler\Generation\NameConverter.cs" />
+    <Compile Include="Compiler\Generation\NewSubtypeMaker.cs" />
+    <Compile Include="Compiler\Generation\NewTypeInfo.cs" />
+    <Compile Include="Compiler\Generation\NewTypeMaker.cs" />
     <Compile Include="Compiler\Generation\PythonCodeDomCodeGen.cs" />
     <Compile Include="Compiler\PythonTokenCategorizer.cs" />
     <Compile Include="Compiler\CompilerException.cs" />
@@ -139,9 +148,12 @@
     <Compile Include="Compiler\Tokenizer.cs" />
     <Compile Include="Compiler\Tokenizer.Generated.cs" />
     <Compile Include="Compiler\TokenKind.Generated.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Hosting\AdapterDict.cs" />
     <Compile Include="Hosting\ErrorCodes.cs" />
     <Compile Include="Hosting\PythonCommandLine.cs" />
     <Compile Include="Hosting\ModuleOptions.cs" />
+    <Compile Include="Hosting\PythonCompilerOptions.cs" />
     <Compile Include="Hosting\PythonConsoleOptions.cs" />
     <Compile Include="Hosting\PythonEngineOptions.cs" />
     <Compile Include="Hosting\PythonErrorSink.cs" />
@@ -156,14 +168,122 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Runtime\Attributes.cs" />
+    <Compile Include="Runtime\Builtin.cs" />
+    <Compile Include="Runtime\Builtin.Generated.cs" />
+    <Compile Include="Runtime\Calls\ClassMethodDescriptor.cs" />
+    <Compile Include="Runtime\Calls\DefaultContext.cs" />
+    <Compile Include="Runtime\Calls\Descriptors.cs" />
+    <Compile Include="Runtime\Calls\DoOperationBinderHelper.cs" />
+    <Compile Include="Runtime\Calls\Function.cs" />
+    <Compile Include="Runtime\Calls\Function.Generated.cs" />
+    <Compile Include="Runtime\Calls\PythonBinder.cs" />
+    <Compile Include="Runtime\Calls\PythonCallBinderHelper.cs" />
+    <Compile Include="Runtime\CompareUtil.cs" />
+    <Compile Include="Runtime\ConversionWrappers.cs" />
+    <Compile Include="Runtime\Converter.cs" />
+    <Compile Include="Runtime\Converter.Generated.cs" />
+    <Compile Include="Runtime\Dict.cs" />
+    <Compile Include="Runtime\DictComparers.cs" />
+    <Compile Include="Runtime\DictionaryOps.cs" />
+    <Compile Include="Runtime\DocBuilder.cs" />
+    <Compile Include="Runtime\Enumerate.cs" />
+    <Compile Include="Runtime\Exceptions\exceptionconverter.cs" />
+    <Compile Include="Runtime\Exceptions\PythonException.cs" />
+    <Compile Include="Runtime\Exceptions\PythonException.Generated.cs" />
+    <Compile Include="Runtime\Exceptions\TraceBack.cs" />
+    <Compile Include="Runtime\Generator.cs" />
+    <Compile Include="Runtime\GlobalsDictionary.cs" />
+    <Compile Include="Runtime\Importer.cs" />
+    <Compile Include="Runtime\Interfaces.cs" />
+    <Compile Include="Runtime\Interfaces.Generated.cs" />
+    <Compile Include="Runtime\List.cs" />
+    <Compile Include="Runtime\LiteralParser.cs" />
+    <Compile Include="Runtime\LocalsDictionary.cs" />
+    <Compile Include="Runtime\ObjectAttributesAdapter.cs" />
+    <Compile Include="Runtime\Operations\ArrayOps.cs" />
+    <Compile Include="Runtime\Operations\BoolOps.cs" />
+    <Compile Include="Runtime\Operations\BoundBuiltinFunctionOps.cs" />
+    <Compile Include="Runtime\Operations\BuiltinFunctionOverloadMapper.cs" />
+    <Compile Include="Runtime\Operations\BuiltinMethodDescriptorOps.cs" />
+    <Compile Include="Runtime\Operations\CharOps.cs" />
+    <Compile Include="Runtime\Operations\ClrModuleOps.cs" />
+    <Compile Include="Runtime\Operations\ComplexOps.cs" />
+    <Compile Include="Runtime\Operations\ConstructionFunctionOps.cs" />
+    <Compile Include="Runtime\Operations\CustomTypeDescHelpers.cs" />
+    <Compile Include="Runtime\Operations\DecimalOps.cs" />
+    <Compile Include="Runtime\Operations\DynamicTypeOps.cs" />
+    <Compile Include="Runtime\Operations\EnumOps.cs" />
+    <Compile Include="Runtime\Operations\FloatOps.cs" />
+    <Compile Include="Runtime\Operations\InstanceOps.cs" />
+    <Compile Include="Runtime\Operations\IntOps.cs" />
+    <Compile Include="Runtime\Operations\IntOps.Generated.cs" />
+    <Compile Include="Runtime\Operations\LongOps.cs" />
+    <Compile Include="Runtime\Operations\ObjectOps.cs" />
+    <Compile Include="Runtime\Operations\PythonOps.cs" />
+    <Compile Include="Runtime\Operations\PythonOps.Generated.cs" />
+    <Compile Include="Runtime\Operations\PythonBuiltinFunctionOps.cs" />
+    <Compile Include="Runtime\Operations\PythonCalls.cs" />
+    <Compile Include="Runtime\Operations\PythonCalls.Generated.cs" />
+    <Compile Include="Runtime\Operations\PythonSites.Generated.cs" />
+    <Compile Include="Runtime\Operations\ReflectedAssemblyOps.cs" />
+    <Compile Include="Runtime\Operations\ReflectedEventOps.cs" />
+    <Compile Include="Runtime\Operations\ReflectedExtensionPropertyOps.cs" />
+    <Compile Include="Runtime\Operations\ReflectedFieldOps.cs" />
+    <Compile Include="Runtime\Operations\ReflectedIndexerOps.cs" />
+    <Compile Include="Runtime\Operations\ReflectedPackageOps.cs" />
+    <Compile Include="Runtime\Operations\ReflectedPropertyOps.cs" />
+    <Compile Include="Runtime\Operations\StringOps.cs" />
+    <Compile Include="Runtime\Operations\TypeCollisionOps.cs" />
+    <Compile Include="Runtime\Operations\UserTypeOps.cs" />
     <Compile Include="Runtime\OutputWriter.cs" />
-    <Compile Include="Runtime\PythonOps.cs" />
+    <Compile Include="Runtime\PythonBuffer.cs" />
+    <Compile Include="Runtime\PythonContext.cs" />
+    <Compile Include="Runtime\PythonFile.cs" />
+    <Compile Include="Runtime\PythonModuleContext.cs" />
+    <Compile Include="Runtime\PythonTypeContext.cs" />
+    <Compile Include="Runtime\ScopeDictionary.cs" />
+    <Compile Include="Runtime\Set.cs" />
+    <Compile Include="Runtime\Slice.cs" />
+    <Compile Include="Runtime\StringFormatter.cs" />
+    <Compile Include="Runtime\Super.cs" />
+    <Compile Include="Runtime\Symbols.cs" />
+    <Compile Include="Runtime\Symbols.Generated.cs" />
+    <Compile Include="Runtime\SystemState.cs" />
+    <Compile Include="Runtime\Tuple.cs" />
+    <Compile Include="Runtime\Types\ComObject.cs" />
+    <Compile Include="Runtime\Types\DelegateType.cs" />
+    <Compile Include="Runtime\Types\DictProxy.cs" />
+    <Compile Include="Runtime\Types\DynamicTypeBasesSlot.cs" />
+    <Compile Include="Runtime\Types\DynamicTypeDictSlot.cs" />
+    <Compile Include="Runtime\Types\DynamicTypeGetAttributeSlot.cs" />
+    <Compile Include="Runtime\Types\DynamicTypeMroSlot.cs" />
+    <Compile Include="Runtime\Types\DynamicTypeNameSlot.cs" />
+    <Compile Include="Runtime\Types\DynamicTypeTypeSlot.cs" />
+    <Compile Include="Runtime\Types\DynamicTypeUserDescriptorSlot.cs" />
+    <Compile Include="Runtime\Types\DynamicTypeWeakRefSlot.cs" />
+    <Compile Include="Runtime\Types\EmptyType.cs" />
+    <Compile Include="Runtime\Types\ExtensibleType.cs" />
+    <Compile Include="Runtime\Types\Mro.cs" />
+    <Compile Include="Runtime\Types\OldClass.cs" />
+    <Compile Include="Runtime\Types\OldInstance.Generated.cs" />
+    <Compile Include="Runtime\Types\OldInstanceTypeBuilder.cs" />
+    <Compile Include="Runtime\Types\OpsReflectedType.cs" />
+    <Compile Include="Runtime\Types\PythonAssemblyOps.cs" />
+    <Compile Include="Runtime\Types\PythonExtensionTypeAttribute.cs" />
+    <Compile Include="Runtime\Types\PythonModuleOps.cs" />
+    <Compile Include="Runtime\Types\PythonTypeCustomizer.cs" />
+    <Compile Include="Runtime\Types\PythonTypeExtender.Generated.cs" />
+    <Compile Include="Runtime\Types\ReflectedSlotProperty.cs" />
+    <Compile Include="Runtime\Types\TypeCache.Generated.cs" />
+    <Compile Include="Runtime\Types\TypeHelpers.cs" />
+    <Compile Include="Runtime\Types\UserType.cs" />
+    <Compile Include="Runtime\WeakRef.cs" />
+    <Compile Include="Runtime\WrapperDictionary.cs" />
+    <Compile Include="Runtime\XRange.cs" />
+    <Compile Include="ThreadStatics.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Scripting.Vestigial\Microsoft.Scripting.Vestigial.csproj">
-      <Project>{90E6D8C8-3E09-498E-9058-2E2FB1151C36}</Project>
-      <Name>Microsoft.Scripting.Vestigial</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
       <Name>Microsoft.Scripting</Name>

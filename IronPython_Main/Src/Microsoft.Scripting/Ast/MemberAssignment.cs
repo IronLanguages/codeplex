@@ -17,9 +17,9 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Member expression (statically typed) which represents 
     /// property or field set, both static and instance.
@@ -48,20 +48,21 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        private MemberAssignment(MemberInfo member, Expression expression, Expression value) {
+        private MemberAssignment(MemberInfo member, Expression expression, Expression value)
+            : base(SourceSpan.None) {
             _member = member;
             _expression = expression;
             _value = value;
         }
 
         public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
-        }
-
-        public override void EmitAs(CodeGen cg, Type asType) {
             // emit "this", if any
             if (_expression != null) {
-                _expression.EmitAs(cg, _member.DeclaringType);
+                if (_member.DeclaringType.IsValueType) {
+                    _expression.EmitAddress(cg, _member.DeclaringType);
+                } else {
+                    _expression.EmitAs(cg, _member.DeclaringType);
+                }
             }
 
             switch (_member.MemberType) {
@@ -79,7 +80,6 @@ namespace Microsoft.Scripting.Internal.Ast {
                     Debug.Assert(false, "Invalid member type");
                     break;
             }
-            cg.EmitConvert(ExpressionType, asType);
         }
 
         public override void Walk(Walker walker) {

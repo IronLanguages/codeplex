@@ -14,7 +14,8 @@
  * ***************************************************************************/
 
 using System.Diagnostics;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class ExecStatement : Statement {
@@ -52,7 +53,7 @@ namespace IronPython.Compiler.Ast {
                     null,
                     AstGenerator.GetHelperMethod("UnqualifiedExec"),
                     new MSAst.CodeContextExpression(),
-                    _code.Transform(ag)
+                    ag.TransformAsObject(_code)
                 );
             } else {
                 // exec code in globals [ , locals ]
@@ -63,9 +64,9 @@ namespace IronPython.Compiler.Ast {
                     null,
                     AstGenerator.GetHelperMethod("QualifiedExec"),
                     new MSAst.CodeContextExpression(),
-                    _code.Transform(ag),
-                    ag.TransformOrConstantNull(_globals),
-                    ag.TransformOrConstantNull(_locals)
+                    ag.Transform(_code),
+                    ag.TransformOrConstantNull(_globals, typeof(IAttributesCollection)),
+                    ag.TransformOrConstantNull(_locals, typeof(object))
                 );
             }
 

@@ -18,8 +18,8 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Reflection;
 
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
 using System.Diagnostics;
 
 namespace Microsoft.Scripting.Actions {
@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Actions {
     /// for a particular action on a particular set of objects, but also a Test that guards the Target.
     /// Whenver the Test returns true, it is assumed that the Target will be the correct action to
     /// take on the arguments.
-    /// 
+        /// 
     /// In the current design, a StandardRule is also used to provide a mini binding scope for the
     /// parameters and temporary variables that might be needed by the Test and Target.  This will
     /// probably change in the future as we unify around the notion of CodeBlocks.
@@ -51,16 +51,17 @@ namespace Microsoft.Scripting.Actions {
         private RuleSet<T> _ruleSet;
 
         // TODO revisit these fields and their uses when CodeBlock moves down
-        private VariableReference[] _parameters;
-        private List<VariableReference> _temps;
+        private Variable[] _parameters;
+        private List<Variable> _temps;
+        private VariableReference[] _references;
 
         public StandardRule() {
             int firstParameter = DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
             
             ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
-            _parameters = new VariableReference[pis.Length - firstParameter];
+            _parameters = new Variable[pis.Length - firstParameter];
             for (int i = firstParameter; i < pis.Length; i++) {
-                _parameters[i - firstParameter] = MakeParameter(i, "arg" + (i - firstParameter), pis[i].ParameterType);
+                _parameters[i - firstParameter] = MakeParameter(i, "$arg" + (i - firstParameter), pis[i].ParameterType);
             }
         }
 
@@ -78,15 +79,13 @@ namespace Microsoft.Scripting.Actions {
             get { return _test; }
         }
 
-        public VariableReference[] Parameters {
+        public Variable[] Parameters {
             get { return _parameters; }
         }
 
-        private VariableReference MakeParameter(int index, string name, Type type) {
-            SymbolId id = SymbolTable.StringToId(name);
-            VariableReference ret = new VariableReference(id);
-            ret.Variable = new Variable(id, Variable.VariableKind.Parameter, null, type, null);
-            ret.Variable.Parameter = index;
+        private Variable MakeParameter(int index, string name, Type type) {
+            Variable ret = Variable.Parameter(null, SymbolTable.StringToId(name), type);
+            ret.ParameterIndex = index;
             return ret;
         }
 
@@ -94,13 +93,17 @@ namespace Microsoft.Scripting.Actions {
             return BoundExpression.Defined(_parameters[index]);
         }
 
-        public VariableReference GetTemporary(Type type, string name) {
+        public Expression[] GetParameterExpressions() {
+            Expression[] parameters = new Expression[Parameters.Length];
+            for (int i = 0; i < parameters.Length; i++) parameters[i] = GetParameterExpression(i);
+            return parameters;
+        }
+
+        public Variable GetTemporary(Type type, string name) {
             if (_temps == null) {
-                _temps = new List<VariableReference>();
+                _temps = new List<Variable>();
             }
-            SymbolId id = SymbolTable.StringToId(name);
-            VariableReference ret = new VariableReference(id);
-            ret.Variable = new Variable(id, Variable.VariableKind.Temporary, null, type, null);
+            Variable ret = Variable.Temporary(SymbolTable.StringToId(name), null, type);
             _temps.Add(ret);
             return ret;
         }
@@ -124,7 +127,7 @@ namespace Microsoft.Scripting.Actions {
         /// Each rule holds onto an immutable RuleSet that contains this rule only.
         /// This should heavily optimize monomorphic call sites.
         /// </summary>
-        public RuleSet<T> MonomorphicRuleSet {
+        internal RuleSet<T> MonomorphicRuleSet {
             get {
                 if (_ruleSet == null) {
                     _ruleSet = new SmallRuleSet<T>(new StandardRule<T>[] { this });
@@ -153,13 +156,12 @@ namespace Microsoft.Scripting.Actions {
             // Need to make sure we aren't generating into two different CodeGens at the same time
             lock (this) {
                 // First, finish binding my variable references
-                foreach (VariableReference vr in _parameters) {
-                    vr.CreateSlot(cg);
+                if (_references == null) {
+                    _references = RuleBinder.Bind(_test, _target, _parameters, _temps);
                 }
-                if (_temps != null) {
-                    foreach (VariableReference vr in _temps) {
-                        vr.CreateSlot(cg);
-                    }
+
+                foreach (VariableReference vr in _references) {
+                    vr.CreateSlot(cg);
                 }
 
                 if (_test != null) {
@@ -169,33 +171,45 @@ namespace Microsoft.Scripting.Actions {
                 // Now do the generation
                 _target.Emit(cg);
 
-                //free any temps now that we're done generating
-                if (_temps != null) {
-                    foreach (VariableReference vr in _temps) {
-                        cg.FreeLocalTmp(vr.Slot);
-                    }
-                }
+                // free any temps now that we're done generating
+                // TODO: Keep temp slots aside sot that they can be freed
+                //if (_temps != null) {
+                //    foreach (Variable vr in _temps) {
+                //        cg.FreeLocalTmp(vr.Slot);
+                //    }
+                //}
             }
         }
 
 
         public override string ToString() {
-            return string.Format("StandardRule({2})", _target);
+            return string.Format("StandardRule({0})", _target);
         }
 
         public Statement MakeReturn(ActionBinder binder, Expression expr) {
             // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
             if (expr.ExpressionType != typeof(void)) {
-                VariableReference vr = GetTemporary(expr.ExpressionType, "$retVal");
+                Variable variable = GetTemporary(expr.ExpressionType, "$retVal");
                 return new ReturnStatement(
-                    new CommaExpression(new Expression[] {
-                        BoundAssignment.Assign(vr, expr),
-                        binder.ConvertExpression(BoundExpression.Defined(vr), typeof(T).GetMethod("Invoke").ReturnType)
-                    },
-                        1)
+                    new CommaExpression(
+                        new Expression[] {
+                            BoundAssignment.Assign(variable, expr),
+                            binder.ConvertExpression(BoundExpression.Defined(variable), typeof(T).GetMethod("Invoke").ReturnType)
+                        },
+                        1
+                    )
                 );
             }
             return new ReturnStatement(binder.ConvertExpression(expr, typeof(T).GetMethod("Invoke").ReturnType));
+        }
+
+        public void MakeTest(params Type[] types) {
+            DynamicType[] dts = new DynamicType[types.Length];
+            for (int i = 0; i < types.Length; i++) {
+                dts[i] = DynamicHelpers.GetDynamicTypeFromType(types[i]);
+            }
+
+            MakeTest(dts);
         }
 
         /// <summary>
@@ -203,11 +217,11 @@ namespace Microsoft.Scripting.Actions {
         /// all of the specified DynamicTypes.
         /// </summary>
         /// <param name="types"></param>
-        public void MakeTest(DynamicType[] types) {
+        public void MakeTest(params DynamicType[] types) {
             _test = MakeTestForTypes(types, 0);
         }
 
-        private Expression MakeTestForTypes(DynamicType[] types, int index) {
+        public Expression MakeTestForTypes(DynamicType[] types, int index) {
             Expression test = MakeTypeTest(types[index], index);
             if (index+1 < types.Length) {
                 Expression nextTests = MakeTestForTypes(types, index+1);
@@ -224,28 +238,31 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Expression MakeTypeTest(DynamicType type, int index) {
+            return MakeTypeTest(type, GetParameterExpression(index));
+        }
+
+        public Expression MakeTypeTest(DynamicType type, Expression tested) {
             if (type == null || type.IsNull) {
-                return BinaryExpression.Equal(GetParameterExpression(index), ConstantExpression.Constant(null));
+                return BinaryExpression.Equal(tested, ConstantExpression.Constant(null));
             } else {
                 Type clrType = type.UnderlyingSystemType;
-                Parameters[index].KnownType = clrType;
-                bool isStaticType = !typeof(IDynamicObject).IsAssignableFrom(clrType);
+                bool isStaticType = !typeof(ISuperDynamicObject).IsAssignableFrom(clrType);
                 
                 // we must always check for non-sealed types explicitly - otherwise we end up
                 // doing fast-path behavior on a subtype which overrides behavior that wasn't
                 // present for the base type.
                 //TODO there's a question about nulls here
-                if (CompilerHelpers.IsSealed(clrType) && clrType == GetParameterExpression(index).ExpressionType) {
+                if (CompilerHelpers.IsSealed(clrType) && clrType == tested.ExpressionType) {
                     return ConstantExpression.Constant(true);
                 }
 
-                Expression test = MakeTypeTestExpression(type.UnderlyingSystemType, index);
+                Expression test = MakeTypeTestExpression(type.UnderlyingSystemType, tested);
 
                 if (!isStaticType) {
                     int version = type.Version;
                     test = BinaryExpression.AndAlso(test,
                         MethodCallExpression.Call(null, typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"),
-                            GetParameterExpression(index), ConstantExpression.Constant(version)));
+                            tested, ConstantExpression.Constant(version)));
 
                     AddValidator(new DynamicTypeValidator(new WeakReference(type), version).Validate);
                 }
@@ -254,13 +271,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Expression MakeTypeTestExpression(Type t, int param) {
+            return MakeTypeTestExpression(t, GetParameterExpression(param));
+        }
+
+        public Expression MakeTypeTestExpression(Type t, Expression expr) {
             return BinaryExpression.AndAlso(
                 BinaryExpression.NotEqual(
-                    GetParameterExpression(param),
+                    expr,
                     ConstantExpression.Constant(null)),
                 BinaryExpression.Equal(
                     MethodCallExpression.Call(
-                        GetParameterExpression(param), typeof(object).GetMethod("GetType")),
+                        expr, typeof(object).GetMethod("GetType")),
                         ConstantExpression.Constant(t)));
         }
 

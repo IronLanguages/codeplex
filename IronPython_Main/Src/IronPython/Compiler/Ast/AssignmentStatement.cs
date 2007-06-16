@@ -18,9 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
-
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 using IronPython.Runtime.Operations;
 
@@ -46,7 +44,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
             // Transform right
-            MSAst.Expression right = _right.Transform(ag);
+            MSAst.Expression right = ag.Transform(_right);
 
             if (_left.Length == 1) {
                 // Do not need temps for simple assignment
@@ -59,7 +57,7 @@ namespace IronPython.Compiler.Ast {
 
                 // 2. right_temp = right
                 statements.Add(
-                    AstGenerator.MakeAssignment(right_temp.Reference, right, right.Span)
+                    AstGenerator.MakeAssignment(right_temp.Variable, right, right.Span)
                     );
 
                 for (int index = _left.Length - 1; index >= 0; index--) {

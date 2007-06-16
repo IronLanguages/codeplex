@@ -15,9 +15,9 @@
 
 using System;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class LoopStatement : Statement {
         private readonly SourceLocation _header;
         private readonly Expression _test;
@@ -25,11 +25,8 @@ namespace Microsoft.Scripting.Internal.Ast {
         private readonly Statement _body;
         private readonly Statement _else;
 
-        public LoopStatement(Expression test, Expression increment, Statement body, Statement else_) {
-            _test = test;
-            _increment = increment;
-            _body = body;
-            _else = else_;
+        public LoopStatement(Expression test, Expression increment, Statement body, Statement else_)
+            : this(test, increment, body, else_, SourceSpan.None, SourceLocation.None) {
         }
 
         public LoopStatement(Expression test, Expression increment, Statement body, Statement else_, SourceSpan span, SourceLocation header)
@@ -85,23 +82,22 @@ namespace Microsoft.Scripting.Internal.Ast {
                 cg.Emit(OpCodes.Br, firstTime.Value);
             }
 
-            cg.MarkLabel(continueTarget);
-
             cg.EmitPosition(Start, _header);
+            cg.MarkLabel(continueTarget);
 
             if (_increment != null) {
                 _increment.EmitAs(cg, typeof(void));
                 cg.MarkLabel(firstTime.Value);
             }
             
-            cg.EmitTestTrue(_test);
+            _test.EmitAs(cg, typeof(bool));
             cg.Emit(OpCodes.Brfalse, eol);
 
             cg.PushTargets(breakTarget, continueTarget, this);
 
             _body.Emit(cg);
             
-            cg.EmitPosition(Start, _header);
+            
             cg.Emit(OpCodes.Br, continueTarget);
 
             cg.PopTargets();

@@ -15,7 +15,7 @@
 
 using System;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public interface ILazySlotFactory<T> {
         Slot GetConcreteSlot(CodeGen cg, T data);
     }

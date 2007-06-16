@@ -33,11 +33,18 @@ AreEqual(1 * SillyLong(2), 42)
 AreEqual(SillyLong(2) * 1, 2)
 AreEqual((1).__mul__(SillyLong(2)), NotImplemented)
 
+#----------------------------------------------------------------------------------
+import sys
 
-if is_cli:
+if sys.platform != "win32":
     from System import *
-    import clr
+    load_iron_python_test()
+    from IronPythonTest import *
+    from IronPythonTest import IntegerTest as it
     
+#----------------------------------------------------------------------------------  
+@skip("win32")
+def test_clr():    
     Assert(Single.IsInfinity(Single.PositiveInfinity))
     Assert(not Single.IsInfinity(1.0))
     
@@ -71,9 +78,8 @@ if is_cli:
         return type.Parse(value, Globalization.CultureInfo.InvariantCulture.NumberFormat)
     
     def VerifyTypes(v):
-        #AreEqual(v.x.GetType().ToString(), v.n)
-        #AreEqual(v.y.GetType().ToString(), v.n)
-        pass
+        AreEqual(str(v.x.GetType()), v.n)
+        AreEqual(str(v.y.GetType()), v.n)
     
     class float:
         def __init__(self, type, name):
@@ -155,10 +161,9 @@ if is_cli:
             type_test(a, b)
             type_test(b, a)
     
-    
-    from lib.assert_util import *
-    load_iron_python_test()
-    from IronPythonTest import *
+#----------------------------------------------------------------------------------    
+@skip("win32")
+def test_conversions():
     
     # implicit conversions (conversion defined on Derived)
     
@@ -297,10 +302,8 @@ if is_cli:
     
     AreEqual(int(Single.Parse("3.14159")), 3)
     
-    ######################################################################################
-    
-    from lib.assert_util import *
-    
+#----------------------------------------------------------------------------------  
+def test_operators():
     def operator_add(a, b) :
         return a + b
     
@@ -413,33 +416,32 @@ if is_cli:
     test_it_all(nums)
     
     
-    #####################################################################################
+#----------------------------------------------------------------------------------  
+def scenarios_helper(templates, cmps, gbls, lcls):
+    values = [3.5, 4.5, 4, 0, -200L, 12345678901234567890]
+    for l in values:
+        for r in values:
+            for t in templates:
+                for c in cmps:
+                    easy = t % (l, c, r)
+                    # need to compare the real values the classes hold,
+                    # not the values we expect them to hold, incase truncation
+                    # has occured                    
+                    easy = easy.replace(')', ').value')
+                    inst = t % (l, c, r)
+                    #print inst, eval(easy), eval(inst)
+                    Assert(eval(easy, gbls, lcls) == eval(inst, gbls, lcls), "%s == %s" % (easy, inst))
+                    
     
-    from lib.assert_util import *
-    
-    def test_scenarios(templates, cmps):
-        values = [3.5, 4.5, 4, 0, -200L, 12345678901234567890]
-        for l in values:
-           for r in values:
-                for t in templates:
-                    for c in cmps:
-                        easy = t % (l, c, r)
-                        # need to compare the real values the classes hold,
-                        # not the values we expect them to hold, incase truncation
-                        # has occured                    
-                        easy = easy.replace(')', ').value')
-                        inst = t % (l, c, r)
-                        #print inst, eval(easy), eval(inst)
-                        Assert(eval(easy) == eval(inst), "%s == %s" % (easy, inst))
-                       
-    
-    templates1 = [ "C(%s) %s C(%s)", "C2(%s) %s C2(%s)",
-                   "C(%s) %s D(%s)", "D(%s) %s C(%s)", 
-                   "C2(%s) %s D(%s)", "D(%s) %s C2(%s)", 
-                   "C(%s) %s D2(%s)", "D2(%s) %s C(%s)", 
-                   "C2(%s) %s D2(%s)", "D2(%s) %s C2(%s)"]
-    templates2 = [x for x in templates1 if x.startswith('C')]
-    
+templates1 = [ "C(%s) %s C(%s)", "C2(%s) %s C2(%s)",
+               "C(%s) %s D(%s)", "D(%s) %s C(%s)", 
+               "C2(%s) %s D(%s)", "D(%s) %s C2(%s)", 
+               "C(%s) %s D2(%s)", "D2(%s) %s C(%s)", 
+               "C2(%s) %s D2(%s)", "D2(%s) %s C2(%s)"]
+templates2 = [x for x in templates1 if x.startswith('C')]
+
+
+def test_oldclass_cd():
     # OldClass: both C and D define __lt__
     class C:
         def __init__(self, value):
@@ -453,8 +455,9 @@ if is_cli:
             return self.value < other.value
     class C2(C): pass
     class D2(D): pass
-    test_scenarios(templates1, ["<", ">"])
+    scenarios_helper(templates1, ["<", ">"], globals(), locals())
     
+def test_oldclass_c():
     # OldClass: C defines __lt__, D does not
     class C:
         def __init__(self, value):
@@ -466,8 +469,9 @@ if is_cli:
             self.value = value
     class C2(C): pass
     class D2(D): pass
-    test_scenarios(templates2, ["<"])
+    scenarios_helper(templates2, ["<"], globals(), locals())
     
+def test_usertype_cd():    
     # UserType: both C and D define __lt__
     class C(object):
         def __init__(self, value):
@@ -481,8 +485,9 @@ if is_cli:
             return self.value < other.value
     class C2(C): pass
     class D2(D): pass
-    test_scenarios(templates1, ["<", ">"])
+    scenarios_helper(templates1, ["<", ">"], globals(), locals())
     
+def test_usertype_c():
     # UserType: C defines __lt__, D does not
     class C(object):
         def __init__(self, value):
@@ -494,8 +499,9 @@ if is_cli:
             self.value = value
     class C2(C): pass
     class D2(D): pass
-    test_scenarios(templates2, ["<"])
-    
+    scenarios_helper(templates2, ["<"], globals(), locals())
+
+def test_mixed_cd():    
     # Mixed: both C and D define __lt__
     class C:
         def __init__(self, value):
@@ -510,8 +516,9 @@ if is_cli:
             return self.value < other.value
     class C2(C): pass
     class D2(D): pass
-    test_scenarios(templates1, ["<", ">"])
-    
+    scenarios_helper(templates1, ["<", ">"], globals(), locals())
+
+def test_mixed_all_cmpop():    
     # Mixed, with all cmpop
     class C(object):
         def __init__(self, value):
@@ -538,7 +545,7 @@ if is_cli:
             return self.value >= other.value
     class C2(C): pass
     class D2(D): pass
-    test_scenarios(templates1, ["<", ">", "<=", ">="])
+    scenarios_helper(templates1, ["<", ">", "<=", ">="], globals(), locals())
     
     # verify two instances of class compare differently
     
@@ -552,42 +559,56 @@ if is_cli:
     Assert( (cmp(D2(5), C(3)) == 1) == True)        
     Assert( (cmp(D(5), C2(8)) == -1) == True)  
     
+def test_old_cmp():    
     # define __cmp__; do not move this before those above cmp testing
     class C:
         def __init__(self, value):
             self.value = value    
         def __cmp__(self, other):
-            return self.value - other.value
+            if self.value < other: return -1
+            elif self.value > other: return 1
+            else: return 0
     
     class D:
         def __init__(self, value):
             self.value = value    
         def __cmp__(self, other):
-            return self.value - other.value
+            if self.value < other: return -1
+            elif self.value > other: return 1
+            else: return 0
+    
     class C2(C): pass
+    
     class D2(D): pass
-    test_scenarios(templates1, ["<", ">", ">=", "<="])
+    
+    scenarios_helper(templates1, ["<", ">", ">=", "<="], globals(), locals())
     
     Assert( (cmp(C(3), C(3)) == 0) == True)        
     Assert( (cmp(C2(3), D(3)) == 0) == True)        
     Assert( (cmp(C(3.0), D2(4.6)) > 0) == False)        
     Assert( (cmp(D(3), C(4.9)) < 0) == True)        
     Assert( (cmp(D2(3), D2(1234567890)) > 0) == False)        
-    
+
+def test_new_cmp():    
     class C(object):
         def __init__(self, value):
             self.value = value    
         def __cmp__(self, other):
-            return self.value - other.value
+            if self.value < other: return -1
+            elif self.value > other: return 1
+            else: return 0
     
     class D(object):
         def __init__(self, value):
             self.value = value    
         def __cmp__(self, other):
-            return self.value - other.value
+            if self.value < other: return -1
+            elif self.value > other: return 1
+            else: return 0
+            
     class C2(C): pass
     class D2(D): pass
-    test_scenarios(templates1, ["<", ">", ">=", "<="])
+    scenarios_helper(templates1, ["<", ">", ">=", "<="], globals(), locals())
     
     Assert( (cmp(C(3), C(3)) == 0) == True)        
     Assert( (cmp(C2(3.4), D(3.4)) == 0) == True)        
@@ -595,12 +616,11 @@ if is_cli:
     Assert( (cmp(D(3L), C(4000000000)) < 0) == True)        
     Assert( (cmp(D2(3), D2(4.9)) < 0) == True)        
     
+#----------------------------------------------------------------------------------  
+@skip("win32")
+def test_comparisions(): 
     
-    from lib.assert_util import *
-    load_iron_python_test()
-    from IronPythonTest import ComparisonTest
-    
-    def test_comparisons(typeObj):
+    def comparisons_helper(typeObj):
         class Callback:
             called = False
             def __call__(self, value):
@@ -639,8 +659,8 @@ if is_cli:
                 
     class ComparisonTest2(ComparisonTest): pass
         
-    test_comparisons(ComparisonTest)
-    test_comparisons(ComparisonTest2)
+    comparisons_helper(ComparisonTest)
+    comparisons_helper(ComparisonTest2)
     
     class C:
         def __init__(self, value):
@@ -652,7 +672,7 @@ if is_cli:
     class C2(C): pass        
     D = ComparisonTest
     D2 = ComparisonTest2  
-    test_scenarios(templates1, ["<", ">"])
+    scenarios_helper(templates1, ["<", ">"], globals(), locals())
     
     class C(object):
         def __init__(self, value):
@@ -663,7 +683,6 @@ if is_cli:
             return self.value > other.value     
     class C2(C): pass     
     
-    # test_scenarios(templates1, ["<", ">"])
     
     ComparisonTest.report = None
     Assert( (cmp(ComparisonTest(5), ComparisonTest(5)) == 0) == False)        
@@ -729,14 +748,10 @@ if is_cli:
     Assert( (D() > C()) == False )
     '''
     
-    #####################################################################################
-    
-    import sys
-    from lib.assert_util import *
-    load_iron_python_test()
-    from IronPythonTest import IntegerTest as it
-    import System
-    
+#----------------------------------------------------------------------------------  
+@skip("win32")
+def test_ipt_integertest():
+
     def f():
         Assert(it.AreEqual(it.UInt32Int32MaxValue,it.uintT(it.Int32Int32MaxValue)))
         Assert(it.AreEqual(it.UInt64Int32MaxValue,it.ulongT(it.Int32Int32MaxValue)))
@@ -2139,9 +2154,10 @@ if is_cli:
     #!!! These tests have changed a lot based on new numeric coercion rules
     #f()
     
-    
     def long_test():
         class mylong(long):
             def __str__(self): return 'mylong'
             
         AreEqual(repr(mylong(3L)), '3L')
+
+run_test(__name__)

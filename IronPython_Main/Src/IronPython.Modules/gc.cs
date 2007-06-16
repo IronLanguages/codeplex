@@ -20,12 +20,13 @@ using System.Text;
 using System.Runtime.InteropServices;
 
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
 
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
 namespace IronPython.Modules {
     [PythonType("gc")]
     public static class PythonGC {
-        public static object gc = Ops.GetDynamicTypeFromType(typeof(PythonGC));
+        public static object gc = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonGC));
         public const int DEBUG_STATS = 1;
         public const int DEBUG_COLLECTABLE = 2;
         public const int DEBUG_UNCOLLECTABLE = 4;
@@ -42,12 +43,12 @@ namespace IronPython.Modules {
 
         [PythonName("disable")]
         public static void Disable() {
-            throw Ops.NotImplementedError("gc.disable isn't implemented");
+            throw PythonOps.NotImplementedError("gc.disable isn't implemented");
         }
 
         [PythonName("isenabled")]
         public static object IsEnabled() {
-            return Ops.True;
+            return RuntimeHelpers.True;
         }
 
 #if !SILVERLIGHT // GC.Collect
@@ -61,7 +62,7 @@ namespace IronPython.Modules {
 
         [PythonName("set_debug")]
         public static void SetDebug(object o) {
-            throw Ops.NotImplementedError("gc.set_debug isn't implemented");
+            throw PythonOps.NotImplementedError("gc.set_debug isn't implemented");
         }
 
         [PythonName("get_debug")]
@@ -71,7 +72,7 @@ namespace IronPython.Modules {
 
         [PythonName("get_objects")]
         public static object[] GetObjects() {
-            throw Ops.NotImplementedError("gc.get_objects isn't implemented");
+            throw PythonOps.NotImplementedError("gc.get_objects isn't implemented");
         }
 
         [PythonName("set_threshold")]
@@ -86,12 +87,12 @@ namespace IronPython.Modules {
 
         [PythonName("get_referrers")]
         public static object[] get_referrers(params object[] objs) {
-            throw Ops.NotImplementedError("gc.get_referrers isn't implemented");
+            throw PythonOps.NotImplementedError("gc.get_referrers isn't implemented");
         }
 
         [PythonName("get_referents")]
         public static object[] GetReferents(params object[] objs) {
-            throw Ops.NotImplementedError("gc.get_referents isn't implemented");
+            throw PythonOps.NotImplementedError("gc.get_referents isn't implemented");
         }
 
 

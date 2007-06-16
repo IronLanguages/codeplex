@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
-
 using System.Diagnostics;
 
 namespace Microsoft.Scripting.Actions {
@@ -24,27 +24,30 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class RuleTree<T> {
-        public static RuleTree<T> MakeRuleTree(LanguageContext context) {
+        public static RuleTree<T> MakeRuleTree(CodeContext context) {
+            if (context == null) throw new ArgumentNullException("context");
+
             return new RuleTree<T>(context);
         }
-        private LanguageContext _context;
+        private CodeContext _context;
         private LinkedList<StandardRule<T>> _rules = new LinkedList<StandardRule<T>>();
 
-        private RuleTree(LanguageContext context) {
+        private RuleTree(CodeContext context) {
+            Debug.Assert(context != null);
             _context = context;
         }
 
         private Scope MakeScope(object[] args) {
             Scope s = new Scope();
             for (int i = 0; i < args.Length; i++) {
-                s.SetName(SymbolTable.StringToId("arg" + i), args[i]);
+                s.SetName(SymbolTable.StringToId("$arg" + i), args[i]);
             }
             return s;
         }
 
 
         public StandardRule<T> GetRule(object[] args) {
-            CodeContext context = new CodeContext(MakeScope(args), _context);
+            CodeContext context = new CodeContext(MakeScope(args), _context.LanguageContext, _context.ModuleContext);
 
             //TODO insert some instrumentation to catch large sets of rules (but what is large?)
 

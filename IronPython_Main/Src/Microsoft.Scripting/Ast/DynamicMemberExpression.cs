@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
 
     public class DynamicMemberExpression : Expression {
         private readonly Expression _target;
@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         public override void Emit(CodeGen cg) {
             cg.EmitCodeContext();
-            _target.Emit(cg);
+            _target.EmitAsObject(cg);
             cg.EmitSymbolId(_name);
             cg.EmitCall(typeof(RuntimeHelpers), _binding == MemberBinding.Unbound ? "GetMember" : "GetBoundMember");
         }

@@ -28,6 +28,7 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using IronPython.Hosting;
 
 [assembly: PythonModule("cPickle", typeof(IronPython.Modules.PythonPickle))]
 namespace IronPython.Modules {
@@ -75,10 +76,10 @@ namespace IronPython.Modules {
         public static string DumpToString(CodeContext context, object obj, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
             //??? possible perf enhancement: use a C# TextWriter-backed IFileOutput and
             // thus avoid Python call overhead. Also do similar thing for LoadFromString.
-            object stringIO = Ops.InvokeWithContext(context, Ops.GetDynamicTypeFromClsOnlyType(typeof(PythonStringIO)), SymbolTable.StringToId("StringIO"));
+            object stringIO = PythonOps.InvokeWithContext(context, DynamicHelpers.GetDynamicTypeFromType(typeof(PythonStringIO)), SymbolTable.StringToId("StringIO"));
             Pickler pickler = new Pickler(stringIO, protocol, bin);
             pickler.Dump(context, obj);
-            return Converter.ConvertToString(Ops.Invoke(stringIO, SymbolTable.StringToId("getvalue")));
+            return Converter.ConvertToString(PythonOps.Invoke(stringIO, SymbolTable.StringToId("getvalue")));
         }
 
         [Documentation("load(file) -> unpickled object\n\n"
@@ -105,8 +106,8 @@ namespace IronPython.Modules {
             )]
         [PythonName("loads")]
         public static object LoadFromString(CodeContext context, object @string) {
-            object stringIO = Ops.Invoke(
-                Ops.GetDynamicTypeFromClsOnlyType(typeof(PythonStringIO)),
+            object stringIO = PythonOps.Invoke(
+                DynamicHelpers.GetDynamicTypeFromType(typeof(PythonStringIO)),
                 SymbolTable.StringToId("StringIO"),
                 @string
             );
@@ -139,12 +140,12 @@ namespace IronPython.Modules {
             private object readLineMethod;
 
             public PythonFileInput(object file) {
-                if (!Ops.TryGetBoundAttr(file, SymbolTable.StringToId("read"), out readMethod) ||
-                    !Ops.IsCallable(readMethod) ||
-                    !Ops.TryGetBoundAttr(file, SymbolTable.StringToId("readline"), out readLineMethod) ||
-                    !Ops.IsCallable(readLineMethod)
+                if (!PythonOps.TryGetBoundAttr(file, SymbolTable.StringToId("read"), out readMethod) ||
+                    !PythonOps.IsCallable(readMethod) ||
+                    !PythonOps.TryGetBoundAttr(file, SymbolTable.StringToId("readline"), out readLineMethod) ||
+                    !PythonOps.IsCallable(readLineMethod)
                 ) {
-                    throw Ops.TypeError("argument must have callable 'read' and 'readline' attributes");
+                    throw PythonOps.TypeError("argument must have callable 'read' and 'readline' attributes");
                 }
             }
 
@@ -161,10 +162,10 @@ namespace IronPython.Modules {
             private object writeMethod;
 
             public PythonFileOutput(object file) {
-                if (!Ops.TryGetBoundAttr(file, SymbolTable.StringToId("write"), out writeMethod) ||
-                    !Ops.IsCallable(this.writeMethod)
+                if (!PythonOps.TryGetBoundAttr(file, SymbolTable.StringToId("write"), out writeMethod) ||
+                    !PythonOps.IsCallable(this.writeMethod)
                 ) {
-                    throw Ops.TypeError("argument must have callable 'write' attribute");
+                    throw PythonOps.TypeError("argument must have callable 'write' attribute");
                 }
             }
 
@@ -177,10 +178,10 @@ namespace IronPython.Modules {
             private object getValueMethod;
 
             public PythonReadableFileOutput(object file) : base(file) {
-                if (!Ops.TryGetBoundAttr(file, SymbolTable.StringToId("getvalue"), out getValueMethod) ||
-                    !Ops.IsCallable(getValueMethod)
+                if (!PythonOps.TryGetBoundAttr(file, SymbolTable.StringToId("getvalue"), out getValueMethod) ||
+                    !PythonOps.IsCallable(getValueMethod)
                 ) {
-                    throw Ops.TypeError("argument must have callable 'getvalue' attribute");
+                    throw PythonOps.TypeError("argument must have callable 'getvalue' attribute");
                 }
             }
 
@@ -324,7 +325,7 @@ namespace IronPython.Modules {
                 [DefaultParameterValue(null)] object protocol,
                 [DefaultParameterValue(null)] object bin
             ) {
-                if (cls == Ops.GetDynamicTypeFromClsOnlyType(typeof(Pickler))) {
+                if (cls == DynamicHelpers.GetDynamicTypeFromType(typeof(Pickler))) {
                     // For undocumented (yet tested in official CPython tests) list-based pickler, the
                     // user could do something like Pickler(1), which would create a protocol-1 pickler
                     // with an internal string output buffer (retrievable using GetValue()). For a little
@@ -339,7 +340,7 @@ namespace IronPython.Modules {
                     return new Pickler(file, protocol, bin);
                 } else {
                     Pickler pickler = cls.CreateInstance(context, file, protocol, bin) as Pickler;
-                    if (pickler == null) throw Ops.TypeError("{0} is not a subclass of Pickler", cls);
+                    if (pickler == null) throw PythonOps.TypeError("{0} is not a subclass of Pickler", cls);
                     return pickler;
                 }
             }
@@ -367,11 +368,11 @@ namespace IronPython.Modules {
                 this.file = file;
                 this.memo = new PythonDictionary();
 
-                if (protocol == null) protocol = Ops.IsTrue(bin) ? 1 : 0;
+                if (protocol == null) protocol = PythonOps.IsTrue(bin) ? 1 : 0;
 
                 int intProtocol = Converter.ConvertToInt32(protocol);
                 if (intProtocol > highestProtocol) {
-                    throw Ops.ValueError("pickle protocol {0} asked for; the highest available protocol is {1}", intProtocol, highestProtocol);
+                    throw PythonOps.ValueError("pickle protocol {0} asked for; the highest available protocol is {1}", intProtocol, highestProtocol);
                 } else if (intProtocol < 0) {
                     this.protocol = highestProtocol;
                 } else {
@@ -426,11 +427,11 @@ namespace IronPython.Modules {
             #region Save functions
 
             private void Save(CodeContext context, object obj) {
-                if (memo.Contains(Ops.Id(obj))) {
+                if (memo.Contains(PythonOps.Id(obj))) {
                     WriteGet(obj);
                 } else {
                     PickleFunction pickleFunction;
-                    DynamicType objType = Ops.GetDynamicType(obj);
+                    DynamicType objType = DynamicHelpers.GetDynamicType(obj);
                     if (!dispatchTable.TryGetValue(objType.CanonicalDynamicType, out pickleFunction)) {
                         if (objType.IsSubclassOf(TypeCache.DynamicType)) {
                             // treat classes with metaclasses like regular classes
@@ -444,7 +445,7 @@ namespace IronPython.Modules {
             }
 
             private void SaveBoolean(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).Equals(TypeCache.Boolean), "arg must be bool");
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.Boolean), "arg must be bool");
                 if (protocol < 2) {
                     Write(Opcode.Int);
                     Write(String.Format("0{0}", ((bool)obj) ? 1 : 0));
@@ -459,8 +460,8 @@ namespace IronPython.Modules {
             }
 
             private void SaveDict(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.Dict), "arg must be dict");
-                Debug.Assert(!memo.Contains(Ops.Id(obj)));
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.Dict), "arg must be dict");
+                Debug.Assert(!memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
 
                 if (protocol < 1) {
@@ -475,7 +476,7 @@ namespace IronPython.Modules {
             }
 
             private void SaveFloat(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).Equals(TypeCache.Double), "arg must be float");
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.Double), "arg must be float");
 
                 if (protocol < 1) {
                     Write(Opcode.Float);
@@ -488,16 +489,16 @@ namespace IronPython.Modules {
 
             private void SaveGlobal(CodeContext context, object obj) {
                 Debug.Assert(
-                    Ops.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.OldClass) ||
-                    Ops.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.Function) ||
-                    Ops.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.BuiltinFunction) ||
-                    Ops.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.DynamicType) ||
-                    Ops.GetDynamicType(obj).CanonicalDynamicType.IsSubclassOf(TypeCache.DynamicType),
+                    DynamicHelpers.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.OldClass) ||
+                    DynamicHelpers.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.Function) ||
+                    DynamicHelpers.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.BuiltinFunction) ||
+                    DynamicHelpers.GetDynamicType(obj).CanonicalDynamicType.Equals(TypeCache.DynamicType) ||
+                    DynamicHelpers.GetDynamicType(obj).CanonicalDynamicType.IsSubclassOf(TypeCache.DynamicType),
                     "arg must be classic class, function, built-in function or method, or new-style type"
                 );
 
                 object name;
-                if (Ops.TryGetBoundAttr(context, obj, Symbols.Name, out name)) {
+                if (PythonOps.TryGetBoundAttr(context, obj, Symbols.Name, out name)) {
                     SaveGlobalByName(context, obj, name);
                 } else {
                     throw CannotPickle(obj, "could not determine its __name__");
@@ -505,7 +506,7 @@ namespace IronPython.Modules {
             }
 
             private void SaveGlobalByName(CodeContext context, object obj, object name) {
-                Debug.Assert(!memo.Contains(Ops.Id(obj)));
+                Debug.Assert(!memo.Contains(PythonOps.Id(obj)));
 
                 object moduleName = FindModuleForGlobal(context, obj, name);
 
@@ -523,7 +524,7 @@ namespace IronPython.Modules {
                             Write(Opcode.Ext4);
                             WriteInt32(code);
                         } else {
-                            throw Ops.RuntimeError("unrecognized integer format");
+                            throw PythonOps.RuntimeError("unrecognized integer format");
                         }
                         return;
                     }
@@ -537,8 +538,8 @@ namespace IronPython.Modules {
             }
 
             private void SaveInstance(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).Equals(TypeCache.OldInstance), "arg must be old-class instance");
-                Debug.Assert(!memo.Contains(Ops.Id(obj)));
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.OldInstance), "arg must be old-class instance");
+                Debug.Assert(!memo.Contains(PythonOps.Id(obj)));
 
                 Write(Opcode.Mark);
 
@@ -546,13 +547,13 @@ namespace IronPython.Modules {
                 // instance (when using proto other than 0) to match CPython's bytecode output
 
                 object objClass;
-                if (!Ops.TryGetBoundAttr(context, obj, Symbols.Class, out objClass)) {
+                if (!PythonOps.TryGetBoundAttr(context, obj, Symbols.Class, out objClass)) {
                     throw CannotPickle(obj, "could not determine its __class__");
                 }
 
                 if (protocol < 1) {
                     object className, classModuleName;
-                    if (!Ops.TryGetBoundAttr(context, objClass, Symbols.Name, out className)) {
+                    if (!PythonOps.TryGetBoundAttr(context, objClass, Symbols.Name, out className)) {
                         throw CannotPickle(obj, "its __class__ has no __name__");
                     }
                     classModuleName = FindModuleForGlobal(context, objClass, className);
@@ -571,17 +572,17 @@ namespace IronPython.Modules {
                 WritePut(obj);
 
                 object getStateCallable;
-                if (Ops.TryGetBoundAttr(context, obj, Symbols.GetState, out getStateCallable)) {
+                if (PythonOps.TryGetBoundAttr(context, obj, Symbols.GetState, out getStateCallable)) {
                     Save(context, PythonCalls.Call(getStateCallable));
                 } else {
-                    Save(context, Ops.GetBoundAttr(context, obj, Symbols.Dict));
+                    Save(context, PythonOps.GetBoundAttr(context, obj, Symbols.Dict));
                 }
 
                 Write(Opcode.Build);
             }
 
             private void SaveInteger(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).Equals(TypeCache.Int32), "arg must be int");
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.Int32), "arg must be int");
                 if (protocol < 1) {
                     Write(Opcode.Int);
                     WriteIntAsString(obj);
@@ -596,14 +597,14 @@ namespace IronPython.Modules {
                         Write(Opcode.BinInt);
                         WriteInt32(obj);
                     } else {
-                        throw Ops.RuntimeError("unrecognized integer format");
+                        throw PythonOps.RuntimeError("unrecognized integer format");
                     }
                 }
             }
 
             private void SaveList(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).Equals(TypeCache.List), "arg must be list");
-                Debug.Assert(!memo.Contains(Ops.Id(obj)));
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.List), "arg must be list");
+                Debug.Assert(!memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
                 if (protocol < 1) {
                     Write(Opcode.Mark);
@@ -617,7 +618,7 @@ namespace IronPython.Modules {
             }
 
             private void SaveLong(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).Equals(TypeCache.BigInteger), "arg must be long");
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.BigInteger), "arg must be long");
 
                 if (protocol < 2) {
                     Write(Opcode.Long);
@@ -644,7 +645,7 @@ namespace IronPython.Modules {
             }
 
             private void SaveNone(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).Equals(TypeCache.None), "arg must be None");
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.None), "arg must be None");
                 Write(Opcode.NoneValue);
             }
 
@@ -654,32 +655,32 @@ namespace IronPython.Modules {
             /// copy_reg.dispatch_table[type(obj)], obj.__reduce_ex__, and obj.__reduce__.
             /// </summary>
             private void SaveObject(CodeContext context, object obj) {
-                Debug.Assert(!memo.Contains(Ops.Id(obj)));
+                Debug.Assert(!memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
 
                 object reduceCallable, result;
-                DynamicType objType = Ops.GetDynamicType(obj);
+                DynamicType objType = DynamicHelpers.GetDynamicType(obj);
 
                 if (PythonCopyReg.DispatchTable.TryGetValue(objType, out reduceCallable)) {
                     result = PythonCalls.Call(reduceCallable, obj);
-                } else if (Ops.TryGetBoundAttr(context, obj, Symbols.ReduceExtended, out reduceCallable)) {
+                } else if (PythonOps.TryGetBoundAttr(context, obj, Symbols.ReduceExtended, out reduceCallable)) {
                     if (obj is DynamicType) {
-                        result = Ops.CallWithContext(context, reduceCallable, obj, protocol);
+                        result = PythonOps.CallWithContext(context, reduceCallable, obj, protocol);
                     } else {
-                        result = Ops.CallWithContext(context, reduceCallable, protocol);
+                        result = PythonOps.CallWithContext(context, reduceCallable, protocol);
                     }
-                } else if (Ops.TryGetBoundAttr(context, obj, Symbols.Reduce, out reduceCallable)) {
+                } else if (PythonOps.TryGetBoundAttr(context, obj, Symbols.Reduce, out reduceCallable)) {
                     if (obj is DynamicType) {
-                        result = Ops.CallWithContext(context, reduceCallable, obj);
+                        result = PythonOps.CallWithContext(context, reduceCallable, obj);
                     } else {
-                        result = Ops.CallWithContext(context, reduceCallable);
+                        result = PythonOps.CallWithContext(context, reduceCallable);
                     }
                 } else {
-                    throw Ops.AttributeError("no reduce function found for {0}", obj);
+                    throw PythonOps.AttributeError("no reduce function found for {0}", obj);
                 }
 
                 if (objType.Equals(TypeCache.String)) {
-                    if (memo.Contains(Ops.Id(obj))) {
+                    if (memo.Contains(PythonOps.Id(obj))) {
                         WriteGet(obj);
                     } else {
                         SaveGlobalByName(context, obj, result);
@@ -713,7 +714,7 @@ namespace IronPython.Modules {
             /// Only context, obj, func, and reduceCallable are required; all other arguments may be null.
             /// </summary>
             private void SaveReduce(CodeContext context, object obj, object reduceCallable, object func, object args, object state, object listItems, object dictItems) {
-                if (!Ops.IsCallable(func)) {
+                if (!PythonOps.IsCallable(func)) {
                     throw CannotPickle(obj, "func from reduce() should be callable");
                 } else if (!(args is Tuple) && args != null) {
                     throw CannotPickle(obj, "args from reduce() should be a tuple");
@@ -725,7 +726,7 @@ namespace IronPython.Modules {
 
                 object funcName;
                 string funcNameString;
-                if (!Ops.TryGetBoundAttr(context, func, Symbols.Name, out funcName)) {
+                if (!PythonOps.TryGetBoundAttr(context, func, Symbols.Name, out funcName)) {
                     throw CannotPickle(obj, "func from reduce() ({0}) should have a __name__ attribute");
                 } else if (!Converter.TryConvertToString(funcName, out funcNameString) || funcNameString == null) {
                     throw CannotPickle(obj, "__name__ of func from reduce() must be string");
@@ -738,7 +739,7 @@ namespace IronPython.Modules {
                     Tuple argsTuple = (Tuple)args;
                     if (argsTuple.Count == 0) {
                         throw CannotPickle(obj, "__newobj__ arglist is empty");
-                    } else if (!Ops.GetDynamicType(obj).Equals(argsTuple[0])) {
+                    } else if (!DynamicHelpers.GetDynamicType(obj).Equals(argsTuple[0])) {
                         throw CannotPickle(obj, "args[0] from __newobj__ args has the wrong class");
                     }
                     Save(context, argsTuple[0]);
@@ -767,8 +768,8 @@ namespace IronPython.Modules {
             }
 
             private void SaveTuple(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).Equals(TypeCache.Tuple), "arg must be tuple");
-                Debug.Assert(!memo.Contains(Ops.Id(obj)));
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.Tuple), "arg must be tuple");
+                Debug.Assert(!memo.Contains(PythonOps.Id(obj)));
                 Tuple t = (Tuple)obj;
                 string opcode;
                 bool needMark = false;
@@ -796,8 +797,8 @@ namespace IronPython.Modules {
             }
 
             private void SaveUnicode(CodeContext context, object obj) {
-                Debug.Assert(Ops.GetDynamicType(obj).Equals(TypeCache.String), "arg must be unicode");
-                Debug.Assert(!memo.Contains(Ops.Id(obj)));
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.String), "arg must be unicode");
+                Debug.Assert(!memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
                 if (protocol < 1) {
                     Write(Opcode.Unicode);
@@ -818,7 +819,7 @@ namespace IronPython.Modules {
             /// Write value in pickle decimalnl_short format.
             /// </summary>
             private void WriteFloatAsString(object value) {
-                Debug.Assert(Ops.GetDynamicType(value).Equals(TypeCache.Double));
+                Debug.Assert(DynamicHelpers.GetDynamicType(value).Equals(TypeCache.Double));
                 // 17 digits of precision are necessary for accurate roundtripping
                 StringFormatter sf = new StringFormatter("%.17g", value);
                 sf._TrailingZeroAfterWholeFloat = true;
@@ -830,7 +831,7 @@ namespace IronPython.Modules {
             /// Write value in pickle float8 format.
             /// </summary>
             private void WriteFloat64(object value) {
-                Debug.Assert(Ops.GetDynamicType(value).Equals(TypeCache.Double));
+                Debug.Assert(DynamicHelpers.GetDynamicType(value).Equals(TypeCache.Double));
                 Write(PythonStruct.Pack(">d", value));
             }
 
@@ -863,7 +864,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteIntAsString(object value) {
                 Debug.Assert(IsInt32(value));
-                Write(Ops.StringRepr(value));
+                Write(PythonOps.StringRepr(value));
                 Write(Newline);
             }
 
@@ -871,8 +872,8 @@ namespace IronPython.Modules {
             /// Write value in pickle decimalnl_long format.
             /// </summary>
             private void WriteLongAsString(object value) {
-                Debug.Assert(Ops.GetDynamicType(value).Equals(TypeCache.BigInteger));
-                Write(Ops.StringRepr(value));
+                Debug.Assert(DynamicHelpers.GetDynamicType(value).Equals(TypeCache.BigInteger));
+                Write(PythonOps.StringRepr(value));
                 Write(Newline);
             }
 
@@ -880,7 +881,7 @@ namespace IronPython.Modules {
             /// Write value in pickle unicodestringnl format.
             /// </summary>
             private void WriteUnicodeStringRaw(object value) {
-                Debug.Assert(Ops.GetDynamicType(value).Equals(TypeCache.String));
+                Debug.Assert(DynamicHelpers.GetDynamicType(value).Equals(TypeCache.String));
                 // manually escape backslash and newline
                 Write(StringOps.RawUnicodeEscapeEncode(((string)value).Replace("\\", "\\u005c").Replace("\n", "\\u000a")));
                 Write(Newline);
@@ -890,7 +891,7 @@ namespace IronPython.Modules {
             /// Write value in pickle unicodestring4 format.
             /// </summary>
             private void WriteUnicodeStringUtf8(object value) {
-                Debug.Assert(Ops.GetDynamicType(value).Equals(TypeCache.String));
+                Debug.Assert(DynamicHelpers.GetDynamicType(value).Equals(TypeCache.String));
                 string encodedString = StringOps.FromByteArray(System.Text.Encoding.UTF8.GetBytes((string)value));
                 WriteInt32(encodedString.Length);
                 Write(encodedString);
@@ -900,8 +901,8 @@ namespace IronPython.Modules {
             /// Write value in pickle stringnl_noescape_pair format.
             /// </summary>
             private void WriteStringPair(object value1, object value2) {
-                Debug.Assert(Ops.GetDynamicType(value1).Equals(TypeCache.String));
-                Debug.Assert(Ops.GetDynamicType(value2).Equals(TypeCache.String));
+                Debug.Assert(DynamicHelpers.GetDynamicType(value1).Equals(TypeCache.String));
+                Debug.Assert(DynamicHelpers.GetDynamicType(value2).Equals(TypeCache.String));
                 Debug.Assert(IsPrintableAscii(value1));
                 Debug.Assert(IsPrintableAscii(value2));
                 Write((string)value1);
@@ -939,7 +940,7 @@ namespace IronPython.Modules {
             /// Return true if value is a string where each value is in the range of printable ASCII characters.
             /// </summary>
             private bool IsPrintableAscii(object value) {
-                Debug.Assert(Ops.GetDynamicType(value).Equals(TypeCache.String));
+                Debug.Assert(DynamicHelpers.GetDynamicType(value).Equals(TypeCache.String));
                 string strValue = (string)value;
                 foreach (char c in strValue) {
                     if (!(LowestPrintableChar <= c && c <= HighestPrintableChar)) return false;
@@ -956,9 +957,9 @@ namespace IronPython.Modules {
             }
 
             private void WriteGet(object obj) {
-                Debug.Assert(memo.Contains(Ops.Id(obj)));
+                Debug.Assert(memo.Contains(PythonOps.Id(obj)));
                 // Memo entries are tuples, and the first element is the memo index
-                IList<object> memoEntry = (IList<object>)memo[Ops.Id(obj)];
+                IList<object> memoEntry = (IList<object>)memo[PythonOps.Id(obj)];
 
                 object index = memoEntry[0];
                 Debug.Assert(PythonSites.GreaterThanOrEqualRetBool(index, 0));
@@ -978,7 +979,7 @@ namespace IronPython.Modules {
 
             private void WriteInitArgs(CodeContext context, object obj) {
                 object getInitArgsCallable;
-                if (Ops.TryGetBoundAttr(context, obj, Symbols.GetInitArgs, out getInitArgsCallable)) {
+                if (PythonOps.TryGetBoundAttr(context, obj, Symbols.GetInitArgs, out getInitArgsCallable)) {
                     object initArgs = PythonCalls.Call(getInitArgsCallable);
                     if (!(initArgs is Tuple)) {
                         throw CannotPickle(obj, "__getinitargs__() must return tuple");
@@ -990,9 +991,9 @@ namespace IronPython.Modules {
             }
 
             private void WritePut(object obj) {
-                Debug.Assert(memo.Contains(Ops.Id(obj)));
+                Debug.Assert(memo.Contains(PythonOps.Id(obj)));
                 // Memo entries are tuples, and the first element is the memo index
-                IList<object> memoEntry = (IList<object>)memo[Ops.Id(obj)];
+                IList<object> memoEntry = (IList<object>)memo[PythonOps.Id(obj)];
 
                 object index = memoEntry[0];
                 Debug.Assert(PythonSites.GreaterThanOrEqualRetBool(index, 0));
@@ -1153,8 +1154,8 @@ namespace IronPython.Modules {
             }
 
             private void Memoize(object obj) {
-                Debug.Assert(!memo.Contains(Ops.Id(obj)));
-                memo[Ops.Id(obj)] = Tuple.MakeTuple(memo.Count, obj);
+                Debug.Assert(!memo.Contains(PythonOps.Id(obj)));
+                memo[PythonOps.Id(obj)] = Tuple.MakeTuple(memo.Count, obj);
             }
 
             /// <summary>
@@ -1177,15 +1178,15 @@ namespace IronPython.Modules {
             private object FindModuleForGlobal(CodeContext context, object obj, object name) {
                 object module;
                 object moduleName;
-                if (Ops.TryGetBoundAttr(context, obj, Symbols.Module, out moduleName)) {
+                if (PythonOps.TryGetBoundAttr(context, obj, Symbols.Module, out moduleName)) {
                     // TODO: Global SystemState
-                    if (!SystemState.Instance.Importer.TryGetExistingModule(Converter.ConvertToString(moduleName), out module)) {
+                    if (!PythonEngine.CurrentEngine.Importer.TryGetExistingModule(Converter.ConvertToString(moduleName), out module)) {
                         module = Builtin.Import(context, Converter.ConvertToString(moduleName));
                     }
 
                     object foundObj;
-                    if (Ops.TryGetBoundAttr(context, module, SymbolTable.StringToId(Converter.ConvertToString(name)), out foundObj)) {
-                        if (Ops.IsRetBool(foundObj, obj)) {
+                    if (PythonOps.TryGetBoundAttr(context, module, SymbolTable.StringToId(Converter.ConvertToString(name)), out foundObj)) {
+                        if (PythonOps.IsRetBool(foundObj, obj)) {
                             return moduleName;
                         } else {
                             throw CannotPickle(obj, "it's not the same object as {0}.{1}", moduleName, name);
@@ -1199,8 +1200,8 @@ namespace IronPython.Modules {
                         moduleName = modulePair.Key;
                         module = modulePair.Value;
                         object foundObj;
-                        if (Ops.TryGetBoundAttr(context, module, SymbolTable.StringToId(Converter.ConvertToString(name)), out foundObj) &&
-                            Ops.IsRetBool(foundObj, obj)
+                        if (PythonOps.TryGetBoundAttr(context, module, SymbolTable.StringToId(Converter.ConvertToString(name)), out foundObj) &&
+                            PythonOps.IsRetBool(foundObj, obj)
                         ) {
                             return moduleName;
                         }
@@ -1312,7 +1313,7 @@ namespace IronPython.Modules {
 
                 while (opcode != Opcode.Stop) {
                     if (!dispatch.ContainsKey(opcode)) {
-                        throw CannotUnpickle("invalid opcode: {0}", Ops.StringRepr(opcode));
+                        throw CannotUnpickle("invalid opcode: {0}", PythonOps.StringRepr(opcode));
                     }
                     dispatch[opcode](context);
                     opcode = Read(1);
@@ -1333,7 +1334,7 @@ namespace IronPython.Modules {
                )]
             [PythonName("noload")]
             public void NoLoad(CodeContext context) {
-                throw Ops.NotImplementedError("noload() is not implemented");
+                throw PythonOps.NotImplementedError("noload() is not implemented");
             }
 
             private Exception CannotUnpickle(string format, params object[] args) {
@@ -1390,8 +1391,8 @@ namespace IronPython.Modules {
 
             private object ReadIntFromString(CodeContext context) {
                 string raw = ReadLineNoNewline();
-                if ("00" == raw) return Ops.False;
-                else if ("01" == raw) return Ops.True;
+                if ("00" == raw) return RuntimeHelpers.False;
+                else if ("01" == raw) return RuntimeHelpers.True;
                 return Int32Ops.Make(context, TypeCache.Int32, raw);
             }
 
@@ -1421,22 +1422,22 @@ namespace IronPython.Modules {
             [PythonName("find_global")]
             public object FindGlobal(CodeContext context, object module, object attr) {
                 object moduleObject;
-                if (!SystemState.Instance.Importer.TryGetExistingModule(Converter.ConvertToString(module), out moduleObject)) {
+                if (!PythonEngine.CurrentEngine.Importer.TryGetExistingModule(Converter.ConvertToString(module), out moduleObject)) {
                     moduleObject = Builtin.Import(context, Converter.ConvertToString(module));
                 }
-                return Ops.GetBoundAttr(context, moduleObject, SymbolTable.StringToId(Converter.ConvertToString(attr)));
+                return PythonOps.GetBoundAttr(context, moduleObject, SymbolTable.StringToId(Converter.ConvertToString(attr)));
             }
 
             private object MakeInstance(CodeContext context, object cls, object[] args) {
                 OldClass oc = cls as OldClass;
                 if (oc != null) {
                     OldInstance inst = new OldInstance(oc);
-                    if (args.Length != 0 || Ops.HasAttr(context, cls, Symbols.GetInitArgs)) {
-                        Ops.CallWithContext(context, Ops.GetBoundAttr(context, inst, Symbols.Init), args);
+                    if (args.Length != 0 || PythonOps.HasAttr(context, cls, Symbols.GetInitArgs)) {
+                        PythonOps.CallWithContext(context, PythonOps.GetBoundAttr(context, inst, Symbols.Init), args);
                     }
                     return inst;
                 }
-                return Ops.CallWithContext(context, cls, args);
+                return PythonOps.CallWithContext(context, cls, args);
             }
 
             private void PopMark(int markIndex) {
@@ -1456,7 +1457,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadEof(CodeContext context) {
-                throw Ops.EofError("unexpected end of opcode stream");
+                throw PythonOps.EofError("unexpected end of opcode stream");
             }
 
             private void LoadAppend(CodeContext context) {
@@ -1465,7 +1466,7 @@ namespace IronPython.Modules {
                 if (seq is List) {
                     ((List)seq).Append(item);
                 } else {
-                    PythonCalls.Call(Ops.GetBoundAttr(context, seq, Symbols.Append), item);
+                    PythonCalls.Call(PythonOps.GetBoundAttr(context, seq, Symbols.Append), item);
                 }
             }
 
@@ -1476,7 +1477,7 @@ namespace IronPython.Modules {
                 if (seq is List) {
                     ((List)seq).Extend(stackSlice);
                 } else {
-                    Ops.CallWithContext(context, Ops.GetBoundAttr(context, seq, Symbols.Extend), stackSlice);
+                    PythonOps.CallWithContext(context, PythonOps.GetBoundAttr(context, seq, Symbols.Extend), stackSlice);
                 }
                 PopMark(markIndex);
             }
@@ -1502,7 +1503,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadBinPersid(CodeContext context) {
-                throw Ops.NotImplementedError("noload() is not implemented");
+                throw PythonOps.NotImplementedError("noload() is not implemented");
             }
 
             private void LoadBinPut(CodeContext context) {
@@ -1525,8 +1526,8 @@ namespace IronPython.Modules {
                 object arg = stack.Pop();
                 object inst = stack[-1];
                 object setStateCallable;
-                if (Ops.TryGetBoundAttr(context, inst, Symbols.SetState, out setStateCallable)) {
-                    Ops.CallWithContext(context, setStateCallable, arg);
+                if (PythonOps.TryGetBoundAttr(context, inst, Symbols.SetState, out setStateCallable)) {
+                    PythonOps.CallWithContext(context, setStateCallable, arg);
                     return;
                 }
 
@@ -1541,24 +1542,24 @@ namespace IronPython.Modules {
                 } else if (arg is Tuple) {
                     Tuple argsTuple = (Tuple)arg;
                     if (argsTuple.Count != 2) {
-                        throw Ops.ValueError("state for object without __setstate__ must be None, dict, or 2-tuple");
+                        throw PythonOps.ValueError("state for object without __setstate__ must be None, dict, or 2-tuple");
                     }
                     dict = (PythonDictionary)argsTuple[0];
                     slots = (PythonDictionary)argsTuple[1];
                 } else {
-                    throw Ops.ValueError("state for object without __setstate__ must be None, dict, or 2-tuple");
+                    throw PythonOps.ValueError("state for object without __setstate__ must be None, dict, or 2-tuple");
                 }
 
                 if (dict != null) {
                     object instDict;
-                    if (Ops.TryGetBoundAttr(context, inst, Symbols.Dict, out instDict)) {
+                    if (PythonOps.TryGetBoundAttr(context, inst, Symbols.Dict, out instDict)) {
                         PythonDictionary realDict = instDict as PythonDictionary;
                         if (realDict != null) {
                             realDict.Update(arg);
                         } else {
                             object updateCallable;
-                            if (Ops.TryGetBoundAttr(context, instDict, Symbols.Update, out updateCallable)) {
-                                Ops.CallWithContext(context, updateCallable, dict);
+                            if (PythonOps.TryGetBoundAttr(context, instDict, Symbols.Update, out updateCallable)) {
+                                PythonOps.CallWithContext(context, updateCallable, dict);
                             } else {
                                 throw CannotUnpickle("could not update __dict__ {0} when building {1}", dict, inst);
                             }
@@ -1568,7 +1569,7 @@ namespace IronPython.Modules {
 
                 if (slots != null) {
                     foreach(object key in slots) {
-                        Ops.SetAttr(context, inst, SymbolTable.StringToId((string)key), slots[key]);
+                        PythonOps.SetAttr(context, inst, SymbolTable.StringToId((string)key), slots[key]);
                     }
                 }
             }
@@ -1639,7 +1640,7 @@ namespace IronPython.Modules {
 
                     stack.Append(MakeInstance(context, cls, args));
                 } else {
-                    throw Ops.TypeError("expected class or type after INST, got {0}", Ops.GetDynamicType(cls));
+                    throw PythonOps.TypeError("expected class or type after INST, got {0}", DynamicHelpers.GetDynamicType(cls));
                 }
             }
 
@@ -1679,18 +1680,18 @@ namespace IronPython.Modules {
             }
 
             private void LoadNewFalse(CodeContext context) {
-                stack.Append(Ops.False);
+                stack.Append(RuntimeHelpers.False);
             }
 
             private void LoadNewObj(CodeContext context) {
                 Tuple args = stack.Pop() as Tuple;
                 if (args == null) {
-                    throw Ops.TypeError("expected tuple as second argument to NEWOBJ, got {0}", Ops.GetDynamicType(args));
+                    throw PythonOps.TypeError("expected tuple as second argument to NEWOBJ, got {0}", DynamicHelpers.GetDynamicType(args));
                 }
 
                 DynamicType cls = stack.Pop() as DynamicType;
                 if (args == null) {
-                    throw Ops.TypeError("expected new-style type as first argument to NEWOBJ, got {0}", Ops.GetDynamicType(args));
+                    throw PythonOps.TypeError("expected new-style type as first argument to NEWOBJ, got {0}", DynamicHelpers.GetDynamicType(args));
                 }
 
                 DynamicTypeSlot dts;
@@ -1701,15 +1702,15 @@ namespace IronPython.Modules {
                     args.CopyTo(newargs, 1);
                     newargs[0] = cls;
 
-                    stack.Append(Ops.CallWithContext(context, value, newargs));
+                    stack.Append(PythonOps.CallWithContext(context, value, newargs));
                     return;
                 }
                 
-                throw Ops.TypeError("didn't find __new__");
+                throw PythonOps.TypeError("didn't find __new__");
             }
 
             private void LoadNewTrue(CodeContext context) {
-                stack.Append(Ops.True);
+                stack.Append(RuntimeHelpers.True);
             }
 
             private void LoadNoneValue(CodeContext context) {
@@ -1724,12 +1725,12 @@ namespace IronPython.Modules {
                     PopMark(markIndex);
                     stack.Append(MakeInstance(context, cls, args));
                 } else {
-                    throw Ops.TypeError("expected class or type as first argument to INST, got {0}", Ops.GetDynamicType(cls));
+                    throw PythonOps.TypeError("expected class or type as first argument to INST, got {0}", DynamicHelpers.GetDynamicType(cls));
                 }
             }
 
             private void LoadPersId(CodeContext context) {
-                throw Ops.NotImplementedError("persistent id support is not implemented");
+                throw PythonOps.NotImplementedError("persistent id support is not implemented");
             }
 
             private void LoadPop(CodeContext context) {
@@ -1742,7 +1743,7 @@ namespace IronPython.Modules {
 
             private void LoadProto(CodeContext context) {
                 int proto = ReadUInt8();
-                if (proto > 2) throw Ops.ValueError("unsupported pickle protocol: {0}", proto);
+                if (proto > 2) throw PythonOps.ValueError("unsupported pickle protocol: {0}", proto);
                 // discard result
             }
 
@@ -1754,14 +1755,14 @@ namespace IronPython.Modules {
                 object args = stack.Pop();
                 object callable = stack.Pop();
                 if (args == null) {
-                    stack.Append(PythonCalls.Call(Ops.GetBoundAttr(context, callable, SymbolTable.StringToId("__basicnew__"))));
-                } else if (!Ops.GetDynamicType(args).Equals(TypeCache.Tuple)) {
-                    throw Ops.TypeError(
+                    stack.Append(PythonCalls.Call(PythonOps.GetBoundAttr(context, callable, SymbolTable.StringToId("__basicnew__"))));
+                } else if (!DynamicHelpers.GetDynamicType(args).Equals(TypeCache.Tuple)) {
+                    throw PythonOps.TypeError(
                         "while executing REDUCE, expected tuple at the top of the stack, but got {0}",
-                        Ops.GetDynamicType(args)
+                        DynamicHelpers.GetDynamicType(args)
                     );
                 }
-                stack.Append(Ops.CallWithArgsTupleAndContext(context, callable, Ops.EmptyObjectArray, args));
+                stack.Append(PythonOps.CallWithArgsTupleAndContext(context, callable, RuntimeHelpers.EmptyObjectArray, args));
             }
 
             private void LoadSetItem(CodeContext context) {
@@ -1769,9 +1770,9 @@ namespace IronPython.Modules {
                 object key = stack.Pop();
                 PythonDictionary dict = stack[-1] as PythonDictionary;
                 if (dict == null) {
-                    throw Ops.TypeError(
+                    throw PythonOps.TypeError(
                         "while executing SETITEM, expected dict at stack[-3], but got {0}",
-                        Ops.GetDynamicType(stack[-1])
+                        DynamicHelpers.GetDynamicType(stack[-1])
                     );
                 }
                 dict[key] = value;
@@ -1781,9 +1782,9 @@ namespace IronPython.Modules {
                 int markIndex = MarkIndex;
                 PythonDictionary dict = stack[markIndex - 1] as PythonDictionary;
                 if (dict == null) {
-                    throw Ops.TypeError(
+                    throw PythonOps.TypeError(
                         "while executing SETITEMS, expected dict below last mark, but got {0}",
-                        Ops.GetDynamicType(stack[markIndex - 1])
+                        DynamicHelpers.GetDynamicType(stack[markIndex - 1])
                     );
                 }
                 SetItems(dict, markIndex);
@@ -1801,7 +1802,7 @@ namespace IronPython.Modules {
                     repr[0] == '\'' && repr[repr.Length - 1] == '\''
                     )
                 ) {
-                    throw Ops.ValueError("while executing STRING, expected string that starts and ends with quotes");
+                    throw PythonOps.ValueError("while executing STRING, expected string that starts and ends with quotes");
                 }
 #if !SILVERLIGHT // Encoding
                 stack.Append(StringOps.Decode(context, repr.Substring(1, repr.Length - 2), "string-escape", "strict"));

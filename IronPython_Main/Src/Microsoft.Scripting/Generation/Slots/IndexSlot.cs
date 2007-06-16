@@ -16,7 +16,7 @@
 using System;
 using System.Reflection.Emit;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Slot that indexes into an array
     /// </summary>

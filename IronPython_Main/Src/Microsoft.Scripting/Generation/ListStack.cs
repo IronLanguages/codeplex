@@ -15,9 +15,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// A stack implemented as a list.  Allows both Push/Pop access and indexing into any
     /// member of the list.

@@ -21,10 +21,9 @@ using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Internal.Ast;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
 using System.IO;
 using System.Text;
@@ -41,11 +40,10 @@ namespace Microsoft.Scripting.Hosting {
         EngineOptions Options { get; }
         string VersionString { get; }
 
-        void AddAssembly(Assembly assembly);
-        
         // TODO: 
         // exception handling:
         string FormatException(Exception exception);
+        void GetExceptionMessage(Exception exception, out string message, out string typeName);
 
         // configuration:
         void SetSourceUnitSearchPaths(string[] paths);
@@ -257,8 +255,8 @@ namespace Microsoft.Scripting.Hosting {
         #region Object Operations
 
         public bool TryGetVariable(string name, IScriptModule module, out object obj) {
-            ScriptModule local_module = RemoteWrapper.GetLocalArgument<ScriptModule>(module, "module");
-            return GetLanguageContext(local_module).TryLookupName(local_module.Scope, SymbolTable.StringToId(name), out obj);
+            CodeContext context = GetCodeContext(module);
+            return context.LanguageContext.TryLookupName(context, SymbolTable.StringToId(name), out obj);
         }
         
         public bool TryGetObjectMemberValue(object obj, string name, out object value) {
@@ -349,7 +347,9 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Compiler options factory.
         /// </summary>
-        public abstract CompilerOptions GetDefaultCompilerOptions();
+        public virtual CompilerOptions GetDefaultCompilerOptions() {
+            return new CompilerOptions();
+        }
 
         /// <summary>
         /// Creates compiler options initialized by the options associated with the module.
@@ -703,15 +703,19 @@ namespace Microsoft.Scripting.Hosting {
         // Gets a LanguageContext for the specified module that captures the current state 
         // of the module which will be used for compilation and execution of the next piece of code against the module.
         private CodeContext GetCodeContext(IScriptModule module) {
-            ScriptModule local_module = RemoteWrapper.GetLocalArgument<ScriptModule>(module ?? 
-                ScriptDomainManager.CurrentManager.Host.DefaultModule, "module");
+            return GetCodeContext(RemoteWrapper.GetLocalArgument<ScriptModule>(module ?? 
+                ScriptDomainManager.CurrentManager.Host.DefaultModule, "module"));
+        }
 
-            LanguageContext language_context = GetLanguageContext(local_module);
-            return new CodeContext(local_module.Scope, language_context);
+        internal protected CodeContext GetCodeContext(ScriptModule module) {
+            if (module == null) throw new ArgumentNullException("module");
+            LanguageContext languageContext = GetLanguageContext(module);
+            ModuleContext moduleContext = languageContext.EnsureModuleContext(module);
+            return new CodeContext(module.Scope, languageContext, moduleContext);
         }
 
         internal protected virtual LanguageContext GetLanguageContext(ScriptModule module) {
-            Debug.Assert(module != null);
+            if (module == null) throw new ArgumentNullException("module");
             return GetLanguageContext(module.GetCompilerOptions(this));
         }
         
@@ -723,9 +727,6 @@ namespace Microsoft.Scripting.Hosting {
             // nop
         }
 
-        // TODO:
-        public abstract IAttributesCollection GetGlobalsDictionary(IDictionary<string, object> globals);
-
         #region Exception handling
 
         public virtual string FormatException(Exception exception) {
@@ -733,11 +734,13 @@ namespace Microsoft.Scripting.Hosting {
             return exception.ToString();
         }
 
-        #endregion
-
-        public virtual void AddAssembly(Assembly assembly) {
-            // nop
+        public virtual void GetExceptionMessage(Exception exception, out string message, out string typeName) {
+            if (exception == null) throw new ArgumentNullException("exception");
+            message = exception.ToString();
+            typeName = exception.GetType().Name;
         }
+
+        #endregion
 
         #region Console Support
 
@@ -762,10 +765,6 @@ namespace Microsoft.Scripting.Hosting {
 
         #region // TODO: Microsoft.Scripting.Vestigial Workarounds (used from MSV instead of PythonEngine)
 
-        public virtual object GetSystemState() {
-            throw new NotSupportedException();
-        }
-
         // Ops.GetAttrNames
         protected virtual IList<object> Ops_GetAttrNames(CodeContext context, object obj) {
             throw new NotSupportedException();
@@ -783,30 +782,6 @@ namespace Microsoft.Scripting.Hosting {
 
         // Ops.Call
         protected virtual object Ops_Call(CodeContext context, object obj, object[] args) {
-            throw new NotSupportedException();
-        }
-        
-        public virtual ScriptModule MakePythonModule(string name) {
-            throw new NotSupportedException();
-        }
-        
-        public virtual ScriptModule MakePythonModule(string name, DynamicType type) {
-            throw new NotSupportedException();
-        }
-
-        public virtual ScriptModule MakePythonModule(string name, Scope scope, ModuleOptions options) {
-            throw new NotSupportedException();
-        }
-
-        public virtual ScriptModule MakePythonModule(string name, Scope scope) {
-            throw new NotSupportedException();
-        }
-
-        public virtual object TryGetModuleContext(ScriptModule module) {
-            throw new NotSupportedException();
-        }
-
-        public virtual void SetModuleContext(ScriptModule module, object moduleContext) {
             throw new NotSupportedException();
         }
 

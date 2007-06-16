@@ -14,13 +14,18 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class VoidExpression : Expression {
         private Statement _statement;
 
-        public VoidExpression(Statement statement) {
+        public VoidExpression(Statement statement)
+            : this(statement, SourceSpan.None) {
+        }
+
+        public VoidExpression(Statement statement, SourceSpan span)
+            : base(span) {
             if (statement == null) {
                 throw new ArgumentNullException("statement");
             }
@@ -39,14 +44,6 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
-        }
-
-        public override void EmitAs(CodeGen cg, Type asType) {
-            if (asType != typeof(void)) {
-                throw new NotSupportedException("VoidExpression can only be emitted as void");
-            }
-
             _statement.Emit(cg);
         }
 

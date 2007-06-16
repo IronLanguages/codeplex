@@ -14,28 +14,30 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+using Microsoft.Scripting.Hosting;
 
 namespace Microsoft.Scripting {
     /// <summary>
     /// Singleton LanguageContext which represents a language-neutral LanguageContext
     /// </summary>
     public class InvariantContext : LanguageContext {
-        public static InvariantContext Instance = new InvariantContext();
-        public static CodeContext CodeContext = new CodeContext(new Scope(new SymbolDictionary()), Instance);
+        public static InvariantContext Instance;
+        public static CodeContext CodeContext;
 
-        public override bool ShowCls {
-            get {
-                return true;
-            }
-            set {
-                throw new InvalidOperationException();
-            }
+        static InvariantContext() {
+            Instance = new InvariantContext();
+            ModuleContext moduleContext = new ModuleContext(null);
+            moduleContext.ShowCls = true;
+            CodeContext = new CodeContext(new Scope(new SymbolDictionary()), Instance, moduleContext);
         }
         
-        private InvariantContext() : base(null) {
+        private InvariantContext() {
         }
 
+        public override ScriptEngine Engine {
+            get {
+                throw new InvalidOperationException("Engine property is not available on InvariantContext");
+            }
+        }
     }
 }

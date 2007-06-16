@@ -26,13 +26,14 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using IronPython.Hosting;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {
     [PythonType("thread")]
     public static class PythonThread {
         #region Public API Surface
-        public static object LockType = Ops.GetDynamicTypeFromType(typeof(Lock));
+        public static object LockType = DynamicHelpers.GetDynamicTypeFromType(typeof(Lock));
         public static object error = ExceptionConverter.CreatePythonException("error", "thread");
 
 
@@ -40,7 +41,7 @@ namespace IronPython.Modules {
         [PythonName("start_new_thread")]
         public static object StartNewThread(CodeContext context, object function, object args, object kwDict) {
             Tuple tupArgs = args as Tuple;
-            if (tupArgs == null) throw Ops.TypeError("2nd arg must be a tuple");
+            if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
             Thread t = new Thread(new ThreadObj((CodeContext)context, function, tupArgs, kwDict).Start);
             t.Start();
@@ -52,7 +53,7 @@ namespace IronPython.Modules {
         [PythonName("start_new_thread")]
         public static object StartNewThread(CodeContext context, object function, object args) {
             Tuple tupArgs = args as Tuple;
-            if (tupArgs == null) throw Ops.TypeError("2nd arg must be a tuple");
+            if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
             Thread t = new Thread(new ThreadObj((CodeContext)context, function, tupArgs, null).Start);
             t.Start();
@@ -62,13 +63,13 @@ namespace IronPython.Modules {
 
         [PythonName("interrupt_main")]
         public static void InterruptMain() {
-            throw Ops.NotImplementedError("interrupt_main not implemented");
+            throw PythonOps.NotImplementedError("interrupt_main not implemented");
             //throw new PythonKeyboardInterrupt();
         }
 
         [PythonName("exit")]
         public static void Exit() {
-            Ops.SystemExit();
+            PythonOps.SystemExit();
         }
 
         [Documentation("allocate_lock() -> lock object\nAllocates a new lock object that can be used for synchronization")]
@@ -108,18 +109,18 @@ namespace IronPython.Modules {
 
             [PythonName("acquire")]
             public object Acquire() {
-                return (Acquire(Ops.True));
+                return (Acquire(RuntimeHelpers.True));
             }
 
             [PythonName("acquire")]
             public object Acquire(object waitflag) {
-                bool fWait = Ops.IsTrue(waitflag);
+                bool fWait = PythonOps.IsTrue(waitflag);
                 for (; ; ) {
                     if (Interlocked.CompareExchange<Thread>(ref curHolder, Thread.CurrentThread, null) == null) {
-                        return Ops.True;
+                        return RuntimeHelpers.True;
                     }
                     if (!fWait) {
-                        return Ops.False;
+                        return RuntimeHelpers.False;
                     }
                     if (blockEvent == null) {
                         // try again in case someone released us, checked the block
@@ -176,15 +177,15 @@ namespace IronPython.Modules {
             public void Start() {
                 try {
                     if (kwargs != null) {
-                        Ops.CallWithArgsTupleAndKeywordDictAndContext(context, func, Ops.EmptyObjectArray, new string[0], args, kwargs);
+                        PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, new string[0], args, kwargs);
                     } else {
-                        Ops.CallWithArgsTuple(func, Ops.EmptyObjectArray, args);
+                        PythonOps.CallWithArgsTuple(func, RuntimeHelpers.EmptyObjectArray, args);
                     }
                 } catch (PythonSystemExitException) {
                     // ignore and quit
                 } catch (Exception e) {
                     PythonOps.Print("Unhandled exception on thread");
-                    string result = SystemState.Instance.Engine.FormatException(e);
+                    string result = PythonEngine.CurrentEngine.FormatException(e);
                     PythonOps.Print(result);
                 }
             }

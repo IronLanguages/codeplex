@@ -18,8 +18,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 
 using Microsoft.Scripting;
-
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
 
@@ -40,7 +39,7 @@ namespace IronPython.Compiler.Ast {
         protected readonly ParameterKind _kind;
         protected Expression _defaultValue;
 
-        private PythonReference _reference;
+        private PythonVariable _variable;
 
         public Parameter(SymbolId name)
             : this(name, ParameterKind.Normal) {
@@ -75,14 +74,14 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        public PythonReference Reference {
-            get { return _reference; }
-            set { _reference = value; }
+        internal PythonVariable Variable {
+            get { return _variable; }
+            set { _variable = value; }
         }
 
-        internal virtual MSAst.Parameter Transform(AstGenerator outer, AstGenerator inner) {
-            MSAst.Parameter parameter = MSAst.Parameter.Create(inner.Block, Name, outer.Transform(_defaultValue));
-            Reference.Variable.SetParameter(parameter);
+        internal virtual MSAst.Variable Transform(AstGenerator outer, AstGenerator inner) {
+            MSAst.Variable parameter = inner.Block.CreateParameter(Name, outer.Transform(_defaultValue));
+            _variable.SetParameter(parameter);
             return parameter;
         }
 
@@ -112,16 +111,16 @@ namespace IronPython.Compiler.Ast {
             get { return _tuple; }
         }
 
-        internal override Microsoft.Scripting.Internal.Ast.Parameter Transform(AstGenerator outer, AstGenerator inner) {
-            MSAst.Parameter parameter = MSAst.Parameter.Create(inner.Block, Name, outer.Transform(_defaultValue));
-            Reference.Variable.SetParameter(parameter);
+        internal override MSAst.Variable Transform(AstGenerator outer, AstGenerator inner) {
+            MSAst.Variable parameter = inner.Block.CreateParameter(Name, outer.Transform(_defaultValue));
+            Variable.SetParameter(parameter);
             return parameter;
         }
 
         internal override void Init(AstGenerator inner, List<MSAst.Statement> init) {
             MSAst.Statement stmt = _tuple.TransformSet(
                 inner,
-                new MSAst.BoundExpression(Reference.Reference, Span),
+                new MSAst.BoundExpression(Variable.Variable, Span),
                 Operators.None
                 );
 

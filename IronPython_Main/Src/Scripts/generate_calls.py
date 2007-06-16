@@ -28,6 +28,10 @@ def make_params1(nargs, prefix=("CodeContext context",)):
     params = ["object arg%d" % i for i in range(nargs)]
     return ", ".join(list(prefix) + params)
 
+def make_args(nargs, *prefix):
+    params = ["arg%d" % i for i in range(nargs)]
+    return ", ".join(list(prefix) + params)
+
 def make_args1(nargs, prefix, start=0):
     args = ["arg%d" % i for i in range(start, nargs)]
     return ", ".join(list(prefix) + args)
@@ -408,7 +412,7 @@ public static object Call(%(params)s) {
 
 def gen_call_meth(nargs, cw):
     args = ["DefaultContext.Default"]+["arg%d" % i for i in range(nargs)]
-    argsArray = "Ops.EmptyObjectArray"
+    argsArray = "RuntimeHelpers.EmptyObjectArray"
     if nargs > 0:
         argsArray = "new object[] { %s }" % ", ".join(args[1:])
 
@@ -421,7 +425,7 @@ def gen_callcontext_meth(nparams, cw):
     cw.write("if (fc != null) return fc.Call("+ make_args1(nparams, ["context"]) +");")
     cw.write("")
     if nparams == 0:
-        cw.write("return RuntimeHelpers.CallWithContext(context, func, EmptyObjectArray);")
+        cw.write("return RuntimeHelpers.CallWithContext(context, func, RuntimeHelpers.EmptyObjectArray);")
     else:
         cw.write("return RuntimeHelpers.CallWithContext(context, func, new object[] " + gen_args_array(nparams) + ");")
     cw.exit_block()
@@ -499,9 +503,9 @@ def gen_method_fastcall(cw):
         else:
             cw.write("else return fc.Call(%(args)s);", args=make_args1(i, ["context"]))
         cw.else_block("")
-        cw.write("if (_inst != null) return Ops.CallWithContext(%(args)s);", args=make_args1(i, ["context", "_func", "_inst"]))
+        cw.write("if (_inst != null) return PythonOps.CallWithContext(%(args)s);", args=make_args1(i, ["context", "_func", "_inst"]))
         if i > 0:
-            cw.write("return Ops.CallWithContext(%(args)s);", args=make_args1(i, ["context", "_func", "CheckSelf(arg0)"], start=1))    
+            cw.write("return PythonOps.CallWithContext(%(args)s);", args=make_args1(i, ["context", "_func", "CheckSelf(arg0)"], start=1))    
         else:
             cw.write("throw BadSelf(null);")
                 
@@ -511,44 +515,40 @@ def gen_method_fastcall(cw):
 
 CodeGenerator("Method FastCallable Members", gen_method_fastcall).doit()
 
-
-def gen_reflectedmethod_contextcall(cw):
-    cw.enter_block("public override object Call(CodeContext context)")
-    cw.write("if (HasInstance) return OptimizedTarget.CallInstance(context, Instance);")
-    cw.write("else return OptimizedTarget.Call(context);")
-    cw.exit_block()
-    
-    for i in xrange(MAX_ARGS):
-        param = i+1
-        cw.enter_block("public override object Call(CodeContext context, " + gen_args(param) + ")")
-        cw.write("if (HasInstance) return OptimizedTarget.CallInstance(context, Instance, %s);" % gen_args_call(param))
-        cw.write("else return OptimizedTarget.Call(context, %s);" % gen_args_call(param))
-        cw.exit_block()
-        cw.enter_block("public override object CallInstance(CodeContext context, " + gen_args(param) + ")")
-        cw.write("if (HasInstance) return OptimizedTarget.CallInstance(context, Instance, %s);" % gen_args_call(param))
-        cw.write("else return OptimizedTarget.CallInstance(context, %s);" % gen_args_call(param))
-        cw.exit_block()
-
 def gen_builtin_targets(cw):
     for i in xrange(MAX_ARGS+1):
         cw.enter_block("public override object Call(%(params)s)", params=make_params1(i))
-        cw.write("return OptimizedTarget.Call(%(args)s);", args=make_args1(i, ["context"]))
+        if i != 2:
+            cw.write("return MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Targets, BinderType).CallReflected(%s);" % make_args(i, 'context', 'CallType.None'))
+        else:
+            cw.enter_block("if (IsReversedOperator)")
+            cw.write("return MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Targets, BinderType).CallReflected(context, CallType.None, arg1, arg0);")
+            cw.else_block()
+            cw.write("return MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Targets, BinderType).CallReflected(%s);" % make_args(i, 'context', 'CallType.None'))
+            cw.exit_block()
         cw.exit_block()
 
         if i == 0: continue
         cw.enter_block("public override object CallInstance(%(params)s)", params=make_params1(i))
-        cw.write("return OptimizedTarget.CallInstance(%(args)s);", args=make_args1(i, ["context"]))
+        if i != 2:
+            cw.write("return MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Targets, BinderType).CallReflected(%s);" % make_args(i, 'context', 'CallType.ImplicitInstance'))
+        else:
+            cw.enter_block("if (IsReversedOperator)")
+            cw.write("return MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Targets, BinderType).CallReflected(context, CallType.ImplicitInstance, arg1, arg0);")
+            cw.else_block()
+            cw.write("return MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Targets, BinderType).CallReflected(%s);" % make_args(i, 'context', 'CallType.ImplicitInstance'))
+            cw.exit_block()
         cw.exit_block()
         
 def gen_boundbuiltin_targets(cw):
     for i in xrange(MAX_ARGS+1):
         cw.enter_block("public override object Call(%(params)s)", params=make_params1(i))
-        cw.write("return _target.OptimizedTarget.CallInstance(%(args)s);", args=make_args1(i, ["context", "_instance"]))
+        cw.write("return _target.CallInstance(%(args)s);", args=make_args1(i, ["context", "_instance"]))
         cw.exit_block()
 
         if i == 0: continue
         cw.enter_block("public override object CallInstance(%(params)s)", params=make_params1(i))
-        cw.write("return _target.OptimizedTarget.CallInstance(%(args)s);", args=make_args1(i, ["context", "_instance"]))
+        cw.write("return _target.CallInstance(%(args)s);", args=make_args1(i, ["context", "_instance"]))
         cw.exit_block()
 
             

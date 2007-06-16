@@ -28,7 +28,7 @@ debug_list = [ 1, #DEBUG_STATS
 
 #get_objects
 def test_get_objects():
-    if is_cli:
+    if is_cli or is_silverlight:
         AssertError(NotImplementedError, gc.get_objects)
     else:
         gc.get_objects()
@@ -92,7 +92,7 @@ def test_set_threshold():
     
 #get_referrers
 def test_get_referrers():
-    if is_cli:
+    if is_cli or is_silverlight:
         AssertError(NotImplementedError, gc.get_referrers,1,"hello",True)
         AssertError(NotImplementedError, gc.get_referrers)
     else:
@@ -106,7 +106,7 @@ def test_get_referrers():
     
 #get_referents
 def test_get_referents():
-    if is_cli:
+    if is_cli or is_silverlight:
         AssertError(NotImplementedError, gc.get_referents,1,"hello",True)
         AssertError(NotImplementedError, gc.get_referents)
     else:
@@ -124,7 +124,7 @@ def test_enable():
     
 #disable
 def test_disable():
-    if is_cli:
+    if is_cli or is_silverlight:
         AssertError(NotImplementedError, gc.disable)
     else:
         gc.disable()
@@ -137,12 +137,13 @@ def test_isenabled():
     result = gc.isenabled()
     Assert(result,"enable Method can't set gc.isenabled as true.")
     
-    if not is_cli:
+    if not is_cli and not is_silverlight:
         gc.disable()
         result = gc.isenabled()
         Assert(result == False,"enable Method can't set gc.isenabled as false.")
 
 #collect    
+@skip("silverlight")
 def test_collect():
     if is_cli:
         i = gc.collect()
@@ -155,7 +156,7 @@ def test_collect():
     
 #set_dubug,get_debug  
 def test_setdebug():
-    if is_cli:
+    if is_cli or is_silverlight:
         for debug in debug_list:
             AssertError(NotImplementedError, gc.set_debug,debug)
             AreEqual(None,gc.get_debug())
@@ -172,7 +173,7 @@ def test_garbage():
     
 #gc
 def test_gc():
-    if is_cli:
+    if is_cli or is_silverlight:
         Assert(gc.gc != None,"gc.gc should not be None")
     
 #test DEBUG_STATS,DEBUG_COLLECTABLE,DEBUG_UNCOLLECTABLE,DEBUG_INSTANCES,DEBUG_OBJECTS,DEBUG_SAVEALL and DEBUG_LEAK
@@ -186,12 +187,12 @@ def test_debug_stats():
     AreEqual(62,gc.DEBUG_LEAK)
  
 
-@skip("cli")
+@disabled("CodePlex Work Item 8202")
 def test_get_debug():
     state = [0,gc.DEBUG_STATS,gc.DEBUG_COLLECTABLE,gc.DEBUG_UNCOLLECTABLE,gc.DEBUG_INSTANCES,gc.DEBUG_OBJECTS,gc.DEBUG_SAVEALL,gc.DEBUG_LEAK]
     result = gc.get_debug()
     if result not in state:
-        Fail("Returned value of getdebug method is not invalid value")  
+        Fail("Returned value of getdebug method is not valid value:" + str(result))  
 
 #CodePlex Work Item# 8202
 #if gc.get_debug()!=0:

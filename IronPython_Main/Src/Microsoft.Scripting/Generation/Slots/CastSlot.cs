@@ -17,7 +17,7 @@ using System;
 using System.Reflection.Emit;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// A slot that can be used to wrap other slots and perform a cast before
     /// getting or setting the value.

@@ -31,11 +31,11 @@ AreEqual(vars(list).keys().count('ToString'), 0)
 
 import System
 
-# but CLS types w/o the attribute should....
-AreEqual(hasattr(System.Environment, 'ToString'), True)
-AreEqual(dir(System.Environment).count('ToString'), 1)
-AreEqual(vars(System.Environment).keys().count('ToString'), 1)
-
+if not is_silverlight:
+    # but CLS types w/o the attribute should....
+    AreEqual(hasattr(System.Environment, 'ToString'), True)
+    AreEqual(dir(System.Environment).count('ToString'), 1)
+    AreEqual(vars(System.Environment).keys().count('ToString'), 1)
 
 # and importing clr should show them all...
 import clr
@@ -52,11 +52,11 @@ AreEqual(hasattr([], 'ToString'), True)
 AreEqual(dir([]).count('ToString'), 1)
 AreEqual(vars(list).keys().count('ToString'), 1)
 
-
-# and they should still show up on system.
-AreEqual(hasattr(System.Environment, 'ToString'), True)
-AreEqual(dir(System.Environment).count('ToString'), 1)
-AreEqual(vars(System.Environment).keys().count('ToString'), 1)
+if not is_silverlight:
+    # and they should still show up on system.
+    AreEqual(hasattr(System.Environment, 'ToString'), True)
+    AreEqual(dir(System.Environment).count('ToString'), 1)
+    AreEqual(vars(System.Environment).keys().count('ToString'), 1)
 
 # eval should flow it's context
 a = "hello world"

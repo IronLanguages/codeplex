@@ -29,10 +29,6 @@ using System.Runtime.Remoting;
 
 namespace Microsoft.Scripting {
 
-    [AttributeUsage(AttributeTargets.Method)]
-    public sealed class DlrSpecialNameAttribute : Attribute {
-    }
-
     public delegate void Function();
     public delegate R Function<R>();
     public delegate R Function<T, R>(T arg);
@@ -46,6 +42,13 @@ namespace Microsoft.Scripting {
         #region Debug
 
         public static class Assert {
+
+            public static Exception Unreachable {
+                get {
+                    Debug.Assert(false, "Unreachable");
+                    return null;
+                }
+            }
 
             [Conditional("DEBUG")]
             public static void NotNull(object var, params object[] vars) {
@@ -93,9 +96,13 @@ namespace Microsoft.Scripting {
             public static readonly Type[] EmptyTypes = Type.EmptyTypes;
 #endif
 
-            public static bool IsSpecialName(MethodInfo mi) {
-                return mi.IsSpecialName || mi.IsDefined(typeof(DlrSpecialNameAttribute), false);
+#if SILVERLIGHT
+            public static bool IsNested(Type t) {
+                return t.DeclaringType != null;
             }
+#else
+            public static bool IsNested(Type t) { return t.IsNested; }
+#endif
 
 #if DEBUG
             public static string FormatSignature(MethodBase method) {
@@ -128,8 +135,10 @@ namespace Microsoft.Scripting {
                 
                 try {
                     return (T)Activator.CreateInstance(actualType, args);
-                } catch (Exception e) {
+                } catch (TargetInvocationException e) {
                     throw new InvalidImplementationException(System.String.Format(Resources.InvalidCtorImplementation, actualType), e.InnerException);
+                } catch (Exception e) {
+                    throw new InvalidImplementationException(System.String.Format(Resources.InvalidCtorImplementation, actualType), e);
                 }
             }
         }
@@ -445,6 +454,9 @@ namespace Microsoft.Scripting {
             foreach (char c in Path.GetInvalidPathChars())
                 sb.Replace(c, '_');
 
+            // GetInvalidNameChars not avaliable on Silverlight:
+            sb.Replace('\\', '_').Replace(':', '_').Replace('*', '_').Replace('/', '_').Replace('?', '_');
+            
             return sb.ToString();
         }
 
@@ -742,7 +754,7 @@ namespace Microsoft.Scripting {
             private static UnhandledExceptionEventHandler unhandledExceptionEventHandler;
             private static string[] commandLineArgs;
 
-            private class ExitProcessException : Exception {
+            public class ExitProcessException : Exception {
 
                 public int ExitCode { get { return exitCode; } }
                 int exitCode;
@@ -754,6 +766,13 @@ namespace Microsoft.Scripting {
 
             public static void ExitProcess(int exitCode) {
                 throw new ExitProcessException(exitCode);
+            }
+#else
+            public static bool IsOrcas {
+                get {
+                    Type t = typeof(object).Assembly.GetType("System.DateTimeOffset", false);
+                    return t != null;
+                }
             }
 #endif
 
@@ -970,6 +989,12 @@ namespace Microsoft.Scripting {
             }
 
             #endregion
+        }
+
+        public static List<T> MakeList<T>(T item) {
+            List<T> result = new List<T>();
+            result.Add(item);
+            return result;
         }
 
         #endregion

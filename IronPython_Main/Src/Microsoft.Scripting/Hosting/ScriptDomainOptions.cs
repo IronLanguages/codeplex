@@ -16,39 +16,32 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.Scripting.Hosting;
 using System.Reflection;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Hosting {
-    public enum DivisionOption {
-        Old,
-        New,
-        Warn,
-        WarnAll
-    }
-
     [Serializable]
     public sealed class ScriptDomainOptions {
-        private bool debugMode = true;
-        private bool engineDebug;
-        private bool verbose;
-        private bool traceBackSupport = (IntPtr.Size == 4);  // currently only enabled on 32-bit
-        private bool checkInitialized = true;
-        private bool debugCodeGen = false;
-        private bool trackPerformance;
-        private bool optimizeEnvironments = true;
-        private bool frames;
-        private AssemblyGenAttributes assemblyGenAttributes = AssemblyGenAttributes.None;
-        private string binariesDirectory;
-        private bool privateBinding;
-        private bool generateSafeCasts = true;
-        private bool doNotCacheConstants;
-        private bool generateModulesAsSnippets;
-        private bool bufferedStdOutAndError = true;
-        private DivisionOption division = DivisionOption.Old;
-        private bool python25;
-        private bool fastOps = true;
+        private bool _debugMode = true;
+        private bool _engineDebug;
+        private bool _verbose;
+        private bool _traceBackSupport = (IntPtr.Size == 4);  // currently only enabled on 32-bit
+        private bool _checkInitialized = true;
+        private bool _debugCodeGen = true;
+        private bool _trackPerformance;
+        private bool _optimizeEnvironments = true;
+        private bool _frames;
+        private AssemblyGenAttributes _assemblyGenAttributes = AssemblyGenAttributes.GenerateDebugAssemblies;
+        private string _binariesDirectory;
+        private bool _privateBinding;
+        private bool _generateSafeCasts = true;
+        private bool _doNotCacheConstants;
+        private bool _generateModulesAsSnippets;
+        private bool _bufferedStdOutAndError = true;
+        private bool _fastOps = true;
+        private bool _showASTs = false;
+        private bool _dumpASTs = false;
+        private bool _showRules = false;
         
         public ScriptDomainOptions() {
         }
@@ -60,10 +53,10 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public bool FastOps {
             get {
-                return fastOps;
+                return _fastOps;
             }
             set {
-                fastOps = value;
+                _fastOps = value;
             }
         }
 
@@ -71,54 +64,56 @@ namespace Microsoft.Scripting.Hosting {
         ///  Is this a debug mode? "__debug__" is defined, and Asserts are active
         /// </summary>
         public bool DebugMode {
-            get { return debugMode; }
-            set { debugMode = value; }
+            get { return _debugMode; }
+            set { _debugMode = value; }
         }
 
         /// <summary>
         /// corresponds to the "-v" command line parameter
         /// </summary>
         public bool Verbose {
-            get { return verbose; }
-            set { verbose = value; }
+            get { return _verbose; }
+            set { _verbose = value; }
         }
 
         /// <summary>
         /// Is the engine in debug mode? This is useful for debugging the engine itself
         /// </summary>
         public bool EngineDebug {
-            get { return engineDebug; }
+            get { return _engineDebug; }
             set { 
-                engineDebug = value;
+                _engineDebug = value;
 #if DEBUG
-                if (value) assemblyGenAttributes |= AssemblyGenAttributes.VerifyAssemblies;
-                else assemblyGenAttributes &= ~AssemblyGenAttributes.VerifyAssemblies;
+                if (value) _assemblyGenAttributes |= AssemblyGenAttributes.VerifyAssemblies;
+                else _assemblyGenAttributes &= ~AssemblyGenAttributes.VerifyAssemblies;
 #endif
             }
         }
 
         public bool DynamicStackTraceSupport {
-            get { return traceBackSupport; }
-            set { traceBackSupport = value; }
+            get { return _traceBackSupport; }
+            set { _traceBackSupport = value; }
         }
 
-        // Emit CheckInitialized calls
+        /// <summary>
+        /// Emit CheckInitialized calls
+        /// </summary>
         public bool CheckInitialized {
-            get { return checkInitialized; }
-            set { checkInitialized = value; }
+            get { return _checkInitialized; }
+            set { _checkInitialized = value; }
         }
 
         public bool TrackPerformance {
-            get { return trackPerformance; }
-            set { trackPerformance = value; }
+            get { return _trackPerformance; }
+            set { _trackPerformance = value; }
         }
 
         /// <summary>
         /// Should optimized code gen be disabled.
         /// </summary>
         public bool DebugCodeGeneration {
-            get { return debugCodeGen; }
-            set { debugCodeGen = value; }
+            get { return _debugCodeGen; }
+            set { _debugCodeGen = value; }
         }
 
         /// <summary>
@@ -127,16 +122,16 @@ namespace Microsoft.Scripting.Hosting {
         /// If false, environments are stored in FunctionEnvironmentN only
         /// </summary>
         public bool OptimizeEnvironments {
-            get { return optimizeEnvironments; }
-            set { optimizeEnvironments = value; }
+            get { return _optimizeEnvironments; }
+            set { _optimizeEnvironments = value; }
         }
 
         /// <summary>
         /// Generate functions using custom frames. Allocate the locals on frames.
         /// </summary>
         public bool Frames {
-            get { return frames; }
-            set { frames = value; }
+            get { return _frames; }
+            set { _frames = value; }
         }
 
         /// <summary>
@@ -144,8 +139,8 @@ namespace Microsoft.Scripting.Hosting {
         /// or by boxing it every time its needed.
         /// </summary>
         public bool DoNotCacheConstants {
-            get { return doNotCacheConstants; }
-            set { doNotCacheConstants = value; }
+            get { return _doNotCacheConstants; }
+            set { _doNotCacheConstants = value; }
         }
 
         /// <summary>
@@ -153,59 +148,48 @@ namespace Microsoft.Scripting.Hosting {
         /// to give richer information of failing casts.
         /// </summary>
         public bool GenerateSafeCasts {
-            get { return generateSafeCasts; }
-            set { generateSafeCasts = value; }
+            get { return _generateSafeCasts; }
+            set { _generateSafeCasts = value; }
         }
 
         public AssemblyGenAttributes AssemblyGenAttributes {
-            get { return assemblyGenAttributes; }
-            set { assemblyGenAttributes = value; }
+            get { return _assemblyGenAttributes; }
+            set { _assemblyGenAttributes = value; }
         }
 
         public string BinariesDirectory {
-            get { return binariesDirectory; }
-            set { binariesDirectory = value; }
+            get { return _binariesDirectory; }
+            set { _binariesDirectory = value; }
         }
 
         public bool PrivateBinding {
-            get { return privateBinding; }
-            set { privateBinding = value; }
+            get { return _privateBinding; }
+            set { _privateBinding = value; }
         }
 
         /// <summary>
         /// true to import modules as though a sequence of snippets 
         /// </summary>
         public bool GenerateModulesAsSnippets {
-            get { return generateModulesAsSnippets; }
-            set { generateModulesAsSnippets = value; }
+            get { return _generateModulesAsSnippets; }
+            set { _generateModulesAsSnippets = value; }
         }
 
         // obsolete:
         public bool BufferedStandardOutAndError {
-            get { return bufferedStdOutAndError; }
-            set { bufferedStdOutAndError = value; }
+            get { return _bufferedStdOutAndError; }
+            set { _bufferedStdOutAndError = value; }
         }
 
 
-        // Should we strip out all doc strings (the -OO command line option)?
+        /// <summary>
+        ///  Should we strip out all doc strings (the -OO command line option)?
+        /// </summary>
         private bool stripDocStrings = false;
 
         public bool StripDocStrings {
             get { return stripDocStrings; }
             set { stripDocStrings = value; }
-        }
-
-        public DivisionOption Division {
-            get { return division; }
-            set { division = value; }
-        }
-
-        /// <summary>
-        ///  should the Python 2.5 features be enabled (-X:Python25 commandline option) ?
-        /// </summary>
-        public bool Python25 {
-            get { return python25; }
-            set { python25 = value; }
         }
 
         /// <summary>
@@ -219,6 +203,29 @@ namespace Microsoft.Scripting.Hosting {
                 return false;
 #endif
             }
+        }
+
+        /// <summary>
+        /// Print generated Abstract Syntax Trees to the console
+        /// </summary>
+        public bool ShowASTs {
+            get { return _showASTs; }
+            set { _showASTs = value; }
+        }
+        /// <summary>
+        /// Write out generated Abstract Syntax Trees as files in the current directory
+        /// </summary>
+        public bool DumpASTs {
+            get { return _dumpASTs; }
+            set { _dumpASTs = value; }
+        }
+
+        /// <summary>
+        /// Print generated action dispatch rules to the console
+        /// </summary>
+        public bool ShowRules {
+            get { return _showRules; }
+            set { _showRules = value; }
         }
 
         #endregion

@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class DynamicMemberAssignment : Expression {
         private readonly Expression _target;
         private readonly SymbolId _name;
@@ -63,21 +63,17 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
-        }
-
-        public override void EmitAs(CodeGen cg, Type asType) {
             Slot targetTmp = null;
             if (_op == Operators.None) {
-                _value.Emit(cg);
+                _value.EmitAsObject(cg);
             } else {
                 cg.EmitInPlaceOperator(
                     _op,
                     this.ExpressionType,
                     delegate(CodeGen _cg, Type _asType) {
                         _cg.EmitCodeContext();
-                        _target.Emit(_cg);
-                        targetTmp = _cg.CopyTopOfStack(typeof(object));
+                        _target.EmitAsObject(_cg);
+                        targetTmp = _cg.DupAndStoreInTemp(typeof(object));
                         _cg.EmitSymbolId(_name);
                         _cg.EmitCall(typeof(RuntimeHelpers), _binding == MemberBinding.Unbound ? "GetMember" : "GetBoundMember");
                         _cg.EmitConvertFromObject(_asType);
@@ -87,19 +83,16 @@ namespace Microsoft.Scripting.Internal.Ast {
                 );
             }
 
-            Slot result = cg.CopyTopOfStack(asType);
             if (targetTmp != null) {
                 targetTmp.EmitGet(cg);
                 cg.FreeLocalTmp(targetTmp);
             } else {
                 _target.Emit(cg);
             }
+
             cg.EmitSymbolId(_name);
             cg.EmitCodeContext();
             cg.EmitCall(typeof(RuntimeHelpers), "SetMember");
-            cg.Emit(System.Reflection.Emit.OpCodes.Pop);
-            result.EmitGet(cg);
-            cg.FreeLocalTmp(result);
         }
 
         public override void Walk(Walker walker) {

@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal;
 using Microsoft.Scripting;
+using System.Runtime.CompilerServices;
 
 namespace IronPythonTest {
     public class Cmplx {
@@ -107,13 +107,13 @@ namespace IronPythonTest {
             return new Cmplx(-x.r, -x.i);
         }
 
-        [System.Runtime.CompilerServices.SpecialName, DlrSpecialNameAttribute]
+        [SpecialName]
         public static Cmplx op_MultiplicationAssignment(Cmplx x, double y) {
             x.r *= y;
             x.i *= y;
             return x;
         }
-        [System.Runtime.CompilerServices.SpecialName, DlrSpecialNameAttribute]
+        [SpecialName]
         public static Cmplx op_MultiplicationAssignment(Cmplx x, Cmplx y) {
             double r = x.r * y.r - x.i * y.i;
             double i = x.r * y.i + x.i * y.r;
@@ -121,35 +121,35 @@ namespace IronPythonTest {
             x.i = i;
             return x;
         }
-        [System.Runtime.CompilerServices.SpecialName, DlrSpecialNameAttribute]
+        [SpecialName]
         public static Cmplx op_SubtractionAssignment(Cmplx x, double y) {
             x.r -= y;
             return x;
         }
-        [System.Runtime.CompilerServices.SpecialName, DlrSpecialNameAttribute]
+        [SpecialName]
         public static Cmplx op_SubtractionAssignment(Cmplx x, Cmplx y) {
             x.r -= y.r;
             x.i -= y.i;
             return x;
         }
-        [System.Runtime.CompilerServices.SpecialName, DlrSpecialNameAttribute]
+        [SpecialName]
         public static Cmplx op_AdditionAssignment(Cmplx x, double y) {
             x.r += y;
             return x;
         }
-        [System.Runtime.CompilerServices.SpecialName, DlrSpecialNameAttribute]
+        [SpecialName]
         public static Cmplx op_AdditionAssignment(Cmplx x, Cmplx y) {
             x.r += y.r;
             x.i += y.i;
             return x;
         }
-        [System.Runtime.CompilerServices.SpecialName, DlrSpecialNameAttribute]
+        [SpecialName]
         public static Cmplx op_DivisionAssignment(Cmplx x, double y) {
             x.r /= y;
             x.i /= y;
             return x;
         }
-        [System.Runtime.CompilerServices.SpecialName, DlrSpecialNameAttribute]
+        [SpecialName]
         public static Cmplx op_DivisionAssignment(Cmplx x, Cmplx y) {
             double div = y.r * y.r + y.i * y.i;
             double r = (x.r * y.r + x.i * y.i) / div;

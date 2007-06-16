@@ -25,8 +25,8 @@ namespace Microsoft.Scripting.Actions {
         SetMember,
         DeleteMember,
 
-        Call
-        //Call and CreateInstance variants TBD
+        Call,
+        CreateInstance
     }
 
     public abstract class Action {
@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Actions {
 
         public static Action ParseName(string name) {
             Debug.Assert(name.IndexOf('-') != -1, "Action name is bad: " + name);
-            ActionKind kind = (ActionKind)typeof(ActionKind).GetField(name.Substring(0, name.IndexOf('-'))).GetValue(null);
+            ActionKind kind = (ActionKind)Enum.Parse(typeof(ActionKind), name.Substring(0, name.IndexOf('-')), false);
             string param = name.Substring(name.IndexOf('-')+1);
             param = param.Substring(0, param.LastIndexOf('-'));
             switch (kind) {

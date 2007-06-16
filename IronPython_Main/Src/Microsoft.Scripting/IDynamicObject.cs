@@ -17,10 +17,16 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
+using Microsoft.Scripting.Actions;
+
 namespace Microsoft.Scripting {
     public interface IDynamicObject {
-        DynamicType DynamicType {
-            get;
-        }
+        /// <summary>
+        /// The language the object is defined in.
+        /// </summary>
+        [Obsolete("Do not use this property! It will be gone when ICallable interfaces are removed and we figure out how to do GetDelegate via dynamic sites.")]
+        LanguageContext LanguageContext { get; }
+
+        StandardRule<T> GetRule<T>(Action action, CodeContext context, object[] args);
     }
 }

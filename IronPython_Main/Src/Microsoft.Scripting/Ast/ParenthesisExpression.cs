@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class ParenthesisExpression : Expression {
         private readonly Expression _expression;
 
@@ -26,11 +26,20 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         public ParenthesisExpression(Expression expression, SourceSpan span)
             : base(span) {
+            if (expression == null) {
+                throw new ArgumentNullException("expression");
+            }
             _expression = expression;
         }
 
         public Expression Expression {
             get { return _expression; }
+        }
+
+        public override Type ExpressionType {
+            get {
+                return _expression.ExpressionType;
+            }
         }
 
         public override object Evaluate(CodeContext context) {

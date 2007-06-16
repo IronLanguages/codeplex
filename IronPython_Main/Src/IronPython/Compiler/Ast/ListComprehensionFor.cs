@@ -15,7 +15,7 @@
 
 using System.Collections;
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 using Operators = Microsoft.Scripting.Operators;
 
 namespace IronPython.Compiler.Ast {
@@ -36,7 +36,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag, MSAst.Statement body) {
-            MSAst.VariableReference temp = ag.MakeTemp(SymbolTable.StringToId("list_comprehension_for"), typeof(IEnumerator));
+            MSAst.Variable temp = ag.MakeTemp(SymbolTable.StringToId("list_comprehension_for"), typeof(IEnumerator));
             return ForStatement.TransformForStatement(ag, temp, _list, _lhs, body, null, Span, _lhs.End);
         }
 

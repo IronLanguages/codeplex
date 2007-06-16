@@ -17,7 +17,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Internal;
 using System.IO;
 using System.Diagnostics;
 

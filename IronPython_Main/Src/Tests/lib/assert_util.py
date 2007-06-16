@@ -48,8 +48,8 @@ if not is_silverlight:
         else: return None
 
     def get_temp_dir():
-        temp = get_environ_variable("TEMP")
-        if temp == None: temp = get_environ_variable("TMP")
+        temp = get_environ_variable("TMP")
+        if temp == None: temp = get_environ_variable("TEMP")
         if (temp == None) or (' ' in temp) : 
             temp = r"C:\temp"
         return temp
@@ -96,7 +96,6 @@ else:
 
         basePyDir = 'Languages\\IronPython'
         if not rowan_root:
-            basePyDir = 'Src\\'
             rowan_root = sys.prefix
             if rowan_root.endswith("\\Bin\\Debug"):
                 rowan_root = rowan_root[:-10]
@@ -104,6 +103,9 @@ else:
                 rowan_root = rowan_root[:-12]
             else:
                 raise AssertionError("Cannot find merlin_root environment variable")
+            if is_cli:
+                if System.IO.Directory.Exists(path_combine(rowan_root, 'Src')):
+                    basePyDir = 'Src'
 
         # get some directories and files
         ip_root             = path_combine(rowan_root, basePyDir)
@@ -178,16 +180,22 @@ def SequencesAreEqual(a, b, m=None):
 def AlmostEqual(a, b):
     Assert(round(a-b, 6) == 0, "expected %r and %r almost same" % (a, b))    
     
-def AssertError(exc, func, *args):
-    try:        func(*args)
+def AssertError(exc, func, *args, **kwargs):
+    try:        func(*args, **kwargs)
     except exc: return
     else :      Fail("Expected %r but got no exception" % exc)
 
+def AssertInOrNot(l, in_list, not_in_list):
+    for x in in_list:
+        Assert(x in l, "%s should be in %s" % (x, l))
+    for x in not_in_list:
+        Assert(x not in l, "%s should not be in %s" % (x, l))
+        
 # Check that the exception is raised with the provided message
 
-def AssertErrorWithMessage(exc, expectedMessage, func, *args):
+def AssertErrorWithMessage(exc, expectedMessage, func, *args, **kwargs):
     Assert(expectedMessage, "expectedMessage cannot be null")
-    try:   func(*args)
+    try:   func(*args, **kwargs)
     except exc, inst:
         Assert(expectedMessage == inst.__str__(), \
                "Exception %r message (%r) does not contain %r" % (type(inst), inst.__str__(), expectedMessage))
@@ -196,14 +204,14 @@ def AssertErrorWithMessage(exc, expectedMessage, func, *args):
 # Check that the exception is raised with the provided message, where the message
 # differs on IronPython and CPython
 
-def AssertErrorWithMessages(exc, ironPythonMessage, cpythonMessage, func, *args):
+def AssertErrorWithMessages(exc, ironPythonMessage, cpythonMessage, func, *args, **kwargs):
     if is_cli or is_silverlight:
         expectedMessage = ironPythonMessage
     else:
         expectedMessage = cpythonMessage
 
     Assert(expectedMessage, "expectedMessage cannot be null")
-    try:   func(*args)
+    try:   func(*args, **kwargs)
     except exc, inst:
         Assert(expectedMessage == inst.__str__(), \
                "Exception %r message (%r) does not contain %r" % (type(inst), inst.__str__(), expectedMessage))
@@ -214,15 +222,19 @@ def AssertErrorWithMessages(exc, ironPythonMessage, cpythonMessage, func, *args)
 if is_silverlight:
     def load_iron_python_test(*args):
         import clr
+
+        clr.AddReference("Microsoft.Scripting")
+        clr.AddReference("IronPython")
+
         if args: 
             return clr.LoadAssembly("IronPythonTest")
         else: 
             clr.AddReference("IronPythonTest")
 else:
-    def AssertErrorWithMatch(exc, expectedMessage, func, *args):
+    def AssertErrorWithMatch(exc, expectedMessage, func, *args, **kwargs):
         import re
         Assert(expectedMessage, "expectedMessage cannot be null")
-        try:   func(*args)
+        try:   func(*args, **kwargs)
         except exc, inst:
             Assert(re.compile(expectedMessage).match(inst.__str__()), \
                    "Exception %r message (%r) does not contain %r" % (type(inst), inst.__str__(), expectedMessage))
@@ -230,6 +242,10 @@ else:
 
     def load_iron_python_test(*args):
         import clr
+
+        clr.AddReference("Microsoft.Scripting")
+        clr.AddReference("IronPython")
+
         if args: 
             return clr.LoadAssemblyFromFileWithPath(testpath.iron_python_test_dll)
         else: 
@@ -373,3 +389,14 @@ def run_test(mod_name, noOutputPlease=False):
 def run_class(mod_name, verbose=False): 
     pass
     
+is_32, is_64 = False, False    
+if sys.platform=="win32":
+    cpu = get_environ_variable("PROCESSOR_ARCHITECTURE")
+    if cpu.lower()=="x86":
+        is_32 = True
+    elif cpu.lower()=="amd64":
+        is_64 = True
+else:
+    is_32, is_64 = is_cli32, is_cli64
+
+

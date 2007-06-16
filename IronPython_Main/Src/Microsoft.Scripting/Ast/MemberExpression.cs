@@ -17,9 +17,9 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Member expression (statically typed) which represents 
     /// property or field access, both static and instance.
@@ -51,16 +51,13 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        private MemberExpression(MemberInfo member, Expression expression) {
+        private MemberExpression(MemberInfo member, Expression expression)
+            : base(SourceSpan.None) {
             _member = member;
             _expression = expression;
         }
 
         public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
-        }
-
-        public override void EmitAs(CodeGen cg, Type asType) {
             // emit "this", if any
             if (_expression != null) {
                 if (_member.DeclaringType.IsValueType) {
@@ -83,8 +80,6 @@ namespace Microsoft.Scripting.Internal.Ast {
                     Debug.Assert(false, "Invalid member type");
                     break;
             }
-
-            cg.EmitConvert(ExpressionType, asType);
         }
 
         public override object Evaluate(CodeContext context) {

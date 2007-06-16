@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class CallWithThisExpression : Expression {
         private readonly Expression _target;
         private readonly Expression _instance;
@@ -49,14 +49,14 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         public override void Emit(CodeGen cg) {
             cg.EmitCodeContext();
-            _target.Emit(cg);
-            cg.EmitExprOrNull(_instance);
+            _target.EmitAsObject(cg);
+            cg.EmitExprAsObjectOrNull(_instance);
 
             if (_args == null) {
                 cg.EmitNull();
             } else {
                 cg.EmitArray(typeof(object), _args.Length, delegate(int item) {
-                    cg.EmitExprOrNull(_args[item].Expression);
+                    cg.EmitExprAsObjectOrNull(_args[item].Expression);
                 });
             }
 

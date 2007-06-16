@@ -19,10 +19,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting;
-
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Internal.Generation;
 
 namespace Microsoft.Scripting.Generation {
     public class ModuleGlobalSlot : Slot {

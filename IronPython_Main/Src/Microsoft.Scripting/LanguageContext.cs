@@ -19,21 +19,20 @@ using System.Text;
 using System.Threading;
 using System.Globalization;
 
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal.Ast;
-using System.Runtime.CompilerServices;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
+using System.Runtime.CompilerServices;
+using System.Reflection;
 
 namespace Microsoft.Scripting {
     /// <summary>
     /// Provides language specific facilities which are typicalled called by the runtime.
     /// </summary>
     public abstract class LanguageContext : ICloneable {
-        // TODO:
-        private ScriptEngine _engine;
-        private static ModuleGlobalCache _noCache;        
+        private static ModuleGlobalCache _noCache;
         [ThreadStatic]
         internal static List<Exception> _currentExceptions;
         
@@ -41,15 +40,7 @@ namespace Microsoft.Scripting {
             get { return Engine.DefaultBinder; }
         }
 
-        public virtual ScriptEngine Engine {
-            get {
-                return _engine;
-            }
-        }
-
-        protected void SetEngine(ScriptEngine engine) {
-            _engine = engine;
-        }
+        public abstract ScriptEngine Engine { get; }
 
         /// <summary>
         /// Provides the ContextId which includes members that should only be shown for this LanguageContext.
@@ -62,24 +53,57 @@ namespace Microsoft.Scripting {
             }
         }
 
-        /// <summary>
-        /// Returns the attributes associated with this LanguageContext's code.
-        /// </summary>
-        public abstract bool ShowCls { get; set; }
-
-        // engine can be null for invariant contexts
-        public LanguageContext(ScriptEngine engine) {
-            _engine = engine;
+        protected LanguageContext() {
         }
 
-        public virtual LanguageContext GetLanguageContextForModule(ScriptModule module) {
-            // nop
-            return this;
+        #region Module Context
+
+        public ModuleContext GetModuleContext(ScriptModule module) {
+            if (module == null) throw new ArgumentNullException("module");
+            return module.GetModuleContext(ContextId);
         }
         
+        public ModuleContext EnsureModuleContext(ScriptModule module) {
+            if (module == null) throw new ArgumentNullException("module");
+            ModuleContext context = module.GetModuleContext(ContextId);
+            
+            if (context == null) {
+                context = CreateModuleContext(module);
+                if (context == null) {
+                    throw new InvalidImplementationException("CreateModuleContext must return a module context.");
+                }
+                return module.SetModuleContext(ContextId, context);
+            }
+
+            return context;
+        }
+
+        /// <summary>
+        /// Notification sent when a ScriptCode is about to be executed within given ModuleContext.
+        /// </summary>
+        /// <param name="newContext"></param>
+        public virtual void ModuleContextEntering(ModuleContext newContext) {
+            // nop
+        }
+
+        /// <summary>
+        /// Factory for ModuleContext creation. 
+        /// It is guaranteed that this method is called once per each ScriptModule the langauge code is executed within.
+        /// </summary>
+        /// <param name="module">The module the context will be associated with.</param>
+        /// <returns>Non-<c>null</c> module context instance.</returns>
+        public virtual ModuleContext CreateModuleContext(ScriptModule module) {
+            return new ModuleContext(module);
+        }
+
+        #endregion
+
         //TODO rename and comment
         public virtual ScriptCode CompileAst(CompilerContext context, CodeBlock body) {
             body.BindClosures();
+#if DEBUG
+            AstWriter.Dump(body, context);
+#endif
             return new ScriptCode(body, this, context);
         }
 
@@ -100,7 +124,7 @@ namespace Microsoft.Scripting {
 
             SourceFileUnit su = new SourceFileUnit(engine, path, module.ModuleName, Encoding.Default);
 
-            return ScriptCode.FromCompiledCode(su.Compile(module.GetCompilerOptions(engine)));
+            return ScriptCode.FromCompiledCode(su.Compile(engine.GetModuleCompilerOptions(module)));
         }
 
         /// <summary>
@@ -115,12 +139,12 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Looks up the name in the provided Scope using the current language's semantics.
         /// </summary>
-        public virtual bool TryLookupName(Scope scope, SymbolId name, out object value) {
-            if (scope.TryLookupName(this, name, out value)) {
+        public virtual bool TryLookupName(CodeContext context, SymbolId name, out object value) {
+            if (context.Scope.TryLookupName(this, name, out value)) {
                 return true;
             }
 
-            return TryLookupGlobal(scope, name, out value);
+            return TryLookupGlobal(context, name, out value);
         }
 
         /// <summary>
@@ -129,9 +153,11 @@ namespace Microsoft.Scripting {
         /// If the name cannot be found throws the language appropriate exception or returns
         /// the language's appropriate default value.
         /// </summary>
-        public virtual object LookupName(Scope scope, SymbolId name) {
+        public virtual object LookupName(CodeContext context, SymbolId name) {
             object value;
-            if (!TryLookupName(scope, name, out value)) throw MissingName(name);
+            if (!TryLookupName(context, name, out value)) {
+                throw MissingName(name);
+            }
 
             return value;
         }
@@ -139,15 +165,15 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Attempts to set the name in the provided scope using the current language's semantics.
         /// </summary>
-        public virtual void SetName(Scope scope, SymbolId name, object value) {
-            scope.SetName(name, value);
+        public virtual void SetName(CodeContext context, SymbolId name, object value) {
+            context.Scope.SetName(name, value);
         }
 
         /// <summary>
         /// Attempts to remove the name from the provided scope using the current language's semantics.
         /// </summary>
-        public virtual bool RemoveName(Scope scope, SymbolId name) {
-            return scope.RemoveName(this, name);
+        public virtual bool RemoveName(CodeContext context, SymbolId name) {
+            return context.Scope.RemoveName(this, name);
         }
 
         /// <summary>
@@ -155,7 +181,7 @@ namespace Microsoft.Scripting {
         /// the provided Scope.  The default implementation will attempt to lookup the variable
         /// at the host level.
         /// </summary>
-        public virtual bool TryLookupGlobal(Scope scope, SymbolId name, out object value) {
+        public virtual bool TryLookupGlobal(CodeContext context, SymbolId name, out object value) {
             return ScriptDomainManager.CurrentManager.Host.TryGetVariable(Engine, name, out value);
         }
 
@@ -291,7 +317,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Get value from the target at the specified index:  target[index]
         /// </summary>
-        /// <param name="context">Code context of the executing code</param>
+        /// <param name="context"></param>
         /// <param name="target">Target</param>
         /// <param name="index">Index</param>
         /// <returns></returns>
@@ -302,7 +328,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Set the value on the target at the specified index.
         /// </summary>
-        /// <param name="context">Code context</param>
+        /// <param name="context"></param>
         /// <param name="target">Target of the operation</param>
         /// <param name="index">Index</param>
         /// <param name="value">Value to set at the given index.</param>
@@ -312,7 +338,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Get the value of the member with given name from the target
         /// </summary>
-        /// <param name="context">Code context</param>
+        /// <param name="context"></param>
         /// <param name="target">The target to get the member from</param>
         /// <param name="name">Name of the member</param>
         /// <returns></returns>
@@ -323,7 +349,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Get the value of the bound member with given name from the target
         /// </summary>
-        /// <param name="context">Code context</param>
+        /// <param name="context"></param>
         /// <param name="target">The target to get the bound member from</param>
         /// <param name="name">Name of the member</param>
         /// <returns></returns>
@@ -334,7 +360,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Sets the value of the member with given name on the target.
         /// </summary>
-        /// <param name="context">Code context</param>
+        /// <param name="context"></param>
         /// <param name="target">The target on which to set the member</param>
         /// <param name="name">Name of the member to set</param>
         /// <param name="value">The new value for the member</param>
@@ -344,7 +370,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Calls the function with given arguments
         /// </summary>
-        /// <param name="context">Code context</param>
+        /// <param name="context"></param>
         /// <param name="function">The function to call</param>
         /// <param name="args">The argumetns with which to call the function.</param>
         /// <returns></returns>
@@ -355,7 +381,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Calls the function with instance as the "this" value.
         /// </summary>
-        /// <param name="context">Code context</param>
+        /// <param name="context"></param>
         /// <param name="function">The function to call</param>
         /// <param name="instance">The instance to pass as "this".</param>
         /// <param name="args">The rest of the arguments.</param>
@@ -367,7 +393,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Calls the function with arguments, extra arguments in tuple and dictionary of keyword arguments
         /// </summary>
-        /// <param name="context">Code context</param>
+        /// <param name="context"></param>
         /// <param name="func">The function to call</param>
         /// <param name="args">The arguments</param>
         /// <param name="names">Argument names</param>
@@ -381,7 +407,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Calls function with arguments and additional arguments in the tuple
         /// </summary>
-        /// <param name="context">Code context</param>
+        /// <param name="context"></param>
         /// <param name="func">The function to call</param>
         /// <param name="args">Argument array</param>
         /// <param name="argsTuple">Tuple with extra arguments</param>
@@ -393,7 +419,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Calls the function with arguments, some of which are keyword arguments.
         /// </summary>
-        /// <param name="context">Code context</param>
+        /// <param name="context"></param>
         /// <param name="func">Function to call</param>
         /// <param name="args">Argument array</param>
         /// <param name="names">Names for some of the arguments</param>
@@ -405,7 +431,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Determines object equality in the given context.
         /// </summary>
-        /// <param name="context">Language context.</param>
+        /// <param name="context"></param>
         /// <param name="x">First object to compare</param>
         /// <param name="y">Second object to compare</param>
         /// <returns>bool</returns>
@@ -416,7 +442,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Used by the Switch statment to check if a given object can be used as a valid case
         /// </summary>
-        /// <param name="context">CodeContext</param>
+        /// <param name="context"></param>
         /// <param name="exprVal">Object which is the case expression</param>
         /// <param name="index">The actual index to be used for switching</param>
         /// <returns>True if a index was found successfully</returns>
@@ -427,6 +453,45 @@ namespace Microsoft.Scripting {
             }
             index = -1;
             return false;
+        }
+
+        /// <summary>
+        /// Gets the value or throws an exception when the provided MethodCandidate cannot be called.
+        /// </summary>
+        /// <returns></returns>
+        public virtual object GetNotImplemented(params MethodCandidate []candidates) {
+            throw new MissingMemberException("the specified operator is not implemented");
+        }
+
+        public virtual string GetTypeName(object o) {
+            return DynamicHelpers.GetDynamicType(o).Name;
+        }
+
+        /// <summary>
+        /// Checks whether the target is callable with given number of arguments.
+        /// </summary>
+        public void CheckCallable(object target, int argumentCount) {
+            int min, max;
+            if (!IsCallable(target, argumentCount, out min, out max)) {
+                if (min == max) {
+                    throw RuntimeHelpers.SimpleTypeError(String.Format("expected compatible function, but got parameter count mismatch (expected {0} args, target takes {1})", argumentCount, min));
+                } else {
+                    throw RuntimeHelpers.SimpleTypeError(String.Format("expected compatible function, but got parameter count mismatch (expected {0} args, target takes at least {1} and at most {2})", argumentCount, min, max));
+                }
+            }
+        }
+
+        public virtual bool IsCallable(object target, int argumentCount, out int min, out int max) {
+            min = max = 0;
+            return true;
+        }
+
+        public virtual Assembly LoadAssemblyFromFile(string file) {
+#if SILVERLIGHT
+            return null;
+#else
+            return Assembly.LoadFile(file);
+#endif
         }
     }
 }

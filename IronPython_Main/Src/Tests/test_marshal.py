@@ -18,12 +18,10 @@ if is_silverlight==False:
     from lib.file_util import *
 
 # Some of these tests only apply to Python 2.5 compatibility
-if is_cli: 
-    from System import Environment
-    isPython25 = "-X:Python25" in System.Environment.GetCommandLineArgs()
-else:
-    import sys
-    isPython25 = ((sys.version_info[0] == 2) and (sys.version_info[1] >= 5)) or (sys.version_info[0] > 2)
+import sys
+isPython25 = ((sys.version_info[0] == 2) and (sys.version_info[1] >= 5)) or (sys.version_info[0] > 2)
+
+Assert(isPython25 or not is_cli)
 
 import marshal
 
@@ -128,9 +126,3 @@ def test_negative():
     AssertError(ValueError, marshal.dumps, my())  ## unmarshallable object
     
 run_test(__name__)    
-
-if not isPython25: 
-    if is_cli:
-        from lib.process_util import *
-        result = launch_ironpython_changing_extensions(path_combine(testpath.public_testdir, "test_marshal.py"), ["-X:Python25"])
-        AreEqual(result, 0)

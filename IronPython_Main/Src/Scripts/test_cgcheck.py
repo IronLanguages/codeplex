@@ -19,7 +19,10 @@ def test_main(level='full'):
     old_args = sys.argv
     sys.argv = ['checkonly']
 
+    # !!! Instead of a whitelist, we should have a blacklist so that any newly added
+    # generators automatically get included in this tests
     generators = [
+        'generate_AssemblyTypeNames',
         'generate_alltypes',
         'generate_calls', 
         'generate_convert', 

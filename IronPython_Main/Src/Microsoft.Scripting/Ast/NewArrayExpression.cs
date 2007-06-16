@@ -17,12 +17,13 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class NewArrayExpression : Expression {
         private IList<Expression> _expressions;
         private Type _type;
+        private System.Reflection.ConstructorInfo _constructor;
 
         /// <summary>
         /// Creates a new array expression of the specified type from the provided initializers.
@@ -42,18 +43,20 @@ namespace Microsoft.Scripting.Internal.Ast {
             return new NewArrayExpression(type, new List<Expression>(initializers));
         }
 
-        private NewArrayExpression(Type type, IList<Expression> expressions) {
+        private NewArrayExpression(Type type, IList<Expression> expressions)
+            : base(SourceSpan.None) {
             if (expressions == null) throw new ArgumentNullException("expressions");
             if (type == null) throw new ArgumentNullException("type");
             for (int i = 0; i < expressions.Count; i++) {
                 if (expressions[i] == null) {
                     Debug.Assert(false);
-                    throw new ArgumentNullException("expressions[" + i.ToString() + "]"); 
+                    throw new ArgumentNullException("expressions[" + i.ToString() + "]");
                 }
             }
 
             _type = type;
             _expressions = expressions;
+            _constructor = _type.GetConstructor(new Type[] { typeof(int) });
         }
 
         public IList<Expression> Expressions {
@@ -66,13 +69,26 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
-            cg.EmitArrayFromExpressions(_type.GetElementType(), _expressions);
-            cg.EmitConvert(ExpressionType, asType);
-        }
-
         public override void Emit(CodeGen cg) {
             cg.EmitArrayFromExpressions(_type.GetElementType(), _expressions);
+        }
+
+        public override object Evaluate(CodeContext context) {
+            if (_type.IsValueType) {
+                // value arrays cannot be cast to object arrays
+                object contents = (object)_constructor.Invoke(new object[] { _expressions.Count });
+                System.Reflection.MethodInfo setter = _type.GetMethod("Set");
+                for (int i = 0; i < _expressions.Count; i++) {
+                    setter.Invoke(contents, new object[] {i, _expressions[i].Evaluate(context)});
+                }
+                return contents;
+            } else {
+                object[] contents = (object[])_constructor.Invoke(new object[] { _expressions.Count });
+                for (int i = 0; i < _expressions.Count; i++) {
+                    contents[i] = _expressions[i].Evaluate(context);
+                }
+                return contents;
+            }
         }
 
         public override void Walk(Walker walker) {

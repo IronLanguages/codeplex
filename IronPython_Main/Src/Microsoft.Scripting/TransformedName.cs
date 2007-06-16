@@ -17,9 +17,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
-using Microsoft.Scripting;
 
-namespace Microsoft.Scripting.Internal {
+namespace Microsoft.Scripting {
     /// <summary>
     /// Returns the transformed name of the member or null if the member should
     /// not be displayed.
@@ -70,23 +69,33 @@ namespace Microsoft.Scripting.Internal {
         private readonly CustomTransformer _custTransform;
 
         public TransformedName(string name, OperatorMapping op, ContextId context) {
+            if (name == null) throw new ArgumentNullException("name");
+            if (op == null) throw new ArgumentNullException("op");
+
             _name = name;
             _context = context;
             _op = op;
         }
 
         public TransformedName(string name, ContextId context) {
+            if (name == null) throw new ArgumentNullException("name");
+
             _name = name;
             _context = context;
         }
 
         public TransformedName(string name, CustomTransformer customTransformer, ContextId context) {
+            if (name == null) throw new ArgumentNullException("name");
+            if (customTransformer == null) throw new ArgumentNullException("customTransformer");
+
             _name = name;
             _context = context;
             _custTransform = customTransformer;
         }
 
         public TransformedName(OperatorMapping op, ContextId context) {
+            if (op == null) throw new ArgumentNullException("op");
+
             _op = op;
             _context = context;
         }

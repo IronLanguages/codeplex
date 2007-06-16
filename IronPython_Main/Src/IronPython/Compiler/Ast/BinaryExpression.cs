@@ -15,9 +15,9 @@
 
 using System;
 using System.Diagnostics;
-using MSAst = Microsoft.Scripting.Internal.Ast;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class BinaryExpression : Expression {
@@ -80,7 +80,7 @@ namespace IronPython.Compiler.Ast {
             BinaryExpression bright = (BinaryExpression)_right;
 
             // Transform the left child of my right child (the next node in sequence)
-            MSAst.Expression rleft = bright.Left.Transform(ag);
+            MSAst.Expression rleft = ag.Transform(bright.Left);
 
             // Store it in the temp
             MSAst.BoundExpression temp = ag.MakeTempExpression("chained_comparison", rleft.Span);
@@ -89,7 +89,8 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression comparison = MakeBinaryOperation(
                 _op,
                 left,
-                new MSAst.BoundAssignment(temp.Reference, rleft,  Operators.None),
+                new MSAst.BoundAssignment(temp.Variable, rleft,  Operators.None),
+                typeof(object),
                 Span
             );
 
@@ -102,7 +103,8 @@ namespace IronPython.Compiler.Ast {
                 rright = MakeBinaryOperation(
                     bright.Operator,
                     temp,
-                    bright.Right.Transform(ag),
+                    ag.Transform(bright.Right),
+                    typeof(object),
                     bright.Span
                 );
             }
@@ -113,38 +115,29 @@ namespace IronPython.Compiler.Ast {
             return new MSAst.AndExpression(comparison, rright, Span);
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             MSAst.Expression left = ag.Transform(_left);
 
             if (NeedComparisonTransformation()) {
                 return FinishCompare(left, ag);
             } else {
-                return MakeBinaryOperation(_op, left, ag.Transform(_right), Span);
+                return MakeBinaryOperation(_op, left, ag.Transform(_right), type, Span);
             }
         }
 
-        private static MSAst.Expression MakeBinaryOperation(PythonOperator op, MSAst.Expression left, MSAst.Expression right, SourceSpan span) {
+        private static MSAst.Expression MakeBinaryOperation(PythonOperator op, MSAst.Expression left, MSAst.Expression right, Type type, SourceSpan span) {
             Operators action = PythonOperatorToAction(op);
             if (action != Operators.None) {
                 // Create action expression
-                return new MSAst.ActionExpression(
-                    DoOperationAction.Make(action),
-                    new MSAst.Expression[] {
-                            left,
-                            right,
-                        },
-                    span
-                );
+                return MSAst.ActionExpression.Operator(span, action, type, left, right);
             } else {
                 // Call helper method
-                return new MSAst.MethodCallExpression(
-                    AstGenerator.GetHelperMethod(GetHelperName(op)),
+                return MSAst.MethodCallExpression.Call(
+                    span,
                     null,
-                    new MSAst.Expression[] {
-                        left,
-                        right
-                    },
-                    span
+                    AstGenerator.GetHelperMethod(GetHelperName(op)),
+                    AstGenerator.ConvertIfNeeded(left, typeof(object)),
+                    AstGenerator.ConvertIfNeeded(right, typeof(object))
                 );
             }
         }

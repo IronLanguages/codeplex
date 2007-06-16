@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Creates FunctionEnvironments which are used for closures and exposing locals or arguments as a collection object to the user.
     /// 

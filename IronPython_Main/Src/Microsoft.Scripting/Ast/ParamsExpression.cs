@@ -15,10 +15,15 @@
 
 using System;
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class ParamsExpression : Expression {
+
+        public ParamsExpression()
+            : base(SourceSpan.None) {
+        }
+
         public override Type ExpressionType {
             get {
                 return typeof(object[]);

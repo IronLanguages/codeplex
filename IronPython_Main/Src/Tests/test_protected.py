@@ -20,51 +20,58 @@ load_iron_python_test()
 from IronPythonTest import *
 
 # properties w/ differening access
-a = BaseClass()
-
-AreEqual(a.Area, 0)
-a.Area = 16
-AreEqual(a.Area, 16)
-
-class MyBaseClass(BaseClass):
-    def MySetArea(self, size):
-        self.Area = size
+@skip("silverlight", "Rowan #245494")
+def test_base():
+    a = BaseClass()
+    AreEqual(a.Area, 0)
+    a.Area = 16
+    AreEqual(a.Area, 16)
 
 
-a = MyBaseClass()
-AreEqual(a.Area, 0)
-
-a.MySetArea(16)
-AreEqual(a.Area, 16)
-
-a.Area = 36
-AreEqual(a.Area, 36)
-
-# protected fields
-AreEqual(a.foo, 0)
-a.foo = 7
-AreEqual(a.foo, 7)
-
-# overriding methods
-a = Inherited()
-AreEqual(a.ProtectedMethod(), 'Inherited.ProtectedMethod')
-AreEqual(a.ProtectedProperty, 'Inherited.Protected')
-
-class MyInherited(Inherited):
-    def ProtectedMethod(self):
-        return "MyInherited"
-    def ProtectedMethod(self):
-        return "MyInherited Override"
-    def ProtectedPropertyGetter(self):
-        return "MyInherited.Protected"
-    ProtectedProperty = property(ProtectedPropertyGetter)
+@skip("silverlight", "Rowan #245494")
+def test_derived():
+    class MyBaseClass(BaseClass):
+        def MySetArea(self, size):
+            self.Area = size
 
 
-a = MyInherited()
+    a = MyBaseClass()
+    AreEqual(a.Area, 0)
 
-AreEqual(a.ProtectedMethod(), 'MyInherited Override')
-AreEqual(a.CallProtected(), 'MyInherited Override')
-AreEqual(a.ProtectedProperty, "MyInherited.Protected")
-AreEqual(a.CallProtectedProp(), "MyInherited.Protected")
+    a.MySetArea(16)
+    AreEqual(a.Area, 16)
+
+    a.Area = 36
+    AreEqual(a.Area, 36)
+
+    # protected fields
+    AreEqual(a.foo, 0)
+    a.foo = 7
+    AreEqual(a.foo, 7)
 
 
+@skip("silverlight", "Rowan #245494")
+def test_override():
+    # overriding methods
+    a = Inherited()
+    AreEqual(a.ProtectedMethod(), 'Inherited.ProtectedMethod')
+    AreEqual(a.ProtectedProperty, 'Inherited.Protected')
+
+    class MyInherited(Inherited):
+        def ProtectedMethod(self):
+            return "MyInherited"
+        def ProtectedMethod(self):
+            return "MyInherited Override"
+        def ProtectedPropertyGetter(self):
+            return "MyInherited.Protected"
+        ProtectedProperty = property(ProtectedPropertyGetter)
+
+    a = MyInherited()
+    
+    AreEqual(a.ProtectedMethod(), 'MyInherited Override')
+    AreEqual(a.CallProtected(), 'MyInherited Override')
+    AreEqual(a.ProtectedProperty, "MyInherited.Protected")
+    AreEqual(a.CallProtectedProp(), "MyInherited.Protected")
+    
+
+run_test(__name__)

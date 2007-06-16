@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
-using MSAst = Microsoft.Scripting.Internal.Ast;
 using Microsoft.Scripting;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class PrintStatement : Statement {
@@ -68,7 +68,7 @@ namespace IronPython.Compiler.Ast {
                     MSAst.BoundExpression temp = ag.MakeTempExpression("destination", destination.Span);
 
                     statements.Add(
-                        AstGenerator.MakeAssignment(temp.Reference, destination, destination.Span)
+                        AstGenerator.MakeAssignment(temp.Variable, destination, destination.Span)
                     );
 
                     destination = temp;
@@ -83,13 +83,13 @@ namespace IronPython.Compiler.Ast {
                             null,
                             AstGenerator.GetHelperMethod(method + "WithDest"),
                             destination,
-                            current.Transform(ag)
+                            ag.Transform(current)
                         );
                     } else {
                         mce = MSAst.MethodCallExpression.Call(
                             null,
                             AstGenerator.GetHelperMethod(method),
-                            current.Transform(ag)
+                            ag.Transform(current)
                         );
                     }
 

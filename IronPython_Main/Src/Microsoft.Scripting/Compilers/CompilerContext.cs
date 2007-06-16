@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 using System.Globalization;
 
 using System.Collections.Generic;
@@ -32,7 +32,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Source unit currently being compiled in the CompilerContext
         /// </summary>
-        private SourceUnit _sourceUnit;
+        private readonly SourceUnit _sourceUnit;
 
         /// <summary>
         /// Current error sink.

@@ -16,9 +16,9 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Definition represents actual memory/dictionary location in the generated code.
     /// </summary>
@@ -26,8 +26,9 @@ namespace Microsoft.Scripting.Internal.Ast {
         public enum VariableKind {
             Local,
             Parameter,
-            Global,
             Temporary,              // Temporary variable (name not important/published)
+
+            Global,                 // Globals may need to go away and be handled on Python side only.
 
             /// <summary>
             /// Since we don't have the proper analysis at codegen time,
@@ -41,10 +42,15 @@ namespace Microsoft.Scripting.Internal.Ast {
         };
 
         private readonly SymbolId _name;
+
+        // TODO: Maybe we don't need this!
         private readonly CodeBlock _block;
+
         private readonly VariableKind _kind;
         private readonly Type _type;
         private readonly Expression _defaultValue;
+
+        private Type _knownType;
 
         private int _parameter;                     // parameter index
         private Storage _storage;                   // storage for the variable, used to create slots
@@ -53,7 +59,7 @@ namespace Microsoft.Scripting.Internal.Ast {
         private bool _unassigned;       // Variable ever referenced without being assigned
         private bool _uninitialized;    // Variable ever used either uninitialized or after deletion
 
-        public Variable(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue) {
+        private Variable(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue) {
             _name = name;
             _kind = kind;
             _block = block;
@@ -81,19 +87,13 @@ namespace Microsoft.Scripting.Internal.Ast {
             get { return _defaultValue; }
         }
 
-        public bool AllocateInEnvironment {
-            get {
-                return _lift;
-            }
-        }
-
         public bool IsTemporary {
             get {
                 return _kind == VariableKind.Temporary || _kind == VariableKind.GeneratorTemporary;
             }
         }
 
-        public int Parameter {
+        public int ParameterIndex {
             get { return _parameter; }
             set { _parameter = value; }
         }
@@ -104,6 +104,11 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         public bool Unassigned {
             get { return _unassigned; }
+        }
+
+        public Type KnownType {
+            get { return _knownType; }
+            set { _knownType = value; }
         }
 
         public void UnassignedUse() {
@@ -277,15 +282,31 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         #region Factory methods
 
-        public static Variable Create(SymbolId name, VariableKind kind, CodeBlock block) {
-            return Create(name, kind, block, typeof(object), null);
+        public static Variable Parameter(CodeBlock block, SymbolId name, Type type) {
+            return new Variable(name, VariableKind.Parameter, block, type, null);
         }
 
-        public static Variable Create(SymbolId name, VariableKind kind, CodeBlock block, Type type) {
+        public static Variable Parameter(CodeBlock block, SymbolId name, Type type, Expression defaultValue) {
+            return new Variable(name, VariableKind.Parameter, block, type, defaultValue);
+        }
+
+        internal static Variable Local(SymbolId name, CodeBlock block, Type type) {
+            return new Variable(name,  VariableKind.Local, block, type, null);
+        }
+
+        internal static Variable Temporary(SymbolId name, CodeBlock block, Type type) {
+            return new Variable(name, VariableKind.Temporary, block, type, null);
+        }
+
+        internal static Variable GeneratorTemp(SymbolId name, CodeBlock block, Type type) {
+            return new Variable(name, VariableKind.GeneratorTemporary, block, type, null);
+        }
+
+        internal static Variable Create(SymbolId name, VariableKind kind, CodeBlock block, Type type) {
             return Create(name, kind, block, type, null);
         }
 
-        public static Variable Create(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue) {
+        internal static Variable Create(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue) {
             // Cannot create parameters this way
             if (kind == VariableKind.Parameter) {
                 throw new ArgumentException("kind");
@@ -294,5 +315,13 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         #endregion
+
+        public static Expression[] VariablesToExpressions(Variable[] variables) {
+            Expression[] exprs = new Expression[variables.Length];
+            for (int i = 0; i < exprs.Length; i++) {
+                exprs[i] = BoundExpression.Defined(variables[i]);
+            }
+            return exprs;
+        }
     }
 }

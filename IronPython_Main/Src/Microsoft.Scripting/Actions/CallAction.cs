@@ -16,25 +16,23 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Actions {
     public class CallAction : Action {
         private static CallAction _simple = new CallAction();
         private ArgumentKind[] _argumentKinds;
 
-        private CallAction() {
+        protected CallAction() {
         }
 
-        private CallAction(ArgumentKind[] args) {
+        protected CallAction(ArgumentKind[] args) {
             _argumentKinds = args;
         }
 
         public static CallAction Make(params Arg[] args) {
-            return Make(false, args);
-        }
+            if (args == null) return Simple;
 
-        public static CallAction Make(bool withThis, params Arg[] args) {
             ArgumentKind[] argkind = new ArgumentKind[args.Length];
             bool nonSimple = false;
             for (int i = 0; i < args.Length; i++) {
@@ -44,6 +42,19 @@ namespace Microsoft.Scripting.Actions {
 
             if (nonSimple) {
                 return new CallAction(argkind);
+            }
+
+            return CallAction.Simple;
+        }
+
+
+        public static CallAction Make(params ArgumentKind[] args) {
+            if (args == null) return Simple;
+
+            for (int i = 0; i < args.Length; i++) {
+                if (args[i] != ArgumentKind.Simple) {
+                    return new CallAction(args);
+                }
             }
 
             return CallAction.Simple;
@@ -63,12 +74,7 @@ namespace Microsoft.Scripting.Actions {
         public static CallAction Make(string s) {
             if (s == "Simple") return Simple;
 
-            string[] pieces = s.Split(',');
-            ArgumentKind[] kinds = new ArgumentKind[pieces.Length];
-            for (int i = 0; i < kinds.Length; i++) {
-                kinds[i] = ArgumentKind.Parse(pieces[i]);
-            }
-            return new CallAction(kinds);
+            return new CallAction(ArgumentKind.ParseAll(s));
         }
 
         public static CallAction Simple {
@@ -93,47 +99,32 @@ namespace Microsoft.Scripting.Actions {
 
         public override string ParameterString {
             get {
-                if (_argumentKinds == null) return "Simple";
-
-                StringBuilder b = new StringBuilder();
-                for (int i = 0; i < _argumentKinds.Length; i++) {
-                    if (i > 0) b.Append(',');
-                    b.Append(_argumentKinds[i].ParameterString);
-                }
-                return b.ToString();
+                return ArgumentKind.ToParameterString(_argumentKinds);
             }
         }
 
         public override bool Equals(object obj) {
             CallAction other = obj as CallAction;
             if (other == null) return false;
-            if (IsSimple) {
-                if (other.IsSimple) 
-                    return true;
-                return false;
-            } else if(other.IsSimple) {
-                return false;
-            }
-            
-            if (other._argumentKinds.Length != this._argumentKinds.Length) {
+
+            if (other.GetType() != GetType()) return false;
+
+            if (_argumentKinds == null) {
+                return other.ArgumentKinds == null;
+            } else if (other.ArgumentKinds == null) {
                 return false;
             }
+
+            if (_argumentKinds.Length != other.ArgumentKinds.Length) return false;
+
             for (int i = 0; i < _argumentKinds.Length; i++) {
-                if (!other._argumentKinds[i].Equals(this._argumentKinds[i])) {
-                    return false;
-                }
+                if (_argumentKinds[i] != other.ArgumentKinds[i]) return false;
             }
             return true;
         }
 
         public override int GetHashCode() {
-            int h = 0;
-            if (!IsSimple) {
-                foreach (ArgumentKind kind in _argumentKinds) {
-                    h ^= kind.GetHashCode();
-                }
-            }
-            return (int)Kind << 28 ^ h;
+            return ArgumentKind.GetHashCode(Kind, _argumentKinds);
         }
     }
     /// <summary>
@@ -187,6 +178,36 @@ namespace Microsoft.Scripting.Actions {
                 if (_name != SymbolId.Empty) b.Append(SymbolTable.IdToString(_name));
                 return b.ToString();
             }
+        }
+
+        public static ArgumentKind[] ParseAll(string s) {
+            string[] pieces = s.Split(',');
+            ArgumentKind[] kinds = new ArgumentKind[pieces.Length];
+            for (int i = 0; i < kinds.Length; i++) {
+                kinds[i] = ArgumentKind.Parse(pieces[i]);
+            }
+            return kinds;
+        }
+
+        public static string ToParameterString(ArgumentKind[] kinds) {
+            if (kinds == null) return "Simple";
+
+            StringBuilder b = new StringBuilder();
+            for (int i = 0; i < kinds.Length; i++) {
+                if (i > 0) b.Append(',');
+                b.Append(kinds[i].ParameterString);
+            }
+            return b.ToString();
+        }
+
+        public static int GetHashCode(ActionKind kind, ArgumentKind[] kinds) {
+            int h = 6551;
+            if (kinds != null) {
+                foreach (ArgumentKind k in kinds) {
+                    h ^= (h << 5) ^ k.GetHashCode();
+                }
+            }
+            return (int)kind << 28 ^ h;
         }
 
         public static ArgumentKind Parse(string s) {

@@ -15,10 +15,10 @@
 
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class ContextArgBuilder : ArgBuilder {
         public ContextArgBuilder() { }
         public override object Build(CodeContext context, object[] args) {

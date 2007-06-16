@@ -22,13 +22,13 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
-using Microsoft.Scripting.Math;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Calls;
+
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
+using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Hosting;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
@@ -142,7 +142,7 @@ namespace IronPython.Modules {
 
         [PythonName("mkdir")]
         public static void MakeDirectory(string path) {
-            if (Directory.Exists(path)) throw Ops.IOError("directory already exists");
+            if (Directory.Exists(path)) throw PythonOps.IOError("directory already exists");
 
             try {
                 Directory.CreateDirectory(path);
@@ -153,7 +153,7 @@ namespace IronPython.Modules {
 
         [PythonName("mkdir")]
         public static void MakeDirectory(string path, int mode) {
-            if (Directory.Exists(path)) throw Ops.IOError("directory already exists");
+            if (Directory.Exists(path)) throw PythonOps.IOError("directory already exists");
             // we ignore mode
 
             try {
@@ -217,7 +217,7 @@ namespace IronPython.Modules {
                         res = new POpenFile(context, command, p, p.StandardInput.BaseStream, "w");
                         break;
                     default:
-                        throw Ops.ValueError("expected 'r' or 'w' for mode, got {0}", mode);
+                        throw PythonOps.ValueError("expected 'r' or 'w' for mode, got {0}", mode);
                 }
             } catch (Exception e) {
                 throw ToPythonException(e);
@@ -239,7 +239,7 @@ namespace IronPython.Modules {
         [PythonName("popen2")]
         public static Tuple OpenPipedCommandBoth(CodeContext context, string command, string mode, int bufsize) {
             if (String.IsNullOrEmpty(mode)) mode = "t";
-            if (mode != "t" && mode != "b") throw Ops.ValueError("mode must be 't' or 'b' (default is t)");
+            if (mode != "t" && mode != "b") throw PythonOps.ValueError("mode must be 't' or 'b' (default is t)");
             if (mode == "t") mode = String.Empty;
 
             try {
@@ -268,7 +268,7 @@ namespace IronPython.Modules {
         [PythonName("popen3")]
         public static Tuple OpenPipedCommandAll(CodeContext context, string command, string mode, int bufsize) {
             if (String.IsNullOrEmpty(mode)) mode = "t";
-            if (mode != "t" && mode != "b") throw Ops.ValueError("mode must be 't' or 'b' (default is t)");
+            if (mode != "t" && mode != "b") throw PythonOps.ValueError("mode must be 't' or 'b' (default is t)");
             if (mode == "t") mode = String.Empty;
 
             try {
@@ -341,7 +341,7 @@ namespace IronPython.Modules {
         [PythonName("spawnle")]
         public static object SpawnProcessWithParamsArgsAndEnvironment(int mode, string path, params object[] args) {
             if (args.Length < 1) {
-                throw Ops.TypeError("spawnle() takes at least three arguments ({0} given)", 2 + args.Length);
+                throw PythonOps.TypeError("spawnle() takes at least three arguments ({0} given)", 2 + args.Length);
             }
 
             object env = args[args.Length - 1];
@@ -386,7 +386,7 @@ namespace IronPython.Modules {
             }
 
             if (!process.Start()) {
-                throw Ops.OSError("Cannot start process: {0}", path);
+                throw PythonOps.OSError("Cannot start process: {0}", path);
             }
             if (mode == (int)P_WAIT) {
                 process.WaitForExit();
@@ -404,7 +404,7 @@ namespace IronPython.Modules {
         private static void SetEnvironment(System.Collections.Specialized.StringDictionary currentEnvironment, object newEnvironment) {
             PythonDictionary env = newEnvironment as PythonDictionary;
             if (env == null) {
-                throw Ops.TypeError("env argument must be a dict");
+                throw PythonOps.TypeError("env argument must be a dict");
             }
 
             currentEnvironment.Clear();
@@ -412,10 +412,10 @@ namespace IronPython.Modules {
             string strKey, strValue;
             foreach (object key in env.Keys) {
                 if (!Converter.TryConvertToString(key, out strKey)) {
-                    throw Ops.TypeError("env dict contains a non-string key");
+                    throw PythonOps.TypeError("env dict contains a non-string key");
                 }
                 if (!Converter.TryConvertToString(env[key], out strValue)) {
-                    throw Ops.TypeError("env dict contains a non-string value");
+                    throw PythonOps.TypeError("env dict contains a non-string value");
                 }
                 currentEnvironment[strKey] = strValue;
             }
@@ -428,7 +428,7 @@ namespace IronPython.Modules {
             IEnumerator argsEnumerator;
             System.Text.StringBuilder sb = null;
             if (!Converter.TryConvertToIEnumerator(args, out argsEnumerator)) {
-                throw Ops.TypeError("args parameter must be sequence, not {0}", Ops.GetDynamicType(args));
+                throw PythonOps.TypeError("args parameter must be sequence, not {0}", DynamicHelpers.GetDynamicType(args));
             }
 
             bool space = false;
@@ -437,7 +437,7 @@ namespace IronPython.Modules {
                 argsEnumerator.MoveNext();
                 while (argsEnumerator.MoveNext()) {
                     if (sb == null) sb = new System.Text.StringBuilder(); // lazy creation
-                    string strarg = Ops.ToString(argsEnumerator.Current);
+                    string strarg = PythonOps.ToString(argsEnumerator.Current);
                     if (space) {
                         sb.Append(' ');
                     }
@@ -488,7 +488,7 @@ namespace IronPython.Modules {
                 // dict is allowed by CPython's stat_result, but doesn't seem to do anything, so we ignore it here.
 
                 if (statResult.GetLength() != 10) {
-                    throw Ops.TypeError("stat_result() takes a 10-sequence ({0}-sequence given)", statResult.GetLength());
+                    throw PythonOps.TypeError("stat_result() takes a 10-sequence ({0}-sequence given)", statResult.GetLength());
                 }
 
                 this.mode = Converter.ConvertToBigInteger(statResult[0]);
@@ -576,7 +576,7 @@ namespace IronPython.Modules {
                 timeDict["st_mtime"] = StatMTime;
 
                 return Tuple.MakeTuple(
-                    Ops.GetDynamicTypeFromType(typeof(StatResult)),
+                    DynamicHelpers.GetDynamicTypeFromType(typeof(StatResult)),
                     Tuple.MakeTuple(MakeTuple(), timeDict)
                 );
             }
@@ -766,7 +766,7 @@ namespace IronPython.Modules {
                     fi.LastAccessTime = atime;
                     fi.LastWriteTime = mtime;
                 } else {
-                    throw Ops.TypeError("times value must be a 2-value tuple (atime, mtime)");
+                    throw PythonOps.TypeError("times value must be a 2-value tuple (atime, mtime)");
                 }
             } catch (Exception e) {
                 throw ToPythonException(e);
@@ -777,7 +777,7 @@ namespace IronPython.Modules {
         public static Tuple WaitForProcess(int pid, object options) {
             System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(pid);
             if (process == null) {
-                throw Ops.OSError("Cannot find process {0}", pid);
+                throw PythonOps.OSError("Cannot find process {0}", pid);
             }
             process.WaitForExit();
             return Tuple.MakeTuple(pid, process.ExitCode);
@@ -907,7 +907,7 @@ namespace IronPython.Modules {
                     }
                 }
                 if (pos == command.Length)
-                    throw Ops.ValueError("mismatch quote in command");
+                    throw PythonOps.ValueError("mismatch quote in command");
             } else {
                 pos = command.IndexOf(' ');
                 if (pos != -1) {
@@ -936,7 +936,7 @@ namespace IronPython.Modules {
                 if (File.Exists(fullpath)) return fullpath;
             }
 
-            throw Ops.WindowsError("The system can not find command '{0}'", command);
+            throw PythonOps.WindowsError("The system can not find command '{0}'", command);
         }
 
         #endregion

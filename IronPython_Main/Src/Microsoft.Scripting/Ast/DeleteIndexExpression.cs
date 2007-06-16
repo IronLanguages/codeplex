@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// AST node representing deletion of the expression.
     /// </summary>
@@ -46,8 +46,8 @@ namespace Microsoft.Scripting.Internal.Ast {
 
             cg.EmitLanguageContext();
             cg.EmitCodeContext();
-            _target.Emit(cg);
-            _index.Emit(cg);
+            _target.EmitAsObject(cg);
+            _index.EmitAsObject(cg);
             cg.EmitCall(typeof(LanguageContext), "DeleteIndex");
         }
 

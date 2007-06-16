@@ -14,9 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class IndexExpression : Expression {
         private readonly Expression _target;
         private readonly Expression _index;
@@ -43,8 +43,8 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         public override void Emit(CodeGen cg) {
             cg.EmitCodeContext();
-            _target.Emit(cg);
-            _index.Emit(cg);
+            _target.EmitAsObject(cg);
+            _index.EmitAsObject(cg);
             cg.EmitCall(typeof(RuntimeHelpers), "GetIndex");
         }
 

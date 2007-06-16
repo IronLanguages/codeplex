@@ -17,9 +17,8 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Diagnostics;
-using Microsoft.Scripting;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Represents a namespace. Slots can be created, look up by name, or relocated into
     /// this namespace.

@@ -53,5 +53,11 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         #endregion
+
+#if DEBUG
+        public string ToDebugString() {
+            return String.Format("{0}: {1}, {2}", _span.ToDebugString(), _category, _trigger);
+        }
+#endif
     }
 }

@@ -15,10 +15,10 @@
 
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public abstract class ArgBuilder {
         public virtual bool CanGenerate {
             get { return true; }

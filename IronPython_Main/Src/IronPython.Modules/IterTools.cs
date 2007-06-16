@@ -21,8 +21,8 @@ using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
 
 [assembly: PythonModule("itertools", typeof(IronPython.Modules.PythonIterTools))]
 namespace IronPython.Modules {
@@ -35,11 +35,11 @@ namespace IronPython.Modules {
         }
         [PythonName("tee")]
         public static object Tee(object iterable, int n) {
-            if (n < 0) throw Ops.SystemError("bad argument to internal function");
+            if (n < 0) throw PythonOps.SystemError("bad argument to internal function");
 
             object[] res = new object[n];
             if (!(iterable is TeeIterator)) {
-                IEnumerator iter = Ops.GetEnumerator(iterable);
+                IEnumerator iter = PythonOps.GetEnumerator(iterable);
                 List dataList = new List();
 
                 for (int i = 0; i < n; i++) {
@@ -88,7 +88,7 @@ namespace IronPython.Modules {
             public Chain(params object[] iterables) {
                 this.iterables = new IEnumerator[iterables.Length];
                 for (int i = 0; i < iterables.Length; i++) {
-                    this.iterables[i] = Ops.GetEnumerator(iterables[i]);
+                    this.iterables[i] = PythonOps.GetEnumerator(iterables[i]);
                 }
                 inner = Yielder();
             }
@@ -131,7 +131,7 @@ namespace IronPython.Modules {
 
             #region Object overrides
             public override string ToString() {
-                return String.Format("{0}({1})", Ops.GetPythonTypeName(this), cur + 1);
+                return String.Format("{0}({1})", PythonOps.GetPythonTypeName(this), cur + 1);
             }
             #endregion
         }
@@ -139,7 +139,7 @@ namespace IronPython.Modules {
         [PythonType("cycle")]
         public class Cycle : IterBase {
             public Cycle(object iterable) {
-                inner = Yielder(Ops.GetEnumerator(iterable));
+                inner = Yielder(PythonOps.GetEnumerator(iterable));
             }
 
             IEnumerator<object> Yielder(IEnumerator iter) {
@@ -161,12 +161,12 @@ namespace IronPython.Modules {
         [PythonType("dropwhile")]
         public class DropWhile : IterBase {
             public DropWhile(object predicate, object iterable) {
-                inner = Yielder(predicate, Ops.GetEnumerator(iterable));
+                inner = Yielder(predicate, PythonOps.GetEnumerator(iterable));
             }
 
             IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
                 while (MoveNextHelper(iter)) {
-                    if (!Ops.IsTrue(PythonCalls.Call(predicate, iter.Current))) {
+                    if (!PythonOps.IsTrue(PythonCalls.Call(predicate, iter.Current))) {
                         yield return iter.Current;
                         break;
                     }
@@ -184,18 +184,18 @@ namespace IronPython.Modules {
             bool fFinished = false;
 
             public GroupBy(object iterable) {
-                inner = Yielder(Ops.GetEnumerator(iterable), null);
+                inner = Yielder(PythonOps.GetEnumerator(iterable), null);
             }
 
             public GroupBy(object iterable, object key) {
-                inner = Yielder(Ops.GetEnumerator(iterable), key);
+                inner = Yielder(PythonOps.GetEnumerator(iterable), key);
             }
 
             IEnumerator<object> Yielder(IEnumerator iter, object keyFunc) {
                 object curKey = starterKey;
                 if (MoveNextHelper(iter)) {
                     while (!fFinished) {
-                        while (Ops.EqualRetBool(GetKey(iter.Current, keyFunc), curKey)) {
+                        while (PythonOps.EqualRetBool(GetKey(iter.Current, keyFunc), curKey)) {
                             if (!MoveNextHelper(iter)) { fFinished = true; yield break; }
                         }
                         curKey = GetKey(iter.Current, keyFunc);
@@ -205,7 +205,7 @@ namespace IronPython.Modules {
             }
 
             IEnumerator<object> Grouper(IEnumerator iter, object curKey, object keyFunc) {
-                while (Ops.EqualRetBool(GetKey(iter.Current, keyFunc), curKey)) {
+                while (PythonOps.EqualRetBool(GetKey(iter.Current, keyFunc), curKey)) {
                     yield return iter.Current;
                     if (!MoveNextHelper(iter)) { fFinished = true; yield break; }
                 }
@@ -220,7 +220,7 @@ namespace IronPython.Modules {
         [PythonType("ifilter")]
         public class IteratorFilter : IterBase {
             public IteratorFilter(object predicate, object iterable) {
-                inner = Yielder(predicate, Ops.GetEnumerator(iterable));
+                inner = Yielder(predicate, PythonOps.GetEnumerator(iterable));
             }
 
             IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
@@ -232,15 +232,15 @@ namespace IronPython.Modules {
             }
 
             static bool ShouldYield(object predicate, object current) {
-                if (predicate == null) return Ops.IsTrue(current);
-                return Ops.IsTrue(PythonCalls.Call(predicate, current));
+                if (predicate == null) return PythonOps.IsTrue(current);
+                return PythonOps.IsTrue(PythonCalls.Call(predicate, current));
             }
         }
 
         [PythonType("ifilterfalse")]
         public class IteratorFilterFalse : IterBase {
             public IteratorFilterFalse(object predicate, object iterable) {
-                inner = Yielder(predicate, Ops.GetEnumerator(iterable));
+                inner = Yielder(predicate, PythonOps.GetEnumerator(iterable));
             }
 
             IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
@@ -252,8 +252,8 @@ namespace IronPython.Modules {
             }
 
             static bool ShouldYield(object predicate, object current) {
-                if (predicate == null) return !Ops.IsTrue(current);
-                return !Ops.IsTrue(PythonCalls.Call(predicate, current));
+                if (predicate == null) return !PythonOps.IsTrue(current);
+                return !PythonOps.IsTrue(PythonCalls.Call(predicate, current));
             }
         }
 
@@ -263,12 +263,12 @@ namespace IronPython.Modules {
             IEnumerator[] iterables;
 
             public IteratorMap(object function, params object[] iterables) {
-                if (iterables.Length < 1) throw Ops.TypeError("imap() must have at least two arguments");
+                if (iterables.Length < 1) throw PythonOps.TypeError("imap() must have at least two arguments");
 
                 this.function = function;
                 this.iterables = new IEnumerator[iterables.Length];
                 for (int i = 0; i < iterables.Length; i++) {
-                    this.iterables[i] = Ops.GetEnumerator(iterables[i]);
+                    this.iterables[i] = PythonOps.GetEnumerator(iterables[i]);
                 }
             }
 
@@ -318,16 +318,16 @@ namespace IronPython.Modules {
                 int startInt, stopInt = -1;
 
                 if (!Converter.TryConvertToInt32(start, out startInt) || startInt < 0)
-                    throw Ops.ValueError("start argument must be non-negative integer, ({0})", start);
+                    throw PythonOps.ValueError("start argument must be non-negative integer, ({0})", start);
 
                 if (stop != null) {
                     if (!Converter.TryConvertToInt32(stop, out stopInt) || stopInt < 0)
-                        throw Ops.ValueError("stop argument must be non-negative integer ({0})", stop);
+                        throw PythonOps.ValueError("stop argument must be non-negative integer ({0})", stop);
                 }
 
-                if (step <= 0) throw Ops.ValueError("step must be 1 or greater for islice");
+                if (step <= 0) throw PythonOps.ValueError("step must be 1 or greater for islice");
 
-                inner = Yielder(Ops.GetEnumerator(iterable), startInt, stopInt, step);
+                inner = Yielder(PythonOps.GetEnumerator(iterable), startInt, stopInt, step);
             }
 
             IEnumerator<object> Yielder(IEnumerator iter, int start, int stop, int step) {
@@ -357,7 +357,7 @@ namespace IronPython.Modules {
             public IteratorZip(params object[] iterables) {
                 iters = new IEnumerator[iterables.Length];
                 for (int i = 0; i < iterables.Length; i++) {
-                    iters[i] = Ops.GetEnumerator(iterables[i]);
+                    iters[i] = PythonOps.GetEnumerator(iterables[i]);
                 }
             }
 
@@ -416,16 +416,16 @@ namespace IronPython.Modules {
             #region Object overrides
             public override string ToString() {
                 if (fInfinite) {
-                    return String.Format("{0}({1})", Ops.GetPythonTypeName(this), Ops.Repr(obj));
+                    return String.Format("{0}({1})", PythonOps.GetPythonTypeName(this), PythonOps.Repr(obj));
                 }
-                return String.Format("{0}({1}, {2})", Ops.GetPythonTypeName(this), Ops.Repr(obj), remaining);
+                return String.Format("{0}({1}, {2})", PythonOps.GetPythonTypeName(this), PythonOps.Repr(obj), remaining);
 
             }
             #endregion
 
             [OperatorMethod, PythonName("__len__")]
             public int GetLength() {
-                if (fInfinite) throw Ops.TypeError("len of unsized object");
+                if (fInfinite) throw PythonOps.TypeError("len of unsized object");
                 return Math.Max(remaining, 0);
             }
         }
@@ -433,19 +433,19 @@ namespace IronPython.Modules {
         [PythonType("starmap")]
         public class StarMap : IterBase {
             public StarMap(CodeContext context, object function, object iterable) {
-                inner = Yielder(context, function, Ops.GetEnumerator(iterable));
+                inner = Yielder(context, function, PythonOps.GetEnumerator(iterable));
             }
 
             IEnumerator<object> Yielder(CodeContext context, object function, IEnumerator iter) {
                 while (MoveNextHelper(iter)) {
                     Tuple args = iter.Current as Tuple;
-                    if (args == null) throw Ops.TypeError("iterator must be a tuple");
+                    if (args == null) throw PythonOps.TypeError("iterator must be a tuple");
 
                     object[] objargs = new object[args.Count];
                     for (int i = 0; i < objargs.Length; i++) {
                         objargs[i] = args[i];
                     }
-                    yield return Ops.CallWithContext(context, function, objargs);
+                    yield return PythonOps.CallWithContext(context, function, objargs);
                 }
             }
         }
@@ -453,12 +453,12 @@ namespace IronPython.Modules {
         [PythonType("takewhile")]
         public class TakeWhile : IterBase {
             public TakeWhile(object predicate, object iterable) {
-                inner = Yielder(predicate, Ops.GetEnumerator(iterable));
+                inner = Yielder(predicate, PythonOps.GetEnumerator(iterable));
             }
 
             IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
                 while (MoveNextHelper(iter)) {
-                    if (!Ops.IsTrue(PythonCalls.Call(predicate, iter.Current))) break;
+                    if (!PythonOps.IsTrue(PythonCalls.Call(predicate, iter.Current))) break;
                     yield return iter.Current;
                 }
             }
@@ -476,7 +476,7 @@ namespace IronPython.Modules {
                     this.iter = other.iter;
                     this.data = other.data;
                 } else {
-                    this.iter = Ops.GetEnumerator(iterable);
+                    this.iter = PythonOps.GetEnumerator(iterable);
                     data = new List();
                 }
             }

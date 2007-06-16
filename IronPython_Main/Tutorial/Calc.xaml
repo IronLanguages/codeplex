@@ -38,7 +38,7 @@
             <FlowDocument>
                 <Paragraph>
                     <TextBlock FontFamily="Perpetua Titling MT" FontStyle="Italic" FontWeight="700" FontSize="20" Foreground="sc#1.000000, 0.172911, 0.172911, 0.172910">IronCalc</TextBlock>
-                    <TextBlock FontFamily="Perpetua Titling MT" FontStyle="Italic" FontWeight="700" FontSize="20" Foreground="sc#1.000000, 0.172911, 0.172911, 0.172910">2005</TextBlock>
+                    <TextBlock FontFamily="Perpetua Titling MT" FontStyle="Italic" FontWeight="700" FontSize="20" Foreground="sc#1.000000, 0.172911, 0.172911, 0.172910">2007</TextBlock>
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>

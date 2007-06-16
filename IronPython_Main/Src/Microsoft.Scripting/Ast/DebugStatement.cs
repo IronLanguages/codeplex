@@ -14,13 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class DebugStatement : Statement {
         private readonly string _marker;
 
-        public DebugStatement(string marker) {
+        public DebugStatement(string marker)
+            : base(SourceSpan.None) {
             _marker = marker;
         }
 

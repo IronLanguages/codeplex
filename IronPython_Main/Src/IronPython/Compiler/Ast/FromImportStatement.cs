@@ -15,7 +15,7 @@
 
 using System.Collections.Generic;
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class FromImportStatement : Statement {
@@ -25,7 +25,7 @@ namespace IronPython.Compiler.Ast {
         private readonly SymbolId[] _asNames;
         private readonly bool _fromFuture;
 
-        private PythonReference[] _references;    // References that correspond to the _names or _asNames
+        private PythonVariable[] _variables;
 
         public static SymbolId[] Star {
             get { return FromImportStatement._star; }
@@ -47,9 +47,9 @@ namespace IronPython.Compiler.Ast {
             get { return _asNames; }
         }
 
-        public PythonReference[] References {
-            get { return _references; }
-            set { _references = value; }
+        internal PythonVariable[] Variables {
+            get { return _variables; }
+            set { _variables = value; }
         }
 
         public FromImportStatement(DottedName root, SymbolId[] names, SymbolId[] asNames, bool fromFuture) {
@@ -88,7 +88,7 @@ namespace IronPython.Compiler.Ast {
                 statements.Add(
                     new MSAst.ExpressionStatement(
                         new MSAst.BoundAssignment(
-                            module.Reference,
+                            module.Variable,
                             MSAst.MethodCallExpression.Call(
                                 _root.Span,
                                 null,
@@ -109,7 +109,7 @@ namespace IronPython.Compiler.Ast {
                     statements.Add(
                         new MSAst.ExpressionStatement(
                                 new MSAst.BoundAssignment(
-                                    _references[i].Reference,
+                                    _variables[i].Variable,
                                     MSAst.MethodCallExpression.Call(
                                         Span,
                                         null,

@@ -15,10 +15,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Shell;
+
 using Microsoft.Scripting;
+using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Hosting;
+
 using IronPython.Compiler;
 
 namespace IronPython.Hosting {

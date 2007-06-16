@@ -18,13 +18,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.IO;
-using Microsoft.Scripting;
 using System.Diagnostics;
-
 using System.Threading;
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Internal.Generation;
+
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -72,11 +70,11 @@ namespace Microsoft.Scripting {
                 object value;
                 // HACK: Shouldn't look in the GlobalScope here, but need to until JSGlobalObject
                 // unifies w/ module dictionary.
-                if (_context.Scope.GlobalScope.TryGetName(_context.LanguageContext, _name, out value)) {
+                if (_context.Scope.ModuleScope.TryGetName(_context.LanguageContext, _name, out value)) {
                     return value;
                 }
 
-                if (_context.LanguageContext.TryLookupGlobal(_context.Scope, _name, out value)) {
+                if (_context.LanguageContext.TryLookupGlobal(_context, _name, out value)) {
                     return value;
                 }
             }
@@ -97,7 +95,7 @@ namespace Microsoft.Scripting {
 
                 if (_global.IsCaching && _global.HasValue) return GetStringDisplay(_global.Value);
                 object value;
-                if (_context.LanguageContext.TryLookupGlobal(_context.Scope, _name, out value))
+                if (_context.LanguageContext.TryLookupGlobal(_context, _name, out value))
                     return GetStringDisplay(value);
 
                 return GetStringDisplay(Uninitialized.Instance);

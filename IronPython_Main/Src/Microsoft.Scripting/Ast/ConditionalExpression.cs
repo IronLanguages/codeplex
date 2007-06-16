@@ -13,19 +13,19 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Reflection.Emit;
 using System.Diagnostics;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class ConditionalExpression : Expression {
         private readonly Expression _test;
         private readonly Expression _true;
         private readonly Expression _false;
 
-
-        public ConditionalExpression(Expression testExpression, Expression trueExpression, Expression falseExpression, SourceSpan span)
+        private ConditionalExpression(Expression testExpression, Expression trueExpression, Expression falseExpression, SourceSpan span)
             : base(span) {
             _test = testExpression;
             _true = trueExpression;
@@ -46,11 +46,7 @@ namespace Microsoft.Scripting.Internal.Ast {
 
         public override System.Type ExpressionType {
             get {
-                if (_true.ExpressionType != _false.ExpressionType) {
-                    return typeof(object);
-                } else {
-                    return _false.ExpressionType;
-                }
+                return _true.ExpressionType;
             }
         }
 
@@ -63,20 +59,16 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        public override void EmitAs(CodeGen cg, System.Type asType) {
+        public override void Emit(CodeGen cg) {
             Label eoi = cg.DefineLabel();
             Label next = cg.DefineLabel();
-            cg.EmitTestTrue(_test);
+            _test.EmitAs(cg, typeof(bool));
             cg.Emit(OpCodes.Brfalse, next);
-            _true.EmitAs(cg, asType);
+            _true.Emit(cg);
             cg.Emit(OpCodes.Br, eoi);
             cg.MarkLabel(next);
-            _false.EmitAs(cg, asType);
+            _false.Emit(cg);
             cg.MarkLabel(eoi);
-        }
-
-        public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
         }
 
         public override void Walk(Walker walker) {
@@ -88,8 +80,25 @@ namespace Microsoft.Scripting.Internal.Ast {
             walker.PostWalk(this);
         }
 
-        public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) {
-            return new ConditionalExpression(test, ifTrue, ifFalse, SourceSpan.None);
+        public static ConditionalExpression Condition(Expression test, Expression trueValue, Expression falseValue) {
+            return Condition(test, trueValue, falseValue, SourceSpan.None);
+        }
+
+        public static ConditionalExpression Condition(Expression test, Expression trueValue, Expression falseValue, SourceSpan span) {
+            if (test == null) {
+                throw new ArgumentNullException("test");
+            }
+            if (trueValue == null) {
+                throw new ArgumentNullException("trueValue");
+            }
+            if (falseValue == null) {
+                throw new ArgumentNullException("falseValue");
+            }
+            if (trueValue.ExpressionType != falseValue.ExpressionType) {
+                throw new ArgumentException(String.Format("Cannot determine the type of the conditional expression: {0}, {1}.", trueValue.ExpressionType, falseValue.ExpressionType));
+            }
+
+            return new ConditionalExpression(test, trueValue, falseValue, span);
         }
     }
 }

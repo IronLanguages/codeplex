@@ -17,7 +17,7 @@ using System;
 using System.Reflection.Emit;
 using System.Diagnostics;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Local variable access
     /// Note that access of local variables of an enclosing function is done using a FieldSlot

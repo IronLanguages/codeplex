@@ -15,9 +15,9 @@
 
 using System;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class BinaryExpression : Expression {
         private readonly Expression _left, _right;
         private readonly Operators _op;
@@ -48,20 +48,26 @@ namespace Microsoft.Scripting.Internal.Ast {
                         return typeof(bool);
                     case Operators.AndAlso:
                         return typeof(bool);
+                    case Operators.Multiply:
+                        return typeof(int);
                     default:
                         throw new NotImplementedException();
                 }
             }
         }
 
+        public Operators Op {
+            get { return _op; }
+        }
+
         private bool EmitBranchTrue(CodeGen cg, Operators op, Label label) {
             switch (op) {
                 case Operators.Equal:
                     if (_left.IsConstant(null)) {
-                        _right.Emit(cg);
+                        _right.EmitAsObject(cg);
                         cg.Emit(OpCodes.Brfalse, label);
                     } else if (_right.IsConstant(null)) {
-                        _left.Emit(cg);
+                        _left.EmitAsObject(cg);
                         cg.Emit(OpCodes.Brfalse, label);
                     } else {
                         _left.EmitAs(cg, GetEmitType());
@@ -71,10 +77,10 @@ namespace Microsoft.Scripting.Internal.Ast {
                     return true;
                 case Operators.NotEqual:
                     if (_left.IsConstant(null)) {
-                        _right.Emit(cg);
+                        _right.EmitAsObject(cg);
                         cg.Emit(OpCodes.Brtrue, label);
                     } else if (_right.IsConstant(null)) {
-                        _left.Emit(cg);
+                        _left.EmitAsObject(cg);
                         cg.Emit(OpCodes.Brtrue, label);
                     } else {
                         _left.EmitAs(cg, GetEmitType());
@@ -95,6 +101,8 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         private Type GetEmitType() {
+            if (_op == Operators.Multiply) return typeof(int);
+
             return _left.ExpressionType == _right.ExpressionType ? _left.ExpressionType : typeof(object);
         }
 
@@ -122,7 +130,7 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
+        public override void Emit(CodeGen cg) {
             if (_op == Operators.AndAlso) {
                 Label falseBranch = cg.DefineLabel();
                 _left.EmitBranchFalse(cg, falseBranch);
@@ -149,10 +157,12 @@ namespace Microsoft.Scripting.Internal.Ast {
                     cg.EmitInt(0);
                     cg.Emit(OpCodes.Ceq);
                     break;
+                case Operators.Multiply:
+                    cg.Emit(OpCodes.Mul);
+                    break;
                 default:
                     throw new NotImplementedException();
             }
-            cg.EmitConvert(ExpressionType, asType);
         }
 
         public override object Evaluate(CodeContext context) {
@@ -167,13 +177,14 @@ namespace Microsoft.Scripting.Internal.Ast {
 
             object l = _left.Evaluate(context);
             object r = _right.Evaluate(context);
-            //TODO these use Equals to handle boxed Value types correctly; however,
-            // that is only a partially correct solution...
             switch (_op) {
                 case Operators.Equal:
                     return RuntimeHelpers.BooleanToObject(TestEquals(l, r));
                 case Operators.NotEqual:
                     return RuntimeHelpers.BooleanToObject(!TestEquals(l, r));
+                case Operators.Multiply:
+                    return (int)context.LanguageContext.Binder.Convert(l, typeof(int)) *
+                            (int)context.LanguageContext.Binder.Convert(r, typeof(int));
                 default:
                     throw new NotImplementedException();
             }
@@ -188,10 +199,6 @@ namespace Microsoft.Scripting.Internal.Ast {
                 return l.Equals(r);
             }
             return l == r;
-        }
-
-        public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
         }
 
         public override void Walk(Walker walker) {
@@ -210,6 +217,17 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
         public static Expression AndAlso(Expression left, Expression right) {
             return new BinaryExpression(Operators.AndAlso, left, right, SourceSpan.None);
+        }
+
+        /// <summary>
+        /// Multiples two Int32 values.
+        /// </summary>
+        public static Expression Multiply(Expression left, Expression right) {
+            if (left.ExpressionType != typeof(int) || right.ExpressionType != typeof(int)) {
+                throw new NotSupportedException(String.Format("multiply only supports ints, got {0} {1}", left.ExpressionType.Name, right.ExpressionType.Name));
+            }
+            
+            return new BinaryExpression(Operators.Multiply, left, right, SourceSpan.None);
         }
     }
 }

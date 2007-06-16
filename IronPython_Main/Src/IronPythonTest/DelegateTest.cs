@@ -14,9 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Internal;
+using System.Collections.Generic;
 using Microsoft.Scripting;
 
 namespace IronPythonTest {

@@ -115,7 +115,7 @@ def test_property():
 
     def f_read(target): print target.Property
     for x in [b, o1, o2]:
-        AssertErrorWithMessage(TypeError, "get_Property() takes exactly 0 arguments (0 given)", f_read, x)
+        AssertErrorWithMessage(TypeError, "Property() takes exactly 0 arguments (0 given)", f_read, x)
 
     def f_write(target): target.Property = 'Anything'  
     AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'Base' object is read-only", f_write, b)      

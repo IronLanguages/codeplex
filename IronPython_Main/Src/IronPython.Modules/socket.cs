@@ -65,7 +65,7 @@ namespace IronPython.Modules {
 
         #region Socket object
 
-        public static DynamicType socket = Ops.GetDynamicTypeFromType(typeof(SocketObj));
+        public static DynamicType socket = DynamicHelpers.GetDynamicTypeFromType(typeof(SocketObj));
         public static DynamicType SocketType = socket;
 
         [PythonType("socket")]
@@ -515,7 +515,7 @@ namespace IronPython.Modules {
                         double seconds;
                         seconds = Converter.ConvertToDouble(timeout);
                         if (seconds < 0) {
-                            throw Ops.TypeError("a non-negative float is required");
+                            throw PythonOps.TypeError("a non-negative float is required");
                         }
                         socket.Blocking = seconds > 0; // 0 timeout means non-blocking mode
                         socket.SendTimeout = (int)(seconds * MillisecondsPerSecond);
@@ -576,7 +576,7 @@ namespace IronPython.Modules {
                     throw MakeException(e);
                 }
 
-                throw Ops.TypeError("setsockopt() argument 3 must be int or string");
+                throw PythonOps.TypeError("setsockopt() argument 3 must be int or string");
             }
 
             [Documentation("shutdown() -> None\n\n"
@@ -911,20 +911,20 @@ namespace IronPython.Modules {
         [PythonName("getnameinfo")]
         public static object GetNameInfo(Tuple socketAddr, int flags) {
             if (socketAddr.GetLength() < 2 || socketAddr.GetLength() > 4) {
-                throw Ops.TypeError("socket address must be a 2-tuple (IPv4 or IPv6) or 4-tuple (IPv6)");
+                throw PythonOps.TypeError("socket address must be a 2-tuple (IPv4 or IPv6) or 4-tuple (IPv6)");
             }
 
             if ((flags & (int)NI_NUMERICSERV) == 0) {
-                throw Ops.NotImplementedError("getnameinfo() required the NI_NUMERICSERV flag (see docstring)");
+                throw PythonOps.NotImplementedError("getnameinfo() required the NI_NUMERICSERV flag (see docstring)");
             }
 
             string host = Converter.ConvertToString(socketAddr[0]);
-            if (host == null) throw Ops.TypeError("argument 1 must be string");
+            if (host == null) throw PythonOps.TypeError("argument 1 must be string");
             int port = 0;
             try {
                 port = (int)socketAddr[1];
             } catch (InvalidCastException) {
-                throw Ops.TypeError("an integer is required");
+                throw PythonOps.TypeError("an integer is required");
             }
 
             string resultHost = null;
@@ -1006,7 +1006,7 @@ namespace IronPython.Modules {
         [PythonName("getservbyname")]
         public static int GetServiceByName(string serviceName, [DefaultParameterValue(null)] string protocolName) {
             // !!! .NET networking libraries don't support this, so we don't either
-            throw Ops.NotImplementedError("name to service conversion not supported");
+            throw PythonOps.NotImplementedError("name to service conversion not supported");
         }
 
         [Documentation("getservbyport(port[, protocol_name]) -> service_name\n\n"
@@ -1017,7 +1017,7 @@ namespace IronPython.Modules {
         [PythonName("getservbyport")]
         public static string GetServiceByPort(int port, [DefaultParameterValue(null)] string protocolName) {
             // !!! .NET networking libraries don't support this, so we don't either
-            throw Ops.NotImplementedError("service to name conversion not supported");
+            throw PythonOps.NotImplementedError("service to name conversion not supported");
         }
 
         [Documentation("ntohl(x) -> integer\n\nConvert a 32-bit integer from network byte order to host byte order.")]
@@ -1186,7 +1186,7 @@ namespace IronPython.Modules {
                 double seconds;
                 seconds = Converter.ConvertToDouble(timeout);
                 if (seconds < 0) {
-                    throw Ops.ValueError("a non-negative float is required");
+                    throw PythonOps.ValueError("a non-negative float is required");
                 }
                 DefaultTimeout = (int)(seconds * MillisecondsPerSecond);
             }
@@ -1496,21 +1496,21 @@ namespace IronPython.Modules {
         /// </summary>
         private static IPEndPoint TupleToEndPoint(Tuple address, AddressFamily family) {
             if (address.Count != 2 && address.Count != 4) {
-                throw Ops.TypeError("address tuple must have exactly 2 (IPv4) or exactly 4 (IPv6) elements");
+                throw PythonOps.TypeError("address tuple must have exactly 2 (IPv4) or exactly 4 (IPv6) elements");
             }
 
             string host;
             try {
                 host = Converter.ConvertToString(address[0]);
             } catch (ArgumentTypeException) {
-                throw Ops.TypeError("host must be string");
+                throw PythonOps.TypeError("host must be string");
             }
 
             int port;
             try {
                 port = Converter.ConvertToInt32(address[1]);
             } catch (ArgumentTypeException) {
-                throw Ops.TypeError("port must be integer");
+                throw PythonOps.TypeError("port must be integer");
             }
 
             IPAddress ip = HostToAddress(host, family);
@@ -1522,7 +1522,7 @@ namespace IronPython.Modules {
                 try {
                     flowInfo = Converter.ConvertToInt64(address[2]);
                 } catch (ArgumentTypeException) {
-                    throw Ops.TypeError("flowinfo must be integer");
+                    throw PythonOps.TypeError("flowinfo must be integer");
                 }
                 // We don't actually do anything with flowinfo right now, but we validate it
                 // in case we want to do something in the future.
@@ -1531,7 +1531,7 @@ namespace IronPython.Modules {
                 try {
                     scopeId = Converter.ConvertToInt64(address[3]);
                 } catch (ArgumentTypeException) {
-                    throw Ops.TypeError("scopeid must be integer");
+                    throw PythonOps.TypeError("scopeid must be integer");
                 }
 
                 IPEndPoint endPoint = new IPEndPoint(ip, port);

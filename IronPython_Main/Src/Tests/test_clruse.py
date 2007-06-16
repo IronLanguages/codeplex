@@ -26,7 +26,7 @@ from lib.assert_util import *
 import System
 import clr
 import sys
-import nt
+
 
 #------------------------------------------------------------------------------
 #--GLOBALS
@@ -60,6 +60,8 @@ def simpleTester(a, b, c):
     global SIMPLE_TEST
     global SIMPLE_TEST_COUNT
     
+    import nt
+    
     test_name = "clrusetest" + str(SIMPLE_TEST_COUNT) + ".py"
     SIMPLE_TEST_COUNT = SIMPLE_TEST_COUNT + 1
     new_stdout_name = "new_stdout.log"
@@ -79,7 +81,6 @@ def simpleTester(a, b, c):
     #clr.Use
     name = test_name.split(".py")[0]
     new_module = clr.Use(name)
-    Assert(sys.modules.has_key(name))
     
     #give stdout back
     sys.stdout = old_stdout
@@ -125,6 +126,8 @@ def simpleTester(a, b, c):
 
 #------------------------------------------------------------------------------
 #--TESTS
+
+@skip("silverlight")
 def test_sanity():
     simpleTester(1, 2, 3)
     #if it worked once, it should work again...
@@ -132,7 +135,7 @@ def test_sanity():
     #None
     simpleTester(None, None, None)
 
-
+@skip("silverlight")
 def test_modified_module():
     test_name = "test_modified_module.py"
     new_stdout_name = "new_stdout.log"

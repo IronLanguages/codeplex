@@ -18,10 +18,9 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Internal.Generation;
 using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public partial class CodeBlock {
         public static EnvironmentFactory CreateEnvironmentFactory(int size) {
             size++; // +1 for the FunctionEnvironmentDictionary 

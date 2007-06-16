@@ -13,7 +13,8 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using System;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class SliceExpression : Expression {
@@ -39,14 +40,14 @@ namespace IronPython.Compiler.Ast {
             get { return _sliceStep; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return new MSAst.MethodCallExpression(
                 AstGenerator.GetHelperMethod("MakeSlice"),      // method
                 null,                                           // instance
                 new MSAst.Expression[] {                        // parameters
-                    ag.TransformOrConstantNull(_sliceStart),
-                    ag.TransformOrConstantNull(_sliceStop),
-                    ag.TransformOrConstantNull(_sliceStep)
+                    ag.TransformOrConstantNull(_sliceStart, typeof(object)),
+                    ag.TransformOrConstantNull(_sliceStop, typeof(object)),
+                    ag.TransformOrConstantNull(_sliceStep, typeof(object))
                 },
                 Span);
         }

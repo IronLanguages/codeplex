@@ -286,12 +286,12 @@ namespace Microsoft.Scripting.Hosting {
             _engine.Shutdown();
         }
 
-        public void AddAssembly(Assembly assembly) {
-            _engine.AddAssembly(assembly);
-        }
-
         public string FormatException(Exception exception) {
             return _engine.FormatException(exception);
+        }
+
+        public void GetExceptionMessage(Exception exception, out string message, out string typeName) {
+            _engine.GetExceptionMessage(exception, out message, out typeName);
         }
 
         public void PublishModule(IScriptModule module) {

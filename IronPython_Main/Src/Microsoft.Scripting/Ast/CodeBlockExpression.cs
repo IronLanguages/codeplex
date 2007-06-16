@@ -23,13 +23,10 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Internal.Ast;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// An expression that will return a reference to a block of code.
     /// Currently these references are created by emitting a delegate of the 
@@ -39,7 +36,8 @@ namespace Microsoft.Scripting.Internal.Ast {
         private CodeBlock _block;
         private bool _forceWrapperMethod;
 
-        public CodeBlockExpression(CodeBlock block, bool forceWrapperMethod) {
+        public CodeBlockExpression(CodeBlock block, bool forceWrapperMethod)
+            : base(SourceSpan.None) {
             this._block = block;
             this._forceWrapperMethod = forceWrapperMethod;
         }
@@ -61,9 +59,8 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
-            _block.EmitDelegate(cg, _forceWrapperMethod);
-            cg.EmitConvert(ExpressionType, asType);
+        public override object Evaluate(CodeContext context) {
+            return new CallTargetWithContextN(_block.Execute);
         }
 
         public override void Emit(CodeGen cg) {

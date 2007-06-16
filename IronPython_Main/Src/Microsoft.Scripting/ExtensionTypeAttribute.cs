@@ -14,9 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Internal;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Microsoft.Scripting {
@@ -32,6 +31,13 @@ namespace Microsoft.Scripting {
         internal static Dictionary<Type, DynamicType> ExtensionTypeToType = new Dictionary<Type, DynamicType>(10);
 
         public ExtensionTypeAttribute(Type extends, Type extensionType) {
+            if (extends == null) {
+                throw new ArgumentNullException("extends");
+            }
+            if (extensionType != null && !extensionType.IsPublic && !extensionType.IsNestedPublic) {
+                throw new ArgumentException(String.Format("Extension type {0} must be public", extensionType.FullName), "extensionType");
+            }
+
             _extends = extends;
             _extensionType = extensionType;
         }

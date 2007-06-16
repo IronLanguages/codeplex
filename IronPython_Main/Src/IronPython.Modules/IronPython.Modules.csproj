@@ -26,6 +26,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <BaseAddress>1936719872</BaseAddress>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -94,10 +95,6 @@
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Scripting.Vestigial\Microsoft.Scripting.Vestigial.csproj">
-      <Project>{90E6D8C8-3E09-498E-9058-2E2FB1151C36}</Project>
-      <Name>Microsoft.Scripting.Vestigial</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
       <Name>Microsoft.Scripting</Name>

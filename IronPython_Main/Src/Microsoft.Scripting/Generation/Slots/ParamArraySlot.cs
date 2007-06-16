@@ -16,7 +16,7 @@
 using System;
 using System.Reflection.Emit;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Slot that indexes into a param array.  Currently the param array is assumed to always
     /// be of type object.

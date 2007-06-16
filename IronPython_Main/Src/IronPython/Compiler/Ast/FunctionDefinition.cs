@@ -18,12 +18,11 @@ using System.Diagnostics;
 using System.Collections.Generic;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
+using Microsoft.Scripting.Generation;
+using MSAst = Microsoft.Scripting.Ast;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
-using MSAst = Microsoft.Scripting.Internal.Ast;
-using Microsoft.Scripting.Internal.Generation;
 
 namespace IronPython.Compiler.Ast {
     public class FunctionDefinition : ScopeStatement {
@@ -35,7 +34,7 @@ namespace IronPython.Compiler.Ast {
         private SourceUnit _sourceUnit;
         private bool _generator;                        // The function is a generator
 
-        private PythonReference _reference;             // The reference corresponding to the function name
+        private PythonVariable _variable;               // The variable corresponding to the function name
         private MSAst.CodeBlock _block;
 
         public FunctionDefinition(SymbolId name, Parameter[] parameters, SourceUnit sourceUnit)
@@ -43,8 +42,6 @@ namespace IronPython.Compiler.Ast {
         }
 
         public FunctionDefinition(SymbolId name, Parameter[] parameters, Statement body, SourceUnit sourceUnit) {
-            //ValidateParameters(parameters);
-
             _name = name;
             _parameters = parameters;
             _body = body;
@@ -79,9 +76,9 @@ namespace IronPython.Compiler.Ast {
             set { _generator = value; }
         }
 
-        public PythonReference Reference {
-            get { return _reference; }
-            set { _reference = value; }
+        internal PythonVariable Variable {
+            get { return _variable; }
+            set { _variable = value; }
         }
 
         protected override MSAst.CodeBlock Block {
@@ -113,10 +110,93 @@ namespace IronPython.Compiler.Ast {
             return fa;
         }
 
+        internal override bool TryBindOuter(SymbolId name, out PythonVariable variable) {
+            // Functions expose their locals to direct access
+            ContainsNestedFreeVariables = true;
+            return TryGetVariable(name, out variable);
+        }
+
+        internal override PythonVariable BindName(SymbolId name) {
+            PythonVariable variable;
+
+            // First try variables local to this scope
+            if (TryGetVariable(name, out variable)) {
+                return variable;
+            }
+
+            // Try to bind in outer scopes
+            for (ScopeStatement parent = Parent; parent != null; parent = parent.Parent) {
+                if (parent.TryBindOuter(name, out variable)) {
+                    IsClosure = true;
+                    return variable;
+                }
+            }
+
+            // Unbound variable
+            if (ContainsUnqualifiedExec | ContainsImportStar | NeedsLocalsDictionary) {
+                // If the context contains unqualified exec, new locals can be introduced
+                // We introduce the locals for every free variable to optimize the name based
+                // lookup.
+                EnsureHiddenVariable(name);
+                return null;
+            } else {
+                // Create a global variable to bind to.
+                return GetGlobalScope().EnsureGlobalVariable(name, false);
+            }
+        }
+
+        internal override void Bind(PythonNameBinder binder) {
+            base.Bind(binder);
+            Verify(binder);
+        }
+
+        private void Verify(PythonNameBinder binder) {
+            if (ContainsImportStar && IsClosure) {
+                binder.ReportSyntaxError(
+                    String.Format(
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        "import * is not allowed in function '{0}' because it is a nested function",
+                        SymbolTable.IdToString(Name)),
+                    this);
+            }
+            if (ContainsImportStar && Parent is FunctionDefinition) {
+                binder.ReportSyntaxError(
+                    String.Format(
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        "import * is not allowed in function '{0}' because it is a nested function",
+                        SymbolTable.IdToString(Name)),
+                    this);
+            }
+            if (ContainsImportStar && ContainsNestedFreeVariables) {
+                binder.ReportSyntaxError(
+                    String.Format(
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        "import * is not allowed in function '{0}' because it contains a nested function with free variables",
+                        SymbolTable.IdToString(Name)),
+                    this);
+            }
+            if (ContainsUnqualifiedExec && ContainsNestedFreeVariables) {
+                binder.ReportSyntaxError(
+                    String.Format(
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        "unqualified exec is not allowed in function '{0}' it contains a nested function with free variables",
+                        SymbolTable.IdToString(Name)),
+                    this);
+            }
+            if (ContainsUnqualifiedExec && IsClosure) {
+                binder.ReportSyntaxError(
+                    String.Format(
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        "unqualified exec is not allowed in function '{0}' it is a nested function",
+                        SymbolTable.IdToString(Name)),
+                    this);
+            }
+        }
+
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            MSAst.Expression ret = TransformToFunctionExpression(ag);
+            MSAst.Expression function = TransformToFunctionExpression(ag);
             return new MSAst.ExpressionStatement(
-                new MSAst.BoundAssignment(_reference.Reference, ret, Operators.None),
+                new MSAst.BoundAssignment(_variable.Variable, function, Operators.None),
                 new SourceSpan(Start, Header)
             );
         }
@@ -127,26 +207,24 @@ namespace IronPython.Compiler.Ast {
             if (IsGenerator) {
                 code = new MSAst.GeneratorCodeBlock(
                     SymbolTable.IdToString(_name),
-                    null,
-                    null,
                     typeof(PythonGenerator),
                     typeof(PythonGenerator.NextTarget),
-                    Span
+                    SourceSpan.None
                 );
             } else {
-                code = new MSAst.CodeBlock(SymbolTable.IdToString(_name), null, null, Span);
+                code = new MSAst.CodeBlock(SymbolTable.IdToString(_name), SourceSpan.None);
             }
             _block = code; //???
 
             SetParent(code);
 
             // Create AST generator to generate the body with
-            AstGenerator bodyGen = new AstGenerator(code, ag);
+            AstGenerator bodyGen = new AstGenerator(code, ag.Context);
 
             // Transform the parameters, should any require initialization,
             // it will be added into the list
             List<MSAst.Statement> statements = new List<MSAst.Statement>();
-            code.Parameters = TransformParameters(ag, bodyGen);
+            TransformParameters(ag, bodyGen);
 
             // Create variables and references. Since references refer to
             // parameters, do this after parameters have been created.
@@ -159,6 +237,17 @@ namespace IronPython.Compiler.Ast {
             // Transform the body and add the resulting statements into the list
             TransformBody(bodyGen, statements);
 
+            if (ScriptDomainManager.Options.DebugMode) {
+                // add beginning and ending break points for the function.
+                if (statements.Count == 0 || statements[0].Start != Body.Start) {
+                    statements.Insert(0, new MSAst.EmptyStatement(new SourceSpan(Body.Start, Body.Start)));
+                }
+
+                if (statements[statements.Count-1].End != Body.End) {
+                    statements.Add(new MSAst.EmptyStatement(new SourceSpan(Body.End, Body.End)));
+                }
+            }
+
             code.Body = new MSAst.BlockStatement(statements.ToArray());
 
             FunctionAttributes flags = ComputeFlags(_parameters);
@@ -166,7 +255,7 @@ namespace IronPython.Compiler.Ast {
             List<MSAst.Expression> defaults = new List<MSAst.Expression>();
             List<MSAst.Expression> names = new List<MSAst.Expression>();
             // There's a weird question about where to get these
-            foreach (MSAst.Parameter p in code.Parameters) {
+            foreach (MSAst.Variable p in code.Parameters) {
                 names.Add(new MSAst.ConstantExpression(SymbolTable.IdToString(p.Name)));
                 if (p.DefaultValue != null) defaults.Add(p.DefaultValue);
             }
@@ -174,7 +263,7 @@ namespace IronPython.Compiler.Ast {
             FunctionCode.FuncCodeFlags codeFlags = 0;
             if (_generator) codeFlags |= FunctionCode.FuncCodeFlags.Generator;
 
-            string filename = CompilerHelpers.GetSourceDisplayName(_sourceUnit);
+            string filename = _sourceUnit.DisplayName;
 
             MSAst.Expression ret = MSAst.MethodCallExpression.Call(
                 new SourceSpan(Start, Header),
@@ -208,14 +297,10 @@ namespace IronPython.Compiler.Ast {
             return ret;
         }
 
-        private MSAst.Parameter[] TransformParameters(AstGenerator outer, AstGenerator inner) {
-            MSAst.Parameter[] to = new MSAst.Parameter[_parameters.Length];
-
+        private void TransformParameters(AstGenerator outer, AstGenerator inner) {
             for (int i = 0; i < _parameters.Length; i++) {
-                to[i] = _parameters[i].Transform(outer, inner);
+                _parameters[i].Transform(outer, inner);
             }
-
-            return to;
         }
 
         private void InitializeParameters(AstGenerator ag, List<MSAst.Statement> init) {

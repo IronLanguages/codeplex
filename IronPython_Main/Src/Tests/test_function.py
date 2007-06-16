@@ -255,14 +255,20 @@ except TypeError:
 
 if is_cli or is_silverlight:
     import System
-    ht = System.Collections.Hashtable()
-    def foo(**kwargs):
-        return kwargs['key']
-        
-    ht['key'] = 'xyz'
     
-    AreEqual(foo(**ht), 'xyz')
+    # Test Hashtable and Dictionary on desktop, and just Dictionary in Silverlight
+    # (Hashtable is not available)
+    htlist = [System.Collections.Generic.Dictionary[System.Object, System.Object]()]
+    if not is_silverlight:
+        htlist += [System.Collections.Hashtable()]
 
+    for ht in htlist:
+        def foo(**kwargs):
+            return kwargs['key']
+            
+        ht['key'] = 'xyz'
+        
+        AreEqual(foo(**ht), 'xyz')
 
 def foo(a,b):
     return a-b
@@ -307,48 +313,76 @@ def f(a): pass
 
 AssertErrorWithMessage(TypeError, "f() takes exactly 1 argument (0 given)", f)
 AssertErrorWithMessage(TypeError, "f() takes exactly 1 argument (3 given)", f, 1, 2, 3)
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [], dict({"dummy":2}))
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [1], dict({"dummy":2}))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", f, dummy=2)
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", f, dummy=2)
+#AssertError calls f(*args), which generates a different AST than f(1,2,3)
+AssertErrorWithMessage(TypeError, "f() takes exactly 1 argument (0 given)", lambda:f())
+AssertErrorWithMessage(TypeError, "f() takes exactly 1 argument (3 given)", lambda:f(1, 2, 3))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", lambda:f(dummy=2))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", lambda:f(1, dummy=2))
 
 def f(a,b,c,d,e,f,g,h,i,j): pass
 
 AssertErrorWithMessage(TypeError, "f() takes exactly 10 arguments (0 given)", f)
 AssertErrorWithMessage(TypeError, "f() takes exactly 10 arguments (3 given)", f, 1, 2, 3)
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [], dict({"dummy":2}))
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [1], dict({"dummy":2}))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", f, dummy=2)
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", f, dummy=2)
+AssertErrorWithMessage(TypeError, "f() takes exactly 10 arguments (0 given)", lambda:f())
+AssertErrorWithMessage(TypeError, "f() takes exactly 10 arguments (3 given)", lambda:f(1, 2, 3))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", lambda:f(dummy=2))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", lambda:f(1, dummy=2))
 
 def f(a, b=2): pass
 
 AssertErrorWithMessage(TypeError, "f() takes at least 1 argument (0 given)", f)
 AssertErrorWithMessage(TypeError, "f() takes at most 2 arguments (3 given)", f, 1, 2, 3)
-AssertErrorWithMessage(TypeError, "f() takes at least 1 non-keyword argument (0 given)", apply, f, [], dict({"b":2}))
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [], dict({"dummy":3}))
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [], dict({"b":2, "dummy":3}))
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [1], dict({"dummy":3}))
+AssertErrorWithMessage(TypeError, "f() takes at least 1 non-keyword argument (0 given)", f, b=2)
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", f, dummy=3)
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", f, b=2, dummy=3)
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", f, 1, dummy=3)
+AssertErrorWithMessage(TypeError, "f() takes at least 1 argument (0 given)", lambda:f())
+AssertErrorWithMessage(TypeError, "f() takes at most 2 arguments (3 given)", lambda:f(1, 2, 3))
+AssertErrorWithMessage(TypeError, "f() takes at least 1 non-keyword argument (0 given)", lambda:f(b=2))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", lambda:f(dummy=3))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", lambda:f(b=2, dummy=3))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", lambda:f(1, dummy=3))
 
 def f(a, *argList): pass
 
 AssertErrorWithMessage(TypeError, "f() takes at least 1 argument (0 given)", f)
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [], dict({"dummy":2}))
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [], dict({"dummy":2}))
-AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", apply, f, [1], dict({"dummy":2}))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", f, dummy=2)
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", f, 1, dummy=2)
+AssertErrorWithMessage(TypeError, "f() takes at least 1 argument (0 given)", lambda:f())
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", lambda:f(dummy=2))
+AssertErrorWithMessage(TypeError, "f() got an unexpected keyword argument 'dummy'", lambda:f(1, dummy=2))
 
 def f(a, **keywordDict): pass
 
 AssertErrorWithMessage(TypeError, "f() takes exactly 1 argument (0 given)", f)
 AssertErrorWithMessage(TypeError, "f() takes exactly 1 argument (3 given)", f, 1, 2, 3)
-AssertErrorWithMessage(TypeError, "f() takes exactly 1 non-keyword argument (0 given)", apply, f, [], dict({"dummy":2}))
-AssertErrorWithMessage(TypeError, "f() takes exactly 1 non-keyword argument (0 given)", apply, f, [], dict({"dummy":3}))
-AssertErrorWithMessage(TypeError, "f() takes exactly 1 non-keyword argument (0 given)", apply, f, [], dict({"dummy":2, "dummy2":3}))
+AssertErrorWithMessage(TypeError, "f() takes exactly 1 non-keyword argument (0 given)", f, dummy=2)
+AssertErrorWithMessage(TypeError, "f() takes exactly 1 non-keyword argument (0 given)", f, dummy=2, dummy2=3)
+AssertErrorWithMessage(TypeError, "f() takes exactly 1 argument (0 given)", lambda:f())
+AssertErrorWithMessage(TypeError, "f() takes exactly 1 argument (3 given)", lambda:f(1, 2, 3))
+AssertErrorWithMessage(TypeError, "f() takes exactly 1 non-keyword argument (0 given)", lambda:f(dummy=2))
+AssertErrorWithMessage(TypeError, "f() takes exactly 1 non-keyword argument (0 given)", lambda:f(dummy=2, dummy2=3))
 
 AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (0 given)",
                                    "abs() takes exactly one argument (0 given)",   abs)
 AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (3 given)",
                                    "abs() takes exactly one argument (3 given)",   abs, 1, 2, 3)
 AssertErrorWithMessages(TypeError, "abs() got an unexpected keyword argument 'dummy'",
-                                   "abs() takes no keyword arguments",             apply, abs, [], dict({"dummy":2}))
+                                   "abs() takes no keyword arguments",             abs, dummy=2)
 AssertErrorWithMessages(TypeError, "abs() got an unexpected keyword argument 'dummy'",
-                                   "abs() takes no keyword arguments",             apply, abs, [1], dict({"dummy":2}))
+                                   "abs() takes no keyword arguments",             abs, 1, dummy=2)
+AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (0 given)",
+                                   "abs() takes exactly one argument (0 given)",   lambda:abs())
+AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (3 given)",
+                                   "abs() takes exactly one argument (3 given)",   lambda:abs(1, 2, 3))
+AssertErrorWithMessages(TypeError, "abs() got an unexpected keyword argument 'dummy'",
+                                   "abs() takes no keyword arguments",             lambda:abs(dummy=2))
+AssertErrorWithMessages(TypeError, "abs() got an unexpected keyword argument 'dummy'",
+                                   "abs() takes no keyword arguments",             lambda:abs(1, dummy=2))
 
 # list([m]) has one default argument (built-in type)
 #AssertErrorWithMessage(TypeError, "list() takes at most 1 argument (2 given)", list, 1, 2)
@@ -706,6 +740,8 @@ def test_func_flags():
     def foo5(a, *args): pass
     def foo6(a, **args): pass
     def foo7(a, *args, **kwargs): pass
+    def foo8(a,b,c,d,e,f): pass
+    def foo9(a,b): pass
     
     AreEqual(foo0.func_code.co_flags & 12, 0)
     AreEqual(foo1.func_code.co_flags & 12, 4)
@@ -715,10 +751,100 @@ def test_func_flags():
     AreEqual(foo5.func_code.co_flags & 12, 4)
     AreEqual(foo6.func_code.co_flags & 12, 8)
     AreEqual(foo7.func_code.co_flags & 12, 12)
+    #CodePlex WorkItem #6805
+    #AreEqual(foo8.func_code.co_flags & 12, 0)
+    AreEqual(foo9.func_code.co_flags & 12, 0)
     
-
+@disabled("CodePlex Work Item 5641")
 def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)
     Assert((x.co_flags & 8192) == 8192)
+    
+    #CodePlex Work Item 5641 - test co_filename
+    names = [   "", ".", "1", "\n", " ", "@", "%^",
+                "a", "A", "Abc", "aBC", "filename.py",
+                "longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
+                """
+                stuff
+                more stuff
+                last stuff
+                """
+                ]
+    for name in names:
+        AreEqual(compile("print 2/3", name, "exec", 8192).co_filename,
+                 name)
+
+@disabled("CodePlex Work Item #5641")
+def test_filename():
+    c = compile("x = 2", "test", "exec")
+    AreEqual(c.co_filename, 'test')
+    
+@disabled("Codeplex Work Item #6142")
+def test_name():
+    def f(): pass
+    
+    f.__name__ = 'g'
+    AreEqual(f.__name__, 'g')
+    Assert(repr(f).startswith('<function g'))
+    
+    f.func_name = 'x'
+    AreEqual(f.__name__, 'x')
+    Assert(repr(f).startswith('<function x'))
+
+@disabled("Codeplex Work Item #6805")
+def test_argcount():
+    def foo0(): pass
+    def foo1(*args): pass
+    def foo2(**args): pass
+    def foo3(*args, **kwargs): pass
+    def foo4(a): pass
+    def foo5(a, *args): pass
+    def foo6(a, **args): pass
+    def foo7(a, *args, **kwargs): pass
+    def foo8(a,b,c,d,e,f): pass
+    def foo9(a,b): pass
+    
+    AreEqual(foo0.func_code.co_argcount, 0)
+    AreEqual(foo1.func_code.co_argcount, 0)
+    AreEqual(foo2.func_code.co_argcount, 0)
+    AreEqual(foo3.func_code.co_argcount, 0)
+    AreEqual(foo4.func_code.co_argcount, 1)
+    AreEqual(foo5.func_code.co_argcount, 1)
+    AreEqual(foo6.func_code.co_argcount, 1)
+    AreEqual(foo7.func_code.co_argcount, 1)
+    AreEqual(foo8.func_code.co_argcount, 6)
+    AreEqual(foo9.func_code.co_argcount, 2)
+
+@disabled("CodePlex Work Item #7632")
+def test_defaults():
+    defaults = [None, object, int, [], 3.14, [3.14], (None,), "a string"]
+    for default in defaults:
+        def helperFunc(): pass
+        AreEqual(helperFunc.func_defaults, None)
+        AreEqual(helperFunc.func_defaults, None)
+    
+        def helperFunc1(a): pass
+        AreEqual(helperFunc1.func_defaults, None)
+        AreEqual(helperFunc1.func_defaults, None)
+        
+        
+        def helperFunc2(a=default): pass
+        AreEqual(helperFunc2.func_defaults, (default,))
+        helperFunc2(a=7)
+        AreEqual(helperFunc2.func_defaults, (default,))
+        
+        
+        def helperFunc3(a, b=default, c=[42]): c.append(b)
+        AreEqual(helperFunc3.func_defaults, (default, [42]))
+        helperFunc3("stuff")
+        AreEqual(helperFunc3.func_defaults, (default, [42, default]))
+
+def test_argument_eval_order():
+    """Check order of evaluation of function arguments"""
+    x = [1]
+    def noop(a, b, c):
+        pass
+    noop(x.append(2), x.append(3), x.append(4))
+    AreEqual(x, [1,2,3,4])
 
 run_test(__name__)

@@ -17,9 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Generator code block (code block with yield statements).
     /// 
@@ -45,11 +45,13 @@ namespace Microsoft.Scripting.Internal.Ast {
         /// </summary>
         private readonly Type _next;
 
+        private List<YieldTarget> _topTargets;
+
         private static int _Counter = 0;
         private static string[] _GeneratorSigNames = new string[] { "$gen", "$ret" };
 
-        public GeneratorCodeBlock(string name, IList<Parameter> parameters, Statement body, Type generator, Type next, SourceSpan span)
-            : base(name, parameters, body, span) {
+        public GeneratorCodeBlock(string name, Type generator, Type next, SourceSpan span)
+            : base(name, span) {
             if (generator == null) throw new ArgumentNullException("generator");
             if (next == null) throw new ArgumentNullException("next");
             if (!typeof(Generator).IsAssignableFrom(generator)) throw new ArgumentException("The generator type must inherit from Generator");
@@ -63,6 +65,13 @@ namespace Microsoft.Scripting.Internal.Ast {
             CreateEnvironmentFactory(true);
             EmitGeneratorBody(cg);
             cg.EmitReturn();
+        }
+
+        public override void Walk(Walker walker) {
+            if (walker.Walk(this)) {
+                Body.Walk(walker);
+            }
+            walker.PostWalk(this);
         }
 
         /// <summary>
@@ -156,7 +165,7 @@ namespace Microsoft.Scripting.Internal.Ast {
         // the slots are allocated, whereas in the actual generator they are CreateSlot'ed
         private void InitializeGeneratorEnvironment(CodeGen cg) {
             cg.Allocator.AddScopeAccessSlot(this, cg.EnvironmentSlot);
-            foreach (Parameter p in Parameters) {
+            foreach (Variable p in Parameters) {
                 p.Allocate(cg);
             }
             foreach (Variable d in Variables) {
@@ -165,13 +174,19 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         private void EmitGenerator(CodeGen ncg) {
-            List<YieldTarget> targets = YieldLabelBuilder.BuildYieldTargets(this, ncg);
+            Debug.Assert(_topTargets != null);
 
-            Label[] jumpTable = new Label[targets.Count];
-            for (int i = 0; i < jumpTable.Length; i++) jumpTable[i] = targets[i].TopBranchTarget;
+            Label[] jumpTable = new Label[_topTargets.Count];
+            for (int i = 0; i < jumpTable.Length; i++) {
+                jumpTable[i] = _topTargets[i].EnsureLabel(ncg);
+            }
             ncg.YieldLabels = jumpTable;
 
+            Slot router = ncg.GetLocalTmp(typeof(int));
             ncg.EmitGetGeneratorLocation();
+            router.EmitSet(ncg);
+            ncg.GotoRouter = router;
+            router.EmitGet(ncg);
             ncg.Emit(OpCodes.Switch, jumpTable);
 
             // fall-through on first pass
@@ -181,6 +196,16 @@ namespace Microsoft.Scripting.Internal.Ast {
             // is almost always needed
             ncg.EmitReturnInGenerator(null);
             ncg.Finish();
+
+            ncg.GotoRouter = null;
+            ncg.FreeLocalTmp(router);
+        }
+
+        internal int BuildYieldTargets() {
+            Debug.Assert(_topTargets == null);
+            int temps;
+            YieldLabelBuilder.BuildYieldTargets(this, out _topTargets, out temps);
+            return temps;
         }
     }
 }

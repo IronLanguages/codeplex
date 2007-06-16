@@ -23,18 +23,19 @@ from time import sleep
 
 doRun = True
 
-sys.path.append(sys.prefix + '\\External\\Maui')
+sys.path.append(testpath.rowan_root + '\\Languages\\IronPython\\External\\Maui')
+
 try:
     clr.AddReference('Maui.Core.dll')
 except:
-    print "SuperConsole.py passing vacuously: cannot load Maui.Core assembly"
+    print "test_superconsole.py failed: cannot load Maui.Core assembly"
     doRun = False
 
 if doRun:
     from Maui.Core import App
     proc = Process()
     proc.StartInfo.FileName = sys.executable
-    proc.StartInfo.WorkingDirectory = sys.prefix + '\\Tests'
+    proc.StartInfo.WorkingDirectory = testpath.rowan_root + '\\Languages\\IronPython\\Tests'
     proc.StartInfo.Arguments = '-X:TabCompletion -X:AutoIndent -X:ColorfulConsole'
     proc.StartInfo.UseShellExecute = True	
     proc.StartInfo.WindowStyle = ProcessWindowStyle.Normal
@@ -44,9 +45,10 @@ if doRun:
     try:
         superConsole = App(proc.Id)
     except:
-        print "SuperConsole.py passing vacuously: cannot initialize App object (probably running as service, or in minimized remote window"
+        print "test_superconsole.py failed: cannot initialize App object (probably running as service, or in minimized remote window"
         proc.Kill()
         doRun = False
+        #sys.exit(1)
 
 if doRun:
 # (Test scaffolding is loaded into the SuperConsole by pretest.py)
@@ -57,18 +59,18 @@ if doRun:
 
 # Test Case #1: ensure that an attribute with a prefix unique to the dictionary is properly completed.
 ######################################################################################################
-
-    superConsole.SendKeys('print z{TAB}{ENTER}')
-    testRegex += 'zoltar'
-    superConsole.SendKeys('print yo{TAB}{ENTER}')
-    testRegex += 'yorick'
+    print "CodePlex Work Item 10928"
+    #superConsole.SendKeys('print z{TAB}{ENTER}')
+    #testRegex += 'zoltar'
+    #superConsole.SendKeys('print yo{TAB}{ENTER}')
+    #testRegex += 'yorick'
 
 # Test Case #2: ensure that tabbing on a non-unique prefix cycles through the available options
 ######################################################################################################
-
-    superConsole.SendKeys('print y{TAB}{ENTER}')
-    superConsole.SendKeys('print y{TAB}{TAB}{ENTER}')
-    testRegex += '(yorickyak|yakyorick)'
+    print "CodePlex Work Item 10928"
+    #superConsole.SendKeys('print y{TAB}{ENTER}')
+    #superConsole.SendKeys('print y{TAB}{TAB}{ENTER}')
+    #testRegex += '(yorickyak|yakyorick)'
 
 
 # Test Case #3: ensure that tabbing after 'ident.' cycles through the available options
@@ -141,7 +143,7 @@ if doRun:
     superConsole.SendKeys('^(c)')
 
 # check that Ctrl-C breaks an infinite loop (the test is that subsequent things actually appear)
-    superConsole.SendKeys('def foo{(}{)}:{ENTER}try:{ENTER}while True: pass{ENTER}{BACKSPACE}except KeyboardInterrupt:{ENTER}print "caught"{ENTER}{BACKSPACE}{ENTER}print "after"{ENTER}{BACKSPACE}{ENTER}foo{(}{)}{ENTER}')    
+    superConsole.SendKeys('def foo{(}{)}:{ENTER}try:{ENTER}while True: pass{ENTER}{BACKSPACE}{BACKSPACE}except KeyboardInterrupt:{ENTER}print "caught"{ENTER}{BACKSPACE}{ENTER}print "after"{ENTER}{BACKSPACE}{ENTER}foo{(}{)}{ENTER}')    
     sleep(2)
     superConsole.SendKeys('^(c)')
     testRegex += 'caughtafter'
@@ -159,8 +161,8 @@ if doRun:
 # Test Case #10: tab-completion is case-insensitive (wrt input)
 ###########################################
     superConsole.SendKeys('import System{ENTER}')
-    superConsole.SendKeys('print System.r{TAB}{(}{)}{ENTER}')
-    testRegex += 'System\.Random'
+    superConsole.SendKeys('print System.r{TAB}{ENTER}')
+    testRegex += "<type 'Random'>"
 
 # Test Case #11: history
 ###########################################
@@ -203,9 +205,12 @@ if doRun:
 
 # now verify the log file against the test regexp
 
-    f = open(sys.prefix+'\\Tests\\ip_session.log','r')
-    chopped = ''.join([line[:-1] for line in f.readlines()])
+    f = open(testpath.rowan_root + '\\Languages\\IronPython\\Tests\\ip_session.log','r')
+    
+    chopped = ''.join([line[:-1] for line in f.readlines() if not line.startswith(">>>") and not line.startswith("...")])
     f.close()
 
     Assert(re.match(testRegex, chopped))
+    print "Passed."
+        
 

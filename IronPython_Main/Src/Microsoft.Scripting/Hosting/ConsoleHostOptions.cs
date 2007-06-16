@@ -63,7 +63,12 @@ namespace Microsoft.Scripting.Hosting {
                 { "/paths:<file-path-list>",   "Semicolon separated list of import paths (/run only)." },
                 { "/nologo",                   "Do not display host logo." },
                 { "/mta",                      "Starts command line thread in multi-threaded apartment. Not available on Silverlight." },
-                { "/setenv:<var1=value1;...>", "Sets specified environment variables for the console process. Not available on Silverlight." }
+                { "/setenv:<var1=value1;...>", "Sets specified environment variables for the console process. Not available on Silverlight." },
+#if DEBUG
+                { "/X:ShowASTs",               "Print generated Abstract Syntax Trees to the console" },
+                { "/X:DumpASTs",               "Write generated ASTs as files in the current directory" },
+                { "/X:ShowRules",              "Print generated action dispatch rules to the console" },
+#endif
             };
         }
     }
@@ -127,6 +132,15 @@ namespace Microsoft.Scripting.Hosting {
                     case "setenv":
                         OptionNotAvailableOnSilverlight(name);
                         _options.EnvironmentVars.AddRange(value.Split(';'));
+                        break;
+
+                    case "x":
+                        switch(value) {
+                            case "ShowASTs": ScriptDomainManager.Options.ShowASTs = true; break;
+                            case "DumpASTs": ScriptDomainManager.Options.DumpASTs = true; break;
+                            case "ShowRules": ScriptDomainManager.Options.ShowRules = true; break;
+                            default: _options.IgnoredArgs.Add(current); break;
+                        }
                         break;
 
                     case "help":

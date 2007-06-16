@@ -24,13 +24,10 @@ using System.Text;
 using System.Threading;
 using System.IO;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Internal.Ast;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
 
     /// <summary>
     /// This captures a block of code that should correspond to a .NET method body.  It takes
@@ -44,13 +41,14 @@ namespace Microsoft.Scripting.Internal.Ast {
     public partial class CodeBlock : Node {
         private static int _Counter = 0;
 
-        private IList<Parameter> _parameters;
         private string _name;
-
         private CodeBlock _parent;
         private Statement _body;
-        private List<Variable> _variables = new List<Variable>();
-        private List<VariableReference> _references = new List<VariableReference>();
+
+        private readonly List<Variable> _parameters = new List<Variable>();
+        private readonly List<Variable> _variables = new List<Variable>();
+        private IList<VariableReference> _references;
+
         private EnvironmentFactory _environmentFactory;
 
         private int _generatorTemps;
@@ -62,36 +60,33 @@ namespace Microsoft.Scripting.Internal.Ast {
         private bool _visibleScope = true;
         private bool _parameterArray;
 
-        public static CodeBlock MakeCodeBlock(string name, Statement body) {
-            return MakeCodeBlock(name, body, SourceSpan.None);
+        public static CodeBlock MakeCodeBlock(string name) {
+            return new CodeBlock(name);
         }
 
-        public static CodeBlock MakeCodeBlock(string name, Statement body, SourceSpan span) {
-            return new CodeBlock(name, new Parameter[0], body, span);
+        public static CodeBlock MakeCodeBlock(string name, SourceSpan span) {
+            return new CodeBlock(name, span);
         }
 
-        public CodeBlock(SymbolId name, IList<Parameter> parameters, Statement body)
-            : this(name, parameters, body, SourceSpan.None) {
+        public CodeBlock(SymbolId name)
+            : this(name, SourceSpan.None) {
         }
 
-        public CodeBlock(SymbolId name, IList<Parameter> parameters, Statement body, SourceSpan span)
-            : this(SymbolTable.IdToString(name), parameters, body, span) {
+        public CodeBlock(SymbolId name, SourceSpan span)
+            : this(SymbolTable.IdToString(name), span) {
         }
 
-        public CodeBlock(string name, IList<Parameter> parameters, Statement body)
-            : this(name, parameters, body, SourceSpan.None) {
+        public CodeBlock(string name)
+            : this(name, SourceSpan.None) {
         }
 
-        public CodeBlock(string name, IList<Parameter> parameters, Statement body, SourceSpan span)
+        public CodeBlock(string name, SourceSpan span)
             : base(span) {
             _name = name;
-            _body = body;
-            _parameters = parameters ?? new Parameter[0];
         }
 
-        public IList<Parameter> Parameters {
+        public List<Variable> Parameters {
             get { return _parameters; }
-            set { _parameters = value; }
         }
 
         public string Name {
@@ -167,8 +162,9 @@ namespace Microsoft.Scripting.Internal.Ast {
             set { _body = value; }
         }
 
-        public List<VariableReference> References {
+        internal IList<VariableReference> References {
             get { return _references; }
+            set { _references = value; }
         }
 
         public List<Variable> Variables {
@@ -190,43 +186,50 @@ namespace Microsoft.Scripting.Internal.Ast {
             get { return _generatorTemps; }
         }
 
-        public void AddVariable(Variable variable) {
-            Debug.Assert(variable.Block == this);
+        public Variable CreateParameter(SymbolId name, Expression defaultValue) {
+            Variable variable = Variable.Parameter(this, name, typeof(object), defaultValue);
+            _parameters.Add(variable);
+            return variable;
+        }
+
+        public Variable CreateVariable(SymbolId name, Variable.VariableKind kind, Type type) {
+            return CreateVariable(name, kind, type, null);
+        }
+
+        public Variable CreateVariable(SymbolId name, Variable.VariableKind kind, Type type, Expression defaultValue) {
+            if (kind == Variable.VariableKind.Parameter) {
+                throw new ArgumentException("kind");
+            }
+            Variable variable = Variable.Create(name, kind, this, type, defaultValue);
             _variables.Add(variable);
+            return variable;
         }
 
-        public void AddReference(VariableReference reference) {
-            _references.Add(reference);
-        }
-
-        public VariableReference CreateTemporaryVariable(SymbolId name, Type type) {
-            return CreateTemporaryVariable(name, Variable.VariableKind.Temporary, type);
-        }
-
-        public VariableReference CreateGeneratorTempVariable(SymbolId name, Type type) {
-            return CreateTemporaryVariable(name, Variable.VariableKind.GeneratorTemporary, type);
-        }
-
-        private VariableReference CreateTemporaryVariable(SymbolId name, Variable.VariableKind kind, Type type) {
-            if (type == null) throw new ArgumentNullException("type");
-
-            Variable variable = Variable.Create(name, kind, this, type);
-            VariableReference reference = new VariableReference(name);
-            reference.Variable = variable;
-
+        public Variable CreateLocalVariable(SymbolId name, Type type) {
+            Variable variable = Variable.Local(name, this, type);
             _variables.Add(variable);
-            _references.Add(reference);
+            return variable;
+        }
 
-            return reference;
+        public Variable CreateTemporaryVariable(SymbolId name, Type type) {
+            Variable variable = Variable.Temporary(name, this, type);
+            _variables.Add(variable);
+            return variable;
+        }
+
+        public Variable CreateGeneratorTempVariable(SymbolId name, Type type) {
+            Variable variable = Variable.GeneratorTemp(name, this, type);
+            _variables.Add(variable);
+            return variable;
         }
 
         private void EmitEnvironmentIDs(CodeGen cg) {
             int size = 0;
-            foreach (Parameter prm in _parameters) {
-                if (prm.AllocateInEnvironment) size++;
+            foreach (Variable prm in _parameters) {
+                if (prm.Lift) size++;
             }
             foreach (Variable var in _variables) {
-                if (var.AllocateInEnvironment) size++;
+                if (var.Lift) size++;
             }
 
             if (!cg.IsDynamicMethod) {
@@ -250,14 +253,14 @@ namespace Microsoft.Scripting.Internal.Ast {
             int index = 0;
             cg.EmitDebugMarker("--- Environment IDs ---");
 
-            foreach (Parameter prm in _parameters) {
-                if (prm.AllocateInEnvironment) {
+            foreach (Variable prm in _parameters) {
+                if (prm.Lift) {
                     EmitSetVariableName(cg, index++, prm.Name);
                 }
             }
 
             foreach (Variable var in _variables) {
-                if (var.AllocateInEnvironment) {
+                if (var.Lift) {
                     EmitSetVariableName(cg, index++, var.Name);
                 }
             }
@@ -287,11 +290,11 @@ namespace Microsoft.Scripting.Internal.Ast {
                     }
                 }
 
-                foreach (Parameter parm in _parameters) {
-                    if (parm.AllocateInEnvironment) size++;
+                foreach (Variable parm in _parameters) {
+                    if (parm.Lift) size++;
                 }
                 foreach (Variable var in _variables) {
-                    if (var.AllocateInEnvironment) size++;
+                    if (var.Lift) size++;
                 }
                 // Find the right environment factory for the size of elements to store
                 _environmentFactory = CreateEnvironmentFactory(size);
@@ -348,7 +351,7 @@ namespace Microsoft.Scripting.Internal.Ast {
 
             CreateOuterScopeAccessSlots(cg);
 
-            foreach (Parameter prm in _parameters) {
+            foreach (Variable prm in _parameters) {
                 prm.Allocate(cg);
             }
             foreach (Variable var in _variables) {
@@ -416,9 +419,19 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
 
-        public object Execute(CodeContext context) {
+        public object Execute(CodeContext context, params object[] args) {
             //TODO what about parameters?
-            return Body.Execute(context);
+            /*SymbolDictionary parms = new SymbolDictionary();
+            for (int i = 0; i < _parameters.Count; i++) {
+                parms.Add(_parameters[i].Name, Variable.);
+            }
+            CodeContext child = RuntimeHelpers.CreateNestedCodeContext(context, parms, visible);*/
+            object ret = Body.Execute(context);
+            if (ret == Statement.NextStatement) {
+                return null;
+            } else {
+                return ret;
+            }
         }
 
         private bool NeedsWrapperMethod() {
@@ -486,14 +499,14 @@ namespace Microsoft.Scripting.Internal.Ast {
                 paramTypes.Add(typeof(object[]));
                 paramNames.Add(SymbolTable.StringToId("$params"));
                 int index = 0;
-                foreach (Parameter p in _parameters) {
-                    p.Parameter = index++;
+                foreach (Variable p in _parameters) {
+                    p.ParameterIndex = index++;
                 }
             } else {
-                foreach (Parameter p in _parameters) {
+                foreach (Variable p in _parameters) {
                     paramTypes.Add(p.Type);
                     paramNames.Add(p.Name);
-                    p.Parameter = parameterIndex++;
+                    p.ParameterIndex = parameterIndex++;
                 }
             }
 
@@ -567,17 +580,11 @@ namespace Microsoft.Scripting.Internal.Ast {
         }
 
         public void EmitFunctionImplementation(CodeGen _impl) {
-            // Try block may yield, but we are not interested in the isBlockYielded value
-            // hence push a dummySlot to pass the Assertion.
-            Slot dummySlot = _impl.GetLocalTmp(typeof(int));
-
-            CompilerHelpers.EmitStackTraceTryBlockStart(_impl, dummySlot);
+            CompilerHelpers.EmitStackTraceTryBlockStart(_impl);
 
             // emit the actual body
             EmitBody(_impl);
 
-            // free up dummySlot
-            _impl.FreeLocalTmp(dummySlot);
             CompilerHelpers.EmitStackTraceFaultBlock(_impl, _name, _impl.Context.SourceUnit);
         }
 
@@ -628,29 +635,18 @@ namespace Microsoft.Scripting.Internal.Ast {
             cg.EmitPosition(End, End);
             cg.EmitSequencePointNone();
         }
-        
-
-        /// <summary>
-        /// TODO Kill this method
-        /// Creates global slots only. Used by the "CreateDelegate*" APIs.
-        /// The global slots are the only ones that can be referenced by
-        /// the lambda function.
-        /// </summary>
-        /// <param name="cg"></param>
-        internal void AllocateGlobals(CodeGen cg) {
-            foreach (Variable var in _variables) {
-                if (var.Kind == Variable.VariableKind.Global) {
-                    var.Allocate(cg);
-                }
-            }
-        }
 
         public T CreateDelegate<T>(CompilerContext context) 
             where T : class {
             CodeGen cg = CompilerHelpers.CreateDynamicCodeGenerator(context);
             cg.Allocator = CompilerHelpers.CreateFrameAllocator(cg.ContextSlot);
             
-            cg.EnvironmentSlot = new EnvironmentSlot(new PropertySlot(cg.ContextSlot, typeof(CodeContext).GetProperty("Locals")));
+            cg.EnvironmentSlot = new EnvironmentSlot(                
+                new PropertySlot(
+                    new PropertySlot(cg.ContextSlot, 
+                        typeof(CodeContext).GetProperty("Scope")),
+                    typeof(Scope).GetProperty("Dict"))
+                );
 
             EmitFunctionImplementation(cg);
             cg.Finish();

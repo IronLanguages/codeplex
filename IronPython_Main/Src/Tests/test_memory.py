@@ -16,6 +16,10 @@
 from lib.assert_util import *
 skiptest("win32")
 skiptest("silverlight")  #no time.clock or GetTotalMemory
+
+from System import Environment  
+skipMemoryCheck = '-X:StaticMethods' in Environment.GetCommandLineArgs()
+
 from time import clock
 
 # GetTotalMemory() actually pulls in System
@@ -80,9 +84,13 @@ t_list = [
 for code in t_list:
     baseMem = evalTest(10)
     usedMax = max(10000, 4*baseMem)
-    for repetitions in [100, 500]:
-        usedMem = evalTest(repetitions)
-        Assert(usedMem < usedMax, "Allocated %i (max %i, base %i) running %s %d times" % (usedMem, usedMax, baseMem, code, repetitions))
+    if not skipMemoryCheck: 
+        for repetitions in [100, 500]:
+            usedMem = evalTest(repetitions)
+            Assert(usedMem < usedMax, "Allocated %i (max %i, base %i) running %s %d times" % (usedMem, usedMax, baseMem, code, repetitions))
+    else:  
+        # not to measure the memory usage, but still try to peverify the code at the end
+        evalTest(2)
     
 e = compile("def f(): return 42", "", "single")
 names = {}

@@ -13,6 +13,7 @@
 #
 #####################################################################################
 
+
 from lib.assert_util import *
 items = 0
 import operator
@@ -766,7 +767,7 @@ def test_key_error():
             AreEqual(e.args[0], key)
 
 #CodePlex Work Item 7426
-@skip("cli")
+@disabled("CodePlex Work Item #7426")
 def test_contains():
     class ContainsDict(dict):
         was_called = False
@@ -781,6 +782,57 @@ def test_contains():
     AreEqual("nothing" in md, False)
     AreEqual("stuff" in md, True)
     AreEqual(ContainsDict.was_called, True)
+
+
+def test_stdtypes_dict():
+    temp_types = [  int,
+                    long,
+                    float,
+                    complex,
+                    bool,
+                    str,
+                    unicode,
+                    basestring,
+                    list,
+                    tuple,
+                    xrange,
+                    dict,
+                    set,
+                    frozenset,
+                    type,
+                    object,
+                ] #+ [eval("types." + x) for x in dir(types) if x.endswith("Type")]
+    
+    if not is_silverlight:
+        temp_types.append(file)
+    
+    
+    temp_keys = [ None, -1, 0, 1, 2.34, "", "None", int, object, test_stdtypes_dict, [], (None,)]
+    
+    for temp_type in temp_types:
+        for temp_key in temp_keys:
+            try:
+                temp_type.__dict__[temp_key] = 0
+                raise "Should have been an exception for " + str(temp_type)
+            except TypeError, e:
+                pass
+            except Exception, e:
+                print "Failed on", temp_type, "type using", temp_key, "as the key:", e
+                raise e
+    
+    
+#CodePlex Work Item 5712
+@disabled("CodePlex Work Item 5712")
+def test_main_dict():
+    import __main__
+    #just make sure this doesn't throw...
+    t_list = []
+    for w in __main__.__dict__: t_list.append(w)
+    
+    t_list.sort()
+    g_list = globals().keys()
+    g_list.sort()
+    AreEqual(t_list, g_list)
     
 
 run_test(__name__)

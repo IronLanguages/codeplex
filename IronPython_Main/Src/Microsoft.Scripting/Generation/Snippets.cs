@@ -16,12 +16,12 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Hosting;
 using System.Reflection;
 using System.Diagnostics;
 using System.Threading;
+using Microsoft.Scripting.Hosting;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
 
     public class Snippets {
         private const string AssemblyName = "snippets";
@@ -66,9 +66,7 @@ namespace Microsoft.Scripting.Internal.Generation {
                 result |= AssemblyGenAttributes.EmitDebugInfo;
 
                 
-#if SILVERLIGHT
-                if(Environment.OSVersion.Platform == PlatformID.Unix)
-#else
+#if !SILVERLIGHT
                 if (options.DebugCodeGeneration)
 #endif
                     result |= AssemblyGenAttributes.DisableOptimizations;

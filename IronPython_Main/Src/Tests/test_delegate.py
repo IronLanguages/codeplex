@@ -677,4 +677,44 @@ def test_event_as_attribute_disallowed_ops():
     for x in [f1, f2, f3]:
         AssertError(AttributeError, x)
 
+
+def test_reflected_event_ops():
+    '''
+    Test to hit IronPython.Runtime.Operations.ReflectedEventOps
+    
+    Needs more cases (__set__, __delete__).
+    '''
+    
+    #__str__
+    AreEqual(str(IronPythonTest.Events.StaticTest.Event),
+             "<event# StaticTest on Events>")
+    
+    #__set__, __delete__    
+    t_list = [  IronPythonTest.Events.StaticTest.Event,
+                IronPythonTest.Events().InstanceTest.Event,
+                ]
+                
+    for stuff in t_list:
+        for inst, val in [(None, None), (1, None), (None, 1), (1, 1), ("abc", "xyz")]:
+            AssertError(AttributeError,
+                        stuff.__set__,
+                        inst, val)
+                                
+            AssertError(AttributeError,
+                        stuff.__delete__, 
+                        inst)
+                    
+    AssertError(AttributeError,  
+                IronPythonTest.Events.StaticTest.Event.__set__,
+                None, IronPythonTest.Events().InstanceTest)
+                
+    AssertError(AttributeError,  
+                IronPythonTest.Events.StaticTest.Event.__delete__,
+                IronPythonTest.Events().InstanceTest)                                   
+                    
+    for stuff in [ None, 1, "abc"]:
+        #Just ensure it doesn't throw
+        IronPythonTest.Events.StaticTest.Event.__set__(stuff, IronPythonTest.Events.StaticTest)
+
+
 run_test(__name__)

@@ -16,9 +16,9 @@
 using System;
 using System.Reflection.Emit;
 
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class ThrowExpression : Expression {
         private readonly Expression _val;
 
@@ -36,10 +36,13 @@ namespace Microsoft.Scripting.Internal.Ast {
             }
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
-            if (asType != typeof(void)) {
-                throw new NotSupportedException("ThrowExpression can only be emitted as void");
+        public override Type ExpressionType {
+            get {
+                return typeof(void);
             }
+        }
+
+        public override void Emit(CodeGen cg) {
             cg.EmitPosition(Start, End);
             if (_val == null) {
                 cg.Emit(OpCodes.Rethrow);
@@ -47,10 +50,6 @@ namespace Microsoft.Scripting.Internal.Ast {
                 _val.EmitAs(cg, typeof(Exception));
                 cg.Emit(OpCodes.Throw);
             }
-        }
-
-        public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
         }
 
         public override void Walk(Walker walker) {

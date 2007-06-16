@@ -14,10 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     [Flags]
     public enum CodeGenOptions {
         None = 0x00,

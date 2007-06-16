@@ -15,6 +15,9 @@
 
 from lib.assert_util import *
 
+skiptest("silverlight")
+skiptest("win32")
+
 # set this flag to True to have the test trace progress
 trace = False
 
@@ -27,15 +30,14 @@ skipTypes =  [
 
 counter = 1
 
-if is_cli:
-    import clr
-    import System
-    import System.IO as IO
-    import System.Reflection as Reflection
-    import System.Reflection.Emit as Emit
-    import System.Runtime.InteropServices as Interop
-    import System.Diagnostics as Diagnostics
-    from System.Reflection.Emit import OpCodes
+import clr
+import System
+import System.IO as IO
+import System.Reflection as Reflection
+import System.Reflection.Emit as Emit
+import System.Runtime.InteropServices as Interop
+import System.Diagnostics as Diagnostics
+from System.Reflection.Emit import OpCodes
 
 def MakeArray(type, *values):
     a = System.Array.CreateInstance(clr.GetClrType(type), len(values))

@@ -38,10 +38,11 @@ def test_proxy_dir():
             
             return b
             
-        prxy = run_test()    
-        gc.collect()
-        
-        AreEqual(dir(prxy), [])
+        prxy = run_test()
+        if not is_silverlight:
+            gc.collect()
+            #This will fail if original object has not been garbage collected.
+            AreEqual(dir(prxy), [])
 
 def test_special_methods():
     for cls in [NonCallableClass, CallableClass]:
@@ -78,7 +79,8 @@ def test_type_call():
         return x
         
     wr = get_dead_weakref()
-    type(wr).__add__.__get__(wr, None) # no exception
+    # Uncomment the next line after fixing merlin#243506
+    # type(wr).__add__.__get__(wr, None) # no exception
     
     try:
         type(wr).__add__.__get__(wr, None)() # object is dead, should throw

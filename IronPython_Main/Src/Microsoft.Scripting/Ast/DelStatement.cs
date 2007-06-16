@@ -13,24 +13,26 @@
  *
  * ***************************************************************************/
 
+using System.Diagnostics;
 using System.Collections.Generic;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// AST node representing deletion of the expression.
     /// </summary>
     public class DelStatement : Statement {
-        private readonly VariableReference _vr;
+        private readonly Variable _var;
+        private VariableReference _ref;
         private bool _defined;
 
-        public DelStatement(VariableReference vr)
-            : this(vr, SourceSpan.None) {
+        public DelStatement(Variable var)
+            : this(var, SourceSpan.None) {
         }
 
-        public DelStatement(VariableReference vr, SourceSpan span) 
+        public DelStatement(Variable var, SourceSpan span)
             : base(span) {
-            _vr = vr;
+            _var = var;
         }
 
         internal bool IsDefined {
@@ -38,13 +40,22 @@ namespace Microsoft.Scripting.Internal.Ast {
             set { _defined = value; }
         }
 
-        public VariableReference Reference {
-            get { return _vr; }
+        public Variable Variable {
+            get { return _var; }
+        }
+
+        internal VariableReference Ref {
+            get { return _ref; }
+            set {
+                Debug.Assert(value.Variable == _var);
+                Debug.Assert(_ref == null);
+                _ref = value;
+            }
         }
 
         public override void Emit(CodeGen cg) {
             cg.EmitPosition(Start, End);
-            cg.EmitDel(_vr.Slot, _vr.Name, !_defined);
+            _ref.Slot.EmitDelete(cg, _var.Name, !_defined);
         }
 
         public override void Walk(Walker walker) {

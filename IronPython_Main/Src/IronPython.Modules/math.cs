@@ -28,7 +28,7 @@ namespace IronPython.Modules {
         public static double e = Math.E;
 
         private static double Check(double v) {
-            return Ops.CheckMath(v);
+            return PythonOps.CheckMath(v);
         }
 
         private const double degreesToRadians = Math.PI / 180.0;

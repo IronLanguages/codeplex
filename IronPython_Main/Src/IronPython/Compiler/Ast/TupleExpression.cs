@@ -13,7 +13,8 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using System;
+using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
@@ -25,7 +26,7 @@ namespace IronPython.Compiler.Ast {
             _expandable = expandable;
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return new MSAst.MethodCallExpression(
                 AstGenerator.GetHelperMethod(_expandable ? "MakeExpandableTuple" : "MakeTuple"),
                 null,

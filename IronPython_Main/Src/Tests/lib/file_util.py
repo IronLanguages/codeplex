@@ -32,18 +32,24 @@ def append_string_to_file(filename, *lines):
     f.close()
 
 def directory_exists(path):
-    try:    
-        nt.stat(path)
-        return True
-    except: 
-        return False
+    if sys.platform=="win32":
+        return nt.access(path, nt.F_OK)
+    else:
+        try:    
+            nt.stat(path)
+            return True
+        except: 
+            return False
 
 def file_exists(file):
-    try:    
-        nt.stat(file)
-        return True
-    except: 
-        return False
+    if sys.platform=="win32":
+        return nt.access(path, nt.F_OK)
+    else:
+        try:    
+            nt.stat(file)
+            return True
+        except: 
+            return False
         
 def file_exists_in_path(file):
     full_path = [nt.environ[x] for x in nt.environ.keys() if x.lower() == "path"]
@@ -134,7 +140,8 @@ def ensure_future_present(path):
     futureFile = path_combine(path, "__future__.py")
     write_to_file(futureFile, 
     '''division=1
-with_statement=1''')
+with_statement=1
+generators=1''')
         
 def clean_directory(path):
     for f in nt.listdir(path):

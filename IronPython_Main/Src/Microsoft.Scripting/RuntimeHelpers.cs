@@ -78,7 +78,7 @@ namespace Microsoft.Scripting {
         /// <param name="version"></param>
         /// <returns></returns>
         public static bool CheckTypeVersion(object o, int version) {
-            return ((IDynamicObject)o).DynamicType.Version == version;
+            return ((ISuperDynamicObject)o).DynamicType.Version == version;
         }
 
         // formalNormalArgumentCount - does not include FuncDefFlags.ArgList and FuncDefFlags.KwDict
@@ -142,41 +142,57 @@ namespace Microsoft.Scripting {
         /// Called from generated code, helper to do name lookup
         /// </summary>
         public static object LookupName(CodeContext context, SymbolId name) {
-            return context.LanguageContext.LookupName(context.Scope, name);
+            return context.LanguageContext.LookupName(context, name);
+        }
+
+        /// <summary>
+        /// Called from generated code, helper to do name assignment.
+        /// Order of parameters matches the codegen flow.
+        /// </summary>
+        public static object SetNameReorder(object value, CodeContext context, SymbolId name) {
+            context.LanguageContext.SetName(context, name, value);
+            return value;
         }
 
         /// <summary>
         /// Called from generated code, helper to do name assignment
         /// </summary>
         public static void SetName(CodeContext context, SymbolId name, object value) {
-            context.LanguageContext.SetName(context.Scope, name, value);
+            context.LanguageContext.SetName(context, name, value);
         }
 
         /// <summary>
         /// Called from generated code, helper to remove a name
         /// </summary>
-        public static void RemoveName(CodeContext context, SymbolId name) {
-            context.LanguageContext.RemoveName(context.Scope, name);
+        public static object RemoveName(CodeContext context, SymbolId name) {
+            context.LanguageContext.RemoveName(context, name);
+            return null;
         }
         /// <summary>
         /// Called from generated code, helper to do a global name lookup
         /// </summary>
         public static object LookupGlobalName(CodeContext context, SymbolId name) {
-            return context.LanguageContext.LookupName(context.Scope.GlobalScope, name);
+            // TODO: could we get rid of new context creation:
+            CodeContext moduleScopedContext = new CodeContext(context.Scope.ModuleScope, context.LanguageContext, context.ModuleContext);
+            return context.LanguageContext.LookupName(moduleScopedContext, name);
         }
 
         /// <summary>
         /// Called from generated code, helper to do global name assignment
         /// </summary>
         public static void SetGlobalName(CodeContext context, SymbolId name, object value) {
-            context.LanguageContext.SetName(context.Scope.GlobalScope, name, value);
+            // TODO: could we get rid of new context creation:
+            CodeContext moduleScopedContext = new CodeContext(context.Scope.ModuleScope, context.LanguageContext, context.ModuleContext);
+            context.LanguageContext.SetName(moduleScopedContext, name, value);
         }
 
         /// <summary>
         /// Called from generated code, helper to remove a global name
         /// </summary>
         public static void RemoveGlobalName(CodeContext context, SymbolId name) {
-            context.LanguageContext.RemoveName(context.Scope.GlobalScope, name);
+            // TODO: could we get rid of new context creation:
+            CodeContext moduleScopedContext = new CodeContext(context.Scope.ModuleScope, context.LanguageContext, context.ModuleContext);
+            context.LanguageContext.RemoveName(moduleScopedContext, name);
         }
 
         /// <summary>
@@ -190,8 +206,9 @@ namespace Microsoft.Scripting {
         /// Called from generated code, a helper to set value on the target at a given index
         /// The unusual order of parameters makes it easier to do a codegen for this call.
         /// </summary>
-        public static void SetIndex(object value, object target, object index, CodeContext context) {
+        public static object SetIndex(object value, object target, object index, CodeContext context) {
             context.LanguageContext.SetIndex(context, target, index, value);
+            return value;
         }
 
         /// <summary>
@@ -239,7 +256,7 @@ namespace Microsoft.Scripting {
         }
 
         public static CodeContext CreateNestedCodeContext(CodeContext context, IAttributesCollection locals, bool visible) {
-            return new CodeContext(new Scope(context.Scope, locals, visible), context.LanguageContext);
+            return new CodeContext(new Scope(context.Scope, locals, visible), context.LanguageContext, context.ModuleContext);
         }
 
         public static void AddFunctionEnvironmentToArray(FunctionEnvironmentNDictionary funcEnv) {
@@ -334,6 +351,18 @@ namespace Microsoft.Scripting {
 
         public static bool TryGetSwitchIndex(CodeContext context, object exprVal, out int index) {
             return context.LanguageContext.TryGetSwitchIndex(context, exprVal, out index);
+        }
+
+        /// <summary>
+        /// Helper method to create an instance.  Work around for Silverlight where Activator.CreateInstance
+        /// is SecuritySafeCritical.
+        /// </summary>
+        public static T CreateInstance<T>() {
+            return default(T);
+        }
+
+        public static IAttributesCollection GetLocalDictionary(CodeContext context) {
+            return context.Scope.Dict;
         }
     }
 }

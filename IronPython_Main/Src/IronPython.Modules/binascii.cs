@@ -29,8 +29,8 @@ namespace IronPython.Modules {
 
         [PythonName("a2b_uu")]
         public static string DecodeUUEncoding(string data) {
-            if (data == null) throw Ops.TypeError("expected string, got NoneType");
-            if (data.Length < 1) throw Ops.ValueError("data is too short");
+            if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
+            if (data.Length < 1) throw PythonOps.ValueError("data is too short");
 
             StringBuilder res = DecodeWorker(data.Substring(1), Char.MinValue, delegate(char val) {
                 return val - 32;
@@ -42,8 +42,8 @@ namespace IronPython.Modules {
 
         [PythonName("b2a_uu")]
         public static string EncodeUUEncoding(string data) {
-            if (data == null) throw Ops.TypeError("expected string, got NoneType");
-            if (data.Length > 45) throw Ops.ValueError("at most 45 characters");
+            if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
+            if (data.Length > 45) throw PythonOps.ValueError("at most 45 characters");
 
             StringBuilder res = EncodeWorker(data, Int32.MaxValue, ' ', delegate(int val) {
                 return (char)(' ' + val);
@@ -57,7 +57,7 @@ namespace IronPython.Modules {
 
         [PythonName("a2b_base64")]
         public static object DecodeBase64(string data) {
-            if (data == null) throw Ops.TypeError("expected string, got NoneType");
+            if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
             if (data.Length == 0) return String.Empty;
 
             StringBuilder res = DecodeWorker(data, '=', delegate(char val) {
@@ -75,7 +75,7 @@ namespace IronPython.Modules {
 
         [PythonName("b2a_base64")]
         public static object EncodeBase64(string data) {
-            if (data == null) throw Ops.TypeError("expected string, got NoneType");
+            if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
             if (data.Length == 0) return String.Empty;
 
             StringBuilder res = EncodeWorker(data, 76, '=', delegate(int val) {
@@ -154,8 +154,8 @@ namespace IronPython.Modules {
         }
         [PythonName("a2b_hex")]
         public static object DecodeHex(string data) {
-            if (data == null) throw Ops.TypeError("expected string, got NoneType");
-            if ((data.Length & 0x01) != 0) throw Ops.ValueError("string must be even lengthed");
+            if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
+            if ((data.Length & 0x01) != 0) throw PythonOps.ValueError("string must be even lengthed");
             StringBuilder res = new StringBuilder(data.Length / 2);
 
             for (int i = 0; i < data.Length; i += 2) {
@@ -236,7 +236,7 @@ namespace IronPython.Modules {
 
                 res = decFunc(curChar);
             } while (res == NoMoreData);
-            if (res < 0 && empty != Char.MinValue) throw Ops.TypeError("Incorrect padding");
+            if (res < 0 && empty != Char.MinValue) throw PythonOps.TypeError("Incorrect padding");
             return res;
         }
 

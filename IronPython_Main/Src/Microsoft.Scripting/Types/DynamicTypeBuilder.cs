@@ -38,7 +38,7 @@ namespace Microsoft.Scripting {
             _building.ExtensionType = extensionType;
         }
 
-        private DynamicTypeBuilder(DynamicType type) : base(type) {
+        internal DynamicTypeBuilder(DynamicType type) : base(type) {
             _building = type;
         }
 
@@ -120,6 +120,10 @@ namespace Microsoft.Scripting {
 
         public void SetExtensionType(Type type) {
             _building.ExtensionType = type;
+        }
+
+        public void DisallowConstructorKeywordArguments(ContextId context) {
+            _building.DisallowConstructorKeywordArguments(context);
         }
     }
 }

@@ -34,14 +34,13 @@ using System.IO;
 using System.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
-using Microsoft.Scripting;
 
 using IronPython.Runtime;
 using IronPython.Hosting;
 using IronPython.Runtime.Operations;
 
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting.Internal;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 
 namespace IronPython.Compiler {

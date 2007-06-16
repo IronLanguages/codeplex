@@ -16,6 +16,10 @@
 import sys
 from lib.assert_util import *
 
+#System.Xml is unavailable in silverlight
+skiptest("silverlight")
+skiptest("win32")
+
 load_iron_python_test()
 from IronPythonTest import *
 
@@ -34,4 +38,4 @@ def test_attributes_injector():
     AreEqual(x.bar.baz.GetType().Name, 'String')
     AreEqual(x.bar.baz, 'baz text')
 
-test_attributes_injector()
+run_test(__name__)

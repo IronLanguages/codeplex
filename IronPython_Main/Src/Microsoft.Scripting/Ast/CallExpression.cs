@@ -17,9 +17,9 @@ using System;
 using System.Reflection.Emit;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class CallExpression : Expression {
         private readonly Expression _target;
         private readonly Arg[] _args;
@@ -90,38 +90,38 @@ namespace Microsoft.Scripting.Internal.Ast {
 
             if (_hasKeywordDict || (_hasArgsTuple && _keywordCount > 0)) {
                 cg.EmitCodeContext();
-                _target.Emit(cg);
+                _target.EmitAsObject(cg);
                 cg.EmitArrayFromExpressions(typeof(object), exprs);
                 cg.EmitArray(keywordNames);
-                cg.EmitExprOrNull(argsTuple);
-                cg.EmitExprOrNull(keywordDict);
+                cg.EmitExprAsObjectOrNull(argsTuple);
+                cg.EmitExprAsObjectOrNull(keywordDict);
                 cg.EmitCall(typeof(RuntimeHelpers), "CallWithArgsKeywordsTupleDict",
                     new Type[] { typeof(CodeContext), typeof(object), typeof(object[]), typeof(string[]),
 							   typeof(object), typeof(object)});
             } else if (_hasArgsTuple) {
                 cg.EmitCodeContext();
-                _target.Emit(cg);
+                _target.EmitAsObject(cg);
                 cg.EmitArrayFromExpressions(typeof(object), exprs);
-                cg.EmitExprOrNull(argsTuple);
+                cg.EmitExprAsObjectOrNull(argsTuple);
                 cg.EmitCall(typeof(RuntimeHelpers), "CallWithArgsTuple",
                     new Type[] { typeof(CodeContext), typeof(object), typeof(object[]), typeof(object) });
             } else if (_keywordCount > 0) {
                 cg.EmitCodeContext();
-                _target.Emit(cg);
+                _target.EmitAsObject(cg);
                 cg.EmitArrayFromExpressions(typeof(object), exprs);
                 cg.EmitArray(keywordNames);
                 cg.EmitCall(typeof(RuntimeHelpers), "CallWithKeywordArgs",
                     new Type[] { typeof(CodeContext), typeof(object), typeof(object[]), typeof(string[]) });
             } else {
                 cg.EmitCodeContext();
-                _target.Emit(cg);
+                _target.EmitAsObject(cg);
                 if (_args.Length <= CallTargets.MaximumCallArgs) {
                     Type[] argTypes = new Type[_args.Length + 2];
                     int i = 0;
                     argTypes[i++] = typeof(CodeContext);
                     argTypes[i++] = typeof(object);
                     foreach (Expression e in exprs) {
-                        e.EmitAs(cg, typeof(object));
+                        e.EmitAsObject(cg);
                         argTypes[i++] = typeof(object);
                     }
                     cg.EmitCall(typeof(RuntimeHelpers), "CallWithContext", argTypes);

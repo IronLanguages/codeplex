@@ -109,14 +109,14 @@
 	IronPython.&nbsp; This tutorial is NOT meant to be an introduction to Python 
 	itself, and if you're looking for that, we recommend you start with the 
 	tutorial at <a href="http://docs.python.org/tut/tut.html">www.python.org</a> 
-	or the often recommend book <i>Learning Python</i> by Mark Lutz and David 
+	or the often recommended book <i>Learning Python</i> by Mark Lutz and David 
 	Ascher.<br><br>
         Some of the exercises in this tutorial require prerequisites.&nbsp; The prerequisites to successfully complete the whole tutorial are:</p>
 	<ul type="disc">
 		<li class="Normal">Microsoft .NET Framework Version 2.0 Redistributable 
 		Package (x86)
 		<ul type="circle">
-			<li class="Normal">Required to run IronPython</li>
+			<li class="Normal">Required to run IronPython.</li>
 			<li class="Normal">Download from
 			<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=0856eacb-4362-4b0d-8edd-aab15c5e04f5&DisplayLang=en">
 			here</a>.</li>
@@ -313,7 +313,7 @@
 		<p class="Step">The Python import statement is similar to the &quot;using&quot; statement 
 		of C# or &quot;Imports&quot; statement of Visual Basic. The important difference is 
 		that the C# and VB statements bring the names from the imported namespace 
-		into to the global namespace to be accessed directly. Python’s import doesn’t 
+		into the global namespace to be accessed directly. Python’s import doesn’t 
 		do that. To access the names or attributes in an imported module, prefix 
 		the 
 		names with the module's name:</p>
@@ -437,7 +437,7 @@
 	<p class="Code-Highlighted">&gt;&gt;&gt; dir(System.Environment)</p>
 	<p class="Code-Background">[&#39;CommandLine&#39;, ..., &#39;OSVersion&#39;, ... ]</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; System.Environment.OSVersion</p>
-	<p class="Code-Background">Microsoft Windows NT 5.2.3790 Service Pack 1</p>
+	<p class="Code-Background">Microsoft Windows NT 6.0.6000.0</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; System.Environment.CommandLine</p>
 	<p class="Code-Background">&#39;C:\\IronPython\\ipy.exe&#39;<br />
 	&gt;&gt;&gt; </p>
@@ -545,7 +545,7 @@
 	<ol>
 		<li>
 		<p class="Step">Import the Generic collections from the System.Collections.Generic 
-		namespace</p>
+		namespace:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">from System.Collections.Generic import *</p>
@@ -553,15 +553,15 @@
 		<li>
 		<p class="Step">To instantiate a generic class, the generic type arguments 
 		must be specified.&nbsp; IronPython uses the following syntax to specify the type 
-		arguments: generic_type[type_argument, ...].&nbsp; Create instance of generic 
-		list of string:</p>
+		arguments: generic_type[type_argument, ...].&nbsp; Create an instance of generic 
+        list of string:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">l = List[str]()</p>
 	<ol start="3">
 		<li>
-		<p class="Step">Add string values into the list. Since we created list of 
-		string, adding string is possible:</p>
+		<p class="Step">Add string values into the list. Since we created a list of 
+		string, adding strings is possible:</p>
 		</li>
 	</ol>
 	<p class="TypedExample">l.Add(&quot;Hello&quot;)</p>
@@ -1430,11 +1430,11 @@
 		</li>
 	</ol>
 	<p class="LabSummary">Tutorial Summary</p>
-	<p class="Body">IronPython provides very easy way to develop live applications 
+	<p class="Body">IronPython provides a very easy way to develop live applications 
 	in a dynamic and exploratory way. Both Windows Forms and Windows Presentation 
 	Foundation (Avalon) applications can be easily developed this way with minimal 
 	setup. The advantage is that changes are visible immediately and modifications 
-	are happening to live system and don&#39;t require recompilation.</p>
+	are happening to a live system and don&#39;t require recompilation.</p>
 	<p class="Body">In this tutorial you performed the following exercises:</p>
 	<ul>
 		<li>
@@ -1853,7 +1853,7 @@
 	<p class="Body">In this exercise you will use C# language to build a class that 
 	supports enumeration, custom operators and delegates and you will use that class 
 	from IronPython.  It’s worth noting that as Python does not contain protected class members,
-        that these members get promoted to public class members when imported into Python.  Private
+        these members get promoted to public class members when imported into Python.  Private
         class members, however, will be invisible to Python when imported.</p>
 	<h3><a name="T5.1.1">Task 1: Implementing simple class - constructor and ToString</a></h3>
 	<ol>
@@ -1972,7 +1972,7 @@
 		Console (ip) and test the code:</p>
 		</li>
 	</ol>
-	<p class="TypedExample">import sys</p>
+	<p class="TypedExample">import clr</p>
 	<p class="TypedExample">clr.AddReferenceToFile(&quot;csextend.dll&quot;)</p>
 	<p class="TypedExample">import Simple</p>
 	<p class="TypedExample">dir(Simple)</p>
@@ -2148,8 +2148,8 @@
 		an interesting exercise is combining the debugging example and the extending 
 		one. If you are inspired to do so, try debugging the script that you just 
 		typed in. Debug the &quot;debugcsx.py&quot; script located in Tutorial directory and 
-		place breakpoint into the X function - you will see mixed call stack between 
-		Visual Basic and Python.</p>
+		place a breakpoint on the X function - you will see mixed call stack between 
+		C# and Python.</p>
 		</li>
 	</ol>
 	<h2><a name="T5.2">Exercise 2: Extending using Visual Basic.NET</a></h2>
@@ -2490,7 +2490,7 @@
 		are interested, an interesting exercise is combining the debugging example 
 		and the extending one. If you are inspired to do so, try debugging the script 
 		that you just typed in. Debug the &quot;debugvbx.py&quot; script located in the Tutorial 
-		directory. Place breakpoint into the X function - you will see mixed call 
+		directory. Place a breakpoint on the X function - you will see mixed call 
 		stack between Visual Basic and Python.</p>
 		</li>
 	</ol>

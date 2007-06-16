@@ -13,8 +13,9 @@
  *
  * ***************************************************************************/
 
+using System;
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class ConditionalExpression : Expression {
@@ -40,11 +41,11 @@ namespace IronPython.Compiler.Ast {
             get { return _trueExpr; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
-            return new MSAst.ConditionalExpression(
-                ag.Transform(_testExpr),
-                ag.Transform(_trueExpr),
-                ag.Transform(_falseExpr),
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
+            return MSAst.ConditionalExpression.Condition(
+                ag.TransformAndConvert(_testExpr, typeof(bool)),
+                ag.TransformAndConvert(_trueExpr, type),
+                ag.TransformAndConvert(_falseExpr, type),
                 Span
             );
         }

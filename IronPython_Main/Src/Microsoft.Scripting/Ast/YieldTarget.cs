@@ -13,32 +13,57 @@
  *
  * ***************************************************************************/
 
+using System.Diagnostics;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
-    public struct YieldTarget {
-        private Label _topBranchTarget;
-        private Label _yieldContinuationTarget;
+namespace Microsoft.Scripting.Ast {
+    internal class TargetLabel {
+        private Label _label;
+        private bool _initialized;
 
-        public YieldTarget(Label topBranchTarget) {
-            this._topBranchTarget = topBranchTarget;
-            _yieldContinuationTarget = new Label();
+        internal TargetLabel() {
         }
 
-        public Label TopBranchTarget {
-            get { return _topBranchTarget; }
-            set { _topBranchTarget = value; }
+        internal Label EnsureLabel(CodeGen cg) {
+            if (!_initialized) {
+                _label = cg.DefineLabel();
+                _initialized = true;
+            }
+            return _label;
         }
 
-        public Label YieldContinuationTarget {
-            get { return _yieldContinuationTarget; }
-            set { _yieldContinuationTarget = value; }
+        internal void Clear() {
+            _initialized = false;
+        }
+    }
+
+    internal struct YieldTarget {
+        private readonly int _index;
+        private readonly TargetLabel _target;
+
+        public YieldTarget(int index, TargetLabel label) {
+            _index = index;
+            _target = label;
         }
 
-        internal YieldTarget FixForTryCatchFinally(CodeGen cg) {
-            _yieldContinuationTarget = cg.DefineLabel();
-            return this;
+        public int Index {
+            get { return _index; }
+        }
+
+        public TargetLabel Target {
+            get { return _target; }
+        }
+
+        public Label EnsureLabel(CodeGen cg) {
+            Debug.Assert(_target != null);
+            return _target.EnsureLabel(cg);
+        }
+
+        internal void Clear() {
+            if (_target != null) {
+                _target.Clear();
+            }
         }
     }
 }

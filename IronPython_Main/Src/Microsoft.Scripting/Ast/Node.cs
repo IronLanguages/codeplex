@@ -15,17 +15,12 @@
 
 using System;
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public abstract class Node {
         private SourceLocation _start;
         private SourceLocation _end;
-
-        protected Node() {
-            _start = SourceLocation.Invalid;
-            _end = SourceLocation.Invalid;
-        }
 
         protected Node(SourceSpan span) {
             _start = span.Start;

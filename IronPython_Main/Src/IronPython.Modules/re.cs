@@ -79,7 +79,7 @@ namespace IronPython.Modules {
 
         [PythonName("escape")]
         public static string Escape(string text) {
-            if (text == null) throw Ops.TypeError("text must not be None");
+            if (text == null) throw PythonOps.TypeError("text must not be None");
 
             for (int i = 0; i < text.Length; i++) {
                 if (!Char.IsLetterOrDigit(text[i])) {
@@ -383,7 +383,7 @@ namespace IronPython.Modules {
 
             [PythonName("sub")]
             public string Substitute(object repl, object @string, int count) {
-                if (repl == null) throw Ops.TypeError("NoneType is not valid repl");
+                if (repl == null) throw PythonOps.TypeError("NoneType is not valid repl");
                 //  if 'count' is omitted or 0, all occurrences are replaced
                 if (count == 0) count = Int32.MaxValue;
 
@@ -420,7 +420,7 @@ namespace IronPython.Modules {
 
             [PythonName("subn")]
             public object SubGetCount(object repl, object @string, int count) {
-                if (repl == null) throw Ops.TypeError("NoneType is not valid repl");
+                if (repl == null) throw PythonOps.TypeError("NoneType is not valid repl");
                 //  if 'count' is omitted or 0, all occurrences are replaced
                 if (count == 0) count = Int32.MaxValue;
 
@@ -471,8 +471,11 @@ namespace IronPython.Modules {
                         PythonDictionary d = new PythonDictionary();
                         string[] names = re.GetGroupNames();
                         int[] nums = re.GetGroupNumbers();
-                        for (int i = 1; i < names.Length; i++)
+                        for (int i = 1; i < names.Length; i++) {
+                            if (Char.IsDigit(names[i][0])) continue;    // skip numeric names
+
                             d[names[i]] = nums[i];
+                        }
                         groups = d;
                     }
                     return groups;
@@ -607,7 +610,7 @@ namespace IronPython.Modules {
                         ret[i - 1] = m.Groups[i].Value;
                     }
                 }
-                return Ops.MakeTuple(ret);
+                return Tuple.MakeTuple(ret);
             }
 
             [PythonName("expand")]
@@ -778,7 +781,7 @@ namespace IronPython.Modules {
                     grpIndex = pattern.re.GroupNumberFromName(ValidateString(group, "group"));
                 }
                 if (grpIndex < 0 || grpIndex >= m.Groups.Count) {
-                    throw Ops.IndexError("no such group");
+                    throw PythonOps.IndexError("no such group");
                 }
                 return grpIndex;
             }
@@ -1006,13 +1009,13 @@ namespace IronPython.Modules {
                                             if (Microsoft.Scripting.Utils.TryParseInt32(grp, out num)) {
                                                 g = m.Groups[num];
                                                 if (String.IsNullOrEmpty(g.Value)) {
-                                                    throw Ops.IndexError("unknown group reference");
+                                                    throw PythonOps.IndexError("unknown group reference");
                                                 }
                                                 sb.Append(g.Value);
                                             } else {
                                                 g = m.Groups[grp];
                                                 if (String.IsNullOrEmpty(g.Value)) {
-                                                    throw Ops.IndexError("unknown group reference");
+                                                    throw PythonOps.IndexError("unknown group reference");
                                                 }
                                                 sb.Append(g.Value);
                                             }
@@ -1064,7 +1067,7 @@ namespace IronPython.Modules {
             RE_Pattern rep = pattern as RE_Pattern;
             if (rep != null) return rep.pre.UserPattern;
 
-            throw Ops.TypeError("pattern must be a string or compiled pattern");
+            throw PythonOps.TypeError("pattern must be a string or compiled pattern");
         }
 
         private static string ValidateString(object str, string param) {
@@ -1073,7 +1076,7 @@ namespace IronPython.Modules {
             ExtensibleString es = str as ExtensibleString;
             if (es != null) return es.Value;
 
-            throw Ops.TypeError("expected string for parameter '{0}' but got '{1}'", param, Ops.GetPythonTypeName(str));
+            throw PythonOps.TypeError("expected string for parameter '{0}' but got '{1}'", param, PythonOps.GetPythonTypeName(str));
         }
 
         #endregion

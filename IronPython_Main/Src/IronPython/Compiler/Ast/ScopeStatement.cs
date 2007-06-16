@@ -13,29 +13,32 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
-using VariableKind = Microsoft.Scripting.Internal.Ast.Variable.VariableKind;
+using MSAst = Microsoft.Scripting.Ast;
+using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
 
 namespace IronPython.Compiler.Ast {
     public abstract class ScopeStatement : Statement {
         private ScopeStatement _parent;
-        private PythonScopeFlags _flags;
+
+        private bool _importStar;                   // from module import *
+        private bool _unqualifiedExec;              // exec "code"
+        private bool _nestedFreeVariables;          // nested function with free variable
+        private bool _locals;                       // The scope needs locals dictionary
+                                                    // due to "exec" or call to dir, locals, eval, vars...
+        private bool _closure;                      // the scope is a closure (its locals are referenced by nested scopes)
+
 
         private Dictionary<SymbolId, PythonVariable> _variables;
         private Dictionary<SymbolId, PythonReference> _references;
-        private List<PythonReference> _temprefs;
 
         public ScopeStatement Parent {
             get { return _parent; }
             set { _parent = value; }
-        }
-
-        internal PythonScopeFlags Flags {
-            get { return _flags; }
         }
 
         protected abstract MSAst.CodeBlock Block { get; }
@@ -47,68 +50,28 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal bool ContainsImportStar {
-            get { return GetFlag(PythonScopeFlags.ContainsImportStar); }
-            set { SetFlag(value, PythonScopeFlags.ContainsImportStar); }
+            get { return _importStar; }
+            set { _importStar = value; }
         }
         internal bool ContainsUnqualifiedExec {
-            get { return GetFlag(PythonScopeFlags.ContainsUnqualifiedExec); }
-            set { SetFlag(value, PythonScopeFlags.ContainsUnqualifiedExec); }
-        }
-        internal bool ContainsExec {
-            get { return (_flags & PythonScopeFlags.ContainsExec) != 0; }
-            set { SetFlag(value, PythonScopeFlags.ContainsExec); }
+            get { return _unqualifiedExec; }
+            set { _unqualifiedExec = value; }
         }
         internal bool ContainsNestedFreeVariables {
-            get { return GetFlag(PythonScopeFlags.ContainsNestedFreeVariables); }
-            set { SetFlag(value, PythonScopeFlags.ContainsNestedFreeVariables); }
+            get { return _nestedFreeVariables; }
+            set { _nestedFreeVariables = value; }
         }
         internal bool NeedsLocalsDictionary {
-            get { return GetFlag(PythonScopeFlags.NeedsLocalsDictionary); }
-            set { SetFlag(value, PythonScopeFlags.NeedsLocalsDictionary); }
+            get { return _locals; }
+            set { _locals = value; }
         }
         internal bool IsClosure {
-            get { return GetFlag(PythonScopeFlags.IsClosure); }
-            set { SetFlag(value, PythonScopeFlags.IsClosure); }
+            get { return _closure; }
+            set { _closure = value; }
         }
 
-        private bool GetFlag(PythonScopeFlags flag) {
-            return (_flags & flag) != 0;
-        }
-        private void SetFlag(bool value, PythonScopeFlags flag) {
-            if (value) {
-                _flags |= flag;
-            } else {
-                _flags &= ~flag;
-            }
-        }
-
-        // Scope has fixed locals if no locals can be introduced at runtime
-        // This is true if the context contains neither exec (in any form, either qualified or non-qualified) nor import *
-        // Note that even qualified exec may introduce locals: "exec 'x = 1' in globals(), locals()"
-        internal bool HasFixedLocals {
-            get {
-                return (_flags & (PythonScopeFlags.ContainsExec | PythonScopeFlags.ContainsImportStar)) == 0;
-            }
-        }
-
-        //[Obsolete("Get rid of this")]
-        internal bool IsGlobal {
-            get {
-                Debug.Assert(this is PythonAst || _parent != null);
-                return _parent == null;
-            }
-        }
-
-        //[Obsolete("Remove")]
-        public bool IsFunctionScope {
-            get { return GetType() == typeof(FunctionDefinition); }
-        }
-
-        internal Dictionary<SymbolId, PythonVariable> Definitions {
+        internal Dictionary<SymbolId, PythonVariable> Variables {
             get { return _variables; }
-        }
-        internal Dictionary<SymbolId, PythonReference> References {
-            get { return _references; }
         }
 
         protected virtual void CreateVariables(MSAst.CodeBlock block) {
@@ -118,18 +81,8 @@ namespace IronPython.Compiler.Ast {
                     // in the dictionary also that were used for name binding lookups
                     // Do not publish parameters, they will get created separately.
                     if (kv.Value.Scope == this && kv.Value.Kind  != VariableKind.Parameter) {
-                        block.AddVariable(kv.Value.Transform(block));
+                        kv.Value.Transform(block);
                     }
-                }
-            }
-            if (_references != null) {
-                foreach (KeyValuePair<SymbolId, PythonReference> kv in _references) {
-                    block.AddReference(kv.Value.Transform());
-                }
-            }
-            if (_temprefs != null) {
-                foreach (PythonReference r in _temprefs) {
-                    block.AddReference(r.Transform());
                 }
             }
 
@@ -139,81 +92,120 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        private PythonVariable EnsureDefinition(SymbolId name) {
-            PythonVariable variable;
-            EnsureDefinitions();
-            if (!_variables.TryGetValue(name, out variable)) {
-                variable = new PythonVariable(name, this);
-                _variables[name] = variable;
+        private bool TryGetAnyVariable(SymbolId name, out PythonVariable variable) {
+            if (_variables != null) {
+                return _variables.TryGetValue(name, out variable);
+            } else {
+                variable = null;
+                return false;
             }
-            return variable;
         }
 
-        private void EnsureDefinitions() {
+        internal bool TryGetVariable(SymbolId name, out PythonVariable variable) {
+            if (TryGetAnyVariable(name, out variable) && variable.Visible) {
+                return true;
+            } else {
+                variable = null;
+                return false;
+            }
+        }
+
+        internal virtual bool TryBindOuter(SymbolId name, out PythonVariable variable) {
+            // Hide scope contents by default (only functions expose their locals)
+            variable = null;
+            return false;
+        }
+
+        internal abstract PythonVariable BindName(SymbolId name);
+
+        internal virtual void Bind(PythonNameBinder binder) {
+            if (_references != null) {
+                foreach (KeyValuePair<SymbolId, PythonReference> kv in _references) {
+                    PythonVariable variable;
+                    kv.Value.PythonVariable = variable = BindName(kv.Key);
+
+                    // Accessing outer scope variable which is being deleted?
+                    if (variable != null &&
+                        variable.Deleted &&
+                        variable.Kind != VariableKind.Global &&
+                        (object)variable.Scope != (object)this) {
+
+                        // report syntax error
+                        binder.ReportSyntaxError(
+                            String.Format(
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                "can not delete variable '{0}' referenced in nested context",
+                                SymbolTable.IdToString(kv.Key)
+                                ),
+                            this);
+                    }
+                }
+            }
+        }
+
+        private void EnsureVariables() {
             if (_variables == null) {
                 _variables = new Dictionary<SymbolId, PythonVariable>();
             }
         }
 
-        internal bool TryGetDefinition(SymbolId name, out PythonVariable variable) {
-            if (_variables == null) {
-                variable = null;
-                return false;
-            }
-            return _variables.TryGetValue(name, out variable);
+        internal void AddGlobalVariable(PythonVariable variable) {
+            EnsureVariables();
+            _variables[variable.Name] = variable;
         }
 
-        public PythonReference EnsureReference(SymbolId name) {
+        internal PythonReference Reference(SymbolId name) {
+            if (_references == null) {
+                _references = new Dictionary<SymbolId, PythonReference>();
+            }
             PythonReference reference;
-            EnsureReferences();
             if (!_references.TryGetValue(name, out reference)) {
-                reference = new PythonReference(name);
-                _references[name] = reference;
+                _references[name] = reference = new PythonReference(name);
             }
             return reference;
         }
 
-        private void EnsureReferences() {
-            if (_references == null) {
-                _references = new Dictionary<SymbolId, PythonReference>();
-            }
+        internal bool IsReferenced(SymbolId name) {
+            PythonReference reference;
+            return _references != null && _references.TryGetValue(name, out reference);
         }
 
-        internal bool TryGetReference(SymbolId name, out PythonReference reference) {
-            if (_references == null) {
-                reference = null;
-                return false;
-            }
-            return _references.TryGetValue(name, out reference);
-        }
-
-        internal void AddTemporaryReference(PythonReference reference) {
-            if (_temprefs == null) {
-                _temprefs = new List<PythonReference>();
-            }
-            _temprefs.Add(reference);
-        }
-
-        internal PythonVariable DefineName(SymbolId name) {
-            PythonVariable variable = EnsureDefinition(name);
-            variable.Flags |= PythonVariable.PythonFlags.Assigned;
+        internal PythonVariable CreateVariable(SymbolId name, VariableKind kind) {
+            EnsureVariables();
+            Debug.Assert(!_variables.ContainsKey(name));
+            PythonVariable variable;
+            _variables[name] = variable = new PythonVariable(name, kind, this);
             return variable;
         }
 
-        internal void DefineParameter(SymbolId name) {
-            PythonVariable variable = EnsureDefinition(name);
-            Debug.Assert(variable.Kind == VariableKind.Local);
-            variable.Kind = VariableKind.Parameter;
+        internal PythonVariable EnsureVariable(SymbolId name) {
+            PythonVariable variable;
+            if (!TryGetVariable(name, out variable)) {
+                return CreateVariable(name, VariableKind.Local);
+            }
+            return variable;
         }
 
-        internal void DefineDeleted(SymbolId name) {
-            PythonVariable variable = EnsureDefinition(name);
-            variable.Flags |= PythonVariable.PythonFlags.Deleted;
+        internal PythonVariable EnsureHiddenVariable(SymbolId name) {
+            PythonVariable variable;
+            if (!TryGetAnyVariable(name, out variable)) {
+                variable = CreateVariable(name, VariableKind.Local);
+                variable.Hide();
+            }
+            return variable;
         }
 
-        internal void AddGlobalDefinition(PythonVariable variable) {
-            EnsureDefinitions();
-            _variables[variable.Name] = variable;
+        internal PythonVariable DefineParameter(SymbolId name) {
+            return CreateVariable(name, VariableKind.Parameter);
+        }
+
+        protected internal PythonAst GetGlobalScope() {
+            ScopeStatement global = this;
+            while (global.Parent != null) {
+                global = global.Parent;
+            }
+            Debug.Assert(global is PythonAst);
+            return global as PythonAst;
         }
     }
 }

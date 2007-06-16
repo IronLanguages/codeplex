@@ -14,9 +14,8 @@
  * ***************************************************************************/
 
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Ast;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     #region Generated Scripting AST Walker
 
     // *** BEGIN GENERATED CODE ***
@@ -81,6 +80,10 @@ namespace Microsoft.Scripting.Internal.Ast {
         public virtual bool Walk(ConstantExpression node) { return true; }
         public virtual void PostWalk(ConstantExpression node) { }
 
+        // ConversionExpression
+        public virtual bool Walk(ConversionExpression node) { return true; }
+        public virtual void PostWalk(ConversionExpression node) { }
+
         // DeleteDynamicMemberExpression
         public virtual bool Walk(DeleteDynamicMemberExpression node) { return true; }
         public virtual void PostWalk(DeleteDynamicMemberExpression node) { }
@@ -88,6 +91,10 @@ namespace Microsoft.Scripting.Internal.Ast {
         // DeleteIndexExpression
         public virtual bool Walk(DeleteIndexExpression node) { return true; }
         public virtual void PostWalk(DeleteIndexExpression node) { }
+
+        // DeleteUnboundExpression
+        public virtual bool Walk(DeleteUnboundExpression node) { return true; }
+        public virtual void PostWalk(DeleteUnboundExpression node) { }
 
         // DynamicMemberAssignment
         public virtual bool Walk(DynamicMemberAssignment node) { return true; }
@@ -161,6 +168,14 @@ namespace Microsoft.Scripting.Internal.Ast {
         public virtual bool Walk(TypeBinaryExpression node) { return true; }
         public virtual void PostWalk(TypeBinaryExpression node) { }
 
+        // UnboundAssignment
+        public virtual bool Walk(UnboundAssignment node) { return true; }
+        public virtual void PostWalk(UnboundAssignment node) { }
+
+        // UnboundExpression
+        public virtual bool Walk(UnboundExpression node) { return true; }
+        public virtual void PostWalk(UnboundExpression node) { }
+
         // VoidExpression
         public virtual bool Walk(VoidExpression node) { return true; }
         public virtual void PostWalk(VoidExpression node) { }
@@ -188,6 +203,10 @@ namespace Microsoft.Scripting.Internal.Ast {
         // DoStatement
         public virtual bool Walk(DoStatement node) { return true; }
         public virtual void PostWalk(DoStatement node) { }
+
+        // DynamicTryStatement
+        public virtual bool Walk(DynamicTryStatement node) { return true; }
+        public virtual void PostWalk(DynamicTryStatement node) { }
 
         // EmptyStatement
         public virtual bool Walk(EmptyStatement node) { return true; }
@@ -237,9 +256,17 @@ namespace Microsoft.Scripting.Internal.Ast {
         public virtual bool Walk(Arg node) { return true; }
         public virtual void PostWalk(Arg node) { }
 
+        // CatchBlock
+        public virtual bool Walk(CatchBlock node) { return true; }
+        public virtual void PostWalk(CatchBlock node) { }
+
         // CodeBlock
         public virtual bool Walk(CodeBlock node) { return true; }
         public virtual void PostWalk(CodeBlock node) { }
+
+        // DynamicTryStatementHandler
+        public virtual bool Walk(DynamicTryStatementHandler node) { return true; }
+        public virtual void PostWalk(DynamicTryStatementHandler node) { }
 
         // GeneratorCodeBlock
         public virtual bool Walk(GeneratorCodeBlock node) { return true; }
@@ -248,244 +275,6 @@ namespace Microsoft.Scripting.Internal.Ast {
         // IfStatementTest
         public virtual bool Walk(IfStatementTest node) { return true; }
         public virtual void PostWalk(IfStatementTest node) { }
-
-        // TryStatementHandler
-        public virtual bool Walk(TryStatementHandler node) { return true; }
-        public virtual void PostWalk(TryStatementHandler node) { }
-    }
-
-
-    /// <summary>
-    /// WalkerNonRecursive class - The Scripting AST Walker (default result is false)
-    /// </summary>
-    public class WalkerNonRecursive : Walker {
-        // ActionExpression
-        public override bool Walk(ActionExpression node) { return false; }
-        public override void PostWalk(ActionExpression node) { }
-
-        // AndExpression
-        public override bool Walk(AndExpression node) { return false; }
-        public override void PostWalk(AndExpression node) { }
-
-        // ArrayIndexAssignment
-        public override bool Walk(ArrayIndexAssignment node) { return false; }
-        public override void PostWalk(ArrayIndexAssignment node) { }
-
-        // ArrayIndexExpression
-        public override bool Walk(ArrayIndexExpression node) { return false; }
-        public override void PostWalk(ArrayIndexExpression node) { }
-
-        // BinaryExpression
-        public override bool Walk(BinaryExpression node) { return false; }
-        public override void PostWalk(BinaryExpression node) { }
-
-        // BoundAssignment
-        public override bool Walk(BoundAssignment node) { return false; }
-        public override void PostWalk(BoundAssignment node) { }
-
-        // BoundExpression
-        public override bool Walk(BoundExpression node) { return false; }
-        public override void PostWalk(BoundExpression node) { }
-
-        // CallExpression
-        public override bool Walk(CallExpression node) { return false; }
-        public override void PostWalk(CallExpression node) { }
-
-        // CallWithThisExpression
-        public override bool Walk(CallWithThisExpression node) { return false; }
-        public override void PostWalk(CallWithThisExpression node) { }
-
-        // CodeBlockExpression
-        public override bool Walk(CodeBlockExpression node) { return false; }
-        public override void PostWalk(CodeBlockExpression node) { }
-
-        // CodeContextExpression
-        public override bool Walk(CodeContextExpression node) { return false; }
-        public override void PostWalk(CodeContextExpression node) { }
-
-        // CommaExpression
-        public override bool Walk(CommaExpression node) { return false; }
-        public override void PostWalk(CommaExpression node) { }
-
-        // ConditionalExpression
-        public override bool Walk(ConditionalExpression node) { return false; }
-        public override void PostWalk(ConditionalExpression node) { }
-
-        // ConstantExpression
-        public override bool Walk(ConstantExpression node) { return false; }
-        public override void PostWalk(ConstantExpression node) { }
-
-        // DeleteDynamicMemberExpression
-        public override bool Walk(DeleteDynamicMemberExpression node) { return false; }
-        public override void PostWalk(DeleteDynamicMemberExpression node) { }
-
-        // DeleteIndexExpression
-        public override bool Walk(DeleteIndexExpression node) { return false; }
-        public override void PostWalk(DeleteIndexExpression node) { }
-
-        // DynamicMemberAssignment
-        public override bool Walk(DynamicMemberAssignment node) { return false; }
-        public override void PostWalk(DynamicMemberAssignment node) { }
-
-        // DynamicMemberExpression
-        public override bool Walk(DynamicMemberExpression node) { return false; }
-        public override void PostWalk(DynamicMemberExpression node) { }
-
-        // DynamicNewExpression
-        public override bool Walk(DynamicNewExpression node) { return false; }
-        public override void PostWalk(DynamicNewExpression node) { }
-
-        // EnvironmentExpression
-        public override bool Walk(EnvironmentExpression node) { return false; }
-        public override void PostWalk(EnvironmentExpression node) { }
-
-        // IndexAssignment
-        public override bool Walk(IndexAssignment node) { return false; }
-        public override void PostWalk(IndexAssignment node) { }
-
-        // IndexExpression
-        public override bool Walk(IndexExpression node) { return false; }
-        public override void PostWalk(IndexExpression node) { }
-
-        // MemberAssignment
-        public override bool Walk(MemberAssignment node) { return false; }
-        public override void PostWalk(MemberAssignment node) { }
-
-        // MemberExpression
-        public override bool Walk(MemberExpression node) { return false; }
-        public override void PostWalk(MemberExpression node) { }
-
-        // MethodCallExpression
-        public override bool Walk(MethodCallExpression node) { return false; }
-        public override void PostWalk(MethodCallExpression node) { }
-
-        // NewArrayExpression
-        public override bool Walk(NewArrayExpression node) { return false; }
-        public override void PostWalk(NewArrayExpression node) { }
-
-        // NewExpression
-        public override bool Walk(NewExpression node) { return false; }
-        public override void PostWalk(NewExpression node) { }
-
-        // OrExpression
-        public override bool Walk(OrExpression node) { return false; }
-        public override void PostWalk(OrExpression node) { }
-
-        // ParamsExpression
-        public override bool Walk(ParamsExpression node) { return false; }
-        public override void PostWalk(ParamsExpression node) { }
-
-        // ParenthesisExpression
-        public override bool Walk(ParenthesisExpression node) { return false; }
-        public override void PostWalk(ParenthesisExpression node) { }
-
-        // ShortCircuitExpression
-        public override bool Walk(ShortCircuitExpression node) { return false; }
-        public override void PostWalk(ShortCircuitExpression node) { }
-
-        // StaticUnaryExpression
-        public override bool Walk(StaticUnaryExpression node) { return false; }
-        public override void PostWalk(StaticUnaryExpression node) { }
-
-        // ThrowExpression
-        public override bool Walk(ThrowExpression node) { return false; }
-        public override void PostWalk(ThrowExpression node) { }
-
-        // TypeBinaryExpression
-        public override bool Walk(TypeBinaryExpression node) { return false; }
-        public override void PostWalk(TypeBinaryExpression node) { }
-
-        // VoidExpression
-        public override bool Walk(VoidExpression node) { return false; }
-        public override void PostWalk(VoidExpression node) { }
-
-        // BlockStatement
-        public override bool Walk(BlockStatement node) { return false; }
-        public override void PostWalk(BlockStatement node) { }
-
-        // BreakStatement
-        public override bool Walk(BreakStatement node) { return false; }
-        public override void PostWalk(BreakStatement node) { }
-
-        // ContinueStatement
-        public override bool Walk(ContinueStatement node) { return false; }
-        public override void PostWalk(ContinueStatement node) { }
-
-        // DebugStatement
-        public override bool Walk(DebugStatement node) { return false; }
-        public override void PostWalk(DebugStatement node) { }
-
-        // DelStatement
-        public override bool Walk(DelStatement node) { return false; }
-        public override void PostWalk(DelStatement node) { }
-
-        // DoStatement
-        public override bool Walk(DoStatement node) { return false; }
-        public override void PostWalk(DoStatement node) { }
-
-        // EmptyStatement
-        public override bool Walk(EmptyStatement node) { return false; }
-        public override void PostWalk(EmptyStatement node) { }
-
-        // ExpressionStatement
-        public override bool Walk(ExpressionStatement node) { return false; }
-        public override void PostWalk(ExpressionStatement node) { }
-
-        // IfStatement
-        public override bool Walk(IfStatement node) { return false; }
-        public override void PostWalk(IfStatement node) { }
-
-        // LabeledStatement
-        public override bool Walk(LabeledStatement node) { return false; }
-        public override void PostWalk(LabeledStatement node) { }
-
-        // LoopStatement
-        public override bool Walk(LoopStatement node) { return false; }
-        public override void PostWalk(LoopStatement node) { }
-
-        // ReturnStatement
-        public override bool Walk(ReturnStatement node) { return false; }
-        public override void PostWalk(ReturnStatement node) { }
-
-        // ScopeStatement
-        public override bool Walk(ScopeStatement node) { return false; }
-        public override void PostWalk(ScopeStatement node) { }
-
-        // SwitchStatement
-        public override bool Walk(SwitchStatement node) { return false; }
-        public override void PostWalk(SwitchStatement node) { }
-
-        // TryFinallyStatement
-        public override bool Walk(TryFinallyStatement node) { return false; }
-        public override void PostWalk(TryFinallyStatement node) { }
-
-        // TryStatement
-        public override bool Walk(TryStatement node) { return false; }
-        public override void PostWalk(TryStatement node) { }
-
-        // YieldStatement
-        public override bool Walk(YieldStatement node) { return false; }
-        public override void PostWalk(YieldStatement node) { }
-
-        // Arg
-        public override bool Walk(Arg node) { return false; }
-        public override void PostWalk(Arg node) { }
-
-        // CodeBlock
-        public override bool Walk(CodeBlock node) { return false; }
-        public override void PostWalk(CodeBlock node) { }
-
-        // GeneratorCodeBlock
-        public override bool Walk(GeneratorCodeBlock node) { return false; }
-        public override void PostWalk(GeneratorCodeBlock node) { }
-
-        // IfStatementTest
-        public override bool Walk(IfStatementTest node) { return false; }
-        public override void PostWalk(IfStatementTest node) { }
-
-        // TryStatementHandler
-        public override bool Walk(TryStatementHandler node) { return false; }
-        public override void PostWalk(TryStatementHandler node) { }
     }
 
     // *** END GENERATED CODE ***

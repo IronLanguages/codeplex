@@ -26,7 +26,7 @@ namespace Microsoft.Scripting {
     public class DynamicMixinBuilder {
         internal DynamicMixin _building;
         private List<TypeInitializer> _inits;
-        private static List<EventHandler<TypeCreatedEventArgs>> _notifcations = new List<EventHandler<TypeCreatedEventArgs>>();
+        private static List<EventHandler<TypeCreatedEventArgs>> _notifications = new List<EventHandler<TypeCreatedEventArgs>>();
 
         /// <summary>
         /// Creates a new DynamicMixinBuilder for a DynamicMixin without a name that has an underlying
@@ -52,16 +52,21 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Gets the DynamicMixinBuilder for a pre-existing DynamicMixin.
         /// </summary>
-        public static DynamicMixinBuilder GetBuilder(DynamicMixin type) {
-            if (type == null) throw new ArgumentNullException("type");
+        public static DynamicMixinBuilder GetBuilder(DynamicMixin mixin) {
+            if (mixin == null) throw new ArgumentNullException("mixin");
 
-            lock (type.SyncRoot) {
-                if (type.Builder == null) {
-                    type.Builder = new DynamicMixinBuilder(type);
-                    return type.Builder;
+            lock (mixin.SyncRoot) {
+                if (mixin.Builder == null) {
+                    DynamicType type = mixin as DynamicType;
+                    if (type != null) {
+                        mixin.Builder = new DynamicTypeBuilder(type);
+                    } else {
+                        mixin.Builder = new DynamicMixinBuilder(mixin);
+                    }
+                    return mixin.Builder;
                 }
 
-                return type.Builder;
+                return mixin.Builder;
             }
         }
 
@@ -252,7 +257,7 @@ namespace Microsoft.Scripting {
 
                 DynamicType dt = _building as DynamicType;
                 EventHandler<TypeCreatedEventArgs> []notifys;
-                lock (_notifcations) notifys = _notifcations.ToArray();
+                lock (_notifications) notifys = _notifications.ToArray();
                 foreach(EventHandler<TypeCreatedEventArgs> init in notifys) {
                     init(this, new TypeCreatedEventArgs(dt));
                 }
@@ -265,8 +270,8 @@ namespace Microsoft.Scripting {
         public static event EventHandler<TypeCreatedEventArgs> TypeInitialized {
             add {
                 List<DynamicType> inited = new List<DynamicType>();
-                lock (_notifcations) {
-                    _notifcations.Add(value);
+                lock (_notifications) {
+                    _notifications.Add(value);
 
                     int current = 0;
                     inited.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(object)));
@@ -295,8 +300,8 @@ namespace Microsoft.Scripting {
                 }
             }
             remove {
-                lock (_notifcations) {
-                    _notifcations.Remove(value);
+                lock (_notifications) {
+                    _notifications.Remove(value);
                 }
             }
         }

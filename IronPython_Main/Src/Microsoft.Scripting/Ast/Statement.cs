@@ -22,15 +22,11 @@ using System.Collections.Generic;
 using System.Globalization;
 
 using System.Diagnostics;
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public abstract class Statement : Node {
         public static readonly object NextStatement = new object();
-
-        protected Statement() {
-        }
 
         protected Statement(SourceSpan span)
             : base(span) {

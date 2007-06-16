@@ -16,9 +16,8 @@
 from lib.assert_util import *
 from sys import exit
 
-if not is_cli:
-    #bail
-    exit(0)
+skiptest("win32")
+skiptest("silverlight")
 
 from System.IO          import Directory
 from System             import Environment

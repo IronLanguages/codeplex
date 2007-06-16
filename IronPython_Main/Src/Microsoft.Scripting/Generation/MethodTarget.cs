@@ -19,10 +19,10 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Internal.Ast;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class MethodTarget  {
         private ActionBinder _binder;
         private MethodBase _method;
@@ -189,22 +189,25 @@ namespace Microsoft.Scripting.Internal.Generation {
             CodeGen cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
                 Method.Name, typeof(object), paramTypes, null);
 
-            if (needsContext) {
-                cg.ContextSlot = cg.ArgumentSlots[0];
+            try {
+                if (needsContext) {
+                    cg.ContextSlot = cg.ArgumentSlots[0];
+                }
+                Slot contextSlot = needsContext ? cg.ArgumentSlots[0] : null;
+
+                Debug.Assert(!needsContext || contextSlot != null, this.Method.Name + " missing context slot on " + Method.DeclaringType.Name);
+
+                Slot[] argSlots = new Slot[ParameterCount];
+                for (int i = 0; i < argSlots.Length; i++) {
+                    argSlots[i] = cg.ArgumentSlots[i + contextOffset];
+                }
+
+                EmitConversionsAndCall(cg, argSlots);
+                cg.EmitConvert(_returnBuilder.ReturnType, cg.MethodInfo.ReturnType);
+                cg.EmitReturn();
+            } finally {
+                cg.Finish();
             }
-            Slot contextSlot = needsContext ? cg.ArgumentSlots[0] : null;
-
-            Debug.Assert(!needsContext || contextSlot != null, this.Method.Name + " missing context slot on " + Method.DeclaringType.Name);
-
-            Slot[] argSlots = new Slot[ParameterCount];
-            for (int i = 0; i < argSlots.Length; i++) {
-                argSlots[i] = cg.ArgumentSlots[i + contextOffset];
-            }
-
-            EmitConversionsAndCall(cg, argSlots);
-            cg.EmitConvert(_returnBuilder.ReturnType, cg.MethodInfo.ReturnType);
-            cg.EmitReturn();
-            cg.Finish();
 
             return cg.CreateDelegate(CallTargets.GetTargetType(needsContext, ParameterCount));
         }
@@ -233,8 +236,8 @@ namespace Microsoft.Scripting.Internal.Generation {
             _returnBuilder.Generate(cg, argSlots);
         }
 
-        public Expression MakeExpression(ActionBinder binder, VariableReference[] parameters) {
-            return MakeExpression(binder, VariableReference.ReferencesToExpressions(parameters));
+        public Expression MakeExpression(ActionBinder binder, Variable[] variables) {
+            return MakeExpression(binder, Variable.VariablesToExpressions(variables));
         }
 
         public Expression MakeExpression(ActionBinder binder, Expression[] parameters) {

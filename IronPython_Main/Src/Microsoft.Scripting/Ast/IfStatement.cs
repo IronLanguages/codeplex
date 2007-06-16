@@ -15,15 +15,16 @@
 
 using System.Reflection.Emit;
 using System.Collections.Generic;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
 
     public class IfStatement : Statement {
         private readonly IfStatementTest[] _tests;
         private readonly Statement _elseStmt;
 
-        public IfStatement(IfStatementTest[] tests, Statement else_) {
+        public IfStatement(IfStatementTest[] tests, Statement else_)
+            : base(SourceSpan.None) {
             _tests = tests;
             _elseStmt = else_;
         }
@@ -60,7 +61,7 @@ namespace Microsoft.Scripting.Internal.Ast {
             foreach (IfStatementTest t in _tests) {
                 Label next = cg.DefineLabel();
                 cg.EmitPosition(t.Start, t.Header);
-                cg.EmitTestTrue(t.Test);
+                t.Test.EmitAs(cg, typeof(bool));
                 cg.Emit(OpCodes.Brfalse, next);
                 t.Body.Emit(cg);
                 // optimize no else case                

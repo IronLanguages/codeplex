@@ -16,10 +16,10 @@
 using System;
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Internal.Ast;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class SimpleArgBuilder : ArgBuilder {
         private int _index;
         private Type _parameterType;

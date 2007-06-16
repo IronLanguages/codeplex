@@ -16,14 +16,6 @@
 from common import *
 import testdata
 
-if not is_cli: 
-    import warnings
-    warnings.filterwarnings("ignore",
-                            r'complex divmod\(\), // and % are deprecated',
-                            DeprecationWarning,
-                            r'sbs_simple_ops$'
-                           )
-
 class oldstyle: 
     def __init__(self, value):          self.value = value
     def __repr__(self):                 return "oldstyle(%s)" % self.value

@@ -643,7 +643,8 @@ def test_datetime():
     #Similar to Merlin Work Item 148470
     AreEqual(x.strftime("%H:%M:%S"), "02:28:03")
     #Similar to Merlin Work Item 148470
-    #AreEqual(x.strftime("%a %A %b %B %c %d %H %I %j %m %M %p %S %U %w %W %x %X %y %Y %Z %%"), "Tue Tuesday Mar March 03/22/05 02:28:03 22 02 02 081 03 28 AM 03 12 2 12 03/22/05 02:28:03 05 2005  %")
+    if not is_silverlight:
+        AreEqual(x.strftime("%a %A %b %B %c %d %H %I %j %m %M %p %S %U %w %W %x %X %y %Y %Z %%"), "Tue Tuesday Mar March 03/22/05 02:28:03 22 02 02 081 03 28 AM 03 12 2 12 03/22/05 02:28:03 05 2005  %")
     
 def test_timedelta():
     #CodePlex Work Item 4871

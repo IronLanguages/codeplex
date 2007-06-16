@@ -14,13 +14,12 @@
  * ***************************************************************************/
 
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     public class YieldStatement : Statement {
         private readonly Expression _expr;
-        private int _index;
-        private Label _label;
+        private YieldTarget _target;
 
         public YieldStatement(Expression expression, SourceSpan span)
             : base(span) {
@@ -31,19 +30,14 @@ namespace Microsoft.Scripting.Internal.Ast {
             get { return _expr; }
         }
 
-        internal int Index {
-            get { return _index; }
-            set { _index = value; }
-        }
-
-        internal Label Label {
-            get { return _label; }
-            set { _label = value; }
+        internal YieldTarget Target {
+            get { return _target; }
+            set { _target = value; }
         }
 
         public override void Emit(CodeGen cg) {
             cg.EmitPosition(Start, End);
-            cg.EmitYield(_expr, _index, _label);
+            cg.EmitYield(_expr, _target);
         }
 
         public override void Walk(Walker walker) {

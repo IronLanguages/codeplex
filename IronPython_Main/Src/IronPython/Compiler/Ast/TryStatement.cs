@@ -13,9 +13,12 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Internal.Ast;
-using Microsoft.Scripting.Internal;
+using System;
+using System.Diagnostics;
+using System.Collections.Generic;
+
 using Microsoft.Scripting;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class TryStatement : Statement {
@@ -25,6 +28,8 @@ namespace IronPython.Compiler.Ast {
 
         private Statement _else;
         private Statement _finally;
+
+        private bool GenerateNewTryStatement = false;
 
         public TryStatement(Statement body, TryStatementHandler[] handlers, Statement else_, Statement finally_) {
             _body = body;
@@ -54,13 +59,186 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
+            if (GenerateNewTryStatement) {
+                return TransformToTryStatement(ag);
+            } else {
+                return new MSAst.DynamicTryStatement(
+                    ag.Transform(_body),
+                    ag.Transform(_handlers),
+                    ag.Transform(_else),
+                    ag.Transform(_finally),
+                    Span,
+                    _header
+                );
+            }
+        }
+
+        private MSAst.Statement TransformToTryStatement(AstGenerator ag) {
             return new MSAst.TryStatement(
                 ag.Transform(_body),
-                ag.Transform(_handlers),
-                ag.Transform(_else),
+                TransformCatch(ag),
                 ag.Transform(_finally),
                 Span,
                 _header
+            );
+        }
+
+        private MSAst.CatchBlock[] TransformCatch(AstGenerator ag) {
+            if (_handlers == null) {
+                return null;
+            } else {
+                return new MSAst.CatchBlock[] {
+                    TransformCatchBlocks(ag)
+                };
+            }
+        }
+
+        private MSAst.CatchBlock TransformCatchBlocks(AstGenerator ag) {
+            Debug.Assert(_handlers != null);
+
+            MSAst.BoundExpression exception = ag.MakeTempExpression("exception", typeof(Exception), SourceSpan.None);
+            MSAst.BoundExpression extracted = ag.MakeTempExpression("extracted", SourceSpan.None);
+
+            //
+            // extracted = PushExceptionHandler(context, exception)
+            //
+            MSAst.Statement init = new MSAst.ExpressionStatement(
+                MSAst.BoundAssignment.Assign(
+                    extracted.Variable,
+                    MSAst.MethodCallExpression.Call(
+                        null,
+                        AstGenerator.GetHelperMethod("PushExceptionHandler"),
+                        new MSAst.CodeContextExpression(),
+                        exception
+                    )
+                )
+            );
+
+            //
+            // PopExceptionHandler(context)
+            //
+            MSAst.Statement done = new MSAst.ExpressionStatement(
+                MSAst.MethodCallExpression.Call(
+                    null,
+                    AstGenerator.GetHelperMethod("PopExceptionHandler"),
+                    new MSAst.CodeContextExpression()
+                )
+            );
+
+            List<MSAst.IfStatementTest> tests = new List<MSAst.IfStatementTest>(_handlers.Length);
+            MSAst.BoundExpression converted = null;
+            MSAst.Statement catchAll = null;
+
+            for (int index = 0; index < _handlers.Length; index++) {
+                TryStatementHandler tsh = _handlers[index];
+
+                if (tsh.Test != null) {
+                    MSAst.IfStatementTest ist;
+
+                    //  translating:
+                    //      except Test ...
+                    //
+                    //  generate following AST for the Test (common part):
+                    //      CheckException(context, exception, Test)
+                    MSAst.Expression test =
+                        MSAst.MethodCallExpression.Call(
+                            null,
+                            AstGenerator.GetHelperMethod("CheckException"),
+                            new MSAst.CodeContextExpression(),
+                            extracted,
+                            ag.TransformAsObject(tsh.Test)
+                        );
+
+                    if (tsh.Target != null) {
+                        //  translating:
+                        //      except Test, Target:
+                        //          <body>
+                        //  into:
+                        //      if ((converted = CheckException(context, exception, Test)) != null) {
+                        //          Target = converted;
+                        //          <body>
+                        //      }
+
+                        if (converted == null) {
+                            converted = ag.MakeTempExpression("converted", SourceSpan.None);
+                        }
+
+                        ist = new MSAst.IfStatementTest(
+                            MSAst.BinaryExpression.NotEqual(
+                                MSAst.BoundAssignment.Assign(converted.Variable, test),
+                                MSAst.ConstantExpression.Constant(null)
+                            ),
+                            MSAst.BlockStatement.Block(
+                                tsh.Target.TransformSet(ag, converted, Operators.None),
+                                ag.Transform(tsh.Body)
+                            )
+                        );
+                    } else {
+                        //  translating:
+                        //      except Test:
+                        //          <body>
+                        //  into:
+                        //      if (CheckException(context, exception, Test) != null) {
+                        //          <body>
+                        //      }
+                        ist = new MSAst.IfStatementTest(
+                            MSAst.BinaryExpression.NotEqual(
+                                test,
+                                MSAst.ConstantExpression.Constant(null)
+                            ),
+                            ag.Transform(tsh.Body)
+                        );
+                    }
+
+                    // Add the test to the if statement test cascade
+                    tests.Add(ist);
+                } else {
+                    Debug.Assert(index == _handlers.Length - 1);
+                    Debug.Assert(catchAll == null);
+
+                    //  translating:
+                    //      except:
+                    //          <body>
+                    //  into:
+                    //      <body>
+                    catchAll = ag.Transform(tsh.Body);
+                }
+            }
+
+            MSAst.Statement body = null;
+
+            if (tests.Count > 0) {
+                // rethrow the exception if we have no catch-all block
+                if (catchAll == null) {
+                    catchAll = new MSAst.ExpressionStatement(
+                        new MSAst.ThrowExpression(exception)
+                    );
+                }
+
+                body = new MSAst.IfStatement(
+                    tests.ToArray(),
+                    catchAll
+                );
+            } else {
+                Debug.Assert(catchAll != null);
+                body = catchAll;
+            }
+
+            MSAst.TryStatement handler = new MSAst.TryStatement(
+                MSAst.BlockStatement.Block(
+                    init,
+                    body
+                ),
+                null,
+                done,
+                Span,
+                _header
+            );
+
+            return new MSAst.CatchBlock(
+                typeof(Exception),
+                exception.Variable,
+                handler
             );
         }
 
@@ -112,16 +290,16 @@ namespace IronPython.Compiler.Ast {
             get { return _body; }
         }
 
-        internal MSAst.TryStatementHandler Transform(AstGenerator ag) {
+        internal MSAst.DynamicTryStatementHandler Transform(AstGenerator ag) {
             if (_target != null) {
                 MSAst.BoundExpression target = ag.MakeTempExpression("exception_target", _target.Span);
-                return new MSAst.TryStatementHandler(
+                return new MSAst.DynamicTryStatementHandler(
                     ag.Transform(_test),
-                    target.Reference,
+                    target.Variable,
                     new MSAst.BlockStatement(
                         new MSAst.Statement[] {
                             _target.TransformSet(ag, target, Operators.None),
-                            ag.Transform(_body),
+                            ag.Transform(_body)
                         },
                         _body.Span
                     ),
@@ -129,7 +307,7 @@ namespace IronPython.Compiler.Ast {
                     _header
                 );
             } else {
-                return new MSAst.TryStatementHandler(
+                return new MSAst.DynamicTryStatementHandler(
                     ag.Transform(_test),
                     null,
                     ag.Transform(_body),

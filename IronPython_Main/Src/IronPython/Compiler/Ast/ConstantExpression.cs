@@ -13,9 +13,11 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using System;
+using MSAst = Microsoft.Scripting.Ast;
 using Operators = Microsoft.Scripting.Operators;
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
     public class ConstantExpression : Expression {
@@ -29,7 +31,7 @@ namespace IronPython.Compiler.Ast {
             get { return _value; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             if (_value == PythonOps.Ellipsis) {
                 return MSAst.MemberExpression.Field(
                     null,

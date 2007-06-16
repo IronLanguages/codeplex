@@ -15,7 +15,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting.Internal;
 
 namespace Microsoft.Scripting {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Struct, Inherited = false)]

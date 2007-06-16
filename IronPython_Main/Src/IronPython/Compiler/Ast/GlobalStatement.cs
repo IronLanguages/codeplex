@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     public class GlobalStatement : Statement {

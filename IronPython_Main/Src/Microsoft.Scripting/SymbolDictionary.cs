@@ -85,6 +85,10 @@ namespace Microsoft.Scripting {
             string strKey = key as string;
             lock (this) {
                 if (strKey != null) {
+                    if (!SymbolTable.StringHasId(strKey)) {
+                        // Avoid creating a SymbolID if this string does not already have one
+                        return false;
+                    }
                     return _data.ContainsKey(SymbolTable.StringToId(strKey));
                 } else {
                     Dictionary<object, object> objData = GetObjectKeysDictionaryIfExists();

@@ -15,10 +15,10 @@
 
 using System;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Generation;
 using System.Reflection;
 
-namespace Microsoft.Scripting.Internal.Ast {
+namespace Microsoft.Scripting.Ast {
     // TODO rename to UnaryExpression
     public class StaticUnaryExpression : Expression {
         private readonly Expression _operand;
@@ -26,7 +26,8 @@ namespace Microsoft.Scripting.Internal.Ast {
         private readonly Type _type;
         private readonly MethodInfo _method;
 
-        public StaticUnaryExpression(Operators op, Expression operand, MethodInfo method) {
+        public StaticUnaryExpression(Operators op, Expression operand, MethodInfo method)
+            : base(SourceSpan.None) {
             _operand = operand;
             _method = method;
             _op = op;
@@ -50,7 +51,7 @@ namespace Microsoft.Scripting.Internal.Ast {
             get { return _type; }
         }
 
-        public override void EmitAs(CodeGen cg, Type asType) {
+        public override void Emit(CodeGen cg) {
             switch (_op) {
                 case Operators.Coerce:
                     _operand.EmitAs(cg, _operand.ExpressionType);
@@ -64,7 +65,6 @@ namespace Microsoft.Scripting.Internal.Ast {
                     }
                     throw new NotImplementedException();
             }
-            cg.EmitConvert(_type, asType);
         }
 
         public override object Evaluate(CodeContext context) {
@@ -75,10 +75,6 @@ namespace Microsoft.Scripting.Internal.Ast {
                 default:
                     throw new NotImplementedException();
             }
-        }
-
-        public override void Emit(CodeGen cg) {
-            EmitAs(cg, typeof(object));
         }
 
         public override void Walk(Walker walker) {

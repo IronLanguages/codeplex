@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
@@ -23,7 +23,7 @@ namespace IronPython.Compiler.Ast {
             : base(items) {
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return new MSAst.MethodCallExpression(
                 AstGenerator.GetHelperMethod("MakeList", new Type[] { typeof(object[]) }),  // method
                 null,                                                                       // instance

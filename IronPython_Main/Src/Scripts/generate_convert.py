@@ -192,12 +192,12 @@ checked_cast        = ("result = checked((%(to_type)s)(%(from_type)s)%(value)s);
 checked_float_cast  = (
 """result = checked((%(to_type)s)(%(from_type)s)%(value)s);
 if (%(to_type)s.IsInfinity(result)) {
-    throw Ops.OverflowError("{0} won't fit into %(to_type)s", %(value)s);
+    throw PythonOps.OverflowError("{0} won't fit into %(to_type)s", %(value)s);
 }
 return true;""",
 """%(to_type)s %(to_type)sValue = checked((%(to_type)s)(%(from_type)s)%(value)s);
 if (%(to_type)s.IsInfinity(%(to_type)sValue)) {
-    throw Ops.OverflowError("{0} won't fit into %(to_type)s", %(value)s);
+    throw PythonOps.OverflowError("{0} won't fit into %(to_type)s", %(value)s);
 }
 return %(to_type)sValue;""")
 
@@ -230,12 +230,12 @@ bigint_to_int64  = ("result = ((BigInteger)%(value)s).ToInt64(); return true;",
 bigint_to_single    = (
 """result = checked(((BigInteger)%(value)s).ToFloat64());
 if (%(to_type)s.IsInfinity(result)) {
-    throw Ops.OverflowError("{0} won't fit into %(to_type)s", %(value)s);
+    throw PythonOps.OverflowError("{0} won't fit into %(to_type)s", %(value)s);
 }
 return true;""",
 """%(to_type)s %(to_type)sValue = checked((%(to_type)s)((BigInteger)%(value)s).ToFloat64());
 if (%(to_type)s.IsInfinity(%(to_type)sValue)) {
-    throw Ops.OverflowError("{0} won't fit into %(to_type)s", %(value)s);
+    throw PythonOps.OverflowError("{0} won't fit into %(to_type)s", %(value)s);
 }
 return %(to_type)sValue;""")
 

@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 using System;
-
+using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -23,11 +23,10 @@ using System.Reflection.Emit;
 
 using System.Security.Permissions;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Actions;
 
-namespace Microsoft.Scripting.Internal.Generation {
+namespace Microsoft.Scripting.Generation {
     public class TypeGen {
         private readonly AssemblyGen _myAssembly;
         private readonly TypeBuilder _myType;
@@ -117,7 +116,7 @@ namespace Microsoft.Scripting.Internal.Generation {
             FieldBuilder contextField = _myType.DefineField(CodeContext.ContextFieldName,
                     typeof(CodeContext),
                     FieldAttributes.Public | FieldAttributes.Static);
-            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(new Type[0]), Runtime.Operations.Ops.EmptyObjectArray));
+            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(new Type[0]), Runtime.Operations.RuntimeHelpers.EmptyObjectArray));
             _contextSlot = new StaticFieldSlot(contextField);
         }
 
@@ -201,21 +200,6 @@ namespace Microsoft.Scripting.Internal.Generation {
             CodeGen res = CreateCodeGen(mb, mb.GetILGenerator(), parameterTypes, constantPool);
 
             if (paramNames == null) return res;
-#if SILVERLIGHT
-            for (int i = 0; i < paramNames.Count; i++) {
-                // parameters are index from 1.
-                ParameterBuilder pb = res.DefineParameter(i + 1, ParameterAttributes.None, paramNames[i]);
-                if (defaultVals != null && i < defaultVals.Length && defaultVals[i] != DBNull.Value) {
-                    pb.SetConstant(defaultVals[i]);
-                }
-
-                if (cabs != null && i < cabs.Length && cabs[i] != null) {
-                    pb.SetCustomAttribute(cabs[i]);
-                }
-            }
-
-#else
-            // TODO: Consolidate the SILVERLIGHT and non-SILVERLIGHT code paths
             // parameters are index from 1, with constant pool we need to skip the first arg
             int offset = constantPool != null ? 2 : 1;
             for (int i = 0; i < paramNames.Count; i++) {
@@ -228,7 +212,6 @@ namespace Microsoft.Scripting.Internal.Generation {
                     pb.SetCustomAttribute(cabs[i]);
                 }
             }
-#endif
             return res;
         }
 
@@ -266,16 +249,38 @@ namespace Microsoft.Scripting.Internal.Generation {
         /// Constants
         /// </summary>
 
-        public Slot GetOrMakeConstant(object value) {
-            if (value is CompilerConstant) {
-                return GetOrMakeConstant((CompilerConstant)value);
+        internal Slot GetOrMakeConstant(object value) {
+            Debug.Assert(!(value is CompilerConstant));
+
+            Slot ret;
+            if (_constants.TryGetValue(value, out ret)) {
+                return ret;
             }
-            return GetOrMakeConstant(value, typeof(object));
+
+            Type type = value.GetType();
+
+            // Create a name like "c$3.141592$712"
+            string name = value.ToString();
+            if (name.Length > 20) {
+                name = name.Substring(0, 20);
+            }
+            name = "c$" + name + "$" + _constants.Count;
+
+            FieldBuilder fb = _myType.DefineField(name, type, FieldAttributes.Static | FieldAttributes.InitOnly);
+            ret = new StaticFieldSlot(fb);
+
+            TypeInitializer.EmitConstantNoCache(value);
+            _initGen.EmitFieldSet(fb);
+
+            _constants[value] = ret;
+            return ret;
         }
 
-        public Slot GetOrMakeConstant(CompilerConstant value) {
+        internal Slot GetOrMakeCompilerConstant(CompilerConstant value) {
             Slot ret;
-            if (_constants.TryGetValue(value, out ret)) return ret;
+            if (_constants.TryGetValue(value, out ret)) {
+                return ret;
+            }
 
             string name = "c$" + value.Name + "$" + _constants.Count;
 
@@ -283,26 +288,6 @@ namespace Microsoft.Scripting.Internal.Generation {
             ret = new StaticFieldSlot(fb);
 
             value.EmitCreation(TypeInitializer);
-            _initGen.EmitFieldSet(fb);
-
-            _constants[value] = ret;
-            return ret;
-        }
-
-        public Slot GetOrMakeConstant(object value, Type type) {
-            Slot ret;
-            if (_constants.TryGetValue(value, out ret)) return ret;
-
-            // Create a name like "c$3.141592$712"
-            string symbolicName = value.ToString();
-            if (symbolicName.Length > 20)
-                symbolicName = symbolicName.Substring(0, 20);
-            string name = "c$" + symbolicName + "$" + _constants.Count;
-
-            FieldBuilder fb = _myType.DefineField(name, type, FieldAttributes.Static | FieldAttributes.InitOnly);
-            ret = new StaticFieldSlot(fb);
-
-            TypeInitializer.EmitConstantBoxed(value);
             _initGen.EmitFieldSet(fb);
 
             _constants[value] = ret;

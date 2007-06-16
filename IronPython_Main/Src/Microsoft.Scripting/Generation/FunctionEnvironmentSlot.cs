@@ -14,11 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Internal.Generation;
-using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Generation {    
     public class FunctionEnvironmentSlot : EnvironmentSlot {

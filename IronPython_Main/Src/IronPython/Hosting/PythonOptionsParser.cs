@@ -19,11 +19,10 @@ using IronPython.Compiler;
 using System.IO;
 using System.Diagnostics;
 using System.Collections.Generic;
-using Microsoft.Scripting.Internal;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Shell;
-using Microsoft.Scripting.Internal.Generation;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Hosting {
 
@@ -108,6 +107,7 @@ namespace IronPython.Hosting {
                 case "-i": _consoleOptions.Introspection = true; break;
 //#endif
                 case "-X:NoOptimize": GlobalOptions.DebugCodeGeneration = true; break;
+                case "-X:Optimize": GlobalOptions.DebugCodeGeneration = false; break;
                 case "-X:NoTraceback": GlobalOptions.DynamicStackTraceSupport = false; break;
                 
                 case "-X:MaxRecursion":
@@ -119,7 +119,6 @@ namespace IronPython.Hosting {
                     break;
 
                 case "-X:PrivateBinding": GlobalOptions.PrivateBinding = true; break;
-                case "-X:Python25": GlobalOptions.Python25 = true; break;
                 case "-X:SaveAssemblies": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.SaveAndReloadAssemblies; break;
                 case "-X:ShowClrExceptions": _engineOptions.ShowClrExceptions = true; break;
                 case "-X:SlowOps": GlobalOptions.FastOps = false; break;
@@ -146,19 +145,19 @@ namespace IronPython.Hosting {
                     string level = PopNextArg();
 
                     switch (level) {
-                        case "old": GlobalOptions.Division = DivisionOption.Old; break;
-                        case "new": GlobalOptions.Division = DivisionOption.New; break;
-                        case "warn": GlobalOptions.Division = DivisionOption.Warn; break;
-                        case "warnall": GlobalOptions.Division = DivisionOption.WarnAll; break;
+                        case "old": _engineOptions.DivisionOptions = PythonDivisionOptions.Old; break;
+                        case "new": _engineOptions.DivisionOptions = PythonDivisionOptions.New; break;
+                        case "warn": _engineOptions.DivisionOptions = PythonDivisionOptions.Warn; break;
+                        case "warnall": _engineOptions.DivisionOptions = PythonDivisionOptions.WarnAll; break;
                         default:
                             throw InvalidOptionValue(arg, level);
                     }
                     break;
 
-                case "-Qold": GlobalOptions.Division = DivisionOption.Old; break;
-                case "-Qnew": GlobalOptions.Division = DivisionOption.New; break;
-                case "-Qwarn": GlobalOptions.Division = DivisionOption.Warn; break;
-                case "-Qwarnall": GlobalOptions.Division = DivisionOption.WarnAll; break;
+                case "-Qold": _engineOptions.DivisionOptions = PythonDivisionOptions.Old; break;
+                case "-Qnew": _engineOptions.DivisionOptions = PythonDivisionOptions.New; break;
+                case "-Qwarn": _engineOptions.DivisionOptions = PythonDivisionOptions.Warn; break;
+                case "-Qwarnall": _engineOptions.DivisionOptions = PythonDivisionOptions.WarnAll; break;
                 
                 case "-W":
                     if (_engineOptions.WarningFilters == null)

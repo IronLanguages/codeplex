@@ -18,10 +18,18 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Microsoft.Scripting {
-    public interface ISuperDynamicObject : IDynamicObject {
+    /// <summary>
+    /// TODO: Move back to IronPython?
+    /// </summary>
+    public interface ISuperDynamicObject {
         IAttributesCollection Dict {
             get;
         }
+
+        bool HasDictionary {
+            get;
+        }
+
         /// <summary>
         /// Thread-safe dictionary set.  Returns the dictionary set or the previous value if already set or 
         /// null if the dictionary set isn't supported.
@@ -35,7 +43,11 @@ namespace Microsoft.Scripting {
         /// <param name="dict"></param>
         /// <returns></returns>
         bool ReplaceDict(IAttributesCollection dict);
-        
+
+        DynamicType DynamicType {
+            get;
+        }
+
         void SetDynamicType(DynamicType newType);  
     }
 }

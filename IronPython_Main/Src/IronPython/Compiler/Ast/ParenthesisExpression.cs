@@ -13,7 +13,8 @@
  *
  * ***************************************************************************/
 
-using MSAst = Microsoft.Scripting.Internal.Ast;
+using System;
+using MSAst = Microsoft.Scripting.Ast;
 using Operators = Microsoft.Scripting.Operators;
 
 namespace IronPython.Compiler.Ast {
@@ -28,8 +29,8 @@ namespace IronPython.Compiler.Ast {
             get { return _expression; }
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
-            return new MSAst.ParenthesisExpression(ag.Transform(_expression), Span);
+        internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
+            return new MSAst.ParenthesisExpression(ag.Transform(_expression, type), Span);
         }
 
         internal override MSAst.Statement TransformSet(AstGenerator ag, MSAst.Expression right, Operators op) {

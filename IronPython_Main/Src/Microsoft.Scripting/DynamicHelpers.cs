@@ -18,12 +18,27 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading;
 
 namespace Microsoft.Scripting {
     public static class DynamicHelpers {
-        public delegate DynamicType GetDynamicTypeDelegate(Type t); // HACKHACK: remove when ReflectedTypeBuilder moves down.
+        private static TopReflectedPackage _topPackage;
 
-        public static GetDynamicTypeDelegate GetDynamicTypeFromType;   // HACKHACK: Make a function
+        /// <summary> Table of dynamicly generated delegates which are shared based upon method signature. </summary>
+        private static Publisher<DelegateSignatureInfo, DelegateInfo> _dynamicDelegateCache = new Publisher<DelegateSignatureInfo, DelegateInfo>();
+
+        public static DynamicType GetDynamicTypeFromType(Type type) {
+            if (type == null) throw new ArgumentNullException("type");
+
+            PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "TypeLookup " + type.FullName);
+
+            DynamicType ret = DynamicType.GetDynamicType(type);
+            if (ret != null) return ret;
+
+            ret = ReflectedTypeBuilder.Build(type);
+
+            return DynamicType.SetDynamicType(type, ret);
+        }
 
         public static StackFrame[] GetStackFrames(Exception e, bool includeNonDynamicFrames) {
             return null;
@@ -84,7 +99,7 @@ namespace Microsoft.Scripting {
 #endif
         }
         public static DynamicType GetDynamicType(object o) {
-            IDynamicObject dt = o as IDynamicObject;
+            ISuperDynamicObject dt = o as ISuperDynamicObject;
             if (dt != null) return dt.DynamicType;
             
             if (o == null) return DynamicType.NullType;
@@ -109,5 +124,97 @@ namespace Microsoft.Scripting {
             return res;
         }
 
+        public static TopReflectedPackage TopPackage {
+            get {
+                if (_topPackage == null)
+                    Interlocked.CompareExchange<TopReflectedPackage>(ref _topPackage, new TopReflectedPackage(), null);
+
+                return _topPackage;
+            }
+        }
+
+
+
+        // TODO: remove exceptionHandler param (Silverlight hack):
+        /// <summary>
+        /// Creates a delegate with a given signature that could be used to invoke this object from non-dynamic code (w/o code context).
+        /// A stub is created that makes appropriate conversions/boxing and calls the object.
+        /// The stub should be executed within a context of this object's language.
+        /// </summary>
+        /// <returns>The delegate or a <c>null</c> reference if the object is not callable.</returns>
+        public static Delegate GetDelegate(object callableObject, Type delegateType, Action<Exception> exceptionHandler) {
+            if (delegateType == null) throw new ArgumentNullException("delegateType");
+
+            Delegate result = callableObject as Delegate;
+            if (result != null) {
+                if (!delegateType.IsAssignableFrom(result.GetType())) {
+                    throw RuntimeHelpers.SimpleTypeError(String.Format("Cannot cast {0} to {1}.", result.GetType(), delegateType));
+                }
+
+                return result;
+            }
+
+            IDynamicObject dynamicObject = callableObject as IDynamicObject;
+            if (dynamicObject != null) {
+
+                MethodInfo invoke;
+                
+                if (!typeof(Delegate).IsAssignableFrom(delegateType) || (invoke = delegateType.GetMethod("Invoke")) == null) {
+                    throw RuntimeHelpers.SimpleTypeError("A specific delegate type is required.");
+                }
+
+// using IDynamicObject.LanguageContext for now, we need todo better
+#pragma warning disable 618
+                Debug.Assert(dynamicObject.LanguageContext != null, "Invalid implementation");
+
+                ParameterInfo[] parameters = invoke.GetParameters();
+
+                dynamicObject.LanguageContext.CheckCallable(dynamicObject, parameters.Length);
+                
+                DelegateSignatureInfo signatureInfo = new DelegateSignatureInfo(
+                    dynamicObject.LanguageContext.Binder,
+                    invoke.ReturnType,
+                    parameters,
+                    exceptionHandler
+                );
+#pragma warning restore
+
+                DelegateInfo delegateInfo = _dynamicDelegateCache.GetOrCreateValue(signatureInfo,
+                    delegate() {
+                        // creation code
+                        return signatureInfo.GenerateDelegateStub();
+                    });
+
+
+                result = delegateInfo.CreateDelegate(delegateType, dynamicObject);
+                if (result != null) {
+                    return result;
+                }
+            }
+
+            throw RuntimeHelpers.SimpleTypeError("Object is not callable.");
+        }
+
+        /// <summary>
+        /// Registers a set of extension methods from the provided assemly.
+        /// </summary>
+        public static void RegisterAssembly(Assembly assembly) {
+            object[] attrs = assembly.GetCustomAttributes(typeof(ExtensionTypeAttribute), false);
+            foreach (ExtensionTypeAttribute et in attrs) {
+                ExtendOneType(et, DynamicHelpers.GetDynamicTypeFromType(et.Extends));
+            }
+        }
+
+        public static void ExtendOneType(ExtensionTypeAttribute et, DynamicType dt) {
+            ExtensionTypeAttribute.RegisterType(et.Extends, et.Type, dt);
+
+            DynamicTypeExtender.ExtendType(dt, et.Type, et.Transformer);
+
+            if (et.EnableDerivation) {
+                DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetIsExtensible();
+            } else if (et.DerivationType != null) {
+                DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetExtensionType(et.DerivationType);
+            }
+        }
     }
 }

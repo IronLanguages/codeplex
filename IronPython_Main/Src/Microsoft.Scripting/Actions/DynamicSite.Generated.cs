@@ -19,7 +19,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 
-namespace Microsoft.Scripting.Actions {
+namespace Microsoft.Scripting.Actions { 
     #region Generated DynamicSites
 
     // *** BEGIN GENERATED CODE ***
@@ -58,6 +58,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, Tret>>.FixedInstance) return newTarget(this, context, arg0);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0);
@@ -97,6 +98,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                return newTarget(this, arg0);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0);
@@ -138,6 +140,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1);
@@ -177,6 +180,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                return newTarget(this, arg0, arg1);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1);
@@ -218,6 +222,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1, arg2);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1, arg2);
@@ -257,6 +262,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                return newTarget(this, arg0, arg1, arg2);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1, arg2);
@@ -298,6 +304,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1, arg2, arg3);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1, arg2, arg3);
@@ -337,6 +344,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                return newTarget(this, arg0, arg1, arg2, arg3);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1, arg2, arg3);
@@ -378,6 +386,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1, arg2, arg3, arg4);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1, arg2, arg3, arg4);
@@ -417,6 +426,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                return newTarget(this, arg0, arg1, arg2, arg3, arg4);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1, arg2, arg3, arg4);
@@ -458,6 +468,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1, arg2, arg3, arg4, arg5);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1, arg2, arg3, arg4, arg5);
@@ -497,6 +508,7 @@ namespace Microsoft.Scripting.Actions {
                     _rules = newRules;
                     _target = newTarget;
                 }
+                return newTarget(this, arg0, arg1, arg2, arg3, arg4, arg5);
             }
 
             return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1, arg2, arg3, arg4, arg5);
