@@ -25,6 +25,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Compiler;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 
 [assembly:PythonExtensionType(typeof(DynamicType), typeof(DynamicTypeOps), DerivationType=typeof(ExtensibleType))]
 namespace IronPython.Runtime.Operations {
@@ -204,9 +205,7 @@ namespace IronPython.Runtime.Operations {
                         PythonOps.StringRepr(DynamicHelpers.GetDynamicType(args[0])));
                 }
 
-                object[] newArgs = new object[args.Length - 1];
-                Array.Copy(args, 1, newArgs, 0, args.Length - 1);
-                return DynamicTypeOps.CallWorker(context, dt, newArgs);
+                return DynamicTypeOps.CallWorker(context, dt, CompilerHelpers.RemoveFirst(args));
             }
 
             #endregion

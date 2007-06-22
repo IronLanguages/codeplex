@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 namespace Microsoft.Scripting.Ast {
     public class IfStatementTest : Node {
         private readonly SourceLocation _header;
@@ -25,6 +26,9 @@ namespace Microsoft.Scripting.Ast {
 
         public IfStatementTest(Expression test, Statement body, SourceSpan span, SourceLocation header)
             : base(span) {
+            if (test == null) throw new ArgumentNullException("test");
+            if (body == null) throw new ArgumentNullException("body");
+
             _test = test;
             _body = body;
             _header = header;

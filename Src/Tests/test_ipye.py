@@ -23,14 +23,15 @@ import sys
 if not is_silverlight:
     remove_ironpython_dlls(testpath.public_testdir)
     load_iron_python_dll()
-    
-import IronPython
-pe = IronPython.Hosting.PythonEngine.CurrentEngine
 
 # setup Scenario tests in module from EngineTest.cs
 # this enables us to see the individual tests that pass / fail
 load_iron_python_test()
+
+import IronPython
 import IronPythonTest
+
+pe = IronPython.Hosting.PythonEngine.CurrentEngine
 et = IronPythonTest.EngineTest()
 for s in dir(et):
     if s.startswith("Scenario"):

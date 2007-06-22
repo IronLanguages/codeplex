@@ -753,79 +753,79 @@ namespace IronPython.Runtime.Exceptions {
     /// Represents a single exception mapping from a CLR type to python type.
     /// </summary>
     public struct ExceptionMapping {
-        private string pythonException;
-        private string pythonModule;
-        private Type clrException;
-        private ExceptionMapping[] subtypes;
-        private ExceptionClassCreator creator;
+        private string _pythonException;
+        private string _pythonModule;
+        private Type _clrException;
+        private ExceptionMapping[] _subtypes;
+        private ExceptionClassCreator _creator;
 
         public ExceptionMapping(string python, Type clr) {
-            pythonException = python;
-            pythonModule = ExceptionConverter.defaultExceptionModule;
-            clrException = clr;
-            this.subtypes = null;
-            creator = ExceptionConverter.DefaultExceptionCreator;
+            _pythonException = python;
+            _pythonModule = ExceptionConverter.defaultExceptionModule;
+            _clrException = clr;
+            this._subtypes = null;
+            _creator = ExceptionConverter.DefaultExceptionCreator;
         }
 
         public ExceptionMapping(string python, string module, Type clr) {
-            pythonException = python;
-            pythonModule = module;
-            clrException = clr;
-            this.subtypes = null;
-            creator = ExceptionConverter.DefaultExceptionCreator;
+            _pythonException = python;
+            _pythonModule = module;
+            _clrException = clr;
+            this._subtypes = null;
+            _creator = ExceptionConverter.DefaultExceptionCreator;
         }
 
         public ExceptionMapping(string python, Type clr, ExceptionClassCreator creator) {
-            pythonException = python;
-            pythonModule = ExceptionConverter.defaultExceptionModule;
-            clrException = clr;
-            this.subtypes = null;
-            this.creator = creator;
+            _pythonException = python;
+            _pythonModule = ExceptionConverter.defaultExceptionModule;
+            _clrException = clr;
+            this._subtypes = null;
+            this._creator = creator;
         }
 
         public ExceptionMapping(string python, string module, Type clr, ExceptionMapping[] subtypes) {
-            pythonException = python;
-            pythonModule = module;
-            clrException = clr;
-            this.subtypes = subtypes;
-            creator = ExceptionConverter.DefaultExceptionCreator;
+            _pythonException = python;
+            _pythonModule = module;
+            _clrException = clr;
+            this._subtypes = subtypes;
+            _creator = ExceptionConverter.DefaultExceptionCreator;
         }
 
         public ExceptionMapping(string python, Type clr, ExceptionMapping[] subtypes) {
-            pythonException = python;
-            pythonModule = ExceptionConverter.defaultExceptionModule;
-            clrException = clr;
-            this.subtypes = subtypes;
-            creator = ExceptionConverter.DefaultExceptionCreator;
+            _pythonException = python;
+            _pythonModule = ExceptionConverter.defaultExceptionModule;
+            _clrException = clr;
+            this._subtypes = subtypes;
+            _creator = ExceptionConverter.DefaultExceptionCreator;
         }
 
         public ExceptionMapping(string python, Type clr, ExceptionClassCreator creator, ExceptionMapping[] subtypes) {
-            pythonException = python;
-            pythonModule = ExceptionConverter.defaultExceptionModule;
-            clrException = clr;
-            this.subtypes = subtypes;
-            this.creator = creator;
+            _pythonException = python;
+            _pythonModule = ExceptionConverter.defaultExceptionModule;
+            _clrException = clr;
+            this._subtypes = subtypes;
+            this._creator = creator;
         }
 
 
         public string PythonException {
-            get { return pythonException; }
+            get { return _pythonException; }
         }
 
         public string PythonModule {
-            get { return pythonModule; }
+            get { return _pythonModule; }
         }
 
         public Type ClrException {
-            get { return clrException; }
+            get { return _clrException; }
         }
 
         public IList<ExceptionMapping> Subtypes {
-            get { return subtypes; }
+            get { return _subtypes; }
         }
 
         public ExceptionClassCreator Creator {
-            get { return creator; }
+            get { return _creator; }
         }
     }
 

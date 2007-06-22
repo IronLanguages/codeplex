@@ -26,6 +26,10 @@ namespace Microsoft.Scripting.Ast {
         private readonly CatchBlock[] _handlers;
         private readonly Statement _finally;
 
+        public TryStatement(Statement body, CatchBlock[] handlers, Statement finallySuite) 
+            : this(body, handlers, finallySuite, SourceSpan.None, SourceLocation.None) {
+        }
+
         /// <summary>
         /// Creates a try/catch/finally/else block.
         /// 

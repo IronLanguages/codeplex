@@ -55,6 +55,15 @@ namespace Microsoft.Scripting.Ast {
             return context.LanguageContext.Binder.Execute(context, _action, Evaluate(_arguments, context));
         }
 
+        public override AbstractValue AbstractEvaluate(AbstractContext context) {
+            List<AbstractValue> values = new List<AbstractValue>();
+            foreach (Expression arg in _arguments) {
+                values.Add(arg.AbstractEvaluate(context));
+            }
+
+            return context.Binder.AbstractExecute(_action, values);
+        }
+
         private Type[] GetSiteTypes() {
             Type[] ret = new Type[_arguments.Count + 1];
             for (int i = 0; i < _arguments.Count; i++) {

@@ -177,16 +177,7 @@ namespace IronPython.Hosting {
                     PythonCalls.Call(callable);
                 }
             } finally {
-                DumpDebugInfo();
-            }
-        }
-
-        public void DumpDebugInfo() {
-            if (ScriptDomainManager.Options.EngineDebug) {
-                PerfTrack.DumpStats();
-                try {
-                    ScriptDomainManager.CurrentManager.Snippets.Dump();
-                } catch (NotSupportedException) { } // usually not important info...
+                base.DumpDebugInfo();
             }
         }
 

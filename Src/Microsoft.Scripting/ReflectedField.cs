@@ -24,11 +24,11 @@ using Microsoft.Scripting;
 
 namespace Microsoft.Scripting {
     public class ReflectedField : DynamicTypeSlot, IContextAwareMember {
+        private NameType _nameType;
         public readonly FieldInfo info;
-        private NameType nameType;
 
         public ReflectedField(FieldInfo info, NameType nameType) {
-            this.nameType = nameType;
+            this._nameType = nameType;
             this.info = info;
         }
 
@@ -88,7 +88,7 @@ namespace Microsoft.Scripting {
         #region IContextAwareMember Members
 
         public override bool IsVisible(CodeContext context, DynamicMixin owner) {
-            return nameType == NameType.PythonField || context.ModuleContext.ShowCls;
+            return _nameType == NameType.PythonField || context.ModuleContext.ShowCls;
         }
 
         #endregion

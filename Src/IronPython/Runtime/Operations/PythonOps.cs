@@ -275,8 +275,8 @@ namespace IronPython.Runtime.Operations {
 
             if (fo != null) {
                 if (fo is FunctionN == false) {
-                    maxArgCnt = fo.ArgCount;
-                    minArgCnt = fo.ArgCount - fo.FunctionDefaults.Count;
+                    maxArgCnt = fo.NormalArgumentCount;
+                    minArgCnt = fo.NormalArgumentCount - fo.FunctionDefaults.Count;
 
                     // take into account unbound methods / bound methods
                     if (m != null) {
@@ -1554,18 +1554,7 @@ namespace IronPython.Runtime.Operations {
                     DynamicHelpers.GetDynamicType(self),
                     name);
             }
-        }
-        
-        /// <summary>
-        /// Handles the descriptor protocol - checks for our internal implementation,
-        /// then calls the version that works on user-types
-        /// </summary>
-        public static object GetDescriptor(object o, object instance, object type) {
-            PythonFunction f = o as PythonFunction;
-            if (f != null) return f.GetAttribute(instance, type);
-
-            return GetUserDescriptor(o, instance, type);
-        }
+        }               
 
         /// <summary>
         /// Handles the descriptor protocol for user-defined objects that may implement __get__
@@ -2484,6 +2473,145 @@ namespace IronPython.Runtime.Operations {
 
         public static object CheckException(CodeContext context, object exception, object test) {
             return RuntimeHelpers.CheckException(context, exception, test);
+        }
+
+        public static IAttributesCollection CopyAndVerifyDictionary(PythonFunction function, IDictionary dict) {
+            foreach (object o in dict.Keys) {
+                if (!(o is string)) {
+                    throw TypeError("{0}() keywords most be strings", function.Name);
+                }
+            }
+            return new PythonDictionary(dict);
+        }
+
+        public static object ExtractDictionaryArgument(PythonFunction function, string name, int argCnt, IAttributesCollection dict) {
+            object val;
+            if (dict.TryGetObjectValue(name, out val)) {
+                dict.RemoveObjectKey(name);
+                return val;
+            }
+
+            throw PythonOps.TypeError("{0}() takes exactly {1} non-keyword arguments ({2} given)", 
+                function.Name, 
+                function.NormalArgumentCount,
+                argCnt);
+        }
+
+        public static void AddDictionaryArgument(PythonFunction function, string name, object value, IAttributesCollection dict) {
+            if (dict.ContainsObjectKey(name)) {
+                throw TypeError("{0}() got multiple values for keyword argument '{1}'", function.Name, name);
+            }
+
+            dict.AddObjectKey(name, value);
+        }
+
+        public static List CopyAndVerifyParamsList(PythonFunction function, object list) {
+            return new List(list);
+        }
+
+        public static Tuple GetOrCopyParamsTuple(object input) {
+            if (input.GetType() == typeof(Tuple)) {
+                return (Tuple)input;
+            }
+
+            return Tuple.Make(input);
+        }
+
+        public static object ExtractParamsArgument(PythonFunction function, int argCnt, List list) {
+            if (list.Count != 0) {
+                return list.Pop(0);
+            }
+
+            throw function.BadArgumentError(argCnt);
+        }
+
+        public static void AddParamsArguments(List list, params object[] args) {
+            for (int i = 0; i < args.Length; i++) {
+                list.Insert(i, args[i]);
+            }
+        }
+
+        /// <summary>
+        /// Extracts an argument from either the dictionary or params
+        /// </summary>
+        public static object ExtractAnyArgument(PythonFunction function, string name, int argCnt, List list, IDictionary dict) {
+            object val;
+            if (dict.Contains(name)) {                
+                val = dict[name];
+                dict.Remove(name);
+                return val;
+            }
+
+            if (list.Count != 0) {
+                return list.Pop(0);
+            }
+
+            if (function.ExpandDictPosition == -1 && dict.Count > 0) {   
+                // python raises an error for extra splatted kw keys before missing arguments.
+                // therefore we check for this in the error case here.
+                foreach (string x in dict.Keys) {
+                    bool found = false;
+                    foreach (string y in function.ArgNames) {
+                        if (x == y) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        throw UnexpectedKeywordArgumentError(function, x);
+                    }
+                }
+            }
+
+            throw RuntimeHelpers.TypeErrorForIncorrectArgumentCount(
+                function.Name,
+                function.NormalArgumentCount,
+                function.Defaults.Length,
+                argCnt,
+                function.ExpandListPosition != -1,
+                dict.Count > 0);
+        }
+
+        public static object GetParamsValueOrDefault(PythonFunction function, int index, List extraArgs) {
+            if (extraArgs.Count > 0) {
+                return extraArgs.Pop(0);
+            }
+
+            return function.GetDefaultValue(index);
+        }
+
+        public static object GetFunctionParameterValue(PythonFunction function, int index, string name, List extraArgs, IAttributesCollection dict) {
+            if (extraArgs != null && extraArgs.Count > 0) {
+                return extraArgs.Pop(0);
+            }
+
+            object val;
+            if (dict != null && dict.TryGetObjectValue(name, out val)) {
+                dict.RemoveObjectKey(name);
+                return val;
+            }
+
+            return function.GetDefaultValue(index);
+        }
+
+        public static void CheckParamsZero(PythonFunction function, List extraArgs) {
+            if (extraArgs.Count != 0) {
+                throw function.BadArgumentError(extraArgs.Count + function.NormalArgumentCount);
+            }
+        }
+
+        public static void CheckDictionaryZero(PythonFunction function, IDictionary dict) {
+            if (dict.Count != 0) {
+                IDictionaryEnumerator ie = dict.GetEnumerator();                
+                ie.MoveNext();
+
+                throw UnexpectedKeywordArgumentError(function, (string)ie.Key);
+            }
+        }
+
+        public static Exception UnexpectedKeywordArgumentError(PythonFunction function, string name) {
+            return TypeError("{0}() got an unexpected keyword argument '{1}'", function.Name, name);
         }
     }
 }

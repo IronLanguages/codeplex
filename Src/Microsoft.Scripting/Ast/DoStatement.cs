@@ -15,6 +15,7 @@
 
 using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
+using System;
 
 namespace Microsoft.Scripting.Ast {
     public class DoStatement : Statement {
@@ -24,8 +25,15 @@ namespace Microsoft.Scripting.Ast {
 
         // TODO: Check if the else stmt required here, like other loops
 
+        public DoStatement(Expression test, Statement body)
+            : this(test, body, SourceSpan.None, SourceLocation.None) {
+        }
+
         public DoStatement(Expression test, Statement body, SourceSpan span, SourceLocation header)
             : base(span) {
+            if (test == null) throw new ArgumentNullException("test");
+            if (body == null) throw new ArgumentNullException("body");
+
             _test = test;
             _body = body;
             _header = header;
@@ -48,12 +56,14 @@ namespace Microsoft.Scripting.Ast {
             
             do {
                 ret = _body.Execute(context);
-
-                if (ret != NextStatement) break;
-
+                if (ret == Statement.Break) {
+                    break;
+                } else if (!(ret is ControlFlow)) {
+                    return ret;
+                }
             } while (context.LanguageContext.IsTrue(_test.Evaluate(context)));
 
-            return ret;            
+            return NextStatement;
         }
 
         public override void Emit(CodeGen cg) {

@@ -118,7 +118,7 @@ namespace Microsoft.Scripting.Actions {
             if (_argumentKinds.Length != other.ArgumentKinds.Length) return false;
 
             for (int i = 0; i < _argumentKinds.Length; i++) {
-                if (_argumentKinds[i] != other.ArgumentKinds[i]) return false;
+                if (!_argumentKinds[i].Equals(other.ArgumentKinds[i])) return false;
             }
             return true;
         }

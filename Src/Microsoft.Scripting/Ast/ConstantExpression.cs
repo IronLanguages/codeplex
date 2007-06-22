@@ -53,6 +53,10 @@ namespace Microsoft.Scripting.Ast {
             return _value;
         }
 
+        public override AbstractValue AbstractEvaluate(AbstractContext context) {
+            return AbstractValue.Constant(_value, this);
+        }
+
         public override void Emit(CodeGen cg) {
             cg.EmitConstant(_value);
         }

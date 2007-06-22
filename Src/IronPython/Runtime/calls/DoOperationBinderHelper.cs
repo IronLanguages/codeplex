@@ -859,8 +859,7 @@ namespace IronPython.Runtime.Calls {
                     if (notExpr.ExpressionType == typeof(int)) {
                         notExpr = BinaryExpression.Equal(notExpr, new ConstantExpression(0));
                     } else {
-                        // TODO: nested site - we hit this on OldInstance's.
-                        notExpr = MethodCallExpression.Call(null, typeof(PythonOps).GetMethod("Compare"), notExpr, new ConstantExpression(0));
+                        notExpr = ActionExpression.Operator(Operators.Compare, typeof(int), notExpr, new ConstantExpression(0));
                     }
                 }
             }

@@ -65,7 +65,7 @@ namespace IronPython.Runtime.Types {
         private DynamicType _type = null;
 
         public IAttributesCollection __dict__;
-        private int attrs;  // actually OldClassAttributes - losing type safety for thread safety
+        private int _attrs;  // actually OldClassAttributes - losing type safety for thread safety
         internal object __name__;
 
         private static int _namesVersion;
@@ -208,40 +208,40 @@ namespace IronPython.Runtime.Types {
 
         public bool HasFinalizer {
             get {
-                return (attrs & (int)OldClassAttributes.HasFinalizer) != 0;
+                return (_attrs & (int)OldClassAttributes.HasFinalizer) != 0;
             }
             internal set {
                 int oldAttrs, newAttrs;
                 do {
-                    oldAttrs = attrs;
+                    oldAttrs = _attrs;
                     newAttrs = value ? oldAttrs | ((int)OldClassAttributes.HasFinalizer) : oldAttrs & ((int)~OldClassAttributes.HasFinalizer);
-                } while (Interlocked.CompareExchange(ref attrs, newAttrs, oldAttrs) != oldAttrs);
+                } while (Interlocked.CompareExchange(ref _attrs, newAttrs, oldAttrs) != oldAttrs);
             }
         }
 
         internal bool HasSetAttr {
             get {
-                return (attrs & (int)OldClassAttributes.HasSetAttr) != 0;
+                return (_attrs & (int)OldClassAttributes.HasSetAttr) != 0;
             }
             set {
                 int oldAttrs, newAttrs;
                 do {
-                    oldAttrs = attrs;
+                    oldAttrs = _attrs;
                     newAttrs = value ? oldAttrs | ((int)OldClassAttributes.HasSetAttr) : oldAttrs & ((int)~OldClassAttributes.HasSetAttr);
-                } while (Interlocked.CompareExchange(ref attrs, newAttrs, oldAttrs) != oldAttrs);
+                } while (Interlocked.CompareExchange(ref _attrs, newAttrs, oldAttrs) != oldAttrs);
             }
         }
 
         internal bool HasDelAttr {
             get {
-                return (attrs & (int)OldClassAttributes.HasDelAttr) != 0;
+                return (_attrs & (int)OldClassAttributes.HasDelAttr) != 0;
             }
             set {
                 int oldAttrs, newAttrs;
                 do {
-                    oldAttrs = attrs;
+                    oldAttrs = _attrs;
                     newAttrs = value ? oldAttrs | ((int)OldClassAttributes.HasDelAttr) : oldAttrs & ((int)~OldClassAttributes.HasDelAttr);
-                } while (Interlocked.CompareExchange(ref attrs, newAttrs, oldAttrs) != oldAttrs);
+                } while (Interlocked.CompareExchange(ref _attrs, newAttrs, oldAttrs) != oldAttrs);
             }
         }
         public override string ToString() {
@@ -637,7 +637,7 @@ namespace IronPython.Runtime.Types {
 
         private IAttributesCollection __dict__;
         internal OldClass __class__;
-        private WeakRefTracker weakRef;       // initialized if user defines finalizer on class or instance
+        private WeakRefTracker _weakRef;       // initialized if user defines finalizer on class or instance
 
         private IAttributesCollection MakeDictionary(OldClass oldClass) {
             //if (oldClass.OptimizedInstanceNames.Length == 0) {
@@ -1386,11 +1386,11 @@ namespace IronPython.Runtime.Types {
         #region IWeakReferenceable Members
 
         WeakRefTracker IWeakReferenceable.GetWeakRef() {
-            return weakRef;
+            return _weakRef;
         }
 
         bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
-            weakRef = value;
+            _weakRef = value;
             return true;
         }
 
@@ -1495,13 +1495,13 @@ namespace IronPython.Runtime.Types {
 
         private void AddFinalizer() {
             InstanceFinalizer oif = new InstanceFinalizer(this);
-            weakRef = new WeakRefTracker(oif, oif);
+            _weakRef = new WeakRefTracker(oif, oif);
         }
 
         private void ClearFinalizer() {
-            if (weakRef == null) return;
+            if (_weakRef == null) return;
 
-            WeakRefTracker wrt = weakRef;
+            WeakRefTracker wrt = _weakRef;
             if (wrt != null) {
                 // find our handler and remove it (other users could have created weak refs to us)
                 for (int i = 0; i < wrt.HandlerCount; i++) {
@@ -1514,14 +1514,14 @@ namespace IronPython.Runtime.Types {
                 // we removed the last handler
                 if (wrt.HandlerCount == 0) {
                     GC.SuppressFinalize(wrt);
-                    weakRef = null;
+                    _weakRef = null;
                 }
             }
         }
 
         private bool HasFinalizer() {
-            if (weakRef != null) {
-                WeakRefTracker wrt = weakRef;
+            if (_weakRef != null) {
+                WeakRefTracker wrt = _weakRef;
                 if (wrt != null) {
                     for (int i = 0; i < wrt.HandlerCount; i++) {
                         if (wrt.GetHandlerCallback(i) is InstanceFinalizer) {

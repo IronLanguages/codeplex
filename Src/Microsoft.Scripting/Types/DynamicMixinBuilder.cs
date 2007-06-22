@@ -39,7 +39,9 @@ namespace Microsoft.Scripting {
         /// Creates a new DynamicMixinBuilder for a DynamicMixin with the specified name that has an
         /// underlying system type of Object.
         /// </summary>
-        public DynamicMixinBuilder(string name)  {
+        public DynamicMixinBuilder(string name) {
+            Utils.Assert.NotNull(name);
+
             _building = new DynamicMixin();
             _building.Name = name;
             _building.Builder = this;

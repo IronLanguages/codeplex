@@ -40,6 +40,11 @@ namespace Microsoft.Scripting.Ast {
             throw new NotImplementedException(String.Format(CultureInfo.CurrentCulture, Resources.NotImplemented_Evaluate, this));
         }
 
+
+        public virtual AbstractValue AbstractEvaluate(AbstractContext context) {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Generates code for this expression in a value position.
         /// This method will leave the value of the expression
@@ -119,5 +124,10 @@ namespace Microsoft.Scripting.Ast {
             }
             return ret;
         }
+
+        public ExpressionStatement ToStatement() {
+            return new ExpressionStatement(this);
+        }
+
     }
 }

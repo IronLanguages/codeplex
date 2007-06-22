@@ -1237,7 +1237,11 @@ namespace Microsoft.Scripting {
         #region Private implementation details
 
         internal void Initialize() {
-            if (_builder == null) return;
+            if (_builder == null) {
+                Debug.Assert(_dict != null);
+                Debug.Assert((_attrs & DynamicTypeAttributes.Initialized) != 0);
+                return;
+            }
 
             EnsureDict();
 

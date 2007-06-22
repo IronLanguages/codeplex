@@ -139,7 +139,7 @@ def test_meta_attrs():
         AssertErrorWithMessage(AttributeError, "attribute 'ToString' of 'DateTime' object is read-only", dateTime.__setattr__, "ToString", "foo")
         AssertErrorWithMessage(AttributeError, "attribute 'ToString' of 'DateTime' object is read-only", dateTime.__delattr__, "ToString")
     
-        arrayList = System.Collections.ArrayList()
+        arrayList = System.Collections.Generic.List[int]()
         arrayList.__setattr__("Capacity", 123)
         AreEqual(arrayList.Capacity, 123)
     

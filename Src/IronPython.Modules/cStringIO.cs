@@ -25,36 +25,36 @@ using Microsoft.Scripting;
 [assembly: PythonModule("cStringIO", typeof(IronPython.Modules.PythonStringIO))]
 namespace IronPython.Modules {
     class StringStream {
-        private string data;
-        private int position;
-        private int length;
+        private string _data;
+        private int _position;
+        private int _length;
 
         public StringStream(string data) {
-            this.data = data;
-            this.position = 0;
-            this.length = data == null ? 0 : data.Length;
+            this._data = data;
+            this._position = 0;
+            this._length = data == null ? 0 : data.Length;
         }
 
         public bool EOF {
-            get { return position >= length; }
+            get { return _position >= _length; }
         }
 
         public int Position {
-            get { return position; }
+            get { return _position; }
         }
 
         public string Data {
             get {
-                return data;
+                return _data;
             }
             set {
-                data = value;
-                if (data == null) {
-                    length = position = 0;
+                _data = value;
+                if (_data == null) {
+                    _length = _position = 0;
                 } else {
-                    length = data.Length;
-                    if (position > length) {
-                        position = length;
+                    _length = _data.Length;
+                    if (_position > _length) {
+                        _position = _length;
                     }
                 }
             }
@@ -62,48 +62,48 @@ namespace IronPython.Modules {
 
         public string Prefix {
             get {
-                return data.Substring(0, position);
+                return _data.Substring(0, _position);
             }
         }
 
         public int Read() {
-            if (position < length) {
-                return data[position++];
+            if (_position < _length) {
+                return _data[_position++];
             } else {
                 return -1;
             }
         }
 
         public string Read(int i) {
-            if (position + i > length) {
-                i = length - position;
+            if (_position + i > _length) {
+                i = _length - _position;
             }
-            string ret = data.Substring(position, i);
-            position += i;
+            string ret = _data.Substring(_position, i);
+            _position += i;
             return ret;
         }
 
         public string ReadLine() {
-            int i = position;
-            while (i < length) {
-                char c = data[i];
+            int i = _position;
+            while (i < _length) {
+                char c = _data[i];
                 if (c == '\n' || c == '\r') {
                     i++;
-                    if (c == '\r' && position < length && data[i] == '\n') {
+                    if (c == '\r' && _position < _length && _data[i] == '\n') {
                         i++;
                     }
                     // preserve newline character like StringIO
 
-                    string res = data.Substring(position, i - position);
-                    position = i;
+                    string res = _data.Substring(_position, i - _position);
+                    _position = i;
                     return res;
                 }
                 i++;
             }
 
-            if (i > position) {
-                string res = data.Substring(position, i - position);
-                position = i;
+            if (i > _position) {
+                string res = _data.Substring(_position, i - _position);
+                _position = i;
                 return res;
             }
 
@@ -111,58 +111,58 @@ namespace IronPython.Modules {
         }
 
         public string ReadToEnd() {
-            if (position < length) {
-                string res = data.Substring(position);
-                position = length;
+            if (_position < _length) {
+                string res = _data.Substring(_position);
+                _position = _length;
                 return res;
             } else return "";
         }
 
         public void Reset() {
-            position = 0;
+            _position = 0;
         }
 
         public int Seek(int offset, SeekOrigin origin) {
             switch (origin) {
                 case SeekOrigin.Begin:
-                    position = offset; break;
+                    _position = offset; break;
                 case SeekOrigin.Current:
-                    position = position + offset; break;
+                    _position = _position + offset; break;
                 case SeekOrigin.End:
-                    position = length + offset; break;
+                    _position = _length + offset; break;
                 default:
                     throw new ArgumentException("origin");
             }
-            return position;
+            return _position;
         }
 
         public void Truncate() {
-            data = data.Substring(0, position);
-            length = data.Length;
+            _data = _data.Substring(0, _position);
+            _length = _data.Length;
         }
 
         public void Truncate(int size) {
-            data = data.Substring(0, size);
-            position = size;
-            length = data.Length;
+            _data = _data.Substring(0, size);
+            _position = size;
+            _length = _data.Length;
         }
 
         internal void Write(string s) {
             string newData;
             int newPosition;
-            if (position > 0) {
-                newData = data.Substring(0, position) + s;
+            if (_position > 0) {
+                newData = _data.Substring(0, _position) + s;
             } else {
                 newData = s;
             }
             newPosition = newData.Length;
-            if (position + s.Length < length) {
-                newData = newData + data.Substring(position + s.Length);
+            if (_position + s.Length < _length) {
+                newData = newData + _data.Substring(_position + s.Length);
             }
 
-            data = newData;
-            position = newPosition;
-            length = data.Length;
+            _data = newData;
+            _position = newPosition;
+            _length = _data.Length;
         }
     }
 
@@ -173,21 +173,21 @@ namespace IronPython.Modules {
 
         [PythonType("StringI")]
         public class StringI {
-            private StringStream sr;
+            private StringStream _sr;
 
             internal StringI(string data) {
-                sr = new StringStream(data);
+                _sr = new StringStream(data);
             }
 
             [PythonName("close")]
             public void Close() {
-                sr = null;
+                _sr = null;
             }
 
             public bool Closed {
                 [PythonName("closed")]
                 get {
-                    return sr == null;
+                    return _sr == null;
                 }
             }
 
@@ -199,12 +199,12 @@ namespace IronPython.Modules {
             [PythonName("getvalue")]
             public string GetValue() {
                 ThrowIfClosed();
-                return sr.Data;
+                return _sr.Data;
             }
 
             [PythonName("getvalue")]
             public string GetValue(bool usePos) {
-                return sr.Prefix;
+                return _sr.Prefix;
             }
 
             [PythonName("__iter__")]
@@ -215,7 +215,7 @@ namespace IronPython.Modules {
             [PythonName("next")]
             public string Next() {
                 ThrowIfClosed();
-                if (sr.EOF) {
+                if (_sr.EOF) {
                     throw PythonOps.StopIteration();
                 }
                 return ReadLine();
@@ -224,26 +224,26 @@ namespace IronPython.Modules {
             [PythonName("read")]
             public string Read() {
                 ThrowIfClosed();
-                return sr.ReadToEnd();
+                return _sr.ReadToEnd();
             }
 
             [PythonName("read")]
             public string Read(int s) {
                 ThrowIfClosed();
-                return sr.Read(s);
+                return _sr.Read(s);
             }
 
             [PythonName("readline")]
             public string ReadLine() {
                 ThrowIfClosed();
-                return sr.ReadLine();
+                return _sr.ReadLine();
             }
 
             [PythonName("readlines")]
             public List ReadLines() {
                 ThrowIfClosed();
                 List list = List.Make();
-                while (!sr.EOF) {
+                while (!_sr.EOF) {
                     list.AddNoLock(ReadLine());
                 }
                 return list;
@@ -253,7 +253,7 @@ namespace IronPython.Modules {
             public List ReadLines(int size) {
                 ThrowIfClosed();
                 List list = List.Make();
-                while (!sr.EOF) {
+                while (!_sr.EOF) {
                     string line = ReadLine();
                     list.AddNoLock(line);
                     if (line.Length >= size) break;
@@ -265,7 +265,7 @@ namespace IronPython.Modules {
             [PythonName("reset")]
             public void Reset() {
                 ThrowIfClosed();
-                sr.Reset();
+                _sr.Reset();
             }
 
             [PythonName("seek")]
@@ -282,25 +282,25 @@ namespace IronPython.Modules {
                     case 2: so = SeekOrigin.End; break;
                     default: so = SeekOrigin.Begin; break;
                 }
-                sr.Seek(position, so);
+                _sr.Seek(position, so);
             }
 
             [PythonName("tell")]
             public int Tell() {
                 ThrowIfClosed();
-                return sr.Position;
+                return _sr.Position;
             }
 
             [PythonName("truncate")]
             public void Truncate() {
                 ThrowIfClosed();
-                sr.Truncate();
+                _sr.Truncate();
             }
 
             [PythonName("truncate")]
             public void Truncate(int size) {
                 ThrowIfClosed();
-                sr.Truncate(size);
+                _sr.Truncate(size);
             }
 
             private void ThrowIfClosed() {
@@ -312,9 +312,9 @@ namespace IronPython.Modules {
 
         [PythonType("StringO")]
         public class StringO {
-            private StringWriter sw = new StringWriter();
-            private StringStream sr = new StringStream("");
-            private int softspace;
+            private StringWriter _sw = new StringWriter();
+            private StringStream _sr = new StringStream("");
+            private int _softspace;
 
             internal StringO() {
             }
@@ -326,14 +326,14 @@ namespace IronPython.Modules {
 
             [PythonName("close")]
             public void Close() {
-                if (sw != null) { sw.Close(); sw = null; }
-                if (sr != null) { sr = null; }
+                if (_sw != null) { _sw.Close(); _sw = null; }
+                if (_sr != null) { _sr = null; }
             }
 
             public bool Closed {
                 [PythonName("closed")]
                 get {
-                    return sw == null || sr == null;
+                    return _sw == null || _sr == null;
                 }
             }
 
@@ -346,21 +346,21 @@ namespace IronPython.Modules {
             public string GetValue() {
                 ThrowIfClosed();
                 FixStreams();
-                return sr.Data;
+                return _sr.Data;
             }
 
             [PythonName("getvalue")]
             public string GetValue(bool usePos) {
                 ThrowIfClosed();
                 FixStreams();
-                return sr.Prefix;
+                return _sr.Prefix;
             }
 
             [PythonName("next")]
             public string Next() {
                 ThrowIfClosed();
                 FixStreams();
-                if (sr.EOF) {
+                if (_sr.EOF) {
                     throw PythonOps.StopIteration();
                 }
                 return ReadLine();
@@ -370,28 +370,28 @@ namespace IronPython.Modules {
             public string Read() {
                 ThrowIfClosed();
                 FixStreams();
-                return sr.ReadToEnd();
+                return _sr.ReadToEnd();
             }
 
             [PythonName("read")]
             public string Read(int i) {
                 ThrowIfClosed();
                 FixStreams();
-                return sr.Read(i);
+                return _sr.Read(i);
             }
 
             [PythonName("readline")]
             public string ReadLine() {
                 ThrowIfClosed();
                 FixStreams();
-                return sr.ReadLine();
+                return _sr.ReadLine();
             }
 
             [PythonName("readlines")]
             public List ReadLines() {
                 ThrowIfClosed();
                 List list = List.Make();
-                while (!sr.EOF) {
+                while (!_sr.EOF) {
                     list.AddNoLock(ReadLine());
                 }
                 return list;
@@ -401,7 +401,7 @@ namespace IronPython.Modules {
             public List ReadLines(int size) {
                 ThrowIfClosed();
                 List list = List.Make();
-                while (!sr.EOF) {
+                while (!_sr.EOF) {
                     string line = ReadLine();
                     list.AddNoLock(line);
                     if (line.Length >= size) break;
@@ -414,7 +414,7 @@ namespace IronPython.Modules {
             public void Reset() {
                 ThrowIfClosed();
                 FixStreams();
-                sr.Reset();
+                _sr.Reset();
             }
 
             [PythonName("seek")]
@@ -432,41 +432,41 @@ namespace IronPython.Modules {
                     case 2: so = SeekOrigin.End; break;
                     default: so = SeekOrigin.Begin; break;
                 }
-                sr.Seek(offset, so);
+                _sr.Seek(offset, so);
             }
 
             public int SoftSpace {
                 [PythonName("softspace")]
-                get { return softspace; }
+                get { return _softspace; }
                 [PythonName("softspace")]
-                set { softspace = value; }
+                set { _softspace = value; }
             }
 
             [PythonName("tell")]
             public int Tell() {
                 ThrowIfClosed();
                 FixStreams();
-                return sr.Position;
+                return _sr.Position;
             }
 
             [PythonName("truncate")]
             public void Truncate() {
                 ThrowIfClosed();
                 FixStreams();
-                sr.Truncate();
+                _sr.Truncate();
             }
 
             [PythonName("truncate")]
             public void Truncate(int size) {
                 ThrowIfClosed();
                 FixStreams();
-                sr.Truncate(size);
+                _sr.Truncate(size);
             }
 
             [PythonName("write")]
             public void Write(string s) {
                 ThrowIfClosed();
-                sw.Write(s);
+                _sw.Write(s);
             }
 
             [PythonName("writelines")]
@@ -483,10 +483,10 @@ namespace IronPython.Modules {
             }
 
             private void FixStreams() {
-                if (sr != null) {
-                    StringBuilder sb = sw.GetStringBuilder();
+                if (_sr != null) {
+                    StringBuilder sb = _sw.GetStringBuilder();
                     if (sb != null && sb.Length > 0) {
-                        sr.Write(sb.ToString());
+                        _sr.Write(sb.ToString());
                         sb.Length = 0;
                     }
                 }

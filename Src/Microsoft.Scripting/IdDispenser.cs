@@ -120,31 +120,31 @@ namespace Microsoft.Scripting {
         /// Weak-ref wrapper caches the weak reference, our hash code, and the object ID.
         /// </summary>
         private sealed class Wrapper {
-            private WeakReference weakReference;
-            private int hashCode;
-            private long id;
+            private WeakReference _weakReference;
+            private int _hashCode;
+            private long _id;
 
             public Wrapper(Object obj, long uniqueId) {
-                weakReference = new WeakReference(obj, true);
+                _weakReference = new WeakReference(obj, true);
 
-                hashCode = (obj == null) ? 0 : obj.GetHashCode();
-                id = uniqueId;
+                _hashCode = (obj == null) ? 0 : obj.GetHashCode();
+                _id = uniqueId;
             }
 
             public long Id {
                 get {
-                    return id;
+                    return _id;
                 }
             }
 
             public Object Target {
                 get {
-                    return weakReference.Target;
+                    return _weakReference.Target;
                 }
             }
 
             public override int GetHashCode() {
-                return hashCode;
+                return _hashCode;
             }
         }
 

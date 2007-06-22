@@ -260,8 +260,8 @@ namespace IronPython.Compiler.Ast {
                 if (p.DefaultValue != null) defaults.Add(p.DefaultValue);
             }
 
-            FunctionCode.FuncCodeFlags codeFlags = 0;
-            if (_generator) codeFlags |= FunctionCode.FuncCodeFlags.Generator;
+            FunctionAttributes codeFlags = 0;
+            if (_generator) codeFlags |= FunctionAttributes.Generator;
 
             string filename = _sourceUnit.DisplayName;
 

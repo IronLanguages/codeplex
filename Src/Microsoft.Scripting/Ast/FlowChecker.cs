@@ -379,7 +379,9 @@ namespace Microsoft.Scripting.Ast {
         // LoopStatement
         public override bool Walk(LoopStatement node) {
             // Expression is executed always at least once
-            node.Test.Walk(this);
+            if (node.Test != null) {
+                node.Test.Walk(this);
+            }
 
             // Beyond this point, either body will be executed (test succeeded),
             // or else is getting executed (test failed). There is no guarantee

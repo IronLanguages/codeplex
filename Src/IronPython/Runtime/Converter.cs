@@ -524,7 +524,7 @@ namespace IronPython.Runtime {
         private static readonly Type IEnumerableType = typeof(IEnumerable);
         private static readonly Type ValueTypeType = typeof(ValueType);
         private static readonly Type TypeType = typeof(Type);
-#if SILVERLIGHT
+#if !SILVERLIGHT
         private static readonly Type ArrayListType = typeof(ArrayList);
         private static readonly Type HashtableType = typeof(Hashtable);
 #endif

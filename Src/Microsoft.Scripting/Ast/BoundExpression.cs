@@ -72,6 +72,10 @@ namespace Microsoft.Scripting.Ast {
             return context.LanguageContext.LookupName(context, Name);
         }
 
+        public override AbstractValue AbstractEvaluate(AbstractContext context) {
+            return context.Lookup(_variable);
+        }
+
         public override void EmitAddress(CodeGen cg, Type asType) {
             if (asType == ExpressionType) {
                 _vr.Slot.EmitGetAddr(cg);

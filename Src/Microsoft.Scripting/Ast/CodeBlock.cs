@@ -430,6 +430,7 @@ namespace Microsoft.Scripting.Ast {
             if (ret == Statement.NextStatement) {
                 return null;
             } else {
+                Debug.Assert(!(ret is ControlFlow));
                 return ret;
             }
         }

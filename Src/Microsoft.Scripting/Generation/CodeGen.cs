@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Generation {
     /// handling the details of exception handling, loops, etc...
     /// </summary>
     public class CodeGen : IDisposable {
-        private CodeGenOptions options;
+        private CodeGenOptions _options;
         private TypeGen _typeGen;
         private AssemblyGen _assemblyGen;
         private ISymbolDocumentWriter _debugSymbolWriter;
@@ -1468,6 +1468,11 @@ namespace Microsoft.Scripting.Generation {
                 EmitType((Type)value);
             } else if (value is RuntimeTypeHandle) {
                 Emit(OpCodes.Ldtoken, Type.GetTypeFromHandle((RuntimeTypeHandle)value));
+            } else if (value is MethodInfo) {
+                Emit(OpCodes.Ldtoken, (MethodInfo)value);
+                EmitCall(typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+            } else if (value is RuntimeMethodHandle) {
+                Emit(OpCodes.Ldtoken, (MethodInfo)MethodBase.GetMethodFromHandle((RuntimeMethodHandle)value));
             } else {
                 throw new NotImplementedException("generate: " + value + " type: " + value.GetType());
             }
@@ -1902,26 +1907,11 @@ namespace Microsoft.Scripting.Generation {
         }
 
         private static string MakeSignature(MethodBase mb) {
-            MethodBuilder builder = mb as MethodBuilder;
-            if (builder != null) return builder.Signature;
-            ConstructorBuilder cb = mb as ConstructorBuilder;
-            if (cb != null) return cb.Signature;
-
-            ParameterInfo[] parameters = mb.GetParameters();
-            if (parameters.Length > 0) {
-                System.Text.StringBuilder sb = new System.Text.StringBuilder();
-                bool comma = false;
-                foreach (ParameterInfo pi in parameters) {
-                    if (comma) {
-                        sb.Append(", ");
-                    }
-                    sb.Append(pi.ParameterType.FullName);
-                    sb.Append(" ");
-                    sb.Append(pi.Name);
-                    comma = true;
-                }
-                return sb.ToString();
-            } else return String.Empty;
+#if DEBUG
+            return Utils.Reflection.FormatSignature(mb);
+#else
+            return String.Empty;
+#endif
         }
 
         [Conditional("DEBUG")]
@@ -2073,11 +2063,11 @@ namespace Microsoft.Scripting.Generation {
 
         public bool DynamicMethod {
             get {
-                return (options & CodeGenOptions.DynamicMethod) != 0;
+                return (_options & CodeGenOptions.DynamicMethod) != 0;
             }
             set {
-                if (value) options |= CodeGenOptions.DynamicMethod;
-                else options &= ~CodeGenOptions.DynamicMethod;
+                if (value) _options |= CodeGenOptions.DynamicMethod;
+                else _options &= ~CodeGenOptions.DynamicMethod;
             }
         }
 
@@ -2086,11 +2076,11 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         public bool ILDebug {
             get {
-                return (options & CodeGenOptions.ILDebug) != 0;
+                return (_options & CodeGenOptions.ILDebug) != 0;
             }
             set {
-                if (value) options |= CodeGenOptions.ILDebug;
-                else options &= ~CodeGenOptions.ILDebug;
+                if (value) _options |= CodeGenOptions.ILDebug;
+                else _options &= ~CodeGenOptions.ILDebug;
             }
         }
 
@@ -2100,11 +2090,11 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         public bool CacheConstants {
             get {
-                return (options & CodeGenOptions.CacheConstants) != 0;
+                return (_options & CodeGenOptions.CacheConstants) != 0;
             }
             set {
-                if (value) options |= CodeGenOptions.CacheConstants;
-                else options &= ~CodeGenOptions.CacheConstants;
+                if (value) _options |= CodeGenOptions.CacheConstants;
+                else _options &= ~CodeGenOptions.CacheConstants;
             }
         }
 
@@ -2114,11 +2104,11 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         public bool EmitLineInfo {
             get {
-                return (options & CodeGenOptions.EmitLineInfo) != 0;
+                return (_options & CodeGenOptions.EmitLineInfo) != 0;
             }
             set {
-                if (value) options |= CodeGenOptions.EmitLineInfo;
-                else options &= ~CodeGenOptions.EmitLineInfo;
+                if (value) _options |= CodeGenOptions.EmitLineInfo;
+                else _options &= ~CodeGenOptions.EmitLineInfo;
             }
         }
 

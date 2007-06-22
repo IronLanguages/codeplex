@@ -315,11 +315,8 @@ namespace Microsoft.Scripting.Actions {
         private static DynamicType[] GetReversedArgumentTypes(DynamicType[] types) {
             if (types.Length < 3) throw new InvalidOperationException("need 3 types or more for reversed operator");
 
-            DynamicType[] argTypes = new DynamicType[types.Length - 1];
-            Array.Copy(types, 1, argTypes, 0, types.Length - 1);
-            DynamicType temp = argTypes[argTypes.Length - 1];
-            argTypes[argTypes.Length - 1] = argTypes[argTypes.Length - 2];
-            argTypes[argTypes.Length - 2] = temp;
+            DynamicType[] argTypes = CompilerHelpers.RemoveFirst(types);
+            CompilerHelpers.SwapLastTwo(argTypes);
             return argTypes;
         }
 

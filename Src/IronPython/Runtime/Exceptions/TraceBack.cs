@@ -76,35 +76,35 @@ namespace IronPython.Runtime.Exceptions {
     [PythonType("frame")]
     [Serializable]
     public class TraceBackFrame {
-        private object globals;
-        private object locals;
-        private object code;
+        private object _globals;
+        private object _locals;
+        private object _code;
 
         public object Globals {
             [PythonName("f_globals")]
             get {
-                return globals;
+                return _globals;
             }
         }
 
         public object Locals {
             [PythonName("f_locals")]
             get {
-                return locals;
+                return _locals;
             }
         }
 
         public object Code {
             [PythonName("f_code")]
             get {
-                return code;
+                return _code;
             }
         }
 
         public TraceBackFrame(object globals, object locals, object code) {
-            this.globals = globals;
-            this.locals = locals;
-            this.code = code;
+            this._globals = globals;
+            this._locals = locals;
+            this._code = code;
         }
     }
 }

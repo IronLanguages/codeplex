@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 
 using Microsoft.Scripting.Ast;
@@ -30,6 +31,10 @@ namespace Microsoft.Scripting.Generation {
 
         public virtual bool NeedsContext {
             get { return false; }
+        }
+
+        public virtual AbstractValue AbstractBuild(AbstractContext context, IList<AbstractValue> parameters) {
+            throw new NotImplementedException();
         }
 
         public abstract Expression ToExpression(ActionBinder binder, Expression[] parameters);

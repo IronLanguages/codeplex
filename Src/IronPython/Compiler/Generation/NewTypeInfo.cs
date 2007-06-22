@@ -26,49 +26,49 @@ namespace IronPython.Compiler.Generation {
     /// </summary>
     internal class NewTypeInfo {
         // The CLI base-type.
-        private Type baseType;
+        private Type _baseType;
 
-        private IList<Type> interfaceTypes;
-        private IList<string> slots;
-        private Nullable<int> hash;
+        private IList<Type> _interfaceTypes;
+        private IList<string> _slots;
+        private Nullable<int> _hash;
 
         public NewTypeInfo(Type baseType, IList<Type> interfaceTypes, IList<string> slots) {
-            this.baseType = baseType;
-            this.interfaceTypes = interfaceTypes;
-            this.slots = slots;
+            this._baseType = baseType;
+            this._interfaceTypes = interfaceTypes;
+            this._slots = slots;
         }
 
         public Type BaseType {
-            get { return baseType; }
+            get { return _baseType; }
         }
 
         public IList<string> Slots {
             get {
-                return slots;
+                return _slots;
             }
         }
 
         public IEnumerable<Type> InterfaceTypes {
-            get { return interfaceTypes; }
+            get { return _interfaceTypes; }
         }
 
         public override int GetHashCode() {
-            if (hash == null) {
-                int hashCode = baseType.GetHashCode();
-                for (int i = 0; i < interfaceTypes.Count; i++) {
-                    hashCode ^= interfaceTypes[i].GetHashCode();
+            if (_hash == null) {
+                int hashCode = _baseType.GetHashCode();
+                for (int i = 0; i < _interfaceTypes.Count; i++) {
+                    hashCode ^= _interfaceTypes[i].GetHashCode();
                 }
 
-                if (slots != null) {
-                    for (int i = 0; i < slots.Count; i++) {
-                        hashCode ^= slots[i].GetHashCode();
+                if (_slots != null) {
+                    for (int i = 0; i < _slots.Count; i++) {
+                        hashCode ^= _slots[i].GetHashCode();
                     }
                 }
 
-                hash = hashCode;
+                _hash = hashCode;
             }
 
-            return hash.Value;
+            return _hash.Value;
         }
 
         public override bool Equals(object obj) {
@@ -76,18 +76,18 @@ namespace IronPython.Compiler.Generation {
             if (other == null) return false;
 
 
-            if (baseType.Equals(other.baseType) &&
-                interfaceTypes.Count == other.interfaceTypes.Count &&
-                ((slots == null && other.slots == null) ||
-                (slots != null && other.slots != null && slots.Count == other.slots.Count))) {
+            if (_baseType.Equals(other._baseType) &&
+                _interfaceTypes.Count == other._interfaceTypes.Count &&
+                ((_slots == null && other._slots == null) ||
+                (_slots != null && other._slots != null && _slots.Count == other._slots.Count))) {
 
-                for (int i = 0; i < interfaceTypes.Count; i++) {
-                    if (!interfaceTypes[i].Equals(other.interfaceTypes[i])) return false;
+                for (int i = 0; i < _interfaceTypes.Count; i++) {
+                    if (!_interfaceTypes[i].Equals(other._interfaceTypes[i])) return false;
                 }
 
-                if (slots != null) {
-                    for (int i = 0; i < slots.Count; i++) {
-                        if (slots[i] != other.slots[i]) return false;
+                if (_slots != null) {
+                    for (int i = 0; i < _slots.Count; i++) {
+                        if (_slots[i] != other._slots[i]) return false;
                     }
                 }
 

@@ -86,12 +86,12 @@ namespace Microsoft.Scripting {
 
             public T Value;
             public Exception Exception;
-            private ManualResetEvent waitEvent;
-            private int waiters;
+            private ManualResetEvent _waitEvent;
+            private int _waiters;
 
             public void PublishValue(T value) {
                 Value = value;
-                if (waitEvent != null) waitEvent.Set();
+                if (_waitEvent != null) _waitEvent.Set();
             }
 
             public void PublishError(Exception e) {
@@ -99,22 +99,22 @@ namespace Microsoft.Scripting {
             }
 
             public void PrepareForWait() {
-                if (waitEvent == null) {
+                if (_waitEvent == null) {
                     ManualResetEvent mre = new ManualResetEvent(false);
-                    if (Interlocked.CompareExchange<ManualResetEvent>(ref waitEvent, mre, null) != null) {
+                    if (Interlocked.CompareExchange<ManualResetEvent>(ref _waitEvent, mre, null) != null) {
                         mre.Close();
                     }
                 }
-                waiters++;
+                _waiters++;
             }
 
             public void WaitForPublish() {
-                waitEvent.WaitOne();
+                _waitEvent.WaitOne();
             }
 
             public void FinishWait() {
-                waiters--;
-                if (waiters == 0) waitEvent.Close();
+                _waiters--;
+                if (_waiters == 0) _waitEvent.Close();
             }
         }
     }

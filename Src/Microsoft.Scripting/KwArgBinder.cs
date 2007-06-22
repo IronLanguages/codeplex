@@ -82,9 +82,7 @@ namespace Microsoft.Scripting {
             if (pis.Length > 0 && (pis[0].ParameterType == typeof(CodeContext))) {
                 // calling a context aware method, remove context from the parameters
                 // for the purpose of the bind.
-                ParameterInfo[] newPis = new ParameterInfo[pis.Length - 1];
-                Array.Copy(pis, 1, newPis, 0, newPis.Length);
-                pis = newPis;
+                pis = CompilerHelpers.RemoveFirst(pis);
             }
 
             string[] argNames = new string[pis.Length];

@@ -24,6 +24,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
+using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -298,11 +299,10 @@ namespace IronPython.Runtime.Operations {
             return !x.Equals(y);
         }
 
-        public static object GetMethod(CodeContext context, object self, object instance, object typeContext) {
+        public static object GetMethod(CodeContext context, object self, object instance, [Optional]object typeContext) {
             DynamicTypeSlot dts = self as DynamicTypeSlot;
             DynamicType dt = typeContext as DynamicType;
-            if (dt == null) dt = DynamicHelpers.GetDynamicType(instance);
-            Debug.Assert(dt != null);
+
             Debug.Assert(dts != null);
 
             object res;
@@ -310,7 +310,7 @@ namespace IronPython.Runtime.Operations {
                 return res;
 
             // context is hiding __get__
-            throw PythonOps.AttributeErrorForMissingAttribute(dt.Name, Symbols.GetDescriptor);
+            throw PythonOps.AttributeErrorForMissingAttribute(dt == null ? "?" : dt.Name, Symbols.GetDescriptor);
         }
 
         public static object CallMethod(CodeContext context, object self, params object[] args\u00F8) {

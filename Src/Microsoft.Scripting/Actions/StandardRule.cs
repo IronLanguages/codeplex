@@ -186,6 +186,10 @@ namespace Microsoft.Scripting.Actions {
             return string.Format("StandardRule({0})", _target);
         }
 
+        public Statement MakeError(ActionBinder binder, Expression expr) {
+            return new ExpressionStatement(new ThrowExpression(expr));
+        }
+
         public Statement MakeReturn(ActionBinder binder, Expression expr) {
             // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
             if (expr.ExpressionType != typeof(void)) {

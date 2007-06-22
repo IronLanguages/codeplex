@@ -15,9 +15,15 @@
 
 from lib.assert_util import *
 
+array_list_options = []
 if is_cli or is_silverlight:
-    from System.Collections import ArrayList
+    array_list_options.append(System.Collections.Generic.List[int])
+    if not is_silverlight:
+        array_list_options.append(System.Collections.ArrayList)
+
+for ArrayList in array_list_options:
     l = ArrayList()
+    
     index = l.Add(22)
     Assert(l[0] == 22)
     l[0] = 33
@@ -31,7 +37,7 @@ Assert('<stdin>' in str(sys.stdin))
 
 # setting an instance property on a built-in type should
 # throw that you can't set on built-in types
-if is_cli or is_silverlight:
+for ArrayList in array_list_options:
     def setCount():
         ArrayList.Count = 23
 
@@ -68,12 +74,12 @@ class foo(object):
 AreEqual(foo.aaa, 'hello')
 
 # ReflectedProperty tests
-if is_cli or is_silverlight: 
+for ArrayList in array_list_options:
     alist = ArrayList()
     AreEqual(ArrayList.Count.__set__(None, 5), None)
     AssertError(TypeError, ArrayList.Count, alist, 5)
     AreEqual(alist.Count, 0)
-    AreEqual(str(ArrayList.__dict__['Count']), '<property# Count on ArrayList>')
+    AreEqual(str(ArrayList.__dict__['Count']), '<property# Count on %s>' % ArrayList.__name__)
     
     def tryDelReflectedProp():
 	    del ArrayList.Count

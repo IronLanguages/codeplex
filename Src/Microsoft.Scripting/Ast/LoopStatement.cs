@@ -29,8 +29,13 @@ namespace Microsoft.Scripting.Ast {
             : this(test, increment, body, else_, SourceSpan.None, SourceLocation.None) {
         }
 
+        /// <summary>
+        /// Null test means infinite loop.
+        /// </summary>
         public LoopStatement(Expression test, Expression increment, Statement body, Statement else_, SourceSpan span, SourceLocation header)
             : base(span) {
+            if (body == null) throw new ArgumentNullException("body");
+
             _test = test;
             _increment = increment;
             _body = body;
@@ -60,15 +65,19 @@ namespace Microsoft.Scripting.Ast {
 
         public override object Execute(CodeContext context) {
             object ret = NextStatement;
-            while (context.LanguageContext.IsTrue(_test.Evaluate(context))) {
+            while (_test == null || context.LanguageContext.IsTrue(_test.Evaluate(context))) {
                 ret = _body.Execute(context);
-                if (ret != NextStatement) break;
-
+                if (ret == Statement.Break) {
+                    break;
+                } else if (!(ret is ControlFlow)) {
+                    return ret;
+                }
                 if (_increment != null) {
                     _increment.Evaluate(context);
                 }
-            }            
-            return ret;
+            }
+
+            return NextStatement;
         }
 
         public override void Emit(CodeGen cg) {
@@ -82,16 +91,20 @@ namespace Microsoft.Scripting.Ast {
                 cg.Emit(OpCodes.Br, firstTime.Value);
             }
 
-            cg.EmitPosition(Start, _header);
+            if (_header.IsValid) {
+                cg.EmitPosition(Start, _header);
+            }
             cg.MarkLabel(continueTarget);
 
             if (_increment != null) {
                 _increment.EmitAs(cg, typeof(void));
                 cg.MarkLabel(firstTime.Value);
             }
-            
-            _test.EmitAs(cg, typeof(bool));
-            cg.Emit(OpCodes.Brfalse, eol);
+
+            if (_test != null) {
+                _test.EmitAs(cg, typeof(bool));
+                cg.Emit(OpCodes.Brfalse, eol);
+            }
 
             cg.PushTargets(breakTarget, continueTarget, this);
 
@@ -111,7 +124,7 @@ namespace Microsoft.Scripting.Ast {
 
         public override void Walk(Walker walker) {
             if (walker.Walk(this)) {
-                _test.Walk(walker);
+                if (_test != null) _test.Walk(walker);
                 if (_increment != null) _increment.Walk(walker);
                 _body.Walk(walker);
                 if (_else != null) _else.Walk(walker);
