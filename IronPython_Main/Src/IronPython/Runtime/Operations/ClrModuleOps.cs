@@ -91,24 +91,24 @@ namespace IronPython.Runtime.Operations {
         }
 
         public class RuntimeArgChecker : DynamicTypeSlot, ICallableWithCodeContext {
-            private object[] expected;
-            private object func;
-            private object inst;
+            private object[] _expected;
+            private object _func;
+            private object _inst;
 
             public RuntimeArgChecker(object function, object[] expectedArgs) {
-                expected = expectedArgs;
-                func = function;
+                _expected = expectedArgs;
+                _func = function;
             }
 
             public RuntimeArgChecker(object instance, object function, object[] expectedArgs)
                 : this(function, expectedArgs) {
-                inst = instance;
+                _inst = instance;
             }
 
             private void ValidateArgs(object[] args) {
                 int start = 0;
 
-                if (inst != null) {
+                if (_inst != null) {
                     start = 1;
                 }
 
@@ -117,10 +117,10 @@ namespace IronPython.Runtime.Operations {
                 for (int i = start; i < args.Length + start; i++) {
                     DynamicType dt = DynamicHelpers.GetDynamicType(args[i - start]);
 
-                    DynamicType expct = expected[i] as DynamicType;
-                    if (expct == null) expct = ((OldClass)expected[i]).TypeObject;
-                    if (dt != expected[i] && !dt.IsSubclassOf(expct)) {
-                        throw PythonOps.AssertionError("argument {0} has bad value (got {1}, expected {2})", i, dt, expected[i]);
+                    DynamicType expct = _expected[i] as DynamicType;
+                    if (expct == null) expct = ((OldClass)_expected[i]).TypeObject;
+                    if (dt != _expected[i] && !dt.IsSubclassOf(expct)) {
+                        throw PythonOps.AssertionError("argument {0} has bad value (got {1}, expected {2})", i, dt, _expected[i]);
                     }
                 }
             }
@@ -130,20 +130,20 @@ namespace IronPython.Runtime.Operations {
             public object Call(CodeContext context, params object[] args) {
                 ValidateArgs(args);
 
-                if (inst != null) {
+                if (_inst != null) {
                     object[] realArgs = new object[args.Length + 1];
-                    realArgs[0] = inst;
+                    realArgs[0] = _inst;
                     Array.Copy(args, 0, realArgs, 1, args.Length);
-                    return PythonOps.CallWithContext(context, func, realArgs);
+                    return PythonOps.CallWithContext(context, _func, realArgs);
                 } else {
-                    return PythonOps.CallWithContext(context, func, args);
+                    return PythonOps.CallWithContext(context, _func, args);
                 }
             }
 
             #endregion
 
             public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
-                value = new RuntimeArgChecker(instance, func, expected);
+                value = new RuntimeArgChecker(instance, _func, _expected);
                 return true;
             }
         }
@@ -168,31 +168,31 @@ namespace IronPython.Runtime.Operations {
         }
 
         public class RuntimeReturnChecker : DynamicTypeSlot, ICallableWithCodeContext {
-            private object retType;
-            private object func;
-            private object inst;
+            private object _retType;
+            private object _func;
+            private object _inst;
 
             public RuntimeReturnChecker(object function, object expectedReturn) {
-                retType = expectedReturn;
-                func = function;
+                _retType = expectedReturn;
+                _func = function;
             }
 
             public RuntimeReturnChecker(object instance, object function, object expectedReturn)
                 : this(function, expectedReturn) {
-                inst = instance;
+                _inst = instance;
             }
 
             private void ValidateReturn(object ret) {
                 // we return void...
-                if (ret == null && retType == null) return;
+                if (ret == null && _retType == null) return;
 
                 DynamicType dt = DynamicHelpers.GetDynamicType(ret);
-                if (dt != retType) {
-                    DynamicType expct = retType as DynamicType;
-                    if (expct == null) expct = ((OldClass)retType).TypeObject;
+                if (dt != _retType) {
+                    DynamicType expct = _retType as DynamicType;
+                    if (expct == null) expct = ((OldClass)_retType).TypeObject;
 
                     if (!dt.IsSubclassOf(expct))
-                        throw PythonOps.AssertionError("bad return value returned (expected {0}, got {1})", retType, dt);
+                        throw PythonOps.AssertionError("bad return value returned (expected {0}, got {1})", _retType, dt);
                 }
             }
 
@@ -200,13 +200,13 @@ namespace IronPython.Runtime.Operations {
 
             public object Call(CodeContext context, params object[] args) {
                 object ret;
-                if (inst != null) {
+                if (_inst != null) {
                     object[] realArgs = new object[args.Length + 1];
-                    realArgs[0] = inst;
+                    realArgs[0] = _inst;
                     Array.Copy(args, 0, realArgs, 1, args.Length);
-                    ret = PythonOps.CallWithContext(context, func, realArgs);
+                    ret = PythonOps.CallWithContext(context, _func, realArgs);
                 } else {
-                    ret = PythonOps.CallWithContext(context, func, args);
+                    ret = PythonOps.CallWithContext(context, _func, args);
                 }
                 ValidateReturn(ret);
                 return ret;
@@ -217,7 +217,7 @@ namespace IronPython.Runtime.Operations {
             #region IDescriptor Members
 
             public object GetAttribute(object instance, object owner) {
-                return new RuntimeReturnChecker(instance, func, retType);
+                return new RuntimeReturnChecker(instance, _func, _retType);
             }
 
             #endregion

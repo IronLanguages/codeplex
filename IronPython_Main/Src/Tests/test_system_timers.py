@@ -15,6 +15,7 @@
 
 from lib.assert_util import *
 skiptest("win32")
+skiptest("silverlight")
 
 from time   import sleep
 from thread import start_new_thread

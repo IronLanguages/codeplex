@@ -690,46 +690,46 @@ namespace IronPython.Runtime {
     }
 
     public class DictionaryKeyCollection : ICollection<object> {
-        private ICollection<object> items;
-        private PythonDictionary dict;
+        private ICollection<object> _items;
+        private PythonDictionary _dict;
 
         public DictionaryKeyCollection(PythonDictionary dictionary, ICollection<object> collection) {
-            items = collection;
-            dict = dictionary;
+            _items = collection;
+            _dict = dictionary;
         }
 
         #region ICollection<object> Members
 
         public void Add(object item) {
-            items.Add(BaseSymbolDictionary.NullToObj(item));
+            _items.Add(BaseSymbolDictionary.NullToObj(item));
         }
 
         public void Clear() {
-            items.Clear();
+            _items.Clear();
         }
 
         public bool Contains(object item) {
-            return items.Contains(BaseSymbolDictionary.NullToObj(item));
+            return _items.Contains(BaseSymbolDictionary.NullToObj(item));
         }
 
         public void CopyTo(object[] array, int arrayIndex) {
             int i = 0;
-            foreach (object o in items) {
+            foreach (object o in _items) {
                 array[i + arrayIndex] = BaseSymbolDictionary.ObjToNull(o);
                 i++;
             }
         }
 
         public int Count {
-            get { return items.Count; }
+            get { return _items.Count; }
         }
 
         public bool IsReadOnly {
-            get { return items.IsReadOnly; }
+            get { return _items.IsReadOnly; }
         }
 
         public bool Remove(object item) {
-            return items.Remove(BaseSymbolDictionary.NullToObj(item));
+            return _items.Remove(BaseSymbolDictionary.NullToObj(item));
         }
 
         #endregion
@@ -737,7 +737,7 @@ namespace IronPython.Runtime {
         #region IEnumerable<object> Members
 
         public IEnumerator<object> GetEnumerator() {
-            return new DictionaryKeyEnumerator(dict.data);
+            return new DictionaryKeyEnumerator(_dict.data);
         }
 
         #endregion
@@ -745,7 +745,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
-            return new DictionaryKeyEnumerator(dict.data);
+            return new DictionaryKeyEnumerator(_dict.data);
         }
 
         #endregion

@@ -30,12 +30,12 @@ namespace IronPython.Runtime.Operations {
 
     // Used to map signatures to specific targets on the embedded reflected method.
     public class BuiltinFunctionOverloadMapper {
-        private BuiltinFunction function;
-        private object instance;
+        private BuiltinFunction _function;
+        private object _instance;
 
         public BuiltinFunctionOverloadMapper(BuiltinFunction builtinFunction, object instance) {
-            this.function = builtinFunction;
-            this.instance = instance;
+            this._function = builtinFunction;
+            this._instance = instance;
         }
 
         public object this[params Type[] types] {
@@ -50,7 +50,7 @@ namespace IronPython.Runtime.Operations {
             // reflected method with all the candidate targets. A caller can then index this
             // reflected method if necessary in order to provide generic type arguments and
             // fully disambiguate the target.
-            BuiltinFunction rm = new BuiltinFunction(function.Name, function.FunctionType);
+            BuiltinFunction rm = new BuiltinFunction(_function.Name, _function.FunctionType);
 
             // Search for targets with the right number of arguments.
             FindMatchingTargets(sig, targets, rm);
@@ -58,8 +58,8 @@ namespace IronPython.Runtime.Operations {
             if (rm.Targets == null)
                 throw RuntimeHelpers.SimpleTypeError(String.Format("No match found for the method signature {0}", sig));    // TODO: Sig to usable display
 
-            if (instance != null) {
-                return new BoundBuiltinFunction(rm, instance);
+            if (_instance != null) {
+                return new BoundBuiltinFunction(rm, _instance);
             } else {
                 return GetTargetFunction(rm);
             }
@@ -90,13 +90,13 @@ namespace IronPython.Runtime.Operations {
 
         public BuiltinFunction Function {
             get {
-                return function;
+                return _function;
             }
         }
 
         public virtual MethodBase[] Targets {
             get {
-                return function.Targets;
+                return _function.Targets;
             }
         }
 

@@ -30,7 +30,7 @@ def test_string():
     Assert(x[0] == "Hello")
     Assert(x[1] == "Python")
     
-@skip('win32')
+@skip('win32', 'silverlight')
 def test_hashtable():
     x = System.Collections.Hashtable()
     x["Hi"] = "Hello"
@@ -120,7 +120,7 @@ def test_property_access():
                 x[i, j, k] = i + j + k
                 Assert(x[i, j, k] == i + j + k)
 
-@skip('win32')
+@skip('win32 silverlightbug?')
 def test_multiple_indexes():
     x = MultipleIndexes()
     

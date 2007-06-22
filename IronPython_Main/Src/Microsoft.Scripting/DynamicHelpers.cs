@@ -164,7 +164,6 @@ namespace Microsoft.Scripting {
                 }
 
 // using IDynamicObject.LanguageContext for now, we need todo better
-#pragma warning disable 618
                 Debug.Assert(dynamicObject.LanguageContext != null, "Invalid implementation");
 
                 ParameterInfo[] parameters = invoke.GetParameters();
@@ -177,7 +176,6 @@ namespace Microsoft.Scripting {
                     parameters,
                     exceptionHandler
                 );
-#pragma warning restore
 
                 DelegateInfo delegateInfo = _dynamicDelegateCache.GetOrCreateValue(signatureInfo,
                     delegate() {

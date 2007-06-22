@@ -85,6 +85,10 @@ namespace Microsoft.Scripting.Actions {
             return DynamicSiteHelpers.Execute(cc, this, action, args);
         }
 
+        public virtual AbstractValue AbstractExecute(Action action, IList<AbstractValue> args) {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Produces a rule for the specified Action for the given arguments.
         /// 

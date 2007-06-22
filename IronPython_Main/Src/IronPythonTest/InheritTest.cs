@@ -385,9 +385,9 @@ namespace IronPythonTest {
     }
 
     public class Inherited : Overriding {
-        private String str;
+        private String _str;
         public Inherited() {
-            this.str = TopMethod();
+            this._str = TopMethod();
         }
 
         public override string AbstractTemplateMethod() {

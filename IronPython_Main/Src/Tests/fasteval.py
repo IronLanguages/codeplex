@@ -25,14 +25,20 @@ def do_fasteval_test():
         l.append(i)
     # we can't use AreEqual &co. until more stuff works.
     assert l == range(10), 'for loops/function calls'
+    assert l == list(tuple(range(10))), 'lists/tuples'
     x = 0
-    while x < 10:
-        x = x + 1
+    while x < 20:
+        x += 1
+        if x >= 10:
+            break
+        else:
+            continue
+        assert False
     assert x == 10, 'while loops/basic arithmetic'
 
     def two_plus_two():
         return 2+2
     assert two_plus_two() == 4, 'function definition/execution'
-    
+
 if __name__=='__main__':
     do_fasteval_test()

@@ -48,6 +48,7 @@ namespace Microsoft.Scripting {
 
         internal TopReflectedPackage()
             : base(null) {
+            SetTopPackage(this);
         }
 
         /// <summary>
@@ -55,7 +56,7 @@ namespace Microsoft.Scripting {
         /// from all other packages in the system.
         /// </summary>
         public TopReflectedPackage(bool isolated)
-            : base(null) {
+            : this() {
             this._isolated = isolated;
         }
 
@@ -163,7 +164,8 @@ namespace Microsoft.Scripting {
         internal Dictionary<Assembly, TypeNames> _typeNames = new Dictionary<Assembly, TypeNames>();
 
         private string _fullName; // null for the TopReflectedPackage
-        
+        private TopReflectedPackage _topPackage;
+
         #region Protected API Surface
 
         private ReflectedPackage() {
@@ -209,6 +211,7 @@ namespace Microsoft.Scripting {
 
         private ReflectedPackage MakeChildPackage(string childName, Assembly assem) {
             ReflectedPackage rp = new ReflectedPackage();
+            rp.SetTopPackage(_topPackage);
             rp._packageAssemblies.Add(assem);
 
             ScriptModule smod;
@@ -465,6 +468,13 @@ namespace Microsoft.Scripting {
         }
 
         protected virtual void LoadNamespaces() {
+            if (_topPackage != null) {
+                _topPackage.LoadNamespaces();
+            }
+        }
+
+        protected void SetTopPackage(TopReflectedPackage pkg) {
+            _topPackage = pkg;
         }
 
         #region Private Implementation Details

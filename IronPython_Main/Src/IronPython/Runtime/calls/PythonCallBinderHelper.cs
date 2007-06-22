@@ -43,10 +43,8 @@ namespace IronPython.Runtime.Calls {
                             ?? CallBinderHelper<T>.MakeDynamicCallRule(Action, Binder, CompilerHelpers.ObjectTypes(args));
                     } else {
                         DynamicType[] types = CompilerHelpers.ObjectTypes(args);
-                        DynamicType[] argTypes = new DynamicType[types.Length - 1];
-                        Array.Copy(types, 1, argTypes, 0, types.Length - 1);
 
-                        return MakePythonTypeCallRule(dt, types, argTypes, args);
+                        return MakePythonTypeCallRule(dt, types, CompilerHelpers.RemoveFirst(types), args);
                     }
                 }
             }
@@ -310,8 +308,7 @@ namespace IronPython.Runtime.Calls {
 
             StandardRule<T> rule = new StandardRule<T>();
             Expression[] exprs = Variable.VariablesToExpressions(rule.Parameters);
-            Expression[] finalExprs = new Expression[exprs.Length - 1];
-            Array.Copy(exprs, 1, finalExprs, 0, exprs.Length - 1);
+            Expression[] finalExprs = CompilerHelpers.RemoveFirst(exprs);
 
             rule.SetTest(CreateInstanceBinderHelper<T>.MakeTestForTypeCall(Action, dt, rule, args));
 

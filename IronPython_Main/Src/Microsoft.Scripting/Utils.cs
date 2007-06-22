@@ -106,22 +106,52 @@ namespace Microsoft.Scripting {
 
 #if DEBUG
             public static string FormatSignature(MethodBase method) {
+                Utils.Assert.NotNull(method);
+
+                MethodBuilder builder = method as MethodBuilder;
+                if (builder != null) return builder.Signature;
+                ConstructorBuilder cb = method as ConstructorBuilder;
+                if (cb != null) return cb.Signature;
+
                 StringBuilder result = new StringBuilder();
                 result.Append(method.DeclaringType.FullName);
                 result.Append("::");
                 result.Append(method.Name);
-                result.Append("(");
 
-                ParameterInfo[] ps = method.GetParameters();
-                for (int i = 0; i < ps.Length; i++) {
-                    if (i > 0) result.Append(", ");
-                    result.Append(ps[i].ParameterType.Name);
-                    if (!System.String.IsNullOrEmpty(ps[i].Name)) {
-                        result.Append(" ");
-                        result.Append(ps[i].Name);
+                if (!method.IsConstructor) {
+                    Type[] typeArgs = method.GetGenericArguments();
+                    if (typeArgs.Length > 0) {
+                        result.Append("<");
+
+                        for (int i = 0; i < typeArgs.Length; i++) {
+                            if (i > 0) result.Append(", ");
+                            result.Append(typeArgs[i].FullName);
+                            if (!System.String.IsNullOrEmpty(typeArgs[i].Name)) {
+                                result.Append(" ");
+                                result.Append(typeArgs[i].Name);
+                            }
+                        }
+
+                        result.Append(">");
                     }
                 }
+                
+                result.Append("(");
 
+                if (!method.ContainsGenericParameters) {
+                    ParameterInfo[] ps = method.GetParameters();
+                    for (int i = 0; i < ps.Length; i++) {
+                        if (i > 0) result.Append(", ");
+                        result.Append(ps[i].ParameterType.FullName);
+                        if (!System.String.IsNullOrEmpty(ps[i].Name)) {
+                            result.Append(" ");
+                            result.Append(ps[i].Name);
+                        }
+                    }
+                } else {
+                    result.Append("?");
+                }
+                
                 result.Append(")");
                 return result.ToString();
             }
@@ -552,6 +582,19 @@ namespace Microsoft.Scripting {
             internal static T[] Copy<T>(T[] array) {
                 return (array.Length > 0) ? (T[])array.Clone() : array; 
             }
+
+            public static T[] MakeArray<T>(IList<T> elements, int reservedSlotsBefore, int reservedSlotsAfter) {
+                if (reservedSlotsAfter < 0) throw new ArgumentOutOfRangeException("reservedSlotsAfter");
+                if (reservedSlotsBefore < 0) throw new ArgumentOutOfRangeException("reservedSlotsBefore");
+
+                if (elements == null) {
+                    return new T[reservedSlotsBefore + reservedSlotsAfter];
+                }
+
+                T[] result = new T[reservedSlotsBefore + elements.Count + reservedSlotsAfter];
+                elements.CopyTo(result, reservedSlotsBefore);
+                return result;
+            }
         }
 
         #endregion
@@ -894,21 +937,21 @@ namespace Microsoft.Scripting {
                 }
             }
 
-            private SupressableWeakReference weakRef;
+            private SupressableWeakReference _weakRef;
 
             public WeakHandle(object target, bool trackResurrection) {
-                this.weakRef = new SupressableWeakReference(target, trackResurrection);
-                GC.SuppressFinalize(this.weakRef);
+                this._weakRef = new SupressableWeakReference(target, trackResurrection);
+                GC.SuppressFinalize(this._weakRef);
             }
 
-            public bool IsAlive { get { return weakRef != null && weakRef.IsAlive; } }
-            public object Target { get { return weakRef != null ? weakRef.Target : null; } }
+            public bool IsAlive { get { return _weakRef != null && _weakRef.IsAlive; } }
+            public object Target { get { return _weakRef != null ? _weakRef.Target : null; } }
             
             public void Free() { 
-                if (weakRef != null) {
-                    GC.ReRegisterForFinalize(weakRef);
-                    weakRef.Target = null;
-                    weakRef = null;
+                if (_weakRef != null) {
+                    GC.ReRegisterForFinalize(_weakRef);
+                    _weakRef.Target = null;
+                    _weakRef = null;
                 } 
             }
         }
@@ -1058,6 +1101,17 @@ namespace Microsoft.Scripting {
             return valid;
         }
 #endif
+
+        // Various String.Compare methods were removed from Silverlight, adding them back here
+        public static int StringCompare(string strA, string strB, bool ignoreCase, CultureInfo culture) {
+            return culture.CompareInfo.Compare(strA, strB, ignoreCase ? CompareOptions.IgnoreCase : CompareOptions.None);
+        }
+
+        public static int StringCompare(string strA, string strB, bool ignoreCase) {
+            return StringCompare(strA, strB, ignoreCase, CultureInfo.CurrentCulture);
+        }
+
+
         #endregion
     }
 }

@@ -79,37 +79,37 @@ namespace IronPython.Runtime {
 
     [PythonType("ReversedEnumerator")]
     public class ReversedEnumerator : IEnumerator, IEnumerator<object> {
-        private readonly object getItemMethod;
-        private object current;
-        private int index;
-        private int savedIndex;
+        private readonly object _getItemMethod;
+        private object _current;
+        private int _index;
+        private int _savedIndex;
 
         public ReversedEnumerator(int length, object getitem) {
-            this.index = this.savedIndex = length;
-            this.getItemMethod = getitem;
+            this._index = this._savedIndex = length;
+            this._getItemMethod = getitem;
         }
 
         [OperatorMethod, PythonName("__len__")]
-        public int Length() { return index; }
+        public int Length() { return _index; }
 
         #region IEnumerator implementation
 
         public object Current {
             get {
-                return current;
+                return _current;
             }
         }
 
         public bool MoveNext() {
-            if (index > 0) {
-                index--;
-                current = PythonCalls.Call(getItemMethod, index);
+            if (_index > 0) {
+                _index--;
+                _current = PythonCalls.Call(_getItemMethod, _index);
                 return true;
             } else return false;
         }
 
         public void Reset() {
-            index = savedIndex;
+            _index = _savedIndex;
         }
 
         #endregion
@@ -194,9 +194,9 @@ namespace IronPython.Runtime {
      */
     [PythonType("enumerator")]
     public class PythonEnumerator : IEnumerator {
-        private readonly object baseObject;
-        private object nextMethod;
-        private object current = null;
+        private readonly object _baseObject;
+        private object _nextMethod;
+        private object _current;
 
         public static bool TryCreate(object baseEnumerator, out IEnumerator enumerator) {
             object iter;
@@ -220,7 +220,7 @@ namespace IronPython.Runtime {
         public PythonEnumerator(object iter) {
             Debug.Assert(!(iter is PythonGenerator));
 
-            this.baseObject = iter;
+            this._baseObject = iter;
         }
 
 
@@ -232,19 +232,19 @@ namespace IronPython.Runtime {
 
         public object Current {
             get {
-                return current;
+                return _current;
             }
         }
 
         public bool MoveNext() {
-            if (nextMethod == null) {
-                if (!PythonOps.TryGetBoundAttr(baseObject, Symbols.GeneratorNext, out nextMethod) || nextMethod == null) {
+            if (_nextMethod == null) {
+                if (!PythonOps.TryGetBoundAttr(_baseObject, Symbols.GeneratorNext, out _nextMethod) || _nextMethod == null) {
                     throw PythonOps.TypeError("instance has no next() method");
                 }
             }
 
             try {
-                current = PythonCalls.Call(nextMethod);
+                _current = PythonCalls.Call(_nextMethod);
                 return true;
             } catch (StopIterationException) {
                 return false;

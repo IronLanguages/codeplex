@@ -23,6 +23,7 @@ using System.Runtime.InteropServices;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
 
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {
@@ -78,7 +79,7 @@ If locale is None then the current setting is returned.
         [Documentation("compares two strings using the current locale")]
         [PythonName("strcoll")]
         public static int StringCollate(string string1, string string2) {
-            return String.Compare(string1, string2, false, currentLocale.Collate);
+            return Utils.StringCompare(string1, string2, false, currentLocale.Collate);
         }
 
         [Documentation(@"returns a transformed string that can be compared using the built-in cmp.

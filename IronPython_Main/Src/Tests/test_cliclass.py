@@ -25,7 +25,7 @@ from IronPythonTest import *
 
 def test_inheritance():
     import System
-    class MyList(System.Collections.ArrayList):
+    class MyList(System.Collections.Generic.List[int]):
         def get0(self):
             return self[0]
 
@@ -46,9 +46,11 @@ def test_interface_inheritance():
     class MyFurtherDerivedComparer(MyDerivedComparer): pass
 
     # Check that MyDerivedComparer and MyFurtherDerivedComparer can be used as an IComparer
-    s = System.Collections.SortedList(MyComparer())
-    s = System.Collections.SortedList(MyDerivedComparer())
-    s = System.Collections.SortedList(MyFurtherDerivedComparer())
+    array = System.Array[int](range(10))
+    
+    System.Array.Sort(array, 0, 10, MyComparer())
+    System.Array.Sort(array, 0, 10, MyDerivedComparer())
+    System.Array.Sort(array, 0, 10, MyFurtherDerivedComparer())
     
 def test_bases():    
     #

@@ -172,11 +172,15 @@
     <Compile Include="Runtime\Builtin.cs" />
     <Compile Include="Runtime\Builtin.Generated.cs" />
     <Compile Include="Runtime\Calls\ClassMethodDescriptor.cs" />
+    <Compile Include="Runtime\Calls\CompileFlags.cs" />
     <Compile Include="Runtime\Calls\DefaultContext.cs" />
     <Compile Include="Runtime\Calls\Descriptors.cs" />
     <Compile Include="Runtime\Calls\DoOperationBinderHelper.cs" />
     <Compile Include="Runtime\Calls\Function.cs" />
     <Compile Include="Runtime\Calls\Function.Generated.cs" />
+    <Compile Include="Runtime\Calls\FunctionAttributes.cs" />
+    <Compile Include="Runtime\Calls\FunctionCode.cs" />
+    <Compile Include="Runtime\Calls\Method.cs" />
     <Compile Include="Runtime\Calls\PythonBinder.cs" />
     <Compile Include="Runtime\Calls\PythonCallBinderHelper.cs" />
     <Compile Include="Runtime\CompareUtil.cs" />

@@ -20,6 +20,7 @@ using System.Reflection.Emit;
 using System.Diagnostics;
 using System.Text;
 
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
@@ -31,10 +32,6 @@ namespace Microsoft.Scripting {
         internal Dictionary<int, TargetSet> _targetSets = new Dictionary<int, TargetSet>();
         internal List<ParamsMethodMaker> _paramsMakers = new List<ParamsMethodMaker>();
         internal ActionBinder _binder;
-
-        public ActionBinder ActionBinder {
-            get { return _binder; }
-        }
 
         private static bool IsUnsupported(MethodBase method) {
             return (method.CallingConvention & CallingConventions.VarArgs) != 0
@@ -50,17 +47,17 @@ namespace Microsoft.Scripting {
             return false;
         }
 
-        public static FastCallable MakeFastCallable(ActionBinder binder, string name, MethodInfo mi, BinderType binderType) {
-            //??? In the future add optimization for simple case of nothing tricky in mi
-            return new MethodBinder(binder, name, new MethodBase[] { mi }, binderType).MakeFastCallable();
-        }
-
-        public static FastCallable MakeFastCallable(ActionBinder binder, string name, MethodBase[] mis, BinderType binderType) {
-            return new MethodBinder(binder, name, mis, binderType).MakeFastCallable();
-        }
-
         public static MethodBinder MakeBinder(ActionBinder binder, string name, MethodBase[] mis, BinderType binderType) {
             return new MethodBinder(binder, name, mis, binderType);
+        }
+
+        public AbstractValue AbstractCall(CallType callType, IList<AbstractValue> args) {
+            TargetSet ts = this.GetTargetSet(args.Count);
+            if (ts != null) {
+                return ts.AbstractCall(callType, args);
+            } else {
+                return AbstractValue.TypeError(BadArgumentCount(callType, args.Count).Message);
+            }
         }
 
         //TODO Move all consumers of this method to the Type version below
@@ -75,17 +72,6 @@ namespace Microsoft.Scripting {
             }
             return null;
         }
-
-        //public StandardRule<T> MakeBindingRule<T>(CallType callType, DynamicType[] types) {
-        //    TargetSet ts = this.GetTargetSet(types.Length);
-        //    if (ts != null) {
-        //        return ts.MakeBindingRule<T>(callType, types);
-        //    } else {
-        //        string message = BadArgumentCount(callType, types.Length).Message;
-        //        return StandardRule<T>.TypeError(message, types);
-        //    }
-        //}
-
 
         private MethodBinder(ActionBinder binder, string name, MethodBase[] methods, BinderType binderType) {
             this._binder = binder;
@@ -106,14 +92,6 @@ namespace Microsoft.Scripting {
         }
 
         public string Name { get { return _name; } }
-        public int MaximumArgs {
-            get {
-                int minArgs, maxArgs;
-                GetMinAndMaxArgs(out minArgs, out maxArgs);
-                return maxArgs;
-            }
-        }
-        public int MinimumArgs { get { int minArgs, maxArgs; GetMinAndMaxArgs(out minArgs, out maxArgs); return minArgs; } }
 
         internal bool IsBinaryOperator {
             get {
@@ -127,75 +105,11 @@ namespace Microsoft.Scripting {
             }
         }
 
-        private Delegate MakeFastCallable(bool needsContext, int nargs) {
-            TargetSet ts = GetTargetSet(nargs);
-            if (ts == null) return null;
-
-            return ts.MakeCallTarget(needsContext);
-        }
-
-        public object CallWithContextN(CodeContext context, object[] args) {
-            return Call(context, CallType.None, args);
-        }
-
-        public object CallN(object[] args) {
-            return Call(null, CallType.None, args);
-        }
-
-        private Delegate MakeFastCallableN(bool needsContext) {
-            int minArgs, maxArgs;
-            GetMinAndMaxArgs(out minArgs, out maxArgs);
-
-            if (maxArgs <= 5 && _paramsMakers.Count == 0) return null;
-            if (needsContext) return new CallTargetWithContextN(this.CallWithContextN);
-            else return new CallTargetN(this.CallN);
-        }
-
         private void GetMinAndMaxArgs(out int minArgs, out int maxArgs) {
             List<int> argCounts = new List<int>(_targetSets.Keys);
             argCounts.Sort();
             minArgs = argCounts[0];
             maxArgs = argCounts[argCounts.Count - 1];
-        }
-
-        public FastCallable MakeFastCallable() {
-            bool needsContext = false;
-            // If we have any instance/static conflicts then we'll use the slow path for everything
-            foreach (TargetSet ts in _targetSets.Values) {
-                if (ts.HasConflict) return new FastCallableUgly(this);
-                if (ts.NeedsContext) needsContext = true;
-            }
-
-            if (_targetSets.Count == 0) return new FastCallableUgly(this);
-
-            if (_targetSets.Count == 1 && _paramsMakers.Count == 0) {
-                TargetSet ts = new List<TargetSet>(_targetSets.Values)[0];
-                if (ts._count <= CallTargets.MaximumCallArgs) return ts.MakeFastCallable();
-            }
-
-            int minArgs, maxArgs;
-            GetMinAndMaxArgs(out minArgs, out maxArgs);
-            if (needsContext) {
-                FastCallableWithContextAny ret = new FastCallableWithContextAny(_name, minArgs, maxArgs);
-                ret.target0 = (CallTargetWithContext0)MakeFastCallable(needsContext, 0);
-                ret.target1 = (CallTargetWithContext1)MakeFastCallable(needsContext, 1);
-                ret.target2 = (CallTargetWithContext2)MakeFastCallable(needsContext, 2);
-                ret.target3 = (CallTargetWithContext3)MakeFastCallable(needsContext, 3);
-                ret.target4 = (CallTargetWithContext4)MakeFastCallable(needsContext, 4);
-                ret.target5 = (CallTargetWithContext5)MakeFastCallable(needsContext, 5);
-                ret.targetN = (CallTargetWithContextN)MakeFastCallableN(needsContext);
-                return ret;
-            } else {
-                FastCallableAny ret = new FastCallableAny(_name, minArgs, maxArgs);
-                ret.target0 = (CallTarget0)MakeFastCallable(needsContext, 0);
-                ret.target1 = (CallTarget1)MakeFastCallable(needsContext, 1);
-                ret.target2 = (CallTarget2)MakeFastCallable(needsContext, 2);
-                ret.target3 = (CallTarget3)MakeFastCallable(needsContext, 3);
-                ret.target4 = (CallTarget4)MakeFastCallable(needsContext, 4);
-                ret.target5 = (CallTarget5)MakeFastCallable(needsContext, 5);
-                ret.targetN = (CallTargetN)MakeFastCallableN(needsContext);
-                return ret;
-            }
         }
 
         private Exception BadArgumentCount(CallType callType, int argCount) {
@@ -237,19 +151,6 @@ namespace Microsoft.Scripting {
                 }
             }
             return null;
-        }
-
-        public object CallInstance(CodeContext context, object instance, params object[] args) {
-            object[] callargs = new object[args.Length + 1];
-            callargs[0] = instance;
-            Array.Copy(args, 0, callargs, 1, args.Length);
-            return Call(context, CallType.ImplicitInstance, callargs);
-        }
-
-        public object Call(CodeContext context, CallType callType, params object[] args) {
-            TargetSet ts = GetTargetSet(args.Length);
-            if (ts != null) return ts.Call(context, callType, args);
-            throw BadArgumentCount(callType, args.Length);
         }
 
         public object CallInstanceReflected(CodeContext context, object instance, params object[] args) {
@@ -432,81 +333,23 @@ namespace Microsoft.Scripting {
             return null;
         }
 
-        //public StandardRule<T> MakeBindingRule<T>(CallType callType, DynamicType[] types) {
-        //    List<MethodCandidate> targets = SelectTargets(callType, types);
-        //    if (targets.Count == 0) {
-        //        return StandardRule<T>.TypeError(NoApplicableTargetMessage(callType, types), types);
-        //    }
-        //    if (targets.Count > 1) {
-        //        return StandardRule<T>.TypeError(MultipleTargetsMessage(targets, callType, types), types);
-        //    }
-
-        //    return StandardRule<T>.Simple(targets[0].Target, types);
-        //}
-
-        public FastCallable MakeFastCallable() {
-            return FastCallable.Make(_binder._name, NeedsContext, _count, MakeCallTarget(NeedsContext));
-        }
-
-        public Delegate MakeCallTarget(bool needsContext) {
-            if (_targets.Count == 1) {
-                Delegate ret = _targets[0].Target.MakeCallTarget(needsContext);
-                if (ret != null) return ret;
-            }
-
-            switch (_count) {
-                case 0:
-                    return new CallTargetWithContext0(Call0);
-                case 1:
-                    return new CallTargetWithContext1(Call1);
-                case 2:
-                    return new CallTargetWithContext2(Call2);
-                case 3:
-                    return new CallTargetWithContext3(Call3);
-                case 4:
-                    return new CallTargetWithContext4(Call4);
-                case 5:
-                    return new CallTargetWithContext5(Call5);
-                default:
-                    return null;
-            }
-        }
-
-        public object Call0(CodeContext context) {
-            return Call(context, CallType.None, new object[] { });
-        }
-        public object Call1(CodeContext context, object arg0) {
-            return Call(context, CallType.None, new object[] { arg0 });
-        }
-        public object Call2(CodeContext context, object arg0, object arg1) {
-            return Call(context, CallType.None, new object[] { arg0, arg1 });
-        }
-        public object Call3(CodeContext context, object arg0, object arg1, object arg2) {
-            return Call(context, CallType.None, new object[] { arg0, arg1, arg2 });
-        }
-        public object Call4(CodeContext context, object arg0, object arg1, object arg2, object arg3) {
-            return Call(context, CallType.None, new object[] { arg0, arg1, arg2, arg3 });
-        }
-        public object Call5(CodeContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            return Call(context, CallType.None, new object[] { arg0, arg1, arg2, arg3, arg4 });
-        }
-        public object CallN(CodeContext context, object[] args) {
-            return Call(context, CallType.None, args);
-        }
-
-        public object Call(CodeContext context, CallType callType, object[] args) {
-            List<MethodCandidate> targets = FindTarget(callType, args);
+        public AbstractValue AbstractCall(CallType callType, IList<AbstractValue> args) {
+            Type[] types = AbstractValue.GetTypes(args);
+            List<MethodCandidate> targets = SelectTargets(callType, types);
 
             if (targets.Count == 1) {
-                if (_binder.IsBinaryOperator) {
-                    if (!targets[0].CheckArgs(context, args)) {
-                        return context.LanguageContext.GetNotImplemented(targets[0]);
-                    }
+                return targets[0].Target.AbstractCall(new AbstractContext(_binder._binder, null), args);
+            } else {
+                DynamicType[] dynamicTypes = new DynamicType[types.Length];
+                for (int i = 0; i < types.Length; i++) {
+                    dynamicTypes[i] = DynamicHelpers.GetDynamicTypeFromType(types[i]);
                 }
-                return targets[0].Target.Call(context, args);
+                if (targets.Count == 0) {
+                    return AbstractValue.TypeError(NoApplicableTargetMessage(callType, dynamicTypes));
+                } else {
+                    return AbstractValue.TypeError(MultipleTargetsMessage(targets, callType, dynamicTypes));
+                }
             }
-
-            return CallFailed(context, targets, callType, args);
         }
 
         public object CallReflected(CodeContext context, CallType callType, object[] args) {
@@ -663,61 +506,6 @@ namespace Microsoft.Scripting {
 
         public override string ToString() {
             return string.Format("TargetSet({0} on {1}, nargs={2})", _targets[0].Target.Method.Name, _targets[0].Target.Method.DeclaringType.FullName, _count);
-        }
-    }
-
-    class FastCallableUgly : FastCallable {
-        private MethodBinder binder;
-
-        internal FastCallableUgly(MethodBinder binder) {
-            this.binder = binder;
-        }
-
-        public override object Call(CodeContext context) {
-            return binder.Call(context, CallType.None, new object[] { });
-        }
-        public override object Call(CodeContext context, object arg0) {
-            return binder.Call(context, CallType.None, new object[] { arg0 });
-        }
-        public override object Call(CodeContext context, object arg0, object arg1) {
-            return binder.Call(context, CallType.None, new object[] { arg0, arg1 });
-        }
-        public override object Call(CodeContext context, object arg0, object arg1, object arg2) {
-            return binder.Call(context, CallType.None, new object[] { arg0, arg1, arg2 });
-        }
-        public override object Call(CodeContext context, object arg0, object arg1, object arg2, object arg3) {
-            return binder.Call(context, CallType.None, new object[] { arg0, arg1, arg2, arg3 });
-        }
-        public override object Call(CodeContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            return binder.Call(context, CallType.None, new object[] { arg0, arg1, arg2, arg3, arg4 });
-        }
-
-        public override object Call(CodeContext context, params object[] args) {
-            return binder.Call(context, CallType.None, args);
-        }
-
-        public override object CallInstance(CodeContext context, object arg0) {
-            return binder.Call(context, CallType.ImplicitInstance, new object[] { arg0 });
-        }
-        public override object CallInstance(CodeContext context, object arg0, object arg1) {
-            return binder.Call(context, CallType.ImplicitInstance, new object[] { arg0, arg1 });
-        }
-        public override object CallInstance(CodeContext context, object arg0, object arg1, object arg2) {
-            return binder.Call(context, CallType.ImplicitInstance, new object[] { arg0, arg1, arg2 });
-        }
-        public override object CallInstance(CodeContext context, object arg0, object arg1, object arg2, object arg3) {
-            return binder.Call(context, CallType.ImplicitInstance, new object[] { arg0, arg1, arg2, arg3 });
-        }
-        public override object CallInstance(CodeContext context, object arg0, object arg1, object arg2, object arg3, object arg4) {
-            return binder.Call(context, CallType.ImplicitInstance, new object[] { arg0, arg1, arg2, arg3, arg4 });
-        }
-
-        public override object CallInstance(CodeContext context, object instance, params object[] args) {
-            object[] nargs = new object[args.Length + 1];
-            nargs[0] = instance;
-            args.CopyTo(nargs, 1);
-            args = nargs;
-            return binder.Call(context, CallType.ImplicitInstance, args);
         }
     }
 }

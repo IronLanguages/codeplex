@@ -23,10 +23,10 @@ using IronPython.Runtime.Calls;
 namespace IronPython.Runtime.Calls {
     [PythonType("staticmethod")]
     public class StaticMethod : DynamicTypeSlot {
-        private object func;
+        private object _func;
 
         public StaticMethod(object func) {
-            this.func = func;
+            this._func = func;
         }
 
         public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
@@ -40,7 +40,7 @@ namespace IronPython.Runtime.Calls {
 
         [PythonName("__get__")]
         public object GetAttribute(object instance, object owner) {
-            return func;
+            return _func;
         }
         #endregion
     }

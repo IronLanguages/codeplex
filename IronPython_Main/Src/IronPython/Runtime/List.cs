@@ -34,13 +34,13 @@ namespace IronPython.Runtime {
 
     [PythonType("list"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     public class List : IMutableSequence, IList, ICodeFormattable, IValueEquality, IList<object> {
-        private int size;
-        private volatile object[] data;
+        private int _size;
+        private volatile object[] _data;
 
         [PythonName("__init__")]
         public void Initialize(CodeContext context) {
-            data = new object[8];
-            size = 0;
+            _data = new object[8];
+            _size = 0;
         }
 
         [PythonName("__init__")]
@@ -51,32 +51,32 @@ namespace IronPython.Runtime {
             if (items != null) {
                 if (this == items) {
                     // list.__init__(l, l) resets l
-                    size = 0;
+                    _size = 0;
                     return;
                 }
-                data = new object[items.Count];
+                _data = new object[items.Count];
                 int i = 0;
                 foreach (object item in items) {
-                    data[i++] = item;
+                    _data[i++] = item;
                 }
-                size = i; 
+                _size = i; 
                 return;
             }
 
             try {
                 if (DynamicHelpers.GetDynamicType(sequence).TryInvokeUnaryOperator(context, Operators.Length, sequence, out len)) {
                     int ilen = Converter.ConvertToInt32(len);
-                    data = new object[ilen];
-                    size = 0;
+                    _data = new object[ilen];
+                    _size = 0;
                     Extend(sequence);
                 } else {
-                    data = new object[20];
-                    size = 0;
+                    _data = new object[20];
+                    _size = 0;
                     Extend(sequence);
                 }
             } catch (MissingMemberException) {
-                data = new object[20];
-                size = 0;
+                _data = new object[20];
+                _size = 0;
                 Extend(sequence);
             }
         }
@@ -102,14 +102,14 @@ namespace IronPython.Runtime {
         }
 
         private List(int capacity) { 
-            data = new object[capacity]; 
-            size = 0; 
+            _data = new object[capacity]; 
+            _size = 0; 
         }
 
         //!!! do we need to copy
         private List(params object[] items) {
-            data = items; 
-            size = data.Length; 
+            _data = items; 
+            _size = _data.Length; 
         } 
 
         public List() : this(20) { }  //!!! figure out the right default size
@@ -119,21 +119,21 @@ namespace IronPython.Runtime {
             object len;
 
             if (items != null) {
-                data = new object[items.Count];
+                _data = new object[items.Count];
                 int i = 0;
                 foreach (object item in items) {
-                    data[i++] = item;
+                    _data[i++] = item;
                 }
-                size = i;
+                _size = i;
             } else if (PythonOps.TryInvokeOperator(DefaultContext.Default,
                 Operators.Length,
                 sequence,
                 out len)) { 
                 int ilen = Converter.ConvertToInt32(len);
-                data = new object[ilen];
+                _data = new object[ilen];
                 Extend(sequence);
             } else {
-                data = new object[20];
+                _data = new object[20];
                 Extend(sequence);
             }
         }
@@ -143,15 +143,15 @@ namespace IronPython.Runtime {
 
             int i = 0;
             foreach (object item in items) {
-                data[i++] = item;
+                _data[i++] = item;
             }
-            size = i;
+            _size = i;
         }
 
         public object[] GetObjectArray() {
             lock (this) {
-                object[] ret = new object[size];
-                Array.Copy(data, 0, ret, 0, size);
+                object[] ret = new object[_size];
+                Array.Copy(_data, 0, ret, 0, _size);
                 return ret;
             }
         }
@@ -161,10 +161,10 @@ namespace IronPython.Runtime {
         public static List operator +(List l1, List l2) {
             object[] them = l2.GetObjectArray();
             lock (l1) {
-                object[] ret = new object[l1.size + them.Length];
+                object[] ret = new object[l1._size + them.Length];
 
-                Array.Copy(l1.data, 0, ret, 0, l1.size);
-                Array.Copy(them, 0, ret, l1.size, them.Length);
+                Array.Copy(l1._data, 0, ret, 0, l1._size);
+                Array.Copy(them, 0, ret, l1._size, them.Length);
 
                 return new List(ret);
             }
@@ -192,14 +192,14 @@ namespace IronPython.Runtime {
             int n, newCount;
             object[] ret;
             lock (self) {
-                n = self.size;
+                n = self._size;
                 //??? is this useful optimization
                 //???if (n == 1) return new List(Array.ArrayList.Repeat(this[0], count));
 
                 newCount = n * count;
                 ret = new object[newCount];
 
-                Array.Copy(self.data, 0, ret, 0, n);
+                Array.Copy(self._data, 0, ret, 0, n);
             }
 
             // this should be extremely fast for large count as it uses the same algoithim as efficient integer powers
@@ -222,7 +222,7 @@ namespace IronPython.Runtime {
 
         [OperatorMethod, PythonName("__len__")]
         public int GetLength() {
-            return size;
+            return _size;
         }
 
         [OperatorMethod, PythonName("__contains__")]
@@ -232,8 +232,8 @@ namespace IronPython.Runtime {
 
         public bool ContainsValue(object value) {
             lock (this) {
-                for (int i = 0; i < size; i++) {
-                    object thisIndex = data[i];
+                for (int i = 0; i < _size; i++) {
+                    object thisIndex = _data[i];
 
                     // release the lock while we may call user code...
                     Monitor.Exit(this);
@@ -268,7 +268,7 @@ namespace IronPython.Runtime {
 
         [OperatorMethod, PythonName("__delitem__")]
         public virtual void DeleteItem(int index) {
-            lock (this) RawDelete(PythonOps.FixIndex(index, size));
+            lock (this) RawDelete(PythonOps.FixIndex(index, _size));
         }
 
 
@@ -276,18 +276,18 @@ namespace IronPython.Runtime {
         [OperatorMethod, PythonName("__imul__")]
         public object InPlaceMultiply(int count) {
             lock (this) {
-                int n = this.size;
+                int n = this._size;
                 int newCount = n * count;
                 EnsureSize(newCount);
 
                 int block = n;
                 int pos = n;
                 while (pos < newCount) {
-                    Array.Copy(data, 0, data, pos, Math.Min(block, newCount - pos));
+                    Array.Copy(_data, 0, _data, pos, Math.Min(block, newCount - pos));
                     pos += block;
                     block *= 2;
                 }
-                this.size = newCount;
+                this._size = newCount;
             }
             return this;
         }
@@ -298,7 +298,7 @@ namespace IronPython.Runtime {
             if (stop > GetLength()) stop = GetLength();
 
             object[] ret;
-            lock (this) ret = ArrayOps.GetSlice(data, start, stop);
+            lock (this) ret = ArrayOps.GetSlice(_data, start, stop);
             return new List(ret);
         }
 
@@ -306,7 +306,7 @@ namespace IronPython.Runtime {
             if (start < 0) start = 0;
             if (stop > GetLength()) stop = GetLength();
 
-            lock (this) return ArrayOps.GetSlice(data, start, stop);
+            lock (this) return ArrayOps.GetSlice(_data, start, stop);
         }
 
         [PythonName("__setslice__")]
@@ -325,10 +325,10 @@ namespace IronPython.Runtime {
             if (start > stop) return;
 
             int i = start;
-            for (int j = stop; j < size; j++, i++) {
-                data[i] = data[j];
+            for (int j = stop; j < _size; j++, i++) {
+                _data[i] = _data[j];
             }
-            size -= stop - start;
+            _size -= stop - start;
             return;
         }
 
@@ -337,13 +337,13 @@ namespace IronPython.Runtime {
                 if (slice == null) throw PythonOps.TypeError("list indicies must be integer or slice, not None");
 
                 int start, stop, step;
-                slice.Indicies(size, out start, out stop, out step);
+                slice.Indicies(_size, out start, out stop, out step);
 
                 if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) return new List();
 
                 if (step == 1) {
                     object[] ret;
-                    lock (this) ret = ArrayOps.GetSlice(data, start, stop);
+                    lock (this) ret = ArrayOps.GetSlice(_data, start, stop);
                     return new List(ret);
                 } else {
                     // start/stop/step could be near Int32.MaxValue, and simply addition could cause overflow
@@ -352,7 +352,7 @@ namespace IronPython.Runtime {
                     lock (this) {
                         int ri = 0;
                         for (int i = 0, index = start; i < n; i++, index += step) {
-                            ret[ri++] = data[index];
+                            ret[ri++] = _data[index];
                         }
                     }
                     return new List(ret);
@@ -366,10 +366,10 @@ namespace IronPython.Runtime {
                     // try to assign back to self: make a copy first
                     if (this == value) value = new List(value);
 
-                    slice.DoSliceAssign(this.SliceAssign, size, value);
+                    slice.DoSliceAssign(this.SliceAssign, _size, value);
                 } else {
                     int start, stop, step;
-                    slice.Indicies(size, out start, out stop, out step);
+                    slice.Indicies(_size, out start, out stop, out step);
                     if (start > stop) return;
 
                     SliceNoStep(start, stop, value);
@@ -383,11 +383,11 @@ namespace IronPython.Runtime {
             // save a ref to myData incase other calls cause us 
             // to re-size.
 
-            List newList = new List(data.Length); // race is tolerable...
+            List newList = new List(_data.Length); // race is tolerable...
 
             lock (this) {
                 for (int i = 0; i < start; i++) {
-                    newList.AddNoLock(data[i]);
+                    newList.AddNoLock(_data[i]);
                 }
             }
 
@@ -397,19 +397,19 @@ namespace IronPython.Runtime {
             }
 
             lock (this) {
-                for (int i = stop; i < size; i++) {
-                    newList.AddNoLock(data[i]);
+                for (int i = stop; i < _size; i++) {
+                    newList.AddNoLock(_data[i]);
                 }
 
-                if (newList.data.Length < data.Length) {
+                if (newList._data.Length < _data.Length) {
                     // shrinking our array may result in IndexOutOfRange in
                     // this[...] where we read w/o a lock.
-                    Array.Copy(newList.data, data, newList.data.Length);
+                    Array.Copy(newList._data, _data, newList._data.Length);
                 } else {
-                    this.data = newList.data;
+                    this._data = newList._data;
                 }
 
-                this.size = newList.size;
+                this._size = newList._size;
             }
         }
 
@@ -425,25 +425,25 @@ namespace IronPython.Runtime {
             lock (this) {
                 int start, stop, step;
                 // slice is sealed, indicies can't be user code...
-                slice.Indicies(size, out start, out stop, out step);
+                slice.Indicies(_size, out start, out stop, out step);
 
                 if (step > 0 && (start >= stop)) return;
                 if (step < 0 && (start <= stop)) return;
 
                 if (step == 1) {
                     int i = start;
-                    for (int j = stop; j < size; j++, i++) {
-                        data[i] = data[j];
+                    for (int j = stop; j < _size; j++, i++) {
+                        _data[i] = _data[j];
                     }
-                    size -= stop - start;
+                    _size -= stop - start;
                     return;
                 }
                 if (step == -1) {
                     int i = stop + 1;
-                    for (int j = start + 1; j < size; j++, i++) {
-                        data[i] = data[j];
+                    for (int j = start + 1; j < _size; j++, i++) {
+                        _data[i] = _data[j];
                     }
-                    size -= start - stop;
+                    _size -= start - stop;
                     return;
                 }
 
@@ -469,24 +469,24 @@ namespace IronPython.Runtime {
 
                 while (curr < stop && move < stop) {
                     if (move != skip) {
-                        data[curr++] = data[move];
+                        _data[curr++] = _data[move];
                     } else
                         skip += step;
                     move++;
                 }
-                while (stop < size) {
-                    data[curr++] = data[stop++];
+                while (stop < _size) {
+                    _data[curr++] = _data[stop++];
                 }
-                size = curr;
+                _size = curr;
             }
         }
 
         #endregion
 
         private void RawDelete(int index) {
-            int len = size - 1;
-            size = len;
-            object[] tempData = data;
+            int len = _size - 1;
+            _size = len;
+            object[] tempData = _data;
             for (int i = index; i < len; i++) {
                 tempData[i] = tempData[i + 1];
             }
@@ -499,13 +499,13 @@ namespace IronPython.Runtime {
         }
 
         internal void EnsureSize(int needed) {
-            if (data.Length >= needed) return;
+            if (_data.Length >= needed) return;
 
-            int newSize = Math.Max(size * 2, 4);
+            int newSize = Math.Max(_size * 2, 4);
             while (newSize < needed) newSize *= 2;
             object[] newData = new object[newSize];
-            data.CopyTo(newData, 0);
-            data = newData;
+            _data.CopyTo(newData, 0);
+            _data = newData;
         }
 
         [PythonName("append")]
@@ -520,14 +520,14 @@ namespace IronPython.Runtime {
         /// haven't yet exposed their list.
         /// </summary>
         internal void AddNoLock(object item) {
-            EnsureSize(size + 1);
-            data[size] = item;
-            size += 1;
+            EnsureSize(_size + 1);
+            _data[_size] = item;
+            _size += 1;
         }
 
         internal void AddNoLockNoDups(object item) {
-            for (int i = 0; i < size; i++) {
-                if (PythonOps.EqualRetBool(data[i], item)) {
+            for (int i = 0; i < _size; i++) {
+                if (PythonOps.EqualRetBool(_data[i], item)) {
                     return;
                 }
             }
@@ -547,8 +547,8 @@ namespace IronPython.Runtime {
         public int CountOfItem(object item) {
             lock (this) {
                 int cnt = 0;
-                for (int i = 0, len = size; i < len; i++) {
-                    object val = data[i];
+                for (int i = 0, len = _size; i < len; i++) {
+                    object val = _data[i];
 
                     Monitor.Exit(this);
                     try {
@@ -575,12 +575,12 @@ namespace IronPython.Runtime {
 
         [PythonName("index")]
         public int Index(object item) {
-            return Index(item, 0, size);
+            return Index(item, 0, _size);
         }
 
         [PythonName("index")]
         public int Index(object item, int start) {
-            return Index(item, start, size);
+            return Index(item, start, _size);
         }
 
         [PythonName("index")]
@@ -596,14 +596,14 @@ namespace IronPython.Runtime {
             int locSize;
             lock (this) {
                 // get a stable view on size / data...
-                locData = data;
-                locSize = size;
+                locData = _data;
+                locSize = _size;
             }
 
             start = PythonOps.FixSliceIndex(start, locSize);
             stop = PythonOps.FixSliceIndex(stop, locSize);
 
-            for (int i = start; i < Math.Min(stop, Math.Min(locSize, size)); i++) {
+            for (int i = start; i < Math.Min(stop, Math.Min(locSize, _size)); i++) {
                 if (PythonOps.EqualRetBool(locData[i], item)) return i;
             }
 
@@ -612,7 +612,7 @@ namespace IronPython.Runtime {
 
         [PythonName("index")]
         public int Index(object item, object start) {
-            return Index(item, Converter.ConvertToSliceIndex(start), size);
+            return Index(item, Converter.ConvertToSliceIndex(start), _size);
         }
 
         [PythonName("index")]
@@ -622,43 +622,43 @@ namespace IronPython.Runtime {
 
         [PythonName("insert")]
         public void Insert(int index, object value) {
-            if (index >= size) {
+            if (index >= _size) {
                 Append(value);
                 return;
             }
 
             lock (this) {
-                index = PythonOps.FixSliceIndex(index, size);
+                index = PythonOps.FixSliceIndex(index, _size);
 
-                EnsureSize(size + 1);
-                size += 1;
-                for (int i = size - 1; i > index; i--) {
-                    data[i] = data[i - 1];
+                EnsureSize(_size + 1);
+                _size += 1;
+                for (int i = _size - 1; i > index; i--) {
+                    _data[i] = _data[i - 1];
                 }
-                data[index] = value;
+                _data[index] = value;
             }
         }
 
         [PythonName("pop")]
         public object Pop() {
-            if (this.size == 0) throw PythonOps.IndexError("pop off of empty list");
+            if (this._size == 0) throw PythonOps.IndexError("pop off of empty list");
 
             lock (this) {
-                this.size -= 1;
-                return data[this.size];
+                this._size -= 1;
+                return _data[this._size];
             }
         }
 
         [PythonName("pop")]
         public object Pop(int index) {
             lock (this) {
-                index = PythonOps.FixIndex(index, size);
-                if (size == 0) throw PythonOps.IndexError("pop off of empty list");
+                index = PythonOps.FixIndex(index, _size);
+                if (_size == 0) throw PythonOps.IndexError("pop off of empty list");
 
-                object ret = data[index];
-                size -= 1;
-                for (int i = index; i < size; i++) {
-                    data[i] = data[i + 1];
+                object ret = _data[index];
+                _size -= 1;
+                for (int i = index; i < _size; i++) {
+                    _data[i] = _data[i + 1];
                 }
                 return ret;
             }
@@ -671,11 +671,11 @@ namespace IronPython.Runtime {
 
         [PythonName("reverse")]
         public void Reverse() {
-            lock (this) Array.Reverse(data, 0, size);
+            lock (this) Array.Reverse(_data, 0, _size);
         }
 
         internal void Reverse(int index, int count) {
-            lock (this) Array.Reverse(data, index, count);
+            lock (this) Array.Reverse(_data, index, count);
         }
 
         private class DefaultPythonComparer : IComparer {
@@ -729,25 +729,25 @@ namespace IronPython.Runtime {
                 (IComparer)new DefaultPythonComparer() :
                 (IComparer)new FunctionComparer(cmp);
 
-            DoSort(comparer, key, reverse, 0, size);
+            DoSort(comparer, key, reverse, 0, _size);
         }
 
         internal void DoSort(IComparer cmp, object key, bool reverse, int index, int count) {
             lock (this) {
-                object[] sortData = data;
-                int sortSize = size;
+                object[] sortData = _data;
+                int sortSize = _size;
 
                 try {
                     // make the list appear empty for the duration of the sort...
-                    data = RuntimeHelpers.EmptyObjectArray;
-                    size = 0;
+                    _data = RuntimeHelpers.EmptyObjectArray;
+                    _size = 0;
 
                     if (key != null) {
                         object[] keys = new object[sortSize];
                         for (int i = 0; i < sortSize; i++) {
-                            Debug.Assert(data.Length == 0);
+                            Debug.Assert(_data.Length == 0);
                             keys[i] = PythonCalls.Call(key, sortData[i]);
-                            if (data.Length != 0) throw PythonOps.ValueError("list mutated while determing keys");
+                            if (_data.Length != 0) throw PythonOps.ValueError("list mutated while determing keys");
                         }
 
                         sortData = ListMergeSort(sortData, keys, cmp, index, count, reverse);
@@ -756,8 +756,8 @@ namespace IronPython.Runtime {
                     }
                 } finally {
                     // restore the list to it's old data & size (which is now supported appropriately)
-                    data = sortData;
-                    size = sortSize;
+                    _data = sortData;
+                    _size = sortSize;
                 }
 
             }
@@ -878,17 +878,17 @@ namespace IronPython.Runtime {
         /// Compares the two specified keys
         /// </summary>
         private bool DoCompare(object[] keys, IComparer cmp, int p, int q, bool reverse) {
-            Debug.Assert(data.Length == 0);
+            Debug.Assert(_data.Length == 0);
 
             int result = cmp.Compare(keys[p], keys[q]);
             bool ret = reverse ? (result >= 0) : (result <= 0);
 
-            if (data.Length != 0) throw PythonOps.ValueError("list mutated during sort");
+            if (_data.Length != 0) throw PythonOps.ValueError("list mutated during sort");
             return ret;
         }
 
         internal int BinarySearch(int index, int count, object value, IComparer comparer) {
-            lock (this) return Array.BinarySearch(data, index, count, value, comparer);
+            lock (this) return Array.BinarySearch(_data, index, count, value, comparer);
         }
 
         internal int CompareToWorker(List l) {
@@ -897,15 +897,15 @@ namespace IronPython.Runtime {
             // the lists
             int result;
             if (this.GetHashCode() < l.GetHashCode()) {
-                lock (this) lock (l) result = PythonOps.CompareArrays(data, size, l.data, l.size);
+                lock (this) lock (l) result = PythonOps.CompareArrays(_data, _size, l._data, l._size);
             } else if (this.GetHashCode() != l.GetHashCode()) {
-                lock (l) lock (this) result = PythonOps.CompareArrays(data, size, l.data, l.size);
+                lock (l) lock (this) result = PythonOps.CompareArrays(_data, _size, l._data, l._size);
             } else {
                 // rare, but possible.  We need a second opinion
                 if (IdDispenser.GetId(this) < IdDispenser.GetId(l))
-                    lock (this) lock (l) result = PythonOps.CompareArrays(data, size, l.data, l.size);
+                    lock (this) lock (l) result = PythonOps.CompareArrays(_data, _size, l._data, l._size);
                 else
-                    lock (l) lock (this) result = PythonOps.CompareArrays(data, size, l.data, l.size);
+                    lock (l) lock (this) result = PythonOps.CompareArrays(_data, _size, l._data, l._size);
             }
             return result;
         }
@@ -921,12 +921,12 @@ namespace IronPython.Runtime {
                 // no locks works here, we either return an
                 // old item (as if we were called first) or return
                 // a current item...                
-                return data[PythonOps.FixIndex(index, size)];
+                return _data[PythonOps.FixIndex(index, _size)];
             }
             set {
                 // but we need a lock here incase we're assigning
                 // while re-sizing.
-                lock (this) data[PythonOps.FixIndex(index, size)] = value;
+                lock (this) _data[PythonOps.FixIndex(index, _size)] = value;
             }
         }
 
@@ -939,7 +939,7 @@ namespace IronPython.Runtime {
         }
 
         public void Clear() {
-            lock (this) size = 0;
+            lock (this) _size = 0;
         }
 
         public int IndexOf(object value) {
@@ -948,11 +948,11 @@ namespace IronPython.Runtime {
             object[] locData;
             int locSize;
             lock (this) {
-                locData = data;
-                locSize = size;
+                locData = _data;
+                locSize = _size;
             }
 
-            for (int i = 0; i < Math.Min(locSize, size); i++) {
+            for (int i = 0; i < Math.Min(locSize, _size); i++) {
                 if (PythonOps.EqualRetBool(locData[i], value)) return i;
             }
             return -1;
@@ -961,7 +961,7 @@ namespace IronPython.Runtime {
         public int Add(object value) {
             lock (this) {
                 AddNoLock(value);
-                return size - 1;
+                return _size - 1;
             }
         }
 
@@ -978,15 +978,15 @@ namespace IronPython.Runtime {
         }
 
         public int Count {
-            get { return size; }
+            get { return _size; }
         }
 
         public void CopyTo(Array array, int index) {
-            Array.Copy(data, 0, array, index, size);
+            Array.Copy(_data, 0, array, index, _size);
         }
 
         public void CopyTo(Array array, int index, int arrayIndex, int count) {
-            Array.Copy(data, index, array, arrayIndex, count);
+            Array.Copy(_data, index, array, arrayIndex, count);
         }
 
         public object SyncRoot {
@@ -1022,7 +1022,7 @@ namespace IronPython.Runtime {
 
             public object Current {
                 get {
-                    return l.data[index];
+                    return l._data[index];
                 }
             }
 
@@ -1030,7 +1030,7 @@ namespace IronPython.Runtime {
                 if (sinkState) return false;
 
                 index++;
-                bool hit = index > l.size - 1;
+                bool hit = index > l._size - 1;
                 if (hit) sinkState = true;
                 return !hit;
             }
@@ -1072,9 +1072,9 @@ namespace IronPython.Runtime {
         public string ToCodeString(CodeContext context) {
             StringBuilder buf = new StringBuilder();
             buf.Append("[");
-            for (int i = 0; i < size; i++) {
+            for (int i = 0; i < _size; i++) {
                 if (i > 0) buf.Append(", ");
-                buf.Append(PythonOps.StringRepr(data[i]));
+                buf.Append(PythonOps.StringRepr(_data[i]));
             }
             buf.Append("]");
             return buf.ToString();

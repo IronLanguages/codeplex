@@ -34,6 +34,10 @@ namespace Microsoft.Scripting.Ast {
             _type = method.ReturnType;
         }
 
+        public StaticUnaryExpression(Operators op, Expression operand, Type type)
+            : this(op, operand, type, SourceSpan.None) {
+        }
+
         public StaticUnaryExpression(Operators op, Expression operand, Type type, SourceSpan span)
             : base(span) {
             if (operand == null) throw new ArgumentNullException("operand");

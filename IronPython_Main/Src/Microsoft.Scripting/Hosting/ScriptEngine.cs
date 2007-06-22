@@ -761,6 +761,16 @@ namespace Microsoft.Scripting.Hosting {
         #endregion
 
         public virtual void Shutdown() {
+            DumpDebugInfo();
+        }
+
+        public void DumpDebugInfo() {
+            if (ScriptDomainManager.Options.EngineDebug) {
+                PerfTrack.DumpStats();
+                try {
+                    ScriptDomainManager.CurrentManager.Snippets.Dump();
+                } catch (NotSupportedException) { } // usually not important info...
+            }
         }
 
         #region // TODO: Microsoft.Scripting.Vestigial Workarounds (used from MSV instead of PythonEngine)

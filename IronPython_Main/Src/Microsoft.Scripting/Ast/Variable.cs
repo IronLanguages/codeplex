@@ -130,8 +130,7 @@ namespace Microsoft.Scripting.Ast {
                     _lift = true;
                     break;
                 default:
-                    Debug.Assert(false, "Cannot lift to a closure :" + _kind.ToString());
-                    break;
+                    throw new InvalidOperationException(String.Format("Cannot lift variable of kind {0} to a closure ('{1}')", _kind, _name));
             }
         }
 

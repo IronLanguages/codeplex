@@ -32,6 +32,8 @@ namespace Microsoft.Scripting.Generation {
             get { return 0; }
         }
 
+
+
         public override object Build(CodeContext context, object[] args) {
             return context.LanguageContext.Binder.Convert(args[_index], _parameterType);
         }
@@ -42,6 +44,11 @@ namespace Microsoft.Scripting.Generation {
 
         public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
             return binder.ConvertExpression(parameters[_index], _parameterType);
+        }
+
+        public override AbstractValue AbstractBuild(AbstractContext context, IList<AbstractValue> parameters) {
+            AbstractValue value = parameters[_index];
+            return context.Binder.AbstractExecute(ConvertToAction.Make(_parameterType), new AbstractValue[] { value });
         }
 
         public int Index {

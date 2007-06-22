@@ -31,8 +31,6 @@ namespace Microsoft.Scripting.Generation {
         private ArgBuilder _instanceBuilder;
         private ReturnBuilder _returnBuilder;
 
-        private FastCallable _fastCallable;
-
         public MethodTarget(ActionBinder binder, MethodBase method, int parameterCount, ArgBuilder instanceBuilder, IList<ArgBuilder> argBuilders, ReturnBuilder returnBuilder) {
             this._binder = binder;
             this._method = method;
@@ -55,18 +53,6 @@ namespace Microsoft.Scripting.Generation {
 
         public int ParameterCount {
             get { return _parameterCount; }
-        }
-
-        public object Call(CodeContext context, object[] args) {
-            if (_fastCallable == null) {
-                _fastCallable = MakeFastCallable();
-            }
-
-            if (_fastCallable == null) {
-                return CallReflected(context, args);
-            } else {
-                return _fastCallable.Call(context, args);
-            }
         }
 
         public bool CheckArgs(CodeContext context, object[] args) {
@@ -124,12 +110,6 @@ namespace Microsoft.Scripting.Generation {
             return _returnBuilder.Build(context, callArgs, result);
         }
 
-        public FastCallable MakeFastCallable() {
-            Delegate target = MakeCallTarget(NeedsContext);
-            if (target == null) return null;
-            return FastCallable.Make(Method.Name, NeedsContext, ParameterCount, target);
-        }
-
         public bool CanMakeCallTarget() {
             if (!CompilerHelpers.CanOptimizeMethod(Method)) return false;
 
@@ -143,97 +123,6 @@ namespace Microsoft.Scripting.Generation {
                 if (!ab.CanGenerate) return false;
             }
             return true;
-        }
-
-        internal bool CanMakeCallSiteBinding() {
-            return CanMakeCallTarget() && !NeedsContext;
-        }
-
-        private bool IsDirectTarget(bool needsContext) {
-            if (needsContext != NeedsContext) return false;
-            if (!(CompilerHelpers.IsStatic(Method))) return false;
-            if (!(Method is MethodInfo)) return false;
-            if (_returnBuilder.CountOutParams > 0) return false;
-            int argCount = 0;
-            if (NeedsContext) argCount++;
-            while (argCount < _argBuilders.Count) {
-                SimpleArgBuilder sab = _argBuilders[argCount++] as SimpleArgBuilder;
-                if (sab == null || sab.Type != typeof(object)) return false;
-            }
-            return argCount <= CallTargets.MaximumCallArgs;
-        }
-
-        public Delegate MakeCallTarget(bool needsContext) {
-            if (!CanMakeCallTarget()) {
-                PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "NonOptimial:" + this.ToString());
-                return null;
-            }
-
-            if (IsDirectTarget(needsContext)) {
-                Delegate ret = FastCallable.MakeDelegate((MethodInfo)Method);
-                if (ret != null) return ret;
-            }
-
-            if (ScriptDomainManager.Options.EngineDebug) {
-                PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "CT:" + this.ToString());
-            }
-
-            int contextOffset = needsContext ? 1 : 0;
-            Type[] paramTypes = new Type[ParameterCount + contextOffset];
-            if (needsContext) paramTypes[0] = typeof(CodeContext);
-
-            for (int i = 0; i < ParameterCount; i++) {
-                paramTypes[i + contextOffset] = typeof(object);
-            }
-
-            CodeGen cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
-                Method.Name, typeof(object), paramTypes, null);
-
-            try {
-                if (needsContext) {
-                    cg.ContextSlot = cg.ArgumentSlots[0];
-                }
-                Slot contextSlot = needsContext ? cg.ArgumentSlots[0] : null;
-
-                Debug.Assert(!needsContext || contextSlot != null, this.Method.Name + " missing context slot on " + Method.DeclaringType.Name);
-
-                Slot[] argSlots = new Slot[ParameterCount];
-                for (int i = 0; i < argSlots.Length; i++) {
-                    argSlots[i] = cg.ArgumentSlots[i + contextOffset];
-                }
-
-                EmitConversionsAndCall(cg, argSlots);
-                cg.EmitConvert(_returnBuilder.ReturnType, cg.MethodInfo.ReturnType);
-                cg.EmitReturn();
-            } finally {
-                cg.Finish();
-            }
-
-            return cg.CreateDelegate(CallTargets.GetTargetType(needsContext, ParameterCount));
-        }
-
-        internal void EmitConversionsAndCall(CodeGen cg, IList<Slot> argSlots) {
-            cg.Binder = _binder; //TODO this is an ugly dependency
-
-            if (!CompilerHelpers.IsStatic(Method)) {
-                if (Method.DeclaringType.IsValueType) {
-                    SimpleArgBuilder sb = _instanceBuilder as SimpleArgBuilder;
-                    argSlots[sb.Index].EmitGet(cg);
-                    cg.Emit(OpCodes.Unbox, Method.DeclaringType);
-                } else {
-                    _instanceBuilder.Generate(cg, argSlots);
-                }
-            }
-
-            for (int i = 0; i < _argBuilders.Count; i++) {
-                _argBuilders[i].Generate(cg, argSlots);
-            }
-
-            Type returnType = EmitCall(cg);
-
-            //!!! add support for reference arg remapping
-
-            _returnBuilder.Generate(cg, argSlots);
         }
 
         public Expression MakeExpression(ActionBinder binder, Variable[] variables) {
@@ -255,17 +144,35 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-
-        private Type EmitCall(CodeGen cg) {
-            MethodInfo mi = Method as MethodInfo;
-
-            if (mi != null) {
-                cg.EmitCall(mi);
-                return mi.ReturnType;
-            } else {
-                cg.EmitNew((ConstructorInfo)Method);
-                return ((ConstructorInfo)Method).DeclaringType;
+        public AbstractValue AbstractCall(AbstractContext context, IList<AbstractValue> args) {
+            AbstractValue[] callArgs = new AbstractValue[_argBuilders.Count];
+            for (int i = 0; i < _argBuilders.Count; i++) {
+                callArgs[i] = _argBuilders[i].AbstractBuild(context, args);
             }
+
+            Expression[] argExprs = new Expression[callArgs.Length];
+            for (int i = 0; i < callArgs.Length; i++) {
+                Expression expr = callArgs[i].Expression;
+                if (expr == null) {
+                    argExprs = null;
+                    break;
+                } else {
+                    argExprs[i] = expr;
+                }
+            }
+
+            Expression callExpr = null;
+            if (argExprs != null) {
+                MethodInfo mi = Method as MethodInfo;
+                if (mi != null) {
+                    Expression instance = mi.IsStatic ? null : _instanceBuilder.AbstractBuild(context, args).Expression;
+                    callExpr = MethodCallExpression.Call(instance, mi, argExprs);
+                } else {
+                    callExpr =  NewExpression.New((ConstructorInfo)Method, argExprs);
+                }
+            }
+
+            return AbstractValue.LimitType(this.ReturnType, callExpr);
         }
 
         private static int FindMaxPriority(IList<ArgBuilder> abs) {
@@ -316,7 +223,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override string ToString() {
-            return string.Format("MethodTarget({0} on {1}, optimized={2})", Method, Method.DeclaringType.FullName, _fastCallable != null);
+            return string.Format("MethodTarget({0} on {1})", Method, Method.DeclaringType.FullName);
         }
 
         public Type ReturnType {

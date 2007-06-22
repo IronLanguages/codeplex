@@ -61,6 +61,10 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        public override object Execute(CodeContext context) {
+            return Statement.Continue;
+        }
+
         public override void Walk(Walker walker) {
             if (walker.Walk(this)) {
                 ;

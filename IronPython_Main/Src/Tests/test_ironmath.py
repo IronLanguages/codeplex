@@ -28,12 +28,12 @@ import clr
 if is_cli:
     math_assembly = (1L).GetType().Assembly
     clr.AddReference(math_assembly)
+load_iron_python_test()    
+import IronPythonTest
+    
 from Microsoft.Scripting.Math import BigInteger
 from Microsoft.Scripting.Math import Complex64
 
-
-load_iron_python_test()
-import IronPythonTest
 
 class myFormatProvider(IFormatProvider):
     def ToString():pass

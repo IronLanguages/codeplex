@@ -28,7 +28,6 @@ namespace IronPython.Compiler.Ast {
         private readonly Arg[] _args;
         private bool _hasArgsTuple, _hasKeywordDict;
         private int _keywordCount, _extraArgs;
-        private static bool _callAction = true;
 
         public CallExpression(Expression target, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs) {
             _target = target;
@@ -65,28 +64,22 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             MSAst.Arg[] args = ag.Transform(_args);
-            bool callOk = true;
-            if (_callAction && args.Length < 6) {
+
+            if (args.Length < 6) {
                 MSAst.Expression[] argVals = new MSAst.Expression[args.Length + 1];
                 int i = 1;
                 argVals[0] = ag.Transform(_target);
                 foreach (MSAst.Arg arg in args) {
-                    if (arg.Kind == MSAst.Arg.ArgumentKind.Named) {
-                        callOk = false;
-                        break;
-                    }
                     argVals[i] = args[i-1].Expression;
                     i++;
                 }
 
-                if (callOk) {
-                    return MSAst.ActionExpression.Call(
-                        Span,
-                        CallAction.Make(args),
-                        type,
-                        argVals
-                    );
-                }
+                return MSAst.ActionExpression.Call(
+                    Span,
+                    CallAction.Make(args),
+                    type,
+                    argVals
+                );
             }
 
             return new MSAst.CallExpression(

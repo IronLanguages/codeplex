@@ -84,9 +84,6 @@ namespace System {
     public interface ISerializable {
     }
 
-    public class ThreadStaticAttribute : Attribute {
-    }
-
     [Flags]
     public enum StringSplitOptions {
         None = 0,
@@ -111,6 +108,95 @@ namespace System {
         Yellow = 14,
         White = 15,
     }
+
+
+    // BitArray was removed from CoreCLR, recreate a simple version here
+    public class BitArray {
+        readonly int[] _data;
+        readonly int _count;
+
+        public int Length {
+            get { return _count; }
+        }
+
+        public int Count {
+            get { return _count; }
+        }
+
+        public BitArray(int count)
+            : this(count, false) {
+        }
+
+        public BitArray(int count, bool value) {
+            this._count = count;
+            this._data = new int[(count + 31) / 32];
+            if (value) {
+                Not();
+            }
+        }
+
+        public BitArray(BitArray bits) {
+            _count = bits._count;
+            _data = (int[])bits._data.Clone();
+        }
+
+        public bool Get(int index) {
+            if (index < 0 || index >= _count) {
+                throw new IndexOutOfRangeException();
+            }
+            int elem = index / 32, mask = 1 << (index % 32);
+            return (_data[elem] & mask) != 0;
+        }
+
+        public void Set(int index, bool value) {
+            if (index < 0 || index >= _count) {
+                throw new IndexOutOfRangeException();
+            }
+            int elem = index / 32, mask = 1 << (index % 32);
+            if (value) {
+                _data[elem] |= mask;
+            } else {
+                _data[elem] &= ~mask;
+            }
+        }
+
+        public void SetAll(bool value) {
+            int set = value ? -1 : 0;
+            for (int i = 0; i < _data.Length; ++i) {
+                _data[i] = set;
+            }
+        }
+
+        public void And(BitArray bits) {
+            if (bits == null) {
+                throw new ArgumentNullException();
+            } else if (bits._count != _count) {
+                throw new ArgumentException("Array lengths differ");
+            }
+            for (int i = 0; i < _data.Length; ++i) {
+                _data[i] &= bits._data[i];
+            }
+        }
+
+        public void Or(BitArray bits) {
+            if (bits == null) {
+                throw new ArgumentNullException();
+            } else if (bits._count != _count) {
+                throw new ArgumentException("Array lengths differ");
+            }
+            for (int i = 0; i < _data.Length; ++i) {
+                _data[i] |= bits._data[i];
+            }
+        }
+
+        public BitArray Not() {
+            for (int i = 0; i < _data.Length; ++i) {
+                _data[i] = ~_data[i];
+            }
+            return this;
+        }
+    }
+
 }
 
 #endif

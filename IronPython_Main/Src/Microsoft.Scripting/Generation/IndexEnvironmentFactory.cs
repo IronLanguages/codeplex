@@ -29,11 +29,11 @@ namespace Microsoft.Scripting.Generation {
     /// members.
     /// </summary>
     class IndexEnvironmentFactory : EnvironmentFactory {
-        private int size;
-        private int index = 1;  // first index reserved for storing our dictionary
+        private int _size;
+        private int _index = 1;  // first index reserved for storing our dictionary
 
         public IndexEnvironmentFactory(int size) {
-            this.size = size;
+            this._size = size;
         }
 
         public override Type EnvironmentType {
@@ -49,8 +49,8 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override Storage MakeEnvironmentReference(SymbolId name, Type type) {
-            if (index < size) {
-                return new IndexEnvironmentReference(index++, type);
+            if (_index < _size) {
+                return new IndexEnvironmentReference(_index++, type);
             } else {
                 throw new InvalidOperationException("not enough environment references available");
             }
@@ -68,7 +68,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override void EmitStorage(CodeGen cg) {            
-            cg.EmitInt(size);
+            cg.EmitInt(_size);
             cg.Emit(OpCodes.Newarr, typeof(object));
 
         }

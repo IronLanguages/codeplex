@@ -124,7 +124,7 @@ namespace IronPython.Modules {
 
         private static object FixFindAllMatch(RE_Pattern pat, MatchCollection mc) {
             object[] matches = new object[mc.Count];
-            int numgrps = pat.re.GetGroupNumbers().Length;
+            int numgrps = pat._re.GetGroupNumbers().Length;
             for (int i = 0; i < mc.Count; i++) {
                 if (numgrps > 2) { // CLR gives us a "bonus" group of 0 - the entire expression
                     //  at this point we have more than one group in the pattern;
@@ -232,44 +232,44 @@ namespace IronPython.Modules {
         /// </summary>
         [PythonType("RE_Pattern")]
         public class RE_Pattern : IWeakReferenceable {
-            internal Regex re;
-            private PythonDictionary groups;
-            private int compileFlags;
-            private WeakRefTracker weakRefTracker;
-            internal ParsedRegex pre;
+            internal Regex _re;
+            private PythonDictionary _groups;
+            private int _compileFlags;
+            private WeakRefTracker _weakRefTracker;
+            internal ParsedRegex _pre;
 
             public RE_Pattern(object pattern)
                 : this(pattern, 0) {
             }
 
             public RE_Pattern(object pattern, int flags) {
-                pre = PreParseRegex(ValidatePattern(pattern));
+                _pre = PreParseRegex(ValidatePattern(pattern));
                 try {
                     RegexOptions opts = FlagsToOption(flags);
-                    this.re = new Regex(pre.Pattern, opts);
+                    this._re = new Regex(_pre.Pattern, opts);
                 } catch (ArgumentException e) {
                     throw ExceptionConverter.CreateThrowable(error, e.Message);
                 }
-                this.compileFlags = flags;
+                this._compileFlags = flags;
             }
 
             [PythonName("match")]
             public RE_Match Match(object text) {
                 string input = ValidateString(text, "text");
-                return RE_Match.makeMatch(re.Match(input), this, input, 0);
+                return RE_Match.makeMatch(_re.Match(input), this, input, 0);
             }
 
             [PythonName("match")]
             public RE_Match Match(object text, int pos) {
                 string input = ValidateString(text, "text");
-                return RE_Match.makeMatch(re.Match(input, pos), this, input, pos);
+                return RE_Match.makeMatch(_re.Match(input, pos), this, input, pos);
             }
 
             [PythonName("match")]
             public RE_Match Match(object text, [DefaultParameterValue(0)]int pos, int endpos) {
                 string input = ValidateString(text, "text");
                 return RE_Match.makeMatch(
-                    re.Match(input.Substring(0, endpos), pos),
+                    _re.Match(input.Substring(0, endpos), pos),
                     this,
                     input,
                     pos);
@@ -278,19 +278,19 @@ namespace IronPython.Modules {
             [PythonName("search")]
             public RE_Match Search(object text) {
                 string input = ValidateString(text, "text");
-                return RE_Match.make(re.Match(input), this, input);
+                return RE_Match.make(_re.Match(input), this, input);
             }
 
             [PythonName("search")]
             public RE_Match Search(object text, int pos) {
                 string input = ValidateString(text, "text");
-                return RE_Match.make(re.Match(input, pos, input.Length - pos), this, input);
+                return RE_Match.make(_re.Match(input, pos, input.Length - pos), this, input);
             }
 
             [PythonName("search")]
             public RE_Match Search(object text, int pos, int endpos) {
                 string input = ValidateString(text, "text");
-                return RE_Match.make(re.Match(input, pos, Math.Max(endpos - pos, 0)), this, input);
+                return RE_Match.make(_re.Match(input, pos, Math.Max(endpos - pos, 0)), this, input);
             }
 
             [PythonName("findall")]
@@ -316,7 +316,7 @@ namespace IronPython.Modules {
                     int end = Converter.ConvertToInt32(endpos);
                     against = against.Substring(0, Math.Max(end, 0));
                 }
-                return re.Matches(against, pos);
+                return _re.Matches(against, pos);
             }
 
             [PythonName("finditer")]
@@ -351,7 +351,7 @@ namespace IronPython.Modules {
                 else {
                     // iterate over all matches
                     string theStr = ValidateString(@string, "string");
-                    MatchCollection matches = re.Matches(theStr);
+                    MatchCollection matches = _re.Matches(theStr);
                     int lastPos = 0; // is either start of the string, or first position *after* the last match
                     int nSplits = 0; // how many splits have occurred?
                     foreach (Match m in matches) {
@@ -396,7 +396,7 @@ namespace IronPython.Modules {
 
                 Match prev = null;
                 string input = ValidateString(@string, "string");
-                return re.Replace(
+                return _re.Replace(
                     input,
                     delegate(Match match) {
                         //  from the docs: Empty matches for the pattern are replaced 
@@ -436,7 +436,7 @@ namespace IronPython.Modules {
 
                 Match prev = null;
                 string input = ValidateString(@string, "string");
-                res = re.Replace(
+                res = _re.Replace(
                     input,
                     delegate(Match match) {
                         //  from the docs: Empty matches for the pattern are replaced 
@@ -460,32 +460,32 @@ namespace IronPython.Modules {
             public int Flags {
                 [PythonName("flags")]
                 get {
-                    return compileFlags;
+                    return _compileFlags;
                 }
             }
 
             public PythonDictionary GroupIndex {
                 [PythonName("groupindex")]
                 get {
-                    if (groups == null) {
+                    if (_groups == null) {
                         PythonDictionary d = new PythonDictionary();
-                        string[] names = re.GetGroupNames();
-                        int[] nums = re.GetGroupNumbers();
+                        string[] names = _re.GetGroupNames();
+                        int[] nums = _re.GetGroupNumbers();
                         for (int i = 1; i < names.Length; i++) {
                             if (Char.IsDigit(names[i][0])) continue;    // skip numeric names
 
                             d[names[i]] = nums[i];
                         }
-                        groups = d;
+                        _groups = d;
                     }
-                    return groups;
+                    return _groups;
                 }
             }
 
             public string Pattern {
                 [PythonName("pattern")]
                 get {
-                    return pre.UserPattern;
+                    return _pre.UserPattern;
                 }
             }
 
@@ -493,11 +493,11 @@ namespace IronPython.Modules {
             #region IWeakReferenceable Members
 
             public WeakRefTracker GetWeakRef() {
-                return weakRefTracker;
+                return _weakRefTracker;
             }
 
             public bool SetWeakRef(WeakRefTracker value) {
-                weakRefTracker = value;
+                _weakRefTracker = value;
                 return true;
             }
 
@@ -510,10 +510,10 @@ namespace IronPython.Modules {
 
         [PythonType("RE_Match")]
         public class RE_Match {
-            RE_Pattern pattern;
-            private Match m;
-            private string text;
-            private int lastindex = -1;
+            RE_Pattern _pattern;
+            private Match _m;
+            private string _text;
+            private int _lastindex = -1;
 
             #region Internal makers
             internal static RE_Match make(Match m, RE_Pattern pattern, string input) {
@@ -529,9 +529,9 @@ namespace IronPython.Modules {
 
             #region Public ctors
             public RE_Match(Match m, RE_Pattern pattern, string text) {
-                this.m = m;
-                this.pattern = pattern;
-                this.text = text;
+                this._m = m;
+                this._pattern = pattern;
+                this._text = text;
             }
             #endregion
 
@@ -543,30 +543,30 @@ namespace IronPython.Modules {
 
             [PythonName("end")]
             public int End() {
-                return m.Index + m.Length;
+                return _m.Index + _m.Length;
             }
 
             [PythonName("start")]
             public int Start() {
-                return m.Index;
+                return _m.Index;
             }
 
             [PythonName("start")]
             public int Start(object group) {
                 int grpIndex = GetGroupIndex(group);
-                if (!m.Groups[grpIndex].Success) {
+                if (!_m.Groups[grpIndex].Success) {
                     return -1;
                 }
-                return m.Groups[grpIndex].Index;
+                return _m.Groups[grpIndex].Index;
             }
 
             [PythonName("end")]
             public int End(object group) {
                 int grpIndex = GetGroupIndex(group);
-                if (!m.Groups[grpIndex].Success) {
+                if (!_m.Groups[grpIndex].Success) {
                     return -1;
                 }
-                return m.Groups[grpIndex].Index + m.Groups[grpIndex].Length;
+                return _m.Groups[grpIndex].Index + _m.Groups[grpIndex].Length;
             }
 
             [PythonName("group")]
@@ -574,10 +574,10 @@ namespace IronPython.Modules {
                 if (additional.Length == 0) return Group(index);
 
                 object[] res = new object[additional.Length + 1];
-                res[0] = m.Groups[GetGroupIndex(index)].Success ? m.Groups[GetGroupIndex(index)].Value : null;
+                res[0] = _m.Groups[GetGroupIndex(index)].Success ? _m.Groups[GetGroupIndex(index)].Value : null;
                 for (int i = 1; i < res.Length; i++) {
                     int grpIndex = GetGroupIndex(additional[i - 1]);
-                    res[i] = m.Groups[grpIndex].Success ? m.Groups[grpIndex].Value : null;
+                    res[i] = _m.Groups[grpIndex].Success ? _m.Groups[grpIndex].Value : null;
                 }
                 return Tuple.MakeTuple(res);
             }
@@ -585,7 +585,7 @@ namespace IronPython.Modules {
             [PythonName("group")]
             public object Group(object index) {
                 int pos = GetGroupIndex(index);
-                Group g = m.Groups[pos];
+                Group g = _m.Groups[pos];
                 return g.Success ? g.Value : null;
 
             }
@@ -602,12 +602,12 @@ namespace IronPython.Modules {
 
             [PythonName("groups")]
             public object Groups(object @default) {
-                object[] ret = new object[m.Groups.Count - 1];
-                for (int i = 1; i < m.Groups.Count; i++) {
-                    if (!m.Groups[i].Success) {
+                object[] ret = new object[_m.Groups.Count - 1];
+                for (int i = 1; i < _m.Groups.Count; i++) {
+                    if (!_m.Groups[i].Success) {
                         ret[i - 1] = @default;
                     } else {
-                        ret[i - 1] = m.Groups[i].Value;
+                        ret[i - 1] = _m.Groups[i].Value;
                     }
                 }
                 return Tuple.MakeTuple(ret);
@@ -634,7 +634,7 @@ namespace IronPython.Modules {
                             while (strTmp[i] != '>' && i < strTmp.Length) {
                                 name.Append(strTmp[i++]);
                             }
-                            AppendGroup(res, pattern.re.GroupNumberFromName(name.ToString()));
+                            AppendGroup(res, _pattern._re.GroupNumberFromName(name.ToString()));
                         }
                     } else {
                         switch (strTmp[i]) {
@@ -656,14 +656,14 @@ namespace IronPython.Modules {
 
             [PythonName("groupdict")]
             public object GroupDict(object value) {
-                string[] groupNames = this.pattern.re.GetGroupNames();
-                Debug.Assert(groupNames.Length == this.m.Groups.Count);
+                string[] groupNames = this._pattern._re.GetGroupNames();
+                Debug.Assert(groupNames.Length == this._m.Groups.Count);
                 PythonDictionary d = new PythonDictionary();
                 for (int i = 0; i < groupNames.Length; i++) {
                     if (groupNames[i] == "0") continue; // python doesn't report this overarching group
 
-                    if (m.Groups[i].Captures.Count != 0) {
-                        d[groupNames[i]] = m.Groups[i].Value;
+                    if (_m.Groups[i].Captures.Count != 0) {
+                        d[groupNames[i]] = _m.Groups[i].Value;
                     } else {
                         d[groupNames[i]] = value;
                     }
@@ -684,21 +684,21 @@ namespace IronPython.Modules {
             public int Position {
                 [PythonName("pos")]
                 get {
-                    return m.Index;
+                    return _m.Index;
                 }
             }
 
             public int EndPosition {
                 [PythonName("endpos")]
                 get {
-                    return m.Index + m.Length;
+                    return _m.Index + _m.Length;
                 }
             }
 
             public string SearchValue {
                 [PythonName("string")]
                 get {
-                    return text;
+                    return _text;
                 }
             }
 
@@ -712,7 +712,7 @@ namespace IronPython.Modules {
             public object Pattern {
                 [PythonName("re")]
                 get {
-                    return pattern;
+                    return _pattern;
                 }
             }
 
@@ -724,18 +724,18 @@ namespace IronPython.Modules {
                     //other : the true lastindex
 
                     // Match.Groups contains "lower" level matched groups, which has to be removed
-                    if (lastindex == -1) {
+                    if (_lastindex == -1) {
                         int i = 1;
-                        while (i < m.Groups.Count) {
-                            if (m.Groups[i].Success) {
-                                lastindex = i;
-                                int start = m.Groups[i].Index;
-                                int end = start + m.Groups[i].Length;
+                        while (i < _m.Groups.Count) {
+                            if (_m.Groups[i].Success) {
+                                _lastindex = i;
+                                int start = _m.Groups[i].Index;
+                                int end = start + _m.Groups[i].Length;
                                 i++;
 
                                 // skip any group which fall into the range [start, end], 
                                 // no matter match succeed or fail
-                                while (i < m.Groups.Count && (m.Groups[i].Index < end)) {
+                                while (i < _m.Groups.Count && (_m.Groups[i].Index < end)) {
                                     i++;
                                 }
                             } else {
@@ -743,15 +743,15 @@ namespace IronPython.Modules {
                             }
                         }
 
-                        if (lastindex == -1) {
-                            lastindex = 0;
+                        if (_lastindex == -1) {
+                            _lastindex = 0;
                         }
                     }
 
-                    if (lastindex == 0) {
+                    if (_lastindex == 0) {
                         return null;
                     } else {
-                        return lastindex;
+                        return _lastindex;
                     }
                 }
             }
@@ -764,7 +764,7 @@ namespace IronPython.Modules {
                     // when group was not explicitly named, RegEx assigns the number as name
                     // This is different from C-Python, which returns None in such cases
 
-                    return this.pattern.re.GroupNameFromNumber((int)LastIndex);
+                    return this._pattern._re.GroupNameFromNumber((int)LastIndex);
                 }
             }
 
@@ -772,15 +772,15 @@ namespace IronPython.Modules {
 
             #region Private helper functions
             private void AppendGroup(StringBuilder sb, int index) {
-                sb.Append(m.Groups[index].Value);
+                sb.Append(_m.Groups[index].Value);
             }
 
             private int GetGroupIndex(object group) {
                 int grpIndex;
                 if (!Converter.TryConvertToInt32(group, out grpIndex)) {
-                    grpIndex = pattern.re.GroupNumberFromName(ValidateString(group, "group"));
+                    grpIndex = _pattern._re.GroupNumberFromName(ValidateString(group, "group"));
                 }
-                if (grpIndex < 0 || grpIndex >= m.Groups.Count) {
+                if (grpIndex < 0 || grpIndex >= _m.Groups.Count) {
                     throw PythonOps.IndexError("no such group");
                 }
                 return grpIndex;
@@ -1065,7 +1065,7 @@ namespace IronPython.Modules {
             if (es != null) return es.Value;
 
             RE_Pattern rep = pattern as RE_Pattern;
-            if (rep != null) return rep.pre.UserPattern;
+            if (rep != null) return rep._pre.UserPattern;
 
             throw PythonOps.TypeError("pattern must be a string or compiled pattern");
         }

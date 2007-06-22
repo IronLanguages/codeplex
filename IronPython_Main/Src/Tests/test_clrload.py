@@ -228,4 +228,28 @@ def test_local_dll():
     del x.BarNamespace.Bar
     AssertError(AttributeError, lambda: x.BarNamespace.Bar)
 
+def test_namespaceimport():
+    tmp = testpath.temporary_dir
+    if tmp not in sys.path:
+        sys.path.append(tmp)
+
+    code1 = "namespace TestNamespace { public class Test1 {} }"
+    code2 = "namespace TestNamespace { public class Test2 {} }"
+
+    test1_cs, test1_dll = path_combine(tmp, 'testns1.cs'), path_combine(tmp, 'testns1.dll')
+    test2_cs, test2_dll = path_combine(tmp, 'testns2.cs'), path_combine(tmp, 'testns2.dll')
+        
+    write_to_file(test1_cs, code1)
+    write_to_file(test2_cs, code2)
+    
+    AreEqual(run_csc("/nologo /target:library /out:"+ test1_dll + ' ' + test1_cs), 0)
+    AreEqual(run_csc("/nologo /target:library /out:"+ test2_dll + ' ' + test2_cs), 0)
+    
+    clr.AddReference('testns1')
+    import TestNamespace
+    AreEqual(dir(TestNamespace), ['Test1'])
+    clr.AddReference('testns2')
+    # verify that you don't need to import TestNamespace again to see Test2
+    AreEqual(dir(TestNamespace), ['Test1', 'Test2'])    
+
 run_test(__name__)

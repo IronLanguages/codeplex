@@ -21,14 +21,14 @@ using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting {
     public class ParamsMethodMaker {
-        private MethodCandidate baseTarget;
+        private MethodCandidate _baseTarget;
 
         public ParamsMethodMaker(MethodCandidate baseTarget) {
-            this.baseTarget = baseTarget;
+            this._baseTarget = baseTarget;
         }
 
         public MethodCandidate MakeTarget(ActionBinder binder, int count) {
-            return baseTarget.MakeParamsExtended(binder, count);
+            return _baseTarget.MakeParamsExtended(binder, count);
         }
     }
 

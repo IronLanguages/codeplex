@@ -116,7 +116,10 @@
     <Compile Include="Ast\BinaryExpression.cs" />
     <Compile Include="Ast\CatchBlock.cs" />
     <Compile Include="Ast\CodeBlockWalker.cs" />
+    <Compile Include="Ast\ControlFlow.cs" />
     <Compile Include="Ast\ConversionExpression.cs" />
+    <Compile Include="Ast\AbstractValue.cs" />
+    <Compile Include="Ast\AbstractContext.cs" />
     <Compile Include="Ast\DeleteUnboundExpression.cs" />
     <Compile Include="Ast\DynamicTryStatement.cs" />
     <Compile Include="Ast\DynamicTryStatementHandler.cs" />
@@ -207,6 +210,9 @@
     <Compile Include="DynamicTypeExtender.cs" />
     <Compile Include="FunctionType.cs" />
     <Compile Include="Generation\DelegateConstant.cs" />
+    <Compile Include="Generation\FieldSlotFactory.cs" />
+    <Compile Include="Generation\LocalFrameSlotFactory.cs" />
+    <Compile Include="Generation\LocalSlotFactory.cs" />
     <Compile Include="Generation\ReturnFixer.cs" />
     <Compile Include="Generation\Slots\ArgSlot.cs" />
     <Compile Include="Generation\Slots\CastSlot.cs" />
@@ -221,7 +227,9 @@
     <Compile Include="Generation\Slots\Slot.cs" />
     <Compile Include="Generation\Slots\StaticFieldSlot.cs" />
     <Compile Include="Generation\Slots\ThisSlot.cs" />
+    <Compile Include="Generation\StaticFieldSlotFactory.cs" />
     <Compile Include="Generation\StubGenerator.cs" />
+    <Compile Include="Generation\TupleSlotFactory.cs" />
     <Compile Include="Hosting\CodeDomCodeGen.cs" />
     <Compile Include="IParameterSequence.cs" />
     <Compile Include="KwArgBinder.cs" />

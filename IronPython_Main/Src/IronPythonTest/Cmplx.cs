@@ -19,8 +19,8 @@ using System.Runtime.CompilerServices;
 
 namespace IronPythonTest {
     public class Cmplx {
-        private double r;
-        private double i;
+        private double _r;
+        private double _i;
 
         public Cmplx()
             : this(0, 0) {
@@ -31,138 +31,138 @@ namespace IronPythonTest {
         }
 
         public Cmplx(double r, double i) {
-            this.r = r;
-            this.i = i;
+            this._r = r;
+            this._i = i;
         }
 
         public override int GetHashCode() {
-            return r.GetHashCode() ^ i.GetHashCode();
+            return _r.GetHashCode() ^ _i.GetHashCode();
         }
 
         public override bool Equals(object obj) {
             if (obj is Cmplx) {
                 Cmplx o = (Cmplx)obj;
-                return o.r == r && o.i == i;
+                return o._r == _r && o._i == _i;
             } else if (obj is IConvertible) {
                 double o = ((IConvertible)obj).ToDouble(null);
-                return o == r && i == 0;
+                return o == _r && _i == 0;
             }
             return false;
         }
 
         public override string ToString() {
-            return String.Format("({0} + {1}i)", r, i);
+            return String.Format("({0} + {1}i)", _r, _i);
         }
 
         public double Real {
             get {
-                return r;
+                return _r;
             }
         }
 
         public double Imag {
             get {
-                return i;
+                return _i;
             }
         }
 
         public static Cmplx operator *(double x, Cmplx y) {
-            return new Cmplx(x * y.r, x * y.i);
+            return new Cmplx(x * y._r, x * y._i);
         }
         public static Cmplx operator *(Cmplx x, double y) {
-            return new Cmplx(x.r * y, x.i * y);
+            return new Cmplx(x._r * y, x._i * y);
         }
         public static Cmplx operator *(Cmplx x, Cmplx y) {
-            return new Cmplx(x.r * y.r - x.i * y.i, x.r * y.i + x.i * y.r);
+            return new Cmplx(x._r * y._r - x._i * y._i, x._r * y._i + x._i * y._r);
         }
         public static Cmplx operator /(double x, Cmplx y) {
             return new Cmplx(x) / y;
         }
         public static Cmplx operator /(Cmplx x, double y) {
-            return new Cmplx(x.r / y, x.i / y);
+            return new Cmplx(x._r / y, x._i / y);
         }
         public static Cmplx operator /(Cmplx x, Cmplx y) {
-            double div = y.r * y.r + y.i * y.i;
-            return new Cmplx((x.r * y.r + x.i * y.i) / div, (x.i * y.r - x.r * y.i) / div);
+            double div = y._r * y._r + y._i * y._i;
+            return new Cmplx((x._r * y._r + x._i * y._i) / div, (x._i * y._r - x._r * y._i) / div);
         }
         public static Cmplx operator +(double x, Cmplx y) {
-            return new Cmplx(x + y.r, y.i);
+            return new Cmplx(x + y._r, y._i);
         }
         public static Cmplx operator +(Cmplx x, double y) {
-            return new Cmplx(x.r + y, x.i);
+            return new Cmplx(x._r + y, x._i);
         }
         public static Cmplx operator +(Cmplx x, Cmplx y) {
-            return new Cmplx(x.r + y.r, x.i + y.i);
+            return new Cmplx(x._r + y._r, x._i + y._i);
         }
         public static Cmplx operator -(double x, Cmplx y) {
-            return new Cmplx(x - y.r, -y.i);
+            return new Cmplx(x - y._r, -y._i);
         }
         public static Cmplx operator -(Cmplx x, double y) {
-            return new Cmplx(x.r - y, x.i);
+            return new Cmplx(x._r - y, x._i);
         }
         public static Cmplx operator -(Cmplx x, Cmplx y) {
-            return new Cmplx(x.r - y.r, x.i - y.i);
+            return new Cmplx(x._r - y._r, x._i - y._i);
         }
         public static Cmplx operator -(Cmplx x) {
-            return new Cmplx(-x.r, -x.i);
+            return new Cmplx(-x._r, -x._i);
         }
 
         [SpecialName]
         public static Cmplx op_MultiplicationAssignment(Cmplx x, double y) {
-            x.r *= y;
-            x.i *= y;
+            x._r *= y;
+            x._i *= y;
             return x;
         }
         [SpecialName]
         public static Cmplx op_MultiplicationAssignment(Cmplx x, Cmplx y) {
-            double r = x.r * y.r - x.i * y.i;
-            double i = x.r * y.i + x.i * y.r;
-            x.r = r;
-            x.i = i;
+            double r = x._r * y._r - x._i * y._i;
+            double i = x._r * y._i + x._i * y._r;
+            x._r = r;
+            x._i = i;
             return x;
         }
         [SpecialName]
         public static Cmplx op_SubtractionAssignment(Cmplx x, double y) {
-            x.r -= y;
+            x._r -= y;
             return x;
         }
         [SpecialName]
         public static Cmplx op_SubtractionAssignment(Cmplx x, Cmplx y) {
-            x.r -= y.r;
-            x.i -= y.i;
+            x._r -= y._r;
+            x._i -= y._i;
             return x;
         }
         [SpecialName]
         public static Cmplx op_AdditionAssignment(Cmplx x, double y) {
-            x.r += y;
+            x._r += y;
             return x;
         }
         [SpecialName]
         public static Cmplx op_AdditionAssignment(Cmplx x, Cmplx y) {
-            x.r += y.r;
-            x.i += y.i;
+            x._r += y._r;
+            x._i += y._i;
             return x;
         }
         [SpecialName]
         public static Cmplx op_DivisionAssignment(Cmplx x, double y) {
-            x.r /= y;
-            x.i /= y;
+            x._r /= y;
+            x._i /= y;
             return x;
         }
         [SpecialName]
         public static Cmplx op_DivisionAssignment(Cmplx x, Cmplx y) {
-            double div = y.r * y.r + y.i * y.i;
-            double r = (x.r * y.r + x.i * y.i) / div;
-            double i = (x.i * y.r - x.r * y.i) / div;
-            x.r = r;
-            x.i = i;
+            double div = y._r * y._r + y._i * y._i;
+            double r = (x._r * y._r + x._i * y._i) / div;
+            double i = (x._i * y._r - x._r * y._i) / div;
+            x._r = r;
+            x._i = i;
             return x;
         }
     }
 
     public class Cmplx2 {
-        private double r;
-        private double i;
+        private double _r;
+        private double _i;
 
         public Cmplx2()
             : this(0, 0) {
@@ -173,16 +173,16 @@ namespace IronPythonTest {
         }
 
         public Cmplx2(double r, double i) {
-            this.r = r;
-            this.i = i;
+            this._r = r;
+            this._i = i;
         }
 
         public static Cmplx2 operator +(Cmplx y, Cmplx2 x) {
-            return new Cmplx2(x.r + y.Real, x.i + y.Imag);
+            return new Cmplx2(x._r + y.Real, x._i + y.Imag);
         }
 
         public static Cmplx2 operator +(Cmplx2 x, Cmplx y) {
-            return new Cmplx2(x.r + y.Real, x.i + y.Imag);
+            return new Cmplx2(x._r + y.Real, x._i + y.Imag);
         }
     }
 }

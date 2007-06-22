@@ -48,6 +48,7 @@ namespace Microsoft.Scripting.Ast {
                         return typeof(bool);
                     case Operators.AndAlso:
                         return typeof(bool);
+                    case Operators.Add:
                     case Operators.Multiply:
                         return typeof(int);
                     default:
@@ -160,6 +161,9 @@ namespace Microsoft.Scripting.Ast {
                 case Operators.Multiply:
                     cg.Emit(OpCodes.Mul);
                     break;
+                case Operators.Add:
+                    cg.Emit(OpCodes.Add);
+                    break;
                 default:
                     throw new NotImplementedException();
             }
@@ -184,6 +188,9 @@ namespace Microsoft.Scripting.Ast {
                     return RuntimeHelpers.BooleanToObject(!TestEquals(l, r));
                 case Operators.Multiply:
                     return (int)context.LanguageContext.Binder.Convert(l, typeof(int)) *
+                            (int)context.LanguageContext.Binder.Convert(r, typeof(int));
+                case Operators.Add:
+                    return (int)context.LanguageContext.Binder.Convert(l, typeof(int)) +
                             (int)context.LanguageContext.Binder.Convert(r, typeof(int));
                 default:
                     throw new NotImplementedException();
@@ -228,6 +235,17 @@ namespace Microsoft.Scripting.Ast {
             }
             
             return new BinaryExpression(Operators.Multiply, left, right, SourceSpan.None);
+        }
+
+        /// <summary>
+        /// Multiples two Int32 values.
+        /// </summary>
+        public static Expression Add(Expression left, Expression right) {
+            if (left.ExpressionType != typeof(int) || right.ExpressionType != typeof(int)) {
+                throw new NotSupportedException(String.Format("add only supports ints, got {0} {1}", left.ExpressionType.Name, right.ExpressionType.Name));
+            }
+
+            return new BinaryExpression(Operators.Add, left, right, SourceSpan.None);
         }
     }
 }

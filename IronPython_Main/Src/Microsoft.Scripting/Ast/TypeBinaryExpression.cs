@@ -23,6 +23,10 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _expression;
         private readonly Type _typeOperand;
 
+        public TypeBinaryExpression(Expression expression, Type typeOperand)
+            : this(expression, typeOperand, SourceSpan.None) {
+        }
+        
         public TypeBinaryExpression(Expression expression, Type typeOperand, SourceSpan span)
             : base(span) {
             if (expression == null) throw new ArgumentNullException("expression");

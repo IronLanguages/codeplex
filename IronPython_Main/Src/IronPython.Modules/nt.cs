@@ -30,6 +30,7 @@ using IronPython.Runtime.Calls;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
@@ -345,9 +346,7 @@ namespace IronPython.Modules {
             }
 
             object env = args[args.Length - 1];
-            object[] slicedArgs = new object[args.Length - 1];
-
-            Array.Copy(args, 1, slicedArgs, 0, args.Length - 1);
+            object[] slicedArgs = CompilerHelpers.RemoveFirst(args);
 
             Process process = MakeProcess();
             SetEnvironment(process.StartInfo.EnvironmentVariables, env);
@@ -865,7 +864,7 @@ namespace IronPython.Modules {
 
         [PythonType(typeof(PythonFile))]
         private class POpenFile : PythonFile {
-            private Process process;
+            private Process _process;
 
             [PythonName("__new__")]
             public static object Make(CodeContext context, string command, Process process, Stream stream, string mode) {
@@ -874,15 +873,15 @@ namespace IronPython.Modules {
 
             internal POpenFile(CodeContext context, string command, Process process, Stream stream, string mode)
                 : base(stream, SystemState.Instance.DefaultEncoding, command, mode) {
-                this.process = process;
+                this._process = process;
             }
 
             [PythonName("close")]
             public override object Close() {
                 base.Close();
 
-                if (process.HasExited && process.ExitCode != 0) {
-                    return process.ExitCode;
+                if (_process.HasExited && _process.ExitCode != 0) {
+                    return _process.ExitCode;
                 }
 
                 return null;

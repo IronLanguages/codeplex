@@ -32,6 +32,8 @@ namespace Microsoft.Scripting.Ast {
 
         public CatchBlock(Type test, Variable target, Statement body, SourceSpan span, SourceLocation header)
             : base(span) {
+            if (body == null) throw new ArgumentNullException("body");
+
             _test = test;
             _var = target;
             _body = body;

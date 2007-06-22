@@ -43,29 +43,29 @@ namespace IronPython.Runtime.Operations {
     /// our converter recognizes it as a string.
     /// </summary>
     public class ExtensibleString : ICodeFormattable, IValueEquality, ISequence {
-        private string self;
+        private string _self;
 
-        public ExtensibleString() { this.self = String.Empty; }
-        public ExtensibleString(string self) { this.self = self; }
+        public ExtensibleString() { this._self = String.Empty; }
+        public ExtensibleString(string self) { this._self = self; }
 
         public string Value {
-            get { return self; }
+            get { return _self; }
         }
 
         public override string ToString() {
-            return self;
+            return _self;
         }
 
 
         public override int GetHashCode() {
-            return self.GetHashCode();
+            return _self.GetHashCode();
         }
 
         #region ICodeFormattable Members
 
         [OperatorMethod, PythonName("__repr__")]
         public virtual string ToCodeString(CodeContext context) {
-            return StringOps.Quote(self);
+            return StringOps.Quote(_self);
         }
 
         #endregion
@@ -131,9 +131,9 @@ namespace IronPython.Runtime.Operations {
             if (other == null) return false;
 
             ExtensibleString es = other as ExtensibleString;
-            if (es != null) return self == es.self;
+            if (es != null) return _self == es._self;
             string os = other as string;
-            if (os != null) return self == os;
+            if (os != null) return _self == os;
 
             return false;
         }
@@ -147,15 +147,15 @@ namespace IronPython.Runtime.Operations {
         #region ISequence Members
 
         public virtual object this[int index] {
-            get { return RuntimeHelpers.CharToString(self[index]); }
+            get { return RuntimeHelpers.CharToString(_self[index]); }
         }
 
         public object this[Slice slice] {
-            get { return StringOps.GetItem(self, slice); }
+            get { return StringOps.GetItem(_self, slice); }
         }
 
         public object GetSlice(int start, int stop) {
-            return StringOps.GetSlice(self, start, stop);
+            return StringOps.GetSlice(_self, start, stop);
         }
 
         #endregion
@@ -164,13 +164,13 @@ namespace IronPython.Runtime.Operations {
 
         [OperatorMethod, PythonName("__len__")]
         public virtual int GetLength() {
-            return self.Length;
+            return _self.Length;
         }
 
         [OperatorMethod, PythonName("__contains__")]
         public virtual bool ContainsValue(object value) {
-            if (value is string) return self.Contains((string)value);
-            else if (value is ExtensibleString) return self.Contains(((ExtensibleString)value).self);
+            if (value is string) return _self.Contains((string)value);
+            else if (value is ExtensibleString) return _self.Contains(((ExtensibleString)value)._self);
 
             throw PythonOps.TypeErrorForBadInstance("expected string, got {0}", value);
         }
@@ -1723,28 +1723,28 @@ namespace IronPython.Runtime.Operations {
         }
 
         private class PythonStringEnumerator : IEnumerator {
-            private string s;
-            private int i;
+            private string _s;
+            private int _i;
 
             public PythonStringEnumerator(string s) {
-                this.s = s;
+                this._s = s;
                 this.Reset();
             }
             #region IEnumerator Members
 
             public void Reset() {
-                i = -1;
+                _i = -1;
             }
 
             public object Current {
                 get {
-                    return RuntimeHelpers.CharToString(s[i]);
+                    return RuntimeHelpers.CharToString(_s[_i]);
                 }
             }
 
             public bool MoveNext() {
-                i++;
-                return i < s.Length;
+                _i++;
+                return _i < _s.Length;
             }
 
             #endregion
@@ -1774,15 +1774,15 @@ namespace IronPython.Runtime.Operations {
         /// and int is an index where encoding should continue.
 
         private class PythonEncoderFallbackBuffer : EncoderFallbackBuffer {
-            private object function;
-            private string encoding, strData;
-            private string buffer;
-            private int bufferIndex;
+            private object _function;
+            private string _encoding, _strData;
+            private string _buffer;
+            private int _bufferIndex;
 
             public PythonEncoderFallbackBuffer(string encoding, string str, object callable) {
-                function = callable;
-                strData = str;
-                this.encoding = encoding;
+                _function = callable;
+                _strData = str;
+                this._encoding = encoding;
             }
 
             public override bool Fallback(char charUnknown, int index) {
@@ -1794,14 +1794,14 @@ namespace IronPython.Runtime.Operations {
             }
 
             public override char GetNextChar() {
-                if (buffer == null || bufferIndex >= buffer.Length) return Char.MinValue;
+                if (_buffer == null || _bufferIndex >= _buffer.Length) return Char.MinValue;
 
-                return buffer[bufferIndex++];
+                return _buffer[_bufferIndex++];
             }
 
             public override bool MovePrevious() {
-                if (bufferIndex > 0) {
-                    bufferIndex--;
+                if (_bufferIndex > 0) {
+                    _bufferIndex--;
                     return true;
                 }
                 return false;
@@ -1809,52 +1809,52 @@ namespace IronPython.Runtime.Operations {
 
             public override int Remaining {
                 get {
-                    if (buffer == null) return 0;
-                    return buffer.Length - bufferIndex;
+                    if (_buffer == null) return 0;
+                    return _buffer.Length - _bufferIndex;
                 }
             }
 
             public override void Reset() {
-                buffer = null;
-                bufferIndex = 0;
+                _buffer = null;
+                _bufferIndex = 0;
                 base.Reset();
             }
 
             private bool DoPythonFallback(int index, int length) {
                 // create the exception object to hand to the user-function...
                 object exObj = PythonCalls.Call(ExceptionConverter.GetPythonException("UnicodeEncodeError"),
-                    encoding,
-                    strData,
+                    _encoding,
+                    _strData,
                     index,
                     index + length,
                     "unexpected code byte");
 
                 // call the user function...
-                object res = PythonCalls.Call(function, exObj);
+                object res = PythonCalls.Call(_function, exObj);
 
                 string replacement = PythonDecoderFallbackBuffer.CheckReplacementTuple(res, "encoding");
 
                 // finally process the user's request.
-                buffer = replacement;
-                bufferIndex = 0;
+                _buffer = replacement;
+                _bufferIndex = 0;
                 return true;
             }
 
         }
 
         class PythonEncoderFallback : EncoderFallback {
-            private object function;
-            private string str;
-            private string enc;
+            private object _function;
+            private string _str;
+            private string _enc;
 
             public PythonEncoderFallback(string encoding, string data, object callable) {
-                function = callable;
-                str = data;
-                enc = encoding;
+                _function = callable;
+                _str = data;
+                _enc = encoding;
             }
 
             public override EncoderFallbackBuffer CreateFallbackBuffer() {
-                return new PythonEncoderFallbackBuffer(enc, str, function);
+                return new PythonEncoderFallbackBuffer(_enc, _str, _function);
             }
 
             public override int MaxCharCount {
@@ -1863,61 +1863,61 @@ namespace IronPython.Runtime.Operations {
         }
 
         private class PythonDecoderFallbackBuffer : DecoderFallbackBuffer {
-            private object function;
-            private string encoding, strData;
-            private string buffer;
-            private int bufferIndex;
+            private object _function;
+            private string _encoding, _strData;
+            private string _buffer;
+            private int _bufferIndex;
 
             public PythonDecoderFallbackBuffer(string encoding, string str, object callable) {
-                this.encoding = encoding;
-                this.strData = str;
-                this.function = callable;
+                this._encoding = encoding;
+                this._strData = str;
+                this._function = callable;
             }
 
             public override int Remaining {
                 get {
-                    if (buffer == null) return 0;
-                    return buffer.Length - bufferIndex;
+                    if (_buffer == null) return 0;
+                    return _buffer.Length - _bufferIndex;
                 }
             }
 
             public override char GetNextChar() {
-                if (buffer == null || bufferIndex >= buffer.Length) return Char.MinValue;
+                if (_buffer == null || _bufferIndex >= _buffer.Length) return Char.MinValue;
 
-                return buffer[bufferIndex++];
+                return _buffer[_bufferIndex++];
             }
 
             public override bool MovePrevious() {
-                if (bufferIndex > 0) {
-                    bufferIndex--;
+                if (_bufferIndex > 0) {
+                    _bufferIndex--;
                     return true;
                 }
                 return false;
             }
 
             public override void Reset() {
-                buffer = null;
-                bufferIndex = 0;
+                _buffer = null;
+                _bufferIndex = 0;
                 base.Reset();
             }
 
             public override bool Fallback(byte[] bytesUnknown, int index) {
                 // create the exception object to hand to the user-function...
                 object exObj = PythonCalls.Call(ExceptionConverter.GetPythonException("UnicodeDecodeError"),
-                    encoding,
-                    strData,
+                    _encoding,
+                    _strData,
                     index,
                     index + bytesUnknown.Length,
                     "unexpected code byte");
 
                 // call the user function...
-                object res = PythonCalls.Call(function, exObj);
+                object res = PythonCalls.Call(_function, exObj);
 
                 string replacement = CheckReplacementTuple(res, "decoding");
 
                 // finally process the user's request.
-                buffer = replacement;
-                bufferIndex = 0;
+                _buffer = replacement;
+                _bufferIndex = 0;
                 return true;
             }
 

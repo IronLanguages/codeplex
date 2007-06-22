@@ -304,7 +304,7 @@ def test_interface_hierarchy():
     Assert(System.Collections.IEnumerable in System.Collections.IList.__bases__)
     AreEqual(System.Collections.IEnumerable.GetEnumerator, System.Collections.IList.GetEnumerator)
     Assert("GetEnumerator" in dir(System.Collections.IList))
-    l = System.Collections.ArrayList()
+    l = System.Collections.Generic.List[int]()
     l.Add(100)
     Assert(100 in System.Collections.IList.GetEnumerator(l))
 
@@ -433,7 +433,7 @@ def test_oldstyle_inheritance_dir():
 
 if is_cli or is_silverlight:
     def test_cli_inheritance_dir():
-        class PythonDerivedFromCLR(System.Collections.ArrayList): pass
+        class PythonDerivedFromCLR(System.Collections.Generic.List[int]): pass
         #
         # now check that methods are available, but aren't visible in dir()
         Assert('Capacity' in dir(PythonDerivedFromCLR))

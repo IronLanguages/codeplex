@@ -20,23 +20,23 @@ using System.Text;
 
 namespace IronPython.Hosting {
     public class ResourceFile {
-        private string name;
-        private string file;
-        private bool publicResource;
+        private string _name;
+        private string _file;
+        private bool _publicResource;
 
         public string Name {
-            get { return name; }
-            set { name = value; }
+            get { return _name; }
+            set { _name = value; }
         }
 
         public string File {
-            get { return file; }
-            set { file = value; }
+            get { return _file; }
+            set { _file = value; }
         }
 
         public bool PublicResource {
-            get { return publicResource; }
-            set { publicResource = value; }
+            get { return _publicResource; }
+            set { _publicResource = value; }
         }
 
         public ResourceFile(string name, string file)
@@ -44,9 +44,9 @@ namespace IronPython.Hosting {
         }
 
         public ResourceFile(string name, string file, bool publicResource) {
-            this.name = name;
-            this.file = file;
-            this.publicResource = publicResource;
+            this._name = name;
+            this._file = file;
+            this._publicResource = publicResource;
         }
     }
 }
