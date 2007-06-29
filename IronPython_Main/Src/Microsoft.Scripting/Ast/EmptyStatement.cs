@@ -17,11 +17,7 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public class EmptyStatement : Statement {
-        public EmptyStatement()
-            : this(SourceSpan.None) {
-        }
-
-        public EmptyStatement(SourceSpan span)
+        internal EmptyStatement(SourceSpan span)
             : base(span) {
         }
 
@@ -39,6 +35,15 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
+    public static partial class Ast {
+        public static EmptyStatement Empty() {
+            return Empty(SourceSpan.None);
+        }
+
+        public static EmptyStatement Empty(SourceSpan span) {
+            return new EmptyStatement(span);
+        }
     }
 }

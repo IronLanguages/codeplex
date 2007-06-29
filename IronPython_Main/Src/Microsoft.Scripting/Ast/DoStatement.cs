@@ -23,13 +23,10 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _test;
         private readonly Statement _body;
 
-        // TODO: Check if the else stmt required here, like other loops
-
-        public DoStatement(Expression test, Statement body)
-            : this(test, body, SourceSpan.None, SourceLocation.None) {
-        }
-
-        public DoStatement(Expression test, Statement body, SourceSpan span, SourceLocation header)
+        /// <summary>
+        /// Called by <see cref="DoStatementBuilder"/>.
+        /// </summary>
+        internal DoStatement(SourceSpan span, SourceLocation header, Expression test, Statement body)
             : base(span) {
             if (test == null) throw new ArgumentNullException("test");
             if (body == null) throw new ArgumentNullException("body");

@@ -2160,7 +2160,8 @@ namespace Microsoft.Scripting.Generation {
                 // Create unoptimized dynamic site and put it in the constant pool
                 DynamicSite sds = DynamicSiteHelpers.MakeSite(
                     action,
-                    DynamicSiteHelpers.MakeDynamicSiteType(siteTypes)
+                    DynamicSiteHelpers.MakeDynamicSiteType(siteTypes),
+                    siteTypes.Length
                     );
                 return this.ConstantPool.AddData(sds);
             }

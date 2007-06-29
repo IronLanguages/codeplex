@@ -124,10 +124,5 @@ namespace Microsoft.Scripting.Ast {
             }
             return ret;
         }
-
-        public ExpressionStatement ToStatement() {
-            return new ExpressionStatement(this);
-        }
-
     }
 }

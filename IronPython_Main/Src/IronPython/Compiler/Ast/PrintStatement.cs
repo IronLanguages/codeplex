@@ -18,6 +18,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class PrintStatement : Statement {
         private readonly Expression _dest;
         private readonly Expression[] _expressions;
@@ -42,21 +44,21 @@ namespace IronPython.Compiler.Ast {
 
             if (_expressions.Length == 0) {
                 if (destination != null) {
-                    return new MSAst.ExpressionStatement(
-                        MSAst.MethodCallExpression.Call(
+                    return Ast.Statement(
+                        Span,
+                        Ast.Call(
                             null,
                             AstGenerator.GetHelperMethod("PrintNewlineWithDest"),
                             destination
-                        ),
-                        Span
+                        )
                     );
                 } else {
-                    return new MSAst.ExpressionStatement(
-                        MSAst.MethodCallExpression.Call(
+                    return Ast.Statement(
+                        Span,
+                        Ast.Call(
                             null,
                             AstGenerator.GetHelperMethod("PrintNewline")
-                        ),
-                        Span
+                        )
                     );
                 }
             } else {
@@ -79,24 +81,24 @@ namespace IronPython.Compiler.Ast {
                     MSAst.MethodCallExpression mce;
 
                     if (destination != null) {
-                        mce = MSAst.MethodCallExpression.Call(
+                        mce = Ast.Call(
                             null,
                             AstGenerator.GetHelperMethod(method + "WithDest"),
                             destination,
                             ag.Transform(current)
                         );
                     } else {
-                        mce = MSAst.MethodCallExpression.Call(
+                        mce = Ast.Call(
                             null,
                             AstGenerator.GetHelperMethod(method),
                             ag.Transform(current)
                         );
                     }
 
-                    statements.Add(new MSAst.ExpressionStatement(mce));
+                    statements.Add(Ast.Statement(mce));
                 }
 
-                return new MSAst.BlockStatement(statements.ToArray(), Span);
+                return Ast.Block(Span, statements.ToArray());
             }
         }
 

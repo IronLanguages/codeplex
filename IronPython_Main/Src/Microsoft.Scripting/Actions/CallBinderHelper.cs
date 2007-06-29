@@ -19,12 +19,13 @@ using System.Text;
 using System.Diagnostics;
 using System.Reflection;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     /// <summary>
     /// Creates rules for performing method calls.  Currently supports calling built-in functions, built-in method descriptors (w/o 
     /// a bound value) and bound built-in method descriptors (w/ a bound value).
@@ -39,10 +40,14 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public StandardRule<T> MakeRule(object[] args) {
+            Debug.Assert(args != null && args.Length > 0);
+            // args[0]: target
+            // args[1..n]: arguments
+
             DynamicType[] types = CompilerHelpers.ObjectTypes(args);
             object target = args[0];
 
-            if (Action.IsSimple || IsParamsCall) {
+            if (CanGenerateRule) {
                 BuiltinFunction bf = TryConvertToBuiltinFunction(target);
                 BoundBuiltinFunction bbf = target as BoundBuiltinFunction;
                 if (bbf != null) {
@@ -50,7 +55,7 @@ namespace Microsoft.Scripting.Actions {
                     if (!CanOptimizeUserCall(sdo, bbf)) {
                         return MakeDynamicCallRule(bbf, types);
                     }
-                }                
+                }
 
                 if (bf != null && (!bf.DeclaringType.UnderlyingSystemType.IsValueType || bf.DeclaringType.UnderlyingSystemType.IsPrimitive)) {
                     return MakeBuiltinFunctionRule(bf, args) ?? MakeDynamicCallRule(types);
@@ -64,11 +69,17 @@ namespace Microsoft.Scripting.Actions {
             }
             
             return MakeDynamicCallRule(types);
-        }
+        }        
 
-        private bool IsParamsCall {
+        private bool CanGenerateRule {
             get {
-                return IsParamsCallWorker(Action);
+                if (!Action.IsSimple) {
+                    foreach (ArgumentKind ak in Action.ArgumentKinds) {
+                        if (ak.ExpandDictionary) return false;
+                    }
+                }
+
+                return true;
             }
         }
 
@@ -101,17 +112,17 @@ namespace Microsoft.Scripting.Actions {
             StandardRule<T> rule = new StandardRule<T>();
             
             rule.SetTest(
-                BinaryExpression.AndAlso(
+                Ast.AndAlso(
                     rule.MakeTestForTypes(types, 0),
-                    BinaryExpression.Equal(
-                        MemberExpression.Property(
-                            MemberExpression.Property(
-                                StaticUnaryExpression.Convert(
-                                    rule.GetParameterExpression(0),
+                    Ast.Equal(
+                        Ast.ReadProperty(
+                            Ast.ReadProperty(
+                                Ast.Cast(
+                                    rule.Parameters[0],
                                     typeof(BoundBuiltinFunction)),
                                 typeof(BoundBuiltinFunction).GetProperty("Target")),
                             typeof(BuiltinFunction).GetProperty("Id")),
-                        new ConstantExpression(bbf.Target.Id))
+                        Ast.Constant(bbf.Target.Id))
                 )
             );
             rule.SetTarget(rule.MakeReturn(binder, CallBinderHelper<T>.MakeDynamicTarget(rule, action)));
@@ -122,7 +133,9 @@ namespace Microsoft.Scripting.Actions {
             DynamicType[] argTypes = GetArgumentTypes(args);
             if (argTypes == null) return null;
 
-            MethodCandidate cand = GetMethodCandidate(args[0], bf, argTypes);
+            SymbolId[] argNames = GetArgumentNames();
+
+            MethodCandidate cand = GetMethodCandidate(args[0], bf, argTypes, argNames);
 
             // currently we fall back to the fully dynamic case for all error messages
             if (cand != null &&
@@ -140,18 +153,18 @@ namespace Microsoft.Scripting.Actions {
                 rule = new StandardRule<T>();
 
                 Expression test = MakeBuiltinFunctionTest(rule, args[0], bf.Id);
-                Expression[] exprargs = GetArgumentExpressions(Action, rule, args);
+                Expression[] exprargs = GetArgumentExpressions(cand, Action, rule, args);
 
-                if (IsParamsCall) {
-                    test = BinaryExpression.AndAlso(test, MakeParamsTest(rule, args));
+                if (IsParamsCallWorker(Action)) {
+                    test = Ast.AndAlso(test, MakeParamsTest(rule, args));
                 }
                 if (argTypes.Length > 0) {
-                    test = BinaryExpression.AndAlso(test, MakeTestForTypes(rule, exprargs, argTypes, 0, args[0] is BoundBuiltinFunction, bf));
+                    test = Ast.AndAlso(test, MakeTestForTypes(rule, exprargs, argTypes, 0, args[0] is BoundBuiltinFunction, bf));
                 } 
 
                 rule.SetTest(test);
                 
-                if (bf.IsReversedOperator) CompilerHelpers.SwapLastTwo(exprargs);
+                if (bf.IsReversedOperator) Utils.Array.SwapLastTwo(exprargs);
 
                 rule.SetTarget(rule.MakeReturn(
                     Binder,
@@ -162,21 +175,23 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
-        private MethodCandidate GetMethodCandidate(object target, BuiltinFunction bf, DynamicType[] argTypes) {
+
+        private MethodCandidate GetMethodCandidate(object target, BuiltinFunction bf, DynamicType[] argTypes, SymbolId []argNames) {
             MethodBinder binder = MethodBinder.MakeBinder(Binder, "__call__", bf.Targets, bf.IsBinaryOperator ? BinderType.BinaryOperator : BinderType.Normal);
             BoundBuiltinFunction boundbf = target as BoundBuiltinFunction;
             if (boundbf == null) {
-                return binder.MakeBindingTarget(CallType.None, argTypes);
+                return binder.MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(argTypes), argNames);
             }
 
-            DynamicType[] types = new DynamicType[argTypes.Length + 1];
-            types[0] = bf.DeclaringType;
-            Array.Copy(argTypes, 0, types, 1, argTypes.Length);
+            DynamicType[] types = Utils.Array.Insert(bf.DeclaringType, argTypes);
             if (bf.IsReversedOperator) {
-                CompilerHelpers.SwapLastTwo(types);
+                Utils.Array.SwapLastTwo(types);
+                if (argNames.Length >= 2) {
+                    Utils.Array.SwapLastTwo(argNames);
+                }
             }
 
-            return binder.MakeBindingTarget(CallType.ImplicitInstance, types);
+            return binder.MakeBindingTarget(CallType.ImplicitInstance, CompilerHelpers.ConvertToTypes(types), argNames);
         }
 
         /// <summary>
@@ -190,30 +205,30 @@ namespace Microsoft.Scripting.Actions {
             BoundBuiltinFunction bbf = target as BoundBuiltinFunction;
             if (bbf != null) {
                 if (bbf.Self is ISuperDynamicObject) {
-                    test = BinaryExpression.AndAlso(test,
-                             TypeBinaryExpression.TypeIs(
-                                 MemberExpression.Property(
-                                      StaticUnaryExpression.Convert(rule.GetParameterExpression(0), typeof(BoundBuiltinFunction)),
+                    test = Ast.AndAlso(test,
+                             Ast.TypeIs(
+                                 Ast.ReadProperty(
+                                      Ast.Cast(rule.Parameters[0], typeof(BoundBuiltinFunction)),
                                       typeof(BoundBuiltinFunction).GetProperty("Self")),
                                  typeof(ISuperDynamicObject))
                           );
 
                 } else {
-                    test = BinaryExpression.AndAlso(test,
-                               BinaryExpression.NotEqual(
-                                   TypeBinaryExpression.TypeIs(
-                                       MemberExpression.Property(
-                                            StaticUnaryExpression.Convert(rule.GetParameterExpression(0), typeof(BoundBuiltinFunction)),
+                    test = Ast.AndAlso(test,
+                               Ast.NotEqual(
+                                   Ast.TypeIs(
+                                       Ast.ReadProperty(
+                                            Ast.Cast(rule.Parameters[0], typeof(BoundBuiltinFunction)),
                                             typeof(BoundBuiltinFunction).GetProperty("Self")),
                                        typeof(ISuperDynamicObject)),
-                                   new ConstantExpression(true)));
+                                   Ast.True()));
                 }
             }
 
-            return BinaryExpression.AndAlso(test,
-                BinaryExpression.Equal(
-                    MemberExpression.Property(bfexpr, typeof(BuiltinFunction).GetProperty("Id")),
-                    ConstantExpression.Constant(id)));
+            return Ast.AndAlso(test,
+                Ast.Equal(
+                    Ast.ReadProperty(bfexpr, typeof(BuiltinFunction).GetProperty("Id")),
+                    Ast.Constant(id)));
         }
 
         /// <summary>
@@ -221,19 +236,19 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private static Expression GetBuiltinFunctionFromTarget(StandardRule<T> rule, object target) {
             if (target is BuiltinFunction) {
-                return StaticUnaryExpression.Convert(rule.GetParameterExpression(0), typeof(BuiltinFunction));
+                return Ast.Cast(rule.Parameters[0], typeof(BuiltinFunction));
             }
 
             if (target is BoundBuiltinFunction) {
-                return MemberExpression.Property(
-                    StaticUnaryExpression.Convert(rule.GetParameterExpression(0), typeof(BoundBuiltinFunction)),
+                return Ast.ReadProperty(
+                    Ast.Cast(rule.Parameters[0], typeof(BoundBuiltinFunction)),
                     typeof(BoundBuiltinFunction).GetProperty("Target"));
             }
 
             Debug.Assert(target is BuiltinMethodDescriptor);
 
-            return MemberExpression.Property(
-                StaticUnaryExpression.Convert(rule.GetParameterExpression(0), typeof(BuiltinMethodDescriptor)),
+            return Ast.ReadProperty(
+                Ast.Cast(rule.Parameters[0], typeof(BuiltinMethodDescriptor)),
                 typeof(BuiltinMethodDescriptor).GetProperty("Template"));
         }
 
@@ -243,7 +258,7 @@ namespace Microsoft.Scripting.Actions {
         private Expression MakeTestForTypes(StandardRule<T> rule, Expression[] exprArgs, DynamicType[] types, int index, bool boundFunc, BuiltinFunction bf) {
             try {
                 bool needTest = AreArgumentTypesOverloaded(types, index, boundFunc, bf);
-                Expression test = needTest ? rule.MakeTypeTest(types[index], exprArgs[index + (boundFunc ? 1 : 0)]) : new ConstantExpression(true);
+                Expression test = needTest ? rule.MakeTypeTest(types[index], exprArgs[index + (boundFunc ? 1 : 0)]) : Ast.True();
 
                 if (index + 1 < types.Length) {
                     Expression nextTests = MakeTestForTypes(rule, exprArgs, types, index + 1, boundFunc, bf);
@@ -252,7 +267,7 @@ namespace Microsoft.Scripting.Actions {
                     } else if (nextTests.IsConstant(true)) {
                         return test;
                     } else {
-                        return BinaryExpression.AndAlso(test, nextTests);
+                        return Ast.AndAlso(test, nextTests);
                     }
                 }
 
@@ -312,11 +327,24 @@ namespace Microsoft.Scripting.Actions {
             return GetArgumentTypes(Action, args);
         }
 
+        private SymbolId[] GetArgumentNames() {
+            if (Action.IsSimple) return SymbolId.EmptySymbols;
+
+            List<SymbolId> res = new List<SymbolId>();
+            foreach (ArgumentKind ak in Action.ArgumentKinds) {
+                if (ak.Name != SymbolId.Empty) {
+                    res.Add(ak.Name);
+                }
+            }
+
+            return res.ToArray();
+        }
+
         private static DynamicType[] GetReversedArgumentTypes(DynamicType[] types) {
             if (types.Length < 3) throw new InvalidOperationException("need 3 types or more for reversed operator");
 
-            DynamicType[] argTypes = CompilerHelpers.RemoveFirst(types);
-            CompilerHelpers.SwapLastTwo(argTypes);
+            DynamicType[] argTypes = Utils.Array.RemoveFirst(types);
+            Utils.Array.SwapLastTwo(argTypes);
             return argTypes;
         }
 
@@ -331,42 +359,42 @@ namespace Microsoft.Scripting.Actions {
 
             bool argsTuple = false, keywordDict = false;
             int kwCnt = 0, extraArgs = 0;
-            for (int i = 0; i < rule.Parameters.Length - 1; i++) {
+            for (int i = 0; i < rule.ParameterCount - 1; i++) {
                 if (action.IsSimple) {
-                    args.Add(Arg.Simple(rule.GetParameterExpression(i + 1)));
+                    args.Add(Arg.Simple(rule.Parameters[i + 1]));
                 } else if (action.ArgumentKinds[i].IsThis) {
-                    instance = rule.GetParameterExpression(i + 1);
+                    instance = rule.Parameters[i + 1];
                 } else if (action.ArgumentKinds[i].ExpandDictionary) {
-                    args.Add(Arg.Dictionary(rule.GetParameterExpression(i + 1)));
+                    args.Add(Arg.Dictionary(rule.Parameters[i + 1]));
                     keywordDict = true; extraArgs++;
                 } else if (action.ArgumentKinds[i].ExpandList) {
-                    args.Add(Arg.List(rule.GetParameterExpression(i + 1)));
+                    args.Add(Arg.List(rule.Parameters[i + 1]));
                     argsTuple = true; extraArgs++;
                 } else if (action.ArgumentKinds[i].Name != SymbolId.Empty) {
-                    args.Add(Arg.Named(action.ArgumentKinds[i].Name, rule.GetParameterExpression(i + 1)));
+                    args.Add(Arg.Named(action.ArgumentKinds[i].Name, rule.Parameters[i + 1]));
                     kwCnt++;
                 } else {
-                    args.Add(Arg.Simple(rule.GetParameterExpression(i + 1)));
+                    args.Add(Arg.Simple(rule.Parameters[i + 1]));
                 }
             }
 
             if (instance != null) {
-                return new CallWithThisExpression(
-                    rule.GetParameterExpression(0),
+                return Ast.CallWithThis(
+                    rule.Parameters[0],
                     instance,
-                    args.ToArray());
+                    args.ToArray()
+                );
             }
 
-            return new CallExpression(
-                rule.GetParameterExpression(0),
+            return Ast.DynamicCall(
+                rule.Parameters[0],
                 args.ToArray(),
                 argsTuple,
                 keywordDict,
                 kwCnt,
                 extraArgs
-                );
+            );
         }
-
         
 #if FALSE
 

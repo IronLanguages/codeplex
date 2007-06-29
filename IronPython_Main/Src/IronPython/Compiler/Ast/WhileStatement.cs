@@ -17,6 +17,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class WhileStatement : Statement {
         private SourceLocation _header;
         private readonly Expression _test;
@@ -52,13 +54,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            return new MSAst.LoopStatement(
-                ag.TransformAndConvert(_test, typeof(bool)),
-                null,                // increment
-                ag.Transform(_body),
-                ag.Transform(_else),
+            return Ast.While(
                 Span,
-                _header
+                _header,
+                ag.TransformAndConvert(_test, typeof(bool)),
+                ag.Transform(_body),
+                ag.Transform(_else)
             );
         }
 

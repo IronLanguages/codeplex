@@ -79,7 +79,7 @@ If locale is None then the current setting is returned.
         [Documentation("compares two strings using the current locale")]
         [PythonName("strcoll")]
         public static int StringCollate(string string1, string string2) {
-            return Utils.StringCompare(string1, string2, false, currentLocale.Collate);
+            return currentLocale.Collate.CompareInfo.Compare(string1, string2, CompareOptions.None);
         }
 
         [Documentation(@"returns a transformed string that can be compared using the built-in cmp.

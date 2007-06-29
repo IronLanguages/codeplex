@@ -18,6 +18,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ForStatement : Statement {
         private SourceLocation _header;
         private readonly Expression _left;
@@ -92,14 +94,14 @@ namespace IronPython.Compiler.Ast {
                                                     Expression list, Expression left, MSAst.Statement body,
                                                     Statement else_, SourceSpan span, SourceLocation header) {
             // enumerator = PythonOps.GetEnumeratorForIteration(list)
-            MSAst.BoundAssignment init = MSAst.BoundAssignment.Assign(
+            MSAst.BoundAssignment init = Ast.Assign(
+                list.Span,
                 enumerator,
-                MSAst.MethodCallExpression.Call(
+                Ast.Call(
                     null,
                     AstGenerator.GetHelperMethod("GetEnumeratorForIteration"),
                     ag.Transform(list)
-                ),
-                list.Span
+                )
             );
 
             // while enumerator.MoveNext():
@@ -107,30 +109,30 @@ namespace IronPython.Compiler.Ast {
             //    body
             // else:
             //    else
-            MSAst.LoopStatement ls = new MSAst.LoopStatement(
-                MSAst.MethodCallExpression.Call(
-                    new MSAst.BoundExpression(enumerator),
+            MSAst.LoopStatement ls = Ast.Loop(
+                new SourceSpan(left.Start, span.End),
+                left.End,
+                Ast.Call(
+                    Ast.Read(enumerator),
                     typeof(IEnumerator).GetMethod("MoveNext")
                 ),
                 null,
-                MSAst.BlockStatement.Block(
+                Ast.Block(
                     left.TransformSet(
                         ag,
-                        MSAst.MethodCallExpression.Call(
-                            new MSAst.BoundExpression(enumerator),
+                        Ast.Call(
+                            Ast.Read(enumerator),
                             typeof(IEnumerator).GetProperty("Current").GetGetMethod()
                         ),
                         Operators.None
                     ),
                     body
                 ),
-                ag.Transform(else_),
-                new SourceSpan(left.Start, span.End),
-                left.End
+                ag.Transform(else_)
             );
 
-            return MSAst.BlockStatement.Block(
-                new MSAst.ExpressionStatement(init, init.Span),
+            return Ast.Block(
+                Ast.Statement(init.Span, init),
                 ls
             );
         }

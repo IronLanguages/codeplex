@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
@@ -26,6 +27,8 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Calls {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     class PythonCallBinderHelper<T> : BinderHelper<T, CallAction> {
         public PythonCallBinderHelper(CodeContext context, CallAction action)
             : base(context, action) {
@@ -44,7 +47,7 @@ namespace IronPython.Runtime.Calls {
                     } else {
                         DynamicType[] types = CompilerHelpers.ObjectTypes(args);
 
-                        return MakePythonTypeCallRule(dt, types, CompilerHelpers.RemoveFirst(types), args);
+                        return MakePythonTypeCallRule(dt, types, Utils.Array.RemoveFirst(types), args);
                     }
                 }
             }
@@ -65,7 +68,8 @@ namespace IronPython.Runtime.Calls {
 
             StandardRule<T> rule = new StandardRule<T>();
 
-            Expression[] parameters = CallBinderHelper<T>.GetArgumentExpressions(Action, rule, args);
+            // TODO: Pass in MethodCandidate when we support kw-args
+            Expression[] parameters = CallBinderHelper<T>.GetArgumentExpressions(null, Action, rule, args);
             if (!TooManyArgsForDefaultNew(creating, parameters)) {
                 Expression createExpr = MakeCreationExpression(creating, rule, args);
                 if (createExpr != null) {
@@ -92,41 +96,49 @@ namespace IronPython.Runtime.Calls {
             creating.TryResolveSlot(Context, Symbols.NewInst, out newInst);
             if (newInst == InstanceOps.New) {
                 // parameterless ctor, call w/ no args
-                createExpr = creating.IsSystemType ?
-                    CreateInstanceBinderHelper<T>.CallTypeConstructor(Binder, creating, new DynamicType[0], new Expression[0]) :
-                    CreateInstanceBinderHelper<T>.CallTypeConstructor(Binder, creating, new DynamicType[] { TypeCache.DynamicType }, new Expression[] { rule.GetParameterExpression(0) });
+                MethodCandidate cand = creating.IsSystemType ?
+                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, creating, new DynamicType[0]) :
+                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, creating, new DynamicType[] { TypeCache.DynamicType });
+
+                Debug.Assert(cand != null);
+                createExpr = cand.Target.MakeExpression(Binder, creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] });
             } else if (newInst is ConstructorFunction) {
                 // ctor w/ parameters, call w/ args
-                createExpr = creating.IsSystemType ?
-                    CreateInstanceBinderHelper<T>.CallTypeConstructor(Binder, 
+                MethodCandidate cand = creating.IsSystemType ?
+                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, 
                         creating, 
-                        CallBinderHelper<T>.GetArgumentTypes(Action, args), 
-                        CallBinderHelper<T>.GetArgumentExpressions(Action, rule, args)) :
-                    CreateInstanceBinderHelper<T>.CallTypeConstructor(Binder, 
+                        CallBinderHelper<T>.GetArgumentTypes(Action, args)) :
+                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, 
                         creating,
-                        CompilerHelpers.PrependArray(TypeCache.DynamicType, 
-                            CallBinderHelper<T>.GetArgumentTypes(Action, args)),
-                        CompilerHelpers.PrependArray(rule.GetParameterExpression(0), CallBinderHelper<T>.GetArgumentExpressions(Action, rule, args))
+                        Utils.Array.Insert(TypeCache.DynamicType, CallBinderHelper<T>.GetArgumentTypes(Action, args))                        
                     );
+
+                if (cand != null) {
+                    createExpr = cand.Target.MakeExpression(Binder,
+                        creating.IsSystemType ?
+                        CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, args) :
+                        Utils.Array.Insert(rule.Parameters[0], CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, args)));
+                }
             } else {
                 // type has __new__, call that w/ the cls parameter
                 BuiltinFunction bf = newInst as BuiltinFunction;
                 if (bf != null) {
                     createExpr = CallPythonNew(creating, bf, rule, args);
                 } else {
-                    createExpr = ActionExpression.Call(
+                    createExpr = Ast.Action.Call(
                         GetDynamicNewAction(),
                         typeof(object),
-                        CompilerHelpers.PrependArray<Expression>(
-                            MethodCallExpression.Call(rule.GetParameterExpression(0),
+                        Utils.Array.Insert<Expression>(
+                            Ast.Call(
+                                rule.Parameters[0],
                                 typeof(DynamicMixin).GetMethod("GetMember"),
                                 new Expression[] { 
-                                    new CodeContextExpression(),
-                                    new ConstantExpression(null),
-                                    new ConstantExpression(Symbols.NewInst),
+                                    Ast.CodeContext(),
+                                    Ast.Null(),
+                                    Ast.Constant(Symbols.NewInst),
                                 }
                             ),
-                            rule.GetParameterExpressions()
+                            rule.Parameters
                         )
                     );
                 }
@@ -137,7 +149,7 @@ namespace IronPython.Runtime.Calls {
         private CallAction GetDynamicNewAction() {
             if (Action.IsSimple) return CallAction.Simple;
 
-            return CallAction.Make(CompilerHelpers.PrependArray(ArgumentKind.Simple, Action.ArgumentKinds));
+            return CallAction.Make(Utils.Array.Insert(ArgumentKind.Simple, Action.ArgumentKinds));
         }
 
         /// <summary>
@@ -154,29 +166,29 @@ namespace IronPython.Runtime.Calls {
                 // default init, we can just return the value from __new__
                 target = rule.MakeReturn(Binder, createExpr);
             } else {
-                Variable vr = rule.GetTemporary(createExpr.ExpressionType, "newInst");
-                Expression assignment = BoundAssignment.Assign(vr, createExpr);
+                Variable variable = rule.GetTemporary(createExpr.ExpressionType, "newInst");
+                Expression assignment = Ast.Assign(variable, createExpr);
                 Expression initCall = null;
 
                 // get the target for the __init__ call, if we can
                 BuiltinMethodDescriptor bmd = init as BuiltinMethodDescriptor;
                 if (bmd != null) {
-                    initCall = CallInitBuiltin(creating, bmd, rule, args, vr);
+                    initCall = CallInitBuiltin(creating, bmd, rule, args, variable);
                 } else {
                     // call init w/ result from new
-                    initCall = CallInitDynamic(rule, vr);
+                    initCall = CallInitDynamic(rule, variable);
                 }
 
                 // make the appropriate call to the __init__ method
                 if (initCall != null) {
-                    Statement body = GetTargetWithOptionalFinalization(hasDel, vr, initCall);
+                    Statement body = GetTargetWithOptionalFinalization(hasDel, variable, initCall);
 
                     if (!creating.UnderlyingSystemType.IsAssignableFrom(createExpr.ExpressionType)) {
                         // return type of object, we need to check the return type before calling __init__.
-                        target = CallInitChecked(creating, rule, vr, assignment, body);
+                        target = CallInitChecked(creating, rule, variable, assignment, body);
                     } else {
                         // just call the __init__ method, no type check necessary (TODO: need null check?)
-                        target = CallInitUnchecked(rule, vr, assignment, body);
+                        target = CallInitUnchecked(rule, variable, assignment, body);
                     }
                 }
             }
@@ -184,71 +196,75 @@ namespace IronPython.Runtime.Calls {
             return target;
         }
 
-        private static Statement GetTargetWithOptionalFinalization(bool hasDel, Variable vr, Expression initCall) {
-            Statement body = new ExpressionStatement(initCall);
+        private static Statement GetTargetWithOptionalFinalization(bool hasDel, Variable variable, Expression initCall) {
+            Statement body = Ast.Statement(initCall);
             if (hasDel) {
-                body = BlockStatement.Block(
-                        body,
-                        new ExpressionStatement(
-                            MethodCallExpression.Call(null,
+                body = Ast.Block(
+                    body,
+                    Ast.Statement(
+                        Ast.Call(
+                            null,
                             typeof(PythonOps).GetMethod("InitializeForFinalization"),
-                            BoundExpression.Defined(vr)
-                        ))
-                    );
+                            Ast.ReadDefined(variable)
+                        )
+                    )
+                );
             }
 
             return body;
         }
 
-        private BlockStatement CallInitUnchecked(StandardRule<T> rule, Variable vr, Expression assignment, Statement body) {
-            return BlockStatement.Block(
-                new ExpressionStatement(assignment),
+        private BlockStatement CallInitUnchecked(StandardRule<T> rule, Variable variable, Expression assignment, Statement body) {
+            return Ast.Block(
+                Ast.Statement(assignment),
                 body,
-                rule.MakeReturn(Binder, BoundExpression.Defined(vr))
+                rule.MakeReturn(Binder, Ast.ReadDefined(variable))
             );
         }
 
-        private BlockStatement CallInitChecked(DynamicType creating, StandardRule<T> rule, Variable vr, Expression assignment, Statement body) {
-            return BlockStatement.Block(
-                new ExpressionStatement(assignment),
-                IfStatement.IfThen(
-                    TypeBinaryExpression.TypeIs(BoundExpression.Defined(vr), creating.UnderlyingSystemType),
+        private BlockStatement CallInitChecked(DynamicType creating, StandardRule<T> rule, Variable variable, Expression assignment, Statement body) {
+            return Ast.Block(
+                Ast.Statement(assignment),
+                Ast.IfThen(
+                    Ast.TypeIs(Ast.ReadDefined(variable), creating.UnderlyingSystemType),
                     body
                 ),
-                rule.MakeReturn(Binder, BoundExpression.Defined(vr))
+                rule.MakeReturn(Binder, Ast.ReadDefined(variable))
             );
         }
 
-        private Expression CallInitBuiltin(DynamicType creating, BuiltinMethodDescriptor bmd, StandardRule<T> rule, object[] args, Variable vr) {
+        private Expression CallInitBuiltin(DynamicType creating, BuiltinMethodDescriptor bmd, StandardRule<T> rule, object[] args, Variable variable) {
             Expression initCall = null;
             if (bmd == InstanceOps.Init) {
                 // we have a default __init__, don't call it.
-                initCall = new VoidExpression(new EmptyStatement());
+                initCall = Ast.Void(
+                    Ast.Empty()
+                );
             } else {
                 MethodBinder mb = MethodBinder.MakeBinder(Binder, "__init__", bmd.Template.Targets, BinderType.Normal);
                 MethodCandidate mc = mb.MakeBindingTarget(CallType.None, 
-                    CompilerHelpers.PrependArray(creating, CallBinderHelper<T>.GetArgumentTypes(Action, args)));
+                    Utils.Array.Insert(creating, CallBinderHelper<T>.GetArgumentTypes(Action, args)));
                 if (mc != null) {
-                    initCall = mc.Target.MakeExpression(Binder, CompilerHelpers.PrependArray<Expression>(BoundExpression.Defined(vr), CallBinderHelper<T>.GetArgumentExpressions(Action, rule, args)));
+                    initCall = mc.Target.MakeExpression(Binder, 
+                        Utils.Array.Insert<Expression>(Ast.ReadDefined(variable), CallBinderHelper<T>.GetArgumentExpressions(mc, Action, rule, args)));
                 }
             }
             return initCall;
         }
 
         private ActionExpression CallInitDynamic(StandardRule<T> rule, Variable self) {
-            return ActionExpression.Call(
+            return Ast.Action.Call(
                 Action,
                 typeof(object),
-                CompilerHelpers.PrependArray<Expression>(
-                    MethodCallExpression.Call(rule.GetParameterExpression(0),
+                Utils.Array.Insert<Expression>(
+                    Ast.Call(
+                        rule.Parameters[0],
                         typeof(DynamicMixin).GetMethod("GetMember"),
-                        new Expression[] { 
-                            new CodeContextExpression(),
-                            BoundExpression.Defined(self),
-                            new ConstantExpression(Symbols.Init),
-                        }
+                        Ast.CodeContext(),
+                        Ast.ReadDefined(self),
+                        Ast.Constant(Symbols.Init)
                     ),
-                    CompilerHelpers.RemoveFirst(rule.GetParameterExpressions())
+                    Utils.Array.RemoveFirst(rule.Parameters)
                 )
             );
         }
@@ -272,8 +288,9 @@ namespace IronPython.Runtime.Calls {
         /// Generates an Expression which calls the Python __new__ method w/ the class parameter
         /// </summary>
         private Expression CallPythonNew(DynamicType creating, BuiltinFunction newInst, StandardRule<T> rule, object[] args) {
-            Expression[] parameters = CompilerHelpers.PrependArray(rule.GetParameterExpression(0), CallBinderHelper<T>.GetArgumentExpressions(Action, rule, args));
-            DynamicType[] types = CompilerHelpers.PrependArray(TypeCache.DynamicType, CallBinderHelper<T>.GetArgumentTypes(Action, args));
+            // TODO: Pass in method candidate when we support kw args
+            Expression[] parameters = Utils.Array.Insert(rule.Parameters[0], CallBinderHelper<T>.GetArgumentExpressions(null, Action, rule, args));
+            DynamicType[] types = Utils.Array.Insert(TypeCache.DynamicType, CallBinderHelper<T>.GetArgumentTypes(Action, args));
 
             MethodBinder mb = MethodBinder.MakeBinder(Binder,
                 DynamicTypeOps.GetName(creating),
@@ -307,23 +324,23 @@ namespace IronPython.Runtime.Calls {
             }
 
             StandardRule<T> rule = new StandardRule<T>();
-            Expression[] exprs = Variable.VariablesToExpressions(rule.Parameters);
-            Expression[] finalExprs = CompilerHelpers.RemoveFirst(exprs);
+            Expression[] exprs = rule.Parameters;
+            Expression[] finalExprs = Utils.Array.RemoveFirst(exprs);
 
             rule.SetTest(CreateInstanceBinderHelper<T>.MakeTestForTypeCall(Action, dt, rule, args));
 
             rule.SetTarget(
                 rule.MakeReturn(
                     Binder,
-                    MethodCallExpression.Call(
+                    Ast.Call(
                         null,
                         typeof(DynamicTypeOps).GetMethod("CallWorker", new Type[] { typeof(CodeContext), typeof(DynamicType), typeof(object[]) }),
-                        new CodeContextExpression(),
-                        StaticUnaryExpression.Convert(
-                            rule.GetParameterExpression(0),
+                        Ast.CodeContext(),
+                        Ast.Cast(
+                            rule.Parameters[0],
                             typeof(DynamicType)
                         ),
-                        NewArrayExpression.NewArrayInit(typeof(object[]), finalExprs)
+                        Ast.NewArray(typeof(object[]), finalExprs)
                     )
                 )
             );

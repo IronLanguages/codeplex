@@ -91,8 +91,24 @@ def calltargets_with_context(cw):
                  (nparams, make_params(nparams, "CodeContext context")))
     cw.write("")
 
+def calltargets_with_this(cw):
+    cw.write("")
+    for nparams in range(MAX_ARGS+1):
+        cw.write("public delegate object CallTargetWithThis%d(%s);" %
+                 (nparams, make_params(nparams, "object instance")))
+    cw.write("")
+    
+def calltargets_with_context_and_this(cw):
+    cw.write("")
+    for nparams in range(MAX_ARGS+1):
+        cw.write("public delegate object CallTargetWithContextAndThis%d(%s);" %
+                 (nparams, make_params(nparams, "CodeContext context", "object instance")))
+    cw.write("")
+    
 CodeGenerator("Contextless CallTargets", calltargets).doit()
 CodeGenerator("CallTargets", calltargets_with_context).doit()
+CodeGenerator("CallTargets WithThis", calltargets_with_this).doit()
+CodeGenerator("CallTargets WithContextAndThis", calltargets_with_context_and_this).doit()
 
 def get_call_type(postfix):
     if postfix == "": return "CallType.None"

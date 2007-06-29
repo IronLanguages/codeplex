@@ -304,6 +304,7 @@ if not is_silverlight:
 
 # SuperDelegate Tests
 
+@skip("cli64") #TFS Bug 262182
 def test_basic():
     class TestCounter:
         myhandler = 0
@@ -442,6 +443,7 @@ def test_basic():
 ##    Event Handler Add / Removal
 ###############################################################
 
+@skip("cli64") #TFS Bug 262182
 def test_event_handler_add_removal_sequence():
     class C: pass
     c = C()

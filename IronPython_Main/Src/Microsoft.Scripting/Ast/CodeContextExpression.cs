@@ -20,11 +20,7 @@ using Microsoft.Scripting.Generation;
 namespace Microsoft.Scripting.Ast {
     public class CodeContextExpression : Expression {
 
-        public CodeContextExpression()
-            : this(SourceSpan.None) {
-        }
-
-        public CodeContextExpression(SourceSpan span)
+        internal CodeContextExpression(SourceSpan span)
             : base(span) {
         }
 
@@ -46,6 +42,15 @@ namespace Microsoft.Scripting.Ast {
             if (walker.Walk(this)) {
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static CodeContextExpression CodeContext() {
+            return CodeContext(SourceSpan.None);
+        }
+        public static CodeContextExpression CodeContext(SourceSpan span) {
+            return new CodeContextExpression(span);
         }
     }
 }

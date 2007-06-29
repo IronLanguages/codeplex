@@ -23,11 +23,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _target;
         private readonly Expression _index;
 
-        public DeleteIndexExpression(Expression target, Expression index)
-            : this(target, index, SourceSpan.None) {
-        }
-
-        public DeleteIndexExpression(Expression target, Expression index, SourceSpan span) 
+        internal DeleteIndexExpression(SourceSpan span, Expression target, Expression index) 
             : base(span) {
             _target = target;
             _index = index;
@@ -57,6 +53,19 @@ namespace Microsoft.Scripting.Ast {
                 _index.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        /// <summary>
+        /// Deletes index from the object:  del target[index]
+        /// </summary>
+        public static DeleteIndexExpression Delete(Expression target, Expression index) {
+            return new DeleteIndexExpression(SourceSpan.None, target, index);
+        }
+
+        public static DeleteIndexExpression Delete(SourceSpan span, Expression target, Expression index) {
+            return new DeleteIndexExpression(span, target, index);
         }
     }
 }

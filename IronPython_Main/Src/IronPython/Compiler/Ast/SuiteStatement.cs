@@ -17,6 +17,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class SuiteStatement : Statement {
         private readonly Statement[] _statements;
 
@@ -30,7 +32,7 @@ namespace IronPython.Compiler.Ast {
         } 
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            return new MSAst.BlockStatement(ag.Transform(_statements));
+            return Ast.Block(ag.Transform(_statements));
         }
        
         public override void Walk(PythonWalker walker) {

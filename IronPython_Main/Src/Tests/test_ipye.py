@@ -41,15 +41,17 @@ def test_trivial():
     Assert(IronPython.Hosting.PythonEngine.Version != "")
 
 def test_fasteval():
-    global pe;
+    global pe
 
     # pe.Options.FastEvaluation is tested at compile time, so we need
     # to import another module here for the option to take effect.
     save = pe.Options.FastEvaluation
     pe.Options.FastEvaluation = True
-    import fasteval
-    fasteval.do_fasteval_test()
-    pe.Options.FastEvaluation = save
+    try:
+        import fasteval
+        fasteval.do_fasteval_test()
+    finally:
+        pe.Options.FastEvaluation = save
 
 def skip_test_CreateMethod():
     """Test cases specific to PythonEngine.CreateMethod<DelegateType>"""
@@ -307,7 +309,7 @@ def test_publishmodule():
     AssertError(TypeError, pe.PublishModule, None)
 
   
-       
+
 run_test(__name__)
 
 

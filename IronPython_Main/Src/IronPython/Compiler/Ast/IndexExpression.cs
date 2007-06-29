@@ -18,6 +18,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class IndexExpression : Expression {
         private readonly Expression _target;
         private readonly Expression _index;
@@ -36,33 +38,34 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return new MSAst.IndexExpression(
+            return Ast.DynamicReadItem(
+                Span,
                 ag.Transform(_target),
-                ag.Transform(_index),
-                Span
-                );
+                ag.Transform(_index)
+            );
         }
 
         internal override MSAst.Statement TransformSet(AstGenerator ag, MSAst.Expression right, Operators op) {
-            MSAst.IndexAssignment ia = new MSAst.IndexAssignment(
-                ag.Transform(_target),
-                ag.Transform(_index),
-                right,
-                op,
-                Span
-                );
-            return new MSAst.ExpressionStatement(ia, Span);
+            return Ast.Statement(
+                Ast.DynamicAssignItem(
+                    Span,
+                    ag.Transform(_target),
+                    ag.Transform(_index),
+                    right,
+                    op
+                )
+            );
         }
 
 
         internal override MSAst.Statement TransformDelete(AstGenerator ag) {
-            return new MSAst.ExpressionStatement(
-                  new MSAst.DeleteIndexExpression(
+            return Ast.Statement(
+                Span,
+                Ast.Delete(
+                    Span,
                     ag.Transform(_target),
-                    ag.Transform(_index),
-                    Span
-                   ),
-                   Span
+                    ag.Transform(_index)
+                )
             );
         }
 

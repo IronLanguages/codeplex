@@ -17,6 +17,8 @@ using System;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class SliceExpression : Expression {
         private readonly Expression _sliceStart;
         private readonly Expression _sliceStop;
@@ -41,15 +43,14 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return new MSAst.MethodCallExpression(
-                AstGenerator.GetHelperMethod("MakeSlice"),      // method
-                null,                                           // instance
-                new MSAst.Expression[] {                        // parameters
-                    ag.TransformOrConstantNull(_sliceStart, typeof(object)),
-                    ag.TransformOrConstantNull(_sliceStop, typeof(object)),
-                    ag.TransformOrConstantNull(_sliceStep, typeof(object))
-                },
-                Span);
+            return Ast.Call(
+                Span,
+                null,                                                       // instance
+                AstGenerator.GetHelperMethod("MakeSlice"),                  // method
+                ag.TransformOrConstantNull(_sliceStart, typeof(object)),    // parameters
+                ag.TransformOrConstantNull(_sliceStop, typeof(object)),
+                ag.TransformOrConstantNull(_sliceStep, typeof(object))
+            );
         }
 
         public override void Walk(PythonWalker walker) {

@@ -82,7 +82,7 @@ namespace Microsoft.Scripting {
             if (pis.Length > 0 && (pis[0].ParameterType == typeof(CodeContext))) {
                 // calling a context aware method, remove context from the parameters
                 // for the purpose of the bind.
-                pis = CompilerHelpers.RemoveFirst(pis);
+                pis = Utils.Array.RemoveFirst(pis);
             }
 
             string[] argNames = new string[pis.Length];
@@ -112,10 +112,7 @@ namespace Microsoft.Scripting {
             object[] oldArgs = _arguments;
             if (_instance != null && CompilerHelpers.IsStatic(target)) {
                 // instance provided for non-instance method, combine.
-                object [] newArgs = new object[_arguments.Length + 1];
-                newArgs[0] = _instance;
-                Array.Copy(_arguments, 0, newArgs, 1, _arguments.Length);
-                _arguments = newArgs;
+                _arguments = Utils.Array.Insert(_instance, _arguments);
             }
 
             try {

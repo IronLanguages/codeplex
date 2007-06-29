@@ -21,7 +21,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _target;
         private readonly Expression _index;
 
-        public IndexExpression(Expression target, Expression index, SourceSpan span)
+        internal IndexExpression(SourceSpan span, Expression target, Expression index)
             : base(span) {
             _target = target;
             _index = index;
@@ -55,15 +55,14 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        #region Factories
-        public static IndexExpression Indexer(SourceSpan span, Expression target, Expression index) {
-            return new IndexExpression(target, index, span);
+    public static partial class Ast {
+        public static IndexExpression DynamicReadItem(Expression target, Expression index) {
+            return DynamicReadItem(SourceSpan.None, target, index);
         }
-
-        public static IndexExpression Indexer(Expression target, Expression index) {
-            return new IndexExpression(target, index, SourceSpan.None);
+        public static IndexExpression DynamicReadItem(SourceSpan span, Expression target, Expression index) {
+            return new IndexExpression(span, target, index);
         }
-        #endregion
     }
 }

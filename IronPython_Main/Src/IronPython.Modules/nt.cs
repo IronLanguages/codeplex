@@ -346,7 +346,7 @@ namespace IronPython.Modules {
             }
 
             object env = args[args.Length - 1];
-            object[] slicedArgs = CompilerHelpers.RemoveFirst(args);
+            object[] slicedArgs = Utils.Array.RemoveFirst(args);
 
             Process process = MakeProcess();
             SetEnvironment(process.StartInfo.EnvironmentVariables, env);

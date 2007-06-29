@@ -14,15 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
 using System.Diagnostics;
+using System.Collections.Generic;
 
-namespace Microsoft.Scripting {
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Actions;
+
+namespace Microsoft.Scripting.Actions {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class BinderHelper<T, ActionType> where ActionType : Action {
         private CodeContext _context;
         private ActionType _action;
@@ -82,41 +82,52 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Gets the expressions which correspond to each parameter on the calling method.
         /// </summary>
-        public static Expression[] GetArgumentExpressions(CallAction action, StandardRule<T> rule, object[] args) {
+        public static Expression[] GetArgumentExpressions(MethodCandidate candidate, CallAction action, StandardRule<T> rule, object[] args) {
             List<Expression> res = new List<Expression>();
             object target = args[0];
 
             if (target is BoundBuiltinFunction) {
                 // bound method call, the argument expressions include the instance from the bound function too
-                res.Add(MemberExpression.Property(
-                    StaticUnaryExpression.Convert(rule.GetParameterExpression(0), typeof(BoundBuiltinFunction)),
+                res.Add(Ast.ReadProperty(
+                    Ast.Cast(rule.Parameters[0], typeof(BoundBuiltinFunction)),
                     typeof(BoundBuiltinFunction).GetProperty("Self")));
             }
 
             for (int i = 0; i < ArgumentCount(action, rule); i++) {
-                if (action.ArgumentKinds == null ||                // simple call...
-                    (!action.ArgumentKinds[i].ExpandDictionary &&
-                    !action.ArgumentKinds[i].ExpandList &&
-                    action.ArgumentKinds[i].Name == SymbolId.Empty)) {
-                    res.Add(rule.GetParameterExpression(i + 1));
-                    continue;
-                }
+                if (action.ArgumentKinds == null || action.ArgumentKinds[i].IsSimple) {
+                    res.Add(rule.Parameters[i + 1]);
+                } else if (action.ArgumentKinds[i].Name != SymbolId.Empty) {
+                    // until everyone supports kw args this may be null but not if our action specifies kw-args.
+                    Debug.Assert(candidate != null);
 
-                // we only support lists right now
-                Debug.Assert(action.ArgumentKinds[i].ExpandList);
-                Debug.Assert(i == ArgumentCount(action, rule) - 1);
+                    // need to figure out which parameter we represent...
+                    for (int j = 0; j < candidate.Parameters.Count; j++) {
+                        if (candidate.Parameters[j].Name == action.ArgumentKinds[i].Name) {
+                            while (res.Count <= j) {
+                                res.Add(null);
+                            }
 
-                for (int j = 0; j < ((IList<object>)args[args.Length - 1]).Count; j++) {
-                    res.Add(
-                        MethodCallExpression.Call(
-                            StaticUnaryExpression.Convert(
-                                rule.GetParameterExpression(i + 1),
-                                typeof(IList<object>)),
-                            typeof(IList<object>).GetMethod("get_Item"),
-                            new ConstantExpression(j)
-                        )
-                    );
-                }
+                            res[j] = rule.Parameters[i + 1];
+                            break;
+                        }
+                    }
+                } else {
+                    // we only support lists right now
+                    Debug.Assert(action.ArgumentKinds[i].ExpandList);
+                    Debug.Assert(i == ArgumentCount(action, rule) - 1);
+
+                    for (int j = 0; j < ((IList<object>)args[args.Length - 1]).Count; j++) {
+                        res.Add(
+                            Ast.Call(
+                                Ast.Cast(
+                                    rule.Parameters[i + 1],
+                                    typeof(IList<object>)),
+                                typeof(IList<object>).GetMethod("get_Item"),
+                                Ast.Constant(j)
+                            )
+                        );
+                    }
+                }                
             }
 
             return res.ToArray();
@@ -128,25 +139,24 @@ namespace Microsoft.Scripting {
                 return action.ArgumentKinds.Length;
             }
 
-            return rule.Parameters.Length - 1;
+            return rule.ParameterCount - 1;
         }
 
-        public static StaticUnaryExpression GetParamsList(StandardRule<T> rule) {
-            return StaticUnaryExpression.Convert(
-                rule.GetParameterExpression(rule.Parameters.Length - 1),
+        public static UnaryExpression GetParamsList(StandardRule<T> rule) {
+            return Ast.Cast(
+                rule.Parameters[rule.ParameterCount - 1],
                 typeof(IList<object>)
             );
         }
 
         public static Expression MakeParamsTest(StandardRule<T> rule, object[] args) {
-            return BinaryExpression.Equal(
-                MemberExpression.Property(
+            return Ast.Equal(
+                Ast.ReadProperty(
                     GetParamsList(rule),
                     typeof(ICollection<object>).GetProperty("Count")
                 ),
-                new ConstantExpression(((IList<object>)args[args.Length - 1]).Count)
+                Ast.Constant(((IList<object>)args[args.Length - 1]).Count)
             );
-
         }
 
         public static DynamicType[] GetArgumentTypes(CallAction action, object[] args) {
@@ -154,8 +164,7 @@ namespace Microsoft.Scripting {
             for (int i = 1; i < args.Length; i++) {
                 if (action.ArgumentKinds == null ||
                     (!action.ArgumentKinds[i - 1].ExpandDictionary &&
-                    !action.ArgumentKinds[i - 1].ExpandList &&
-                    action.ArgumentKinds[i - 1].Name == SymbolId.Empty)) {
+                    !action.ArgumentKinds[i - 1].ExpandList)) {
                     res.Add(DynamicHelpers.GetDynamicType(args[i]));
                     continue;
                 }

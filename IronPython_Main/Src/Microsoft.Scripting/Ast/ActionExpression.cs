@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Action _action;
         private readonly Type _result;
 
-        private ActionExpression(Action action, IList<Expression> arguments, Type result, SourceSpan span)
+        internal ActionExpression(SourceSpan span, Action action, IList<Expression> arguments, Type result)
             : base(span) {
             if (action == null) throw new ArgumentNullException("action");
             if (arguments == null) throw new ArgumentNullException("arguments");
@@ -91,7 +91,6 @@ namespace Microsoft.Scripting.Ast {
 
             // Emit code context for unoptimized sites only
             if (!fast) {
-                Debug.Assert(parameters.Length == _arguments.Count + 1);
                 Debug.Assert(parameters[0].ParameterType == typeof(CodeContext));
 
                 cg.EmitCodeContext();
@@ -100,14 +99,64 @@ namespace Microsoft.Scripting.Ast {
                 first = 1;
             }
 
-            // Emit the arguments
-            for (int arg = 0; arg < _arguments.Count; arg ++) {
-                Debug.Assert(parameters[arg + first].ParameterType == _arguments[arg].ExpressionType);
-                _arguments[arg].Emit(cg);
+            if (parameters.Length < _arguments.Count + first) {
+                // tuple parameters
+                Debug.Assert(parameters.Length == first + 1);
+
+                CreateTupleInstance(cg, site.Type.GetGenericArguments()[0], 0, _arguments.Count);
+            } else {
+                // Emit the arguments
+                for (int arg = 0; arg < _arguments.Count; arg++) {
+                    Debug.Assert(parameters[arg + first].ParameterType == _arguments[arg].ExpressionType);
+                    _arguments[arg].Emit(cg);
+                }
             }
+
 
             // Emit the site invoke
             cg.EmitCall(site.Type, "Invoke");
+        }
+
+        private void CreateTupleInstance(CodeGen cg, Type tupleType, int start, int end) {
+            int size = end - start;
+
+            if (size > NewTuple.MaxSize) {
+                int multiplier = 1;
+                while (size > NewTuple.MaxSize) {
+                    size = (size + NewTuple.MaxSize - 1) / NewTuple.MaxSize;
+                    multiplier *= NewTuple.MaxSize;
+                }
+                for (int i = 0; i < size; i++) {
+                    int newStart = start + (i * multiplier);
+                    int newEnd = System.Math.Min(end, start + ((i + 1) * multiplier));
+
+                    PropertyInfo pi = tupleType.GetProperty("Item" + String.Format("{0:D3}", i));
+                    Debug.Assert(pi != null);
+                    CreateTupleInstance(cg, pi.PropertyType, newStart, newEnd);
+                }
+            } else {
+                for (int i = start; i < end; i++) {
+                    _arguments[i].Emit(cg);
+                }
+            }
+
+            // fill in emptys with null.
+            Type[] genArgs = tupleType.GetGenericArguments();
+            for (int i = size; i < genArgs.Length; i++) {
+                cg.EmitNull();
+            }
+           
+            EmitTupleNew(cg, tupleType);
+        }
+
+        private static void EmitTupleNew(CodeGen cg, Type tupleType) {
+            ConstructorInfo[] cis = tupleType.GetConstructors();
+            foreach (ConstructorInfo ci in cis) {
+                if (ci.GetParameters().Length != 0) {
+                    cg.EmitNew(ci);
+                    break;
+                }
+            }
         }
 
         public override void Walk(Walker walker) {
@@ -118,101 +167,101 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        #region Factories
+    public static partial class Ast {
+        public static class Action {
+            /// <summary>
+            /// Creates ActionExpression representing DoOperationAction.
+            /// </summary>
+            /// <param name="op">The operation to perform</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression Operator(Operators op, Type result, params Expression[] arguments) {
+                return Operator(SourceSpan.None, op, result, arguments);
+            }
 
-        /// <summary>
-        /// Creates ActionExpression representing DoOperationAction.
-        /// </summary>
-        /// <param name="op">The operation to perform</param>
-        /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
-        /// <param name="arguments">Array of arguments for the action expression</param>
-        /// <returns>New instance of the ActionExpression</returns>
-        public static ActionExpression Operator(Operators op, Type result, params Expression[] arguments) {
-            return Operator(SourceSpan.None, op, result, arguments);
+            /// <summary>
+            /// Creates ActionExpression representing DoOperationAction.
+            /// </summary>
+            /// <param name="span">SourceSpan to associate with the expression</param>
+            /// <param name="op">The operation to perform</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression Operator(SourceSpan span, Operators op, Type result, params Expression[] arguments) {
+                return new ActionExpression(span, DoOperationAction.Make(op), arguments, result);
+            }
+
+            /// <summary>
+            /// Creates ActionExpression representing a GetMember action.
+            /// </summary>
+            /// <param name="name">The qualifier.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression GetMember(SymbolId name, Type result, params Expression[] arguments) {
+                return GetMember(SourceSpan.None, name, result, arguments);
+            }
+
+            /// <summary>
+            /// Creates ActionExpression representing a GetMember action.
+            /// </summary>
+            /// <param name="span">SourceSpan to associate with the expression</param>
+            /// <param name="name">The qualifier.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression GetMember(SourceSpan span, SymbolId name, Type result, params Expression[] arguments) {
+                return new ActionExpression(span, GetMemberAction.Make(name), arguments, result);
+            }
+
+            /// <summary>
+            /// Creates ActionExpression representing a SetMember action.
+            /// </summary>
+            /// <param name="name">The qualifier.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression SetMember(SymbolId name, Type result, params Expression[] arguments) {
+                return SetMember(SourceSpan.None, name, result, arguments);
+            }
+
+            /// <summary>
+            /// Creates ActionExpression representing a SetMember action.
+            /// </summary>
+            /// <param name="span">SourceSpan to associate with the expression</param>
+            /// <param name="name">The qualifier.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression SetMember(SourceSpan span, SymbolId name, Type result, params Expression[] arguments) {
+                return new ActionExpression(span, SetMemberAction.Make(name), arguments, result);
+            }
+
+            /// <summary>
+            /// Creates ActionExpression representing a Call action.
+            /// </summary>
+            /// <param name="action">The call action to perform.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression Call(CallAction action, Type result, params Expression[] arguments) {
+                return Call(SourceSpan.None, action, result, arguments);
+            }
+
+            /// <summary>
+            /// Creates ActionExpression representing a Call action.
+            /// </summary>
+            /// <param name="span">SourceSpan to associate with the expression</param>
+            /// <param name="action">The call action to perform.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression Call(SourceSpan span, CallAction action, Type result, params Expression[] arguments) {
+                return new ActionExpression(span, action, arguments, result);
+            }
         }
-
-        /// <summary>
-        /// Creates ActionExpression representing DoOperationAction.
-        /// </summary>
-        /// <param name="span">SourceSpan to associate with the expression</param>
-        /// <param name="op">The operation to perform</param>
-        /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
-        /// <param name="arguments">Array of arguments for the action expression</param>
-        /// <returns>New instance of the ActionExpression</returns>
-        public static ActionExpression Operator(SourceSpan span, Operators op, Type result, params Expression[] arguments) {
-            return new ActionExpression(DoOperationAction.Make(op), arguments, result, span);
-        }
-
-        /// <summary>
-        /// Creates ActionExpression representing a GetMember action.
-        /// </summary>
-        /// <param name="name">The qualifier.</param>
-        /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
-        /// <param name="arguments">Array of arguments for the action expression</param>
-        /// <returns>New instance of the ActionExpression</returns>
-        public static ActionExpression GetMember(SymbolId name, Type result, params Expression[] arguments) {
-            return GetMember(SourceSpan.None, name, result, arguments);
-        }
-
-        /// <summary>
-        /// Creates ActionExpression representing a GetMember action.
-        /// </summary>
-        /// <param name="span">SourceSpan to associate with the expression</param>
-        /// <param name="name">The qualifier.</param>
-        /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
-        /// <param name="arguments">Array of arguments for the action expression</param>
-        /// <returns>New instance of the ActionExpression</returns>
-        public static ActionExpression GetMember(SourceSpan span, SymbolId name, Type result, params Expression[] arguments) {
-            return new ActionExpression(GetMemberAction.Make(name), arguments, result, span);
-        }
-
-        /// <summary>
-        /// Creates ActionExpression representing a SetMember action.
-        /// </summary>
-        /// <param name="name">The qualifier.</param>
-        /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
-        /// <param name="arguments">Array of arguments for the action expression</param>
-        /// <returns>New instance of the ActionExpression</returns>
-        public static ActionExpression SetMember(SymbolId name, Type result, params Expression[] arguments) {
-            return SetMember(SourceSpan.None, name, result, arguments);
-        }
-
-        /// <summary>
-        /// Creates ActionExpression representing a SetMember action.
-        /// </summary>
-        /// <param name="span">SourceSpan to associate with the expression</param>
-        /// <param name="name">The qualifier.</param>
-        /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
-        /// <param name="arguments">Array of arguments for the action expression</param>
-        /// <returns>New instance of the ActionExpression</returns>
-        public static ActionExpression SetMember(SourceSpan span, SymbolId name, Type result, params Expression[] arguments) {
-            return new ActionExpression(SetMemberAction.Make(name), arguments, result, span);
-        }
-
-        /// <summary>
-        /// Creates ActionExpression representing a Call action.
-        /// </summary>
-        /// <param name="action">The call action to perform.</param>
-        /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
-        /// <param name="arguments">Array of arguments for the action expression</param>
-        /// <returns>New instance of the ActionExpression</returns>
-        public static ActionExpression Call(CallAction action, Type result, params Expression[] arguments) {
-            return Call(SourceSpan.None, action, result, arguments);
-        }
-
-        /// <summary>
-        /// Creates ActionExpression representing a Call action.
-        /// </summary>
-        /// <param name="span">SourceSpan to associate with the expression</param>
-        /// <param name="action">The call action to perform.</param>
-        /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
-        /// <param name="arguments">Array of arguments for the action expression</param>
-        /// <returns>New instance of the ActionExpression</returns>
-        public static ActionExpression Call(SourceSpan span, CallAction action, Type result, params Expression[] arguments) {
-            return new ActionExpression(action, arguments, result, span);
-        }
-
-        #endregion
     }
 }

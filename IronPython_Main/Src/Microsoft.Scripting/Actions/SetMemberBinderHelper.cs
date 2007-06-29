@@ -17,12 +17,13 @@ using System;
 using System.Reflection;
 using System.Diagnostics;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class SetMemberBinderHelper<T> {
         private ActionBinder _binder;
         private SetMemberAction _action;
@@ -100,21 +101,19 @@ namespace Microsoft.Scripting.Actions {
             return MakeDynamicRule(targetType);            
         }
 
-        private Statement MakeCallExpression(MethodInfo method, Variable[] parameters) {
+        private Statement MakeCallExpression(MethodInfo method, Expression[] parameters) {
             ParameterInfo[] infos = method.GetParameters();
             Expression callInst = null;
             int parameter = 0;
             Expression[] callArgs = new Expression[infos.Length];
 
             if (!method.IsStatic) {
-                callInst = BoundExpression.Defined(parameters[0]);
+                callInst = parameters[0];
                 parameter = 1;
             }
             for (int arg = 0; arg < infos.Length; arg++) {
                 if (parameter < parameters.Length) {
-                    callArgs[arg] = _binder.ConvertExpression(
-                        BoundExpression.Defined(parameters[parameter++]),
-                        infos[arg].ParameterType);
+                    callArgs[arg] = _binder.ConvertExpression(parameters[parameter++], infos[arg].ParameterType);
                 } else {
                     return InvalidArgumentCount(method, infos.Length, parameters.Length);
                 }
@@ -124,16 +123,16 @@ namespace Microsoft.Scripting.Actions {
             if (parameter != parameters.Length) {
                 return InvalidArgumentCount(method, infos.Length, parameters.Length);
             }
-            return new ReturnStatement(MethodCallExpression.Call(callInst, method, callArgs));
+            return Ast.Return(Ast.Call(callInst, method, callArgs));
         }
 
         private static Statement InvalidArgumentCount(MethodInfo method, int expected, int provided) {
-            return new ExpressionStatement(
-                new ThrowExpression(
-                    MethodCallExpression.Call(
+            return Ast.Statement(
+                Ast.Throw(
+                    Ast.Call(
                         null,
                         typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
-                        new ConstantExpression(
+                        Ast.Constant(
                             String.Format("{0}() takes exactly {1} arguments ({1} given)", method.Name, expected, provided)
                         )
                     )
@@ -153,12 +152,12 @@ namespace Microsoft.Scripting.Actions {
                 rule.SetTarget(
                     rule.MakeReturn(
                         _binder,
-                        MemberAssignment.Field(
+                        Ast.AssignField(
                             field.IsStatic ?
                                 null :
-                                rule.GetParameterExpression(0),
+                                rule.Parameters[0],
                             field,
-                            _binder.ConvertExpression(rule.GetParameterExpression(1), field.FieldType)
+                            _binder.ConvertExpression(rule.Parameters[1], field.FieldType)
                         )
                     )
                 );
@@ -174,12 +173,12 @@ namespace Microsoft.Scripting.Actions {
         private StandardRule<T> MakeDynamicRule(DynamicType targetType) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(new DynamicType[] { targetType });
-            Expression expr = MethodCallExpression.Call(null,
+            Expression expr = Ast.Call(null,
                     typeof(RuntimeHelpers).GetMethod("SetMember"),
-                    rule.GetParameterExpression(1),
-                    rule.GetParameterExpression(0),
-                    ConstantExpression.Constant(this._action.Name),
-                    new CodeContextExpression());
+                    rule.Parameters[1],
+                    rule.Parameters[0],
+                    Ast.Constant(this._action.Name),
+                    Ast.CodeContext());
             rule.SetTarget(rule.MakeReturn(_binder, expr));
             return rule;
         }

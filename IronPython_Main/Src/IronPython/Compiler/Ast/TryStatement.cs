@@ -21,6 +21,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class TryStatement : Statement {
         private SourceLocation _header;
         private Statement _body;
@@ -62,24 +64,24 @@ namespace IronPython.Compiler.Ast {
             if (GenerateNewTryStatement) {
                 return TransformToTryStatement(ag);
             } else {
-                return new MSAst.DynamicTryStatement(
+                return Ast.DynamicTry(
+                    Span,
+                    _header,
                     ag.Transform(_body),
                     ag.Transform(_handlers),
                     ag.Transform(_else),
-                    ag.Transform(_finally),
-                    Span,
-                    _header
+                    ag.Transform(_finally)
                 );
             }
         }
 
         private MSAst.Statement TransformToTryStatement(AstGenerator ag) {
-            return new MSAst.TryStatement(
+            return Ast.TryCatchFinally(
+                Span,
+                _header,
                 ag.Transform(_body),
                 TransformCatch(ag),
-                ag.Transform(_finally),
-                Span,
-                _header
+                ag.Transform(_finally)
             );
         }
 
@@ -102,13 +104,13 @@ namespace IronPython.Compiler.Ast {
             //
             // extracted = PushExceptionHandler(context, exception)
             //
-            MSAst.Statement init = new MSAst.ExpressionStatement(
-                MSAst.BoundAssignment.Assign(
+            MSAst.Statement init = Ast.Statement(
+                Ast.Assign(
                     extracted.Variable,
-                    MSAst.MethodCallExpression.Call(
+                    Ast.Call(
                         null,
                         AstGenerator.GetHelperMethod("PushExceptionHandler"),
-                        new MSAst.CodeContextExpression(),
+                        Ast.CodeContext(),
                         exception
                     )
                 )
@@ -117,11 +119,11 @@ namespace IronPython.Compiler.Ast {
             //
             // PopExceptionHandler(context)
             //
-            MSAst.Statement done = new MSAst.ExpressionStatement(
-                MSAst.MethodCallExpression.Call(
+            MSAst.Statement done = Ast.Statement(
+                Ast.Call(
                     null,
                     AstGenerator.GetHelperMethod("PopExceptionHandler"),
-                    new MSAst.CodeContextExpression()
+                    Ast.CodeContext()
                 )
             );
 
@@ -141,10 +143,10 @@ namespace IronPython.Compiler.Ast {
                     //  generate following AST for the Test (common part):
                     //      CheckException(context, exception, Test)
                     MSAst.Expression test =
-                        MSAst.MethodCallExpression.Call(
+                        Ast.Call(
                             null,
                             AstGenerator.GetHelperMethod("CheckException"),
-                            new MSAst.CodeContextExpression(),
+                            Ast.CodeContext(),
                             extracted,
                             ag.TransformAsObject(tsh.Test)
                         );
@@ -163,12 +165,12 @@ namespace IronPython.Compiler.Ast {
                             converted = ag.MakeTempExpression("converted", SourceSpan.None);
                         }
 
-                        ist = new MSAst.IfStatementTest(
-                            MSAst.BinaryExpression.NotEqual(
-                                MSAst.BoundAssignment.Assign(converted.Variable, test),
-                                MSAst.ConstantExpression.Constant(null)
+                        ist = Ast.IfCondition(
+                            Ast.NotEqual(
+                                Ast.Assign(converted.Variable, test),
+                                Ast.Null()
                             ),
-                            MSAst.BlockStatement.Block(
+                            Ast.Block(
                                 tsh.Target.TransformSet(ag, converted, Operators.None),
                                 ag.Transform(tsh.Body)
                             )
@@ -181,10 +183,10 @@ namespace IronPython.Compiler.Ast {
                         //      if (CheckException(context, exception, Test) != null) {
                         //          <body>
                         //      }
-                        ist = new MSAst.IfStatementTest(
-                            MSAst.BinaryExpression.NotEqual(
+                        ist = Ast.IfCondition(
+                            Ast.NotEqual(
                                 test,
-                                MSAst.ConstantExpression.Constant(null)
+                                Ast.Null()
                             ),
                             ag.Transform(tsh.Body)
                         );
@@ -210,12 +212,12 @@ namespace IronPython.Compiler.Ast {
             if (tests.Count > 0) {
                 // rethrow the exception if we have no catch-all block
                 if (catchAll == null) {
-                    catchAll = new MSAst.ExpressionStatement(
-                        new MSAst.ThrowExpression(exception)
+                    catchAll = Ast.Statement(
+                        Ast.Throw(exception)
                     );
                 }
 
-                body = new MSAst.IfStatement(
+                body = Ast.If(
                     tests.ToArray(),
                     catchAll
                 );
@@ -224,18 +226,17 @@ namespace IronPython.Compiler.Ast {
                 body = catchAll;
             }
 
-            MSAst.TryStatement handler = new MSAst.TryStatement(
-                MSAst.BlockStatement.Block(
+            MSAst.TryStatement handler = Ast.TryFinally(
+                Span,
+                _header,
+                Ast.Block(
                     init,
                     body
                 ),
-                null,
-                done,
-                Span,
-                _header
+                done
             );
 
-            return new MSAst.CatchBlock(
+            return Ast.Catch(
                 typeof(Exception),
                 exception.Variable,
                 handler
@@ -296,12 +297,10 @@ namespace IronPython.Compiler.Ast {
                 return new MSAst.DynamicTryStatementHandler(
                     ag.Transform(_test),
                     target.Variable,
-                    new MSAst.BlockStatement(
-                        new MSAst.Statement[] {
-                            _target.TransformSet(ag, target, Operators.None),
-                            ag.Transform(_body)
-                        },
-                        _body.Span
+                    Ast.Block(
+                        _body.Span,
+                        _target.TransformSet(ag, target, Operators.None),
+                        ag.Transform(_body)
                     ),
                     Span,
                     _header

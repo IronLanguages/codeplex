@@ -136,7 +136,6 @@ namespace IronPython.Compiler.Ast {
 
         #endregion
 
-        // TODO: The boolean flag is temporary until we have ModuleStatement or something of sorts
         private PythonAst DoBind(Statement root, bool module) {
             PythonAst gs = new PythonAst(root, module);
             _currentScope = _globalScope = gs;
@@ -224,6 +223,8 @@ namespace IronPython.Compiler.Ast {
             foreach (Expression b in node.Bases) b.Walk(this);
 
             PushScope(node);
+
+            node.ModuleNameVariable = _globalScope.EnsureGlobalVariable(Symbols.Name);
 
             // define the __doc__ and the __module__
             node.DocVariable = DefineName(Symbols.Doc);

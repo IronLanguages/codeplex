@@ -23,11 +23,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _target;
         private SymbolId _name;
 
-        public DeleteDynamicMemberExpression(Expression target, SymbolId name)
-            : this(target, name, SourceSpan.None) {
-        }
-
-        public DeleteDynamicMemberExpression(Expression target, SymbolId name, SourceSpan span) 
+        internal DeleteDynamicMemberExpression(SourceSpan span, Expression target, SymbolId name) 
             : base(span) {
             _target = target;
             _name = name;
@@ -56,6 +52,15 @@ namespace Microsoft.Scripting.Ast {
                 _target.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static DeleteDynamicMemberExpression Delete(Expression target, SymbolId name) {
+            return Delete(SourceSpan.None, target, name);
+        }
+        public static DeleteDynamicMemberExpression Delete(SourceSpan span, Expression target, SymbolId name) {
+            return new DeleteDynamicMemberExpression(span, target, name);
         }
     }
 }

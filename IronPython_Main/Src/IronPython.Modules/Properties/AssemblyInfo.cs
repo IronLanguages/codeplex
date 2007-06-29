@@ -25,7 +25,7 @@ using System.Security;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("IronPython.Modules")]
-[assembly: AssemblyCopyright("Copyright ? Microsoft 2006")]
+[assembly: AssemblyCopyright("Copyright ?? Microsoft 2006")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -46,8 +46,9 @@ using System.Security;
 //
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
-[assembly: AssemblyVersion("2.0.0.100")]
-[assembly: AssemblyFileVersion("2.0")]
+[assembly: AssemblyVersion("2.0.0.200")]
+[assembly: AssemblyFileVersion("2.0.10627.00")]
+[assembly: AssemblyInformationalVersion("2.0")]
 [assembly: SecurityTransparent]
 
 #if !SILVERLIGHT

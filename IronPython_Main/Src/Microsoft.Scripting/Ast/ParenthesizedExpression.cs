@@ -14,21 +14,16 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class ParenthesisExpression : Expression {
+    public class ParenthesizedExpression : Expression {
         private readonly Expression _expression;
 
-        public ParenthesisExpression(Expression expression)
-            : this(expression, SourceSpan.None) {
-        }
-
-        public ParenthesisExpression(Expression expression, SourceSpan span)
+        internal ParenthesizedExpression(SourceSpan span, Expression expression)
             : base(span) {
-            if (expression == null) {
-                throw new ArgumentNullException("expression");
-            }
+            Debug.Assert(expression != null);
             _expression = expression;
         }
 
@@ -55,6 +50,21 @@ namespace Microsoft.Scripting.Ast {
                 _expression.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static ParenthesizedExpression Parenthesize(Expression expression) {
+            return Parenthesize(SourceSpan.None, expression);
+        }
+        public static ParenthesizedExpression Parenthesize(SourceSpan span, Expression expression) {
+            if (expression == null) {
+                throw new ArgumentNullException("expression");
+            }
+            return new ParenthesizedExpression(span, expression);
         }
     }
 }

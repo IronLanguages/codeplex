@@ -19,11 +19,7 @@ namespace Microsoft.Scripting.Ast {
     public class ExpressionStatement : Statement {
         private readonly Expression _expression;
 
-        public ExpressionStatement(Expression expression)
-            : this(expression, SourceSpan.None) {
-        }
-
-        public ExpressionStatement(Expression expression, SourceSpan span)
+        internal ExpressionStatement(SourceSpan span, Expression expression)
             : base(span) {
             _expression = expression;
         }
@@ -48,6 +44,15 @@ namespace Microsoft.Scripting.Ast {
                 _expression.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static Statement Statement(Expression expression) {
+            return Statement(SourceSpan.None, expression);
+        }
+        public static Statement Statement(SourceSpan span, Expression expression) {
+            return new ExpressionStatement(span, expression);
         }
     }
 }

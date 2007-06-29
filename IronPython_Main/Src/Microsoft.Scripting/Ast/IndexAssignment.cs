@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
@@ -23,11 +24,11 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _value;
         private readonly Operators _op;
 
-        public IndexAssignment(Expression target, Expression index, Expression value, Operators op, SourceSpan span)
+        internal IndexAssignment(SourceSpan span, Expression target, Expression index, Expression value, Operators op)
             : base(span) {
-            if (target == null) throw new ArgumentNullException("target");
-            if (index == null) throw new ArgumentNullException("index");
-            if (value == null) throw new ArgumentNullException("value");
+            Debug.Assert(target != null);
+            Debug.Assert(index != null);
+            Debug.Assert(value != null);
 
             _target = target;
             _index = index;
@@ -48,6 +49,24 @@ namespace Microsoft.Scripting.Ast {
 
         public Operators Op {
             get { return _op; }
+        }
+
+        public override object Evaluate(CodeContext context) {
+            object target, value, index;
+            if (_op == Operators.None) {
+                value = _value.Evaluate(context);
+            } else {
+                throw new NotImplementedException("IndexAssignment.Evaluate");
+                // TODO
+                /*
+                ActionExpression action = ActionExpression.Operator(_op, _asType, 
+                value = RuntimeHelpers.GetIndex(context, target, index);
+                 */
+            }
+
+            target = _target.Evaluate(context);
+            index = _index.Evaluate(context);
+            return RuntimeHelpers.SetIndex(value, target, index, context);
         }
 
         public override void Emit(CodeGen cg) {
@@ -93,21 +112,32 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        public static IndexAssignment SimpleAssign(Expression target, Expression index, Expression value) {
-            return OpAssign(target, index, value, Operators.None, SourceSpan.None);
+    public static partial class Ast {
+        public static IndexAssignment DynamicAssignItem(Expression target, Expression index, Expression value) {
+            return DynamicAssignItem(SourceSpan.None, target, index, value, Operators.None);
         }
 
-        public static IndexAssignment SimpleAssign(Expression target, Expression index, Expression value, SourceSpan span) {
-            return OpAssign(target, index, value, Operators.None, span);
+        public static IndexAssignment DynamicAssignItem(SourceSpan span, Expression target, Expression index, Expression value) {
+            return DynamicAssignItem(span, target, index, value, Operators.None);
         }
 
-        public static IndexAssignment OpAssign(Expression target, Expression index, Expression value, Operators op) {
-            return OpAssign(target, index, value, op, SourceSpan.None);
+        public static IndexAssignment DynamicAssignItem(Expression target, Expression index, Expression value, Operators op) {
+            return DynamicAssignItem(SourceSpan.None, target, index, value, op);
         }
 
-        public static IndexAssignment OpAssign(Expression target, Expression index, Expression value, Operators op, SourceSpan span) {
-            return new IndexAssignment(target, index, value, op, span);
+        public static IndexAssignment DynamicAssignItem(SourceSpan span, Expression target, Expression index, Expression value, Operators op) {
+            if (target == null) {
+                throw new ArgumentNullException("target");
+            }
+            if (index == null) {
+                throw new ArgumentNullException("index");
+            }
+            if (value == null) {
+                throw new ArgumentNullException("value");
+            }
+            return new IndexAssignment(span, target, index, value, op);
         }
     }
 }

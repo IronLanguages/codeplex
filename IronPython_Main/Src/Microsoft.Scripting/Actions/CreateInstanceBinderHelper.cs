@@ -19,6 +19,8 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class CreateInstanceBinderHelper<T> : BinderHelper<T, CreateInstanceAction> {
         public CreateInstanceBinderHelper(CodeContext context, CreateInstanceAction action)
             : base(context, action) {
@@ -32,9 +34,6 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private StandardRule<T> MakeTypeCallRule(DynamicType creating, DynamicType[] types, object[] args) {
-            DynamicType[] argTypes = new DynamicType[types.Length - 1];
-            Array.Copy(types, 1, argTypes, 0, types.Length - 1);
-
             return MakeDotNetTypeCallRule(creating, args);
         }
 
@@ -45,9 +44,10 @@ namespace Microsoft.Scripting.Actions {
             StandardRule<T> rule = new StandardRule<T>();
 
             if (creating.UnderlyingSystemType.IsPublic || creating.UnderlyingSystemType.IsNestedPublic) {
-                Expression[] parameters = GetArgumentExpressions(Action, rule, args);
-                Expression target = CallTypeConstructor(creating, GetArgumentTypes(Action, args), parameters);
-                if (target != null) {
+                MethodCandidate cand = GetTypeConstructor(creating, GetArgumentTypes(Action, args));
+                if (cand != null) {
+                    Expression[] parameters = GetArgumentExpressions(cand, Action, rule, args);
+                    Expression target = cand.Target.MakeExpression(Binder, parameters);
                     rule.SetTest(MakeTestForTypeCall(creating, rule, args));
                     rule.SetTarget(rule.MakeReturn(Binder, target));
                     return rule;
@@ -63,24 +63,25 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static Expression MakeTestForTypeCall(CallAction action, DynamicType creating, StandardRule<T> rule, object[] args) {
-            Expression test = BinaryExpression.AndAlso(
+            Expression test = Ast.AndAlso(
                 rule.MakeTestForTypes(CompilerHelpers.ObjectTypes(args), 0),
-                BinaryExpression.Equal(
-                    MemberExpression.Property(rule.GetParameterExpression(0), typeof(DynamicType).GetProperty("Version")),
-                    new ConstantExpression(creating.Version)
+                Ast.Equal(
+                    Ast.ReadProperty(rule.Parameters[0], typeof(DynamicType).GetProperty("Version")),
+                    Ast.Constant(creating.Version)
                 )
             );
 
             if (IsParamsCallWorker(action)) {
-                test = BinaryExpression.AndAlso(test, MakeParamsTest(rule, args));
+                test = Ast.AndAlso(test, MakeParamsTest(rule, args));
                 IList<object> listArgs = args[args.Length - 1] as IList<object>;
 
                 for (int i = 0; i < listArgs.Count; i++) {
-                    test = BinaryExpression.AndAlso(test,
+                    test = Ast.AndAlso(test,
                         rule.MakeTypeTest(DynamicHelpers.GetDynamicType(listArgs[i]),
-                            MethodCallExpression.Call(GetParamsList(rule),
+                            Ast.Call(
+                                GetParamsList(rule),
                                 typeof(IList<object>).GetMethod("get_Item"),
-                                new ConstantExpression(i)
+                                Ast.Constant(i)
                             )
                         )
                     );
@@ -89,14 +90,14 @@ namespace Microsoft.Scripting.Actions {
             return test;
         }
 
-        private Expression CallTypeConstructor(DynamicType creating, DynamicType[] argTypes, Expression[] parameters) {
-            return CallTypeConstructor(Binder, creating, argTypes, parameters);
+        private MethodCandidate GetTypeConstructor(DynamicType creating, DynamicType[] argTypes) {
+            return GetTypeConstructor(Binder, creating, argTypes);
         }
 
         /// <summary>
         /// Generates an expression which calls a .NET constructor directly.
         /// </summary>
-        public static Expression CallTypeConstructor(ActionBinder binder, DynamicType creating, DynamicType[] argTypes, Expression[] parameters) {
+        public static MethodCandidate GetTypeConstructor(ActionBinder binder, DynamicType creating, DynamicType[] argTypes) {
             // type has no __new__ override, call .NET ctor directly
             MethodBinder mb = MethodBinder.MakeBinder(binder,
                 creating.Name,
@@ -105,7 +106,7 @@ namespace Microsoft.Scripting.Actions {
 
             MethodCandidate mc = mb.MakeBindingTarget(CallType.None, argTypes);
             if (mc != null && mc.Target.Method.IsPublic) {
-                return mc.Target.MakeExpression(binder, parameters);
+                return mc;
             }
             return null;
         }     

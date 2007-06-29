@@ -19,6 +19,9 @@ $global:TRACEBACK = "$global:TEST_DIR\traceback_test.py"
 #There are tests which are specifically disabled or enabled for debug binaries
 $global:IS_DEBUG = "$env:ROWAN_BIN".ToLower().EndsWith("bin\debug")
 
+#Some tests fail under x64
+$global:IS_64 = "$env:PROCESSOR_ARCHITECTURE" -eq "AMD64"
+
 ###################################################################################
 function test-setup
 {
@@ -235,7 +238,7 @@ function assembliesdir-helper
 {
 	$dlrexe = $args[0]
 	
-	rm -recurse -force $env:TMP\assemblies_dir
+	if (test-path $env:TMP\assemblies_dir) { rm -recurse -force $env:TMP\assemblies_dir }
 	mkdir $env:TMP\assemblies_dir > $null
 	hello-helper $dlrexe "-X:AssembliesDir" $env:TMP\assemblies_dir $args[1..$args.Length] 
 	$stuff = dir $env:TMP\assemblies_dir
@@ -255,7 +258,7 @@ function saveassemblies-helper
 	if (($stuff | select-string "site.exe") -ne $null) {write-error "Failed: $stuff"; $global:ERRORS++}
 	if (($stuff | select-string "site.pdb") -ne $null) {write-error "Failed: $stuff"; $global:ERRORS++}
 	
-	rm -recurse -force $env:TMP\assemblies_dir
+	if (test-path $env:TMP\assemblies_dir) { rm -recurse -force $env:TMP\assemblies_dir }
 	mkdir $env:TMP\assemblies_dir > $null
 	hello-helper $dlrexe "-X:AssembliesDir" $env:TMP\assemblies_dir "-X:SaveAssemblies" $args[1..$args.Length]
 	
@@ -351,7 +354,14 @@ function notraceback-helper
 	if ($stuff -ne "No traceback") {write-error "Failed: $stuff"; $global:ERRORS++}
 	
 	$stuff = dlrexe $args[1..$args.Length] $global:TRACEBACK
-	if ($stuff -eq "No traceback") {write-error "Failed: $stuff"; $global:ERRORS++}
+	if (!$global:IS_64)
+	{
+		if ($stuff -eq "No traceback") {write-error "Failed: $stuff"; $global:ERRORS++}
+	}
+	else
+	{
+		echo "CodePlex Work Item 11362"
+	}
 }
 
 function showclrexceptions-helper

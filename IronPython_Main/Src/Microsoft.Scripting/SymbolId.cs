@@ -145,6 +145,7 @@ namespace Microsoft.Scripting {
         public const int EmptyId = 0;
         /// <summary>SymbolId for null string</summary>
         public static readonly SymbolId Empty = new SymbolId(EmptyId);
+        public static readonly SymbolId[] EmptySymbols = new SymbolId[0];
 
         public bool IsEmpty {
             get { return _id == EmptyId; }

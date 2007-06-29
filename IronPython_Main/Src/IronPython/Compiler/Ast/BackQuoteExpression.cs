@@ -17,6 +17,8 @@ using System;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class BackQuoteExpression : Expression {
         private readonly Expression _expression;
 
@@ -29,7 +31,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return MSAst.MethodCallExpression.Call(
+            return Ast.Call(
                 Span,                                   // span
                 null,                                   // instance
                 AstGenerator.GetHelperMethod("Repr"),   // method

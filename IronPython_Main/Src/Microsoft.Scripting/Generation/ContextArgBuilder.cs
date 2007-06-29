@@ -19,6 +19,8 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ContextArgBuilder : ArgBuilder {
         public ContextArgBuilder() { }
         public override object Build(CodeContext context, object[] args) {
@@ -38,7 +40,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
-            return new CodeContextExpression();
+            return Ast.CodeContext();
         }
     }
 }

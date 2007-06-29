@@ -51,8 +51,8 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private MemberExpression(MemberInfo member, Expression expression)
-            : base(SourceSpan.None) {
+        internal MemberExpression(SourceSpan span, MemberInfo member, Expression expression)
+            : base(span) {
             _member = member;
             _expression = expression;
         }
@@ -107,18 +107,48 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        #region Factory methods
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static MemberExpression ReadField(Expression expression, Type type, string field) {
+            return ReadField(SourceSpan.None, expression, type, field);
+        }
+
+        public static MemberExpression ReadField(SourceSpan span, Expression expression, Type type, string field) {
+            if (type == null) {
+                throw new ArgumentNullException("type");
+            }
+            if (field == null) {
+                throw new ArgumentNullException("field");
+            }
+            FieldInfo fi = type.GetField(field);
+            if (fi == null) {
+                throw new ArgumentException(String.Format("Type {0} doesn't have field {1}", type, field));
+            }
+            if (expression == null ^ fi.IsStatic) {
+                throw new ArgumentNullException("Static field requires null expression, non-static field requires non-null expression.");
+            }
+
+            return new MemberExpression(span, fi, expression);
+        }
+
+        public static MemberExpression ReadField(Expression expression, FieldInfo field) {
+            return ReadField(SourceSpan.None, expression, field);
+        }
 
         /// <summary>
         /// Creates MemberExpression representing field access, instance or static.
         /// For static field, expression must be null and FieldInfo.IsStatic == true
         /// For instance field, expression must be non-null and FieldInfo.IsStatic == false.
         /// </summary>
+        /// <param name="span">The source code span of the expression.</param>
         /// <param name="expression">Expression that evaluates to the instance for the field access.</param>
         /// <param name="field">Field represented by this Member expression.</param>
         /// <returns>New instance of Member expression</returns>
-        public static MemberExpression Field(Expression expression, FieldInfo field) {
+        public static MemberExpression ReadField(SourceSpan span, Expression expression, FieldInfo field) {
             if (field == null) {
                 throw new ArgumentNullException("field");
             }
@@ -126,7 +156,35 @@ namespace Microsoft.Scripting.Ast {
                 throw new ArgumentException("field");
             }
 
-            return new MemberExpression(field, expression);
+            return new MemberExpression(span, field, expression);
+        }
+
+        public static MemberExpression ReadProperty(Expression expression, Type type, string property) {
+            return ReadProperty(SourceSpan.None, expression, type, property);
+        }
+
+        public static MemberExpression ReadProperty(SourceSpan span, Expression expression, Type type, string property) {
+            if (type == null) {
+                throw new ArgumentNullException("type");
+            }
+            if (property == null) {
+                throw new ArgumentNullException("property");
+            }
+            PropertyInfo pi = type.GetProperty(property);
+            if (pi == null) {
+                throw new ArgumentException(String.Format("Type {0} doesn't have property {1}", type, property));
+            }
+            if (!pi.CanRead) {
+                throw new ArgumentException(String.Format("Cannot read property {0}.{1}", pi.DeclaringType, pi.Name));
+            }
+            if (expression == null ^ pi.GetGetMethod().IsStatic) {
+                throw new ArgumentNullException("Static property requires null expression, non-static property requires non-null expression.");
+            }
+            return new MemberExpression(span, pi, expression);
+        }
+
+        public static MemberExpression ReadProperty(Expression expression, PropertyInfo property) {
+            return ReadProperty(SourceSpan.None, expression, property);
         }
 
         /// <summary>
@@ -134,10 +192,11 @@ namespace Microsoft.Scripting.Ast {
         /// For static properties, expression must be null and property.IsStatic == true.
         /// For instance properties, expression must be non-null and property.IsStatic == false.
         /// </summary>
+        /// <param name="span">The source code span of the expression.</param>
         /// <param name="expression">Expression that evaluates to the instance for instance property access.</param>
         /// <param name="property">PropertyInfo of the property to access</param>
         /// <returns>New instance of the MemberExpression.</returns>
-        public static MemberExpression Property(Expression expression, PropertyInfo property) {
+        public static MemberExpression ReadProperty(SourceSpan span, Expression expression, PropertyInfo property) {
             if (property == null) {
                 throw new ArgumentNullException("property");
             }
@@ -151,29 +210,7 @@ namespace Microsoft.Scripting.Ast {
                 throw new ArgumentException("property");
             }
 
-            return new MemberExpression(property, expression);
+            return new MemberExpression(span, property, expression);
         }
-
-        /// <summary>
-        /// Creates MemberExpression representing member access.
-        /// </summary>
-        /// <param name="expression">Expression representing instance (for instance access).</param>
-        /// <param name="member">Member info for the desired member.</param>
-        /// <returns>New instance of MemberExpression representing member access.</returns>
-        public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member) {
-            FieldInfo field = member as FieldInfo;
-            if (field != null) {
-                return Field(expression, field);
-            }
-
-            PropertyInfo property = member as PropertyInfo;
-            if (property != null) {
-                return Property(expression, property);
-            }
-
-            throw new ArgumentException("member");
-        }
-
-        #endregion
     }
 }

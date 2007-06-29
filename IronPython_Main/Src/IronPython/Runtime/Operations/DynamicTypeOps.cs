@@ -205,7 +205,7 @@ namespace IronPython.Runtime.Operations {
                         PythonOps.StringRepr(DynamicHelpers.GetDynamicType(args[0])));
                 }
 
-                return DynamicTypeOps.CallWorker(context, dt, CompilerHelpers.RemoveFirst(args));
+                return DynamicTypeOps.CallWorker(context, dt, Utils.Array.RemoveFirst(args));
             }
 
             #endregion
@@ -231,10 +231,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object CallWorker(CodeContext context, DynamicType dt, object[] args) {
-            object[] clsArgs = MakeClassArgs(dt, args);
-            object newObject = PythonOps.CallWithContext(context,
-                GetTypeNew(context, dt),
-                clsArgs);
+            object newObject = PythonOps.CallWithContext(context, GetTypeNew(context, dt), Utils.Array.Insert<object>(dt, args));
 
             if (ShouldInvokeInit(dt, DynamicHelpers.GetDynamicType(newObject), args.Length)) {
                 PythonOps.CallWithContext(context, GetInitMethod(context, dt, newObject), args);
@@ -246,7 +243,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static object CallWorker(CodeContext context, DynamicType dt, KwCallInfo args) {
-            object[] clsArgs = MakeClassArgs(dt, args.Arguments);
+            object[] clsArgs = Utils.Array.Insert<object>(dt, args.Arguments);
             object newObject = PythonOps.CallWithKeywordArgs(context,
                 GetTypeNew(context, dt),
                 clsArgs,
@@ -318,14 +315,6 @@ namespace IronPython.Runtime.Operations {
             Debug.Assert(res);
 
             return newInst;
-        }
-
-        private static object[] MakeClassArgs(object cls, object[] pargs) {
-            object[] clsArgs = new object[pargs.Length + 1];
-            clsArgs[0] = cls;
-            Array.Copy(pargs, 0, clsArgs, 1, pargs.Length);
-
-            return clsArgs;
         }
 
         private static bool IsRuntimeAssembly(Assembly assembly) {

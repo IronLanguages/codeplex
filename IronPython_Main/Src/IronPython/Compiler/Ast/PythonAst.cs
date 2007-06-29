@@ -24,6 +24,8 @@ using MSAst = Microsoft.Scripting.Ast;
 using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class PythonAst : ScopeStatement {
         private Statement _body;
         private bool _module;
@@ -82,7 +84,7 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        internal PythonVariable EnsureGlobalVariable(SymbolId name, bool transform) {
+        internal PythonVariable EnsureGlobalVariable(SymbolId name) {
             PythonVariable variable;
             if (TryGetVariable(name, out variable)) {
                 // use the current one if it is global only
@@ -91,7 +93,7 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            return CreateModuleVariable(ref _moduleGlobals, name, VariableKind.Global, transform);
+            return CreateModuleVariable(ref _moduleGlobals, name, VariableKind.Global);
         }
 
         internal override PythonVariable BindName(SymbolId name) {
@@ -103,27 +105,16 @@ namespace IronPython.Compiler.Ast {
             }
 
             // Create module level local for the unbound name
-            return CreateModuleVariable(ref _moduleLocals, name, VariableKind.Local, false);
+            return CreateModuleVariable(ref _moduleLocals, name, VariableKind.Local);
         }
 
-        /// <summary>
-        /// This method is called in name binding phase, in which case the variables don't need to be
-        /// immediately transformed, and during the transformation phase, in which case the variables
-        /// owned by the given scope have already been transformed so any additional variable needs
-        /// to be transformed explicitly here.
-        /// </summary>
-        private PythonVariable CreateModuleVariable(ref Dictionary<SymbolId, PythonVariable> dict, SymbolId name, VariableKind kind, bool transform) {
+        private PythonVariable CreateModuleVariable(ref Dictionary<SymbolId, PythonVariable> dict, SymbolId name, VariableKind kind) {
             PythonVariable variable;
             if (dict == null) {
                 dict = new Dictionary<SymbolId, PythonVariable>();
             }
             if (!dict.TryGetValue(name, out variable)) {
                 variable = new PythonVariable(name, kind, this);
-                if (transform) {
-                    // If called during the transformation phase, we have the _block
-                    Debug.Assert(_block != null);
-                    variable.Transform(_block);
-                }
                 dict[name] = variable;
             }
             Debug.Assert(variable.Kind == kind);
@@ -136,7 +127,7 @@ namespace IronPython.Compiler.Ast {
 
         internal MSAst.CodeBlock TransformToAst(AstGenerator ag, CompilerContext context) {
             string name = context.SourceUnit.Name ?? "<undefined>";
-            MSAst.CodeBlock ast = MSAst.CodeBlock.MakeCodeBlock(name, _body.Span);
+            MSAst.CodeBlock ast = Ast.CodeBlock(_body.Span, name);
             ast.IsGlobal = true;
 
             _block = ast;
@@ -151,22 +142,19 @@ namespace IronPython.Compiler.Ast {
             MSAst.Statement docStmt;
 
             if (_module && _body.Documentation != null) {
-                docStmt = new MSAst.ExpressionStatement(
-                    new MSAst.BoundAssignment(
+                docStmt = Ast.Statement(
+                    Ast.Assign(
                         _docVariable.Variable,
-                        new MSAst.ConstantExpression(_body.Documentation),
-                        Operators.None
+                        Ast.Constant(_body.Documentation)
                     )
                 );
             } else {
-                docStmt = new MSAst.EmptyStatement();
+                docStmt = Ast.Empty();
             }
 
-            ast.Body = new MSAst.BlockStatement(
-                new MSAst.Statement[] {
-                    docStmt,
-                    bodyStmt,
-                }
+            ast.Body = Ast.Block(
+                docStmt,
+                bodyStmt
             );
             return ast;
         }

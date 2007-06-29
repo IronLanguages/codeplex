@@ -44,7 +44,7 @@ using System.Security;
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
 
-[assembly: AssemblyVersion("2.0.0.100")]
+[assembly: AssemblyVersion("2.0.0.200")]
 
 //
 // In order to sign your assembly you must specify a key to use. Refer to the 
@@ -75,4 +75,4 @@ using System.Security;
 [assembly: SecurityTransparent]
 [assembly: CLSCompliant(false)]
 [assembly: ComVisible(false)]
-[assembly: AssemblyFileVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.10627.00")]

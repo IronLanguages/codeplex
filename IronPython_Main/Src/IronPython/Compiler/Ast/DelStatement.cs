@@ -16,6 +16,8 @@
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class DelStatement : Statement {
         private readonly Expression[] _expressions;
 
@@ -33,9 +35,10 @@ namespace IronPython.Compiler.Ast {
             for (int i = 0; i < statements.Length; i++) {
                 statements[i] = _expressions[i].TransformDelete(ag);
             }
-            return new MSAst.BlockStatement(
-                statements,
-                Span);
+            return Ast.Block(
+                Span,
+                statements
+            );
         }
 
         public override void Walk(PythonWalker walker) {

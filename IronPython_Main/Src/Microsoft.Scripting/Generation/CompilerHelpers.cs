@@ -37,16 +37,14 @@ namespace Microsoft.Scripting.Generation {
             for (int i = 0; i < parameterInfos.Length; i++) ret[i] = parameterInfos[i].Name;
             return ret;
         }
+
         public static Type[] GetTypesWithThis(MethodBase mi) {
             Type[] types = GetTypes(mi.GetParameters());
             if(IsStatic(mi)) {
                 return types;
             }
 
-            Type[] ret = new Type[types.Length + 1];
-            ret[0] = mi.DeclaringType;
-            Array.Copy(types, 0, ret, 1, types.Length);
-            return ret;
+            return Utils.Array.Insert(mi.DeclaringType, types);
         }
 
 
@@ -387,25 +385,6 @@ namespace Microsoft.Scripting.Generation {
 
         public static bool CanOptimizeField(FieldInfo fi) {
             return fi.IsPublic && fi.DeclaringType.IsVisible;
-        }
-
-        public static ElemType[] PrependArray<ElemType>(ElemType param, ElemType[] parameters) {
-            ElemType[] res = new ElemType[parameters.Length + 1];
-            Array.Copy(parameters, 0, res, 1, parameters.Length);
-            res[0] = param;
-            return res;
-        }
-
-        public static ElemType[] RemoveFirst<ElemType>(ElemType[] array) {
-            ElemType[] res = new ElemType[array.Length - 1];
-            Array.Copy(array, 1, res, 0, res.Length);
-            return res;
-        }
-
-        public static void SwapLastTwo<ElemType>(ElemType[] array) {
-            ElemType temp = array[array.Length - 1];
-            array[array.Length - 1] = array[array.Length - 2];
-            array[array.Length - 2] = temp;
         }
 
         internal static void CreateYieldLabels(CodeGen cg, List<YieldTarget> targets) {

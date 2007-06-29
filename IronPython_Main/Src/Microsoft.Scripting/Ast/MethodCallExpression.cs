@@ -31,11 +31,7 @@ namespace Microsoft.Scripting.Ast {
         readonly ReadOnlyCollection<Expression> _arguments;
         readonly ParameterInfo[] _pi;
 
-        public MethodCallExpression(MethodInfo method, Expression instance, IList<Expression> arguments)
-            : this(method, instance, arguments, SourceSpan.None) {
-        }
-
-        public MethodCallExpression(MethodInfo method, Expression instance, IList<Expression> arguments, SourceSpan span)
+        internal MethodCallExpression(SourceSpan span, MethodInfo method, Expression instance, IList<Expression> arguments)
             : base(span) {
 
             VerifyArguments(method, arguments);
@@ -102,14 +98,21 @@ namespace Microsoft.Scripting.Ast {
                 for (int i = 0; i < last; i++) {
                     parameters[i] = _arguments[i] != null ? _arguments[i].Evaluate(context) : null;
                 }
-
+                
                 // If the last parameter is a parameter array, throw the extra arguments into an array
+                int extraArgs = _arguments.Count - last;
                 if (CompilerHelpers.IsParamArray(_pi[last])) {
-                    object[] varargs = new object[_arguments.Count - last];
-                    for (int i = last; i < _arguments.Count; i++) {
-                        varargs[i - last] = _arguments[i] != null ? _arguments[i].Evaluate(context) : null;
+                    if (extraArgs == 1 && _arguments[last] != null
+                        && _arguments[last].ExpressionType == _pi[last].ParameterType) {
+                        // If the last argument is an array, copy it over directly
+                        parameters[last] = _arguments[last].Evaluate(context);
+                    } else {
+                        object[] varargs = new object[_arguments.Count - last];
+                        for (int i = last; i < _arguments.Count; i++) {
+                            varargs[i - last] = _arguments[i] != null ? _arguments[i].Evaluate(context) : null;
+                        }
+                        parameters[last] = varargs;
                     }
-                    parameters[last] = varargs;
                 } else {
                     parameters[last] = _arguments[last] != null ? _arguments[last].Evaluate(context) : null;
                 }
@@ -216,17 +219,18 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        #region Factory methods
-
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
         public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) {
             return Call(SourceSpan.None, instance, method, arguments);
         }
 
         public static MethodCallExpression Call(SourceSpan span, Expression instance, MethodInfo method, params Expression[] arguments) {
-            return new MethodCallExpression(method, instance, arguments, span);
+            return new MethodCallExpression(span, method, instance, arguments);
         }
-
-        #endregion 
     }
 }

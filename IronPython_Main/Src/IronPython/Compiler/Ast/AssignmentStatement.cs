@@ -23,6 +23,8 @@ using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class AssignmentStatement : Statement {
         // _left.Length is 1 for simple assignments like "x = 1"
         // _left.Lenght will be 3 for "x = y = z = 1"
@@ -74,10 +76,10 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 // 4. Create and return the resulting suite
-                return new MSAst.BlockStatement(
-                    statements.ToArray(),
-                    Span
-                    );
+                return Ast.Block(
+                    Span,
+                    statements.ToArray()
+                );
             }
         }
 

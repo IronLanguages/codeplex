@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
@@ -23,12 +24,9 @@ namespace Microsoft.Scripting.Ast {
         private readonly SymbolId _name;
         private readonly MemberBinding _binding;
 
-        public DynamicMemberExpression(Expression target, SymbolId name, MemberBinding binding)
-            : this(target, name, binding, SourceSpan.None) {
-        }
-
-        public DynamicMemberExpression(Expression target, SymbolId name, MemberBinding binding, SourceSpan span)
+        internal DynamicMemberExpression(SourceSpan span, Expression target, SymbolId name, MemberBinding binding)
             : base(span) {
+            Debug.Assert(target != null);
             _target = target;
             _name = name;
             _binding = binding;
@@ -71,6 +69,21 @@ namespace Microsoft.Scripting.Ast {
                 _target.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static DynamicMemberExpression DynamicReadMember(Expression target, SymbolId name, MemberBinding binding) {
+            return DynamicReadMember(SourceSpan.None, target, name, binding);
+        }
+        public static DynamicMemberExpression DynamicReadMember(SourceSpan span, Expression target, SymbolId name, MemberBinding binding) {
+            if (target == null) {
+                throw new ArgumentNullException("target");
+            }
+            if (name.IsInvalid || name.IsEmpty) {
+                throw new ArgumentException("Invalid or empty name is not allowed");
+            }
+            return new DynamicMemberExpression(span, target, name, binding);
         }
     }
 }

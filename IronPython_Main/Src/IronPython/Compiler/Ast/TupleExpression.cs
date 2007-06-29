@@ -18,6 +18,8 @@ using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class TupleExpression : SequenceExpression {
         private bool _expandable;
 
@@ -27,11 +29,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return new MSAst.MethodCallExpression(
-                AstGenerator.GetHelperMethod(_expandable ? "MakeExpandableTuple" : "MakeTuple"),
+            return Ast.Call(
+                Span,
                 null,
-                ag.Transform(Items),
-                Span);
+                AstGenerator.GetHelperMethod(_expandable ? "MakeExpandableTuple" : "MakeTuple"),
+                ag.Transform(Items)
+            );
         }
 
         public override void Walk(PythonWalker walker) {

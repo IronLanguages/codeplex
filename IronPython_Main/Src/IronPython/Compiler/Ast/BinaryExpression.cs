@@ -20,6 +20,8 @@ using Microsoft.Scripting.Actions;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class BinaryExpression : Expression {
         private readonly Expression _left, _right;
         private readonly PythonOperator _op;
@@ -89,7 +91,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression comparison = MakeBinaryOperation(
                 _op,
                 left,
-                new MSAst.BoundAssignment(temp.Variable, rleft,  Operators.None),
+                Ast.Assign(temp.Variable, rleft),
                 typeof(object),
                 Span
             );
@@ -112,7 +114,7 @@ namespace IronPython.Compiler.Ast {
             ag.FreeTemp(temp);
 
             // return (left (op) (temp = rleft)) and (rright)
-            return new MSAst.AndExpression(comparison, rright, Span);
+            return Ast.And(Span, comparison, rright);
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
@@ -129,10 +131,10 @@ namespace IronPython.Compiler.Ast {
             Operators action = PythonOperatorToAction(op);
             if (action != Operators.None) {
                 // Create action expression
-                return MSAst.ActionExpression.Operator(span, action, type, left, right);
+                return Ast.Action.Operator(span, action, type, left, right);
             } else {
                 // Call helper method
-                return MSAst.MethodCallExpression.Call(
+                return Ast.Call(
                     span,
                     null,
                     AstGenerator.GetHelperMethod(GetHelperName(op)),

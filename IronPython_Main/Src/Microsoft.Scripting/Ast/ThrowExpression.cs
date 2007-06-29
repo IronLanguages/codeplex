@@ -22,10 +22,7 @@ namespace Microsoft.Scripting.Ast {
     public class ThrowExpression : Expression {
         private readonly Expression _val;
 
-        public ThrowExpression(Expression value)
-            : this(value, SourceSpan.None) { }
-
-        public ThrowExpression(Expression value, SourceSpan span)
+        internal ThrowExpression(SourceSpan span, Expression value)
             : base(span) {
             _val = value;
         }
@@ -39,6 +36,14 @@ namespace Microsoft.Scripting.Ast {
         public override Type ExpressionType {
             get {
                 return typeof(void);
+            }
+        }
+
+        public override object Evaluate(CodeContext context) {
+            if (_val == null) {
+                throw new NotImplementedException();
+            } else {
+                throw (Exception)context.LanguageContext.Binder.Convert(_val.Evaluate(context), typeof(Exception));
             }
         }
 
@@ -58,6 +63,19 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
+    public static partial class Ast {
+        public static ThrowExpression Rethrow() {
+            return Throw(SourceSpan.None, null);
+        }
+
+        public static ThrowExpression Throw(Expression value) {
+            return Throw(SourceSpan.None, value);
+        }
+
+        public static ThrowExpression Throw(SourceSpan span, Expression value) {
+            return new ThrowExpression(span, value);
+        }
     }
 }

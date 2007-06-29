@@ -553,7 +553,7 @@ namespace IronPython.Runtime {
             // Load builtins from IronPython.Modules
             Assembly ironPythonModules;
 #if SIGNED
-            ironPythonModules = ScriptDomainManager.CurrentManager.PAL.LoadAssembly("IronPython.Modules, Version=2.0.0.100, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
+            ironPythonModules = ScriptDomainManager.CurrentManager.PAL.LoadAssembly("IronPython.Modules, Version=2.0.0.200, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
 #else
             ironPythonModules = ScriptDomainManager.CurrentManager.PAL.LoadAssembly("IronPython.Modules");
 #endif

@@ -23,6 +23,8 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class MethodTarget  {
         private ActionBinder _binder;
         private MethodBase _method;
@@ -125,10 +127,6 @@ namespace Microsoft.Scripting.Generation {
             return true;
         }
 
-        public Expression MakeExpression(ActionBinder binder, Variable[] variables) {
-            return MakeExpression(binder, Variable.VariablesToExpressions(variables));
-        }
-
         public Expression MakeExpression(ActionBinder binder, Expression[] parameters) {
             Expression[] args = new Expression[_argBuilders.Count];
             for (int i = 0; i < _argBuilders.Count; i++) {
@@ -138,9 +136,9 @@ namespace Microsoft.Scripting.Generation {
             MethodInfo mi = Method as MethodInfo;
             if (mi != null) {
                 Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(binder, parameters);
-                return MethodCallExpression.Call(instance, mi, args);
+                return Ast.Call(instance, mi, args);
             } else {
-                return NewExpression.New((ConstructorInfo)Method, args);
+                return Ast.New((ConstructorInfo)Method, args);
             }
         }
 
@@ -166,9 +164,9 @@ namespace Microsoft.Scripting.Generation {
                 MethodInfo mi = Method as MethodInfo;
                 if (mi != null) {
                     Expression instance = mi.IsStatic ? null : _instanceBuilder.AbstractBuild(context, args).Expression;
-                    callExpr = MethodCallExpression.Call(instance, mi, argExprs);
+                    callExpr = Ast.Call(instance, mi, argExprs);
                 } else {
-                    callExpr =  NewExpression.New((ConstructorInfo)Method, argExprs);
+                    callExpr = Ast.New((ConstructorInfo)Method, argExprs);
                 }
             }
 

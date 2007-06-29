@@ -24,11 +24,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _statements; }
         }
 
-        public BlockStatement(Statement[] statements)
-            : this(statements, SourceSpan.None) {
-        }
-
-        public BlockStatement(Statement[] statements, SourceSpan span)
+        internal BlockStatement(SourceSpan span, Statement[] statements)
             : base(span) {
             Utils.Assert.NotNull(statements); 
             _statements = statements;
@@ -57,9 +53,9 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        #region Factory methods
-
+    public static partial class Ast {
         public static Statement Block(List<Statement> statements) {
             if (statements.Count == 1) {
                 return statements[0];
@@ -67,15 +63,11 @@ namespace Microsoft.Scripting.Ast {
                 return Block(statements.ToArray());
             }
         }
-
         public static BlockStatement Block(params Statement[] statements) {
-            return new BlockStatement(statements);
+            return Block(SourceSpan.None, statements);
         }
-
         public static BlockStatement Block(SourceSpan span, params Statement[] statements) {
-            return new BlockStatement(statements, span);
+            return new BlockStatement(span, statements);
         }
-
-        #endregion
     }
 }

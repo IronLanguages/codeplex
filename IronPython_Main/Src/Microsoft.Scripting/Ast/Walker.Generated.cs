@@ -148,17 +148,13 @@ namespace Microsoft.Scripting.Ast {
         public virtual bool Walk(ParamsExpression node) { return true; }
         public virtual void PostWalk(ParamsExpression node) { }
 
-        // ParenthesisExpression
-        public virtual bool Walk(ParenthesisExpression node) { return true; }
-        public virtual void PostWalk(ParenthesisExpression node) { }
+        // ParenthesizedExpression
+        public virtual bool Walk(ParenthesizedExpression node) { return true; }
+        public virtual void PostWalk(ParenthesizedExpression node) { }
 
         // ShortCircuitExpression
         public virtual bool Walk(ShortCircuitExpression node) { return true; }
         public virtual void PostWalk(ShortCircuitExpression node) { }
-
-        // StaticUnaryExpression
-        public virtual bool Walk(StaticUnaryExpression node) { return true; }
-        public virtual void PostWalk(StaticUnaryExpression node) { }
 
         // ThrowExpression
         public virtual bool Walk(ThrowExpression node) { return true; }
@@ -167,6 +163,10 @@ namespace Microsoft.Scripting.Ast {
         // TypeBinaryExpression
         public virtual bool Walk(TypeBinaryExpression node) { return true; }
         public virtual void PostWalk(TypeBinaryExpression node) { }
+
+        // UnaryExpression
+        public virtual bool Walk(UnaryExpression node) { return true; }
+        public virtual void PostWalk(UnaryExpression node) { }
 
         // UnboundAssignment
         public virtual bool Walk(UnboundAssignment node) { return true; }
@@ -196,9 +196,9 @@ namespace Microsoft.Scripting.Ast {
         public virtual bool Walk(DebugStatement node) { return true; }
         public virtual void PostWalk(DebugStatement node) { }
 
-        // DelStatement
-        public virtual bool Walk(DelStatement node) { return true; }
-        public virtual void PostWalk(DelStatement node) { }
+        // DeleteStatement
+        public virtual bool Walk(DeleteStatement node) { return true; }
+        public virtual void PostWalk(DeleteStatement node) { }
 
         // DoStatement
         public virtual bool Walk(DoStatement node) { return true; }

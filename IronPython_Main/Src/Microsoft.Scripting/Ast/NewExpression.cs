@@ -29,11 +29,7 @@ namespace Microsoft.Scripting.Ast {
         readonly ConstructorInfo _constructor;
         readonly ReadOnlyCollection<Expression> _arguments;
 
-        public NewExpression(ConstructorInfo constructor, IList<Expression> arguments)
-            : this(constructor, arguments, SourceSpan.None) {
-        }
-
-        public NewExpression(ConstructorInfo constructor, IList<Expression> arguments, SourceSpan span)
+        internal NewExpression(SourceSpan span, ConstructorInfo constructor, IList<Expression> arguments)
             : base(span) {
             _constructor = constructor;
             _arguments = new ReadOnlyCollection<Expression>(arguments);
@@ -80,17 +76,18 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        #region Factory methods
-
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
         public static NewExpression New(ConstructorInfo constructor, params Expression[] arguments) {
             return New(SourceSpan.None, constructor, arguments);
         }
 
         public static NewExpression New(SourceSpan span, ConstructorInfo constructor, params Expression[] arguments) {
-            return new NewExpression(constructor, arguments, span);
+            return new NewExpression(span, constructor, arguments);
         }
-
-        #endregion 
     }
 }

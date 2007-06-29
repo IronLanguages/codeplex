@@ -17,6 +17,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class GlobalStatement : Statement {
         private readonly SymbolId[] _names;
 
@@ -30,7 +32,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
             // global statement is Python's specific syntactic sugar.
-            return new MSAst.EmptyStatement(Span);
+            return Ast.Empty(Span);
         }
 
         public override void Walk(PythonWalker walker) {

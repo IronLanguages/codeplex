@@ -20,6 +20,8 @@ using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ConstantExpression : Expression {
         private readonly object _value;
 
@@ -33,13 +35,13 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             if (_value == PythonOps.Ellipsis) {
-                return MSAst.MemberExpression.Field(
+                return Ast.ReadField(
                     null,
                     typeof(PythonOps).GetField("Ellipsis")
-                    );
+                );
             }
 
-            return new MSAst.ConstantExpression(_value, Span);
+            return Ast.Constant(Span, _value);
         }
 
         internal override MSAst.Statement TransformSet(AstGenerator ag, MSAst.Expression right, Operators op) {

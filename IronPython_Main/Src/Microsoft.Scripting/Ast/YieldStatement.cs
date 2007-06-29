@@ -21,7 +21,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _expr;
         private YieldTarget _target;
 
-        public YieldStatement(Expression expression, SourceSpan span)
+        internal YieldStatement(SourceSpan span, Expression expression)
             : base(span) {
             _expr = expression;
         }
@@ -45,6 +45,18 @@ namespace Microsoft.Scripting.Ast {
                 _expr.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+    /// <summary>
+    /// Factory methods
+    /// </summary>
+    public static partial class Ast {
+        public static YieldStatement Yield(Expression expression) {
+            return Yield(SourceSpan.None, expression);
+        }
+
+        public static YieldStatement Yield(SourceSpan span, Expression expression) {
+            return new YieldStatement(span, expression);
         }
     }
 }

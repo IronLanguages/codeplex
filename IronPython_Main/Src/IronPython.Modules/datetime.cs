@@ -242,7 +242,7 @@ namespace IronPython.Modules {
             private int CompareTo(object other) {
                 PythonTimeDelta delta = other as PythonTimeDelta;
                 if (delta == null)
-                    throw PythonOps.TypeError("can't compare datetime.timedelta to {0}", DynamicHelpers.GetDynamicType(other));
+                    throw PythonOps.TypeError("can't compare datetime.timedelta to {0}", DynamicTypeOps.GetName(other));
 
                 int res = this._days - delta._days;
                 if (res != 0) return res;
@@ -458,23 +458,29 @@ namespace IronPython.Modules {
                 return Tuple.MakeTuple(PythonDate.Make(context, DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDate)), year, month, day));
             }
 
+            [PythonName("replace")]
+            public object Replace() {
+                return this;
+            }
+
             // instance methods
             [PythonName("replace")]
-            public PythonDate Replace([DefaultParameterValue(null)] object year,
-                [DefaultParameterValue(null)]object month,
-                [DefaultParameterValue(null)]object day) {
+            public virtual PythonDate Replace([ParamDictionary]IAttributesCollection dict) {
                 int year2 = _dateTime.Year;
                 int month2 = _dateTime.Month;
                 int day2 = _dateTime.Day;
 
-                if (year != null)
-                    year2 = Converter.ConvertToInt32(year);
+                foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dict) {
+                    string strVal = kvp.Key as string;
+                    if (strVal == null) continue;
 
-                if (month != null)
-                    month2 = Converter.ConvertToInt32(month);
-
-                if (day != null)
-                    day2 = Converter.ConvertToInt32(day);
+                    switch (strVal) {
+                        case "year": year2 = Converter.ConvertToInt32(kvp.Value); break;
+                        case "month": month2 = Converter.ConvertToInt32(kvp.Value); break;
+                        case "day": day2 = Converter.ConvertToInt32(kvp.Value); break;
+                        default: throw PythonOps.TypeError("{0} is an invalid keyword argument for this function", kvp.Key);
+                    }
+                }
 
                 return new PythonDate(year2, month2, day2);
             }
@@ -581,7 +587,7 @@ namespace IronPython.Modules {
                     throw PythonOps.TypeError("can't compare datetime.date to NoneType");
 
                 if (other.GetType() != typeof(PythonDate))
-                    throw PythonOps.TypeError("can't compare datetime.date to {0}", DynamicHelpers.GetDynamicType(other));
+                    throw PythonOps.TypeError("can't compare datetime.date to {0}", DynamicTypeOps.GetName(other));
 
                 PythonDate date = other as PythonDate;
                 return this._dateTime.CompareTo(date._dateTime);
@@ -817,13 +823,8 @@ namespace IronPython.Modules {
             }
 
             [PythonName("replace")]
-            public object Replace() {
-                return this;
-            }
-
-            [PythonName("replace")]
             [Documentation("gets a new datetime object with the fields provided as keyword arguments replaced.")]
-            public object Replace([ParamDictionary]IAttributesCollection dict) {
+            public override PythonDate Replace([ParamDictionary]IAttributesCollection dict) {
                 int year = Year;
                 int month = Month;
                 int day = Day;
@@ -862,6 +863,8 @@ namespace IronPython.Modules {
                         case "tzinfo":
                             tz = kvp.Value as PythonTimeZoneInformation;
                             break;
+                        default:
+                            throw PythonOps.TypeError("{0} is an invalid keyword argument for this function", kvp.Key);
                     }
                 }
                 return new PythonDateTimeCombo(year, month, day, hour, minute, second, microsecond, tz);
@@ -986,7 +989,7 @@ namespace IronPython.Modules {
 
                 PythonDateTimeCombo combo = other as PythonDateTimeCombo;
                 if (combo == null)
-                    throw PythonOps.TypeError("can't compare datetime.datetime to {0}", DynamicHelpers.GetDynamicType(other));
+                    throw PythonOps.TypeError("can't compare datetime.datetime to {0}", DynamicTypeOps.GetName(other));
 
                 if (CheckTzInfoBeforeCompare(this, combo)) {
                     int res = this.InternalDateTime.CompareTo(combo.InternalDateTime);
@@ -1281,7 +1284,7 @@ namespace IronPython.Modules {
             private int CompareTo(object other) {
                 PythonDateTimeTime other2 = other as PythonDateTimeTime;
                 if (other2 == null)
-                    throw PythonOps.TypeError("can't compare datetime.time to {0}", DynamicHelpers.GetDynamicType(other));
+                    throw PythonOps.TypeError("can't compare datetime.time to {0}", DynamicTypeOps.GetName(other));
 
                 if (CheckTzInfoBeforeCompare(this, other2)) {
                     int res = this._timeSpan.CompareTo(other2._timeSpan);

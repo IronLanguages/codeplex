@@ -18,18 +18,20 @@ using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ListExpression : SequenceExpression {
         public ListExpression(params Expression[] items)
             : base(items) {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return new MSAst.MethodCallExpression(
-                AstGenerator.GetHelperMethod("MakeList", new Type[] { typeof(object[]) }),  // method
+            return Ast.Call(
+                Span,
                 null,                                                                       // instance
-                ag.Transform(Items),                                                        // parameters
-                Span
-                );
+                AstGenerator.GetHelperMethod("MakeList", new Type[] { typeof(object[]) }),  // method
+                ag.Transform(Items)                                                         // parameters
+            );
         }
 
         public override void Walk(PythonWalker walker) {

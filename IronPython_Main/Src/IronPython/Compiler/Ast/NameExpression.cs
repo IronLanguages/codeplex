@@ -19,6 +19,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class NameExpression : Expression {
         private readonly SymbolId _name;
         private PythonReference _reference;
@@ -43,9 +45,9 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             MSAst.Variable variable;
             if ((variable = _reference.Variable) != null) {
-                return new MSAst.BoundExpression(variable, Span);
+                return Ast.Read(Span, variable);
             } else {
-                return new MSAst.UnboundExpression(_name, Span);
+                return Ast.Read(Span, _name);
             }
         }
 
@@ -54,23 +56,23 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression assignment;
 
             if ((variable = _reference.Variable) != null) {
-                assignment = new MSAst.BoundAssignment(variable, right, op);
+                assignment = Ast.Assign(variable, right, op);
             } else {
-                assignment = new MSAst.UnboundAssignment(_name, right, op);
+                assignment = Ast.Assign(_name, right, op);
             }
 
-            return new MSAst.ExpressionStatement(
-                assignment,
-                right.Span.IsValid ? new SourceSpan(Span.Start, right.End) : SourceSpan.None
+            return Ast.Statement(
+                right.Span.IsValid ? new SourceSpan(Span.Start, right.End) : SourceSpan.None,
+                assignment
             );
         }
 
         internal override MSAst.Statement TransformDelete(AstGenerator ag) {
             MSAst.Variable variable;
             if ((variable = _reference.Variable) != null) {
-                return new MSAst.DelStatement(variable, Span);
+                return Ast.Delete(Span, variable);
             } else {
-                return new MSAst.ExpressionStatement(new MSAst.DeleteUnboundExpression(_name), Span);
+                return Ast.Statement(Span, Ast.Delete(_name));
             }
         }
 

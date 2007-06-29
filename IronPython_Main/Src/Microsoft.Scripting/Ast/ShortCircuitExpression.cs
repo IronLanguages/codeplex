@@ -19,18 +19,13 @@ using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    // TODO: Cleanup
-    //  1) Remove the UnaryOperator
-    //  2) Determine correct ExpressionType (sometimes _left.ExpressionType, sometimes _resultOp.ResultType)
-    //  3) Add appropriate parameter validation to make sure types all around match, MethodInfo takes correct
-    //     number of arguments, etc.
     public class ShortCircuitExpression : Expression {
         private readonly MethodInfo _testOp;
         private readonly MethodInfo _resultOp;
         private readonly Expression _left, _right;
 
-        public ShortCircuitExpression(MethodInfo testOp, MethodInfo resultOp, Expression left, Expression right)
-            : base(SourceSpan.None) {
+        internal ShortCircuitExpression(SourceSpan span, MethodInfo testOp, MethodInfo resultOp, Expression left, Expression right)
+            : base(span) {
             if (testOp == null) {
                 throw new ArgumentNullException("testOp");
             }
@@ -86,8 +81,6 @@ namespace Microsoft.Scripting.Ast {
             this._resultOp = resultOp;
             this._left = left;
             this._right = right;
-            this.Start = left.Start;
-            this.End = right.End;
         }
 
         public MethodInfo Test {
@@ -156,6 +149,18 @@ namespace Microsoft.Scripting.Ast {
                 _right.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static ShortCircuitExpression ShortCircuit(MethodInfo test, MethodInfo result, Expression left, Expression right) {
+            return ShortCircuit(SourceSpan.None, test, result, left, right);
+        }
+        public static ShortCircuitExpression ShortCircuit(SourceSpan span, MethodInfo test, MethodInfo result, Expression left, Expression right) {
+            return new ShortCircuitExpression(span, test, result, left, right);
         }
     }
 }

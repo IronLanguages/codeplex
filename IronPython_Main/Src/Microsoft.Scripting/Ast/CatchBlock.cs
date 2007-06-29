@@ -26,11 +26,7 @@ namespace Microsoft.Scripting.Ast {
 
         private VariableReference _ref;
 
-        public CatchBlock(Type test, Variable target, Statement body)
-            : this(test, target, body, SourceSpan.None, SourceLocation.None) {
-        }
-
-        public CatchBlock(Type test, Variable target, Statement body, SourceSpan span, SourceLocation header)
+        internal CatchBlock(SourceSpan span, SourceLocation header, Type test, Variable target, Statement body)
             : base(span) {
             if (body == null) throw new ArgumentNullException("body");
 
@@ -74,6 +70,18 @@ namespace Microsoft.Scripting.Ast {
                 _body.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static CatchBlock Catch(Type test, Statement body) {
+            return Catch(SourceSpan.None, SourceLocation.None, test, null, body);
+        }
+        public static CatchBlock Catch(Type test, Variable target, Statement body) {
+            return Catch(SourceSpan.None, SourceLocation.None, test, target, body);
+        }
+        public static CatchBlock Catch(SourceSpan span, SourceLocation header, Type test, Variable target, Statement body) {
+            return new CatchBlock(span, header, test, target, body);
         }
     }
 }

@@ -16,6 +16,8 @@
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class YieldStatement : Statement {
         private readonly Expression _expression;
 
@@ -28,10 +30,10 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            return new MSAst.YieldStatement(
-                ag.Transform(_expression),
-                Span
-                );
+            return Ast.Yield(
+                Span,
+                ag.Transform(_expression)
+            );
         }
 
         public override void Walk(PythonWalker walker) {

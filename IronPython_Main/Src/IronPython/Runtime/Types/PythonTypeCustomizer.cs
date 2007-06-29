@@ -608,6 +608,7 @@ namespace IronPython.Runtime.Types {
             res[typeof(ValueType)] = "ValueType";   // just hiding it's methods in the inheritance hierarchy
             res[typeof(TypeCollision)] = "type-collision";
             res[typeof(None)] = "NoneType";
+            res[typeof(IAttributesCollection)] = "dict";
 
             return res;
         }

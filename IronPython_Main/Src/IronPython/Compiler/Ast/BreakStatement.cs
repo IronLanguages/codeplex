@@ -16,12 +16,14 @@
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class BreakStatement : Statement {
         public BreakStatement() {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            return new MSAst.BreakStatement(Span);
+            return Ast.Break(Span);
         }
 
         public override void Walk(PythonWalker walker) {

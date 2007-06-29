@@ -14,23 +14,19 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-
     public class TypeBinaryExpression : Expression {
         private readonly Expression _expression;
         private readonly Type _typeOperand;
 
-        public TypeBinaryExpression(Expression expression, Type typeOperand)
-            : this(expression, typeOperand, SourceSpan.None) {
-        }
-        
-        public TypeBinaryExpression(Expression expression, Type typeOperand, SourceSpan span)
+        internal TypeBinaryExpression(SourceSpan span, Expression expression, Type typeOperand)
             : base(span) {
-            if (expression == null) throw new ArgumentNullException("expression");
-            if (typeOperand == null) throw new ArgumentNullException("typeOperand");
+            Debug.Assert(expression != null);
+            Debug.Assert(typeOperand != null);
 
             _expression = expression;
             _typeOperand = typeOperand;
@@ -68,9 +64,24 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        public static TypeBinaryExpression TypeIs(Expression expression, Type typeOperand) {
-            return new TypeBinaryExpression(expression, typeOperand, SourceSpan.None);
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static TypeBinaryExpression TypeIs(Expression expression, Type type) {
+            return TypeIs(SourceSpan.None, expression, type);
         }
+        public static TypeBinaryExpression TypeIs(SourceSpan span, Expression expression, Type type) {
+            if (expression == null) {
+                throw new ArgumentNullException("expression");
+            }
+            if (type == null) {
+                throw new ArgumentNullException("type");
+            }
+            return new TypeBinaryExpression(span, expression, type);
+        }
+
     }
 }

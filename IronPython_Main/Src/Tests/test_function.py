@@ -755,6 +755,18 @@ def test_func_flags():
     #AreEqual(foo8.func_code.co_flags & 12, 0)
     AreEqual(foo9.func_code.co_flags & 12, 0)
     
+def test_big_calls():
+    # check various function call sizes and boundaries
+    for size in [3,4,5, 7,8,9, 15,16,17, 23, 24, 25, 31,32,33, 47,48,49, 63,64,65, 127, 128, 129, 254, 255, 256, 257, 258, 511,512,513, 1023,1024,1025, 2047, 2048, 2049]:
+        exec 'def f(' + ','.join(['a' + str(i) for i in range(size)]) + '): return ' + ','.join(['a' + str(i) for i in range(size)])
+        if size <= 255 or is_cli:
+			# CPython allows function definitions > 255, but not calls w/ > 255 params.
+            exec 'a = f(' + ', '.join([str(x) for x in xrange(size)]) + ')'
+            AreEqual(a, tuple(xrange(size)))
+        
+        exec 'a = f(*(' + ', '.join([str(x) for x in xrange(size)]) + '))'
+        AreEqual(a, tuple(xrange(size)))
+    
 @disabled("CodePlex Work Item 5641")
 def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)

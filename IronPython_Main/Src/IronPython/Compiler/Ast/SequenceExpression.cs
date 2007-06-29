@@ -19,6 +19,8 @@ using MSAst = Microsoft.Scripting.Ast;
 using Operators = Microsoft.Scripting.Operators;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public abstract class SequenceExpression : Expression {
         private readonly Expression[] _items;
 
@@ -80,13 +82,13 @@ namespace IronPython.Compiler.Ast {
                 );
 
             // 3. Call GetEnumeratorValues on the right side (stored in temp)
-            MSAst.MethodCallExpression mce = MSAst.MethodCallExpression.Call(
+            MSAst.Expression enumeratorValues = Ast.Call(
                 null,                                                   // instance
                 AstGenerator.GetHelperMethod("GetEnumeratorValues"),    // method
                 // arguments
                 right_temp,
-                new MSAst.ConstantExpression(_items.Length)
-                );
+                Ast.Constant(_items.Length)
+            );
 
             // 4. Create temporary variable for the array
             MSAst.BoundExpression array_temp = ag.MakeTempExpression("array", typeof(object[]), Microsoft.Scripting.SourceSpan.None);
@@ -94,7 +96,7 @@ namespace IronPython.Compiler.Ast {
             // 5. Assign the value of the method call (mce) into the array temp
             // And add the assignment "array_temp = Ops.GetEnumeratorValues(...)" into the block
             statements.Add(
-                AstGenerator.MakeAssignment(array_temp.Variable, mce, rightSpan)
+                AstGenerator.MakeAssignment(array_temp.Variable, enumeratorValues, rightSpan)
                 );
 
             List<MSAst.Statement> sets = new List<MSAst.Statement>();            
@@ -107,26 +109,26 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 // 6. array_temp[i]
-                MSAst.ArrayIndexExpression element = new MSAst.ArrayIndexExpression(
-                    array_temp,                             // array expression
-                    new MSAst.ConstantExpression(i),        // index
+                MSAst.ArrayIndexExpression element = Ast.ReadItem(
                     emitIndividualSets ?                    // span
                         target.Span : 
-                        Microsoft.Scripting.SourceSpan.None 
+                        Microsoft.Scripting.SourceSpan.None,
+                    array_temp,                             // array expression
+                    Ast.Constant(i)                         // index
                 );
 
                 // 7. target = array_temp[i], and add the transformed assignment into the list of sets
                 sets.Add(target.TransformSet(ag, element, Operators.None));
             }
             // 9. add the sets as their own block so they cna be marked as a single span, if necessary.
-            statements.Add(new MSAst.BlockStatement(sets.ToArray(), leftSpan));
+            statements.Add(Ast.Block(leftSpan, sets.ToArray()));
 
             // 10. Free the temps
             ag.FreeTemp(array_temp);
             ag.FreeTemp(right_temp);
 
             // 11. Return the suite statement (block)
-            return new MSAst.BlockStatement(statements.ToArray(), totalSpan);
+            return Ast.Block(totalSpan, statements.ToArray());
         }
 
         private bool IsComplexAssignment(int i) {
@@ -138,7 +140,7 @@ namespace IronPython.Compiler.Ast {
             for (int i = 0; i < statements.Length; i++) {
                 statements[i] = _items[i].TransformDelete(ag);
             }
-            return new MSAst.BlockStatement(statements, Span);
+            return Ast.Block(Span, statements);
         }
     }
 }

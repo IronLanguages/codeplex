@@ -26,18 +26,14 @@ namespace Microsoft.Scripting.Ast {
         private bool _hasArgsTuple, _hasKeywordDict;
         private int _keywordCount, _extraArgs;
 
-        public CallExpression(Expression target, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs)
-            : this(target, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs, SourceSpan.None) {
-        }
-
-        public CallExpression(Expression target, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs, SourceSpan span)
+        internal CallExpression(SourceSpan span, Expression target, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs)
             : base(span) {
-            this._target = target;
-            this._args = args;
-            this._hasArgsTuple = hasArgsTuple;
-            this._hasKeywordDict = hasKeywordDictionary;
-            this._keywordCount = keywordCount;
-            this._extraArgs = extraArgs;
+            _target = target;
+            _args = args;
+            _hasArgsTuple = hasArgsTuple;
+            _hasKeywordDict = hasKeywordDictionary;
+            _keywordCount = keywordCount;
+            _extraArgs = extraArgs;
         }
 
         public IList<Arg> Args {
@@ -139,6 +135,21 @@ namespace Microsoft.Scripting.Ast {
                 foreach (Arg arg in _args) arg.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static CallExpression DynamicCall(Expression target, Arg[] args) {
+            return DynamicCall(SourceSpan.None, target, args, false, false, 0, 0);
+        }
+        public static CallExpression DynamicCall(SourceSpan span, Expression target, Arg[] args) {
+            return DynamicCall(span, target, args, false, false, 0, 0);
+        }
+        public static CallExpression DynamicCall(Expression target, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs) {
+            return DynamicCall(SourceSpan.None, target, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs);
+        }
+        public static CallExpression DynamicCall(SourceSpan span, Expression target, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs) {
+            return new CallExpression(span, target, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs);
         }
     }
 }

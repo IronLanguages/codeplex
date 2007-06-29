@@ -24,11 +24,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _index;
         private readonly Type _elementType;
 
-        public ArrayIndexExpression(Expression array, Expression index)
-            : this(array, index, SourceSpan.None) {
-        }
-
-        public ArrayIndexExpression(Expression array, Expression index, SourceSpan span)
+        internal ArrayIndexExpression(SourceSpan span, Expression array, Expression index)
             : base(span) {
             if (array == null) {
                 throw new ArgumentNullException("array");
@@ -61,6 +57,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        public override object Evaluate(CodeContext context) {
+            object[] array = (object[])_array.Evaluate(context);
+            int index = (int)context.LanguageContext.Binder.Convert(_index.Evaluate(context), typeof(int));
+            return array[index];
+        }
+
         public override void Emit(CodeGen cg) {
             // Emit the array reference
             _array.Emit(cg);
@@ -76,6 +78,15 @@ namespace Microsoft.Scripting.Ast {
                 _index.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static ArrayIndexExpression ReadItem(Expression array, Expression index) {
+            return ReadItem(SourceSpan.None, array, index);
+        }
+        public static ArrayIndexExpression ReadItem(SourceSpan span, Expression array, Expression index) {
+            return new ArrayIndexExpression(span, array, index);
         }
     }
 }

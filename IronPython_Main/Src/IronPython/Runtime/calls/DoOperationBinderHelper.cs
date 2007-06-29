@@ -33,6 +33,8 @@ using Microsoft.Scripting.Generation;
 
 
 namespace IronPython.Runtime.Calls {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class DoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
         public DoOperationBinderHelper(ActionBinder binder, CodeContext context, DoOperationAction action)
             : base(context, action) {
@@ -92,18 +94,20 @@ namespace IronPython.Runtime.Calls {
         private delegate object DynamicOperationMethod(CodeContext context, Operators op, object x, object y);
         private delegate object DynamicUnaryOperationMethod(CodeContext context, Operators op, object x);
         private void MakeDynamicTarget(DynamicOperationMethod action, StandardRule<T> rule) {
-            Expression expr = MethodCallExpression.Call(null, action.Method,
-                    new CodeContextExpression(),
-                    ConstantExpression.Constant(this.Action.Operation),
-                    rule.GetParameterExpression(0),
-                    rule.GetParameterExpression(1));
+            Expression expr = Ast.Call(
+                    null,
+                    action.Method,
+                    Ast.CodeContext(),
+                    Ast.Constant(this.Action.Operation),
+                    rule.Parameters[0],
+                    rule.Parameters[1]);
             rule.SetTarget(rule.MakeReturn(Binder, expr));
         }
         private void MakeDynamicTarget(DynamicUnaryOperationMethod action, StandardRule<T> rule) {
-            Expression expr = MethodCallExpression.Call(null, action.Method,
-                    new CodeContextExpression(),
-                    ConstantExpression.Constant(Action.Operation),
-                    rule.GetParameterExpression(0));
+            Expression expr = Ast.Call(null, action.Method,
+                    Ast.CodeContext(),
+                    Ast.Constant(Action.Operation),
+                    rule.Parameters[0]);
             rule.SetTarget(rule.MakeReturn(Binder, expr));
         }
 
@@ -227,7 +231,7 @@ namespace IronPython.Runtime.Calls {
                 }
             }
 
-            rule.SetTarget(BlockStatement.Block(stmts));
+            rule.SetTarget(Ast.Block(stmts));
             return rule;
         }
 
@@ -286,10 +290,10 @@ namespace IronPython.Runtime.Calls {
             // bail if we're comparing to null and the rhs can't do anything special...
             if (xType.IsNull) {
                 if (yType.IsNull) {
-                    rule.SetTarget(rule.MakeReturn(Binder, new ConstantExpression(0)));
+                    rule.SetTarget(rule.MakeReturn(Binder, Ast.Zero()));
                     return rule;
                 } else if (yType.UnderlyingSystemType.IsPrimitive || yType.UnderlyingSystemType == typeof(Microsoft.Scripting.Math.BigInteger)) {
-                    rule.SetTarget(rule.MakeReturn(Binder, new ConstantExpression(-1)));
+                    rule.SetTarget(rule.MakeReturn(Binder, Ast.Constant(-1)));
                     return rule;
                 }
             } 
@@ -338,7 +342,7 @@ namespace IronPython.Runtime.Calls {
                 stmts.Add(MakeFallbackCompare(rule));
             }
 
-            rule.SetTarget(BlockStatement.Block(stmts));
+            rule.SetTarget(Ast.Block(stmts));
             return rule;
         }
 
@@ -358,14 +362,14 @@ namespace IronPython.Runtime.Calls {
                     stmts.Add(MakeBinaryThrow(rule));
                 }
             }
-            rule.SetTarget(BlockStatement.Block(stmts));
+            rule.SetTarget(Ast.Block(stmts));
             return rule;
         }
 
         private Expression MakeCall(MethodTarget target, StandardRule<T> block, bool reverse) {
-            Variable[] vars = block.Parameters;
+            Expression[] vars = block.Parameters;
             if (reverse) {
-                Variable[] newVars = new Variable[2];
+                Expression[] newVars = new Expression[2];
                 newVars[0] = vars[1];
                 newVars[1] = vars[0];
                 vars = newVars;
@@ -389,23 +393,23 @@ namespace IronPython.Runtime.Calls {
                 }else{
                     body = reverse ?                        
                         rule.MakeReturn(Binder, 
-                            BinaryExpression.Multiply(
-                                StaticUnaryExpression.Convert(
-                                    BoundExpression.Defined(tmp), 
+                            Ast.Multiply(
+                                Ast.Cast(
+                                    Ast.ReadDefined(tmp), 
                                     typeof(int)), 
-                                ConstantExpression.Constant(-1))) :
-                        rule.MakeReturn(Binder, BoundExpression.Defined(tmp));
+                                Ast.Constant(-1))) :
+                        rule.MakeReturn(Binder, Ast.ReadDefined(tmp));
                 }
-                stmts.Add(IfStatement.IfThen(
-                    BinaryExpression.NotEqual(
-                        BoundAssignment.Assign(tmp, MakeCall(target, rule, reverse)),
-                        MemberExpression.Field(null, typeof(PythonOps).GetField("NotImplemented"))),
+                stmts.Add(Ast.IfThen(
+                    Ast.NotEqual(
+                        Ast.Assign(tmp, MakeCall(target, rule, reverse)),
+                        Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
                     body));
             } else {
                 Expression call = MakeCall(target, rule, reverse);
                 if (val == null) {                    
                     if (reverse) {
-                        call = BinaryExpression.Multiply(call, ConstantExpression.Constant(-1));
+                        call = Ast.Multiply(call, Ast.Constant(-1));
                     }
                     stmts.Add(rule.MakeReturn(Binder, call));
                     return false;
@@ -413,19 +417,19 @@ namespace IronPython.Runtime.Calls {
 
                 Debug.Assert(call.ExpressionType == typeof(bool));
                 Variable var = rule.GetTemporary(call.ExpressionType, "tmp");
-                stmts.Add(new ExpressionStatement(BoundAssignment.Assign(var, call)));
+                stmts.Add(Ast.Statement(Ast.Assign(var, call)));
                 stmts.Add(MakeValueCheck(rule, val, var));
             }
             return true;
         }
 
         private IfStatement MakeValueCheck(StandardRule<T> rule, int? val, Variable var) {
-            return IfStatement.IfThen(
-                BinaryExpression.Equal(
-                    BoundExpression.Defined(var),
-                    ConstantExpression.Constant(true)),
+            return Ast.IfThen(
+                Ast.Equal(
+                    Ast.ReadDefined(var),
+                    Ast.True()),
 
-                rule.MakeReturn(Binder, new ConstantExpression(val))
+                rule.MakeReturn(Binder, Ast.Constant(val))
             );
         }
 
@@ -434,11 +438,11 @@ namespace IronPython.Runtime.Calls {
 
             if (ReturnsNotImplemented(target)) {
                 Variable tmp = block.GetTemporary(target.ReturnType, "tmp");
-                stmts.Add(IfStatement.IfThen(
-                    BinaryExpression.NotEqual(
-                        BoundAssignment.Assign(tmp, MakeCall(target, block, reverse)),
-                        MemberExpression.Field(null, typeof(PythonOps).GetField("NotImplemented"))),
-                    block.MakeReturn(Binder, BoundExpression.Defined(tmp))));
+                stmts.Add(Ast.IfThen(
+                    Ast.NotEqual(
+                        Ast.Assign(tmp, MakeCall(target, block, reverse)),
+                        Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
+                    block.MakeReturn(Binder, Ast.ReadDefined(tmp))));
                 return true;
             } else {
                 stmts.Add(block.MakeReturn(Binder, MakeCall(target, block, reverse)));
@@ -458,17 +462,17 @@ namespace IronPython.Runtime.Calls {
         }
 
         private Statement MakeUnaryThrow(StandardRule<T> block) {
-            return new ExpressionStatement(new ThrowExpression(
-                MethodCallExpression.Call(null, typeof(PythonOps).GetMethod("TypeErrorForUnaryOp"),
-                    ConstantExpression.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Action.Operation))),
-                    block.GetParameterExpression(0))));
+            return Ast.Statement(Ast.Throw(
+                Ast.Call(null, typeof(PythonOps).GetMethod("TypeErrorForUnaryOp"),
+                    Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Action.Operation))),
+                    block.Parameters[0])));
         }
 
         private Statement MakeBinaryThrow(StandardRule<T> block) {
-            return new ExpressionStatement(new ThrowExpression(
-                MethodCallExpression.Call(null, typeof(PythonOps).GetMethod("TypeErrorForBinaryOp"),
-                    ConstantExpression.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Action.Operation))),
-                    block.GetParameterExpression(0), block.GetParameterExpression(1))));
+            return Ast.Statement(Ast.Throw(
+                Ast.Call(null, typeof(PythonOps).GetMethod("TypeErrorForBinaryOp"),
+                    Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Action.Operation))),
+                    block.Parameters[0], block.Parameters[1])));
         }
 
         private bool MakeOneCompare(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse) {
@@ -476,11 +480,11 @@ namespace IronPython.Runtime.Calls {
 
             if (ReturnsNotImplemented(target)) {
                 Variable tmp = block.GetTemporary(target.ReturnType, "tmp");
-                stmts.Add(IfStatement.IfThen(
-                    BinaryExpression.NotEqual(
-                        BoundAssignment.Assign(tmp, MakeCall(target, block, reverse)),
-                        MemberExpression.Field(null, typeof(PythonOps).GetField("NotImplemented"))),
-                    MakeCompareTest(BoundExpression.Defined(tmp), block, reverse)));
+                stmts.Add(Ast.IfThen(
+                    Ast.NotEqual(
+                        Ast.Assign(tmp, MakeCall(target, block, reverse)),
+                        Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
+                    MakeCompareTest(Ast.ReadDefined(tmp), block, reverse)));
                 return true;
             } else {
                 stmts.Add(MakeCompareTest(MakeCall(target, block, reverse), block, reverse));
@@ -490,8 +494,8 @@ namespace IronPython.Runtime.Calls {
 
         private Statement MakeCompareTest(Expression expr, StandardRule<T> block, bool reverse) {
             return block.MakeReturn(Binder, 
-                MethodCallExpression.Call(null, GetCompareMethod(reverse),
-                    MethodCallExpression.Call(null, typeof(PythonOps).GetMethod("CompareToZero"),
+                Ast.Call(null, GetCompareMethod(reverse),
+                    Ast.Call(null, typeof(PythonOps).GetMethod("CompareToZero"),
                         expr)));
         }
 
@@ -513,9 +517,9 @@ namespace IronPython.Runtime.Calls {
 
         private Statement MakeFallbackCompare(StandardRule<T> block) {
             return block.MakeReturn(Binder, 
-                MethodCallExpression.Call(null, GetComparisonFallbackMethod(Action.Operation),
-                    block.GetParameterExpression(0),
-                    block.GetParameterExpression(1)));
+                Ast.Call(null, GetComparisonFallbackMethod(Action.Operation),
+                    block.Parameters[0],
+                    block.Parameters[1]));
         }
 
 
@@ -836,7 +840,7 @@ namespace IronPython.Runtime.Calls {
 
             if (nonzero == null && len == null) {
                 // always False or True for None
-                notExpr = ConstantExpression.Constant(types[0].IsNull ? true : false);
+                notExpr = types[0].IsNull ? Ast.True() : Ast.False();
             } else {
                 MethodBinder binder = MethodBinder.MakeBinder(Binder,
                     "Not",
@@ -850,16 +854,16 @@ namespace IronPython.Runtime.Calls {
                 if (nonzero != null) {
                     // call non-zero and negate it
                     if (notExpr.ExpressionType == typeof(bool)) {
-                        notExpr = BinaryExpression.Equal(notExpr, new ConstantExpression(false));
+                        notExpr = Ast.Equal(notExpr, Ast.False());
                     } else {
-                        notExpr = new StaticUnaryExpression(Operators.Not, notExpr, typeof(PythonOps).GetMethod("Not"));
+                        notExpr = Ast.Not(notExpr, typeof(PythonOps).GetMethod("Not"));
                     }
                 } else {
                     // call len, compare w/ zero
                     if (notExpr.ExpressionType == typeof(int)) {
-                        notExpr = BinaryExpression.Equal(notExpr, new ConstantExpression(0));
+                        notExpr = Ast.Equal(notExpr, Ast.Zero());
                     } else {
-                        notExpr = ActionExpression.Operator(Operators.Compare, typeof(int), notExpr, new ConstantExpression(0));
+                        notExpr = Ast.Action.Operator(Operators.Compare, typeof(int), notExpr, Ast.Zero());
                     }
                 }
             }
@@ -872,9 +876,9 @@ namespace IronPython.Runtime.Calls {
             rule.MakeTest(types);
             rule.SetTarget(
                 rule.MakeReturn(Binder,
-                    MethodCallExpression.Call(null,
+                    Ast.Call(null,
                         typeof(PythonOps).GetMethod("Not"),
-                        rule.GetParameterExpression(0))));
+                        rule.Parameters[0])));
             return rule;
         }
 

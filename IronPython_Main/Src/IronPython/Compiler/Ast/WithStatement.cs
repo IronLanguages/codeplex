@@ -18,6 +18,8 @@ using Microsoft.Scripting.Actions;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class WithStatement : Statement {
         private SourceLocation _header;
         private readonly Expression _contextManager;
@@ -73,7 +75,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.BoundExpression exit = ag.MakeGeneratorTempExpression("with_exit", SourceSpan.None);
             statements[1] = AstGenerator.MakeAssignment(
                 exit.Variable,
-                new MSAst.DynamicMemberExpression(
+                Ast.DynamicReadMember(
                     manager,
                     SymbolTable.StringToId("__exit__"),
                     MSAst.MemberBinding.Bound
@@ -84,14 +86,14 @@ namespace IronPython.Compiler.Ast {
             MSAst.BoundExpression value = ag.MakeTempExpression("with_value", SourceSpan.None);
             statements[2] = AstGenerator.MakeAssignment(
                 value.Variable,
-                new MSAst.CallExpression(
-                    new MSAst.DynamicMemberExpression(
+                Ast.Action.Call(
+                    CallAction.Simple,
+                    typeof(object),
+                    Ast.DynamicReadMember(
                         manager,
                         SymbolTable.StringToId("__enter__"),
                         MSAst.MemberBinding.Bound
-                    ),
-                    new MSAst.Arg[0],
-                    false, false, 0, 0
+                    )                
                 )
             );
 
@@ -99,28 +101,30 @@ namespace IronPython.Compiler.Ast {
             MSAst.BoundExpression exc = ag.MakeGeneratorTempExpression("with_exc", SourceSpan.None);
             statements[3] = AstGenerator.MakeAssignment(
                 exc.Variable,
-                new MSAst.ConstantExpression(true)
+                Ast.True()
             );
 
             // 5. if not exit(*sys.exc_info()):
             //        raise
-            MSAst.Statement if_not_exit_raise = MSAst.IfStatement.IfThen(
-                MSAst.ActionExpression.Operator(Operators.Not, typeof(bool), MakeExitCall(exit)),
-                new MSAst.ExpressionStatement(new MSAst.ThrowExpression(null))
+            MSAst.Statement if_not_exit_raise = Ast.IfThen(
+                Ast.Action.Operator(Operators.Not, typeof(bool), MakeExitCall(exit)),
+                Ast.Statement(Ast.Rethrow())
             );
 
             // Create null argument for later use in the call to exit
-            MSAst.Arg null_arg = MSAst.Arg.Simple(new MSAst.ConstantExpression(null));
+            MSAst.Expression null_arg = Ast.Null();
 
-            statements[4] = new MSAst.DynamicTryStatement(
+            statements[4] = Ast.DynamicTry(
+                // try statement location
+                Span,
+                _header,
+
                 // try statement body
                 _var != null ?
-                    new MSAst.BlockStatement(
-                        new MSAst.Statement[] {
-                            _var.TransformSet(ag, value, Operators.None),
-                            ag.Transform(_body)
-                        },
-                        _body.Span
+                    Ast.Block(
+                        _body.Span,
+                        _var.TransformSet(ag, value, Operators.None),
+                        ag.Transform(_body)
                     ) :
                     ag.Transform(_body),
 
@@ -130,19 +134,17 @@ namespace IronPython.Compiler.Ast {
                         null,               // no test
                         null,               // no target
 
-                        new MSAst.BlockStatement(
-                            new MSAst.Statement[] {
-                                // exc = False
-                                AstGenerator.MakeAssignment(
-                                    exc.Variable,
-                                    new MSAst.ConstantExpression(false)
-                                ),
+                        Ast.Block(
+                            // exc = False
+                            AstGenerator.MakeAssignment(
+                                exc.Variable,
+                                Ast.False()
+                            ),
 
-                                // if not exit(*sys.exc_info()):
-                                //    raise
+                            // if not exit(*sys.exc_info()):
+                            //    raise
 
-                                if_not_exit_raise,
-                            }
+                            if_not_exit_raise
                         )
                     ),
                 },
@@ -150,45 +152,36 @@ namespace IronPython.Compiler.Ast {
                 null,
 
                 // try statement "finally"
-                MSAst.IfStatement.IfThen(
+                Ast.IfThen(
                     exc,
-                    new MSAst.ExpressionStatement(
-                        new MSAst.CallExpression(
+                    Ast.Statement(
+                        Ast.Action.Call(
+                            _contextManager.Span,
+                            CallAction.Simple,
+                            typeof(object),
                             exit,
-                            new MSAst.Arg[] {
-                                null_arg,
-                                null_arg,
-                                null_arg
-                            },
-                            false, false, 0, 0, _contextManager.Span
+                            null_arg,
+                            null_arg,
+                            null_arg
                         )
                     )
-                ),
-
-                // try statement location
-                Span,
-                _header
+                )
             );
 
-            return new MSAst.BlockStatement(statements, _body.Span);
+            return Ast.Block(_body.Span, statements);
         }
 
         private MSAst.Expression MakeExitCall(MSAst.BoundExpression exit) {
-            return new MSAst.CallExpression(
+            return Ast.Action.Call(
+                CallAction.Make(new ArgumentKind(false, true, false, SymbolId.Empty)),
+                typeof(bool),
                 exit,
-                new MSAst.Arg[] {
-                    MSAst.Arg.List(
-                            MSAst.MethodCallExpression.Call(
-                                null,
-                                AstGenerator.GetHelperMethod("ExtractSysExcInfo"),
-                                new MSAst.CodeContextExpression()
-                            )
-                        )
-                    },
-                true,
-                false,
-                0,
-                1);
+                Ast.Call(
+                    null,
+                    AstGenerator.GetHelperMethod("ExtractSysExcInfo"),
+                    Ast.CodeContext()
+                )
+            );
         }
 
         public override void Walk(PythonWalker walker) {

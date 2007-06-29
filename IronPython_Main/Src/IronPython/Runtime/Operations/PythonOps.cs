@@ -2050,11 +2050,14 @@ namespace IronPython.Runtime.Operations {
 
         public static object MakeClass(CodeContext context, string name, object[] bases, string selfNames, Delegate body) {
             CodeContext bodyContext;
-            CallTarget0 target = body as CallTarget0;
-            if (target != null) {
+            CallTarget0 target;
+            CallTargetWithContext0 targetWithContext;
+            if ((target = body as CallTarget0) != null) {
                 bodyContext = (CodeContext)target();
-            } else {
+            } else if ((targetWithContext = body as CallTargetWithContext0) != null) {
                 bodyContext = (CodeContext)((CallTargetWithContext0)body)(context);
+            } else {
+                bodyContext = (CodeContext)((CallTargetWithContextN)body)(context);
             }
 
             IAttributesCollection vars = bodyContext.Scope.Dict;

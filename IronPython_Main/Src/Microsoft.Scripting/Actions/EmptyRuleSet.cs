@@ -32,7 +32,13 @@ namespace Microsoft.Scripting.Actions {
         }
 
         protected override T MakeTarget(CodeContext context) {
-            if (DynamicSiteHelpers.IsFastTarget(typeof(T))) {
+            if (DynamicSiteHelpers.IsBigTarget(typeof(T))) {
+                if (DynamicSiteHelpers.IsFastTarget(typeof(T))) {
+                    return (T)(object)DynamicSiteHelpers.MakeUninitializedBigFastTarget(typeof(T));
+                } else {
+                    return (T)(object)DynamicSiteHelpers.MakeUninitializedBigTarget(typeof(T));
+                }
+            } else if (DynamicSiteHelpers.IsFastTarget(typeof(T))) {
                 return (T)(object)DynamicSiteHelpers.MakeUninitializedFastTarget(typeof(T));
             } else {
                 return (T)(object)DynamicSiteHelpers.MakeUninitializedTarget(typeof(T));

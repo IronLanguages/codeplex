@@ -17,6 +17,8 @@ using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ListComprehensionIf : ListComprehensionIterator {
         private readonly Expression _test;
 
@@ -29,16 +31,13 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag, MSAst.Statement body) {
-            return new MSAst.IfStatement(
-                new MSAst.IfStatementTest[] {
-                    new MSAst.IfStatementTest(
-                        ag.Transform(_test),
-                        body,
-                        Span,
-                        Span.End)
-                    },
-                null,
-                Span);
+            return Ast.If(
+                Span,
+                Ast.IfConditions(
+                    Ast.IfCondition(Span, Span.End, ag.Transform(_test), body)
+                ),
+                null
+            );
         }
 
         public override void Walk(PythonWalker walker) {

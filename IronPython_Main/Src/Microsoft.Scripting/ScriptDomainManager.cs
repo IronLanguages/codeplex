@@ -781,8 +781,12 @@ namespace Microsoft.Scripting {
 
             if (scope == null) {
                 if (scriptCodes.Length == 1) {
-                    generator = OptimizedModuleGenerator.Create(scriptCodes);
-                    scope = generator.GenerateScope();
+                    if (scriptCodes[0].LanguageContext.Engine.Options.FastEvaluation) {
+                        scope = new Scope();
+                    } else {
+                        generator = OptimizedModuleGenerator.Create(scriptCodes);
+                        scope = generator.GenerateScope();
+                    }
                 } else {
                     scope = new Scope();
                 }

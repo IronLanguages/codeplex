@@ -19,11 +19,7 @@ namespace Microsoft.Scripting.Ast {
     public class ReturnStatement : Statement {
         private readonly Expression _expr;
 
-        public ReturnStatement(Expression expression)
-            : this(expression, SourceSpan.None) {
-        }
-
-        public ReturnStatement(Expression expression, SourceSpan span)
+        internal ReturnStatement(SourceSpan span, Expression expression)
             : base(span) {
             _expr = expression;
         }
@@ -33,7 +29,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override object Execute(CodeContext context) {
-            return _expr.Evaluate(context);
+            if (_expr != null) {
+                return _expr.Evaluate(context);
+            } else {
+                return null;
+            }
         }
 
         public override void Emit(CodeGen cg) {
@@ -46,6 +46,23 @@ namespace Microsoft.Scripting.Ast {
                 if (_expr != null) _expr.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static ReturnStatement Return() {
+            return Return(SourceSpan.None, null);
+        }
+
+        public static ReturnStatement Return(Expression expression) {
+            return Return(SourceSpan.None, expression);
+        }
+
+        public static ReturnStatement Return(SourceSpan span, Expression expression) {
+            return new ReturnStatement(span, expression);
         }
     }
 }

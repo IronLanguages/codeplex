@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _value;
         private readonly Type _elementType;
 
-        public ArrayIndexAssignment(Expression array, Expression index, Expression value, SourceSpan span)
+        internal ArrayIndexAssignment(SourceSpan span, Expression array, Expression index, Expression value)
             : base(span) {
             if (array == null) throw new ArgumentNullException("array");
             if (index == null) throw new ArgumentNullException("index");
@@ -57,6 +57,14 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        public override object Evaluate(CodeContext context) {
+            object value = _value.Evaluate(context); // evaluate the value first
+            object[] array = (object[])_array.Evaluate(context);
+            int index = (int)context.LanguageContext.Binder.Convert(_index.Evaluate(context), typeof(int));
+            array[index] = value;
+            return null; //??? does Emit leave behind a value on the stack? should we return value instead?
+        }
+
         public override void Emit(CodeGen cg) {
             _value.EmitAs(cg, _elementType);
 
@@ -83,6 +91,12 @@ namespace Microsoft.Scripting.Ast {
                 _value.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static ArrayIndexAssignment AssignItem(SourceSpan span, Expression array, Expression index, Expression value) {
+            return new ArrayIndexAssignment(span, array, index, value);
         }
     }
 }

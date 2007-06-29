@@ -21,6 +21,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
 
     public enum ParameterKind {
         Normal,
@@ -120,9 +121,9 @@ namespace IronPython.Compiler.Ast {
         internal override void Init(AstGenerator inner, List<MSAst.Statement> init) {
             MSAst.Statement stmt = _tuple.TransformSet(
                 inner,
-                new MSAst.BoundExpression(Variable.Variable, Span),
+                Ast.Read(Span, Variable.Variable),
                 Operators.None
-                );
+            );
 
             if (stmt != null) {
                 init.Add(stmt);

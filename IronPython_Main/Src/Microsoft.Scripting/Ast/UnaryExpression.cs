@@ -14,37 +14,23 @@
  * ***************************************************************************/
 
 using System;
+using System.Reflection;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
-using System.Reflection;
 
 namespace Microsoft.Scripting.Ast {
-    // TODO rename to UnaryExpression
-    public class StaticUnaryExpression : Expression {
+    public class UnaryExpression : Expression {
         private readonly Expression _operand;
         private readonly Operators _op;
         private readonly Type _type;
         private readonly MethodInfo _method;
 
-        public StaticUnaryExpression(Operators op, Expression operand, MethodInfo method)
-            : base(SourceSpan.None) {
-            _operand = operand;
-            _method = method;
-            _op = op;
-            _type = method.ReturnType;
-        }
-
-        public StaticUnaryExpression(Operators op, Expression operand, Type type)
-            : this(op, operand, type, SourceSpan.None) {
-        }
-
-        public StaticUnaryExpression(Operators op, Expression operand, Type type, SourceSpan span)
+        internal UnaryExpression(SourceSpan span, Expression operand, Operators op, Type type, MethodInfo method)
             : base(span) {
-            if (operand == null) throw new ArgumentNullException("operand");
-
             _operand = operand;
             _op = op;
             _type = type;
+            _method = method;
         }
 
         public Expression Operand {
@@ -87,9 +73,26 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        public static StaticUnaryExpression Convert(Expression expression, Type type) {
-            return new StaticUnaryExpression(Operators.Coerce, expression, type, SourceSpan.None);
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static UnaryExpression Cast(Expression expression, Type type) {
+            return Cast(SourceSpan.None, expression, type);
+        }
+
+        public static UnaryExpression Cast(SourceSpan span, Expression expression, Type type) {
+            return new UnaryExpression(span, expression, Operators.Coerce, type, null);
+        }
+
+        public static UnaryExpression Not(Expression expression, MethodInfo not) {
+            return new UnaryExpression(SourceSpan.None, expression, Operators.Not, not.ReturnType, not);
+        }
+
+        public static UnaryExpression Unary(Operators op, Expression expression, MethodInfo method) {
+            return new UnaryExpression(SourceSpan.None, expression, op, method.ReturnType, method);
         }
     }
 }
