@@ -43,7 +43,7 @@ namespace Microsoft.Scripting.Ast {
 
         public AbstractValue Lookup(Variable variable) {
             Variable newVar = _variableMap[variable];
-            return AbstractValue.LimitType(newVar.Type, BoundExpression.Defined(newVar));
+            return AbstractValue.LimitType(newVar.Type, Ast.ReadDefined(newVar));
         }
 
         public ActionBinder Binder {

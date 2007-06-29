@@ -21,8 +21,8 @@ namespace Microsoft.Scripting.Ast {
     public class DeleteUnboundExpression : Expression {
         private SymbolId _name;
 
-        public DeleteUnboundExpression(SymbolId name)
-            : base(SourceSpan.None) {
+        internal DeleteUnboundExpression(SourceSpan span, SymbolId name)
+            : base(span) {
             _name = name;
         }
 
@@ -43,4 +43,14 @@ namespace Microsoft.Scripting.Ast {
             walker.PostWalk(this);
         }
     }
+
+    public static partial class Ast {
+        public static DeleteUnboundExpression Delete(SymbolId name) {
+            return Delete(SourceSpan.None, name);
+        }
+        public static DeleteUnboundExpression Delete(SourceSpan span, SymbolId name) {
+            return new DeleteUnboundExpression(span, name);
+        }
+    }
+
 }

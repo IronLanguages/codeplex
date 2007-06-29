@@ -26,11 +26,8 @@ namespace Microsoft.Scripting.Ast {
         private readonly CatchBlock[] _handlers;
         private readonly Statement _finally;
 
-        public TryStatement(Statement body, CatchBlock[] handlers, Statement finallySuite) 
-            : this(body, handlers, finallySuite, SourceSpan.None, SourceLocation.None) {
-        }
-
         /// <summary>
+        /// Called by <see cref="TryStatementBuilder"/>.
         /// Creates a try/catch/finally/else block.
         /// 
         /// The body is protected by the try block.
@@ -38,16 +35,16 @@ namespace Microsoft.Scripting.Ast {
         /// The elseSuite runs if no exception is thrown.
         /// The finallySuite runs regardless of how control exits the body.
         /// </summary>
-        public TryStatement(Statement body, CatchBlock[] handlers, Statement finallySuite, SourceSpan span, SourceLocation header)
+        internal TryStatement(SourceSpan span, SourceLocation header, Statement body, CatchBlock[] handlers, Statement @finally)
             : base(span) {
 
-            if (handlers == null && finallySuite == null) {
+            if (handlers == null && @finally == null) {
                 throw new ArgumentException("TryStatement requires at least one catch block or a finally");
             }
 
             _body = body;
             _handlers = handlers;
-            _finally = finallySuite;
+            _finally = @finally;
             _header = header;
         }
 
@@ -66,7 +63,29 @@ namespace Microsoft.Scripting.Ast {
         public Statement FinallyStatement {
             get { return _finally; }
         }
-
+        
+        public override object Execute(CodeContext context) {
+            try {
+                return _body.Execute(context);
+            } catch (Exception exc) {
+                if (_handlers != null) {
+                    foreach (CatchBlock handler in _handlers) {
+                        if (handler.Test.IsInstanceOfType(exc)) {
+                            if (handler.Variable != null) {
+                                RuntimeHelpers.SetName(context, handler.Variable.Name, exc);
+                            }
+                            return handler.Body.Execute(context);
+                        }
+                    }
+                }
+                throw;
+            } finally {
+                if (_finally != null) {
+                    _finally.Execute(context);
+                }
+            }
+        }
+        
         public override void Emit(CodeGen cg) {
             // Codegen is affected by presence/absence of loop control statements
             // (break/continue) or return statement in finally clause

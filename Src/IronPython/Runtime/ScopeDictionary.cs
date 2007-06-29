@@ -23,7 +23,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Represents a thread safe symbol dictionary which is backed by a Scope.
     /// </summary>
-    public abstract class ScopeDictionary : CustomSymbolDictionary {
+    public abstract class ScopeDictionary : CustomSymbolDictionary, ICodeFormattable {
         private Scope _scope;
 
         protected ScopeDictionary(Scope scope) {
@@ -111,5 +111,10 @@ namespace IronPython.Runtime {
         public override string ToString() {
             return DictionaryOps.ToString(this);
         }
+
+        public string ToCodeString(CodeContext context) {
+            return DictionaryOps.ToCodeString(this);
+        }
+
     }
 }

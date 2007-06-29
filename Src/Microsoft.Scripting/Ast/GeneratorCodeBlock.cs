@@ -50,8 +50,8 @@ namespace Microsoft.Scripting.Ast {
         private static int _Counter = 0;
         private static string[] _GeneratorSigNames = new string[] { "$gen", "$ret" };
 
-        public GeneratorCodeBlock(string name, Type generator, Type next, SourceSpan span)
-            : base(name, span) {
+        public GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next)
+            : base(span, name) {
             if (generator == null) throw new ArgumentNullException("generator");
             if (next == null) throw new ArgumentNullException("next");
             if (!typeof(Generator).IsAssignableFrom(generator)) throw new ArgumentException("The generator type must inherit from Generator");

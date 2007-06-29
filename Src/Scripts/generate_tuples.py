@@ -17,8 +17,8 @@ import generate
 reload(generate)
 from generate import CodeGenerator, CodeWriter
 
-def make_arg_list(size):
-    return ', '.join(['T'+str(x) for x in range(size)])
+def make_arg_list(size, name ='T%(id)d'):
+    return ', '.join([name % {'id': x} for x in range(size)])
 
 def get_base(size):
     if size: return 'Tuple<' + make_arg_list(size) + '>'
@@ -29,6 +29,17 @@ def gen_generic_args(i, type='object'):
 
 def gen_tuple(cw, size, prevSize):
 	cw.enter_block('public class Tuple<%s> : %s' % (make_arg_list(size), get_base(prevSize)))
+	
+	cw.write('public Tuple() { }')
+	cw.write('')
+	cw.write('public Tuple(' + make_arg_list(size, 'T%(id)d item%(id)d') + ')')
+	cw.enter_block('  : base(' + make_arg_list(prevSize, 'item%(id)d') + ')')
+	
+	for i in range(prevSize, size):
+		cw.write('_item%d = item%d;' % (i, i))
+    
+	cw.exit_block()
+	cw.write('')
 	for i in range(prevSize, size):
 	    cw.write("private T%d _item%d;" % (i, i))
         cw.write('')

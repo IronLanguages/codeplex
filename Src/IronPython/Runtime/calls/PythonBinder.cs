@@ -30,6 +30,8 @@ using Microsoft.Scripting.Generation;
 using TypeCache = IronPython.Runtime.Types.TypeCache;
 
 namespace IronPython.Runtime.Calls {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class PythonBinder : ActionBinder {
         public PythonBinder(CodeContext context)
             : base(context) {
@@ -58,7 +60,7 @@ namespace IronPython.Runtime.Calls {
 
             if (toType == typeof(object)) {
                 if (exprType.IsValueType) {
-                    return StaticUnaryExpression.Convert(expr, toType);
+                    return Ast.Cast(expr, toType);
                 } else {
                     return expr;
                 }
@@ -71,42 +73,49 @@ namespace IronPython.Runtime.Calls {
             BoundExpression be = expr as BoundExpression;
             if (be != null && be.Variable.KnownType != null) {
                 if (toType.IsAssignableFrom(be.Variable.KnownType)) {
-                    return StaticUnaryExpression.Convert(expr, toType);
+                    return Ast.Cast(expr, toType);
                 }
             }
 
             // We used to have a special case for int -> double...
             if (exprType != typeof(object)) {
-                expr = StaticUnaryExpression.Convert(expr, typeof(object));
+                expr = Ast.Cast(expr, typeof(object));
             }
 
             if (toType == typeof(object)) return expr;
 
             MethodInfo fastConvertMethod = GetFastConvertMethod(toType);
             if (fastConvertMethod != null) {
-                return MethodCallExpression.Call(null, fastConvertMethod, expr);
+                return Ast.Call(null, fastConvertMethod, expr);
             }
 
             if (typeof(Delegate).IsAssignableFrom(toType)) {
-                return StaticUnaryExpression.Convert(
-                    MethodCallExpression.Call(null,
+                return Ast.Cast(
+                    Ast.Call(
+                        null,
                         typeof(Converter).GetMethod("ConvertToDelegate"),
                         expr,
-                        ConstantExpression.Constant(toType)),
-                    toType);
+                        Ast.Constant(toType)
+                    ),
+                    toType
+                );
             }
             
-            return ConditionalExpression.Condition(
-                TypeBinaryExpression.TypeIs(
+            return Ast.Condition(
+                Ast.TypeIs(
                     expr,
                     toType),
-                StaticUnaryExpression.Convert(
+                Ast.Cast(
                     expr,
                     toType),
-                StaticUnaryExpression.Convert(
-                    MethodCallExpression.Call(null, GetGenericConvertMethod(toType),
-                        expr, ConstantExpression.Constant(toType.TypeHandle)),
-                    toType));
+                Ast.Cast(
+                    Ast.Call(
+                        null, GetGenericConvertMethod(toType),
+                        expr, Ast.Constant(toType.TypeHandle)
+                    ),
+                    toType
+                )
+            );
         }
 
 

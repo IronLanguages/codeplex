@@ -18,12 +18,8 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public class DynamicNewExpression : CallExpression {
-        public DynamicNewExpression(Expression constructor, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs)
-            : base(constructor, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs) {
-        }
-
-        public DynamicNewExpression(Expression constructor, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs, SourceSpan span)
-            : base(constructor, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs, span) {
+        internal DynamicNewExpression(SourceSpan span, Expression constructor, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs)
+            : base(span, constructor, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs) {
         }
 
         public override object Evaluate(CodeContext context) {
@@ -46,6 +42,15 @@ namespace Microsoft.Scripting.Ast {
             });
             cg.EmitCall(typeof(RuntimeHelpers), "Construct",
                 new Type[] { typeof(CodeContext), typeof(object), typeof(object[]) });
+        }
+    }
+
+    public static partial class Ast {
+        public static DynamicNewExpression DynamicNew(Expression constructor, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs) {
+            return DynamicNew(SourceSpan.None, constructor, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs);
+        }
+        public static DynamicNewExpression DynamicNew(SourceSpan span, Expression constructor, Arg[] args, bool hasArgsTuple, bool hasKeywordDictionary, int keywordCount, int extraArgs) {
+            return new DynamicNewExpression(span, constructor, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs);
         }
     }
 }

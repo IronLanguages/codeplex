@@ -114,11 +114,7 @@ namespace IronPython.Runtime.Types {
                         return _site2.Invoke(_ctor, _type, args[0], args[1]);
                 }
 
-                object[] realArgs = new object[args.Length + 1];
-                realArgs[0] = _type;
-
-                Array.Copy(args, 0, realArgs, 1, args.Length);
-                return _ctor.Call(context, realArgs);
+                return _ctor.Call(context, Utils.Array.Insert<object>(_type, args));
             }
 
             #endregion
@@ -126,11 +122,7 @@ namespace IronPython.Runtime.Types {
             #region IFancyCallable Members
 
             public object Call(CodeContext context, object[] args, string[] names) {
-                object[] realArgs = new object[args.Length + 1];
-                realArgs[0] = _type;
-
-                Array.Copy(args, 0, realArgs, 1, args.Length);
-                return _ctor.Call(context, realArgs, names);
+                return _ctor.Call(context, Utils.Array.Insert<object>(_type, args), names);
             }
 
             #endregion

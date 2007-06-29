@@ -66,9 +66,13 @@ namespace Microsoft.Scripting {
         }
 
         public MethodCandidate MakeBindingTarget(CallType callType, Type[] types) {
+            return MakeBindingTarget(callType, types, SymbolId.EmptySymbols);
+        }
+
+        public MethodCandidate MakeBindingTarget(CallType callType, Type[] types, SymbolId[] names) {
             TargetSet ts = this.GetTargetSet(types.Length);
             if (ts != null) {
-                return ts.MakeBindingTarget(callType, types);
+                return ts.MakeBindingTarget(callType, types, names);
             }
             return null;
         }
@@ -154,10 +158,7 @@ namespace Microsoft.Scripting {
         }
 
         public object CallInstanceReflected(CodeContext context, object instance, params object[] args) {
-            object[] callargs = new object[args.Length + 1];
-            callargs[0] = instance;
-            Array.Copy(args, 0, callargs, 1, args.Length);
-            return CallReflected(context, CallType.ImplicitInstance, callargs);
+            return CallReflected(context, CallType.ImplicitInstance, Utils.Array.Insert(instance, args));
         }
 
         public object CallReflected(CodeContext context, CallType callType, params object[] args) {
@@ -217,7 +218,7 @@ namespace Microsoft.Scripting {
                 if (pi.ParameterType.IsByRef) {
                     hasByRef = true;
                     Type refType = typeof(Reference<>).MakeGenericType(pi.ParameterType.GetElementType());
-                    ParameterWrapper param = new ParameterWrapper(_binder, refType, true);
+                    ParameterWrapper param = new ParameterWrapper(_binder, refType, true, SymbolTable.StringToId(pi.Name));
                     parameters.Add(param);
                     argBuilders.Add(new ReferenceArgBuilder(argIndex++, param.Type));
                 } else {
@@ -279,7 +280,7 @@ namespace Microsoft.Scripting {
                     if (CompilerHelpers.IsOutParameter(pi)) {
                         argBuilders.Add(new NullArgBuilder()); //TODO better option here
                     } else {
-                        ParameterWrapper param = new ParameterWrapper(_binder, pi.ParameterType.GetElementType());
+                        ParameterWrapper param = new ParameterWrapper(_binder, pi.ParameterType.GetElementType(), SymbolTable.StringToId(pi.Name));
                         parameters.Add(param);
                         argBuilders.Add(new SimpleArgBuilder(argIndex++, pi.ParameterType.GetElementType()));
                     }
@@ -325,8 +326,8 @@ namespace Microsoft.Scripting {
             get { return _targets.Count != 1 || _targets[0].Target.NeedsContext || !_targets[0].Target.CanMakeCallTarget(); }
         }
 
-        public MethodCandidate MakeBindingTarget(CallType callType, Type[] types) {
-            List<MethodCandidate> targets = SelectTargets(callType, types);
+        public MethodCandidate MakeBindingTarget(CallType callType, Type[] types, SymbolId[] names) {
+            List<MethodCandidate> targets = SelectTargets(callType, types, names);
 
             if (targets.Count == 1) return targets[0];
 
@@ -353,11 +354,15 @@ namespace Microsoft.Scripting {
         }
 
         public object CallReflected(CodeContext context, CallType callType, object[] args) {
+            return CallReflected(context, callType, args, SymbolId.EmptySymbols);
+        }
+
+        public object CallReflected(CodeContext context, CallType callType, object[] args, SymbolId[] names) {
             List<MethodCandidate> targets = FindTarget(callType, args);
 
             if (targets.Count == 1) {
                 if (_binder.IsBinaryOperator) {
-                    if (!targets[0].CheckArgs(context, args)) {
+                    if (!targets[0].CheckArgs(context, args, names)) {
                         return context.LanguageContext.GetNotImplemented(targets[0]);
                     }
                 }
@@ -384,11 +389,15 @@ namespace Microsoft.Scripting {
         }
 
         public List<MethodCandidate> SelectTargets(CallType callType, Type[] types) {
-            if (_targets.Count == 1 && !_binder.IsBinaryOperator) return _targets;
+            return SelectTargets(callType, types, SymbolId.EmptySymbols);
+        }
+
+        public List<MethodCandidate> SelectTargets(CallType callType, Type[] types, SymbolId[] names) {
+            if (_targets.Count == 1 && !_binder.IsBinaryOperator && names.Length == 0) return _targets;
 
             List<MethodCandidate> applicableTargets = new List<MethodCandidate>();
             foreach (MethodCandidate target in _targets) {
-                if (target.IsApplicable(types, NarrowingLevel.None)) {
+                if (target.IsApplicable(types, names, NarrowingLevel.None)) {
                     applicableTargets.Add(target);
                 }
             }
@@ -406,9 +415,9 @@ namespace Microsoft.Scripting {
             }
 
             //no targets are applicable without narrowing conversions, so try those
-
+            
             foreach (MethodCandidate target in _targets) {
-                if (target.IsApplicable(types, NarrowingLevel.Preferred)) {
+                if (target.IsApplicable(types, names, NarrowingLevel.Preferred)) {
                     applicableTargets.Add(new MethodCandidate(target, NarrowingLevel.Preferred));
                 }
             }
@@ -416,7 +425,7 @@ namespace Microsoft.Scripting {
             if (applicableTargets.Count == 0) {
                 foreach (MethodCandidate target in _targets) {
                     NarrowingLevel nl = _binder.IsBinaryOperator ? NarrowingLevel.Operator : NarrowingLevel.All;
-                    if (target.IsApplicable(types, nl)) {
+                    if (target.IsApplicable(types, names, nl)) {
                         applicableTargets.Add(new MethodCandidate(target, nl));
                     }
                 }
@@ -482,25 +491,7 @@ namespace Microsoft.Scripting {
             return buf.ToString();
         }
 
-        public void Add(MethodCandidate target) {
-            for (int i = 0; i < _targets.Count; i++) {
-                if (_targets[i].CompareParameters(target) == 0) {
-                    switch (_targets[i].Target.CompareEqualParameters(target.Target)) {
-                        case -1:
-                            // the new method is strictly better than the existing one so remove the existing one
-                            _targets.RemoveAt(i);
-                            i -= 1; // modify the index since we removed a target from the list
-                            break;
-                        case +1:
-                            // the new method is strictly worse than the existing one so skip it
-                            return;
-                        case 0:
-                            // the two methods are identical ignoring CallType so list a conflict
-                            _hasConflict = true;
-                            break;
-                    }
-                }
-            }
+        public void Add(MethodCandidate target) {            
             _targets.Add(target);
         }
 

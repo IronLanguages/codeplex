@@ -59,18 +59,6 @@ namespace Microsoft.Scripting {
             }
 
             [Conditional("DEBUG")]
-            public static void Serializable(Type type) {
-                Debug.Assert(type != null);
-
-#if !SILVERLIGHT
-                if (type.IsSerializable) return;
-                if (type.IsSubclassOf(typeof(MarshalByRefObject))) return;
-                if (typeof(ISerializable).IsAssignableFrom(type)) return;
-                Debug.Assert(false, "Type " + type + " is not serializable");
-#endif
-            }
-
-            [Conditional("DEBUG")]
             public static void NotNullItems<T>(IEnumerable<T> items) where T : class {
                 Debug.Assert(items != null);
                 foreach (object item in items) {
@@ -500,6 +488,7 @@ namespace Microsoft.Scripting {
 
             // copied from MSCORLIB
             public static T[] FindAll<T>(T[] array, Predicate<T> match) {
+#if SILVERLIGHT
                 if (array == null) {
                     throw new ArgumentNullException("array");
                 }
@@ -515,17 +504,9 @@ namespace Microsoft.Scripting {
                     }
                 }
                 return list.ToArray();
-            }
-
-
-            public static TElement[] FromList<TElement>(IList list) {
-                TElement[] result = new TElement[list.Count];
-
-                int i = 0;
-                foreach (TElement element in list)
-                    result[i++] = element;
-
-                return result;
+#else
+                return System.Array.FindAll(array, match);
+#endif
             }
 
             public static void PrintTable(TextWriter output, string[,] table) {
@@ -594,6 +575,79 @@ namespace Microsoft.Scripting {
                 T[] result = new T[reservedSlotsBefore + elements.Count + reservedSlotsAfter];
                 elements.CopyTo(result, reservedSlotsBefore);
                 return result;
+            }
+
+            public static T[] ShiftRight<T>(T[] array, int count) {
+                if (array == null) throw new ArgumentNullException("array");
+                if (count < 0) throw new ArgumentOutOfRangeException("count");
+
+                T[] result = new T[array.Length + count];
+                System.Array.Copy(array, 0, result, count, array.Length);
+                return result;
+            }
+
+            public static T[] ShiftLeft<T>(T[] array, int count) {
+                if (array == null) throw new ArgumentNullException("array");
+                if (count < 0) throw new ArgumentOutOfRangeException("count");
+
+                T[] result = new T[array.Length - count];
+                System.Array.Copy(array, count, result, 0, result.Length);
+                return result;
+            }
+
+            public static T[] Insert<T>(T item, T[] array) {
+                T[] result = ShiftRight(array, 1);
+                result[0] = item;
+                return result;
+            }
+
+            public static T[] Insert<T>(T item1, T item2, T[] array) {
+                T[] result = ShiftRight(array, 2);
+                result[0] = item1;
+                result[1] = item2;
+                return result;
+            }
+
+            public static T[] Append<T>(T[] array, T item) {
+                if (array == null) throw new ArgumentNullException("array");
+
+                System.Array.Resize<T>(ref array, array.Length + 1);
+                array[array.Length - 1] = item;
+                return array;
+            }
+
+            public static T[] AppendRange<T>(T[] array, IList<T> items, int additionalItemCount) {
+                if (array == null) throw new ArgumentNullException("array");
+                if (additionalItemCount < 0) throw new ArgumentOutOfRangeException("additionalItemCount");
+
+                int j = array.Length;
+
+                System.Array.Resize<T>(ref array, array.Length + items.Count + additionalItemCount);
+
+                for (int i = 0; i < items.Count; i++, j++) {
+                    array[j] = items[i];
+                }
+
+                return array;
+            }
+
+            internal static void SwapLastTwo<T>(T[] array) {
+                Debug.Assert(array != null && array.Length >= 2);
+
+                T temp = array[array.Length - 1];
+                array[array.Length - 1] = array[array.Length - 2];
+                array[array.Length - 2] = temp;
+            }
+
+            public static T[] RemoveFirst<T>(T[] array) {
+                return ShiftLeft(array, 1);
+            }
+
+            public static T[] RemoveLast<T>(T[] array) {
+                if (array == null) throw new ArgumentNullException("array");
+
+                System.Array.Resize(ref array, array.Length - 1);
+                return array;
             }
         }
 
@@ -1101,16 +1155,6 @@ namespace Microsoft.Scripting {
             return valid;
         }
 #endif
-
-        // Various String.Compare methods were removed from Silverlight, adding them back here
-        public static int StringCompare(string strA, string strB, bool ignoreCase, CultureInfo culture) {
-            return culture.CompareInfo.Compare(strA, strB, ignoreCase ? CompareOptions.IgnoreCase : CompareOptions.None);
-        }
-
-        public static int StringCompare(string strA, string strB, bool ignoreCase) {
-            return StringCompare(strA, strB, ignoreCase, CultureInfo.CurrentCulture);
-        }
-
 
         #endregion
     }

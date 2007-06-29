@@ -41,8 +41,8 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public ScopeStatement(Expression scope, Statement body)
-            : base(SourceSpan.None) {
+        internal ScopeStatement(SourceSpan span, Expression scope, Statement body)
+            : base(span) {
             _scope = scope;
             _body = body;
         }
@@ -76,6 +76,19 @@ namespace Microsoft.Scripting.Ast {
                 _body.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static ScopeStatement Scope(Expression scope, Statement body) {
+            return Scope(SourceSpan.None, scope, body);
+        }
+
+        public static ScopeStatement Scope(SourceSpan span, Expression scope, Statement body) {
+            return new ScopeStatement(span, scope, body);
         }
     }
 }

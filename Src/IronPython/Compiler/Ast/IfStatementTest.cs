@@ -17,6 +17,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class IfStatementTest : Node {
         private SourceLocation _header;
         private readonly Expression _test;
@@ -41,12 +43,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.IfStatementTest Transform(AstGenerator ag) {
-            return new MSAst.IfStatementTest(
-                ag.TransformAndConvert(_test, typeof(bool)),
-                ag.Transform(_body),
+            return Ast.IfCondition(
                 Span,
-                _header
-                );
+                _header,
+                ag.TransformAndConvert(_test, typeof(bool)),
+                ag.Transform(_body)
+            );
         }
 
         public override void Walk(PythonWalker walker) {

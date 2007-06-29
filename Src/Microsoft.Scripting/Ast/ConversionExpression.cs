@@ -21,7 +21,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _expression;
         private readonly Type _conversion;
 
-        private ConversionExpression(Expression expression, Type conversion, SourceSpan span)
+        internal ConversionExpression(SourceSpan span, Expression expression, Type conversion)
             : base(span) {
             _expression = expression;
             _conversion = conversion;
@@ -49,14 +49,13 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
-
-        #region Factory method
-
+    }
+    public static partial class Ast {
         public static ConversionExpression Convert(Expression expression, Type conversion) {
-            return Convert(expression, conversion, SourceSpan.None);
+            return Convert(SourceSpan.None, expression, conversion);
         }
 
-        public static ConversionExpression Convert(Expression expression, Type conversion, SourceSpan span) {
+        public static ConversionExpression Convert(SourceSpan span, Expression expression, Type conversion) {
             if (expression == null) {
                 throw new ArgumentNullException("expression");
             }
@@ -64,9 +63,7 @@ namespace Microsoft.Scripting.Ast {
                 throw new ArgumentNullException("conversion");
             }
 
-            return new ConversionExpression(expression, conversion, span);
+            return new ConversionExpression(span, expression, conversion);
         }
-
-        #endregion
     }
 }

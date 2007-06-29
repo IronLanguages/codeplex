@@ -18,6 +18,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class FromImportStatement : Statement {
         private static readonly SymbolId[] _star = new SymbolId[1];
         private readonly DottedName _root;
@@ -62,16 +64,16 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Statement Transform(AstGenerator ag) {
             if (_names == _star) {
                 // from a[.b] import *
-                return new MSAst.ExpressionStatement(
-                    MSAst.MethodCallExpression.Call(
+                return Ast.Statement(
+                    Span,
+                    Ast.Call(
                         Span,
                         null,
                         AstGenerator.GetHelperMethod("ImportStar"),
-                        new MSAst.CodeContextExpression(),
-                        new MSAst.ConstantExpression(_root.MakeString())
-                        ),
-                    Span
-                    );
+                        Ast.CodeContext(),
+                        Ast.Constant(_root.MakeString())
+                    )
+                );
             } else {
                 // from a[.b] import x [as xx], [ y [ as yy] ] [ , ... ]
 
@@ -81,52 +83,48 @@ namespace IronPython.Compiler.Ast {
                 // Create initializer of the array of names being passed to ImportWithNames
                 MSAst.ConstantExpression[] names = new MSAst.ConstantExpression[_names.Length];
                 for (int i = 0; i < names.Length; i++) {
-                    names[i] = new MSAst.ConstantExpression(SymbolTable.IdToString(_names[i]));
+                    names[i] = Ast.Constant(SymbolTable.IdToString(_names[i]));
                 }
 
                 // module = PythonOps.ImportWithNames(<context>, _root, make_array(_names))
                 statements.Add(
-                    new MSAst.ExpressionStatement(
-                        new MSAst.BoundAssignment(
+                    Ast.Statement(
+                        _root.Span,
+                        Ast.Assign(
                             module.Variable,
-                            MSAst.MethodCallExpression.Call(
+                            Ast.Call(
                                 _root.Span,
                                 null,
                                 AstGenerator.GetHelperMethod("ImportWithNames"),
-                                new MSAst.CodeContextExpression(),
-                                new MSAst.ConstantExpression(_root.MakeString()),
-                                MSAst.NewArrayExpression.NewArrayInit(typeof(string[]), names)
-                                ),
-                            Operators.None,
-                            _root.Span
-                            ),
-                        _root.Span
+                                Ast.CodeContext(),
+                                Ast.Constant(_root.MakeString()),
+                                Ast.NewArray(typeof(string[]), names)
+                            )
+                        )
                     )
                 );
 
                 // now load all the names being imported and assign the variables
                 for (int i = 0; i < names.Length; i++) {
                     statements.Add(
-                        new MSAst.ExpressionStatement(
-                                new MSAst.BoundAssignment(
-                                    _variables[i].Variable,
-                                    MSAst.MethodCallExpression.Call(
-                                        Span,
-                                        null,
-                                        AstGenerator.GetHelperMethod("ImportFrom"),
-                                        new MSAst.CodeContextExpression(),
-                                        module,
-                                        names[i]
-                                    ),
-                                    Operators.None,
-                                    Span
-                                ),
-                                Span
+                        Ast.Statement(
+                            Span,
+                            Ast.Assign(
+                                _variables[i].Variable,
+                                Ast.Call(
+                                    Span,
+                                    null,
+                                    AstGenerator.GetHelperMethod("ImportFrom"),
+                                    Ast.CodeContext(),
+                                    module,
+                                    names[i]
+                                )
                             )
-                        );
+                        )
+                    );
                 }
 
-                return new MSAst.BlockStatement(statements.ToArray(), Span);
+                return Ast.Block(Span, statements.ToArray());
             }
         }
 

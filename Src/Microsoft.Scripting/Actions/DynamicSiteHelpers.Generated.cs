@@ -21,10 +21,12 @@ using System.Collections.Generic;
 using Microsoft.Scripting;
 
 namespace Microsoft.Scripting.Actions {
-    public static partial class DynamicSiteHelpers {
+    public static partial class DynamicSiteHelpers {        
         #region Generated DynamicSiteHelpers
 
         // *** BEGIN GENERATED CODE ***
+
+        public static readonly int MaximumArity = 7;
 
         public static Type MakeDynamicSiteType(params Type[] types) {
             Type genType;
@@ -36,7 +38,7 @@ namespace Microsoft.Scripting.Actions {
                 case 6: genType = typeof(DynamicSite<,,,,,>); break;
                 case 7: genType = typeof(DynamicSite<,,,,,,>); break;
                 default:
-                    throw new ArgumentException("require 2-7 types");
+                    return MakeBigDynamicSiteType(types);
             }
 
             return genType.MakeGenericType(types);
@@ -52,24 +54,54 @@ namespace Microsoft.Scripting.Actions {
                 case 6: genType = typeof(FastDynamicSite<,,,,,>); break;
                 case 7: genType = typeof(FastDynamicSite<,,,,,,>); break;
                 default:
-                    throw new ArgumentException("require 2-7 types");
+                    return MakeBigFastDynamicSiteType(types);
             }
 
             return genType.MakeGenericType(types);
         }
 
         public static object Execute(CodeContext context, ActionBinder binder, Action action, params object[] args) {
-            // TODO: this leaks the $arg names into the current scope.
             for (int i = 0; i < args.Length; i++) {
-                context.Scope.SetName(SymbolTable.StringToId("$arg" + i.ToString()), args[i]);
+                binder.Context.Scope.SetName(SymbolTable.StringToId("$arg" + i.ToString()), args[i]);
             }
+            bool result;
             switch (args.Length) {
-                case 1: return binder.GetRule<DynamicSiteTarget<object, object>>(action, args).Target.Execute(context);
-                case 2: return binder.GetRule<DynamicSiteTarget<object, object, object>>(action, args).Target.Execute(context);
-                case 3: return binder.GetRule<DynamicSiteTarget<object, object, object, object>>(action, args).Target.Execute(context);
-                case 4: return binder.GetRule<DynamicSiteTarget<object, object, object, object, object>>(action, args).Target.Execute(context);
-                case 5: return binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object>>(action, args).Target.Execute(context);
-                case 6: return binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object, object>>(action, args).Target.Execute(context);
+                case 1:
+                    StandardRule<DynamicSiteTarget<object, object>> rule1 = 
+                        binder.GetRule<DynamicSiteTarget<object, object>>(action, args);
+                    result = (bool)rule1.Test.Evaluate(binder.Context);
+                    Debug.Assert(result);
+                    return rule1.Target.Execute(binder.Context);
+                case 2:
+                    StandardRule<DynamicSiteTarget<object, object, object>> rule2 = 
+                        binder.GetRule<DynamicSiteTarget<object, object, object>>(action, args);
+                    result = (bool)rule2.Test.Evaluate(binder.Context);
+                    Debug.Assert(result);
+                    return rule2.Target.Execute(binder.Context);
+                case 3:
+                    StandardRule<DynamicSiteTarget<object, object, object, object>> rule3 = 
+                        binder.GetRule<DynamicSiteTarget<object, object, object, object>>(action, args);
+                    result = (bool)rule3.Test.Evaluate(binder.Context);
+                    Debug.Assert(result);
+                    return rule3.Target.Execute(binder.Context);
+                case 4:
+                    StandardRule<DynamicSiteTarget<object, object, object, object, object>> rule4 = 
+                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object>>(action, args);
+                    result = (bool)rule4.Test.Evaluate(binder.Context);
+                    Debug.Assert(result);
+                    return rule4.Target.Execute(binder.Context);
+                case 5:
+                    StandardRule<DynamicSiteTarget<object, object, object, object, object, object>> rule5 = 
+                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object>>(action, args);
+                    result = (bool)rule5.Test.Evaluate(binder.Context);
+                    Debug.Assert(result);
+                    return rule5.Target.Execute(binder.Context);
+                case 6:
+                    StandardRule<DynamicSiteTarget<object, object, object, object, object, object, object>> rule6 = 
+                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object, object>>(action, args);
+                    result = (bool)rule6.Test.Evaluate(binder.Context);
+                    Debug.Assert(result);
+                    return rule6.Target.Execute(binder.Context);
             }
             throw new ArgumentException("requires 1-6 arguments");
         }

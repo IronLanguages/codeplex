@@ -25,10 +25,16 @@ namespace Microsoft.Scripting {
         private Type _type;
         private bool _prohibitNull;
         private ActionBinder _binder;
+        private SymbolId _name;
 
         public ParameterWrapper(ActionBinder binder, Type type) {
             _type = type;
             _binder = binder;
+        }
+
+        public ParameterWrapper(ActionBinder binder, Type type, SymbolId name) 
+            : this(binder, type) {
+            _name = name;
         }
 
         public ParameterWrapper(ActionBinder binder, Type type, bool prohibitNull) {
@@ -37,8 +43,14 @@ namespace Microsoft.Scripting {
             _binder = binder;
         }
 
+        public ParameterWrapper(ActionBinder binder, Type type, bool prohibitNull, SymbolId name) 
+            : this(binder, type, prohibitNull) {
+            _name = name;
+        }
+
         public ParameterWrapper(ActionBinder binder, ParameterInfo info)
             : this(binder, info.ParameterType) {
+            _name = SymbolTable.StringToId(info.Name);
             this._prohibitNull = info.IsDefined(typeof(NotNullAttribute), false);
         }
 
@@ -118,6 +130,12 @@ namespace Microsoft.Scripting {
             else if (_binder.PreferConvert(t2, t1)) return +1;
 
             return null;
+        }
+
+        public SymbolId Name {
+            get {
+                return _name;
+            }
         }
 
         public string ToSignatureString() {

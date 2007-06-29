@@ -48,8 +48,8 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private MemberAssignment(MemberInfo member, Expression expression, Expression value)
-            : base(SourceSpan.None) {
+        internal MemberAssignment(SourceSpan span, MemberInfo member, Expression expression, Expression value)
+            : base(span) {
             _member = member;
             _expression = expression;
             _value = value;
@@ -91,19 +91,50 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        #region Factory methods
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static MemberAssignment AssignField(Expression expression, Type type, string field, Expression value) {
+            return AssignField(SourceSpan.None, expression, type, field, value);
+        }
 
+        public static MemberAssignment AssignField(SourceSpan span, Expression expression, Type type, string field, Expression value) {
+            if (type == null) {
+                throw new ArgumentNullException("type");
+            }
+            if (field == null) {
+                throw new ArgumentNullException("field");
+            }
+            if (value == null) {
+                throw new ArgumentNullException("value");
+            }
+            FieldInfo fi = type.GetField(field);
+            if (fi == null) {
+                throw new ArgumentException(String.Format("Type {0} doesn't have field {1}", type, field));
+            }
+            if (expression == null ^ fi.IsStatic) {
+                throw new ArgumentNullException("Static field requires null expression, non-static field requires non-null expression.");
+            }
+            return new MemberAssignment(span, fi, expression, value);
+        }
+
+        public static MemberAssignment AssignField(Expression expression, FieldInfo field, Expression value) {
+            return AssignField(SourceSpan.None, expression, field, value);
+        }
         /// <summary>
         /// Creates MemberExpression representing field access, instance or static.
         /// For static field, expression must be null and FieldInfo.IsStatic == true
         /// For instance field, expression must be non-null and FieldInfo.IsStatic == false.
         /// </summary>
+        /// <param name="span">The source code span of the expression.</param>
         /// <param name="expression">Expression that evaluates to the instance for the field access.</param>
         /// <param name="field">Field represented by this Member expression.</param>
         /// <param name="value">Value to set this field to.</param>
         /// <returns>New instance of Member expression</returns>
-        public static MemberAssignment Field(Expression expression, FieldInfo field, Expression value) {
+        public static MemberAssignment AssignField(SourceSpan span, Expression expression, FieldInfo field, Expression value) {
             if (field == null) {
                 throw new ArgumentNullException("field");
             }
@@ -115,7 +146,38 @@ namespace Microsoft.Scripting.Ast {
                 throw new ArgumentException("field");
             }
 
-            return new MemberAssignment(field, expression, value);
+            return new MemberAssignment(span, field, expression, value);
+        }
+
+        public static MemberAssignment AssignProperty(Expression expression, Type type, string property, Expression value) {
+            return AssignProperty(SourceSpan.None, expression, type, property, value);
+        }
+
+        public static MemberAssignment AssignProperty(SourceSpan span, Expression expression, Type type, string property, Expression value) {
+            if (type == null) {
+                throw new ArgumentNullException("type");
+            }
+            if (property == null) {
+                throw new ArgumentNullException("property");
+            }
+            if (value == null) {
+                throw new ArgumentNullException("value");
+            }
+            PropertyInfo pi = type.GetProperty(property);
+            if (pi == null) {
+                throw new ArgumentException(String.Format("Type {0} doesn't have property {1}", type, property));
+            }
+            if (!pi.CanWrite) {
+                throw new ArgumentException(String.Format("Cannot assign property {0}.{1}", pi.DeclaringType, pi.Name));
+            }
+            if (expression == null ^ pi.GetSetMethod().IsStatic) {
+                throw new ArgumentNullException("Static property requires null target, non-static property requires non-null target.");
+            }
+            return new MemberAssignment(span, pi, expression, value);
+        }
+
+        public static MemberAssignment AssignProperty(Expression expression, PropertyInfo property, Expression value) {
+            return AssignProperty(SourceSpan.None, expression, property, value);
         }
 
         /// <summary>
@@ -123,11 +185,12 @@ namespace Microsoft.Scripting.Ast {
         /// For static properties, expression must be null and property.IsStatic == true.
         /// For instance properties, expression must be non-null and property.IsStatic == false.
         /// </summary>
+        /// <param name="span">The source code span of the expression.</param>
         /// <param name="expression">Expression that evaluates to the instance for instance property access.</param>
         /// <param name="property">PropertyInfo of the property to access</param>
         /// <param name="value">Value to set this property to.</param>
         /// <returns>New instance of the MemberExpression.</returns>
-        public static MemberAssignment Property(Expression expression, PropertyInfo property, Expression value) {
+        public static MemberAssignment AssignProperty(SourceSpan span, Expression expression, PropertyInfo property, Expression value) {
             if (property == null) {
                 throw new ArgumentNullException("property");
             }
@@ -145,9 +208,7 @@ namespace Microsoft.Scripting.Ast {
                 throw new ArgumentException("property");
             }
 
-            return new MemberAssignment(property, expression, value);
+            return new MemberAssignment(SourceSpan.None, property, expression, value);
         }
-
-        #endregion
     }
 }

@@ -19,6 +19,8 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class NullArgBuilder : ArgBuilder {
         public NullArgBuilder() { }
 
@@ -35,7 +37,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
-            return ConstantExpression.Constant(null);
+            return Ast.Null();
         }
     }
 }

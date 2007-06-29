@@ -29,11 +29,7 @@ namespace Microsoft.Scripting.Ast {
         // implementation detail.
         private VariableReference _vr;
 
-        public BoundAssignment(Variable variable, Expression value, Operators op)
-            : this(variable, value, op, SourceSpan.None) {
-        }
-
-        public BoundAssignment(Variable variable, Expression value, Operators op, SourceSpan span)
+        internal BoundAssignment(SourceSpan span, Variable variable, Expression value, Operators op)
             : base(span) {
             if (variable == null) throw new ArgumentNullException("variable");
             if (value == null) throw new ArgumentNullException("value");
@@ -102,13 +98,17 @@ namespace Microsoft.Scripting.Ast {
                 result = _value.Evaluate(context);
             } else {
                 //TODO: is constructing an ActionExpression on the fly really necessary?
-                ActionExpression action = ActionExpression.Operator(
+                ActionExpression action = Ast.Action.Operator(
                     _op, _variable.Type,
-                    BoundExpression.Defined(_variable), _value);
+                    Ast.ReadDefined(_variable), _value);
                 result = action.Evaluate(context);
             }
-            
-            RuntimeHelpers.SetName(context, _variable.Name, result);
+
+            if (_variable.Kind == Variable.VariableKind.Global) {
+                RuntimeHelpers.SetGlobalName(context, _variable.Name, result);
+            } else {
+                RuntimeHelpers.SetName(context, _variable.Name, result);
+            }
             return result;
         }
 
@@ -118,21 +118,23 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        #region Factory methods
-
+    public static partial class Ast {
         public static BoundAssignment Assign(Variable variable, Expression value) {
-            return OpAssign(variable, value, Operators.None, SourceSpan.None);
+            return Assign(SourceSpan.None, variable, value, Operators.None);
         }
 
-        public static BoundAssignment Assign(Variable variable, Expression value, SourceSpan span) {
-            return OpAssign(variable, value, Operators.None, span);
+        public static BoundAssignment Assign(Variable variable, Expression value, Operators op) {
+            return Assign(SourceSpan.None, variable, value, op);
         }
 
-        public static BoundAssignment OpAssign(Variable variable, Expression value, Operators op, SourceSpan span) {
-            return new BoundAssignment(variable, value, op, span);
+        public static BoundAssignment Assign(SourceSpan span, Variable variable, Expression value) {
+            return Assign(span, variable, value, Operators.None);
         }
 
-        #endregion
+        public static BoundAssignment Assign(SourceSpan span, Variable variable, Expression value, Operators op) {
+            return new BoundAssignment(span, variable, value, op);
+        }
     }
 }

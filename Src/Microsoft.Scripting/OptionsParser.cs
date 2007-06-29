@@ -110,8 +110,7 @@ namespace Microsoft.Scripting {
         }
 
         protected string[] PopRemainingArgs() {
-            string[] result = new string[_args.Length - _current];
-            Array.Copy(_args, _current, result, 0, result.Length);
+            string[] result = Utils.Array.ShiftLeft(_args, _current);
             _current = _args.Length;
             return result;
         }

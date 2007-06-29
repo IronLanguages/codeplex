@@ -23,8 +23,11 @@ using MSAst = Microsoft.Scripting.Ast;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class FunctionDefinition : ScopeStatement {
         protected Statement _body;
         private SourceLocation _header;
@@ -141,7 +144,7 @@ namespace IronPython.Compiler.Ast {
                 return null;
             } else {
                 // Create a global variable to bind to.
-                return GetGlobalScope().EnsureGlobalVariable(name, false);
+                return GetGlobalScope().EnsureGlobalVariable(name);
             }
         }
 
@@ -195,9 +198,9 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
             MSAst.Expression function = TransformToFunctionExpression(ag);
-            return new MSAst.ExpressionStatement(
-                new MSAst.BoundAssignment(_variable.Variable, function, Operators.None),
-                new SourceSpan(Start, Header)
+            return Ast.Statement(
+                new SourceSpan(Start, Header),
+                Ast.Assign(_variable.Variable, function)
             );
         }
 
@@ -206,13 +209,13 @@ namespace IronPython.Compiler.Ast {
             MSAst.CodeBlock code;
             if (IsGenerator) {
                 code = new MSAst.GeneratorCodeBlock(
+                    SourceSpan.None,
                     SymbolTable.IdToString(_name),
                     typeof(PythonGenerator),
-                    typeof(PythonGenerator.NextTarget),
-                    SourceSpan.None
+                    typeof(PythonGenerator.NextTarget)
                 );
             } else {
-                code = new MSAst.CodeBlock(SymbolTable.IdToString(_name), SourceSpan.None);
+                code = Ast.CodeBlock(_name);
             }
             _block = code; //???
 
@@ -240,15 +243,15 @@ namespace IronPython.Compiler.Ast {
             if (ScriptDomainManager.Options.DebugMode) {
                 // add beginning and ending break points for the function.
                 if (statements.Count == 0 || statements[0].Start != Body.Start) {
-                    statements.Insert(0, new MSAst.EmptyStatement(new SourceSpan(Body.Start, Body.Start)));
+                    statements.Insert(0, Ast.Empty(new SourceSpan(Body.Start, Body.Start)));
                 }
 
                 if (statements[statements.Count-1].End != Body.End) {
-                    statements.Add(new MSAst.EmptyStatement(new SourceSpan(Body.End, Body.End)));
+                    statements.Add(Ast.Empty(new SourceSpan(Body.End, Body.End)));
                 }
             }
 
-            code.Body = new MSAst.BlockStatement(statements.ToArray());
+            code.Body = Ast.Block(statements);
 
             FunctionAttributes flags = ComputeFlags(_parameters);
 
@@ -256,7 +259,7 @@ namespace IronPython.Compiler.Ast {
             List<MSAst.Expression> names = new List<MSAst.Expression>();
             // There's a weird question about where to get these
             foreach (MSAst.Variable p in code.Parameters) {
-                names.Add(new MSAst.ConstantExpression(SymbolTable.IdToString(p.Name)));
+                names.Add(Ast.Constant(SymbolTable.IdToString(p.Name)));
                 if (p.DefaultValue != null) defaults.Add(p.DefaultValue);
             }
 
@@ -265,32 +268,31 @@ namespace IronPython.Compiler.Ast {
 
             string filename = _sourceUnit.DisplayName;
 
-            MSAst.Expression ret = MSAst.MethodCallExpression.Call(
+            MSAst.Expression ret = Ast.Call(
                 new SourceSpan(Start, Header),
-                null,                                                                   // instance
-                typeof(PythonFunction).GetMethod("MakeFunction"),                       // method
-                new MSAst.CodeContextExpression(),                                      // 1. Emit CodeContext
-                new MSAst.ConstantExpression(SymbolTable.IdToString(_name)),            // 2. FunctionName
-                new MSAst.CodeBlockExpression(code, flags != FunctionAttributes.None),  // 3. delegate
-                MSAst.NewArrayExpression.NewArrayInit(typeof(string[]), names),         // 4. parameter names
-                MSAst.NewArrayExpression.NewArrayInit(typeof(object[]), defaults),      // 5. default values
-                new MSAst.ConstantExpression(flags),                                    // 6. flags
-                new MSAst.ConstantExpression(_body.Documentation),                      // 7. doc string or null
-                new MSAst.ConstantExpression(this.Start.Line),                          // 8. line number
-                new MSAst.ConstantExpression(filename),                                 // 9. filename
-                new MSAst.ConstantExpression((int)codeFlags)                            // 10. code flags
-                );
+                null,                                                           // instance
+                typeof(PythonFunction).GetMethod("MakeFunction"),               // method
+                Ast.CodeContext(),                                              // 1. Emit CodeContext
+                Ast.Constant(SymbolTable.IdToString(_name)),                    // 2. FunctionName
+                Ast.CodeBlockExpression(code, flags != FunctionAttributes.None),          // 3. delegate
+                Ast.NewArray(typeof(string[]), names),                          // 4. parameter names
+                Ast.NewArray(typeof(object[]), defaults),                       // 5. default values
+                Ast.Constant(flags),                                            // 6. flags
+                Ast.Constant(_body.Documentation),                              // 7. doc string or null
+                Ast.Constant(this.Start.Line),                                  // 8. line number
+                Ast.Constant(filename),                                         // 9. filename
+                Ast.Constant((int)codeFlags)                                    // 10. code flags
+            );
 
             // add decorators
             if (_decorators != null) {
                 for (int i = _decorators.Count - 1; i >= 0; i--) {
                     Expression decorator = _decorators[i];
-                    ret = new MSAst.CallExpression(
+                    ret = Ast.Action.Call(
+                        CallAction.Simple,
+                        typeof(object),
                         ag.Transform(decorator),
-                        new MSAst.Arg[] {
-                            MSAst.Arg.Simple(ret)
-                        },
-                        false, false, 0, 0);
+                        ret);
                 }
             }
 

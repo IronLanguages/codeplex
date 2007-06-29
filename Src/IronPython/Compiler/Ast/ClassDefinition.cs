@@ -23,6 +23,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ClassDefinition : ScopeStatement {
         private SourceLocation _header;
         private readonly SymbolId _name;
@@ -32,6 +34,7 @@ namespace IronPython.Compiler.Ast {
         private PythonVariable _variable;           // Variable corresponding to the class name
         private PythonVariable _modVariable;        // Variable for the the __module__ (module name)
         private PythonVariable _docVariable;        // Variable for the __doc__ attribute
+        private PythonVariable _modNameVariable;    // Variable for the module's __name__
 
         private MSAst.CodeBlock _block;
 
@@ -73,6 +76,11 @@ namespace IronPython.Compiler.Ast {
             set { _docVariable = value; }
         }
 
+        internal PythonVariable ModuleNameVariable {
+            get { return _modNameVariable; }
+            set { _modNameVariable = value; }
+        }
+
         protected override MSAst.CodeBlock Block {
             get { return _block; }
         }
@@ -99,15 +107,16 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Statement Transform(AstGenerator ag) {
             Debug.Assert(_block == null);
 
-            MSAst.CodeBlock block = new MSAst.CodeBlock(SymbolTable.IdToString(_name));
+            MSAst.CodeBlock block = Ast.CodeBlock(_name);
             block.IsVisible = false;
 
             _block = block;
             block.EmitLocalDictionary = true;
 
-            MSAst.Expression bases = MSAst.NewArrayExpression.NewArrayInit(
+            MSAst.Expression bases = Ast.NewArray(
                 typeof(object[]),
-                ag.Transform(_bases));
+                ag.Transform(_bases)
+            );
 
             SetParent(block);
             CreateVariables(block);
@@ -115,51 +124,48 @@ namespace IronPython.Compiler.Ast {
             // Create the body
             AstGenerator body = new AstGenerator(block, ag.Context);
             MSAst.Statement bodyStmt = body.Transform(_body);
-            MSAst.Statement modStmt = new MSAst.ExpressionStatement(
-                new MSAst.BoundAssignment(
-                    _modVariable.Variable,
-                    new MSAst.BoundExpression(GetGlobalScope().EnsureGlobalVariable(Symbols.Name, true).Variable),
-                    Operators.None
-                )
-            );
+            MSAst.Statement modStmt = 
+                Ast.Statement(
+                    Ast.Assign(
+                        _modVariable.Variable,
+                        Ast.Read(_modNameVariable.Variable)
+                    )
+                );
 
             MSAst.Statement docStmt;
             if (_body.Documentation != null) {
-                docStmt = new MSAst.ExpressionStatement(
-                    new MSAst.BoundAssignment(
-                        _docVariable.Variable,
-                        new MSAst.ConstantExpression(_body.Documentation),
-                        Operators.None
-                    )
-                );
+                docStmt =
+                    Ast.Statement(
+                        Ast.Assign(
+                            _docVariable.Variable,
+                            Ast.Constant(_body.Documentation)
+                        )
+                    );
             } else {
-                docStmt = new MSAst.EmptyStatement();
+                docStmt = Ast.Empty();
             }
 
-            MSAst.Statement returnStmt = new MSAst.ReturnStatement(new MSAst.CodeContextExpression());
-            block.Body = new MSAst.BlockStatement(
-                new MSAst.Statement[] {
-                    modStmt,
-                    docStmt,
-                    bodyStmt,
-                    returnStmt
-                }
+            MSAst.Statement returnStmt = Ast.Return(Ast.CodeContext());
+            block.Body = Ast.Block(
+                modStmt,
+                docStmt,
+                bodyStmt,
+                returnStmt
             );
 
-            MSAst.Expression classDef = new MSAst.MethodCallExpression(
-                AstGenerator.GetHelperMethod("MakeClass"),
+            MSAst.Expression classDef = Ast.Call(
                 null,
-                new MSAst.Expression[] {
-                    new MSAst.CodeContextExpression(), 
-                    new MSAst.ConstantExpression(SymbolTable.IdToString(_name)),
-                    bases,
-                    new MSAst.ConstantExpression(FindSelfNames()),
-                    new MSAst.CodeBlockExpression(block, false), //TODO typing is messed up
-                });
+                AstGenerator.GetHelperMethod("MakeClass"),
+                Ast.CodeContext(), 
+                Ast.Constant(SymbolTable.IdToString(_name)),
+                bases,
+                Ast.Constant(FindSelfNames()),
+                Ast.CodeBlockExpression(block, false)             //TODO typing is messed up
+            );
 
-            return new MSAst.ExpressionStatement(
-                new MSAst.BoundAssignment(_variable.Variable, classDef, Operators.None),
-                new SourceSpan(Start, Header)
+            return Ast.Statement(
+                new SourceSpan(Start, Header),
+                Ast.Assign(_variable.Variable, classDef)
             );
         }
 

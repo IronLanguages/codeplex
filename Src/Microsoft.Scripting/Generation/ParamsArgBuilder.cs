@@ -21,6 +21,8 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ParamsArgBuilder : ArgBuilder {
         private int _start;
         private int _count;
@@ -66,7 +68,7 @@ namespace Microsoft.Scripting.Generation {
                 elems[i] = binder.ConvertExpression(parameters[_start + i], _elementType);
             }
 
-            return NewArrayExpression.NewArrayInit(_elementType.MakeArrayType(), elems);
+            return Ast.NewArray(_elementType.MakeArrayType(), elems);
         }
     }    
 }

@@ -16,6 +16,8 @@
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class IfStatement : Statement {
         private readonly IfStatementTest[] _tests;
         private readonly Statement _else;
@@ -34,11 +36,11 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            return new MSAst.IfStatement(
+            return Ast.If(
+                Span,
                 ag.Transform(_tests),
-                ag.Transform(_else),
-                Span
-                );
+                ag.Transform(_else)
+            );
         }
 
         public override void Walk(PythonWalker walker) {

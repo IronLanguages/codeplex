@@ -17,6 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using System.Reflection;
+
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting {
     public abstract class NewTuple {
@@ -57,6 +60,197 @@ namespace Microsoft.Scripting {
 
             return null;
         }
+
+        /// <summary>
+        /// Creates a generic tuple with the specified types.  
+        /// 
+        /// If the number of slots fits within the maximum tuple size then we simply 
+        /// create a single tuple.  If it's greater then we create nested tuples 
+        /// (e.g. a Tuple`2 which contains a Tuple`128 and a Tuple`8 if we had a size of 136).
+        /// </summary>
+        public static Type MakeTupleType(params Type[] types) {
+            if (types == null) throw new ArgumentNullException("types");
+
+            return MakeTupleType(types, 0, types.Length);
+        }
+
+        /// <summary>
+        /// Gets the number of usable slots in the provided Tuple type including slots available in nested tuples.
+        /// </summary>
+        public static int GetSize(Type tupleType) {
+            if (tupleType == null) throw new ArgumentNullException("tupleType");
+
+            Stack<Type> types = new Stack<Type>(tupleType.GetGenericArguments());
+            int count = 0;
+
+            while (types.Count != 0) {
+                Type t = types.Pop();
+
+                if (typeof(NewTuple).IsAssignableFrom(t)) {
+                    foreach (Type subtype in t.GetGenericArguments()) {
+                        types.Push(subtype);
+                    }
+                    continue;
+                }
+
+                if (t == typeof(None)) continue;
+
+                count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Creates a new instance of tupleType with the specified args.  If the tuple is a nested
+        /// tuple the values are added in their nested forms.
+        /// </summary>
+        public static NewTuple MakeTuple(Type tupleType, params object[] args) {
+            if (tupleType == null) throw new ArgumentNullException("tupleType");
+            if (args == null) throw new ArgumentNullException("args");
+
+            return MakeTuple(tupleType, 0, args.Length, args);
+        }
+
+        /// <summary>
+        /// Gets the values from a tuple including unpacking nested values.
+        /// </summary>
+        public static object[] GetTupleValues(NewTuple tuple) {
+            if (tuple == null) throw new ArgumentNullException("tuple");
+
+            List<object> res = new List<object>();
+
+            GetTupleValues(tuple, res);
+
+            return res.ToArray();
+        }
+
+        /// <summary>
+        /// Gets the series of properties that needs to be accessed to access a logical item in a potentially nested tuple.
+        /// </summary>
+        public static IEnumerable<PropertyInfo> GetAccessPath(Type tupleType, int index) {
+            if (tupleType == null) throw new ArgumentNullException("tupleType");
+
+            int size = GetSize(tupleType);
+            if (index < 0 || index >= size) throw new ArgumentNullException("index");
+
+            // We get the final index by breaking the index into groups of bits.  The more significant bits
+            // represent the indexes into the outermost tuples and the least significant bits index into the
+            // inner most tuples.  The mask is initialized to mask the upper bits and adjust is initialized
+            // and adjust is the value we need to divide by to get the index in the least significant bits.
+            // As we go through we shift the mask and adjust down each loop to pull out the inner slot.  Logically
+            // everything in here is shifting bits (not multiplying or dividing) because NewTuple.MaxSize is a 
+            // power of 2.
+            int depth = 0;
+            int mask = NewTuple.MaxSize - 1;
+            int adjust = 1;
+            int count = size;
+            while (count > NewTuple.MaxSize) {
+                depth++;
+                count /= NewTuple.MaxSize;
+                mask *= NewTuple.MaxSize;
+                adjust *= NewTuple.MaxSize;
+            }
+
+            while (depth-- >= 0) {
+                Debug.Assert(mask != 0);
+
+                int curIndex = (index & mask) / adjust;
+
+                PropertyInfo pi = tupleType.GetProperty("Item" + String.Format("{0:D3}", curIndex));
+                yield return pi;
+
+                tupleType = pi.PropertyType;
+
+                mask /= NewTuple.MaxSize;
+                adjust /= NewTuple.MaxSize;
+            }
+        }
+
+        private static void GetTupleValues(NewTuple tuple, List<object> args) {
+            Type[] types = tuple.GetType().GetGenericArguments();
+            for (int i = 0; i < types.Length; i++) {
+                if (typeof(NewTuple).IsAssignableFrom(types[i])) {
+                    GetTupleValues((NewTuple)tuple.GetValue(i), args);
+                } else if (types[i] != typeof(None)) {
+                    args.Add(tuple.GetValue(i));
+                }
+            }
+        }
+
+        private static NewTuple MakeTuple(Type tupleType, int start, int end, object[] args) {
+            int size = end - start;
+
+            NewTuple res = (NewTuple)Activator.CreateInstance(tupleType);
+            if (size > NewTuple.MaxSize) {
+                int multiplier = 1;
+                while (size > NewTuple.MaxSize) {
+                    size = (size + NewTuple.MaxSize - 1) / NewTuple.MaxSize;
+                    multiplier *= NewTuple.MaxSize;
+                }
+                for (int i = 0; i < size; i++) {
+                    int newStart = start + (i * multiplier);
+                    int newEnd = System.Math.Min(end, start + ((i + 1) * multiplier));
+
+                    PropertyInfo pi = tupleType.GetProperty("Item" + String.Format("{0:D3}", i));
+                    res.SetValue(i, CreateTupleInstance(pi.PropertyType, newStart, newEnd, args));
+                }
+            } else {
+                int argCnt = tupleType.GetGenericArguments().Length;
+                for (int i = start; i < end; i++) {
+                    res.SetValue(i - start, args[i]);
+                }
+            }
+
+            return res;
+
+        }
+
+        private static NewTuple CreateTupleInstance(Type tupleType, int start, int end, object[] args) {
+            if (args == null) return (NewTuple)Activator.CreateInstance(tupleType);
+            
+            object[] realArgs = new object[tupleType.GetGenericArguments().Length];
+            Array.Copy(args, start, realArgs, 0, end - start);
+            return (NewTuple)Activator.CreateInstance(tupleType, realArgs);
+        }
+
+        private static Type MakeTupleType(Type[] types, int start, int end) {
+            int size = end - start;
+
+            Type type = GetTupleType(size);
+            if (type != null) {
+                Type[] typeArr = new Type[type.GetGenericArguments().Length];
+                int index = 0;
+                for (int i = start; i < end; i++) {
+                    typeArr[index++] = types[i];
+                }
+                while (index < typeArr.Length) {
+                    typeArr[index++] = typeof(None);
+                }
+                return type.MakeGenericType(typeArr);
+            }
+
+            int multiplier = 1;
+            while (size > NewTuple.MaxSize) {
+                size = (size + NewTuple.MaxSize - 1) / NewTuple.MaxSize;
+                multiplier *= NewTuple.MaxSize;
+            }
+
+            type = NewTuple.GetTupleType(size);
+            Debug.Assert(type != null);
+            Type[] nestedTypes = new Type[type.GetGenericArguments().Length];
+            for (int i = 0; i < size; i++) {
+
+                int newStart = start + (i * multiplier);
+                int newEnd = System.Math.Min(end, start + ((i + 1) * multiplier));
+                nestedTypes[i] = MakeTupleType(types, newStart, newEnd);
+            }
+            for (int i = size; i < nestedTypes.Length; i++) {
+                nestedTypes[i] = typeof(None);
+            }
+
+            return type.MakeGenericType(nestedTypes);
+        }
     }
 
     #region Generated Tuples
@@ -64,6 +258,13 @@ namespace Microsoft.Scripting {
     // *** BEGIN GENERATED CODE ***
 
     public class Tuple<T0> : NewTuple {
+        public Tuple() { }
+
+        public Tuple(T0 item0)
+          : base() {
+            _item0 = item0;
+        }
+
         private T0 _item0;
 
         public T0 Item000 {
@@ -86,6 +287,13 @@ namespace Microsoft.Scripting {
         }
     }
     public class Tuple<T0, T1> : Tuple<T0> {
+        public Tuple() { }
+
+        public Tuple(T0 item0, T1 item1)
+          : base(item0) {
+            _item1 = item1;
+        }
+
         private T1 _item1;
 
         public T1 Item001 {
@@ -110,6 +318,14 @@ namespace Microsoft.Scripting {
         }
     }
     public class Tuple<T0, T1, T2, T3> : Tuple<T0, T1> {
+        public Tuple() { }
+
+        public Tuple(T0 item0, T1 item1, T2 item2, T3 item3)
+          : base(item0, item1) {
+            _item2 = item2;
+            _item3 = item3;
+        }
+
         private T2 _item2;
         private T3 _item3;
 
@@ -143,6 +359,16 @@ namespace Microsoft.Scripting {
         }
     }
     public class Tuple<T0, T1, T2, T3, T4, T5, T6, T7> : Tuple<T0, T1, T2, T3> {
+        public Tuple() { }
+
+        public Tuple(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7)
+          : base(item0, item1, item2, item3) {
+            _item4 = item4;
+            _item5 = item5;
+            _item6 = item6;
+            _item7 = item7;
+        }
+
         private T4 _item4;
         private T5 _item5;
         private T6 _item6;
@@ -194,6 +420,20 @@ namespace Microsoft.Scripting {
         }
     }
     public class Tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : Tuple<T0, T1, T2, T3, T4, T5, T6, T7> {
+        public Tuple() { }
+
+        public Tuple(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10, T11 item11, T12 item12, T13 item13, T14 item14, T15 item15)
+          : base(item0, item1, item2, item3, item4, item5, item6, item7) {
+            _item8 = item8;
+            _item9 = item9;
+            _item10 = item10;
+            _item11 = item11;
+            _item12 = item12;
+            _item13 = item13;
+            _item14 = item14;
+            _item15 = item15;
+        }
+
         private T8 _item8;
         private T9 _item9;
         private T10 _item10;
@@ -281,6 +521,28 @@ namespace Microsoft.Scripting {
         }
     }
     public class Tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31> : Tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> {
+        public Tuple() { }
+
+        public Tuple(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10, T11 item11, T12 item12, T13 item13, T14 item14, T15 item15, T16 item16, T17 item17, T18 item18, T19 item19, T20 item20, T21 item21, T22 item22, T23 item23, T24 item24, T25 item25, T26 item26, T27 item27, T28 item28, T29 item29, T30 item30, T31 item31)
+          : base(item0, item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13, item14, item15) {
+            _item16 = item16;
+            _item17 = item17;
+            _item18 = item18;
+            _item19 = item19;
+            _item20 = item20;
+            _item21 = item21;
+            _item22 = item22;
+            _item23 = item23;
+            _item24 = item24;
+            _item25 = item25;
+            _item26 = item26;
+            _item27 = item27;
+            _item28 = item28;
+            _item29 = item29;
+            _item30 = item30;
+            _item31 = item31;
+        }
+
         private T16 _item16;
         private T17 _item17;
         private T18 _item18;
@@ -440,6 +702,44 @@ namespace Microsoft.Scripting {
         }
     }
     public class Tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31, T32, T33, T34, T35, T36, T37, T38, T39, T40, T41, T42, T43, T44, T45, T46, T47, T48, T49, T50, T51, T52, T53, T54, T55, T56, T57, T58, T59, T60, T61, T62, T63> : Tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31> {
+        public Tuple() { }
+
+        public Tuple(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10, T11 item11, T12 item12, T13 item13, T14 item14, T15 item15, T16 item16, T17 item17, T18 item18, T19 item19, T20 item20, T21 item21, T22 item22, T23 item23, T24 item24, T25 item25, T26 item26, T27 item27, T28 item28, T29 item29, T30 item30, T31 item31, T32 item32, T33 item33, T34 item34, T35 item35, T36 item36, T37 item37, T38 item38, T39 item39, T40 item40, T41 item41, T42 item42, T43 item43, T44 item44, T45 item45, T46 item46, T47 item47, T48 item48, T49 item49, T50 item50, T51 item51, T52 item52, T53 item53, T54 item54, T55 item55, T56 item56, T57 item57, T58 item58, T59 item59, T60 item60, T61 item61, T62 item62, T63 item63)
+          : base(item0, item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13, item14, item15, item16, item17, item18, item19, item20, item21, item22, item23, item24, item25, item26, item27, item28, item29, item30, item31) {
+            _item32 = item32;
+            _item33 = item33;
+            _item34 = item34;
+            _item35 = item35;
+            _item36 = item36;
+            _item37 = item37;
+            _item38 = item38;
+            _item39 = item39;
+            _item40 = item40;
+            _item41 = item41;
+            _item42 = item42;
+            _item43 = item43;
+            _item44 = item44;
+            _item45 = item45;
+            _item46 = item46;
+            _item47 = item47;
+            _item48 = item48;
+            _item49 = item49;
+            _item50 = item50;
+            _item51 = item51;
+            _item52 = item52;
+            _item53 = item53;
+            _item54 = item54;
+            _item55 = item55;
+            _item56 = item56;
+            _item57 = item57;
+            _item58 = item58;
+            _item59 = item59;
+            _item60 = item60;
+            _item61 = item61;
+            _item62 = item62;
+            _item63 = item63;
+        }
+
         private T32 _item32;
         private T33 _item33;
         private T34 _item34;
@@ -743,6 +1043,76 @@ namespace Microsoft.Scripting {
         }
     }
     public class Tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31, T32, T33, T34, T35, T36, T37, T38, T39, T40, T41, T42, T43, T44, T45, T46, T47, T48, T49, T50, T51, T52, T53, T54, T55, T56, T57, T58, T59, T60, T61, T62, T63, T64, T65, T66, T67, T68, T69, T70, T71, T72, T73, T74, T75, T76, T77, T78, T79, T80, T81, T82, T83, T84, T85, T86, T87, T88, T89, T90, T91, T92, T93, T94, T95, T96, T97, T98, T99, T100, T101, T102, T103, T104, T105, T106, T107, T108, T109, T110, T111, T112, T113, T114, T115, T116, T117, T118, T119, T120, T121, T122, T123, T124, T125, T126, T127> : Tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31, T32, T33, T34, T35, T36, T37, T38, T39, T40, T41, T42, T43, T44, T45, T46, T47, T48, T49, T50, T51, T52, T53, T54, T55, T56, T57, T58, T59, T60, T61, T62, T63> {
+        public Tuple() { }
+
+        public Tuple(T0 item0, T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10, T11 item11, T12 item12, T13 item13, T14 item14, T15 item15, T16 item16, T17 item17, T18 item18, T19 item19, T20 item20, T21 item21, T22 item22, T23 item23, T24 item24, T25 item25, T26 item26, T27 item27, T28 item28, T29 item29, T30 item30, T31 item31, T32 item32, T33 item33, T34 item34, T35 item35, T36 item36, T37 item37, T38 item38, T39 item39, T40 item40, T41 item41, T42 item42, T43 item43, T44 item44, T45 item45, T46 item46, T47 item47, T48 item48, T49 item49, T50 item50, T51 item51, T52 item52, T53 item53, T54 item54, T55 item55, T56 item56, T57 item57, T58 item58, T59 item59, T60 item60, T61 item61, T62 item62, T63 item63, T64 item64, T65 item65, T66 item66, T67 item67, T68 item68, T69 item69, T70 item70, T71 item71, T72 item72, T73 item73, T74 item74, T75 item75, T76 item76, T77 item77, T78 item78, T79 item79, T80 item80, T81 item81, T82 item82, T83 item83, T84 item84, T85 item85, T86 item86, T87 item87, T88 item88, T89 item89, T90 item90, T91 item91, T92 item92, T93 item93, T94 item94, T95 item95, T96 item96, T97 item97, T98 item98, T99 item99, T100 item100, T101 item101, T102 item102, T103 item103, T104 item104, T105 item105, T106 item106, T107 item107, T108 item108, T109 item109, T110 item110, T111 item111, T112 item112, T113 item113, T114 item114, T115 item115, T116 item116, T117 item117, T118 item118, T119 item119, T120 item120, T121 item121, T122 item122, T123 item123, T124 item124, T125 item125, T126 item126, T127 item127)
+          : base(item0, item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13, item14, item15, item16, item17, item18, item19, item20, item21, item22, item23, item24, item25, item26, item27, item28, item29, item30, item31, item32, item33, item34, item35, item36, item37, item38, item39, item40, item41, item42, item43, item44, item45, item46, item47, item48, item49, item50, item51, item52, item53, item54, item55, item56, item57, item58, item59, item60, item61, item62, item63) {
+            _item64 = item64;
+            _item65 = item65;
+            _item66 = item66;
+            _item67 = item67;
+            _item68 = item68;
+            _item69 = item69;
+            _item70 = item70;
+            _item71 = item71;
+            _item72 = item72;
+            _item73 = item73;
+            _item74 = item74;
+            _item75 = item75;
+            _item76 = item76;
+            _item77 = item77;
+            _item78 = item78;
+            _item79 = item79;
+            _item80 = item80;
+            _item81 = item81;
+            _item82 = item82;
+            _item83 = item83;
+            _item84 = item84;
+            _item85 = item85;
+            _item86 = item86;
+            _item87 = item87;
+            _item88 = item88;
+            _item89 = item89;
+            _item90 = item90;
+            _item91 = item91;
+            _item92 = item92;
+            _item93 = item93;
+            _item94 = item94;
+            _item95 = item95;
+            _item96 = item96;
+            _item97 = item97;
+            _item98 = item98;
+            _item99 = item99;
+            _item100 = item100;
+            _item101 = item101;
+            _item102 = item102;
+            _item103 = item103;
+            _item104 = item104;
+            _item105 = item105;
+            _item106 = item106;
+            _item107 = item107;
+            _item108 = item108;
+            _item109 = item109;
+            _item110 = item110;
+            _item111 = item111;
+            _item112 = item112;
+            _item113 = item113;
+            _item114 = item114;
+            _item115 = item115;
+            _item116 = item116;
+            _item117 = item117;
+            _item118 = item118;
+            _item119 = item119;
+            _item120 = item120;
+            _item121 = item121;
+            _item122 = item122;
+            _item123 = item123;
+            _item124 = item124;
+            _item125 = item125;
+            _item126 = item126;
+            _item127 = item127;
+        }
+
         private T64 _item64;
         private T65 _item65;
         private T66 _item66;

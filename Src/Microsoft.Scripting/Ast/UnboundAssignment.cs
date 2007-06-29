@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
@@ -22,13 +23,9 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _value;
         private readonly Operators _op;
 
-        public UnboundAssignment(SymbolId name, Expression value, Operators op)
-            : this(name, value, op, SourceSpan.None) {
-        }
-
-        public UnboundAssignment(SymbolId name, Expression value, Operators op, SourceSpan span)
+        internal UnboundAssignment(SourceSpan span, SymbolId name, Expression value, Operators op)
             : base(span) {
-            if (value == null) throw new ArgumentNullException("value");
+            Debug.Assert(value != null);
             _name = name;
             _value = value;
             _op = op;
@@ -74,6 +71,31 @@ namespace Microsoft.Scripting.Ast {
                 _value.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static UnboundAssignment Assign(SymbolId name, Expression value) {
+            return Assign(SourceSpan.None, name, value, Operators.None);
+        }
+        public static UnboundAssignment Assign(SymbolId name, Expression value, Operators op) {
+            return Assign(SourceSpan.None, name, value, op);
+        }
+        public static UnboundAssignment Assign(SourceSpan span, SymbolId name, Expression value) {
+            return Assign(span, name, value, Operators.None);
+        }
+
+        public static UnboundAssignment Assign(SourceSpan span, SymbolId name, Expression value, Operators op) {
+            if (name.IsEmpty || name.IsInvalid) {
+                throw new ArgumentException("Invalid or empty name is not allowed");
+            }
+            if (value == null) {
+                throw new ArgumentNullException("value");
+            }
+            return new UnboundAssignment(span, name, value, op);
         }
     }
 }

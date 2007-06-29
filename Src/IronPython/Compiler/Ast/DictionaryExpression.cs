@@ -19,6 +19,8 @@ using MSAst = Microsoft.Scripting.Ast;
 using Operators = Microsoft.Scripting.Operators;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class DictionaryExpression : Expression {
         private readonly SliceExpression[] _items;
 
@@ -42,20 +44,16 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression[] parts = new MSAst.Expression[_items.Length + 2];
 
             // 3. Create the dictionary by calling MakeDict(_items.Length)
-            parts[0] = new MSAst.BoundAssignment(
+            parts[0] = Ast.Assign(
+                Span,
                 dictionary.Variable,
-                new MSAst.MethodCallExpression(
-                    AstGenerator.GetHelperMethod("MakeDict"),
+                Ast.Call(
+                    Span,
                     null,
-                    new MSAst.Expression[] {
-                            new MSAst.ConstantExpression(_items.Length),
-                        },
-                    Span
-                    ),
-                Operators.None,
-                Span
-                );
-
+                    AstGenerator.GetHelperMethod("MakeDict"),
+                    Ast.Constant(_items.Length)
+                )
+            );
 
             // 4. Get the setter to call on each value inserted into the dictionary
             System.Reflection.MethodInfo setter = typeof(PythonDictionary).GetProperty("Item").GetSetMethod();
@@ -64,14 +62,13 @@ namespace IronPython.Compiler.Ast {
             int index;
             for (index = 0; index < _items.Length; index++) {
                 SliceExpression slice = _items[index];
-                parts[index + 1] = new MSAst.MethodCallExpression(
-                    setter,
+                parts[index + 1] = Ast.Call(
+                    Span,
                     dictionary,
-                    new MSAst.Expression[] {
-                        ag.TransformOrConstantNull(slice.SliceStart, typeof(object)),
-                        ag.TransformOrConstantNull(slice.SliceStop, typeof(object))
-                    },
-                    Span);
+                    setter,
+                    ag.TransformOrConstantNull(slice.SliceStart, typeof(object)),
+                    ag.TransformOrConstantNull(slice.SliceStop, typeof(object))
+                );
             }
 
             // SILVERLIGHT WORKAROUND:
@@ -83,7 +80,7 @@ namespace IronPython.Compiler.Ast {
             ag.FreeTemp(dictionary);
 
             // 6. Return the comma expression, return value is the dictionary creation (at index 0)
-            return new MSAst.CommaExpression(parts, parts.Length - 1, Span);
+            return Ast.Comma(Span, parts.Length - 1, parts);
         }
 
         public override void Walk(PythonWalker walker) {

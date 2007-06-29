@@ -16,6 +16,8 @@
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ExpressionStatement : Statement {
         private readonly Expression _expression;
 
@@ -31,16 +33,16 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression expression = ag.Transform(_expression);
 
             if (ag.PrintExpressions) {
-                expression = MSAst.MethodCallExpression.Call(
+                expression = Ast.Call(
                     Span,
                     null,
                     AstGenerator.GetHelperMethod("PrintExpressionValue"),
-                    new MSAst.CodeContextExpression(),
+                    Ast.CodeContext(),
                     AstGenerator.ConvertIfNeeded(expression, typeof(object))
                 );
             }
 
-            return new MSAst.ExpressionStatement(expression, expression.Span);
+            return Ast.Statement(expression.Span, expression);
         }
 
         public override void Walk(PythonWalker walker) {

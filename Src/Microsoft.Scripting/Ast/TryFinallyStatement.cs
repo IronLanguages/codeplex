@@ -19,18 +19,18 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
-    /// A simple static try/finally statement.  
+    /// A simple static try/finally statement.  REMOVE
     /// 
     /// TODO: Remove DynamicTryStatement and switch to all static exception handling.
     /// </summary>
     public class TryFinallyStatement : Statement {
         private Statement _body;
-        private Statement _finallyBody;
+        private Statement _finally;
 
-        private TryFinallyStatement(Statement body, Statement finallyBody)
-            : base(SourceSpan.None) {
+        internal TryFinallyStatement(SourceSpan span, Statement body, Statement @finally)
+            : base(span) {
             _body = body;
-            _finallyBody = finallyBody;
+            _finally = @finally;
         }
 
         public override void Emit(CodeGen cg) {
@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Ast {
             cg.PopTargets();
             cg.BeginFinallyBlock();
 
-            _finallyBody.Emit(cg);
+            _finally.Emit(cg);
 
             cg.EndExceptionBlock();
         }
@@ -50,13 +50,16 @@ namespace Microsoft.Scripting.Ast {
         public override void Walk(Walker walker) {
             if (walker.Walk(this)) {
                 _body.Walk(walker);
-                _finallyBody.Walk(walker);
+                _finally.Walk(walker);
             }
             walker.PostWalk(this);
         }
+    }
 
-        public static TryFinallyStatement TryFinally(Statement body, Statement finallyBody) {
-            return new TryFinallyStatement(body, finallyBody);
+    public static partial class Ast {
+        // TODO: Remove/rename
+        public static TryFinallyStatement SimpleTryFinally(Statement body, Statement @finally) {
+            return new TryFinallyStatement(SourceSpan.None, body, @finally);
         }
     }
 }

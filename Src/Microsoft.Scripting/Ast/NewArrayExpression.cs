@@ -25,25 +25,7 @@ namespace Microsoft.Scripting.Ast {
         private Type _type;
         private System.Reflection.ConstructorInfo _constructor;
 
-        /// <summary>
-        /// Creates a new array expression of the specified type from the provided initializers.
-        /// </summary>
-        /// <param name="type">The type of the array (e.g. object[]).</param>
-        /// <param name="initializers">The expressions used to create the array elements.</param>
-        public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) {
-            return new NewArrayExpression(type, new List<Expression>(initializers));
-        }
-
-        /// <summary>
-        /// Creates a new array expression of the specified type from the provided initializers.
-        /// </summary>
-        /// <param name="type">The type of the array (e.g. object[]).</param>
-        /// <param name="initializers">The expressions used to create the array elements.</param>
-        public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) {
-            return new NewArrayExpression(type, new List<Expression>(initializers));
-        }
-
-        private NewArrayExpression(Type type, IList<Expression> expressions)
+        internal NewArrayExpression(Type type, IList<Expression> expressions)
             : base(SourceSpan.None) {
             if (expressions == null) throw new ArgumentNullException("expressions");
             if (type == null) throw new ArgumentNullException("type");
@@ -98,6 +80,29 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        /// <summary>
+        /// Creates a new array expression of the specified type from the provided initializers.
+        /// </summary>
+        /// <param name="type">The type of the array (e.g. object[]).</param>
+        /// <param name="initializers">The expressions used to create the array elements.</param>
+        public static NewArrayExpression NewArray(Type type, IEnumerable<Expression> initializers) {
+            return new NewArrayExpression(type, new List<Expression>(initializers));
+        }
+
+        /// <summary>
+        /// Creates a new array expression of the specified type from the provided initializers.
+        /// </summary>
+        /// <param name="type">The type of the array (e.g. object[]).</param>
+        /// <param name="initializers">The expressions used to create the array elements.</param>
+        public static NewArrayExpression NewArray(Type type, params Expression[] initializers) {
+            return new NewArrayExpression(type, new List<Expression>(initializers));
         }
     }
 }

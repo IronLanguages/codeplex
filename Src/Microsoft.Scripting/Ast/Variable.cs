@@ -53,18 +53,24 @@ namespace Microsoft.Scripting.Ast {
         private Type _knownType;
 
         private int _parameter;                     // parameter index
+        private bool _parameterArray;               // should be part of parameter array
         private Storage _storage;                   // storage for the variable, used to create slots
 
         private bool _lift;             // Lift variable/parameter to closure
         private bool _unassigned;       // Variable ever referenced without being assigned
         private bool _uninitialized;    // Variable ever used either uninitialized or after deletion
+        
+        private Variable(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue) 
+            : this ( name, kind, block, type, defaultValue, true) {
+        }
 
-        private Variable(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue) {
+        private Variable(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue, bool parameterArray) {
             _name = name;
             _kind = kind;
             _block = block;
             _type = type;
             _defaultValue = defaultValue;
+            _parameterArray = parameterArray;
         }
 
         public SymbolId Name {
@@ -96,6 +102,10 @@ namespace Microsoft.Scripting.Ast {
         public int ParameterIndex {
             get { return _parameter; }
             set { _parameter = value; }
+        }
+
+        public bool InParameterArray {
+            get { return _parameterArray; }
         }
 
         public bool Lift {
@@ -257,11 +267,16 @@ namespace Microsoft.Scripting.Ast {
         private Slot GetArgumentSlot(CodeGen cg) {
             Slot arg;
             if (_block != null && _block.ParameterArray) {
-                Debug.Assert(cg.ParamsSlot != null);
-                Debug.Assert(cg.ParamsSlot.Type == typeof(object[]));
-                arg = new IndexSlot(cg.ParamsSlot, _parameter);
-                if (_type != typeof(object)) {
-                    arg = new CastSlot(arg, _type);
+                // If not part of parameter array, get the normal parameter slot
+                if (!_parameterArray) {
+                    arg = cg.GetArgumentSlot(_parameter);
+                } else {
+                    Debug.Assert(cg.ParamsSlot != null);
+                    Debug.Assert(cg.ParamsSlot.Type == typeof(object[]));
+                    arg = new IndexSlot(cg.ParamsSlot, _parameter);
+                    if (_type != typeof(object)) {
+                        arg = new CastSlot(arg, _type);
+                    }
                 }
             } else {
                 arg = cg.GetArgumentSlot(_parameter);
@@ -289,6 +304,10 @@ namespace Microsoft.Scripting.Ast {
             return new Variable(name, VariableKind.Parameter, block, type, defaultValue);
         }
 
+        public static Variable Parameter(CodeBlock block, SymbolId name, Type type, Expression defaultValue, bool parameterArray) {
+            return new Variable(name, VariableKind.Parameter, block, type, defaultValue, parameterArray);
+        }
+
         internal static Variable Local(SymbolId name, CodeBlock block, Type type) {
             return new Variable(name,  VariableKind.Local, block, type, null);
         }
@@ -314,13 +333,5 @@ namespace Microsoft.Scripting.Ast {
         }
 
         #endregion
-
-        public static Expression[] VariablesToExpressions(Variable[] variables) {
-            Expression[] exprs = new Expression[variables.Length];
-            for (int i = 0; i < exprs.Length; i++) {
-                exprs[i] = BoundExpression.Defined(variables[i]);
-            }
-            return exprs;
-        }
     }
 }

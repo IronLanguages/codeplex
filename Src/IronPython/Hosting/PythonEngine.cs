@@ -70,7 +70,7 @@ namespace IronPython.Hosting {
 
         public override string VersionString {
             get {
-                return String.Format("IronPython {0} ({1}) on .NET {2}", "2.0A1", GetFileVersion(), Environment.Version);
+                return String.Format("IronPython {0} ({1}) on .NET {2}", "2.0A2", GetFileVersion(), Environment.Version);
             }
         }
         
@@ -773,7 +773,7 @@ namespace IronPython.Hosting {
 
         public override string[] GetObjectCallSignatures(object obj) {
             // TODO:
-            return IsObjectCallable(obj) ? GetObjectDocumentation(obj).Split('\n') : null;
+            return IsObjectCallable(obj) ? GetObjectDocumentation(obj).Replace("\r", "").Split('\n') : null;
         }
 
         public override string GetObjectDocumentation(object obj) {

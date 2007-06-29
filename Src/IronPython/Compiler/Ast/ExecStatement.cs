@@ -18,6 +18,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ExecStatement : Statement {
         private readonly Expression _code, _locals, _globals;
 
@@ -48,29 +50,29 @@ namespace IronPython.Compiler.Ast {
 
             if (_locals == null && _globals == null) {
                 // exec code
-                call = MSAst.MethodCallExpression.Call(
+                call = Ast.Call(
                     Span,
                     null,
                     AstGenerator.GetHelperMethod("UnqualifiedExec"),
-                    new MSAst.CodeContextExpression(),
+                    Ast.CodeContext(),
                     ag.TransformAsObject(_code)
                 );
             } else {
                 // exec code in globals [ , locals ]
                 // We must have globals now (locals is last and may be absent)
                 Debug.Assert(_globals != null);
-                call = MSAst.MethodCallExpression.Call(
+                call = Ast.Call(
                     Span,
                     null,
                     AstGenerator.GetHelperMethod("QualifiedExec"),
-                    new MSAst.CodeContextExpression(),
+                    Ast.CodeContext(),
                     ag.Transform(_code),
                     ag.TransformOrConstantNull(_globals, typeof(IAttributesCollection)),
                     ag.TransformOrConstantNull(_locals, typeof(object))
                 );
             }
 
-            return new MSAst.ExpressionStatement(call, Span);
+            return Ast.Statement(Span, call);
         }
 
         public override void Walk(PythonWalker walker) {

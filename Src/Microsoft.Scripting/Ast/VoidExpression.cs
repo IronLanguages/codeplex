@@ -20,17 +20,12 @@ namespace Microsoft.Scripting.Ast {
     public class VoidExpression : Expression {
         private Statement _statement;
 
-        public VoidExpression(Statement statement)
-            : this(statement, SourceSpan.None) {
-        }
-
-        public VoidExpression(Statement statement, SourceSpan span)
+        internal VoidExpression(SourceSpan span, Statement statement)
             : base(span) {
             if (statement == null) {
                 throw new ArgumentNullException("statement");
             }
             _statement = statement;
-            SetLoc(statement.Span);
         }
 
         public override Type ExpressionType {
@@ -47,11 +42,29 @@ namespace Microsoft.Scripting.Ast {
             _statement.Emit(cg);
         }
 
+        public override object Evaluate(CodeContext context) {
+            _statement.Execute(context);
+            return null;
+        }
+
         public override void Walk(Walker walker) {
             if (walker.Walk(this)) {
                 _statement.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods
+    /// </summary>
+    public static partial class Ast {
+        public static VoidExpression Void(Statement statement) {
+            return Void(SourceSpan.None, statement);
+        }
+
+        public static VoidExpression Void(SourceSpan span, Statement statement) {
+            return new VoidExpression(span, statement);
         }
     }
 }

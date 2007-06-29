@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
@@ -24,16 +25,11 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _value;
         private readonly Operators _op;
 
-        public DynamicMemberAssignment(Expression target, SymbolId name, MemberBinding binding,
-                                       Expression value, Operators op)
-            : this(target, name, binding, value, op, SourceSpan.None) {
-        }
-
-        public DynamicMemberAssignment(Expression target, SymbolId name, MemberBinding binding,
-                                       Expression value, Operators op, SourceSpan span)
+        internal DynamicMemberAssignment(SourceSpan span, Expression target, SymbolId name,
+                                         MemberBinding binding, Expression value, Operators op)
             : base(span) {
-            if (target == null) throw new ArgumentNullException("target");
-            if (value == null) throw new ArgumentNullException("value");
+            Debug.Assert(target != null);
+            Debug.Assert(value != null);
 
             _target = target;
             _name = name;
@@ -101,6 +97,26 @@ namespace Microsoft.Scripting.Ast {
                 _value.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static DynamicMemberAssignment DynamicAssignMember(Expression target, SymbolId name, MemberBinding binding, Expression value, Operators op) {
+            return DynamicAssignMember(SourceSpan.None, target, name, binding, value, op);
+        }
+
+        public static DynamicMemberAssignment DynamicAssignMember(SourceSpan span, Expression target, SymbolId name, MemberBinding binding, Expression value, Operators op) {
+            if (target == null) {
+                throw new ArgumentNullException("target");
+            }
+            if (value == null) {
+                throw new ArgumentNullException("value");
+            }
+            if (name.IsInvalid || name.IsEmpty) {
+                throw new ArgumentException("Invalid or empty name is not allowed");
+            }
+
+            return new DynamicMemberAssignment(span, target, name, binding, value, op);
         }
     }
 }

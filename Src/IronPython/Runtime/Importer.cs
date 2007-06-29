@@ -50,14 +50,11 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal static Importer Instance;  // TODO: REmove when we can get to the Python engine singleton
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object> _importSite = MakeImportSite();
 
         internal Importer(PythonEngine engine) {
             Debug.Assert(engine != null);
             _engine = engine;
-
-            Instance = this;
         }
 
         #region Internal API Surface
@@ -67,7 +64,12 @@ namespace IronPython.Runtime {
         /// a module and returns the module.
         /// </summary>
         public object Import(CodeContext context, string fullName, List from) {
-            return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.Globals(context), Builtin.Locals(context), from);
+            /*if (context.LanguageContext.Engine.Options.FastEvaluation) {
+                return ((ICallableWithCodeContext)FindImportFunction(context)).Call(context, new object[] {
+                    fullName, Builtin.Globals(context), Builtin.Locals(context), from });
+            } else {*/
+                return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.Globals(context), Builtin.Locals(context), from);
+            //}
         }
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object> MakeImportSite() {
@@ -516,9 +518,5 @@ namespace IronPython.Runtime {
             ScriptDomainManager.CurrentManager.PublishModule(res, ScriptDomainManager.CurrentManager.Host.NormalizePath(sourceUnit.Path));
             return res;
         }
-
-        
-
-
     }
 }

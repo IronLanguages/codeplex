@@ -38,6 +38,10 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private Scope MakeScope(object[] args) {
+            if (DynamicSiteHelpers.IsBigTarget(typeof(T))) {
+                args = new object[] { NewTuple.MakeTuple(typeof(T).GetGenericArguments()[0], args) };
+            }
+
             Scope s = new Scope();
             for (int i = 0; i < args.Length; i++) {
                 s.SetName(SymbolTable.StringToId("$arg" + i), args[i]);

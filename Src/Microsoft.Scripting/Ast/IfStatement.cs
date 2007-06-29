@@ -16,23 +16,20 @@
 using System.Reflection.Emit;
 using System.Collections.Generic;
 using Microsoft.Scripting.Generation;
+using System;
 
 namespace Microsoft.Scripting.Ast {
 
     public class IfStatement : Statement {
         private readonly IfStatementTest[] _tests;
-        private readonly Statement _elseStmt;
+        private readonly Statement _else;
 
-        public IfStatement(IfStatementTest[] tests, Statement else_)
-            : base(SourceSpan.None) {
-            _tests = tests;
-            _elseStmt = else_;
-        }
-
-        public IfStatement(IfStatementTest[] tests, Statement else_, SourceSpan span)
+        internal IfStatement(SourceSpan span, IfStatementTest[] tests, Statement @else)
             : base(span) {
+            if (tests == null) throw new ArgumentNullException("tests");
+
             _tests = tests;
-            _elseStmt = else_;
+            _else = @else;
         }
 
         public IList<IfStatementTest> Tests {
@@ -40,7 +37,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public Statement ElseStatement {
-            get { return _elseStmt; }
+            get { return _else; }
         }
 
         public override object Execute(CodeContext context) {
@@ -50,8 +47,8 @@ namespace Microsoft.Scripting.Ast {
                     return t.Body.Execute(context);
                 }
             }
-            if (_elseStmt != null) {
-                return _elseStmt.Execute(context);
+            if (_else != null) {
+                return _else.Execute(context);
             }
             return NextStatement;
         }
@@ -69,8 +66,8 @@ namespace Microsoft.Scripting.Ast {
                 cg.Emit(OpCodes.Br, eoi);
                 cg.MarkLabel(next);
             }
-            if (_elseStmt != null) {
-                _elseStmt.Emit(cg);
+            if (_else != null) {
+                _else.Emit(cg);
             }
             cg.MarkLabel(eoi);
         }
@@ -78,31 +75,9 @@ namespace Microsoft.Scripting.Ast {
         public override void Walk(Walker walker) {
             if (walker.Walk(this)) {
                 foreach (IfStatementTest t in _tests) t.Walk(walker);
-                if (_elseStmt != null) _elseStmt.Walk(walker);
+                if (_else != null) _else.Walk(walker);
             }
             walker.PostWalk(this);
         }
-
-        #region FactoryMethods
-
-        public static IfStatement IfThen(Expression condition, Statement body) {
-            return IfThenElse(condition, body, null, SourceSpan.None);
-        }
-
-        public static IfStatement IfThen(Expression condition, Statement body, SourceSpan span) {
-            return IfThenElse(condition, body, null, span);
-        }
-
-        public static IfStatement IfThenElse(Expression condition, Statement body, Statement else_, SourceSpan span) {
-            return new IfStatement(
-                new IfStatementTest[] {
-                    new IfStatementTest(condition, body)
-                },
-                else_,
-                span
-            );
-        }
-
-        #endregion
     }
 }

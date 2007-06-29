@@ -20,19 +20,7 @@ namespace Microsoft.Scripting.Ast {
     public class BreakStatement : Statement {
         private Statement _statement;
 
-        public BreakStatement()
-            : this(null, SourceSpan.None) {
-        }
-
-        public BreakStatement(SourceSpan span)
-            : this(null, span) {
-        }
-
-        public BreakStatement(Statement statement)
-            : this(statement, SourceSpan.None) {
-        }
-
-        public BreakStatement(Statement statement, SourceSpan span)
+        internal BreakStatement(SourceSpan span, Statement statement)
             : base(span) {
             _statement = statement;
         }
@@ -41,7 +29,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _statement; }
             set { _statement = value; }
         }
-        
+
         public override void Emit(CodeGen cg) {
             if (!cg.InLoop()) {
                 cg.Context.AddError("'break' not properly in loop", this);
@@ -70,6 +58,21 @@ namespace Microsoft.Scripting.Ast {
                 ;
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static BreakStatement Break() {
+            return Break(SourceSpan.None, null);
+        }
+        public static BreakStatement Break(SourceSpan span) {
+            return Break(span, null);
+        }
+        public static BreakStatement Break(Statement statement) {
+            return Break(SourceSpan.None, statement);
+        }
+        public static BreakStatement Break(SourceSpan span, Statement statement) {
+            return new BreakStatement(span, statement);
         }
     }
 }

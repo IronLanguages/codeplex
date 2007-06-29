@@ -20,6 +20,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class AndExpression : Expression {
         private readonly Expression _left, _right;
 
@@ -42,10 +44,10 @@ namespace IronPython.Compiler.Ast {
         } 
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return new MSAst.AndExpression(
+            return Ast.And(
+                Span,
                 ag.Transform(_left),
-                ag.Transform(_right),
-                Span
+                ag.Transform(_right)
             );
         }
 

@@ -31,6 +31,8 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Types {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     // OldClass represents the type of old-style Python classes (which could not inherit from 
     // built-in Python types). 
     // 
@@ -144,7 +146,7 @@ namespace IronPython.Runtime.Types {
 
         private void InitializeInstanceNames(string instanceNames) {
             if (instanceNames.Length == 0) {
-                _optimizedInstanceNames = new SymbolId[0];
+                _optimizedInstanceNames = SymbolId.EmptySymbols;
                 _optimizedInstanceNamesVersion = 0;
                 return;
             }
@@ -503,19 +505,19 @@ namespace IronPython.Runtime.Types {
 
             Expression[] exprArgs = new Expression[args.Length - 1];
             for (int i = 0; i < args.Length - 1; i++) {
-                exprArgs[i] = rule.GetParameterExpression(i + 1);
+                exprArgs[i] = rule.Parameters[i + 1];
             }
 
             // TODO: If we know __init__ wasn't present we could construct the OldInstance directly.
             rule.SetTest(rule.MakeTypeTest(TypeCache.OldClass, 0));
             rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder,
-                MethodCallExpression.Call(
-                    StaticUnaryExpression.Convert(
-                        rule.GetParameterExpression(0),
+                Ast.Call(
+                    Ast.Cast(
+                        rule.Parameters[0],
                         typeof(OldClass)),
                     typeof(OldClass).GetMethod("Call", new Type[] { typeof(CodeContext), typeof(object[]) }),
-                    new CodeContextExpression(),
-                    NewArrayExpression.NewArrayInit(typeof(object[]), exprArgs))));
+                    Ast.CodeContext(),
+                    Ast.NewArray(typeof(object[]), exprArgs))));
 
             return rule;
         }
@@ -736,42 +738,42 @@ namespace IronPython.Runtime.Types {
             StandardRule<T> rule = new StandardRule<T>();
 
             Variable tmp = rule.GetTemporary(typeof(CustomOldClassDictionary), "dict");
-            Expression tryGetValue = MethodCallExpression.Call(
-                StaticUnaryExpression.Convert(rule.GetParameterExpression(0), typeof(OldInstance)),
+            Expression tryGetValue = Ast.Call(
+                Ast.Cast(rule.Parameters[0], typeof(OldInstance)),
                 typeof(OldInstance).GetMethod("GetOptimizedDictionary"),
-                ConstantExpression.Constant(dict.KeyVersion));
-            tryGetValue = BoundAssignment.Assign(tmp, tryGetValue);
+                Ast.Constant(dict.KeyVersion));
+            tryGetValue = Ast.Assign(tmp, tryGetValue);
 
-            Expression test = BinaryExpression.AndAlso(
-                BinaryExpression.NotEqual(
-                    rule.GetParameterExpression(0),
-                    ConstantExpression.Constant(null)),
-                BinaryExpression.Equal(
-                    MethodCallExpression.Call(
-                        rule.GetParameterExpression(0), typeof(object).GetMethod("GetType")),
-                        ConstantExpression.Constant(typeof(OldInstance))
+            Expression test = Ast.AndAlso(
+                Ast.NotEqual(
+                    rule.Parameters[0],
+                    Ast.Null()),
+                Ast.Equal(
+                    Ast.Call(
+                        rule.Parameters[0], typeof(object).GetMethod("GetType")),
+                        Ast.Constant(typeof(OldInstance))
                 ));
-            test = BinaryExpression.AndAlso(test,
-                BinaryExpression.NotEqual(
-                    tryGetValue, ConstantExpression.Constant(null)));
+            test = Ast.AndAlso(test,
+                Ast.NotEqual(
+                    tryGetValue, Ast.Null()));
 
             rule.SetTest(test);
             Expression target;
 
             switch (action.Kind) {
                 case ActionKind.GetMember:
-                    target = MethodCallExpression.Call(
-                                BoundExpression.Defined(tmp),
+                    target = Ast.Call(
+                                Ast.ReadDefined(tmp),
                                 typeof(CustomOldClassDictionary).GetMethod("GetValueHelper"),
-                                ConstantExpression.Constant(key),
-                                rule.GetParameterExpression(0));
+                                Ast.Constant(key),
+                                rule.Parameters[0]);
                     break;
                 case ActionKind.SetMember:
-                    target = MethodCallExpression.Call(
-                                BoundExpression.Defined(tmp),
+                    target = Ast.Call(
+                                Ast.ReadDefined(tmp),
                                 typeof(CustomOldClassDictionary).GetMethod("SetExtraValue"),
-                                ConstantExpression.Constant(key),
-                                rule.GetParameterExpression(1));
+                                Ast.Constant(key),
+                                rule.Parameters[1]);
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -784,23 +786,23 @@ namespace IronPython.Runtime.Types {
         private StandardRule<T> MakeDynamicOldInstanceRule<T>(MemberAction action, CodeContext context) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(new DynamicType[] { DynamicHelpers.GetDynamicTypeFromType(typeof(OldInstance)) });
-            Expression instance = StaticUnaryExpression.Convert(
-                    rule.GetParameterExpression(0), typeof(OldInstance));
+            Expression instance = Ast.Cast(
+                    rule.Parameters[0], typeof(OldInstance));
 
             Expression target;
              switch (action.Kind) {
                 case ActionKind.GetMember:
-                    target = MethodCallExpression.Call(instance,
+                    target = Ast.Call(instance,
                         typeof(OldInstance).GetMethod("GetBoundMember"),
-                            new CodeContextExpression(),
-                            ConstantExpression.Constant(action.Name));
+                            Ast.CodeContext(),
+                            Ast.Constant(action.Name));
                     break;
                 case ActionKind.SetMember:
-                    target = MethodCallExpression.Call(instance,
+                    target = Ast.Call(instance,
                         typeof(OldInstance).GetMethod("SetCustomMember"),
-                            new CodeContextExpression(),
-                            ConstantExpression.Constant(action.Name),
-                            rule.GetParameterExpression(1));
+                            Ast.CodeContext(),
+                            Ast.Constant(action.Name),
+                            rule.Parameters[1]);
                     break;
                 default:
                     throw new InvalidOperationException();

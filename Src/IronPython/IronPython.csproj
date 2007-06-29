@@ -161,6 +161,7 @@
     <Compile Include="Hosting\PythonLanguageProvider.cs" />
     <Compile Include="Hosting\PythonOptionsParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Visibility.cs" />
     <Compile Include="Compiler\Generation\PythonScriptCompiler.cs" />
     <Compile Include="Hosting\PythonEngine.cs" />
     <Compile Include="Resources.Designer.cs">

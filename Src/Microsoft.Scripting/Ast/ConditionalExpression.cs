@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _true;
         private readonly Expression _false;
 
-        private ConditionalExpression(Expression testExpression, Expression trueExpression, Expression falseExpression, SourceSpan span)
+        internal ConditionalExpression(SourceSpan span, Expression testExpression, Expression trueExpression, Expression falseExpression)
             : base(span) {
             _test = testExpression;
             _true = trueExpression;
@@ -44,7 +44,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _true; }
         }
 
-        public override System.Type ExpressionType {
+        public override Type ExpressionType {
             get {
                 return _true.ExpressionType;
             }
@@ -79,12 +79,14 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
+    public static partial class Ast {
         public static ConditionalExpression Condition(Expression test, Expression trueValue, Expression falseValue) {
-            return Condition(test, trueValue, falseValue, SourceSpan.None);
+            return Condition(SourceSpan.None, test, trueValue, falseValue);
         }
 
-        public static ConditionalExpression Condition(Expression test, Expression trueValue, Expression falseValue, SourceSpan span) {
+        public static ConditionalExpression Condition(SourceSpan span, Expression test, Expression trueValue, Expression falseValue) {
             if (test == null) {
                 throw new ArgumentNullException("test");
             }
@@ -98,7 +100,7 @@ namespace Microsoft.Scripting.Ast {
                 throw new ArgumentException(String.Format("Cannot determine the type of the conditional expression: {0}, {1}.", trueValue.ExpressionType, falseValue.ExpressionType));
             }
 
-            return new ConditionalExpression(test, trueValue, falseValue, span);
+            return new ConditionalExpression(span, test, trueValue, falseValue);
         }
     }
 }

@@ -20,11 +20,7 @@ namespace Microsoft.Scripting.Ast {
     public class UnboundExpression : Expression {
         private readonly SymbolId _name;
 
-        public UnboundExpression(SymbolId name)
-            : this(name, SourceSpan.None) {
-        }
-
-        public UnboundExpression(SymbolId name, SourceSpan span)
+        internal UnboundExpression(SourceSpan span, SymbolId name)
             : base(span) {
             _name = name;
         }
@@ -54,6 +50,23 @@ namespace Microsoft.Scripting.Ast {
             if (walker.Walk(this)) {
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods
+    /// </summary>
+    public static partial class Ast {
+        public static UnboundExpression Read(SymbolId name) {
+            return Read(SourceSpan.None, name);
+        }
+
+        public static UnboundExpression Read(SourceSpan span, SymbolId name) {
+            if (name.IsInvalid || name.IsEmpty) {
+                throw new ArgumentException("Invalid or empty name is not allowed");
+            }
+
+            return new UnboundExpression(span, name);
         }
     }
 }

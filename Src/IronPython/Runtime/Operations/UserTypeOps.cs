@@ -28,6 +28,8 @@ using System.Reflection;
 using Microsoft.Scripting.Ast;
 
 namespace IronPython.Runtime.Operations {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public static class UserTypeOps {
         public static string ToStringReturnHelper(object o) {
             if (o is string && o != null) {
@@ -93,7 +95,7 @@ namespace IronPython.Runtime.Operations {
             if (pi != null) {
                 StandardRule<T> rule = new StandardRule<T>();
 
-                if (new GetMemberBinderHelper<T>(PythonEngine.CurrentEngine.DefaultBinder, action).TryMakeGetMemberRule(rule, pi, rule.GetParameterExpression(0))) {
+                if (new GetMemberBinderHelper<T>(PythonEngine.CurrentEngine.DefaultBinder, action).TryMakeGetMemberRule(rule, pi, rule.Parameters[0])) {
                     rule.MakeTest(((ISuperDynamicObject)args[0]).DynamicType);
                     return rule;
                 }
@@ -106,7 +108,7 @@ namespace IronPython.Runtime.Operations {
             /*Type t = args[0].GetType();
             PropertyInfo pi = t.GetProperty(SymbolTable.IdToString(sma.Name));
             if (pi != null) {
-                //if (new SetMemberBinderHelper<T>(PythonEngine.CurrentEngine.DefaultBinder, sma).TryMakeSetMemberRule(rule, pi, rule.GetParameterExpression(0))) {
+                //if (new SetMemberBinderHelper<T>(PythonEngine.CurrentEngine.DefaultBinder, sma).TryMakeSetMemberRule(rule, pi, rule.Parameters[0])) {
                 //}
             }*/
             return MakeDynamicSetMemberRule<T>(action.Name, ((ISuperDynamicObject)args[0]).DynamicType);
@@ -115,11 +117,11 @@ namespace IronPython.Runtime.Operations {
         private static StandardRule<T> MakeDynamicGetMemberRule<T>(SymbolId name, DynamicType targetType) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(targetType);
-            Expression expr = MethodCallExpression.Call(null,
+            Expression expr = Ast.Call(null,
                     typeof(PythonOps).GetMethod("GetBoundAttr"),
-                    new CodeContextExpression(),
-                    rule.GetParameterExpression(0),
-                    ConstantExpression.Constant(name));
+                    Ast.CodeContext(),
+                    rule.Parameters[0],
+                    Ast.Constant(name));
             rule.SetTarget(rule.MakeReturn(PythonEngine.CurrentEngine.DefaultBinder, expr));
             return rule;
         }
@@ -127,12 +129,12 @@ namespace IronPython.Runtime.Operations {
         private static StandardRule<T> MakeDynamicSetMemberRule<T>(SymbolId name, DynamicType targetType) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(targetType);
-            Expression expr = MethodCallExpression.Call(null,
+            Expression expr = Ast.Call(null,
                     typeof(PythonOps).GetMethod("SetAttr"),
-                    new CodeContextExpression(),
-                    rule.GetParameterExpression(0),
-                    ConstantExpression.Constant(name),
-                    rule.GetParameterExpression(1));
+                    Ast.CodeContext(),
+                    rule.Parameters[0],
+                    Ast.Constant(name),
+                    rule.Parameters[1]);
             rule.SetTarget(rule.MakeReturn(PythonEngine.CurrentEngine.DefaultBinder, expr));
             return rule;
         }

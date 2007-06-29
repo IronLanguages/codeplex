@@ -14,9 +14,17 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
+
 using MSAst = Microsoft.Scripting.Ast;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class GeneratorExpression : Expression {
         private readonly FunctionDefinition _function;
         private readonly Expression _iterable;
@@ -27,12 +35,17 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return new MSAst.CallExpression(
-                _function.TransformToFunctionExpression(ag),
-                new MSAst.Arg[] {
-                    MSAst.Arg.Simple(ag.Transform(_iterable))
-                },
-                false, false, 0, 0, Span);
+            MSAst.Expression func = _function.TransformToFunctionExpression(ag);
+            
+            Debug.Assert(func.ExpressionType == typeof(PythonFunction));
+            // Generator expressions always return functions.  We could do even better here when all PythonFunction's are in the same class.
+
+            return Ast.Call(
+                func, 
+                typeof(PythonFunction).GetMethod("Call", new Type[] { typeof(CodeContext), typeof(object[]) }), 
+                Ast.CodeContext(),
+                ag.Transform(_iterable)
+            );
         }
 
         public override void Walk(PythonWalker walker) {

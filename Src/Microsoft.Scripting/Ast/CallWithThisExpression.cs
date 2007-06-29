@@ -21,11 +21,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _instance;
         private readonly Arg[] _args;
 
-        public CallWithThisExpression(Expression target, Expression instance, Arg[] args)
-            : this(target, instance, args, SourceSpan.None) {
-        }
-
-        public CallWithThisExpression(Expression target, Expression instance, Arg[] args, SourceSpan span)
+        internal CallWithThisExpression(SourceSpan span, Expression target, Expression instance, Arg[] args)
             : base(span) {
             _target = target;
             _instance = instance;
@@ -75,6 +71,15 @@ namespace Microsoft.Scripting.Ast {
                     }
                 }
             }
+        }
+    }
+
+    public static partial class Ast {
+        public static CallWithThisExpression CallWithThis(Expression target, Expression instance, Arg[] args) {
+            return CallWithThis(SourceSpan.None, target, instance, args);
+        }
+        public static CallWithThisExpression CallWithThis(SourceSpan span, Expression target, Expression instance, Arg[] args) {
+            return new CallWithThisExpression(span, target, instance, args);
         }
     }
 }

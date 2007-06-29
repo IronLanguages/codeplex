@@ -22,6 +22,8 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class DefaultArgBuilder : ArgBuilder {
         private Type _argumentType;
         private object _defaultValue;
@@ -121,9 +123,7 @@ namespace Microsoft.Scripting.Generation {
                 val = CompilerHelpers.GetMissingValue(_argumentType);
             } 
 
-            return binder.ConvertExpression(ConstantExpression.Constant(val), _argumentType);            
+            return binder.ConvertExpression(Ast.Constant(val), _argumentType);            
         }
-
-        
     }
 }

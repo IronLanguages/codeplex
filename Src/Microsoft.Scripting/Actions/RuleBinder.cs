@@ -23,22 +23,20 @@ namespace Microsoft.Scripting.Actions {
     class RuleBinder : Walker {
         private readonly Expression _test;
         private readonly Statement _target;
-        private readonly Variable[] _parameters;
         private readonly List<Variable> _temps;
 
         private Dictionary<Variable, VariableReference> _refs;
 
-        public static VariableReference[] Bind(Expression test, Statement target, Variable[] parameters, List<Variable> temps) {
-            RuleBinder rb = new RuleBinder(test, target, parameters, temps);
+        public static VariableReference[] Bind(Expression test, Statement target, List<Variable> temps) {
+            RuleBinder rb = new RuleBinder(test, target, temps);
             test.Walk(rb);
             target.Walk(rb);
             return rb.GetReferences();
         }
 
-        private RuleBinder(Expression test, Statement target, Variable[] parameters, List<Variable> temps) {
+        private RuleBinder(Expression test, Statement target, List<Variable> temps) {
             _test = test;
             _target = target;
-            _parameters = parameters;
             _temps = temps;
         }
 
@@ -52,7 +50,7 @@ namespace Microsoft.Scripting.Actions {
             return true;
         }
 
-        public override bool Walk(DelStatement node) {
+        public override bool Walk(DeleteStatement node) {
             node.Ref = GetOrMakeRef(node.Variable);
             return true;
         }

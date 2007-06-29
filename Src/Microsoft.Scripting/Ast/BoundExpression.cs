@@ -25,15 +25,8 @@ namespace Microsoft.Scripting.Ast {
         // Implementation detail
         private VariableReference _vr;
 
-        public BoundExpression(Variable variable)
-            : this(variable, SourceSpan.None) {
-        }
-
-        public BoundExpression(Variable variable, SourceSpan span)
+        internal BoundExpression(SourceSpan span, Variable variable)
             : base(span) {
-            if (variable == null) {
-                throw new ArgumentNullException("variable");
-            }
             _variable = variable;
         }
 
@@ -57,7 +50,7 @@ namespace Microsoft.Scripting.Ast {
 
         public bool IsDefined {
             get { return _defined; }
-            set { _defined = value; }
+            internal set { _defined = value; }
         }
 
         public override Type ExpressionType {
@@ -96,9 +89,24 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        public static BoundExpression Defined(Variable variable) {
-            BoundExpression ret = new BoundExpression(variable);
+    public static partial class Ast {
+        public static BoundExpression Read(Variable variable) {
+            return Read(SourceSpan.None, variable);
+        }
+        public static BoundExpression Read(SourceSpan span, Variable variable) {
+            if (variable == null) {
+                throw new ArgumentNullException("variable");
+            }
+            return new BoundExpression(span, variable);
+        }
+
+        public static BoundExpression ReadDefined(Variable variable) {
+            return ReadDefined(SourceSpan.None, variable);
+        }
+        public static BoundExpression ReadDefined(SourceSpan span, Variable variable) {
+            BoundExpression ret = Read(span, variable);
             ret.IsDefined = true;
             return ret;
         }

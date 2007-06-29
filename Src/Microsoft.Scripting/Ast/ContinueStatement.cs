@@ -20,19 +20,7 @@ namespace Microsoft.Scripting.Ast {
     public class ContinueStatement : Statement {
         private Statement _statement;
 
-        public ContinueStatement()
-            : this(null, SourceSpan.None) {
-        }
-
-        public ContinueStatement(SourceSpan span)
-            : this(null, span) {
-        }
-
-        public ContinueStatement(Statement statement)
-            : this(statement, SourceSpan.None) {
-        }
-
-        public ContinueStatement(Statement statement, SourceSpan span)
+        internal ContinueStatement(SourceSpan span, Statement statement)
             : base(span) {
             _statement = statement;
         }
@@ -70,6 +58,24 @@ namespace Microsoft.Scripting.Ast {
                 ;
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static ContinueStatement Continue() {
+            return Continue(SourceSpan.None, null);
+        }
+
+        public static ContinueStatement Continue(SourceSpan span) {
+            return Continue(span, null);
+        }
+
+        public static ContinueStatement Continue(Statement statement) {
+            return Continue(SourceSpan.None, statement);
+        }
+
+        public static ContinueStatement Continue(SourceSpan span, Statement statement) {
+            return new ContinueStatement(span, statement);
         }
     }
 }

@@ -19,6 +19,8 @@ using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class RaiseStatement : Statement {
         private readonly Expression _type, _value, _traceback;
 
@@ -42,13 +44,14 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
             MSAst.ThrowExpression expr;
-            expr = new MSAst.ThrowExpression(
-                MSAst.MethodCallExpression.Call(null, typeof(PythonOps).GetMethod("MakeException"),
-                    new MSAst.CodeContextExpression(),
+            expr = Ast.Throw(
+                Ast.Call(null, typeof(PythonOps).GetMethod("MakeException"),
+                    Ast.CodeContext(),
                     ag.Transform(_type ?? new ConstantExpression(null)),
                     ag.Transform(_value ?? new ConstantExpression(null)),
                     ag.Transform(_traceback ?? new ConstantExpression(null))));
-            return new MSAst.ExpressionStatement(expr, Span);
+
+            return Ast.Statement(Span, expr);
         }
 
         public override void Walk(PythonWalker walker) {

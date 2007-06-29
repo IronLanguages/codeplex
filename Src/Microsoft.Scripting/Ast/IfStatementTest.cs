@@ -20,11 +20,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _test;
         private readonly Statement _body;
 
-        public IfStatementTest(Expression test, Statement body)
-            : this(test, body, SourceSpan.None, SourceLocation.None) {
-        }
-
-        public IfStatementTest(Expression test, Statement body, SourceSpan span, SourceLocation header)
+        internal IfStatementTest(SourceSpan span, SourceLocation header, Expression test, Statement body)
             : base(span) {
             if (test == null) throw new ArgumentNullException("test");
             if (body == null) throw new ArgumentNullException("body");
@@ -52,6 +48,19 @@ namespace Microsoft.Scripting.Ast {
                 _body.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static IfStatementTest IfCondition(Expression test, Statement body) {
+            return IfCondition(SourceSpan.None, SourceLocation.None, test, body);
+        }
+        public static IfStatementTest IfCondition(SourceSpan span, SourceLocation header, Expression test, Statement body) {
+            return new IfStatementTest(span, header, test, body);
+        }
+
+        public static IfStatementTest[] IfConditions(params IfStatementTest[] tests) {
+            return tests;
         }
     }
 }

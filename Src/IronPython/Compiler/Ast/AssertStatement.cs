@@ -21,6 +21,8 @@ using Microsoft.Scripting.Actions;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class AssertStatement : Statement {
         private readonly Expression _test, _message;
 
@@ -40,45 +42,27 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Statement Transform(AstGenerator ag) {
             // If debugging is off, return empty statement
             if (!ScriptDomainManager.Options.DebugMode) {
-                return new MSAst.EmptyStatement(Span);
+                return Ast.Empty(Span);
             }
 
             // Transform into:
-            // if (! _test) {
+            // if (_test) {
+            // } else {
             //     RaiseAssertionError(_message);
             // }
-
-            return new MSAst.IfStatement(               // if
-                new MSAst.IfStatementTest[] {
-                    new MSAst.IfStatementTest(          // !_test
-                        MakeNotTest(ag),                        
-                        new MSAst.ExpressionStatement(
-                            new MSAst.MethodCallExpression(
-                                AstGenerator.GetHelperMethod("RaiseAssertionError"),
-                                null,
-                                new MSAst.Expression[] {
-                                    _message != null ?
-                                        ag.TransformAsObject(_message) :
-                                        new MSAst.ConstantExpression(null)
-                                },
-                                Span
-                            ),
-                            Span
-                        ),
-                        Span, _test.End
+            return Ast.Unless(                                  // if
+                Span,                                   
+                ag.TransformAndConvert(_test, typeof(bool)),    // _test
+                Ast.Statement(
+                    Ast.Call(                                   // else branch
+                        Span,
+                        null,
+                        AstGenerator.GetHelperMethod("RaiseAssertionError"),
+                        _message != null ?
+                            ag.TransformAsObject(_message) :
+                            Ast.Null()
                     )
-                },
-                null,
-                Span
-            );
-        }
-
-        private MSAst.Expression MakeNotTest(AstGenerator ag) {
-            return MSAst.ActionExpression.Operator(
-                _test.Span,
-                Operators.Not,
-                typeof(bool),
-                ag.Transform(_test)
+                )
             );
         }
 

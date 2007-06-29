@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
 
@@ -22,10 +23,10 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _left, _right;
         private readonly Operators _op;
 
-        public BinaryExpression(Operators op, Expression left, Expression right, SourceSpan span)
+        internal BinaryExpression(SourceSpan span, Operators op, Expression left, Expression right)
             : base(span) {
-            if (left == null) throw new ArgumentNullException("left");
-            if (right == null) throw new ArgumentNullException("right");
+            Debug.Assert(left != null);
+            Debug.Assert(right != null);
 
             _left = left;
             _right = right;
@@ -215,37 +216,49 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
+    public static partial class Ast {
         public static BinaryExpression Equal(Expression left, Expression right) {
-            return new BinaryExpression(Operators.Equal, left, right, SourceSpan.None);
+            return Binary(SourceSpan.None, Operators.Equal, left, right);
         }
         public static BinaryExpression NotEqual(Expression left, Expression right) {
-            return new BinaryExpression(Operators.NotEqual, left, right, SourceSpan.None);
+            return Binary(SourceSpan.None, Operators.NotEqual, left, right);
         }
         public static Expression AndAlso(Expression left, Expression right) {
-            return new BinaryExpression(Operators.AndAlso, left, right, SourceSpan.None);
+            return Binary(SourceSpan.None, Operators.AndAlso, left, right);
         }
 
         /// <summary>
         /// Multiples two Int32 values.
         /// </summary>
-        public static Expression Multiply(Expression left, Expression right) {
+        public static BinaryExpression Multiply(Expression left, Expression right) {
             if (left.ExpressionType != typeof(int) || right.ExpressionType != typeof(int)) {
                 throw new NotSupportedException(String.Format("multiply only supports ints, got {0} {1}", left.ExpressionType.Name, right.ExpressionType.Name));
             }
-            
-            return new BinaryExpression(Operators.Multiply, left, right, SourceSpan.None);
+
+            return Binary(SourceSpan.None, Operators.Multiply, left, right);
         }
 
         /// <summary>
-        /// Multiples two Int32 values.
+        /// Adds two Int32 values.
         /// </summary>
         public static Expression Add(Expression left, Expression right) {
             if (left.ExpressionType != typeof(int) || right.ExpressionType != typeof(int)) {
                 throw new NotSupportedException(String.Format("add only supports ints, got {0} {1}", left.ExpressionType.Name, right.ExpressionType.Name));
             }
 
-            return new BinaryExpression(Operators.Add, left, right, SourceSpan.None);
+            return Binary(SourceSpan.None, Operators.Add, left, right);
+        }
+
+        public static BinaryExpression Binary(SourceSpan span, Operators op, Expression left, Expression right) {
+            if (left == null) {
+                throw new ArgumentNullException("left");
+            }
+            if (right == null) {
+                throw new ArgumentNullException("right");
+            }
+            return new BinaryExpression(span, op, left, right);
         }
     }
 }

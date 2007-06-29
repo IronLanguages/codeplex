@@ -25,21 +25,17 @@ namespace Microsoft.Scripting.Ast {
         private readonly Statement _body;
         private readonly Statement _else;
 
-        public LoopStatement(Expression test, Expression increment, Statement body, Statement else_)
-            : this(test, increment, body, else_, SourceSpan.None, SourceLocation.None) {
-        }
-
         /// <summary>
         /// Null test means infinite loop.
         /// </summary>
-        public LoopStatement(Expression test, Expression increment, Statement body, Statement else_, SourceSpan span, SourceLocation header)
+        internal LoopStatement(SourceSpan span, SourceLocation header, Expression test, Expression increment, Statement body, Statement @else)
             : base(span) {
             if (body == null) throw new ArgumentNullException("body");
 
             _test = test;
             _increment = increment;
             _body = body;
-            _else = else_;
+            _else = @else;
             _header = header;
         }
 
@@ -130,6 +126,35 @@ namespace Microsoft.Scripting.Ast {
                 if (_else != null) _else.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static LoopStatement While(Expression test, Statement body, Statement @else) {
+            return Loop(SourceSpan.None, SourceLocation.None, test, null, body, @else);
+        }
+
+        public static LoopStatement While(SourceSpan span, SourceLocation header, Expression test, Statement body, Statement @else) {
+            return Loop(span, header, test, null, body, @else);
+        }
+
+        public static LoopStatement Loop(Statement body) {
+            return Loop(SourceSpan.None, SourceLocation.None, null, null, body, null);
+        }
+
+        public static LoopStatement Loop(params Statement[] body) {
+            return Loop(SourceSpan.None, SourceLocation.None, null, null, Block(body), null);
+        }
+        
+        public static LoopStatement Loop(Expression test, Expression increment, Statement body, Statement @else) {
+            return Loop(SourceSpan.None, SourceLocation.None, test, increment, body, @else);
+        }
+
+        public static LoopStatement Loop(SourceSpan span, SourceLocation header, Expression test, Expression increment, Statement body, Statement @else) {
+            return new LoopStatement(span, header, test, increment, body, @else);
         }
     }
 }

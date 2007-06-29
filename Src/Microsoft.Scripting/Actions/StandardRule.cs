@@ -23,6 +23,8 @@ using Microsoft.Scripting.Ast;
 using System.Diagnostics;
 
 namespace Microsoft.Scripting.Actions {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     /// <summary>
     /// A dynamic test that can invalidate a rule at runtime.  The definition of an
     /// invalid rule is one whose Test will always return false.  In theory a set of
@@ -51,7 +53,7 @@ namespace Microsoft.Scripting.Actions {
         private RuleSet<T> _ruleSet;
 
         // TODO revisit these fields and their uses when CodeBlock moves down
-        private Variable[] _parameters;
+        private Expression[] _parameters;
         private List<Variable> _temps;
         private VariableReference[] _references;
 
@@ -59,9 +61,27 @@ namespace Microsoft.Scripting.Actions {
             int firstParameter = DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
             
             ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
-            _parameters = new Variable[pis.Length - firstParameter];
-            for (int i = firstParameter; i < pis.Length; i++) {
-                _parameters[i - firstParameter] = MakeParameter(i, "$arg" + (i - firstParameter), pis[i].ParameterType);
+            if (!DynamicSiteHelpers.IsBigTarget(typeof(T))) {
+                _parameters = new Expression[pis.Length - firstParameter];
+                for (int i = firstParameter; i < pis.Length; i++) {
+                    _parameters[i - firstParameter] = Ast.ReadDefined(MakeParameter(i, "$arg" + (i - firstParameter), pis[i].ParameterType));
+                }
+            } else {
+                MakeTupleParameters(firstParameter, typeof(T).GetGenericArguments()[0]);
+            }
+        }
+
+        private void MakeTupleParameters(int firstParameter, Type tupleType) {
+            int count = NewTuple.GetSize(tupleType);
+
+            Expression tuple = Ast.ReadDefined(MakeParameter(firstParameter, "$arg0", tupleType));
+            _parameters = new Expression[count];
+            for (int i = 0; i < _parameters.Length; i++) {
+                Expression tupleAccess = tuple;
+                foreach (PropertyInfo pi in NewTuple.GetAccessPath(tupleType, i)) {
+                    tupleAccess = Ast.ReadProperty(tupleAccess, pi);
+                }
+                _parameters[i] = tupleAccess;
             }
         }
 
@@ -79,8 +99,22 @@ namespace Microsoft.Scripting.Actions {
             get { return _test; }
         }
 
-        public Variable[] Parameters {
-            get { return _parameters; }
+        /// <summary>
+        /// Gets the logical parameters to the dynamic site in the form of Expressions.
+        /// </summary>
+        public Expression[] Parameters {
+            get {
+                return _parameters;
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of logical parameters the dynamic site is provided with.
+        /// </summary>
+        public int ParameterCount {
+            get {
+                return _parameters.Length;
+            }
         }
 
         private Variable MakeParameter(int index, string name, Type type) {
@@ -89,16 +123,9 @@ namespace Microsoft.Scripting.Actions {
             return ret;
         }
 
-        public Expression GetParameterExpression(int index) {
-            return BoundExpression.Defined(_parameters[index]);
-        }
-
-        public Expression[] GetParameterExpressions() {
-            Expression[] parameters = new Expression[Parameters.Length];
-            for (int i = 0; i < parameters.Length; i++) parameters[i] = GetParameterExpression(i);
-            return parameters;
-        }
-
+        /// <summary>
+        /// Allocates a temporary variable for use during the rule.
+        /// </summary>
         public Variable GetTemporary(Type type, string name) {
             if (_temps == null) {
                 _temps = new List<Variable>();
@@ -152,12 +179,12 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public void Emit(CodeGen cg, Label ifFalse) {
+        public void Emit(CodeGen cg, Label ifFalse) {            
             // Need to make sure we aren't generating into two different CodeGens at the same time
             lock (this) {
                 // First, finish binding my variable references
                 if (_references == null) {
-                    _references = RuleBinder.Bind(_test, _target, _parameters, _temps);
+                    _references = RuleBinder.Bind(_test, _target, _temps);
                 }
 
                 foreach (VariableReference vr in _references) {
@@ -187,24 +214,22 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Statement MakeError(ActionBinder binder, Expression expr) {
-            return new ExpressionStatement(new ThrowExpression(expr));
+            return Ast.Statement(Ast.Throw(expr));
         }
 
         public Statement MakeReturn(ActionBinder binder, Expression expr) {
             // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
             if (expr.ExpressionType != typeof(void)) {
                 Variable variable = GetTemporary(expr.ExpressionType, "$retVal");
-                return new ReturnStatement(
-                    new CommaExpression(
-                        new Expression[] {
-                            BoundAssignment.Assign(variable, expr),
-                            binder.ConvertExpression(BoundExpression.Defined(variable), typeof(T).GetMethod("Invoke").ReturnType)
-                        },
-                        1
+                return Ast.Return(
+                    Ast.Comma(
+                        1,
+                        Ast.Assign(variable, expr),
+                        binder.ConvertExpression(Ast.ReadDefined(variable), typeof(T).GetMethod("Invoke").ReturnType)
                     )
                 );
             }
-            return new ReturnStatement(binder.ConvertExpression(expr, typeof(T).GetMethod("Invoke").ReturnType));
+            return Ast.Return(binder.ConvertExpression(expr, typeof(T).GetMethod("Invoke").ReturnType));
         }
 
         public void MakeTest(params Type[] types) {
@@ -234,7 +259,7 @@ namespace Microsoft.Scripting.Actions {
                 } else if (nextTests.IsConstant(true)) {
                     return test;
                 } else {
-                    return BinaryExpression.AndAlso(test, nextTests);
+                    return Ast.AndAlso(test, nextTests);
                 }
             } else {
                 return test;
@@ -242,12 +267,12 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Expression MakeTypeTest(DynamicType type, int index) {
-            return MakeTypeTest(type, GetParameterExpression(index));
+            return MakeTypeTest(type, Parameters[index]);
         }
 
         public Expression MakeTypeTest(DynamicType type, Expression tested) {
             if (type == null || type.IsNull) {
-                return BinaryExpression.Equal(tested, ConstantExpression.Constant(null));
+                return Ast.Equal(tested, Ast.Null());
             } else {
                 Type clrType = type.UnderlyingSystemType;
                 bool isStaticType = !typeof(ISuperDynamicObject).IsAssignableFrom(clrType);
@@ -257,16 +282,16 @@ namespace Microsoft.Scripting.Actions {
                 // present for the base type.
                 //TODO there's a question about nulls here
                 if (CompilerHelpers.IsSealed(clrType) && clrType == tested.ExpressionType) {
-                    return ConstantExpression.Constant(true);
+                    return Ast.True();
                 }
 
                 Expression test = MakeTypeTestExpression(type.UnderlyingSystemType, tested);
 
                 if (!isStaticType) {
                     int version = type.Version;
-                    test = BinaryExpression.AndAlso(test,
-                        MethodCallExpression.Call(null, typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"),
-                            tested, ConstantExpression.Constant(version)));
+                    test = Ast.AndAlso(test,
+                        Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"),
+                            tested, Ast.Constant(version)));
 
                     AddValidator(new DynamicTypeValidator(new WeakReference(type), version).Validate);
                 }
@@ -275,18 +300,18 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Expression MakeTypeTestExpression(Type t, int param) {
-            return MakeTypeTestExpression(t, GetParameterExpression(param));
+            return MakeTypeTestExpression(t, Parameters[param]);
         }
 
         public Expression MakeTypeTestExpression(Type t, Expression expr) {
-            return BinaryExpression.AndAlso(
-                BinaryExpression.NotEqual(
+            return Ast.AndAlso(
+                Ast.NotEqual(
                     expr,
-                    ConstantExpression.Constant(null)),
-                BinaryExpression.Equal(
-                    MethodCallExpression.Call(
+                    Ast.Null()),
+                Ast.Equal(
+                    Ast.Call(
                         expr, typeof(object).GetMethod("GetType")),
-                        ConstantExpression.Constant(t)));
+                        Ast.Constant(t)));
         }
 
         #region Factory Methods
@@ -301,9 +326,9 @@ namespace Microsoft.Scripting.Actions {
             StandardRule<T> ret = new StandardRule<T>();
             ret.MakeTest(types);
             ret.SetTarget(
-                new ExpressionStatement(new ThrowExpression(
-                    MethodCallExpression.Call(null, typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
-                        ConstantExpression.Constant(message)))));
+                Ast.Statement(Ast.Throw(
+                    Ast.Call(null, typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
+                        Ast.Constant(message)))));
             return ret;
         }
 
@@ -311,9 +336,9 @@ namespace Microsoft.Scripting.Actions {
             StandardRule<T> ret = new StandardRule<T>();
             ret.MakeTest(types);
             ret.SetTarget(
-                new ExpressionStatement(new ThrowExpression(
-                    MethodCallExpression.Call(null, typeof(RuntimeHelpers).GetMethod("SimpleAttributeError"),
-                        ConstantExpression.Constant(message)))));
+                Ast.Statement(Ast.Throw(
+                    Ast.Call(null, typeof(RuntimeHelpers).GetMethod("SimpleAttributeError"),
+                        Ast.Constant(message)))));
             return ret;
         }
 

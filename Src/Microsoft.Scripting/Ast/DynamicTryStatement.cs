@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Ast {
         /// The elseSuite runs if no exception is thrown.
         /// The finallySuite runs regardless of how control exits the body.
         /// </summary>
-        public DynamicTryStatement(Statement body, DynamicTryStatementHandler[] handlers, Statement elseSuite, Statement finallySuite, SourceSpan span, SourceLocation header)
+        internal DynamicTryStatement(SourceSpan span, SourceLocation header, Statement body, DynamicTryStatementHandler[] handlers, Statement elseSuite, Statement finallySuite)
             : base(span) {
             _body = body;
             _handlers = handlers;
@@ -135,7 +135,48 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
         }
+        
+        public override object Execute(CodeContext context) {
+            try {
+                object ret = Statement.NextStatement;
 
+                try {
+                    ret = _body.Execute(context);
+                    if (!(ret is ControlFlow)) {
+                        return ret;
+                    }
+                } catch (Exception exc) {
+                    try {
+                        object extracted = RuntimeHelpers.PushExceptionHandler(context, exc);
+                        foreach (DynamicTryStatementHandler handler in _handlers) {
+                            object target = extracted;
+                            if (handler.Test != null) {
+                                target = RuntimeHelpers.CheckException(context, extracted, handler.Test.Evaluate(context));
+                            }
+                            if (target != null) {
+                                if (handler.Variable != null) {
+                                    RuntimeHelpers.SetName(context, handler.Variable.Name, target);
+                                }
+                                return handler.Body.Execute(context);
+                            }
+                        }
+                    } finally {
+                        RuntimeHelpers.PopExceptionHandler(context);
+                    }
+                    throw; // No handler matched
+                }
+                if (_else != null) {
+                    return _else.Execute(context);
+                } else {
+                    return Statement.NextStatement;
+                }
+            } finally {
+                if (_finally != null) {
+                    _finally.Execute(context);
+                }
+            }
+        }
+        
         public override void Emit(CodeGen cg) {
             cg.EmitPosition(Start, _header);
 
@@ -520,6 +561,16 @@ namespace Microsoft.Scripting.Ast {
 
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static DynamicTryStatement DynamicTry(Statement body, DynamicTryStatementHandler[] handlers, Statement @else, Statement @finally) {
+            return DynamicTry(SourceSpan.None, SourceLocation.None, body, handlers, @else, @finally);
+        }
+
+        public static DynamicTryStatement DynamicTry(SourceSpan span, SourceLocation header, Statement body, DynamicTryStatementHandler[] handlers, Statement @else, Statement @finally) {
+            return new DynamicTryStatement(span, header, body, handlers, @else, @finally);
         }
     }
 }

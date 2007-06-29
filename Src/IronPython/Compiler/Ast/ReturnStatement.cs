@@ -16,6 +16,8 @@
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ReturnStatement : Statement {
         private readonly Expression _expression;
 
@@ -28,9 +30,9 @@ namespace IronPython.Compiler.Ast {
         } 
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            return new MSAst.ReturnStatement(
-                ag.Transform(_expression),
-                Span
+            return Ast.Return(
+                Span,
+                ag.Transform(_expression)
             );
         }
 

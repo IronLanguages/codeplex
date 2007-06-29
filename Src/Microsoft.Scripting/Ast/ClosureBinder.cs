@@ -104,7 +104,7 @@ namespace Microsoft.Scripting.Ast {
             return true;
         }
 
-        public override bool Walk(DelStatement node) {
+        public override bool Walk(DeleteStatement node) {
             node.Ref = Reference(node.Variable);
             return true;
         }

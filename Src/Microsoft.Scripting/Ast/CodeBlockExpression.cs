@@ -36,10 +36,10 @@ namespace Microsoft.Scripting.Ast {
         private CodeBlock _block;
         private bool _forceWrapperMethod;
 
-        public CodeBlockExpression(CodeBlock block, bool forceWrapperMethod)
-            : base(SourceSpan.None) {
-            this._block = block;
-            this._forceWrapperMethod = forceWrapperMethod;
+        internal CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapperMethod)
+            : base(span) {
+            _block = block;
+            _forceWrapperMethod = forceWrapperMethod;
         }
 
         public CodeBlock Block {
@@ -60,11 +60,20 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override object Evaluate(CodeContext context) {
-            return new CallTargetWithContextN(_block.Execute);
+            return _block.GetInterpretedDelegate();
         }
 
         public override void Emit(CodeGen cg) {
             _block.EmitDelegate(cg, _forceWrapperMethod);
+        }
+    }
+
+    public static partial class Ast {
+        public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool forceWrapper) {
+            return CodeBlockExpression(SourceSpan.None, block, forceWrapper);
+        }
+        public static CodeBlockExpression CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapper) {
+            return new CodeBlockExpression(span, block, forceWrapper);
         }
     }
 }

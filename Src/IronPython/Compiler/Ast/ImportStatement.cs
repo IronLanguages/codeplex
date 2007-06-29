@@ -18,6 +18,8 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class ImportStatement : Statement {
         private readonly DottedName[] _names;
         private readonly SymbolId[] _asNames;
@@ -48,27 +50,26 @@ namespace IronPython.Compiler.Ast {
             for (int i = 0; i < _names.Length; i++) {
                 statements.Add(
                     // _references[i] = PythonOps.Import(<code context>, _names[i])
-                    new MSAst.ExpressionStatement(
-                        new MSAst.BoundAssignment(
+                    Ast.Statement(
+                        _names[i].Span,
+                        Ast.Assign(
+                            _names[i].Span,
                             _variables[i].Variable,
-                            MSAst.MethodCallExpression.Call(
+                            Ast.Call(
                                 _names[i].Span,                                         // span
                                 null,                                                   // instance
                                 AstGenerator.GetHelperMethod(                           // helper
                                     _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"
                                 ),
-                                new MSAst.CodeContextExpression(),                      // 1st arg - code context
-                                new MSAst.ConstantExpression(_names[i].MakeString())    // 2nd arg - module name
-                                ),
-                             Operators.None,
-                             _names[i].Span
-                             ),
-                        _names[i].Span
+                                Ast.CodeContext(),                                      // 1st arg - code context
+                                Ast.Constant(_names[i].MakeString())                    // 2nd arg - module name
+                            )
                         )
-                    );
+                    )
+                );
             }
 
-            return new MSAst.BlockStatement(statements.ToArray(), Span);
+            return Ast.Block(Span, statements.ToArray());
         }
 
         public override void Walk(PythonWalker walker) {

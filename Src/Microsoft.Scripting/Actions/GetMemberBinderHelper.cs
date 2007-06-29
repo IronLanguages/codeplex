@@ -17,17 +17,21 @@ using System;
 using System.Reflection;
 using System.Diagnostics;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Actions {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class GetMemberBinderHelper<T> {
-        private ActionBinder _binder;
-        private GetMemberAction _action;
+        private readonly ActionBinder _binder;
+        private readonly GetMemberAction _action;
+
         public GetMemberBinderHelper(ActionBinder binder, GetMemberAction action) {
+            Utils.Assert.NotNull(binder, action);
+
             this._binder = binder;
             this._action = action;
         }
@@ -90,7 +94,7 @@ namespace Microsoft.Scripting.Actions {
 
         private StandardRule<T> MakeGetMemberRule(Type targetType, MemberInfo mi) {
             StandardRule<T> rule = new StandardRule<T>();
-            if (TryMakeGetMemberRule(rule, mi, rule.GetParameterExpressions())) {
+            if (TryMakeGetMemberRule(rule, mi, rule.Parameters)) {
                 rule.MakeTest(targetType);
                 return rule;
             }
@@ -183,16 +187,16 @@ namespace Microsoft.Scripting.Actions {
             if (parameter != parameters.Length) {
                 return null;
             }
-            return new ReturnStatement(MethodCallExpression.Call(callInst, method, callArgs));
+            return Ast.Return(Ast.Call(callInst, method, callArgs));
         }
 
         private static Statement InvalidArgumentCount(MethodInfo method, int expected, int provided) {
-            return new ExpressionStatement(
-                new ThrowExpression(
-                    MethodCallExpression.Call(
+            return Ast.Statement(
+                Ast.Throw(
+                    Ast.Call(
                         null,
                         typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
-                        new ConstantExpression(
+                        Ast.Constant(
                             String.Format("{0}() takes exactly {1} arguments ({1} given)", method.Name, expected, provided)
                         )
                     )
@@ -205,7 +209,7 @@ namespace Microsoft.Scripting.Actions {
                 rule.SetTarget(
                     rule.MakeReturn(
                         _binder,
-                        MemberExpression.Field(
+                        Ast.ReadField(
                             field.IsStatic ?
                                 null :
                                 args[0],
@@ -226,11 +230,11 @@ namespace Microsoft.Scripting.Actions {
         private StandardRule<T> MakeDynamicRule(DynamicType targetType) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(new DynamicType[] { targetType });
-            Expression expr = MethodCallExpression.Call(null,
+            Expression expr = Ast.Call(null,
                     typeof(RuntimeHelpers).GetMethod("GetBoundMember"),
-                    new CodeContextExpression(),
-                    rule.GetParameterExpression(0),
-                    ConstantExpression.Constant(this._action.Name));
+                    Ast.CodeContext(),
+                    rule.Parameters[0],
+                    Ast.Constant(this._action.Name));
             rule.SetTarget(rule.MakeReturn(_binder, expr));
             return rule;
         }

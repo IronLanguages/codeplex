@@ -27,11 +27,6 @@ namespace Microsoft.Scripting.Ast {
             _end = span.End;
         }
 
-        public void SetLoc(SourceLocation start, SourceLocation end) {
-            _start = start;
-            _end = end;
-        }
-
         public void SetLoc(SourceSpan span) {
             _start = span.Start;
             _end = span.End;
@@ -41,12 +36,10 @@ namespace Microsoft.Scripting.Ast {
 
         public SourceLocation Start {
             get { return _start; }
-            set { _start = value; }
         }
 
         public SourceLocation End {
             get { return _end; }
-            set { _end = value; }
         }
 
         public SourceSpan Span {

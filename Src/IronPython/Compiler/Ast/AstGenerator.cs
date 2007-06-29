@@ -27,6 +27,8 @@ using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class AstGenerator {
         private readonly MSAst.CodeBlock _block;
         private List<MSAst.Variable> _temps;
@@ -84,7 +86,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         public MSAst.BoundExpression MakeTempExpression(string name, Type type, SourceSpan span) {
-            return new MSAst.BoundExpression(MakeTemp(SymbolTable.StringToId(name), type), span);
+            return Ast.Read(span, MakeTemp(SymbolTable.StringToId(name), type));
         }
 
         internal MSAst.BoundExpression MakeGeneratorTempExpression(string name, SourceSpan span) {
@@ -92,7 +94,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.BoundExpression MakeGeneratorTempExpression(string name, Type type, SourceSpan span) {
-            return new MSAst.BoundExpression(MakeGeneratorTemp(SymbolTable.StringToId(name), type), span);
+            return Ast.Read(span, MakeGeneratorTemp(SymbolTable.StringToId(name), type));
         }
 
         public void FreeTemp(MSAst.BoundExpression be) {
@@ -111,9 +113,9 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal static MSAst.Statement MakeAssignment(MSAst.Variable variable, MSAst.Expression right, SourceSpan span) {
-            return new MSAst.ExpressionStatement(
-                new MSAst.BoundAssignment(variable, right, Operators.None, span),
-                span
+            return Ast.Statement(
+                span,
+                Ast.Assign(span, variable, right)
             );
         }
 
@@ -128,7 +130,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             // Add conversion step to the AST
-            return MSAst.ConversionExpression.Convert(expression, type, expression.Span);
+            return Ast.Convert(expression.Span, expression, type);
         }
 
         #region Utility methods
@@ -168,7 +170,7 @@ namespace IronPython.Compiler.Ast {
         internal MSAst.Expression TransformOrConstantNull(Expression expression, Type type) {
             return ConvertIfNeeded(
                 expression == null ?
-                    new MSAst.ConstantExpression(null) :
+                    Ast.Null() :
                     expression.Transform(this, type),
                 type
             );

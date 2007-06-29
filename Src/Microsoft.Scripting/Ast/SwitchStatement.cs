@@ -22,11 +22,13 @@ namespace Microsoft.Scripting.Ast {
     public class SwitchStatement : Statement {
         private readonly SourceLocation _header;
         private readonly Expression _testValue;
+
+        // TODO: Make SwitchCase[]
         private readonly List<SwitchCase> _cases;
 
         private const int JMPTABLE_SPARSITY = 10;
 
-        public SwitchStatement(Expression testValue, List<SwitchCase> cases, SourceSpan span, SourceLocation header)
+        internal SwitchStatement(SourceSpan span, SourceLocation header, Expression testValue, List<SwitchCase> cases)
             : base(span) {
             _testValue = testValue;
             _cases = cases;
@@ -251,6 +253,15 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+    }
+
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static SwitchStatement Switch(SourceSpan span, SourceLocation header, Expression testValue, List<SwitchCase> cases) {
+            return new SwitchStatement(span, header, testValue, cases);
         }
     }
 }

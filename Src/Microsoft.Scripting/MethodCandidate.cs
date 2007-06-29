@@ -43,21 +43,73 @@ namespace Microsoft.Scripting {
             get { return _target; }
         }
 
+        public bool IsApplicable(Type[] types, SymbolId[] names, NarrowingLevel allowNarrowing) {
+            if (!TryGetNormalizedArguments(types, names, out types)) {
+                return false;
+            }
+
+            return IsApplicable(types, allowNarrowing);
+        }
+
         public bool IsApplicable(Type[] types, NarrowingLevel allowNarrowing) {
             for (int i = 0; i < types.Length; i++) {
                 if (!_parameters[i].HasConversionFrom(types[i], allowNarrowing)) {
                     return false;
                 }
-            }
+            }            
+
             return true;
         }
 
-        public bool CheckArgs(CodeContext context, object[] args) {
-            if (this.IsApplicable(CompilerHelpers.GetTypes(args), NarrowingLevel.None)) {
+        public bool CheckArgs(CodeContext context, object[] args, SymbolId[] names) {
+            Type [] newArgs;
+            if (!TryGetNormalizedArguments(CompilerHelpers.GetTypes(args), names, out newArgs)) {
+                return false;
+            }
+
+            if (IsApplicable(newArgs, NarrowingLevel.None)) {
                 return true;
             }
 
-            return Target.CheckArgs(context, args);
+            object []objArgs;
+            TryGetNormalizedArguments(args, names, out objArgs);
+
+            return Target.CheckArgs(context, objArgs);
+        }
+
+        private bool TryGetNormalizedArguments<T>(T[] argTypes, SymbolId[] names, out T[] args) {
+            if (names.Length == 0) {
+                args = argTypes;
+                return true;
+            }
+            
+            T[] res = new T[argTypes.Length];
+            Array.Copy(argTypes, res, argTypes.Length - names.Length);
+
+            for (int i = 0; i < names.Length; i++) {
+                bool found = false;
+                for(int j = 0; j<_parameters.Count; j++) {
+                    if (_parameters[j].Name == names[i]) {
+                        if (res[j] != null) {
+                            args = null;
+                            return false;
+                        }
+
+                        res[j] = argTypes[i + argTypes.Length - names.Length];
+
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    args = null;
+                    return false;
+                }
+            }
+
+            args = res;
+            return true;
         }
 
         public int? CompareParameters(MethodCandidate other) {
@@ -116,6 +168,12 @@ namespace Microsoft.Scripting {
         public NarrowingLevel NarrowingLevel {
             get {
                 return _narrowingLevel;
+            }
+        }
+
+        public IList<ParameterWrapper> Parameters {
+            get {
+                return _parameters;
             }
         }
     }

@@ -176,10 +176,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // StaticUnaryExpression
-        public override bool Walk(StaticUnaryExpression node) {
+        public override bool Walk(UnaryExpression node) {
             return DefaultWalk(node, "<staticunaryexpr> Type:" + node.ExpressionType.ToString());
         }
-        public override void PostWalk(StaticUnaryExpression node) {
+        public override void PostWalk(UnaryExpression node) {
             Pop();
         }
 
@@ -194,7 +194,7 @@ namespace Microsoft.Scripting.Ast {
 
         // BoundAssignment
         public override bool Walk(BoundAssignment node) {
-            string descr = AssignmentOp(node.Operator);
+            string descr = "<boundassignment> Op:" + AssignmentOp(node.Operator);
             if (node.Variable != null)
                 descr += " Target:" + SymbolTable.IdToString(node.Variable.Name);
             return DefaultWalk(node, descr);
@@ -369,10 +369,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // ParenthesisExpression
-        public override bool Walk(ParenthesisExpression node) {
+        public override bool Walk(ParenthesizedExpression node) {
             return DefaultWalk(node, "<parens>");
         }
-        public override void PostWalk(ParenthesisExpression node) {
+        public override void PostWalk(ParenthesizedExpression node) {
             Pop();
         }
 
@@ -422,13 +422,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // DelStatement
-        public override bool Walk(DelStatement node) {
+        public override bool Walk(DeleteStatement node) {
             string descr = "<del>";
             if (node.Variable != null)
                 descr += " Name:" + SymbolTable.IdToString(node.Variable.Name);
             return DefaultWalk(node, descr);
         }
-        public override void PostWalk(DelStatement node) {
+        public override void PostWalk(DeleteStatement node) {
             Pop();
         }
 
@@ -541,6 +541,30 @@ namespace Microsoft.Scripting.Ast {
             }
             Pop();
             return false;
+        }
+
+        // TryStatement
+        public override bool Walk(TryStatement node) {
+            return DefaultWalk(node, "<statictry>");
+        }
+        public override void PostWalk(TryStatement node) {
+            Pop();
+        }
+
+        // TryFinallyStatement
+        public override bool Walk(TryFinallyStatement node) {
+            return DefaultWalk(node, "<statictryfinally>");
+        }
+        public override void PostWalk(TryFinallyStatement node) {
+            Pop();
+        }
+
+        // CatchBlock
+        public override bool Walk(CatchBlock node) {
+            return DefaultWalk(node, "<catchblock>");
+        }
+        public override void PostWalk(CatchBlock node) {
+            Pop();
         }
 
         // YieldStatement

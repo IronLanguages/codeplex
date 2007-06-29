@@ -125,10 +125,8 @@ namespace Microsoft.Scripting {
                 return MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Targets, BinderType).CallReflected(context, CallType.ImplicitInstance, args[0], instance);
             }
 
-            object [] newArgs = new object[args.Length+1];
-            newArgs[0] = instance;
-            Array.Copy(args, 0, newArgs, 1, args.Length);
-            return MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Targets, BinderType).CallReflected(context, CallType.ImplicitInstance, newArgs);
+            return MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Targets, BinderType).
+                CallReflected(context, CallType.ImplicitInstance, Utils.Array.Insert(instance, args));
         }
 
         private BinderType BinderType {
@@ -201,10 +199,8 @@ namespace Microsoft.Scripting {
                 if (CompilerHelpers.IsStatic(bestTarget)) {
                     ret = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodBase[] { bestTarget }, BinderType.Normal).CallReflected(context, CallType.None, bestArgs);
                 } else {
-                    object[] withInst = new object[bestArgs.Length + 1];
-                    withInst[0] = instance;
-                    Array.Copy(bestArgs, 0, withInst, 1, bestArgs.Length);
-                    ret = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodBase[] { bestTarget }, BinderType.Normal).CallReflected(context, CallType.ImplicitInstance, withInst);
+                    ret = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodBase[] { bestTarget }, BinderType.Normal).
+                        CallReflected(context, CallType.ImplicitInstance, Utils.Array.Insert(instance, bestArgs));
                 }
 
                 // any unbound arguments left over we assume the user

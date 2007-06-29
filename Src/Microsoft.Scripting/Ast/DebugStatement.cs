@@ -20,7 +20,7 @@ namespace Microsoft.Scripting.Ast {
     public class DebugStatement : Statement {
         private readonly string _marker;
 
-        public DebugStatement(string marker)
+        internal DebugStatement(string marker)
             : base(SourceSpan.None) {
             _marker = marker;
         }
@@ -37,6 +37,12 @@ namespace Microsoft.Scripting.Ast {
             if (walker.Walk(this)) {
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static DebugStatement Debug(string marker) {
+            return new DebugStatement(marker);
         }
     }
 }

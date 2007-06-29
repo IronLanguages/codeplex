@@ -19,6 +19,8 @@ using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime;
 
 namespace IronPython.Compiler.Ast {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public abstract class ListComprehensionIterator : Node {
         internal abstract MSAst.Statement Transform(AstGenerator ag, MSAst.Statement body);
     }
@@ -45,25 +47,26 @@ namespace IronPython.Compiler.Ast {
 
             // 1. Initialization code - create list and store it in the temp variable
             MSAst.BoundAssignment initialize =
-                new MSAst.BoundAssignment(
+                Ast.Assign(
+                    _item.Span,
                     list.Variable,
-                    new MSAst.MethodCallExpression(
-                        AstGenerator.GetHelperMethod("MakeList", Utils.Reflection.EmptyTypes), // method
+                    Ast.Call(
+                        _item.Span,
                         null,                                                                  // instance
-                        new MSAst.Expression[0],                                               // arguments
-                        _item.Span
-                        ),
-                    Operators.None,
-                    _item.Span);
+                        AstGenerator.GetHelperMethod("MakeList", Utils.Reflection.EmptyTypes), // method
+                        new MSAst.Expression[0]                                                // arguments
+                    )                    
+                );
 
             // 2. Create body from _item:   list.Append(_item)
-            MSAst.Statement body = new MSAst.ExpressionStatement(
-                MSAst.MethodCallExpression.Call(
+            MSAst.Statement body = Ast.Statement(
+                _item.Span,
+                Ast.Call(
                     list,
                     typeof(List).GetMethod("Append"),                    
                     ag.Transform(_item)
-                    ),
-                _item.Span);
+                )
+            );
 
             // 3. Transform all iterators in reverse order, building the true body:
             int current = _iterators.Length;
@@ -72,14 +75,13 @@ namespace IronPython.Compiler.Ast {
                 body = iterator.Transform(ag, body);
             }
 
-            return new MSAst.CommaExpression(
-                new MSAst.Expression[] {
-                        initialize,
-                        new MSAst.VoidExpression(body),
-                        list,                   // result
-                    },
-                    2,                          // index of list (result)
-                    Span);
+            return Ast.Comma(
+                Span,
+                2,                          // index of list (result)
+                initialize,
+                Ast.Void(body),
+                list                        // result
+            );
         }
 
         public override void Walk(PythonWalker walker) {

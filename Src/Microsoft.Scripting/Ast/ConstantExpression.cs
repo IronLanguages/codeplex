@@ -20,11 +20,7 @@ namespace Microsoft.Scripting.Ast {
     public class ConstantExpression : Expression {
         private readonly object _value;
 
-        public ConstantExpression(object value)
-            : this(value, SourceSpan.None) {
-        }
-
-        public ConstantExpression(object value, SourceSpan span)
+        internal ConstantExpression(SourceSpan span, object value)
             : base(span) {
             _value = value;
         }
@@ -75,9 +71,26 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
+    public static partial class Ast {
+        public static ConstantExpression True() {
+            return new ConstantExpression(SourceSpan.None, true);
+        }
+        public static ConstantExpression False() {
+            return new ConstantExpression(SourceSpan.None, false);
+        }
+        public static ConstantExpression Zero() {
+            return new ConstantExpression(SourceSpan.None, 0);
+        }
+        public static ConstantExpression Null() {
+            return new ConstantExpression(SourceSpan.None, null);
+        }
         public static ConstantExpression Constant(object value) {
-            return new ConstantExpression(value);
+            return Constant(SourceSpan.None, value);
+        }
+        public static ConstantExpression Constant(SourceSpan span, object value) {
+            return new ConstantExpression(span, value);
         }
     }
 }

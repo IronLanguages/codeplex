@@ -232,7 +232,7 @@ namespace Microsoft.Scripting.Ast {
         public override bool Walk(ContinueStatement node) { return true; }
 
         // DelStatement
-        public override bool Walk(DelStatement node) {
+        public override bool Walk(DeleteStatement node) {
             bool defined;
             if (TryCheckVariable(node.Variable, out defined)) {
                 node.IsDefined = defined;
@@ -240,7 +240,7 @@ namespace Microsoft.Scripting.Ast {
             return true;
         }
 
-        public override void PostWalk(DelStatement node) {
+        public override void PostWalk(DeleteStatement node) {
             Delete(node.Variable);
         }
 

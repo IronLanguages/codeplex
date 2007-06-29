@@ -19,18 +19,14 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
-    /// AST node representing deletion of the expression.
+    /// AST node representing deletion of the variable value.
     /// </summary>
-    public class DelStatement : Statement {
+    public class DeleteStatement : Statement {
         private readonly Variable _var;
         private VariableReference _ref;
         private bool _defined;
 
-        public DelStatement(Variable var)
-            : this(var, SourceSpan.None) {
-        }
-
-        public DelStatement(Variable var, SourceSpan span)
+        internal DeleteStatement(SourceSpan span, Variable var)
             : base(span) {
             _var = var;
         }
@@ -62,6 +58,12 @@ namespace Microsoft.Scripting.Ast {
             if (walker.Walk(this)) {
             }
             walker.PostWalk(this);
+        }
+    }
+
+    public static partial class Ast {
+        public static DeleteStatement Delete(SourceSpan span, Variable variable) {
+            return new DeleteStatement(span, variable);
         }
     }
 }

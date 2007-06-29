@@ -131,10 +131,7 @@ namespace IronPython.Runtime.Operations {
                 ValidateArgs(args);
 
                 if (_inst != null) {
-                    object[] realArgs = new object[args.Length + 1];
-                    realArgs[0] = _inst;
-                    Array.Copy(args, 0, realArgs, 1, args.Length);
-                    return PythonOps.CallWithContext(context, _func, realArgs);
+                    return PythonOps.CallWithContext(context, _func, Utils.Array.Insert(_inst, args));
                 } else {
                     return PythonOps.CallWithContext(context, _func, args);
                 }
@@ -201,10 +198,7 @@ namespace IronPython.Runtime.Operations {
             public object Call(CodeContext context, params object[] args) {
                 object ret;
                 if (_inst != null) {
-                    object[] realArgs = new object[args.Length + 1];
-                    realArgs[0] = _inst;
-                    Array.Copy(args, 0, realArgs, 1, args.Length);
-                    ret = PythonOps.CallWithContext(context, _func, realArgs);
+                    ret = PythonOps.CallWithContext(context, _func, Utils.Array.Insert(_inst, args));
                 } else {
                     ret = PythonOps.CallWithContext(context, _func, args);
                 }

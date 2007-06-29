@@ -106,15 +106,19 @@ namespace Microsoft.Scripting {
             MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { Setter }, BinderType.Normal);
 
             if (args.Length == 0) {
-                if (instance != null) binder.CallInstanceReflected(context, instance, value);
-                else binder.CallReflected(context, CallType.None, value);
+                if (instance != null) {
+                    binder.CallInstanceReflected(context, instance, value);
+                } else {
+                    binder.CallReflected(context, CallType.None, value);
+                }
             } else {
-                object[] nargs = new object[args.Length + 1];
-                Array.Copy(args, 0, nargs, 0, args.Length);
-                nargs[args.Length] = value;
+                args = Utils.Array.Append(args, value); 
 
-                if (instance != null) binder.CallInstanceReflected(context, instance, nargs);
-                else binder.CallReflected(context, CallType.None, nargs);
+                if (instance != null) {
+                    binder.CallInstanceReflected(context, instance, args);
+                } else {
+                    binder.CallReflected(context, CallType.None, args);
+                }
             }
 
             return true;

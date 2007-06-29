@@ -60,27 +60,7 @@ namespace Microsoft.Scripting.Ast {
         private bool _visibleScope = true;
         private bool _parameterArray;
 
-        public static CodeBlock MakeCodeBlock(string name) {
-            return new CodeBlock(name);
-        }
-
-        public static CodeBlock MakeCodeBlock(string name, SourceSpan span) {
-            return new CodeBlock(name, span);
-        }
-
-        public CodeBlock(SymbolId name)
-            : this(name, SourceSpan.None) {
-        }
-
-        public CodeBlock(SymbolId name, SourceSpan span)
-            : this(SymbolTable.IdToString(name), span) {
-        }
-
-        public CodeBlock(string name)
-            : this(name, SourceSpan.None) {
-        }
-
-        public CodeBlock(string name, SourceSpan span)
+        internal CodeBlock(SourceSpan span, string name)
             : base(span) {
             _name = name;
         }
@@ -188,6 +168,12 @@ namespace Microsoft.Scripting.Ast {
 
         public Variable CreateParameter(SymbolId name, Expression defaultValue) {
             Variable variable = Variable.Parameter(this, name, typeof(object), defaultValue);
+            _parameters.Add(variable);
+            return variable;
+        }
+
+        public Variable CreateParameter(SymbolId name, Expression defaultValue, bool inParameterArray) {
+            Variable variable = Variable.Parameter(this, name, typeof(object), defaultValue, inParameterArray);
             _parameters.Add(variable);
             return variable;
         }
@@ -420,12 +406,9 @@ namespace Microsoft.Scripting.Ast {
 
 
         public object Execute(CodeContext context, params object[] args) {
-            //TODO what about parameters?
-            /*SymbolDictionary parms = new SymbolDictionary();
             for (int i = 0; i < _parameters.Count; i++) {
-                parms.Add(_parameters[i].Name, Variable.);
+                context.Scope.SetName(_parameters[i].Name, args[i]);
             }
-            CodeContext child = RuntimeHelpers.CreateNestedCodeContext(context, parms, visible);*/
             object ret = Body.Execute(context);
             if (ret == Statement.NextStatement) {
                 return null;
@@ -449,6 +432,33 @@ namespace Microsoft.Scripting.Ast {
             FlowChecker.Check(this);
         }
 
+        public object ExecuteWithChildContext(CodeContext parent, params object[] args) {
+            CodeContext child = new CodeContext(new Scope(parent.Scope.ModuleScope, new SymbolDictionary()), parent.LanguageContext, parent.ModuleContext);
+            return Execute(child, args);
+        }
+
+        // Return a delegate to this.Execute, for use in interpreted mode
+        public Delegate GetInterpretedDelegate() {
+            FlowChecker.Check(this);
+
+            //TODO: return a better match than CallTargetWithContextN
+            /*Type delegateType;
+            if (_parameterArray) {
+                delegateType = typeof(CallTargetWithContextN);
+            } else {
+                delegateType = CallTargets.GetTargetType(true, _parameters.Count);
+            }
+            
+            List<Type> paramTypes = new List<Type>();
+            paramTypes.Add(typeof(CodeContext));
+            for (int i = 0; i < _parameters.Count; i++) {
+                paramTypes.Add(_parameters[i].Type);
+            }
+            MethodInfo exec = typeof(CodeBlock).GetMethod("ExecuteWithChildContext");
+            return CodeGen.CreateDelegate(exec, delegateType, this);*/
+            return new CallTargetWithContextN(ExecuteWithChildContext);
+        }
+
         public void EmitDelegate(CodeGen cg, bool forceWrapperMethod) {
             FlowChecker.Check(this);
             bool createWrapperMethod = _parameterArray ? false : forceWrapperMethod || NeedsWrapperMethod();
@@ -459,9 +469,21 @@ namespace Microsoft.Scripting.Ast {
                 !(cg.ContextSlot is StaticFieldSlot) ||
                 _parameterArray;
 
+            bool hasThis = false;
+
+            for (int index = 0; index < _parameters.Count; index++) {
+                if (! _parameters[index].InParameterArray) {
+                    // Currently only one parameter can be out of parameter array
+                    // TODO: Any number of parameters to be taken out of parameter array
+                    Debug.Assert(hasThis == false);
+                    Debug.Assert(index == 0);
+                    hasThis = true;
+                }
+            }
+
             cg.EmitSequencePointNone();
 
-            CodeGen impl = CreateMethod(cg, hasContextParameter);
+            CodeGen impl = CreateMethod(cg, hasContextParameter, hasThis);
             
             EmitFunctionImplementation(impl);
             impl.Finish();
@@ -469,11 +491,19 @@ namespace Microsoft.Scripting.Ast {
             // if the method has more than our maximum # of args wrap
             // it in a method that takes an object[] instead.
             if (createWrapperMethod) {
-                CodeGen wrapper = MakeWrapperMethodN(cg, impl);
+                CodeGen wrapper = MakeWrapperMethodN(cg, impl, hasThis);
                 wrapper.Finish();
-                cg.EmitDelegate(wrapper, typeof(CallTargetWithContextN));
+                if (hasThis) {
+                    cg.EmitDelegate(wrapper, typeof(CallTargetWithContextAndThisN));
+                } else {
+                    cg.EmitDelegate(wrapper, typeof(CallTargetWithContextN));
+                }
             } else if (_parameterArray) {
-                cg.EmitDelegate(impl, typeof(CallTargetWithContextN));
+                if (hasThis) {
+                    cg.EmitDelegate(impl, typeof(CallTargetWithContextAndThisN));
+                } else {
+                    cg.EmitDelegate(impl, typeof(CallTargetWithContextN));
+                }
             } else {
                 cg.EmitDelegate(impl, CallTargets.GetTargetType(hasContextParameter, _parameters.Count));
             }
@@ -483,7 +513,7 @@ namespace Microsoft.Scripting.Ast {
         /// Defines the method with the correct signature and sets up the context slot appropriately.
         /// </summary>
         /// <returns></returns>
-        private CodeGen CreateMethod(CodeGen outer, bool hasContextParameter) {
+        private CodeGen CreateMethod(CodeGen outer, bool hasContextParameter, bool hasThis) {
             List<Type> paramTypes = new List<Type>();
             List<SymbolId> paramNames = new List<SymbolId>();
             CodeGen impl;
@@ -497,11 +527,19 @@ namespace Microsoft.Scripting.Ast {
 
             // Parameters
             if (_parameterArray) {
+                int startIndex = 0;
+                if (hasThis) {
+                    paramTypes.Add(typeof(Object));
+                    paramNames.Add(SymbolTable.StringToId("$this"));
+                    _parameters[0].ParameterIndex = parameterIndex++;
+                    startIndex = 1;
+                }
+
                 paramTypes.Add(typeof(object[]));
                 paramNames.Add(SymbolTable.StringToId("$params"));
-                int index = 0;
-                foreach (Variable p in _parameters) {
-                    p.ParameterIndex = index++;
+
+                for (int index = startIndex; index < _parameters.Count; index++) {
+                    _parameters[index].ParameterIndex = index - startIndex;
                 }
             } else {
                 foreach (Variable p in _parameters) {
@@ -532,10 +570,11 @@ namespace Microsoft.Scripting.Ast {
         /// Creates a wrapper method for the user-defined function.  This allows us to use the CallTargetN
         /// delegate against the function when we don't have a CallTarget# which is large enough.
         /// </summary>
-        private CodeGen MakeWrapperMethodN(CodeGen outer, CodeGen impl) {
+        private CodeGen MakeWrapperMethodN(CodeGen outer, CodeGen impl, bool hasThis) {
             CodeGen wrapper;
             Slot contextSlot = null;
             Slot argSlot;
+            Slot thisSlot = null;
             ConstantPool staticData = null;
 
             bool hasContextParameter = impl.ArgumentSlots.Count > 0
@@ -548,31 +587,55 @@ namespace Microsoft.Scripting.Ast {
             string implName = impl.MethodBase.Name;
 
             if (hasContextParameter) {
-                wrapper = outer.DefineMethod(implName,
-                    typeof(object),
-                    new Type[] { typeof(CodeContext), typeof(object[]) },
-                    null, staticData);
-                contextSlot = wrapper.GetArgumentSlot(0);
-                argSlot = wrapper.GetArgumentSlot(1);
+                if (hasThis) {
+                    wrapper = outer.DefineMethod(implName,
+                        typeof(object),
+                        new Type[] { typeof(CodeContext), typeof(object), typeof(object[]) },
+                        null, staticData);
+                    contextSlot = wrapper.GetArgumentSlot(0);
+                    thisSlot = wrapper.GetArgumentSlot(1);
+                    argSlot = wrapper.GetArgumentSlot(2);
+                } else {
+                    wrapper = outer.DefineMethod(implName,
+                        typeof(object),
+                        new Type[] { typeof(CodeContext), typeof(object[]) },
+                        null, staticData);
+                    contextSlot = wrapper.GetArgumentSlot(0);
+                    argSlot = wrapper.GetArgumentSlot(1);
+                }
             } else {
                 // Context weirdness: DynamicMethods need to flow their context, and if we don't
                 // have a TypeGen we'll create a DynamicMethod but we won't flow context w/ it.
                 Debug.Assert(outer.TypeGen != null);
-
-                wrapper = outer.DefineMethod(implName, typeof(object), new Type[] { typeof(object[]) },
-                    null, staticData);
-                argSlot = wrapper.GetArgumentSlot(0);
+                if (hasThis) {
+                    wrapper = outer.DefineMethod(implName, typeof(object), new Type[] { typeof(object), typeof(object[]) },
+                        null, staticData);
+                    thisSlot = wrapper.GetArgumentSlot(0);
+                    argSlot = wrapper.GetArgumentSlot(1);
+                } else {
+                    wrapper = outer.DefineMethod(implName, typeof(object), new Type[] { typeof(object[]) },
+                        null, staticData);
+                    argSlot = wrapper.GetArgumentSlot(0);
+                }
             }
 
             if (wrapper.ConstantPool != null) {
                 wrapper.ConstantPool.Slot.EmitGet(wrapper);
             }
 
-            if (contextSlot != null) contextSlot.EmitGet(wrapper);
+            if (contextSlot != null) {
+                contextSlot.EmitGet(wrapper);
+            }
 
-            for (int pi = 0; pi < _parameters.Count; pi++) {
+            int startIndex = 0;
+            if (thisSlot != null) {
+                thisSlot.EmitGet(wrapper);
+                startIndex = 1;
+            }
+
+            for (int pi = startIndex; pi < _parameters.Count; pi++) {
                 argSlot.EmitGet(wrapper);
-                wrapper.EmitInt(pi);
+                wrapper.EmitInt(pi - startIndex);
                 wrapper.Emit(OpCodes.Ldelem_Ref);
             }
             wrapper.EmitCall(impl.MethodInfo);
@@ -654,6 +717,23 @@ namespace Microsoft.Scripting.Ast {
 
             return (T)(object)cg.CreateDelegate(typeof(T));
         }
- 
+    }
+
+    public static partial class Ast {
+        public static CodeBlock CodeBlock(string name) {
+            return CodeBlock(SourceSpan.None, name);
+        }
+
+        public static CodeBlock CodeBlock(SourceSpan span, string name) {
+            return new CodeBlock(span, name);
+        }
+
+        public static CodeBlock CodeBlock(SymbolId name) {
+            return CodeBlock(SourceSpan.None, SymbolTable.IdToString(name));
+        }
+
+        public static CodeBlock CodeBlock(SourceSpan span, SymbolId name) {
+            return CodeBlock(span, SymbolTable.IdToString(name));
+        }
     }
 }

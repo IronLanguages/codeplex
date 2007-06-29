@@ -20,8 +20,8 @@ using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Actions {
     public class CallAction : Action {
-        private static CallAction _simple = new CallAction();
-        private ArgumentKind[] _argumentKinds;
+        private static readonly CallAction _simple = new CallAction();
+        private readonly ArgumentKind[] _argumentKinds;
 
         protected CallAction() {
         }
@@ -167,6 +167,12 @@ namespace Microsoft.Scripting.Actions {
             if (_expandList) ret ^= 0x20000000;
             if (_expandDictionary) ret ^= 0x40000000;
             return ret;
+        }
+
+        public bool IsSimple {
+            get {
+                return Equals(Simple);
+            }
         }
 
         public string ParameterString {

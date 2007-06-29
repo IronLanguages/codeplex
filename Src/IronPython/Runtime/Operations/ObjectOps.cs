@@ -31,6 +31,8 @@ using Microsoft.Scripting.Generation;
 
 [assembly: PythonExtensionType(typeof(object), typeof(ObjectOps))]
 namespace IronPython.Runtime.Operations {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public static class ObjectOps {
         // Types for which the pickle module has built-in support (from PEP 307 case 2)
         private static Dictionary<DynamicType, object> nativelyPickleableTypes = null;
@@ -316,11 +318,12 @@ namespace IronPython.Runtime.Operations {
                 res.SetTest(MakeTest<T>(args, strAttr, res));
                 res.SetTarget(
                     res.MakeReturn(DefaultContext.Default.LanguageContext.Binder,
-                        MethodCallExpression.Call(null,
+                        Ast.Call(
+                            null,
                             typeof(ObjectOps).GetMethod("GetAttribute"),
-                                new CodeContextExpression(),
-                                GetTargetObject<T>(res, args),
-                                new ConstantExpression(strAttr)
+                            Ast.CodeContext(),
+                            GetTargetObject<T>(res, args),
+                            Ast.Constant(strAttr)
                         )
                     )
                 );
@@ -330,24 +333,25 @@ namespace IronPython.Runtime.Operations {
             private static Expression MakeTest<T>(object[] args, string strAttr, StandardRule<T> res) {
                 // test is object types + test on the parameter being looked up.  The input name is
                 // either an object or a string so we call the appropriaet overload on string.
-                return BinaryExpression.AndAlso(
+                return Ast.AndAlso(
                     res.MakeTestForTypes(CompilerHelpers.ObjectTypes(args), 0),
-                    MethodCallExpression.Call(
-                        new ConstantExpression(strAttr),
-                        typeof(string).GetMethod("Equals", new Type[] { res.GetParameterExpression(res.Parameters.Length - 1).ExpressionType }),
-                        res.GetParameterExpression(res.Parameters.Length - 1)
+                    Ast.Call(
+                        Ast.Constant(strAttr),
+                        typeof(string).GetMethod("Equals", new Type[] { res.Parameters[res.ParameterCount - 1].ExpressionType }),
+                        res.Parameters[res.ParameterCount - 1]
                     )
                 );
             }
 
             private Expression GetTargetObject<T>(StandardRule<T> rule, object[] args) {
                 if (args.Length == 2) {
-                    return MethodCallExpression.Call(
-                        rule.GetParameterExpression(0),
-                        typeof(BoundBuiltinFunction).GetMethod("get_Self"));
+                    return Ast.Call(
+                        rule.Parameters[0],
+                        typeof(BoundBuiltinFunction).GetMethod("get_Self")
+                    );
                 } else {
                     Debug.Assert(args.Length == 3);
-                    return rule.GetParameterExpression(1);
+                    return rule.Parameters[1];
                 }
             }
         }

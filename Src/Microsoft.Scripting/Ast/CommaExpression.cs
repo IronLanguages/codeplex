@@ -29,11 +29,7 @@ namespace Microsoft.Scripting.Ast {
         private IList<Expression> _expressions;
         private int _valueIndex;
 
-        public CommaExpression(IList<Expression> expressions, int valueIndex)
-            : this(expressions, valueIndex, SourceSpan.None) {
-        }
-
-        public CommaExpression(IList<Expression> expressions, int valueIndex, SourceSpan span)
+        internal CommaExpression(SourceSpan span, IList<Expression> expressions, int valueIndex)
             : base(span) {
             if (expressions == null) {
                 throw new ArgumentNullException("expressions");
@@ -112,17 +108,20 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+    }
 
-        #region Factories
-
-        public static CommaExpression Comma(int valueIndex, params Expression[] expressions) {
-            return new CommaExpression(expressions, valueIndex);
-        }
-
+    public static partial class Ast {
         public static CommaExpression Comma(int valueIndex, IList<Expression> expressions) {
-            return new CommaExpression(expressions, valueIndex);
+            return Comma(SourceSpan.None, valueIndex, expressions);
         }
-
-        #endregion
+        public static CommaExpression Comma(SourceSpan span, int valueIndex, IList<Expression> expressions) {
+            return new CommaExpression(span, expressions, valueIndex);
+        }
+        public static CommaExpression Comma(int valueIndex, params Expression[] expressions) {
+            return Comma(SourceSpan.None, valueIndex, expressions);
+        }
+        public static CommaExpression Comma(SourceSpan span, int valueIndex, params Expression[] expressions) {
+            return new CommaExpression(span, expressions, valueIndex);
+        }
     }
 }

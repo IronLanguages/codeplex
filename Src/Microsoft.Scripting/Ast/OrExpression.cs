@@ -21,7 +21,7 @@ namespace Microsoft.Scripting.Ast {
     public class OrExpression : Expression {
         private readonly Expression _left, _right;
 
-        public OrExpression(Expression left, Expression right, SourceSpan span)
+        internal OrExpression(SourceSpan span, Expression left, Expression right)
             : base(span) {
             if (left == null) throw new ArgumentNullException("left");
             if (right == null) throw new ArgumentNullException("right");
@@ -67,6 +67,14 @@ namespace Microsoft.Scripting.Ast {
                 _right.Walk(walker);
             }
             walker.PostWalk(this);
+        }
+    }
+    /// <summary>
+    /// Factory methods.
+    /// </summary>
+    public static partial class Ast {
+        public static OrExpression Or(SourceSpan span, Expression left, Expression right) {
+            return new OrExpression(span, left, right);
         }
     }
 }

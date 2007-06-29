@@ -288,8 +288,10 @@ class skip:
         elif is_silverlight and 'silverlight' in self.platforms:
             msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
             return _do_nothing(msg)
-        
-        if sys.platform in self.platforms: 
+        elif sys.platform in self.platforms: 
+            msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
+            return _do_nothing(msg)
+        elif ("cli64" in self.platforms) and is_cli64:
             msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
             return _do_nothing(msg)
         elif ("orcas" in self.platforms) and is_orcas:
