@@ -117,8 +117,17 @@ namespace Microsoft.Scripting.Ast {
                     EmitBranchTrue(cg, Operators.Equal, label);
                     break;
                 case Operators.AndAlso:
-                    _left.EmitBranchFalse(cg, label);
-                    _right.EmitBranchFalse(cg, label);
+                    if (_left.IsConstant(false)) {
+                        cg.Emit(OpCodes.Br, label);
+                    } else {
+                        if (!_left.IsConstant(true)) _left.EmitBranchFalse(cg, label);
+
+                        if (_right.IsConstant(false)) {
+                            cg.Emit(OpCodes.Br, label);
+                        } else if (!_right.IsConstant(true)) {
+                            _right.EmitBranchFalse(cg, label);
+                        }
+                    } 
                     break;
                 default:
                     base.EmitBranchFalse(cg, label);

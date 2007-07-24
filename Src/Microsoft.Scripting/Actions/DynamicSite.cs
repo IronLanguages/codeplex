@@ -93,14 +93,13 @@ namespace Microsoft.Scripting.Actions {
     }
 
     
-    
     /// <summary>
     /// An optinized dynamic site which caches the value of CodeContext
     /// and therefore doesn't require it being passed into its Invoke method.
     /// </summary>
     public abstract class FastDynamicSite {
         private readonly Action _action;
-        private readonly CodeContext _context;
+        private CodeContext _context;
 
         protected FastDynamicSite(CodeContext context, Action action) {
             this._context = context;
@@ -113,6 +112,7 @@ namespace Microsoft.Scripting.Actions {
 
         public CodeContext Context {
             get { return _context; }
+            internal set { _context = value; }
         }
     }
 }

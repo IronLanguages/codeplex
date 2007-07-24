@@ -13,43 +13,48 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Ast {
-    public class Arg : Node {
-        public enum ArgumentKind {
-            Simple,
-            Named,
-            List,
-            Dictionary,
-            Instance
-        };
+using Microsoft.Scripting.Actions;
 
-        private readonly SymbolId _name;
+namespace Microsoft.Scripting.Ast {
+    public enum ArgumentKind {
+        Simple,
+        Named,
+        List,
+        Dictionary,
+        Instance,
+        Block
+    };
+
+    public class Arg : Node {
         private readonly Expression _expr;
-        private readonly ArgumentKind _kind;
+        private readonly ArgumentInfo _info;
 
         private Arg(SymbolId name, Expression expression, ArgumentKind kind, SourceSpan span)
             : base(span) {
-            _name = name;
             _expr = expression;
-            _kind = kind;
+            _info = new ArgumentInfo(kind, name);
         }
 
         public override string ToString() {
-            return base.ToString() + ":" + SymbolTable.IdToString(_name);
+            return base.ToString() + ":" + SymbolTable.IdToString(_info.Name);
         }
 
+        public ArgumentKind Kind {
+            get { return _info.Kind; }
+        }
+        
         public SymbolId Name {
-            get { return _name; }
+            get { return _info.Name; }
+        }
+
+        public ArgumentInfo Info {
+            get { return _info; }
         }
 
         public Expression Expression {
             get { return _expr; }
         }
-
-        public ArgumentKind Kind {
-            get { return _kind; }
-        }
-
+        
         public override void Walk(Walker walker) {
             if (walker.Walk(this)) {
                 _expr.Walk(walker);

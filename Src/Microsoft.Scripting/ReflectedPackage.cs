@@ -60,6 +60,14 @@ namespace Microsoft.Scripting {
             this._isolated = isolated;
         }
 
+        public void Clear() {
+            _initialized = 0;
+            _lastDiscovery = 0;
+            _dict = new SymbolDictionary();
+            _packageAssemblies = new List<Assembly>();
+            _typeNames = new Dictionary<Assembly, TypeNames>();
+        }
+
         #region Public API Surface
 
         /// <summary>

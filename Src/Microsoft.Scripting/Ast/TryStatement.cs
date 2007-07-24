@@ -65,25 +65,40 @@ namespace Microsoft.Scripting.Ast {
         }
         
         public override object Execute(CodeContext context) {
+            bool rethrow = false;
+            Exception savedExc = null;
+            object ret = Statement.NextStatement;
             try {
-                return _body.Execute(context);
+                ret = _body.Execute(context);
             } catch (Exception exc) {
+                rethrow = true;
+                savedExc = exc;
                 if (_handlers != null) {
                     foreach (CatchBlock handler in _handlers) {
                         if (handler.Test.IsInstanceOfType(exc)) {
+                            rethrow = false;
                             if (handler.Variable != null) {
                                 RuntimeHelpers.SetName(context, handler.Variable.Name, exc);
                             }
-                            return handler.Body.Execute(context);
+                            ret = handler.Body.Execute(context);
+                            break;
                         }
                     }
                 }
-                throw;
             } finally {
                 if (_finally != null) {
-                    _finally.Execute(context);
+                    object finallyRet = _finally.Execute(context);
+                    if (finallyRet != Statement.NextStatement) {
+                        ret = finallyRet;
+                        rethrow = false;
+                    }
+                }
+                if (rethrow) {
+                    throw ExceptionHelpers.UpdateForRethrow(savedExc);
                 }
             }
+
+            return ret;
         }
         
         public override void Emit(CodeGen cg) {

@@ -177,7 +177,7 @@ namespace IronPython.Runtime {
 
         public object this[Slice slice] {
             get {
-                return Make(ArrayOps.GetSlice(data, data.Length, slice));
+                return MakeTuple(ArrayOps.GetSlice(data, slice));
             }
         }
 

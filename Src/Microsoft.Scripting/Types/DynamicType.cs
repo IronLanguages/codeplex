@@ -12,6 +12,7 @@
  *
  *
  * ***************************************************************************/
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -497,6 +498,16 @@ namespace Microsoft.Scripting {
             while (_allowKeywordCtor.Count <= context.Id)
                 _allowKeywordCtor.Add(true);
             _allowKeywordCtor[context.Id] = false;
+        }
+
+        protected override void UpdateVersion() {
+            foreach (WeakReference wr in SubTypes) {
+                if (wr.IsAlive) {
+                    ((DynamicType)wr.Target).UpdateVersion();
+                }
+            }
+
+            base.UpdateVersion();
         }
 
         #region Object overrides

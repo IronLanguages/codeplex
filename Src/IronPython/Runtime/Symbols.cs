@@ -21,11 +21,8 @@ using System.Collections.Generic;
 
 namespace IronPython.Runtime {
     public static partial class Symbols {
-        public const int ObjectKeysId = -2;
-        public static readonly SymbolId ObjectKeys = new SymbolId(ObjectKeysId);
-
         //
-        // This is only called from the static constructor
+        // This is only called from the properties which get symbols.
         //
         private static SymbolId MakeSymbolId(string name) {
             return SymbolTable.StringToId(name);

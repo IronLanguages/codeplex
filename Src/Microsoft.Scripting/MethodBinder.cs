@@ -30,7 +30,7 @@ namespace Microsoft.Scripting {
         internal string _name;
         private BinderType _binderType;
         internal Dictionary<int, TargetSet> _targetSets = new Dictionary<int, TargetSet>();
-        internal List<ParamsMethodMaker> _paramsMakers = new List<ParamsMethodMaker>();
+        internal List<ParamsMethodMaker> _paramsMakers;
         internal ActionBinder _binder;
 
         private static bool IsUnsupported(MethodBase method) {
@@ -87,10 +87,12 @@ namespace Microsoft.Scripting {
                 AddBasicMethodTargets(method);
             }
 
-            foreach (ParamsMethodMaker maker in _paramsMakers) {
-                foreach (int count in _targetSets.Keys) {
-                    MethodCandidate target = maker.MakeTarget(binder, count);
-                    if (target != null) AddTarget(target);
+            if (_paramsMakers != null) {
+                foreach (ParamsMethodMaker maker in _paramsMakers) {
+                    foreach (int count in _targetSets.Keys) {
+                        MethodCandidate target = maker.MakeTarget(binder, count);
+                        if (target != null) AddTarget(target);
+                    }
                 }
             }
         }
@@ -117,7 +119,7 @@ namespace Microsoft.Scripting {
         }
 
         private Exception BadArgumentCount(CallType callType, int argCount) {
-            if (_targetSets.Count == 0) return new ArgumentTypeException("no callable targets, if this is a generic method make sure specify the type parameters");
+            if (_targetSets.Count == 0) return new ArgumentTypeException("no callable targets, if this is a generic method make sure to specify the type parameters");
             int minArgs, maxArgs;
             GetMinAndMaxArgs(out minArgs, out maxArgs);
 
@@ -137,9 +139,11 @@ namespace Microsoft.Scripting {
 
         private TargetSet BuildTargetSet(int count) {
             TargetSet ts = new TargetSet(this, count);
-            foreach (ParamsMethodMaker maker in _paramsMakers) {
-                MethodCandidate target = maker.MakeTarget(_binder, count);
-                if (target != null) ts.Add(target);
+            if (_paramsMakers != null) {
+                foreach (ParamsMethodMaker maker in _paramsMakers) {
+                    MethodCandidate target = maker.MakeTarget(_binder, count);
+                    if (target != null) ts.Add(target);
+                }
             }
             return ts;
         }
@@ -148,7 +152,7 @@ namespace Microsoft.Scripting {
             TargetSet ts;
             if (_targetSets.TryGetValue(nargs, out ts)) {
                 return ts;
-            } else if (_paramsMakers.Count > 0) {
+            } else if (_paramsMakers != null) {
                 ts = BuildTargetSet(nargs);
                 if (ts._targets.Count > 0) {
                     return ts;
@@ -181,6 +185,7 @@ namespace Microsoft.Scripting {
             AddTarget(target);
             if (CompilerHelpers.IsParamsMethod(target.Target.Method)) {
                 ParamsMethodMaker maker = new ParamsMethodMaker(target);
+                if (_paramsMakers == null) _paramsMakers = new List<ParamsMethodMaker>();
                 _paramsMakers.Add(maker);
             }
         }
@@ -224,7 +229,7 @@ namespace Microsoft.Scripting {
                 } else {
                     ParameterWrapper param = new ParameterWrapper(_binder, pi);
                     parameters.Add(param);
-                    argBuilders.Add(new SimpleArgBuilder(argIndex++, param.Type));
+                    argBuilders.Add(new SimpleArgBuilder(argIndex++, param.Type, CompilerHelpers.IsParamArray(pi)));
                 }
             }
 
@@ -287,7 +292,7 @@ namespace Microsoft.Scripting {
                 } else {
                     ParameterWrapper param = new ParameterWrapper(_binder, pi);
                     parameters.Add(param);
-                    argBuilders.Add(new SimpleArgBuilder(argIndex++, param.Type));
+                    argBuilders.Add(new SimpleArgBuilder(argIndex++, param.Type, CompilerHelpers.IsParamArray(pi)));
                 }
             }
 
@@ -320,10 +325,6 @@ namespace Microsoft.Scripting {
 
         public bool HasConflict {
             get { return _hasConflict || _binder.IsBinaryOperator; }
-        }
-
-        public bool NeedsContext {
-            get { return _targets.Count != 1 || _targets[0].Target.NeedsContext || !_targets[0].Target.CanMakeCallTarget(); }
         }
 
         public MethodCandidate MakeBindingTarget(CallType callType, Type[] types, SymbolId[] names) {

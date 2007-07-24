@@ -137,44 +137,59 @@ namespace Microsoft.Scripting.Ast {
         }
         
         public override object Execute(CodeContext context) {
+            object ret = Statement.NextStatement;
+            Exception savedExc = null;
+            bool rethrow = false;
             try {
-                object ret = Statement.NextStatement;
-
                 try {
                     ret = _body.Execute(context);
-                    if (!(ret is ControlFlow)) {
-                        return ret;
-                    }
                 } catch (Exception exc) {
+                    rethrow = true;
+                    savedExc = exc;
                     try {
                         object extracted = RuntimeHelpers.PushExceptionHandler(context, exc);
-                        foreach (DynamicTryStatementHandler handler in _handlers) {
-                            object target = extracted;
-                            if (handler.Test != null) {
-                                target = RuntimeHelpers.CheckException(context, extracted, handler.Test.Evaluate(context));
-                            }
-                            if (target != null) {
-                                if (handler.Variable != null) {
-                                    RuntimeHelpers.SetName(context, handler.Variable.Name, target);
+                        if (_handlers != null) {
+                            foreach (DynamicTryStatementHandler handler in _handlers) {
+                                object target = extracted;
+                                if (handler.Test != null) {
+                                    target = RuntimeHelpers.CheckException(context, extracted, handler.Test.Evaluate(context));
                                 }
-                                return handler.Body.Execute(context);
+                                if (target != null) {
+                                    rethrow = false;
+                                    if (handler.Variable != null) {
+                                        BoundAssignment.EvaluateAssign(context, handler.Variable, target);
+                                    }
+                                    ret = handler.Body.Execute(context);
+                                    break;
+                                }
                             }
                         }
                     } finally {
                         RuntimeHelpers.PopExceptionHandler(context);
                     }
-                    throw; // No handler matched
                 }
-                if (_else != null) {
-                    return _else.Execute(context);
-                } else {
-                    return Statement.NextStatement;
+                if (_else != null && rethrow) {
+                    try {
+                        ret = _else.Execute(context);
+                    } catch (Exception exc) {
+                        // The interaction of else and finally here differs from the emit case
+                        // (see work item #268351)
+                        savedExc = exc;
+                    }
                 }
             } finally {
                 if (_finally != null) {
-                    _finally.Execute(context);
+                    object finallyRet = _finally.Execute(context);
+                    if (finallyRet != Statement.NextStatement) {
+                        ret = finallyRet;
+                        rethrow = false;
+                    }
+                }
+                if (rethrow) {
+                    throw ExceptionHelpers.UpdateForRethrow(savedExc);
                 }
             }
+            return ret;
         }
         
         public override void Emit(CodeGen cg) {

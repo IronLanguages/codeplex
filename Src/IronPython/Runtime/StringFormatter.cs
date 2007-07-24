@@ -30,15 +30,9 @@ namespace IronPython.Runtime {
     internal class StringFormatter {
 
         // This is a ThreadStatic since so that formatting operations on one thread do not interfere with other threads
-        private static NumberFormatInfo NumberFormatInfoForThread {
-            get {
-                return ThreadStatics.StringFormatter_NumberFormatInfoForThread;
-            }
-            set {
-                ThreadStatics.StringFormatter_NumberFormatInfoForThread = value;
-            }
-        }
-
+        [ThreadStatic]
+        private static NumberFormatInfo NumberFormatInfoForThread;
+ 
         private static NumberFormatInfo nfi {
             get {
                 if (NumberFormatInfoForThread == null) {

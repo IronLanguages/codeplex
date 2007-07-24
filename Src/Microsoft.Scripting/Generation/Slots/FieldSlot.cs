@@ -43,7 +43,7 @@ namespace Microsoft.Scripting.Generation {
             if (cg == null) throw new ArgumentNullException("cg");
 
             _instance.EmitGet(cg);
-            cg.Emit(OpCodes.Ldflda, _field);
+            cg.EmitFieldAddress(_field);
         }
 
         public override void EmitSet(CodeGen cg, Slot val) {

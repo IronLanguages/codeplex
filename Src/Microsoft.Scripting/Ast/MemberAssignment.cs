@@ -55,6 +55,26 @@ namespace Microsoft.Scripting.Ast {
             _value = value;
         }
 
+        public override object Evaluate(CodeContext context) {
+            object target = _expression != null ? _expression.Evaluate(context) : null;
+            object value = _value.Evaluate(context);
+            
+            switch (_member.MemberType) {
+                case MemberTypes.Field:
+                    FieldInfo field = (FieldInfo)_member;
+                    field.SetValue(target, value);
+                    break;
+                case MemberTypes.Property:
+                    PropertyInfo property = (PropertyInfo)_member;
+                    property.SetValue(target, value, null);
+                    break;
+                default:
+                    Debug.Assert(false, "Invalid member type");
+                    break;
+            }
+            return null;
+        }
+
         public override void Emit(CodeGen cg) {
             // emit "this", if any
             if (_expression != null) {
@@ -70,7 +90,7 @@ namespace Microsoft.Scripting.Ast {
                     FieldInfo field = (FieldInfo)_member;
                     _value.EmitAs(cg, field.FieldType);
                     cg.EmitFieldSet(field);
-                    break;                    
+                    break;
                 case MemberTypes.Property:
                     PropertyInfo property = (PropertyInfo)_member;
                     _value.EmitAs(cg, property.PropertyType);

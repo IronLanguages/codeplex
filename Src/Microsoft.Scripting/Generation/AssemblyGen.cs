@@ -202,8 +202,12 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void Dump() {
+            Dump(null);
+        }
+
+        public void Dump(string fileName) {
 #if !SILVERLIGHT // AssemblyBuilder.Save
-            _myAssembly.Save(_outFileName, _peKind, _machine);
+            _myAssembly.Save(fileName ?? _outFileName, _peKind, _machine);
             if (VerifyAssemblies) {
                 PeVerifyThis();
             }
@@ -307,8 +311,9 @@ namespace Microsoft.Scripting.Generation {
         public CodeGen DefineMethod(string methodName, Type returnType, IList<Type> paramTypes, ConstantPool constantPool) {
             CodeGen cg;
             if (GenerateStaticMethods) {
-                TypeGen tg = DefinePublicType("Type$" + methodName + "$" + Interlocked.Increment(ref _index), typeof(object));
-                cg = tg.DefineMethod("Handle", returnType, paramTypes, null, constantPool);
+                int index = Interlocked.Increment(ref _index);
+                TypeGen tg = DefinePublicType("Type$" + methodName + "$" + index, typeof(object));
+                cg = tg.DefineMethod("Handle" + index, returnType, paramTypes, null, constantPool);
                 cg.DynamicMethod = true;
             } else {
                 Type[] parameterTypes = CompilerHelpers.MakeParamTypeArray(paramTypes, constantPool);

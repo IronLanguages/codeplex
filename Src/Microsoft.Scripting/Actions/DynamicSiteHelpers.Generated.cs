@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
     public static partial class DynamicSiteHelpers {        
@@ -61,49 +62,85 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static object Execute(CodeContext context, ActionBinder binder, Action action, params object[] args) {
-            for (int i = 0; i < args.Length; i++) {
-                binder.Context.Scope.SetName(SymbolTable.StringToId("$arg" + i.ToString()), args[i]);
-            }
             bool result;
             switch (args.Length) {
                 case 1:
                     StandardRule<DynamicSiteTarget<object, object>> rule1 = 
-                        binder.GetRule<DynamicSiteTarget<object, object>>(action, args);
-                    result = (bool)rule1.Test.Evaluate(binder.Context);
-                    Debug.Assert(result);
-                    return rule1.Target.Execute(binder.Context);
+                        binder.GetRule<DynamicSiteTarget<object, object>>(context, action, args);
+
+                    using (context.Scope.TemporaryVariableContext(rule1.TemporaryVariables, rule1.ParamVariables, args)) {
+                        result = (bool)rule1.Test.Evaluate(context);
+                        Debug.Assert(result);
+                        return rule1.Target.Execute(context);
+                    }
                 case 2:
                     StandardRule<DynamicSiteTarget<object, object, object>> rule2 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object>>(action, args);
-                    result = (bool)rule2.Test.Evaluate(binder.Context);
-                    Debug.Assert(result);
-                    return rule2.Target.Execute(binder.Context);
+                        binder.GetRule<DynamicSiteTarget<object, object, object>>(context, action, args);
+
+                    using (context.Scope.TemporaryVariableContext(rule2.TemporaryVariables, rule2.ParamVariables, args)) {
+                        result = (bool)rule2.Test.Evaluate(context);
+                        Debug.Assert(result);
+                        return rule2.Target.Execute(context);
+                    }
                 case 3:
                     StandardRule<DynamicSiteTarget<object, object, object, object>> rule3 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object, object>>(action, args);
-                    result = (bool)rule3.Test.Evaluate(binder.Context);
-                    Debug.Assert(result);
-                    return rule3.Target.Execute(binder.Context);
+                        binder.GetRule<DynamicSiteTarget<object, object, object, object>>(context, action, args);
+
+                    using (context.Scope.TemporaryVariableContext(rule3.TemporaryVariables, rule3.ParamVariables, args)) {
+                        result = (bool)rule3.Test.Evaluate(context);
+                        Debug.Assert(result);
+                        return rule3.Target.Execute(context);
+                    }
                 case 4:
                     StandardRule<DynamicSiteTarget<object, object, object, object, object>> rule4 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object>>(action, args);
-                    result = (bool)rule4.Test.Evaluate(binder.Context);
-                    Debug.Assert(result);
-                    return rule4.Target.Execute(binder.Context);
+                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object>>(context, action, args);
+
+                    using (context.Scope.TemporaryVariableContext(rule4.TemporaryVariables, rule4.ParamVariables, args)) {
+                        result = (bool)rule4.Test.Evaluate(context);
+                        Debug.Assert(result);
+                        return rule4.Target.Execute(context);
+                    }
                 case 5:
                     StandardRule<DynamicSiteTarget<object, object, object, object, object, object>> rule5 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object>>(action, args);
-                    result = (bool)rule5.Test.Evaluate(binder.Context);
-                    Debug.Assert(result);
-                    return rule5.Target.Execute(binder.Context);
+                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object>>(context, action, args);
+
+                    using (context.Scope.TemporaryVariableContext(rule5.TemporaryVariables, rule5.ParamVariables, args)) {
+                        result = (bool)rule5.Test.Evaluate(context);
+                        Debug.Assert(result);
+                        return rule5.Target.Execute(context);
+                    }
                 case 6:
                     StandardRule<DynamicSiteTarget<object, object, object, object, object, object, object>> rule6 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object, object>>(action, args);
-                    result = (bool)rule6.Test.Evaluate(binder.Context);
-                    Debug.Assert(result);
-                    return rule6.Target.Execute(binder.Context);
+                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object, object>>(context, action, args);
+
+                    using (context.Scope.TemporaryVariableContext(rule6.TemporaryVariables, rule6.ParamVariables, args)) {
+                        result = (bool)rule6.Test.Evaluate(context);
+                        Debug.Assert(result);
+                        return rule6.Target.Execute(context);
+                    }
+                default:
+                    //TODO: use CompilerHelpers.GetTypes(args) instead?
+                    Type tupleType = NewTuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), args.Length));
+                    Type targetType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, typeof(object));
+                    Type ruleType = typeof(StandardRule<>).MakeGenericType(targetType);
+                    MethodInfo getRule = typeof(ActionBinder).GetMethod("GetRule").MakeGenericMethod(targetType);
+                    object ruleN = getRule.Invoke(binder, new object[] { context, action, args });
+                    Ast.Expression test = (Ast.Expression)ruleType.GetProperty("Test").GetValue(ruleN, null);
+                    Ast.Statement target = (Ast.Statement)ruleType.GetProperty("Target").GetValue(ruleN, null);
+                    Ast.Variable[] paramVars = (Ast.Variable[]) ruleType.GetProperty("ParamVariables",
+                        BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
+                    Ast.Variable[] tempVars = (Ast.Variable[])ruleType.GetProperty("TemporaryVariables",
+                        BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
+
+
+                    NewTuple t = NewTuple.MakeTuple(tupleType, args);
+                    object[] tupArg = new object[] {t};
+                    using (context.Scope.TemporaryVariableContext(tempVars, paramVars, tupArg)) {
+                        result = (bool)test.Evaluate(context);
+                        Debug.Assert(result);
+                        return target.Execute(context);
+                    }
             }
-            throw new ArgumentException("requires 1-6 arguments");
         }
 
         private class UninitializedTargetHelper<T0, T1, T2, T3, T4, T5, Tret> {
@@ -144,22 +181,6 @@ namespace Microsoft.Scripting.Actions {
                 return site.UpdateBindingAndInvoke(arg0, arg1, arg2, arg3, arg4, arg5);
             }
         }
-        public static Delegate MakeUninitializedTarget(Type targetType) {
-            List<Type> types = new List<Type>(targetType.GetGenericArguments());
-            int argCount = types.Count - 1;
-            while (types.Count < 7) types.Insert(argCount, typeof(object));
-            Type dType = typeof(UninitializedTargetHelper<,,,,,,>).MakeGenericType(types.ToArray());
-            return Delegate.CreateDelegate(targetType, Activator.CreateInstance(dType), "Invoke"+argCount);
-        }
-
-        public static Delegate MakeUninitializedFastTarget(Type targetType) {
-            List<Type> types = new List<Type>(targetType.GetGenericArguments());
-            int argCount = types.Count - 1;
-            while (types.Count < 7) types.Insert(argCount, typeof(object));
-            Type dType = typeof(UninitializedTargetHelper<,,,,,,>).MakeGenericType(types.ToArray());
-            return Delegate.CreateDelegate(targetType, Activator.CreateInstance(dType), "FastInvoke"+argCount);
-        }
-
 
         // *** END GENERATED CODE ***
 

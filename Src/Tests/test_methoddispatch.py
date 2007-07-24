@@ -149,15 +149,34 @@ if not is_silverlight:
         from System.Drawing import Rectangle
         r = Rectangle(0, 0, 3, 7)
         s = Rectangle(3, 0, 8, 14)
+        
+        # calling the static method
         i = Rectangle.Intersect(r, s)
         AreEqual(i, Rectangle(3, 0, 0, 7))
         AreEqual(r, Rectangle(0, 0, 3, 7))
         AreEqual(s, Rectangle(3, 0, 8, 14))
+        
+        # calling the instance
         i = r.Intersect(s)
         AreEqual(i, None)
-        AreEqual(r, Rectangle(3, 0, 0, 7))
+        AreEqual(r, Rectangle(0, 0, 3, 7))
         AreEqual(s, Rectangle(3, 0, 8, 14))
-
+        
+        # calling instance w/ StrongBox
+        box = clr.StrongBox[Rectangle](r)
+        i = box.Intersect(s)
+        AreEqual(i, None)
+        AreEqual(box.Value, Rectangle(3, 0, 0, 7))
+        AreEqual(s, Rectangle(3, 0, 8, 14))
+        
+        # should be able to access properties through the box
+        AreEqual(box.X, 3)
+        
+        # multiple sites should produce the same function
+        i = box.Intersect
+        j = box.Intersect
+        
+        AreEqual(i.Target.Id, j.Target.Id)
 
 def test_io_memorystream():
     s = System.IO.MemoryStream()

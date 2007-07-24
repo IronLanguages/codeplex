@@ -25,16 +25,12 @@ namespace Microsoft.Scripting.Ast {
         private Type _type;
         private System.Reflection.ConstructorInfo _constructor;
 
-        internal NewArrayExpression(Type type, IList<Expression> expressions)
-            : base(SourceSpan.None) {
+        internal NewArrayExpression(SourceSpan span, Type type, IList<Expression> expressions)
+            : base(span) {
             if (expressions == null) throw new ArgumentNullException("expressions");
             if (type == null) throw new ArgumentNullException("type");
-            for (int i = 0; i < expressions.Count; i++) {
-                if (expressions[i] == null) {
-                    Debug.Assert(false);
-                    throw new ArgumentNullException("expressions[" + i.ToString() + "]");
-                }
-            }
+            if (!type.IsArray) throw new ArgumentException("Not an array type", "type");
+            Utils.Array.CheckNonNullElements(expressions, "expressions");
 
             _type = type;
             _expressions = expressions;
@@ -56,7 +52,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override object Evaluate(CodeContext context) {
-            if (_type.IsValueType) {
+            if (_type.GetElementType().IsValueType) {
                 // value arrays cannot be cast to object arrays
                 object contents = (object)_constructor.Invoke(new object[] { _expressions.Count });
                 System.Reflection.MethodInfo setter = _type.GetMethod("Set");
@@ -93,7 +89,7 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="type">The type of the array (e.g. object[]).</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
         public static NewArrayExpression NewArray(Type type, IEnumerable<Expression> initializers) {
-            return new NewArrayExpression(type, new List<Expression>(initializers));
+            return new NewArrayExpression(SourceSpan.None, type, new List<Expression>(initializers));
         }
 
         /// <summary>
@@ -102,7 +98,17 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="type">The type of the array (e.g. object[]).</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
         public static NewArrayExpression NewArray(Type type, params Expression[] initializers) {
-            return new NewArrayExpression(type, new List<Expression>(initializers));
+            return new NewArrayExpression(SourceSpan.None, type, new List<Expression>(initializers));
+        }
+
+        /// <summary>
+        /// Creates a new array expression of the specified type from the provided initializers.
+        /// </summary>
+        /// <param name="span">The SourceSpan that corresponds with the location in code.</param>
+        /// <param name="type">The type of the array (e.g. object[]).</param>
+        /// <param name="initializers">The expressions used to create the array elements.</param>
+        public static NewArrayExpression NewArray(SourceSpan span, Type type, params Expression[] initializers) {
+            return new NewArrayExpression(span, type, new List<Expression>(initializers));
         }
     }
 }

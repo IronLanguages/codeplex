@@ -194,7 +194,31 @@ namespace IronPython.Runtime {
         public object GetValue(object key, object defaultValue) {
             return DictionaryOps.GetIndex(this, key, defaultValue);
         }
-        
+
+        public virtual object this[params object[] key] {
+            get {
+                if (key == null) return this[(object)null];
+
+                if (key.Length == 0) {
+                    throw PythonOps.TypeError("__getitem__() takes exactly one argument (0 given)");
+                }                
+
+                return this[Tuple.MakeTuple(key)];
+            }
+            set {
+                if (key == null) {
+                    this[(object)null] = value;
+                    return;
+                }
+
+                if (key.Length == 0) {
+                    throw PythonOps.TypeError("__setitem__() takes exactly two argument (1 given)");
+                }
+
+                this[Tuple.MakeTuple(key)] = value;
+            }
+        }
+
         public virtual object this[object key] {
             [PythonName("__getitem__")]
             get {

@@ -16,10 +16,14 @@
 using System;
 using System.Reflection;
 using System.Diagnostics;
+using System.Collections.Generic;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Actions {
     public static partial class DynamicSiteHelpers {
+        private static Dictionary<Type, CreateSite> _siteCtors = new Dictionary<Type, CreateSite>();
+        private static Dictionary<Type, CreateFastSite> _fastSiteCtors = new Dictionary<Type, CreateFastSite>();
 
         /// <summary>
         /// Checks to see if a given delegate is used as a "fast" target.  A fast target
@@ -39,15 +43,22 @@ namespace Microsoft.Scripting.Actions {
         //
         public static Slot MakeSlot(Action action, CodeGen cg, params Type[] types) {
             Type siteType = MakeDynamicSiteType(types);
-            return cg.TypeGen.AddStaticField(siteType, "#" + types.Length + "#" + Action.MakeName(action));
+
+            return cg.TypeGen.AddStaticField(siteType, "#" + types.Length.ToString() + "#" + Action.MakeName(action));
         }
 
-        public static DynamicSite MakeSite(Action action, Type siteType, int size) {
-            Debug.Assert(typeof(DynamicSite).IsAssignableFrom(siteType));
-            if (size > MaximumArity) {
-                return (DynamicSite)siteType.GetConstructor(new Type[] { typeof(Action) }).Invoke(new object[] { action });
+        private delegate object CreateSite(Action action);
+        private delegate object CreateFastSite(CodeContext context, Action action);
+
+        public static DynamicSite MakeSite(Action action, Type siteType) {
+            CreateSite ctor;
+            lock (_siteCtors) {
+                if (!_siteCtors.TryGetValue(siteType, out ctor)) {
+                    _siteCtors[siteType] = ctor = (CreateSite)Delegate.CreateDelegate(typeof(CreateSite), siteType.GetMethod("Create"));
+                }
             }
-            return (DynamicSite)siteType.GetConstructor(new Type[] { typeof(Action) }).Invoke(new object[] { action });
+
+            return (DynamicSite)ctor(action);
         }
 
         //
@@ -56,15 +67,20 @@ namespace Microsoft.Scripting.Actions {
                 
         public static Slot MakeFastSlot(Action action, CodeGen cg, params Type[] types) {
             Type siteType = MakeFastDynamicSiteType(types);
-            return cg.TypeGen.AddStaticField(siteType, "#" + types.Length + "#" + Action.MakeName(action));
+            
+            return cg.TypeGen.AddStaticField(siteType, "#" + types.Length.ToString() + "#" + Action.MakeName(action));            
         }
 
-        public static FastDynamicSite MakeFastSite(CodeContext context, Action action, Type siteType, int size) {
+        public static FastDynamicSite MakeFastSite(CodeContext context, Action action, Type siteType) {
             Debug.Assert(typeof(FastDynamicSite).IsAssignableFrom(siteType.BaseType));
-            if (size > MaximumArity) {
-                return (FastDynamicSite)siteType.GetConstructor(new Type[] { typeof(CodeContext), typeof(Action) }).Invoke(new object[] { context, action});
+            CreateFastSite ctor;
+            lock (_fastSiteCtors) {
+                if (!_fastSiteCtors.TryGetValue(siteType, out ctor)) {
+                    _fastSiteCtors[siteType] = ctor = (CreateFastSite)Delegate.CreateDelegate(typeof(CreateFastSite), siteType.GetMethod("Create"));
+                }
             }
-            return (FastDynamicSite)siteType.GetConstructor(new Type[] { typeof(CodeContext), typeof(Action) }).Invoke(new object[] { context, action });
+
+            return (FastDynamicSite)ctor(context, action);
         }
 
         //
@@ -74,28 +90,20 @@ namespace Microsoft.Scripting.Actions {
         public static void InitializeFields(CodeContext context, Type type) {
             if (type == null) return;
 
+            const string slotStorageName = "#SlotStorage";
             foreach (FieldInfo fi in type.GetFields()) {
-                Action action;
-                if (fi.Name.StartsWith("#")) {
-                    int end = fi.Name.IndexOf('#', 1);
-                    int size = Int32.Parse(fi.Name.Substring(1, end - 1));
-                    action = Action.ParseName(fi.Name.Substring(end + 1));
-
-                    if (typeof(DynamicSite).IsAssignableFrom(fi.FieldType)) {
-                        fi.SetValue(null, MakeSite(action, fi.FieldType, size));
-                    } else if (typeof(FastDynamicSite).IsAssignableFrom(fi.FieldType)) {
-                        fi.SetValue(null, MakeFastSite(context, action, fi.FieldType, size));
+                if (fi.Name.StartsWith(slotStorageName)) {
+                    object value = ConstantPool.GetConstantData(Int32.Parse(fi.Name.Substring(slotStorageName.Length)));
+                    FastDynamicSite fds = value as FastDynamicSite;
+                    if (fds != null) {
+                        fds.Context = context;
                     }
-                }
+                    fi.SetValue(null, value);
+                }                
             }
         }
 
-        public static void InsertArguments(Scope scope, params object[] args) {
-            for (int i = 0; i < args.Length; i++) {
-                scope.SetName(SymbolTable.StringToId("$arg" + i.ToString()), args[i]);
-            }
-        }
-
+        
         private static Type MakeBigDynamicSiteType(params Type[] types) {
             if (types.Length < 2) throw new ArgumentException("must have at least 2 types");
 
@@ -121,6 +129,26 @@ namespace Microsoft.Scripting.Actions {
             public Tret BigFastInvoke(BigFastDynamicSite<T0, Tret> site, T0 arg0) {
                 return site.UpdateBindingAndInvoke(arg0);
             }
+        }
+
+        public static Delegate MakeUninitializedTarget(Type targetType) {
+            Type[] args = new Type[DynamicSiteHelpers.MaximumArity];
+            Type[] existing = targetType.GetGenericArguments();
+            for (int i = 0; i < existing.Length - 1; i++) args[i] = existing[i];
+            for (int i = existing.Length - 1; i < args.Length - 1; i++) args[i] = typeof(object);
+            args[args.Length - 1] = existing[existing.Length - 1];
+            Type dType = typeof(UninitializedTargetHelper<,,,,,,>).MakeGenericType(args);
+            return Delegate.CreateDelegate(targetType, Activator.CreateInstance(dType), "Invoke" + (existing.Length - 1).ToString());
+        }
+
+        public static Delegate MakeUninitializedFastTarget(Type targetType) {
+            Type[] args = new Type[DynamicSiteHelpers.MaximumArity];
+            Type[] existing = targetType.GetGenericArguments();
+            for (int i = 0; i < existing.Length - 1; i++) args[i] = existing[i];
+            for (int i = existing.Length - 1; i < args.Length - 1; i++) args[i] = typeof(object);
+            args[args.Length - 1] = existing[existing.Length - 1];
+            Type dType = typeof(UninitializedTargetHelper<,,,,,,>).MakeGenericType(args);
+            return Delegate.CreateDelegate(targetType, Activator.CreateInstance(dType), "FastInvoke" + (existing.Length - 1).ToString());
         }
 
         public static Delegate MakeUninitializedBigTarget(Type targetType) {

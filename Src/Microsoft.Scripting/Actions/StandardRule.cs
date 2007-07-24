@@ -54,6 +54,7 @@ namespace Microsoft.Scripting.Actions {
 
         // TODO revisit these fields and their uses when CodeBlock moves down
         private Expression[] _parameters;
+        private Variable[] _paramVariables;
         private List<Variable> _temps;
         private VariableReference[] _references;
 
@@ -63,9 +64,13 @@ namespace Microsoft.Scripting.Actions {
             ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
             if (!DynamicSiteHelpers.IsBigTarget(typeof(T))) {
                 _parameters = new Expression[pis.Length - firstParameter];
+                List<Variable> paramVars = new List<Variable>();
                 for (int i = firstParameter; i < pis.Length; i++) {
-                    _parameters[i - firstParameter] = Ast.ReadDefined(MakeParameter(i, "$arg" + (i - firstParameter), pis[i].ParameterType));
+                    Variable p = MakeParameter(i, "$arg" + (i - firstParameter), pis[i].ParameterType);
+                    paramVars.Add(p);
+                    _parameters[i - firstParameter] = Ast.ReadDefined(p);
                 }
+                _paramVariables = paramVars.ToArray();
             } else {
                 MakeTupleParameters(firstParameter, typeof(T).GetGenericArguments()[0]);
             }
@@ -74,7 +79,10 @@ namespace Microsoft.Scripting.Actions {
         private void MakeTupleParameters(int firstParameter, Type tupleType) {
             int count = NewTuple.GetSize(tupleType);
 
-            Expression tuple = Ast.ReadDefined(MakeParameter(firstParameter, "$arg0", tupleType));
+            Variable tupleVar = MakeParameter(firstParameter, "$arg0", tupleType);
+            _paramVariables = new Variable[] { tupleVar };
+            Expression tuple = Ast.ReadDefined(tupleVar);
+
             _parameters = new Expression[count];
             for (int i = 0; i < _parameters.Length; i++) {
                 Expression tupleAccess = tuple;
@@ -109,6 +117,24 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary>
+        /// Gets the logical parameters to the dynamic site in the form of Variables.
+        /// </summary>
+        internal Variable[] ParamVariables {
+            get {
+                return _paramVariables;
+            }
+        }
+
+        /// <summary>
+        ///  Gets the temporary variables allocated by this rule.
+        /// </summary>
+        internal Variable[] TemporaryVariables {
+            get {
+                return _temps == null ? new Variable[] { } : _temps.ToArray();
+            }
+        }
+
+        /// <summary>
         /// Gets the number of logical parameters the dynamic site is provided with.
         /// </summary>
         public int ParameterCount {
@@ -119,6 +145,7 @@ namespace Microsoft.Scripting.Actions {
 
         private Variable MakeParameter(int index, string name, Type type) {
             Variable ret = Variable.Parameter(null, SymbolTable.StringToId(name), type);
+
             ret.ParameterIndex = index;
             return ret;
         }
@@ -136,12 +163,22 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public void SetTest(Expression test) {
+            if (test == null) throw new ArgumentNullException("test");
             if (_test != null) throw new InvalidOperationException();
             _test = test;
         }
 
+        public void AddTest(Expression expression) {
+            Utils.Assert.NotNull(expression);
+            if (_test == null) {
+                _test = expression;
+            } else {
+                _test = Ast.AndAlso(_test, expression);
+            }
+        }
+
         public void SetTarget(Statement target) {
-            if (_target != null) throw new InvalidOperationException();
+            if (target == null) throw new ArgumentNullException("test");
             _target = target;
         }
 
@@ -179,12 +216,14 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public void Emit(CodeGen cg, Label ifFalse) {            
+        public void Emit(CodeGen cg, Label ifFalse) {
+            Utils.Assert.NotNull(_test, _target);
+
             // Need to make sure we aren't generating into two different CodeGens at the same time
             lock (this) {
                 // First, finish binding my variable references
                 if (_references == null) {
-                    _references = RuleBinder.Bind(_test, _target, _temps);
+                    _references = RuleBinder.Bind(_test, _target);
                 }
 
                 foreach (VariableReference vr in _references) {
@@ -253,7 +292,7 @@ namespace Microsoft.Scripting.Actions {
         public Expression MakeTestForTypes(DynamicType[] types, int index) {
             Expression test = MakeTypeTest(types[index], index);
             if (index+1 < types.Length) {
-                Expression nextTests = MakeTestForTypes(types, index+1);
+                Expression nextTests = MakeTestForTypes(types, index + 1);
                 if (test.IsConstant(true)) {
                     return nextTests;
                 } else if (nextTests.IsConstant(true)) {
@@ -318,7 +357,7 @@ namespace Microsoft.Scripting.Actions {
         public static StandardRule<T> Simple(ActionBinder binder, MethodTarget target, params DynamicType[] types) {
             StandardRule<T> ret = new StandardRule<T>();
             ret.MakeTest(types);
-            ret.SetTarget(ret.MakeReturn(binder, target.MakeExpression(binder, ret.Parameters)));
+            ret.SetTarget(ret.MakeReturn(binder, target.MakeExpression(binder, ret.Parameters, CompilerHelpers.ConvertToTypes(types))));
             return ret;
         }
 
@@ -366,6 +405,19 @@ namespace Microsoft.Scripting.Actions {
         }
 
         #endregion
+
+#if DEBUG
+        public string Dump {
+            get {
+                using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
+                    AstWriter.ForceDump(Test, "Test", writer);
+                    writer.WriteLine();
+                    AstWriter.ForceDump(Target, "Target", writer);
+                    return writer.ToString();
+                }
+            }
+        }
+#endif
     }
 }
  

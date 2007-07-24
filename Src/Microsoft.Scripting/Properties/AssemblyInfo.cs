@@ -50,8 +50,9 @@ using System.Security;
 //
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
-[assembly: AssemblyVersion("1.0.0.200")]
-[assembly: AssemblyFileVersion("2.0.10627.00")]
+[assembly: AssemblyVersion("1.0.0.300")]
+[assembly: AssemblyFileVersion("2.0.10724.00")]
+[assembly: AssemblyInformationalVersion("1.0")]
 [assembly: SecurityTransparent]
 
 

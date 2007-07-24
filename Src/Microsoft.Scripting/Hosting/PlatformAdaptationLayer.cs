@@ -41,11 +41,10 @@ namespace Microsoft.Scripting.Hosting {
             _assemblyFullNames.Add("system.xml.core", "System.Xml.Core, Version=2.1.0.0, PublicKeyToken=b77a5c561934e089");
             _assemblyFullNames.Add("system.silverlight", "System.SilverLight, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
             _assemblyFullNames.Add("agclr", "agclr, Version=0.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("microsoft.scripting", "Microsoft.Scripting, Version=1.0.0.100, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("microsoft.scripting.vestigial", "Microsoft.Scripting.Vestigial, Version=1.0.0.100, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("microsoft.scripting", "Microsoft.Scripting, Version=1.0.0.300, PublicKeyToken=b03f5f7f11d50a3a");
             _assemblyFullNames.Add("microsoft.scripting.silverlight", "Microsoft.Scripting.SilverLight, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("ironpython", "IronPython, Version=2.0.0.100, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("ironpython.modules", "IronPython.Modules, Version=2.0.0.100, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("ironpython", "IronPython, Version=2.0.0.300, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("ironpython.modules", "IronPython.Modules, Version=2.0.0.300, PublicKeyToken=b03f5f7f11d50a3a");
             _assemblyFullNames.Add("ironpythontest", "IronPythonTest, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
             _assemblyFullNames.Add("microsoft.jscript.compiler", "Microsoft.JScript.Compiler, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
             _assemblyFullNames.Add("microsoft.jscript.runtime", "Microsoft.JScript.Runtime, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");

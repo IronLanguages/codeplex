@@ -71,6 +71,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(ProgramFiles)\Microsoft SilverlightSystem.dll</HintPath>
     </Reference>
+    <Reference Include="System.Data" />
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
@@ -181,8 +182,10 @@
     <Compile Include="Runtime\Calls\Function.Generated.cs" />
     <Compile Include="Runtime\Calls\FunctionAttributes.cs" />
     <Compile Include="Runtime\Calls\FunctionCode.cs" />
+    <Compile Include="Runtime\Calls\PythonGetMemberBinderHelper.cs" />
     <Compile Include="Runtime\Calls\Method.cs" />
     <Compile Include="Runtime\Calls\PythonBinder.cs" />
+    <Compile Include="Runtime\Calls\PythonBinderHelper.cs" />
     <Compile Include="Runtime\Calls\PythonCallBinderHelper.cs" />
     <Compile Include="Runtime\CompareUtil.cs" />
     <Compile Include="Runtime\ConversionWrappers.cs" />
@@ -286,7 +289,7 @@
     <Compile Include="Runtime\WeakRef.cs" />
     <Compile Include="Runtime\WrapperDictionary.cs" />
     <Compile Include="Runtime\XRange.cs" />
-    <Compile Include="ThreadStatics.cs" />
+    <Compile Include="..\AssemblyVersion.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">

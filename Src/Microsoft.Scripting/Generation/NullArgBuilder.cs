@@ -32,10 +32,6 @@ namespace Microsoft.Scripting.Generation {
             return null;
         }
 
-        public override void Generate(CodeGen cg, IList<Slot> argSlots) {
-            cg.EmitNull();
-        }
-
         public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
             return Ast.Null();
         }

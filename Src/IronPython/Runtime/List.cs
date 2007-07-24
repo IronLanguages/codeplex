@@ -680,7 +680,7 @@ namespace IronPython.Runtime {
 
         private class DefaultPythonComparer : IComparer {
             public static DefaultPythonComparer Instance = new DefaultPythonComparer();
-            private FastDynamicSite<object, object, int> site = new FastDynamicSite<object, object, int>(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Compare));
+            private FastDynamicSite<object, object, int> site = FastDynamicSite<object, object, int>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Compare));
             public DefaultPythonComparer() { }
 
             public int Compare(object x, object y) {
@@ -698,7 +698,7 @@ namespace IronPython.Runtime {
         private class FunctionComparer : IComparer {
             //??? optimized version when we know we have a Function
             private object cmpfunc;
-            private FastDynamicSite<object, object, object, int> FuncSite = new FastDynamicSite<object, object, object, int>(DefaultContext.Default, CallAction.Simple);
+            private FastDynamicSite<object, object, object, int> FuncSite = FastDynamicSite<object, object, object, int>.Create(DefaultContext.Default, CallAction.Simple);
             public FunctionComparer(object cmpfunc) { this.cmpfunc = cmpfunc; }
 
             public int Compare(object o1, object o2) {

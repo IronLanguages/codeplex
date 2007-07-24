@@ -186,16 +186,25 @@ namespace IronPython.Runtime {
             return val;
         }
 
-        private static int ParseInt(string text, int b) {
-            int ret = 0;
-            int m = 1;
+        private static bool ParseInt(string text, int b, out int ret) {
+            ret = 0;
+            long m = 1;
             for (int i = text.Length - 1; i >= 0; i--) {
-                checked {
-                    ret += m * CharValue(text[i], b);  // this is more generous than needed
-                    m *= b;                            // is this optimized???
+                // avoid the exception here.  Not only is throwing it expensive,
+                // but loading the resources for it is also expensive 
+                long lret = (long)ret + m * CharValue(text[i], b);
+                if (Int32.MinValue <= lret && lret <= Int32.MaxValue) {
+                    ret = (int)lret;
+                } else {
+                    return false;
+                }
+
+                m *= b;
+                if (Int32.MinValue > m || m > Int32.MaxValue) {
+                    return false;
                 }
             }
-            return ret;
+            return true;
         }
 
         private static bool TryParseInt(string text, int start, int length, int b, out int value) {
@@ -226,14 +235,14 @@ namespace IronPython.Runtime {
             }
 
             if (b == 0) b = DetectRadix(ref text);
-            try {
-                return ParseInt(text, b);
-            } catch (OverflowException) {
+            int iret;
+            if (!ParseInt(text, b, out iret)) {
                 BigInteger ret = ParseBigInteger(text, b);
-                int iret;
-                if (ret.AsInt32(out iret)) return iret;
-                return ret;
+                if (!ret.AsInt32(out iret)) {
+                    return ret;
+                }
             }
+            return iret;
         }
 
         public static object ParseIntegerSign(string text, int b) {

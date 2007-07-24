@@ -63,7 +63,7 @@ namespace IronPython.Runtime.Types {
         IDynamicObject {
 
         [NonSerialized]
-        private List<OldClass> _bases;
+        private IList<OldClass> _bases;
         private DynamicType _type = null;
 
         public IAttributesCollection __dict__;
@@ -77,8 +77,19 @@ namespace IronPython.Runtime.Types {
         public OldClass(string name, Tuple bases, IAttributesCollection dict) : this(name, bases, dict, "") {
         }
 
-        public OldClass(string name, Tuple bases, IAttributesCollection dict, string instanceNames) {
+        internal OldClass(string name, Tuple bases, IAttributesCollection dict, string instanceNames) {            
             _bases = ValidateBases(bases);
+
+            Init(name, dict, instanceNames);
+        }
+        
+        internal OldClass(string name, IList<OldClass> bases, IAttributesCollection dict, string instanceNames) {
+            Utils.Assert.NotNullItems(bases);
+            _bases = bases;
+            Init(name, dict, instanceNames);
+        }
+
+        private void Init(string name, IAttributesCollection dict, string instanceNames) {
             __name__ = name;
 
             InitializeInstanceNames(instanceNames);
@@ -192,7 +203,7 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        public List<OldClass> BaseClasses {
+        public IList<OldClass> BaseClasses {
             get {
                 return _bases;
             }
@@ -414,7 +425,7 @@ namespace IronPython.Runtime.Types {
             OldClass dt = other as OldClass;
             if (dt == null) return false;
 
-            List<OldClass> bases = _bases;
+            IList<OldClass> bases = _bases;
             foreach (OldClass bc in bases) {
                 if (bc.IsSubclassOf(other)) {
                     return true;
@@ -499,6 +510,16 @@ namespace IronPython.Runtime.Types {
         }
 
         public StandardRule<T> GetRule<T>(Action action, CodeContext context, object[] args) {
+            switch(action.Kind ){
+                case ActionKind.GetMember:
+                    return MakeGetMemberRule<T>((GetMemberAction)action, context, args);
+                case ActionKind.Call:
+                    return MakeCallRule<T>((CallAction)action, context, args);
+                default: return null;
+            }
+        }
+
+        private static StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
             if (action != CallAction.Simple) return null;
 
             StandardRule<T> rule = new StandardRule<T>();
@@ -522,6 +543,46 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
+        private static StandardRule<T> MakeGetMemberRule<T>(GetMemberAction action, CodeContext context, object[] args) {
+            StandardRule<T> rule = new StandardRule<T>();
+
+            rule.MakeTest(typeof(OldClass));
+            Expression target;
+
+            if (action.Name == Symbols.Dict) {
+                target = Ast.Comma(0,
+                    Ast.ReadField(rule.Parameters[0], typeof(OldClass).GetField("__dict__")),
+                    Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("DictionaryIsPublic")));
+            } else if (action.Name == Symbols.Bases) {
+                target = Ast.Call(null, 
+                    typeof(Tuple).GetMethod("Make"),
+                    Ast.ReadProperty(rule.Parameters[0], typeof(OldClass).GetProperty("BaseClasses")));                
+            } else if (action.Name == Symbols.Name) {
+                target = Ast.ReadProperty(rule.Parameters[0], typeof(OldClass).GetProperty("Name"));                
+            } else {
+                target = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("LookupValue"),
+                    Ast.CodeContext(),
+                    Ast.Constant(action.Name));
+            }
+
+            rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, target));
+
+            return rule;
+        }
+
+        public object LookupValue(CodeContext context, SymbolId name) {
+            object value;
+            if (TryLookupSlot(name, out value)) {
+                return GetOldStyleDescriptor(context, value, null, this);
+            }
+
+            throw PythonOps.AttributeErrorForMissingAttribute(this, name);
+        }
+
+        public void DictionaryIsPublic() {
+            HasDelAttr = true;
+            HasSetAttr = true;
+        }
         #endregion
     }
 
@@ -719,6 +780,8 @@ namespace IronPython.Runtime.Types {
                 case ActionKind.GetMember:
                 case ActionKind.SetMember:
                     return MakeMemberRule<T>((MemberAction)action, context, args);
+                case ActionKind.DoOperation:
+                    return MakeOperationRule<T>((DoOperationAction)action, context, args);
                 default:
                     return null;
             }
@@ -810,6 +873,27 @@ namespace IronPython.Runtime.Types {
 
             rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, target));
             return rule;
+        }
+
+        private static StandardRule<T> MakeOperationRule<T>(DoOperationAction action, CodeContext context, object[] args) {
+            if (action.Operation == Operators.GetItem || action.Operation == Operators.SetItem) {
+                StandardRule<T> rule = new StandardRule<T>();
+                rule.MakeTest(typeof(OldInstance));
+
+                string method = action.Operation == Operators.GetItem ? "GetItem" : "SetItem";
+                rule.SetTarget(
+                    rule.MakeReturn(context.LanguageContext.Binder,
+                        Ast.Call(
+                            rule.Parameters[0],
+                            typeof(OldInstance).GetMethod(method),
+                            PythonBinderHelper.GetCollapsedIndexArguments<T>(action, args, rule)
+                        )
+                    )
+                );
+
+                return rule;
+            }
+            return null;
         }
 
         #endregion

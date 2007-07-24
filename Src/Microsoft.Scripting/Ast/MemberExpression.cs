@@ -57,15 +57,19 @@ namespace Microsoft.Scripting.Ast {
             _expression = expression;
         }
 
+        public override void EmitAddress(CodeGen cg, Type asType) {
+            EmitInstance(cg);
+
+            if (asType != ExpressionType || _member.MemberType != MemberTypes.Field) {
+                base.EmitAddress(cg, asType);
+            } else {
+                cg.EmitFieldAddress((FieldInfo)_member);
+            }
+        }
+
         public override void Emit(CodeGen cg) {
             // emit "this", if any
-            if (_expression != null) {
-                if (_member.DeclaringType.IsValueType) {
-                    _expression.EmitAddress(cg, _member.DeclaringType);
-                } else {                
-                    _expression.EmitAs(cg, _member.DeclaringType);
-                }
-            }
+            EmitInstance(cg);
 
             switch (_member.MemberType) {
                 case MemberTypes.Field:
@@ -79,6 +83,16 @@ namespace Microsoft.Scripting.Ast {
                 default:
                     Debug.Assert(false, "Invalid member type");
                     break;
+            }
+        }
+
+        private void EmitInstance(CodeGen cg) {
+            if (_expression != null) {
+                if (_member.DeclaringType.IsValueType) {
+                    _expression.EmitAddress(cg, _member.DeclaringType);
+                } else {
+                    _expression.EmitAs(cg, _member.DeclaringType);
+                }
             }
         }
 

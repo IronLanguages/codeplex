@@ -170,9 +170,9 @@ namespace Microsoft.Scripting.Ast {
                             slot = _storage.CreateSlot(null);
                             MarkLocal(slot);
                         }
-                        if (_uninitialized || _lift) {
-                            // Emit initialization
-                            if (_defaultValue != null) {
+                        if (_uninitialized || _defaultValue != null) {
+                            // Emit initialization (environments will be initialized all at once)
+                            if (_defaultValue != null) {                                
                                 _defaultValue.EmitAs(cg, slot.Type);
                                 slot.EmitSet(cg);
                             } else {
@@ -224,10 +224,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal Slot CreateSlot(CodeGen cg) {
+            if (cg.FastEval) {
+                // We must create a slot that is accessible to the interpreted environment
+                return CreateRuntimeSlot(cg);
+            }
             switch (_kind) {
-                case VariableKind.Local: {
-                        return CreateSlotForVariable(cg);
-                    }
+                case VariableKind.Local:
+                    return CreateSlotForVariable(cg);
 
                 case VariableKind.Parameter:
                     if (_lift) {
@@ -260,6 +263,32 @@ namespace Microsoft.Scripting.Ast {
                     return CreateSlotForVariable(cg);
             }
 
+            Debug.Assert(false, "Unexpected variable kind: " + _kind.ToString());
+            return null;
+        }
+
+        /// <summary>
+        /// Attempt to allocate a slot that is accessible to the interpreted environment via RuntimeHelpers.
+        /// </summary>
+        private Slot CreateRuntimeSlot(CodeGen cg) {
+            switch (_kind) {
+                case VariableKind.GeneratorTemporary:
+                    _storage = _block.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
+                    return CreateSlotForVariable(cg);
+                case VariableKind.Temporary:
+                    // We don't need a LocalNamedFrameSlot here since temporaries are never visible in other scopes
+                    return cg.GetNamedLocal(_type, SymbolTable.IdToString(_name));
+                case VariableKind.Parameter:
+                    if (_lift) {
+                        return new LocalNamedFrameSlot(cg.ContextSlot, _name);
+                    } else {
+                        return MarkLocal(GetArgumentSlot(cg));
+                    }
+                case VariableKind.Local:
+                    return new LocalNamedFrameSlot(cg.ContextSlot, _name);
+                case VariableKind.Global:
+                    return new NamedFrameSlot(cg.ContextSlot, _name);
+            }
             Debug.Assert(false, "Unexpected variable kind: " + _kind.ToString());
             return null;
         }

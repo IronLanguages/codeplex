@@ -28,6 +28,10 @@ namespace Microsoft.Scripting.Generation {
         private int _count;
         private Type _elementType;
         public ParamsArgBuilder(int start, int count, Type elementType) {
+            if (elementType == null) throw new ArgumentNullException("elementType");
+            if (start < 0) throw new ArgumentOutOfRangeException("start");
+            if (count < 0) throw new ArgumentOutOfRangeException("count");
+
             this._start = start;
             this._count = count;
             this._elementType = elementType;
@@ -43,22 +47,6 @@ namespace Microsoft.Scripting.Generation {
                 paramsArray.SetValue(context.LanguageContext.Binder.Convert(args[i + _start], _elementType), i);
             }
             return paramsArray;
-        }
-
-        //TODO why is this limitation here?
-        public override bool CanGenerate {
-            get { return !_elementType.IsValueType; }
-        }
-
-        public override void Generate(CodeGen cg, IList<Slot> argSlots) {
-            cg.EmitInt(_count);
-            cg.Emit(OpCodes.Newarr, _elementType);
-            for (int i = 0; i < _count; i++) {
-                cg.Emit(OpCodes.Dup);
-                cg.EmitInt(i);
-                argSlots[_start + i].EmitGetAs(cg, _elementType);
-                cg.EmitStoreElement(_elementType);
-            }
         }
 
         public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {

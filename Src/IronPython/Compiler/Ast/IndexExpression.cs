@@ -38,25 +38,61 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return Ast.DynamicReadItem(
+            return Ast.Action.Operator(
                 Span,
-                ag.Transform(_target),
-                ag.Transform(_index)
+                Operators.GetItem,
+                type,
+                GetActionArgumentsForGet(ag)
             );
+            
+        }
+
+        private MSAst.Expression[] GetActionArgumentsForGet(AstGenerator ag) {
+            TupleExpression te = _index as TupleExpression;
+            if (te != null && te.IsExpandable) {
+                return Utils.Array.Insert(ag.Transform(_target), ag.Transform(te.Items));
+            }
+
+            return new MSAst.Expression[] { ag.Transform(_target), ag.Transform(_index) };
+        }
+
+        private MSAst.Expression[] GetActionArgumentsForSet(AstGenerator ag, MSAst.Expression right) {
+            TupleExpression te = _index as TupleExpression;
+            if (te != null && te.IsExpandable) {
+                MSAst.Expression[] res = new MSAst.Expression[te.Items.Length + 2];
+                res[0] = ag.Transform(_target);
+                for (int i = 0; i < te.Items.Length; i++) {
+                    res[i + 1] = ag.Transform(te.Items[i]);
+                }
+                res[res.Length - 1] = right;
+                return res;
+            }
+
+            return new MSAst.Expression[] { ag.Transform(_target), ag.Transform(_index), right };
         }
 
         internal override MSAst.Statement TransformSet(AstGenerator ag, MSAst.Expression right, Operators op) {
+            if(op != Operators.None) {
+                right = Ast.Action.Operator(op,
+                            typeof(object),
+                            Ast.Action.Operator(
+                                Operators.GetItem,
+                                typeof(object),
+                                GetActionArgumentsForGet(ag)
+                            ),
+                            right
+                        );
+            }
+
             return Ast.Statement(
-                Ast.DynamicAssignItem(
+                Ast.Action.Operator(
                     Span,
-                    ag.Transform(_target),
-                    ag.Transform(_index),
-                    right,
-                    op
+                    Operators.SetItem,
+                    typeof(object),
+                    GetActionArgumentsForSet(ag, right)
                 )
             );
         }
-
 
         internal override MSAst.Statement TransformDelete(AstGenerator ag) {
             return Ast.Statement(

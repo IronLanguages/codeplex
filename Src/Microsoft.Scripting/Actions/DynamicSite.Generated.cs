@@ -36,10 +36,14 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, Tret>> _rules;
 
-        public DynamicSite(Action action)
+        internal DynamicSite(Action action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static DynamicSite<T0, Tret> Create(Action action) {
+            return new DynamicSite<T0, Tret>(action);
         }
 
         public Tret Invoke(CodeContext context, T0 arg0) {
@@ -49,14 +53,19 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0) {
             StandardRule<DynamicSiteTarget<T0, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, Tret>>(Action, new object[] { arg0 });
+              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, Tret>>(context, Action, new object[] { arg0 });
 
     #if DEBUG
+            // This is much slower than building the ruleset, since we have to look up the rule every time;
+            // we do it in debug mode to make sure we can still get through this code path
+            // without generating IL.
             if (context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(context.Scope, arg0);
-                bool result = (bool)rule.Test.Evaluate(context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(context);
+                object[] args = new object[] { arg0 };
+                using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(context);
+                }
             }
     #endif
             RuleSet<DynamicSiteTarget<T0, Tret>> newRules = _rules.AddRule(rule);
@@ -85,10 +94,14 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, Tret>> _rules;
 
-        public FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, Action action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static FastDynamicSite<T0, Tret> Create(CodeContext context, Action action) {
+            return new FastDynamicSite<T0, Tret>(context, action);
         }
 
         public Tret Invoke(T0 arg0) {
@@ -97,14 +110,16 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(T0 arg0) {
             StandardRule<FastDynamicSiteTarget<T0, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, Tret>>(Action, new object[] { arg0 });
+              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, Tret>>(Context, Action, new object[] { arg0 });
 
     #if DEBUG
             if (Context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(Context.Scope, arg0);
-                bool result = (bool)rule.Test.Evaluate(Context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(Context);
+                object[] args = new object[] { arg0 };
+                using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(Context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(Context);
+                }
             }
     #endif
             RuleSet<FastDynamicSiteTarget<T0, Tret>> newRules = _rules.AddRule(rule);
@@ -133,10 +148,14 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, Tret>> _rules;
 
-        public DynamicSite(Action action)
+        internal DynamicSite(Action action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static DynamicSite<T0, T1, Tret> Create(Action action) {
+            return new DynamicSite<T0, T1, Tret>(action);
         }
 
         public Tret Invoke(CodeContext context, T0 arg0, T1 arg1) {
@@ -146,14 +165,19 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1) {
             StandardRule<DynamicSiteTarget<T0, T1, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, Tret>>(Action, new object[] { arg0, arg1 });
+              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, Tret>>(context, Action, new object[] { arg0, arg1 });
 
     #if DEBUG
+            // This is much slower than building the ruleset, since we have to look up the rule every time;
+            // we do it in debug mode to make sure we can still get through this code path
+            // without generating IL.
             if (context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(context.Scope, arg0, arg1);
-                bool result = (bool)rule.Test.Evaluate(context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(context);
+                object[] args = new object[] { arg0, arg1 };
+                using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(context);
+                }
             }
     #endif
             RuleSet<DynamicSiteTarget<T0, T1, Tret>> newRules = _rules.AddRule(rule);
@@ -182,10 +206,14 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, Tret>> _rules;
 
-        public FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, Action action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static FastDynamicSite<T0, T1, Tret> Create(CodeContext context, Action action) {
+            return new FastDynamicSite<T0, T1, Tret>(context, action);
         }
 
         public Tret Invoke(T0 arg0, T1 arg1) {
@@ -194,14 +222,16 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1) {
             StandardRule<FastDynamicSiteTarget<T0, T1, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, Tret>>(Action, new object[] { arg0, arg1 });
+              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, Tret>>(Context, Action, new object[] { arg0, arg1 });
 
     #if DEBUG
             if (Context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(Context.Scope, arg0, arg1);
-                bool result = (bool)rule.Test.Evaluate(Context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(Context);
+                object[] args = new object[] { arg0, arg1 };
+                using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(Context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(Context);
+                }
             }
     #endif
             RuleSet<FastDynamicSiteTarget<T0, T1, Tret>> newRules = _rules.AddRule(rule);
@@ -230,10 +260,14 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, T2, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, Tret>> _rules;
 
-        public DynamicSite(Action action)
+        internal DynamicSite(Action action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, T2, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static DynamicSite<T0, T1, T2, Tret> Create(Action action) {
+            return new DynamicSite<T0, T1, T2, Tret>(action);
         }
 
         public Tret Invoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2) {
@@ -243,14 +277,19 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2) {
             StandardRule<DynamicSiteTarget<T0, T1, T2, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, Tret>>(Action, new object[] { arg0, arg1, arg2 });
+              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, Tret>>(context, Action, new object[] { arg0, arg1, arg2 });
 
     #if DEBUG
+            // This is much slower than building the ruleset, since we have to look up the rule every time;
+            // we do it in debug mode to make sure we can still get through this code path
+            // without generating IL.
             if (context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(context.Scope, arg0, arg1, arg2);
-                bool result = (bool)rule.Test.Evaluate(context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(context);
+                object[] args = new object[] { arg0, arg1, arg2 };
+                using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(context);
+                }
             }
     #endif
             RuleSet<DynamicSiteTarget<T0, T1, T2, Tret>> newRules = _rules.AddRule(rule);
@@ -279,10 +318,14 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, T2, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, Tret>> _rules;
 
-        public FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, Action action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, T2, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static FastDynamicSite<T0, T1, T2, Tret> Create(CodeContext context, Action action) {
+            return new FastDynamicSite<T0, T1, T2, Tret>(context, action);
         }
 
         public Tret Invoke(T0 arg0, T1 arg1, T2 arg2) {
@@ -291,14 +334,16 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1, T2 arg2) {
             StandardRule<FastDynamicSiteTarget<T0, T1, T2, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, Tret>>(Action, new object[] { arg0, arg1, arg2 });
+              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, Tret>>(Context, Action, new object[] { arg0, arg1, arg2 });
 
     #if DEBUG
             if (Context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(Context.Scope, arg0, arg1, arg2);
-                bool result = (bool)rule.Test.Evaluate(Context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(Context);
+                object[] args = new object[] { arg0, arg1, arg2 };
+                using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(Context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(Context);
+                }
             }
     #endif
             RuleSet<FastDynamicSiteTarget<T0, T1, T2, Tret>> newRules = _rules.AddRule(rule);
@@ -327,10 +372,14 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, T2, T3, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>> _rules;
 
-        public DynamicSite(Action action)
+        internal DynamicSite(Action action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static DynamicSite<T0, T1, T2, T3, Tret> Create(Action action) {
+            return new DynamicSite<T0, T1, T2, T3, Tret>(action);
         }
 
         public Tret Invoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
@@ -340,14 +389,19 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
             StandardRule<DynamicSiteTarget<T0, T1, T2, T3, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, Tret>>(Action, new object[] { arg0, arg1, arg2, arg3 });
+              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, Tret>>(context, Action, new object[] { arg0, arg1, arg2, arg3 });
 
     #if DEBUG
+            // This is much slower than building the ruleset, since we have to look up the rule every time;
+            // we do it in debug mode to make sure we can still get through this code path
+            // without generating IL.
             if (context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(context.Scope, arg0, arg1, arg2, arg3);
-                bool result = (bool)rule.Test.Evaluate(context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(context);
+                object[] args = new object[] { arg0, arg1, arg2, arg3 };
+                using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(context);
+                }
             }
     #endif
             RuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>> newRules = _rules.AddRule(rule);
@@ -376,10 +430,14 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, T2, T3, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>> _rules;
 
-        public FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, Action action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static FastDynamicSite<T0, T1, T2, T3, Tret> Create(CodeContext context, Action action) {
+            return new FastDynamicSite<T0, T1, T2, T3, Tret>(context, action);
         }
 
         public Tret Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
@@ -388,14 +446,16 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
             StandardRule<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>>(Action, new object[] { arg0, arg1, arg2, arg3 });
+              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>>(Context, Action, new object[] { arg0, arg1, arg2, arg3 });
 
     #if DEBUG
             if (Context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(Context.Scope, arg0, arg1, arg2, arg3);
-                bool result = (bool)rule.Test.Evaluate(Context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(Context);
+                object[] args = new object[] { arg0, arg1, arg2, arg3 };
+                using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(Context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(Context);
+                }
             }
     #endif
             RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>> newRules = _rules.AddRule(rule);
@@ -424,10 +484,14 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, T2, T3, T4, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> _rules;
 
-        public DynamicSite(Action action)
+        internal DynamicSite(Action action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static DynamicSite<T0, T1, T2, T3, T4, Tret> Create(Action action) {
+            return new DynamicSite<T0, T1, T2, T3, T4, Tret>(action);
         }
 
         public Tret Invoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
@@ -437,14 +501,19 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
             StandardRule<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>(Action, new object[] { arg0, arg1, arg2, arg3, arg4 });
+              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>(context, Action, new object[] { arg0, arg1, arg2, arg3, arg4 });
 
     #if DEBUG
+            // This is much slower than building the ruleset, since we have to look up the rule every time;
+            // we do it in debug mode to make sure we can still get through this code path
+            // without generating IL.
             if (context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(context.Scope, arg0, arg1, arg2, arg3, arg4);
-                bool result = (bool)rule.Test.Evaluate(context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(context);
+                object[] args = new object[] { arg0, arg1, arg2, arg3, arg4 };
+                using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(context);
+                }
             }
     #endif
             RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> newRules = _rules.AddRule(rule);
@@ -473,10 +542,14 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> _rules;
 
-        public FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, Action action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static FastDynamicSite<T0, T1, T2, T3, T4, Tret> Create(CodeContext context, Action action) {
+            return new FastDynamicSite<T0, T1, T2, T3, T4, Tret>(context, action);
         }
 
         public Tret Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
@@ -485,14 +558,16 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
             StandardRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>(Action, new object[] { arg0, arg1, arg2, arg3, arg4 });
+              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>(Context, Action, new object[] { arg0, arg1, arg2, arg3, arg4 });
 
     #if DEBUG
             if (Context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(Context.Scope, arg0, arg1, arg2, arg3, arg4);
-                bool result = (bool)rule.Test.Evaluate(Context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(Context);
+                object[] args = new object[] { arg0, arg1, arg2, arg3, arg4 };
+                using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(Context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(Context);
+                }
             }
     #endif
             RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> newRules = _rules.AddRule(rule);
@@ -521,10 +596,14 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> _rules;
 
-        public DynamicSite(Action action)
+        internal DynamicSite(Action action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static DynamicSite<T0, T1, T2, T3, T4, T5, Tret> Create(Action action) {
+            return new DynamicSite<T0, T1, T2, T3, T4, T5, Tret>(action);
         }
 
         public Tret Invoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
@@ -534,14 +613,19 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
             StandardRule<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>(Action, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>(context, Action, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
 
     #if DEBUG
+            // This is much slower than building the ruleset, since we have to look up the rule every time;
+            // we do it in debug mode to make sure we can still get through this code path
+            // without generating IL.
             if (context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(context.Scope, arg0, arg1, arg2, arg3, arg4, arg5);
-                bool result = (bool)rule.Test.Evaluate(context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(context);
+                object[] args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
+                using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(context);
+                }
             }
     #endif
             RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> newRules = _rules.AddRule(rule);
@@ -570,10 +654,14 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> _rules;
 
-        public FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, Action action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static FastDynamicSite<T0, T1, T2, T3, T4, T5, Tret> Create(CodeContext context, Action action) {
+            return new FastDynamicSite<T0, T1, T2, T3, T4, T5, Tret>(context, action);
         }
 
         public Tret Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
@@ -582,14 +670,16 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
             StandardRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>(Action, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>(Context, Action, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
 
     #if DEBUG
             if (Context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(Context.Scope, arg0, arg1, arg2, arg3, arg4, arg5);
-                bool result = (bool)rule.Test.Evaluate(Context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(Context);
+                object[] args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
+                using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(Context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(Context);
+                }
             }
     #endif
             RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> newRules = _rules.AddRule(rule);
@@ -618,10 +708,14 @@ namespace Microsoft.Scripting.Actions {
         private BigDynamicSiteTarget<T0, Tret> _target;
         private RuleSet<BigDynamicSiteTarget<T0, Tret>> _rules;
 
-        public BigDynamicSite(Action action)
+        internal BigDynamicSite(Action action)
             : base(action) {
             this._rules = RuleSet<BigDynamicSiteTarget<T0, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static BigDynamicSite<T0, Tret> Create(Action action) {
+            return new BigDynamicSite<T0, Tret>(action);
         }
 
         public Tret Invoke(CodeContext context, T0 arg0) {
@@ -631,14 +725,19 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0) {
             StandardRule<BigDynamicSiteTarget<T0, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<BigDynamicSiteTarget<T0, Tret>>(Action, NewTuple.GetTupleValues(arg0));
+              context.LanguageContext.Binder.GetRule<BigDynamicSiteTarget<T0, Tret>>(context, Action, NewTuple.GetTupleValues(arg0));
 
     #if DEBUG
+            // This is much slower than building the ruleset, since we have to look up the rule every time;
+            // we do it in debug mode to make sure we can still get through this code path
+            // without generating IL.
             if (context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(context.Scope, arg0);
-                bool result = (bool)rule.Test.Evaluate(context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(context);
+                object[] args = new object[] { arg0 };
+                using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(context);
+                }
             }
     #endif
             RuleSet<BigDynamicSiteTarget<T0, Tret>> newRules = _rules.AddRule(rule);
@@ -667,10 +766,14 @@ namespace Microsoft.Scripting.Actions {
         private BigFastDynamicSiteTarget<T0, Tret> _target;
         private RuleSet<BigFastDynamicSiteTarget<T0, Tret>> _rules;
 
-        public BigFastDynamicSite(CodeContext context, Action action)
+        internal BigFastDynamicSite(CodeContext context, Action action)
             : base(context, action) {
             this._rules = RuleSet<BigFastDynamicSiteTarget<T0, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
+        }
+
+        public static BigFastDynamicSite<T0, Tret> Create(CodeContext context, Action action) {
+            return new BigFastDynamicSite<T0, Tret>(context, action);
         }
 
         public Tret Invoke(T0 arg0) {
@@ -679,14 +782,16 @@ namespace Microsoft.Scripting.Actions {
 
         public Tret UpdateBindingAndInvoke(T0 arg0) {
             StandardRule<BigFastDynamicSiteTarget<T0, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<BigFastDynamicSiteTarget<T0, Tret>>(Action, NewTuple.GetTupleValues(arg0));
+              Context.LanguageContext.Binder.GetRule<BigFastDynamicSiteTarget<T0, Tret>>(Context, Action, NewTuple.GetTupleValues(arg0));
 
     #if DEBUG
             if (Context.LanguageContext.Engine.Options.FastEvaluation) {
-                DynamicSiteHelpers.InsertArguments(Context.Scope, arg0);
-                bool result = (bool)rule.Test.Evaluate(Context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(Context);
+                object[] args = new object[] { arg0 };
+                using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    bool result = (bool)rule.Test.Evaluate(Context);
+                    Debug.Assert(result);
+                    return (Tret)rule.Target.Execute(Context);
+                }
             }
     #endif
             RuleSet<BigFastDynamicSiteTarget<T0, Tret>> newRules = _rules.AddRule(rule);

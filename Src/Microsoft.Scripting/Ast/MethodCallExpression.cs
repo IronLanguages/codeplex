@@ -45,12 +45,7 @@ namespace Microsoft.Scripting.Ast {
         private static void VerifyArguments(MethodInfo method, IList<Expression> arguments) {
             if (arguments == null) throw new ArgumentNullException("arguments");
             if (method == null) throw new ArgumentNullException("method");
-            for (int i = 0; i < arguments.Count; i++) {
-                if (arguments[i] == null) {
-                    Debug.Assert(false);
-                    throw new ArgumentNullException("arguments[" + i.ToString() + "]");
-                }
-            }
+            Utils.Array.CheckNonNullElements(arguments, "arguments");
         }
 
         public MethodInfo Method {
@@ -79,6 +74,16 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        public object EvaluateArgument(CodeContext context, Expression arg, Type asType) {
+            if (arg == null) {
+                return null;
+            } else {
+                // Convert the evaluated argument to the appropriate type to mirror the emit case.
+                // C# would try to convert for us, but using the binder preserves the semantics of the target language.
+                return context.LanguageContext.Binder.Convert(arg.Evaluate(context), asType);
+            }
+        }
+
         public override object Evaluate(CodeContext context) {
             object instance = null;
             // Evaluate the instance first (if the method is non-static)
@@ -96,7 +101,9 @@ namespace Microsoft.Scripting.Ast {
             if (_pi.Length > 0) {
                 int last = parameters.Length - 1;
                 for (int i = 0; i < last; i++) {
-                    parameters[i] = _arguments[i] != null ? _arguments[i].Evaluate(context) : null;
+                    if (!_pi[i].IsOut) {
+                        parameters[i] = EvaluateArgument(context, _arguments[i], _pi[i].ParameterType);
+                    }
                 }
                 
                 // If the last parameter is a parameter array, throw the extra arguments into an array
@@ -109,17 +116,37 @@ namespace Microsoft.Scripting.Ast {
                     } else {
                         object[] varargs = new object[_arguments.Count - last];
                         for (int i = last; i < _arguments.Count; i++) {
-                            varargs[i - last] = _arguments[i] != null ? _arguments[i].Evaluate(context) : null;
+                            // No need to convert, since the destination type is just Object
+                            varargs[i - last] =  _arguments[i].Evaluate(context);
                         }
                         parameters[last] = varargs;
                     }
                 } else {
-                    parameters[last] = _arguments[last] != null ? _arguments[last].Evaluate(context) : null;
+                    if (!_pi[last].IsOut) {
+                        parameters[last] = EvaluateArgument(context, _arguments[last], _pi[last].ParameterType);
+                    }
                 }
             }
 
             try {
-                return _method.Invoke(instance, parameters);
+                try {
+                    if (ExpressionType == typeof(Boolean)) {
+                        // Return the singleton True or False object
+                        return RuntimeHelpers.BooleanToObject((bool)_method.Invoke(instance, parameters));
+                    } else {
+                        return _method.Invoke(instance, parameters);
+                    }
+                } finally {
+                    // expose by-ref args
+                    for (int i = 0; i < _pi.Length; i++) {
+                        if (_pi[i].ParameterType.IsByRef) {
+                            BoundExpression be = _arguments[i] as BoundExpression;
+                            if (be == null) throw new InvalidOperationException("byref call w/ no address");
+
+                            BoundAssignment.EvaluateAssign(context, be.Variable, parameters[i]);
+                        }
+                    }
+                }
             } catch (TargetInvocationException e) {
                 // Unwrap the real (inner) exception and raise it
                 throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
@@ -130,18 +157,7 @@ namespace Microsoft.Scripting.Ast {
             // Emit instance, if calling an instance method
             Slot temp = null;
             if (!_method.IsStatic) {
-                VerifyNonNull();
-
-                _instance.EmitAs(cg, _method.DeclaringType);
-
-                if (_method.DeclaringType.IsValueType) {
-                    // _method expects a byref as "this", so unbox _instance and get a pointer
-                    // to its location on the stack
-                    // Note: this makes a copy, which is problematic if _method is a mutating method
-                    temp = cg.GetLocalTmp(_method.DeclaringType);
-                    temp.EmitSet(cg);
-                    temp.EmitGetAddr(cg);
-                }
+                EmitInstance(cg);
             }
 
             // Emit arguments
@@ -191,9 +207,23 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        private void EmitInstance(CodeGen cg) {
+            VerifyNonNull();
+
+            if (!_method.DeclaringType.IsValueType) {
+                _instance.EmitAs(cg, _method.DeclaringType);
+            } else {
+                _instance.EmitAddress(cg, _method.DeclaringType);
+            }
+        }
+
         private void EmitArgument(CodeGen cg, ParameterInfo param, int index) {
             if (index < _arguments.Count) {
-                _arguments[index].EmitAs(cg, param.ParameterType);
+                if (param.IsOut || param.ParameterType.IsByRef) {
+                    _arguments[index].EmitAddress(cg, param.ParameterType.GetElementType());
+                } else {
+                    _arguments[index].EmitAs(cg, param.ParameterType);
+                }
             } else {
                 object defaultValue = param.DefaultValue;
                 if (defaultValue != DBNull.Value) {

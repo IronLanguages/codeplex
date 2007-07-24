@@ -30,9 +30,21 @@ using System.Runtime.Remoting;
 namespace Microsoft.Scripting {
 
     public delegate void Function();
+    public delegate void Action<T1, T2>(T1 arg1, T2 arg2);
+    public delegate void Action<T1, T2, T3>(T1 arg1, T2 arg2, T3 arg3);
+    public delegate void Action<T1, T2, T3, T4>(T1 arg1, T2 arg2, T3 arg3, T4 arg4);
+    public delegate void Action<T1, T2, T3, T4, T5>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
+    public delegate void Action<T1, T2, T3, T4, T5, T6>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
+    public delegate void Action<T1, T2, T3, T4, T5, T6, T7>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7);
+    
     public delegate R Function<R>();
     public delegate R Function<T, R>(T arg);
     public delegate R Function<T1, T2, R>(T1 arg1, T2 arg2);
+    public delegate R Function<T1, T2, T3, R>(T1 arg1, T2 arg2, T3 arg3);
+    public delegate R Function<T1, T2, T3, T4, R>(T1 arg1, T2 arg2, T3 arg3, T4 arg4);
+    public delegate R Function<T1, T2, T3, T4, T5, R>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
+    public delegate R Function<T1, T2, T3, T4, T5, T6, R>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
+    public delegate R Function<T1, T2, T3, T4, T5, T6, T7, R>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7);
     
     /// <summary>
     /// Utilities implementing generic functionality. Contains also implementations of features not supported by Silverlight.
@@ -51,11 +63,23 @@ namespace Microsoft.Scripting {
             }
 
             [Conditional("DEBUG")]
-            public static void NotNull(object var, params object[] vars) {
+            public static void NotNull(object var) {
                 Debug.Assert(var != null);
-                foreach (object v in vars) {
-                    Debug.Assert(v != null);
-                }
+            }
+
+            [Conditional("DEBUG")]
+            public static void NotNull(object var1, object var2) {
+                Debug.Assert(var1 != null && var2 != null);
+            }
+
+            [Conditional("DEBUG")]
+            public static void NotNull(object var1, object var2, object var3) {
+                Debug.Assert(var1 != null && var2 != null && var3 != null);
+            }
+
+            [Conditional("DEBUG")]
+            public static void NotNull(object var1, object var2, object var3, object var4) {
+                Debug.Assert(var1 != null && var2 != null && var3 != null && var4 != null);
             }
 
             [Conditional("DEBUG")]
@@ -93,35 +117,33 @@ namespace Microsoft.Scripting {
 #endif
 
 #if DEBUG
-            public static string FormatSignature(MethodBase method) {
-                Utils.Assert.NotNull(method);
+            public static StringBuilder FormatSignature(StringBuilder result, MethodBase method) {
+                Utils.Assert.NotNull(result, method);
+
+                MethodInfo methodInfo = method as MethodInfo;
+                if (methodInfo != null) {
+                    FormatTypeName(result, methodInfo.ReturnType);
+                    result.Append(' ');
+                }
 
                 MethodBuilder builder = method as MethodBuilder;
-                if (builder != null) return builder.Signature;
-                ConstructorBuilder cb = method as ConstructorBuilder;
-                if (cb != null) return cb.Signature;
+                if (builder != null) {
+                    result.Append(builder.Signature);
+                    return result;
+                }
 
-                StringBuilder result = new StringBuilder();
-                result.Append(method.DeclaringType.FullName);
+                ConstructorBuilder cb = method as ConstructorBuilder;
+                if (cb != null) {
+                    result.Append(cb.Signature);
+                    return result;
+                }
+
+                FormatTypeName(result, method.DeclaringType);
                 result.Append("::");
                 result.Append(method.Name);
 
                 if (!method.IsConstructor) {
-                    Type[] typeArgs = method.GetGenericArguments();
-                    if (typeArgs.Length > 0) {
-                        result.Append("<");
-
-                        for (int i = 0; i < typeArgs.Length; i++) {
-                            if (i > 0) result.Append(", ");
-                            result.Append(typeArgs[i].FullName);
-                            if (!System.String.IsNullOrEmpty(typeArgs[i].Name)) {
-                                result.Append(" ");
-                                result.Append(typeArgs[i].Name);
-                            }
-                        }
-
-                        result.Append(">");
-                    }
+                    FormatTypeArgs(result, method.GetGenericArguments());
                 }
                 
                 result.Append("(");
@@ -130,7 +152,7 @@ namespace Microsoft.Scripting {
                     ParameterInfo[] ps = method.GetParameters();
                     for (int i = 0; i < ps.Length; i++) {
                         if (i > 0) result.Append(", ");
-                        result.Append(ps[i].ParameterType.FullName);
+                        FormatTypeName(result, ps[i].ParameterType);
                         if (!System.String.IsNullOrEmpty(ps[i].Name)) {
                             result.Append(" ");
                             result.Append(ps[i].Name);
@@ -141,8 +163,40 @@ namespace Microsoft.Scripting {
                 }
                 
                 result.Append(")");
-                return result.ToString();
+                return result;
             }
+
+            public static StringBuilder FormatTypeName(StringBuilder result, Type type) {
+                Utils.Assert.NotNull(result, type);
+
+                if (type.IsGenericType) {
+                    string genericName = type.GetGenericTypeDefinition().FullName.Replace('+', '.');
+                    int tickIndex = genericName.IndexOf('`');
+                    result.Append(tickIndex != -1 ? genericName.Substring(0, tickIndex) : genericName);
+                    FormatTypeArgs(result, type.GetGenericArguments());
+                } else if (type.IsGenericParameter) {
+                    result.Append(type.Name);
+                } else {
+                    result.Append(type.FullName.Replace('+', '.'));
+                }
+                return result;
+            }
+
+            public static StringBuilder FormatTypeArgs(StringBuilder result, Type[] types) {
+                Utils.Assert.NotNull(result, types);
+                if (types.Length > 0) {
+                    result.Append("<");
+
+                    for (int i = 0; i < types.Length; i++) {
+                        if (i > 0) result.Append(", ");
+                        FormatTypeName(result, types[i]);
+                    }
+
+                    result.Append(">");
+                }
+                return result;
+            }
+
 #endif
 
             /// <exception cref="InvalidImplementationException">The type failed to instantiate.</exception>
@@ -159,6 +213,136 @@ namespace Microsoft.Scripting {
                     throw new InvalidImplementationException(System.String.Format(Resources.InvalidCtorImplementation, actualType), e);
                 }
             }
+
+            public static object InvokeDelegate(Delegate d, params object[] args) {
+#if SILVERLIGHT
+                // delegates:
+                //   - close (target != null)
+                //     - static (target becomes the first argument)
+                //     - instance (no argument shuffling)
+                //   - open (target == null)
+                //     - static (no argument shuffling)
+                //     - instance (first argument becomes the target)
+
+                object target = d.Target;
+
+                if (d.Method.IsStatic && target != null) {
+                    // closed static -> target needs to be passed as the first arg:
+                    object[] new_args = new object[args.Length + 1];
+                    args.CopyTo(new_args, 1);
+                    new_args[0] = d.Target;
+
+                    target = null;
+                    args = new_args;
+
+                } else if (!d.Method.IsStatic && target == null) {
+
+                    // open instance -> the first arg is the target:
+                    object[] new_args = new object[args.Length - 1];
+                    System.Array.Copy(args, 1, new_args, 0, new_args.Length);
+
+                    target = args[0];
+                    args = new_args;
+                }
+
+                return d.Method.Invoke(target, args);
+#else
+                return d.DynamicInvoke(args);
+#endif
+            }
+
+            /// <summary>
+            /// Creates an open delegate for the given (dynamic)method.
+            /// </summary>
+            public static Delegate CreateDelegate(MethodInfo methodInfo, Type delegateType) {
+                if (delegateType == null) throw new ArgumentNullException("delegateType");
+                if (methodInfo == null) throw new ArgumentNullException("methodInfo");
+
+                DynamicMethod dm = methodInfo as DynamicMethod;
+                if (dm != null) {
+                    return dm.CreateDelegate(delegateType);
+                } else {
+                    return Delegate.CreateDelegate(delegateType, methodInfo);
+                }
+            }
+
+            /// <summary>
+            /// Creates a closed delegate for the given (dynamic)method.
+            /// </summary>
+            public static Delegate CreateDelegate(MethodInfo methodInfo, Type delegateType, object target) {
+                if (methodInfo == null) throw new ArgumentNullException("methodInfo");
+                if (delegateType == null) throw new ArgumentNullException("delegateType");
+
+                DynamicMethod dm = methodInfo as DynamicMethod;
+                if (dm != null) {
+                    return dm.CreateDelegate(delegateType, target);
+                } else {
+                    return Delegate.CreateDelegate(delegateType, target, methodInfo);
+                }
+            }
+
+            public static void GetDelegateSignature(Type delegateType, out ParameterInfo[] parameterInfos, out ParameterInfo returnInfo) {
+                if (delegateType == null) throw new ArgumentNullException("delegateType");
+
+                MethodInfo invokeMethod = delegateType.GetMethod("Invoke");
+                if (invokeMethod == null) {
+                    throw new ArgumentException();
+                }
+
+                parameterInfos = invokeMethod.GetParameters();
+                returnInfo = invokeMethod.ReturnParameter;
+            }
+            
+            public static MethodInfo[] GetMethodInfos(Delegate[] delegates) {
+                MethodInfo[] result = new MethodInfo[delegates.Length];
+                for (int i = 0; i < delegates.Length; i++) result[i] = delegates[i].Method;
+                return result;
+            }
+
+            public static Type[] GetParameterTypes(ParameterInfo[] parameterInfos) {
+                Type[] result = new Type[parameterInfos.Length];
+                for (int i = 0; i < parameterInfos.Length; i++) result[i] = parameterInfos[i].ParameterType;
+                return result;
+            }
+
+            public static Type GetDelegateType(Type[] arguments, Type returnType) {
+                Utils.Assert.NotNull(arguments, returnType);
+                Type result;
+
+                if (returnType == typeof(void)) {
+                    switch (arguments.Length) {
+                        case 0: return typeof(Function);
+                        case 1: result = typeof(Action<>); break;
+                        case 2: result = typeof(Action<,>); break;
+                        case 3: result = typeof(Action<,,>); break;
+                        case 4: result = typeof(Action<,,,>); break;
+                        case 5: result = typeof(Action<,,,,>); break;
+                        case 6: result = typeof(Action<,,,,,>); break;
+                        case 7: result = typeof(Action<,,,,,,>); break;
+                        default:
+                            throw new NotImplementedException("Action delegate not implemented for " + arguments.Length + " arguments.");
+                    }
+                } else {
+                    arguments = Utils.Array.Append(arguments, returnType);
+                    switch (arguments.Length) {
+                        case 0: throw Utils.Assert.Unreachable;
+                        case 1: result = typeof(Function<>); break;
+                        case 2: result = typeof(Function<,>); break;
+                        case 3: result = typeof(Function<,,>); break;
+                        case 4: result = typeof(Function<,,,>); break;
+                        case 5: result = typeof(Function<,,,,>); break;
+                        case 6: result = typeof(Function<,,,,,>); break;
+                        case 7: result = typeof(Function<,,,,,,>); break;
+                        case 8: result = typeof(Function<,,,,,,,>); break;
+                        default:
+                            throw new NotImplementedException("Function delegate not implemented for " + arguments.Length + " arguments.");
+                    }
+                }
+
+                return result.MakeGenericType(arguments);
+            }
+
+            public const int MaxSignatureSize = 8;
         }
 
         #endregion
@@ -486,7 +670,21 @@ namespace Microsoft.Scripting {
 
             public static readonly string[] EmptyStrings = new string[0];
 
-            // copied from MSCORLIB
+            public static TOutput[] ConvertAll<TInput, TOutput>(TInput[] input, Converter<TInput, TOutput> conv) {
+#if SILVERLIGHT
+                if (input == null) throw new ArgumentNullException("input");
+                if (conv == null) throw new ArgumentNullException("conv");
+
+                TOutput[] res = new TOutput[input.Length];
+                for (int i = 0; i < input.Length; i++) {
+                    res[i] = conv(input[i]);
+                }
+                return res;
+#else
+                return System.Array.ConvertAll<TInput, TOutput>(input, conv);
+#endif
+            }
+
             public static T[] FindAll<T>(T[] array, Predicate<T> match) {
 #if SILVERLIGHT
                 if (array == null) {
@@ -551,9 +749,9 @@ namespace Microsoft.Scripting {
                 if (count < 0 || count > array.Length - offset) throw new ArgumentOutOfRangeException(countName);
             }
 
-            public static void CheckNonNullElements(object[] array, string arrayName) {
+            public static void CheckNonNullElements<T>(IList<T> array, string arrayName) {
                 if (array == null) throw new ArgumentNullException(arrayName);
-                for (int i = 0; i < array.Length; i++) {
+                for (int i = 0; i < array.Count; i++) {
                     if (array[i] == null) {
                         throw new ArgumentNullException(System.String.Format("{0}[{1}]", arrayName, i));
                     }
@@ -1028,70 +1226,77 @@ namespace Microsoft.Scripting {
 
         #region Collections
 
-        public static IEnumerator<KeyValuePair<KSuper, VSuper>> ToCovariantEnumerator<K, V, KSuper, VSuper>(IEnumerator<KeyValuePair<K, V>> enumerator)
-            where K : KSuper
-            where V : VSuper {
+        public static class Collections {
 
-            if (enumerator == null) throw new ArgumentNullException("enumerator");
+            public static void AddRange<T>(ICollection<T> collection, IEnumerable<T> items) {
+                if (collection == null) throw new ArgumentNullException("collection");
+                if (items == null) throw new ArgumentNullException("items");
 
-            while (enumerator.MoveNext()) {
-                KeyValuePair<K, V> entry = enumerator.Current;
-                yield return new KeyValuePair<KSuper, VSuper>((KSuper)entry.Key, (VSuper)entry.Value);
+                foreach (T item in items) {
+                    collection.Add(item);
+                }
             }
-        }
+            
+            public static IEnumerator<S> ToCovariant<T, S>(IEnumerator<T> enumerator)
+                where T : S {
 
-        public static IDictionaryEnumerator ToDictionaryEnumerator<K, V>(IEnumerator<KeyValuePair<K, V>> enumerator) {
-            if (enumerator == null) throw new ArgumentNullException("enumerator");
-            return new DictionaryEnumerator<K, V>(enumerator);
-        }
+                if (enumerator == null) throw new ArgumentNullException("enumerator");
 
-        private sealed class DictionaryEnumerator<K, V> : IDictionaryEnumerator {
-            IEnumerator<KeyValuePair<K, V>> enumerator;
-
-            public DictionaryEnumerator(IEnumerator<KeyValuePair<K, V>> e) {
-                enumerator = e;
-            }
-
-            #region IDictionaryEnumerator Members
-
-            public DictionaryEntry Entry {
-                get { 
-                    KeyValuePair<K, V> entry = enumerator.Current;
-                    return new DictionaryEntry(entry.Key, entry.Value); 
+                while (enumerator.MoveNext()) {
+                    yield return enumerator.Current;
                 }
             }
 
-            public object Key {
-                get { return enumerator.Current.Key; }
+            public static IEnumerable<S> ToCovariant<T, S>(IEnumerable<T> enumerable)
+                where T : S {
+                return new CovariantConvertor<T, S>(enumerable);
             }
 
-            public object Value {
-                get { return enumerator.Current.Value; }
+            private class CovariantConvertor<T, S> : IEnumerable<S> where T : S {
+                private IEnumerable<T> _enumerable;
+
+                public CovariantConvertor(IEnumerable<T> enumerable) {
+                    if (enumerable == null) throw new ArgumentNullException("enumerable");
+                    _enumerable = enumerable;
+                }
+
+                public IEnumerator<S> GetEnumerator() {
+                    return Utils.Collections.ToCovariant<T, S>(_enumerable.GetEnumerator());
+                }
+
+                IEnumerator IEnumerable.GetEnumerator() {
+                    return GetEnumerator();
+                }
             }
 
-            #endregion
-
-            #region IEnumerator Members
-
-            public object Current {
-                get { return Entry; }
+            public static List<T> MakeList<T>(T item) {
+                List<T> result = new List<T>();
+                result.Add(item);
+                return result;
             }
 
-            public bool MoveNext() {
-                return enumerator.MoveNext();
+            public static int CountOf<T>(IList<T> list, T item) where T : IEquatable<T> {
+                if (list == null) return 0;
+
+                int result = 0;
+                for (int i = 0; i < list.Count; i++) {
+                    if (list[i].Equals(item)) {
+                        result++;
+                    }
+                }
+                return result;
             }
 
-            public void Reset() {
-                enumerator.Reset();
+            public static bool TrueForAll<T>(IList<T> collection, Predicate<T> predicate) {
+                if (collection == null) throw new ArgumentNullException("collection");
+                if (predicate == null) throw new ArgumentNullException("predicate");
+
+                foreach (T item in collection) {
+                    if (!predicate(item)) return false;
+                }
+
+                return true;
             }
-
-            #endregion
-        }
-
-        public static List<T> MakeList<T>(T item) {
-            List<T> result = new List<T>();
-            result.Add(item);
-            return result;
         }
 
         #endregion

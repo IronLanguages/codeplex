@@ -76,6 +76,10 @@ namespace Microsoft.Scripting {
 
                     for (int j = lastFound; j < frames.Count; j++) {
                         MethodBase other = frames[j].GetMethod();
+                        if (other == null) {
+                            // GetMethod() can return null for CodeBlocks executed in interpreted mode
+                            continue;
+                        }
 
                         // method info's don't always compare equal, check based
                         // upon name/module/declaring type which will always be a correct

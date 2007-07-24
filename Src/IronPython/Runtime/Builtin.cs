@@ -782,7 +782,7 @@ namespace IronPython.Runtime {
             
             if (param.Length == 2) {
                 FastDynamicSite<object, object, object> mapSite = null;
-                if(func != null) mapSite = new FastDynamicSite<object, object, object>(DefaultContext.Default, CallAction.Simple);
+                if(func != null) mapSite = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, CallAction.Simple);
                 
                 IEnumerator i = PythonOps.GetEnumerator(param[1]);
                 while (i.MoveNext()) {
@@ -1347,7 +1347,7 @@ namespace IronPython.Runtime {
         }
 
         private static FastDynamicSite<object, object, object> addForSum =
-            new FastDynamicSite<object, object, object>(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Add));
+            FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Add));
 
         [PythonName("sum")]
         public static object Sum(object sequence, object start) {

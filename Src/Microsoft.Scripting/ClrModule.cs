@@ -151,6 +151,16 @@ namespace Microsoft.Scripting {
             }
         }
 
+        private static DynamicType _strongBoxType;
+        public DynamicType StrongBox {
+            get {
+                if (_strongBoxType == null) {
+                    _strongBoxType = DynamicHelpers.GetDynamicTypeFromType(typeof(StrongBox<>));
+                }
+                return _strongBoxType;
+            }
+        }
+
         #region Private implementation methods
 
         private void AddReference(object reference) {

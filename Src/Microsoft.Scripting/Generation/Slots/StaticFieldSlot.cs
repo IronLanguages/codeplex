@@ -38,7 +38,7 @@ namespace Microsoft.Scripting.Generation {
         public override void EmitGetAddr(CodeGen cg) {
             if (cg == null) throw new ArgumentNullException("cg");
 
-            cg.Emit(OpCodes.Ldsflda, _field);
+            cg.EmitFieldAddress(_field);
         }
 
         public override void EmitSet(CodeGen cg) {

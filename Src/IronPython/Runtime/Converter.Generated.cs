@@ -503,6 +503,12 @@ namespace IronPython.Runtime {
             } else if (value is Decimal) {
                 return checked((Byte)(Decimal)value);
             }
+
+            Object result;
+            if(TryConvertObject(value, typeof(Byte), out result) && result is Byte) {
+                return (Byte)result;
+            }
+
             throw CannotConvertTo("Byte", value);
         }
         /// <summary>
@@ -538,6 +544,12 @@ namespace IronPython.Runtime {
             } else if (value is Decimal) {
                 return checked((SByte)(Decimal)value);
             }
+
+            Object result;
+            if(TryConvertObject(value, typeof(SByte), out result) && result is SByte) {
+                return (SByte)result;
+            }
+
             throw CannotConvertTo("SByte", value);
         }
         /// <summary>
@@ -573,6 +585,12 @@ namespace IronPython.Runtime {
             } else if (value is Decimal) {
                 return checked((Int16)(Decimal)value);
             }
+
+            Object result;
+            if(TryConvertObject(value, typeof(Int16), out result) && result is Int16) {
+                return (Int16)result;
+            }
+
             throw CannotConvertTo("Int16", value);
         }
         /// <summary>
@@ -608,6 +626,12 @@ namespace IronPython.Runtime {
             } else if (value is Decimal) {
                 return checked((UInt16)(Decimal)value);
             }
+
+            Object result;
+            if(TryConvertObject(value, typeof(UInt16), out result) && result is UInt16) {
+                return (UInt16)result;
+            }
+
             throw CannotConvertTo("UInt16", value);
         }
         /// <summary>
@@ -675,6 +699,12 @@ namespace IronPython.Runtime {
             } else if (value is Decimal) {
                 return checked((UInt32)(Decimal)value);
             }
+
+            Object result;
+            if(TryConvertObject(value, typeof(UInt32), out result) && result is UInt32) {
+                return (UInt32)result;
+            }
+
             throw CannotConvertTo("UInt32", value);
         }
         /// <summary>
@@ -708,6 +738,12 @@ namespace IronPython.Runtime {
             } else if (value is Decimal) {
                 return checked((Int64)(Decimal)value);
             }
+
+            Object result;
+            if(TryConvertObject(value, typeof(Int64), out result) && result is Int64) {
+                return (Int64)result;
+            }
+
             throw CannotConvertTo("Int64", value);
         }
         /// <summary>
@@ -741,6 +777,12 @@ namespace IronPython.Runtime {
             } else if (value is Decimal) {
                 return checked((UInt64)(Decimal)value);
             }
+
+            Object result;
+            if(TryConvertObject(value, typeof(UInt64), out result) && result is UInt64) {
+                return (UInt64)result;
+            }
+
             throw CannotConvertTo("UInt64", value);
         }
         /// <summary>
@@ -796,6 +838,12 @@ namespace IronPython.Runtime {
             } else if (value is Decimal) {
                 return (Single)(Decimal)value;
             }
+
+            Object result;
+            if(TryConvertObject(value, typeof(Single), out result) && result is Single) {
+                return (Single)result;
+            }
+
             throw CannotConvertTo("Single", value);
         }
         /// <summary>
@@ -875,6 +923,12 @@ namespace IronPython.Runtime {
             } else if (value is Single) {
                 return checked((Decimal)(Single)value);
             }
+
+            Object result;
+            if(TryConvertObject(value, typeof(Decimal), out result) && result is Decimal) {
+                return (Decimal)result;
+            }
+
             throw CannotConvertTo("Decimal", value);
         }
         /// <summary>

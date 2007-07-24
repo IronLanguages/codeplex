@@ -74,6 +74,7 @@ def test_set_dict():
     Assert(o2.__class__ is C)
     Assert(o2.__class__ is not o1.__class__)
 
+
 ############################################################
 def test_attrs():
     class C:pass
@@ -336,6 +337,34 @@ def test_inheritance_attrs_dir():
     Assert(bz.__module__ == [2, 3 , 4])
 
 
+############################################################
+def test_oldstyle_setattr():
+    global called
+    class C:
+        def __setattr__(self, name, value):
+            global called
+            called = (self, name, value)
+            
+    a = C()
+    a.abc = 'def'
+    AreEqual(called, (a, 'abc', 'def'))
+    
+    del C.__setattr__
+    
+    a.qrt = 'abc'
+    
+    AreEqual(called, (a, 'abc', 'def'))
+    
+    def setattr(self, name, value): 
+        global called
+        called = (self, name, value)        
+    
+    C.__setattr__ = setattr
+    
+    a.qrt = 'abc'
+    
+    AreEqual(called, (a, 'qrt', 'abc'))
+    
 ############################################################
 def test_oldstyle_getattr():
     """verify we don't access __getattr__ while creating an old
@@ -1300,6 +1329,18 @@ def test_slots():
     AreEqual(a.barSlot, 'xyz')
     AreEqual(a.fooSlot, 'bar')
     AreEqual(a.dictEntry, 'foo')
+    
+    # large number of slots works (nested tuple slots)
+    class foo(object):
+        __slots__ = [ 'a' + str(x) for x in range(256) ]
+        
+    a = foo()
+    
+    for x in range(256):
+        setattr(a, 'a' + str(x), x)
+        
+    for x in range(256):
+        AreEqual(x, getattr(a, 'a' + str(x)))
 
 ############################################################
 def test_inheritance_cycle():
@@ -1504,6 +1545,14 @@ def test_override_mro():
 def test_type_mro():
     AssertError(NotImplementedError, type.mro, int)
 
+def test_derived_tuple_eq():
+    # verify overriding __eq__ on tuple still allows us to call the super version
+    class bazbar(tuple):    
+        def __eq__(self,other):
+            other = bazbar(other)
+            return super(bazbar,self).__eq__(other)
+    AreEqual(bazbar('abc'), 'abc')
+    
 def test_new_old_slots():
     class N(object): pass
     class O: pass
@@ -1589,6 +1638,23 @@ def test_slots_multiple():
         __slots__=()
     C().x = "hello"
     
+@disabled("Merlin Work Item 273421")    
+def test_override_container_methods():
+    for x in (dict, list, tuple):
+        class C(x):
+            def __len__(self): return 42
+            def __contains__(self, other): 
+                return other == "abc"
+            
+        AreEqual(len(C()), 42)
+        AreEqual('abc' in C(), True)
+        
+def test_dictproxy_access():
+    def f():
+        int.__dict__[0] = 0
+        
+    AssertError(TypeError, f)
+
 # tests w/ special requirements that can't be run in methods..
 #Testing the class attributes backed by globals
     
@@ -1871,5 +1937,38 @@ def test_cmp_notimplemented():
     ran = []
     cmp(foo(), 1)
     #AreEqual(ran, ['foo.eq', 'foo.lt', 'foo.gt', 'foo.cmp'])
-    
+
+
+#CodePlex Work Item #11487
+@skip("cli silverlight")
+def test_override_repr():
+    class KOld:
+        def __repr__(self):
+            return "old"
+            
+    class KNew(object):
+        def __repr__(self):
+            return "new"
+            
+    AreEqual(repr(KOld()), "old")
+    AreEqual(str(KOld()), "old")
+    AreEqual(repr(KNew()), "new")
+    #IP breaks here because __str__ in new style classes does not call __repr__
+    AreEqual(str(KNew()), "new")
+
+
+def test_mutate_base():
+        class basetype(object): 
+            xyz = 3
+        
+        class subtype(basetype): pass
+        
+        AreEqual(subtype.xyz, 3)
+        AreEqual(subtype().xyz, 3)
+        
+        basetype.xyz = 7
+        
+        AreEqual(subtype.xyz, 7)
+        AreEqual(subtype().xyz, 7)
+        
 run_test(__name__)

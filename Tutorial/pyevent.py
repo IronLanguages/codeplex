@@ -63,7 +63,7 @@ class event_caller(object):
             
     def __call__(self, *args):
         for ev in self.event.handlers:
-            ev(args)
+            ev(*args)
 
     def __set__(self, val):
         raise ValueError, "cannot assign to an event, can only add or remove handlers"

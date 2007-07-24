@@ -120,6 +120,11 @@ def test_interface_slots():
     
     class baz(bar): pass
 
+def test_op_Implicit_inheritance():
+    """should inherit op_Implicit from base classes"""
+    a = NewClass()
+    AreEqual(int(a), 1002)
+    AreEqual(NewClass.op_Implicit(a), 1002)
 
 def test_symbol_dict():
     """tests to verify that Symbol dictionaries do the right thing in dynamic scenarios
@@ -721,11 +726,6 @@ def test_constructor_function():
     for constr in t_list:
         AreEqual(constr.__name__, "__new__")
         AreEqual(constr.__doc__, "ConstructorFunction(builtin_function_or_method realTarget, Array[MethodBase] constructors)\r\n")
-    
-    
-    
-    
-
 
 
 run_test(__name__)

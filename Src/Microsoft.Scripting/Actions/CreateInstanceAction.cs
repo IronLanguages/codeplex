@@ -16,29 +16,25 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Actions {
-    public class CreateInstanceAction : CallAction {
-        private static CreateInstanceAction _simple = new CreateInstanceAction();
+    public class CreateInstanceAction : CallAction, IEquatable<CreateInstanceAction> {
+        private static CreateInstanceAction _simple = new CreateInstanceAction(null);
 
-        private CreateInstanceAction() {
-        }
-
-        private CreateInstanceAction(ArgumentKind[] args)
+        private CreateInstanceAction(ArgumentInfo[] args)
             : base(args) {
         }
 
         public static new CreateInstanceAction Make(string s) {
-            if (s == "Simple") return Simple;
-
-            return new CreateInstanceAction(ArgumentKind.ParseAll(s));
+            return new CreateInstanceAction(ArgumentInfo.ParseAll(s));
         }
 
-        public static new CreateInstanceAction Make(params ArgumentKind[] args) {
+        public static new CreateInstanceAction Make(params ArgumentInfo[] args) {
             if (args == null) return Simple;
 
             for (int i = 0; i < args.Length; i++) {
-                if (args[i] != ArgumentKind.Simple) {
+                if (args[i].Kind != ArgumentKind.Simple) {
                     return new CreateInstanceAction(args);
                 }
             }
@@ -53,14 +49,15 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public override bool Equals(object obj) {
-            CreateInstanceAction cia = obj as CreateInstanceAction;
-            if (cia == null) return false;
+            return Equals(obj as CreateInstanceAction);
+        }
 
-            return ParameterString == cia.ParameterString;
+        public bool Equals(CreateInstanceAction other) {
+            return other != null && ParameterString == other.ParameterString;
         }
 
         public override int GetHashCode() {
-            return ArgumentKind.GetHashCode(Kind, ArgumentKinds);
+            return ArgumentInfo.GetHashCode(Kind, ArgumentInfos);
         }
 
         public override ActionKind Kind {

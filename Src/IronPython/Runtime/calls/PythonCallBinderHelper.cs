@@ -38,11 +38,11 @@ namespace IronPython.Runtime.Calls {
         public StandardRule<T> MakeRule(object[] args) {
             DynamicType dt = args[0] as DynamicType;
             if (dt != null) {
-                if (Action.IsSimple || IsParamsCallWorker(Action)) {
+                if (Action.IsSimple || Action.IsParamsCall()) {
                     if (IsStandardDotNetType(dt)) {
                         // If CreateInstance can't do it then we'll fall back to a dynamic call rule.
                         // In the future CreateInstanceBinderHelper should always return a rule successfully.
-                        return new CreateInstanceBinderHelper<T>(Context, CreateInstanceAction.Make(Action.ArgumentKinds)).MakeRule(args) 
+                        return new CreateInstanceBinderHelper<T>(Context, CreateInstanceAction.Make(Action.ArgumentInfos)).MakeRule(args) 
                             ?? CallBinderHelper<T>.MakeDynamicCallRule(Action, Binder, CompilerHelpers.ObjectTypes(args));
                     } else {
                         DynamicType[] types = CompilerHelpers.ObjectTypes(args);
@@ -69,8 +69,7 @@ namespace IronPython.Runtime.Calls {
             StandardRule<T> rule = new StandardRule<T>();
 
             // TODO: Pass in MethodCandidate when we support kw-args
-            Expression[] parameters = CallBinderHelper<T>.GetArgumentExpressions(null, Action, rule, args);
-            if (!TooManyArgsForDefaultNew(creating, parameters)) {
+            if (!TooManyArgsForDefaultNew(creating, ArgumentCount(Action, rule) > 0)) {
                 Expression createExpr = MakeCreationExpression(creating, rule, args);
                 if (createExpr != null) {
                     Statement target = MakeInitTarget(creating, rule, args, createExpr);
@@ -101,23 +100,25 @@ namespace IronPython.Runtime.Calls {
                     CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, creating, new DynamicType[] { TypeCache.DynamicType });
 
                 Debug.Assert(cand != null);
-                createExpr = cand.Target.MakeExpression(Binder, creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] });
+                createExpr = cand.Target.MakeExpression(Binder, 
+                    creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] },
+                    creating.IsSystemType ? Type.EmptyTypes : new Type[] { typeof(DynamicType) });
             } else if (newInst is ConstructorFunction) {
                 // ctor w/ parameters, call w/ args
-                MethodCandidate cand = creating.IsSystemType ?
-                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, 
-                        creating, 
-                        CallBinderHelper<T>.GetArgumentTypes(Action, args)) :
-                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, 
+                DynamicType [] types = creating.IsSystemType ?
+                    CallBinderHelper<T>.GetArgumentTypes(Action, args) :
+                    Utils.Array.Insert(TypeCache.DynamicType, CallBinderHelper<T>.GetArgumentTypes(Action, args))                       ;
+
+                MethodCandidate cand = CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder,
                         creating,
-                        Utils.Array.Insert(TypeCache.DynamicType, CallBinderHelper<T>.GetArgumentTypes(Action, args))                        
-                    );
+                        types);
 
                 if (cand != null) {
                     createExpr = cand.Target.MakeExpression(Binder,
                         creating.IsSystemType ?
-                        CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, args) :
-                        Utils.Array.Insert(rule.Parameters[0], CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, args)));
+                            CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, args) :
+                            Utils.Array.Insert(rule.Parameters[0], CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, args)),
+                        CompilerHelpers.ConvertToTypes(types));
                 }
             } else {
                 // type has __new__, call that w/ the cls parameter
@@ -149,7 +150,7 @@ namespace IronPython.Runtime.Calls {
         private CallAction GetDynamicNewAction() {
             if (Action.IsSimple) return CallAction.Simple;
 
-            return CallAction.Make(Utils.Array.Insert(ArgumentKind.Simple, Action.ArgumentKinds));
+            return CallAction.Make(Utils.Array.Insert(ArgumentInfo.Simple, Action.ArgumentInfos));
         }
 
         /// <summary>
@@ -246,7 +247,7 @@ namespace IronPython.Runtime.Calls {
                     Utils.Array.Insert(creating, CallBinderHelper<T>.GetArgumentTypes(Action, args)));
                 if (mc != null) {
                     initCall = mc.Target.MakeExpression(Binder, 
-                        Utils.Array.Insert<Expression>(Ast.ReadDefined(variable), CallBinderHelper<T>.GetArgumentExpressions(mc, Action, rule, args)));
+                        Utils.Array.Insert<Expression>(Ast.Read(variable), CallBinderHelper<T>.GetArgumentExpressions(mc, Action, rule, args)));
                 }
             }
             return initCall;
@@ -273,8 +274,8 @@ namespace IronPython.Runtime.Calls {
         /// Checks if we have a default new and init - in this case if we have any
         /// arguments we don't allow the call.
         /// </summary>
-        private bool TooManyArgsForDefaultNew(DynamicType creating, Expression[] args) {
-            if (args.Length > 0) {
+        private bool TooManyArgsForDefaultNew(DynamicType creating, bool hasArgs) {
+            if (hasArgs) {
                 DynamicTypeSlot newInst, init;
                 creating.TryResolveSlot(Context, Symbols.NewInst, out newInst);
                 creating.TryResolveSlot(Context, Symbols.Init, out init);
@@ -288,8 +289,6 @@ namespace IronPython.Runtime.Calls {
         /// Generates an Expression which calls the Python __new__ method w/ the class parameter
         /// </summary>
         private Expression CallPythonNew(DynamicType creating, BuiltinFunction newInst, StandardRule<T> rule, object[] args) {
-            // TODO: Pass in method candidate when we support kw args
-            Expression[] parameters = Utils.Array.Insert(rule.Parameters[0], CallBinderHelper<T>.GetArgumentExpressions(null, Action, rule, args));
             DynamicType[] types = Utils.Array.Insert(TypeCache.DynamicType, CallBinderHelper<T>.GetArgumentTypes(Action, args));
 
             MethodBinder mb = MethodBinder.MakeBinder(Binder,
@@ -298,6 +297,7 @@ namespace IronPython.Runtime.Calls {
                 BinderType.Normal);
 
             MethodCandidate mc = mb.MakeBindingTarget(CallType.None, types);
+            Expression[] parameters = Utils.Array.Insert(rule.Parameters[0], CallBinderHelper<T>.GetArgumentExpressions(mc, Action, rule, args));
             Expression createExpr = null;
             if (mc != null) {
                 createExpr = mc.Target.MakeExpression(Binder, parameters);

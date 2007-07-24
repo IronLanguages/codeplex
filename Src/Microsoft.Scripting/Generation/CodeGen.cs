@@ -30,6 +30,7 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using System.Text;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -54,6 +55,7 @@ namespace Microsoft.Scripting.Generation {
         private List<Slot> _freeSlots = new List<Slot>();
         private IList<Label> _yieldLabels;
         private Nullable<ReturnBlock> _returnBlock;
+        private Dictionary<CodeBlock, CodeGen> _codeBlockImplementations;
 
         // Key slots
         private EnvironmentSlot _environmentSlot;   // reference to function's own environment
@@ -81,6 +83,10 @@ namespace Microsoft.Scripting.Generation {
         public const int BranchForBreak = 2;
         public const int BranchForContinue = 3;
 
+        // This is true if we are emitting code while in an interpreted context.
+        // This flag should always be flowed through to other CodeGen objects created from this one.
+        private bool _fastEval = false;
+
         public CodeGen(TypeGen typeGen, AssemblyGen assemblyGen, MethodBase mi, ILGenerator ilg,
             IList<Type> paramTypes, ConstantPool constantPool) {
             Debug.Assert(typeGen == null || typeGen.AssemblyGen == assemblyGen);
@@ -101,6 +107,8 @@ namespace Microsoft.Scripting.Generation {
                 firstArg = 1;
             } else {
                 firstArg = 0;
+                _constantPool = new ConstantPool();
+                _constantPool.SetCodeGen(this, null);
             }
 
             int thisOffset = !mi.IsStatic ? 1 : 0;
@@ -118,6 +126,7 @@ namespace Microsoft.Scripting.Generation {
             EmitLineInfo = ScriptDomainManager.Options.DynamicStackTraceSupport;
             WriteSignature(mi, paramTypes);
 
+            _codeBlockImplementations = new Dictionary<CodeBlock, CodeGen>();
 #if !DEBUG
         }
 #else
@@ -169,6 +178,10 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
+        public bool HasContext {
+            get { return _context != null; }
+        }
+
         public ActionBinder Binder {
             get {
                 if (_binder == null) {
@@ -203,6 +216,21 @@ namespace Microsoft.Scripting.Generation {
         public Slot GotoRouter {
             get { return _gotoRouter; }
             set { _gotoRouter = value; }
+        }
+
+        /// <summary>
+        /// Returns true if we are attempting to generate code while in FastEval mode;
+        /// this means variables need to always be looked up via RuntimeHelpers.
+        /// </summary>
+        public bool FastEval {
+            get { return _fastEval; }
+            set {
+                _fastEval = value;
+                if (value == true) {
+                    // we also lack a CompilerContext, so we don't have line numbers
+                    EmitLineInfo = false;
+                }
+            }
         }
 
         public bool InLoop() {
@@ -646,6 +674,12 @@ namespace Microsoft.Scripting.Generation {
             set { _allocator = value; }
         }
 
+        public bool HasAllocator {
+            get {
+                return _allocator != null;
+            }
+        }
+
         /// <summary>
         /// The slot used for the current frames environment.  If this method defines has one or more closure functions
         /// defined within it then the environment will contain all of the variables that the closure variables lifted
@@ -746,7 +780,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public virtual void EmitCurrentLine(int line) {
-            if (!EmitLineInfo) return;
+            if (!EmitLineInfo || !HasContext) return;
 
             line = _context.SourceUnit.MapLine(line);
             if (line != _currentLine) {
@@ -967,6 +1001,16 @@ namespace Microsoft.Scripting.Generation {
             EmitCall(pi.GetSetMethod());
         }
 
+        public void EmitFieldAddress(FieldInfo fi) {
+            if (fi == null) throw new ArgumentNullException("fi");
+
+            if (fi.IsStatic) {
+                Emit(OpCodes.Ldsflda, fi);
+            } else {
+                Emit(OpCodes.Ldflda, fi);
+            }
+        }
+
         public void EmitFieldGet(Type type, String name) {
             if (type == null) throw new ArgumentNullException("type");
             if (name == null) throw new ArgumentNullException("name");
@@ -1099,11 +1143,11 @@ namespace Microsoft.Scripting.Generation {
         }
 
         // Not to be used with virtual methods
-        public void EmitDelegate(CodeGen delegateFunction, Type delegateType) {            
+        public void EmitDelegateConstruction(CodeGen delegateFunction, Type delegateType) {            
             if (delegateFunction == null) throw new ArgumentNullException("delegateFunction");
             if (delegateType == null) throw new ArgumentNullException("delegateType");
 
-            if (delegateFunction.MethodInfo is DynamicMethod || delegateFunction.ConstantPool != null) {
+            if (delegateFunction.MethodInfo is DynamicMethod || delegateFunction.ConstantPool.IsBound) {
                 Delegate d = delegateFunction.CreateDelegate(delegateType);
                 this.ConstantPool.AddData(d).EmitGet(this);
             } else {
@@ -1486,9 +1530,9 @@ namespace Microsoft.Scripting.Generation {
 
         private void EmitCompilerConstantNoCache(CompilerConstant value) {
             Debug.Assert(value != null);
-            if (_constantPool != null) {
+            if (ConstantPool.IsBound) {
                 //TODO cache these so that we use the same slot for the same values
-                _constantPool.AddData(value.Create()).EmitGet(this);
+                _constantPool.AddData(value.Create(), value.Type).EmitGet(this);
             } else {
                 value.EmitCreation(this);
             }
@@ -1603,42 +1647,18 @@ namespace Microsoft.Scripting.Generation {
         public Delegate CreateDelegate(Type delegateType) {
             if (delegateType == null) throw new ArgumentNullException("delegateType");
 
-            if (_constantPool != null) {
-                return CreateDelegate(CreateDelegateMethodInfo(), delegateType, _constantPool.Data);
+            if (ConstantPool.IsBound) {
+                return Utils.Reflection.CreateDelegate(CreateDelegateMethodInfo(), delegateType, _constantPool.Data);
             } else {
-                return CreateDelegate(CreateDelegateMethodInfo(), delegateType);
+                return Utils.Reflection.CreateDelegate(CreateDelegateMethodInfo(), delegateType);
             }
         }
 
         public Delegate CreateDelegate(Type delegateType, object target) {
             if (delegateType == null) throw new ArgumentNullException("delegateType");
-            Debug.Assert(_constantPool == null);
+            Debug.Assert(!ConstantPool.IsBound);
 
-            return CreateDelegate(CreateDelegateMethodInfo(), delegateType, target);
-        }
-
-        public static Delegate CreateDelegate(MethodInfo methodInfo, Type delegateType) {
-            if (delegateType == null) throw new ArgumentNullException("delegateType");
-            if (methodInfo == null) throw new ArgumentNullException("methodInfo");
-
-            DynamicMethod dm = methodInfo as DynamicMethod;
-            if (dm != null) {
-                return dm.CreateDelegate(delegateType);
-            } else {
-                return Delegate.CreateDelegate(delegateType, methodInfo);
-            }
-        }
-
-        public static Delegate CreateDelegate(MethodInfo methodInfo, Type delegateType, object target) {
-            if (methodInfo == null) throw new ArgumentNullException("methodInfo");
-            if (delegateType == null) throw new ArgumentNullException("delegateType");
-
-            DynamicMethod dm = methodInfo as DynamicMethod;
-            if (dm != null) {
-                return dm.CreateDelegate(delegateType, target);
-            } else {
-                return Delegate.CreateDelegate(delegateType, target, methodInfo);
-            }
+            return Utils.Reflection.CreateDelegate(CreateDelegateMethodInfo(), delegateType, target);
         }
 
         public CodeGen DefineMethod(string name, Type retType, IList<Type> paramTypes, string[] paramNames, ConstantPool constantPool) {
@@ -1857,7 +1877,7 @@ namespace Microsoft.Scripting.Generation {
         private void WriteSignature(MethodBase method, IList<Type> paramTypes) {
             WriteIL("{0} {1} (", method.Name, method.Attributes);
             foreach (Type type in paramTypes) {
-                WriteIL("\t{0}", type.FullName);
+                WriteIL("\t{0}", MakeTypeName(type));
             }
             WriteIL(")");
         }
@@ -1906,49 +1926,57 @@ namespace Microsoft.Scripting.Generation {
             _curLine += lines;
         }
 
-        private static string MakeSignature(MethodBase mb) {
+        private static string MakeSignature(MethodBase method) {
 #if DEBUG
-            return Utils.Reflection.FormatSignature(mb);
+            return Utils.Reflection.FormatSignature(new StringBuilder(), method).ToString();
 #else
-            return String.Empty;
+            throw Utils.Assert.Unreachable;
+#endif
+        }
+
+        private static string MakeTypeName(Type type) {
+#if DEBUG
+            return Utils.Reflection.FormatTypeName(new StringBuilder(), type).ToString();
+#else
+            throw Utils.Assert.Unreachable;
 #endif
         }
 
         [Conditional("DEBUG")]
-        private void WriteIL(OpCode op) {
-            if(ILDebug) WriteIL(op.ToString());
+        private void WriteIL(OpCode opcode) {
+            if(ILDebug) WriteIL(opcode.ToString());
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, byte arg) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, arg);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, arg);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, ConstructorInfo con) {
-            if(ILDebug) WriteIL("{0}\t{1}({2})", opcode, con.DeclaringType, MakeSignature(con));
+            if (ILDebug) WriteIL("{0} {1}\t", opcode, MakeSignature(con));
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, double arg) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, arg);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, arg);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, FieldInfo field) {
-            if(ILDebug) WriteIL("{0}\t{1}.{2}", opcode, field.DeclaringType, field.Name);
+            if (ILDebug) WriteIL("{0}\t{1}.{2}", opcode, MakeTypeName(field.DeclaringType), field.Name);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, float arg) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, arg);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, arg);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, int arg) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, arg);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, arg);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, Label label) {
-            if(ILDebug) WriteIL("{0}\tlabel_{1}", opcode, GetLabelId(label));
+            if (ILDebug) WriteIL("{0}\tlabel_{1}", opcode, GetLabelId(label));
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, Label[] labels) {
-            if(ILDebug) {
+            if (ILDebug) {
                 System.Text.StringBuilder sb = new System.Text.StringBuilder();
                 sb.Append(opcode.ToString());
                 sb.Append("\t[");
@@ -1962,27 +1990,27 @@ namespace Microsoft.Scripting.Generation {
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, LocalBuilder local) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, local);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, local);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, long arg) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, arg);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, arg);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, MethodInfo meth) {
-            if(ILDebug) WriteIL("{0}\t{1} {2}.{3}({4})", opcode, meth.ReturnType.FullName, meth.DeclaringType, meth.Name, MakeSignature(meth));
+            if(ILDebug) WriteIL("{0}\t{1}", opcode, MakeSignature(meth));
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, sbyte arg) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, arg);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, arg);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, short arg) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, arg);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, arg);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, SignatureHelper signature) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, signature);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, signature);
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, string str) {
@@ -1990,11 +2018,11 @@ namespace Microsoft.Scripting.Generation {
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, Type cls) {
-            if(ILDebug) WriteIL("{0}\t{1}", opcode, cls.FullName);
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, MakeTypeName(cls));
         }
         [Conditional("DEBUG")]
         private void WriteIL(OpCode opcode, MethodInfo meth, Type[] optionalParameterTypes) {
-            if(ILDebug) WriteIL("{0}\t{1} {2}.{3}({4})", opcode, meth.ReturnType.FullName, meth.DeclaringType, meth.Name, MakeSignature(meth));
+            if (ILDebug) WriteIL("{0}\t{1}", opcode, MakeSignature(meth));
         }
         [Conditional("DEBUG")]
         private void WriteIL(Label l) {
@@ -2039,9 +2067,6 @@ namespace Microsoft.Scripting.Generation {
         
         /// <summary>
         /// Gets a list which can be used to inject references to objects from IL.  
-        /// 
-        /// For successful use derived classes must save this _constantPool list and then
-        /// override EmitGetConstantPool index to emit the index and get the value.
         /// </summary>
         public ConstantPool ConstantPool {
             get {
@@ -2051,7 +2076,7 @@ namespace Microsoft.Scripting.Generation {
                 _constantPool = value;
             }
         }
-        
+
         public IList<Label> YieldLabels {
             get { return _yieldLabels; }
             set { _yieldLabels = value; }
@@ -2147,24 +2172,17 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public Slot CreateDynamicSite(Action action, Type[] siteTypes, out bool fast) {
+            object site;
             if (fast = CanUseFastSite()) {
-                // TODO: Switch this to use a CompilerConstant
-
                 // Use fast dynamic site (with cached CodeContext)
-                return DynamicSiteHelpers.MakeFastSlot(action, this, siteTypes);
-            } else if (this.ConstantPool == null) {
-                Debug.Assert(this.TypeGen != null);
-                // Use unoptimized dynamic site, store it in the static field
-                return DynamicSiteHelpers.MakeSlot(action, this, siteTypes);
+                Type fastSite = DynamicSiteHelpers.MakeFastDynamicSiteType(siteTypes);
+                site = DynamicSiteHelpers.MakeFastSite(null, action, fastSite);
             } else {
-                // Create unoptimized dynamic site and put it in the constant pool
-                DynamicSite sds = DynamicSiteHelpers.MakeSite(
-                    action,
-                    DynamicSiteHelpers.MakeDynamicSiteType(siteTypes),
-                    siteTypes.Length
-                    );
-                return this.ConstantPool.AddData(sds);
+                Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(siteTypes);
+                site = DynamicSiteHelpers.MakeSite(action, siteType);
             }
+
+            return ConstantPool.AddData(site);
         }
 
         internal Slot GetTemporarySlot(Type type) {
@@ -2185,6 +2203,28 @@ namespace Microsoft.Scripting.Generation {
             if (!IsGenerator) {
                 FreeLocalTmp(temp);
             }
+        }
+
+        /// <summary>
+        /// Returns the CodeGen implementing the code block.
+        /// Emits the code block implementation if it hasn't been emitted yet.
+        /// </summary>
+        internal CodeGen ProvideCodeBlockImplementation(CodeBlock block, bool hasContextParameter, bool hasThis) {
+            Utils.Assert.NotNull(block);
+            CodeGen impl;
+
+            // emit the code block method if it has:
+            if (!_codeBlockImplementations.TryGetValue(block, out impl)) {
+                impl = block.CreateMethod(this, hasContextParameter, hasThis);
+                impl.Binder = _binder;
+
+                block.EmitFunctionImplementation(impl);
+                impl.Finish();
+
+                _codeBlockImplementations.Add(block, impl);
+            }
+
+            return impl;
         }
     }
 }

@@ -32,10 +32,14 @@ public class %(prefix)sDynamicSite<%(ts)s> : DynamicSite %(constraints)s {
     private %(prefix)sDynamicSiteTarget<%(ts)s> _target;
     private RuleSet<%(prefix)sDynamicSiteTarget<%(ts)s>> _rules;
 
-    public %(prefix)sDynamicSite(Action action)
+    internal %(prefix)sDynamicSite(Action action)
         : base(action) {
         this._rules = RuleSet<%(prefix)sDynamicSiteTarget<%(ts)s>>.EmptyRules;
         this._target = this._rules.GetOrMakeTarget(null);
+    }
+    
+    public static %(prefix)sDynamicSite<%(ts)s> Create(Action action) {
+        return new %(prefix)sDynamicSite<%(ts)s>(action);
     }
 
     public Tret Invoke(CodeContext context, %(tparams)s) {
@@ -45,14 +49,19 @@ public class %(prefix)sDynamicSite<%(ts)s> : DynamicSite %(constraints)s {
 
     public Tret UpdateBindingAndInvoke(CodeContext context, %(tparams)s) {
         StandardRule<%(prefix)sDynamicSiteTarget<%(ts)s>> rule = 
-          context.LanguageContext.Binder.GetRule<%(prefix)sDynamicSiteTarget<%(ts)s>>(Action, %(getargsarray)s);
+          context.LanguageContext.Binder.GetRule<%(prefix)sDynamicSiteTarget<%(ts)s>>(context, Action, %(getargsarray)s);
 
 #if DEBUG
+        // This is much slower than building the ruleset, since we have to look up the rule every time;
+        // we do it in debug mode to make sure we can still get through this code path
+        // without generating IL.
         if (context.LanguageContext.Engine.Options.FastEvaluation) {
-            DynamicSiteHelpers.InsertArguments(context.Scope, %(targs)s);
-            bool result = (bool)rule.Test.Evaluate(context);
-            Debug.Assert(result);
-            return (Tret)rule.Target.Execute(context);
+            object[] args = new object[] { %(targs)s };
+            using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                bool result = (bool)rule.Test.Evaluate(context);
+                Debug.Assert(result);
+                return (Tret)rule.Target.Execute(context);
+            }
         }
 #endif
         RuleSet<%(prefix)sDynamicSiteTarget<%(ts)s>> newRules = _rules.AddRule(rule);
@@ -81,10 +90,14 @@ public class %(prefix)sFastDynamicSite<%(ts)s> : FastDynamicSite %(constraints)s
     private %(prefix)sFastDynamicSiteTarget<%(ts)s> _target;
     private RuleSet<%(prefix)sFastDynamicSiteTarget<%(ts)s>> _rules;
 
-    public %(prefix)sFastDynamicSite(CodeContext context, Action action)
+    internal %(prefix)sFastDynamicSite(CodeContext context, Action action)
         : base(context, action) {
         this._rules = RuleSet<%(prefix)sFastDynamicSiteTarget<%(ts)s>>.EmptyRules;
         this._target = this._rules.GetOrMakeTarget(null);
+    }
+
+    public static %(prefix)sFastDynamicSite<%(ts)s> Create(CodeContext context, Action action) {
+        return new %(prefix)sFastDynamicSite<%(ts)s>(context, action);
     }
 
     public Tret Invoke(%(tparams)s) {
@@ -93,14 +106,16 @@ public class %(prefix)sFastDynamicSite<%(ts)s> : FastDynamicSite %(constraints)s
 
     public Tret UpdateBindingAndInvoke(%(tparams)s) {
         StandardRule<%(prefix)sFastDynamicSiteTarget<%(ts)s>> rule = 
-          Context.LanguageContext.Binder.GetRule<%(prefix)sFastDynamicSiteTarget<%(ts)s>>(Action, %(getargsarray)s);
+          Context.LanguageContext.Binder.GetRule<%(prefix)sFastDynamicSiteTarget<%(ts)s>>(Context, Action, %(getargsarray)s);
 
 #if DEBUG
         if (Context.LanguageContext.Engine.Options.FastEvaluation) {
-            DynamicSiteHelpers.InsertArguments(Context.Scope, %(targs)s);
-            bool result = (bool)rule.Test.Evaluate(Context);
-            Debug.Assert(result);
-            return (Tret)rule.Target.Execute(Context);
+            object[] args = new object[] { %(targs)s };
+            using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                bool result = (bool)rule.Test.Evaluate(Context);
+                Debug.Assert(result);
+                return (Tret)rule.Target.Execute(Context);
+            }
         }
 #endif
         RuleSet<%(prefix)sFastDynamicSiteTarget<%(ts)s>> newRules = _rules.AddRule(rule);
@@ -178,32 +193,42 @@ def gen_uninitialized_type(cw):
     
     cw.exit_block()
 
-uninitialized_helper = """\
-public static Delegate MakeUninitialized%(mod)sTarget(Type targetType) {
-    List<Type> types = new List<Type>(targetType.GetGenericArguments());
-    int argCount = types.Count - 1;
-    while (types.Count < %(maxtypes)d) types.Insert(argCount, typeof(object));
-    Type dType = typeof(UninitializedTargetHelper<%(commas)s>).MakeGenericType(types.ToArray());
-    return Delegate.CreateDelegate(targetType, Activator.CreateInstance(dType), "%(mod)sInvoke"+argCount);
-}
-"""
-
-def gen_uninitialized_helper(cw, mod):
-    commas = ','*(MaxTypes-1)
-    cw.write(uninitialized_helper, mod=mod, maxtypes=MaxTypes, commas=commas)
 
 executor = """\
 StandardRule<DynamicSiteTarget<%(typeargs)s>> rule%(k)d = 
-    binder.GetRule<DynamicSiteTarget<%(typeargs)s>>(action, args);
-result = (bool)rule%(k)d.Test.Evaluate(binder.Context);
-Debug.Assert(result);
-return rule%(k)d.Target.Execute(binder.Context);"""
+    binder.GetRule<DynamicSiteTarget<%(typeargs)s>>(context, action, args);
+
+using (context.Scope.TemporaryVariableContext(rule%(k)d.TemporaryVariables, rule%(k)d.ParamVariables, args)) {
+    result = (bool)rule%(k)d.Test.Evaluate(context);
+    Debug.Assert(result);
+    return rule%(k)d.Target.Execute(context);
+}"""
+
+big_executor = '''\
+//TODO: use CompilerHelpers.GetTypes(args) instead?
+Type tupleType = NewTuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), args.Length));
+Type targetType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, typeof(object));
+Type ruleType = typeof(StandardRule<>).MakeGenericType(targetType);
+MethodInfo getRule = typeof(ActionBinder).GetMethod("GetRule").MakeGenericMethod(targetType);
+object ruleN = getRule.Invoke(binder, new object[] { context, action, args });
+Ast.Expression test = (Ast.Expression)ruleType.GetProperty("Test").GetValue(ruleN, null);
+Ast.Statement target = (Ast.Statement)ruleType.GetProperty("Target").GetValue(ruleN, null);
+Ast.Variable[] paramVars = (Ast.Variable[]) ruleType.GetProperty("ParamVariables",
+    BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
+Ast.Variable[] tempVars = (Ast.Variable[])ruleType.GetProperty("TemporaryVariables",
+    BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
+
+
+NewTuple t = NewTuple.MakeTuple(tupleType, args);
+object[] tupArg = new object[] {t};
+using (context.Scope.TemporaryVariableContext(tempVars, paramVars, tupArg)) {
+    result = (bool)test.Evaluate(context);
+    Debug.Assert(result);
+    return target.Execute(context);
+}'''
 
 def gen_execute(cw):
     cw.enter_block("public static object Execute(CodeContext context, ActionBinder binder, Action action, params object[] args)")
-    cw.enter_block('for (int i = 0; i < args.Length; i++)')
-    cw.write('binder.Context.Scope.SetName(SymbolTable.StringToId("$arg" + i.ToString()), args[i]);')
-    cw.exit_block()
     cw.write('bool result;')
     cw.enter_block("switch (args.Length)")
     for i in range(MaxSiteArity):
@@ -211,8 +236,10 @@ def gen_execute(cw):
         typeargs = ", ".join(['object'] * (i+2))
         cw.write(executor % dict(typeargs=typeargs,k=i+1))
         cw.dedent()
+    cw.case_label("default:")
+    cw.write(big_executor)
+    cw.dedent()
     cw.exit_block()
-    cw.write('throw new ArgumentException("requires 1-6 arguments");')
     cw.exit_block()
     cw.write('')
 
@@ -229,8 +256,6 @@ def gen_helpers(cw):
     
     gen_uninitialized_type(cw)
     
-    gen_uninitialized_helper(cw, "")
-    gen_uninitialized_helper(cw, "Fast")
     
     
     

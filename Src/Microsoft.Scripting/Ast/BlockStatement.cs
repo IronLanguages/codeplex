@@ -26,13 +26,14 @@ namespace Microsoft.Scripting.Ast {
 
         internal BlockStatement(SourceSpan span, Statement[] statements)
             : base(span) {
-            Utils.Assert.NotNull(statements); 
+            Utils.Assert.NotNullItems(statements); 
             _statements = statements;
         }
 
         public override object Execute(CodeContext context) {
             object ret = Statement.NextStatement;
             foreach (Statement stmt in _statements) {
+                //AstWriter.ForceDump(stmt, "executing", System.Console.Out);
                 ret = stmt.Execute(context);
                 if (ret != Statement.NextStatement) break;
             }

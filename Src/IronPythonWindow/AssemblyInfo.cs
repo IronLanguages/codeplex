@@ -34,19 +34,6 @@ using System.Security;
 [assembly: AssemblyCulture("")]
 
 //
-// Version information for an assembly consists of the following four values:
-//
-//      Major Version
-//      Minor Version 
-//      Build Number
-//      Revision
-//
-// You can specify all the values or you can default the Revision and Build Numbers 
-// by using the '*' as shown below:
-
-[assembly: AssemblyVersion("2.0.0.200")]
-
-//
 // In order to sign your assembly you must specify a key to use. Refer to the 
 // Microsoft .NET Framework documentation for more information on assembly signing.
 //
@@ -75,4 +62,11 @@ using System.Security;
 [assembly: SecurityTransparent]
 [assembly: CLSCompliant(false)]
 [assembly: ComVisible(false)]
-[assembly: AssemblyFileVersion("2.0.10627.00")]
+[assembly: AssemblyFileVersion("2.0.10724.00")]
+
+// hack in order to pass AssemblyInfoTask 
+// AssemblyVersion attribute has been decorated in AssemblyVersion.cs
+
+#if FALSE
+[assembly: AssemblyVersion("2.0.0.00")]
+#endif

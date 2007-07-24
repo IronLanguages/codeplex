@@ -82,7 +82,7 @@ namespace IronPython.Runtime {
                     // only cache values currently in built-ins, everything else will have
                     // no caching policy and will fall back to the LanguageContext.
                     object value;
-                    if (BuiltinModuleInstance.TryGetCustomMember(DefaultContext.Default, name, out value)) {
+                    if (BuiltinModuleInstance.Scope.TryGetName(DefaultContext.Default.LanguageContext, name, out value)) {
                         _builtinCache[name] = cache = new ModuleGlobalCache(value);
                     }
                 }
@@ -128,7 +128,7 @@ namespace IronPython.Runtime {
 
                 // These fields do not get reset on "reload(sys)"
                 argv = List.Make();
-                modules = new PythonDictionary();
+                modules = new SymbolDictionary();
                 modules["sys"] = this;
 
                 modules["__builtin__"] = PythonModuleOps.MakePythonModule("__builtin__", typeof(Builtin));
@@ -288,7 +288,8 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal static TraceBack RawTraceBack { get { return ThreadStatics.SystemState_RawTraceBack; } set { ThreadStatics.SystemState_RawTraceBack = value; } }
+        [ThreadStatic]
+        internal static TraceBack RawTraceBack;
 
         [PythonName("exc_clear")]
         public void ClearException(CodeContext context) {
@@ -369,17 +370,16 @@ namespace IronPython.Runtime {
         public object ps2;
 
         public object SetDefaultEncodingImplementation(object name) {
-           if (name == null) throw PythonOps.TypeError("name cannot be None");
+            if (name == null) throw PythonOps.TypeError("name cannot be None");
             string strName = name as string;
             if (strName == null) throw PythonOps.TypeError("name must be a string");
 
-           Encoding enc;
+            Encoding enc;
             if (!StringOps.TryGetEncoding(_defaultEncoding, strName, out enc)) {
                 throw PythonOps.LookupError("'{0}' does not match any available encodings", strName);
             }
 
             _defaultEncoding = enc;
-            _dict.Remove(Symbols.SetDefaultEncoding);
 
             return null;
         }
@@ -552,11 +552,7 @@ namespace IronPython.Runtime {
             PythonExtensionTypeAttribute._sysState = this;
             // Load builtins from IronPython.Modules
             Assembly ironPythonModules;
-#if SIGNED
-            ironPythonModules = ScriptDomainManager.CurrentManager.PAL.LoadAssembly("IronPython.Modules, Version=2.0.0.200, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
-#else
-            ironPythonModules = ScriptDomainManager.CurrentManager.PAL.LoadAssembly("IronPython.Modules");
-#endif
+            ironPythonModules = ScriptDomainManager.CurrentManager.PAL.LoadAssembly(VersionInfo.GetIronPythonAssembly("IronPython.Modules"));
             _autoLoadBuiltins.Add(ironPythonModules);
 
             foreach(Assembly builtinsAssembly in _autoLoadBuiltins) {
@@ -575,12 +571,20 @@ namespace IronPython.Runtime {
         }
 
         private void LoadBuiltins(Assembly assem) {
-            foreach (PythonModuleAttribute pma in assem.GetCustomAttributes(typeof(PythonModuleAttribute), false)) {
-                Builtins.Add(pma.Name, pma.Type);
-                BuiltinModuleNames[pma.Type] = pma.Name;
-            }
+            object [] attrs = assem.GetCustomAttributes(typeof(PythonModuleAttribute), false);
+            if (attrs.Length > 0) {
+                foreach (PythonModuleAttribute pma in attrs) {
+                    Builtins.Add(pma.Name, pma.Type);
+                    BuiltinModuleNames[pma.Type] = pma.Name;
+                }
 
-            builtin_module_names = Tuple.Make(_builtinsDict.Keys.GetEnumerator());
+                object[] keys = new object[_builtinsDict.Keys.Count];
+                int index = 0;
+                foreach (object key in _builtinsDict.Keys) {
+                    keys[index++] = key;
+                }
+                builtin_module_names = Tuple.MakeTuple(keys);
+            }
         }
     }
 }

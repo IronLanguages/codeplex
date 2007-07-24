@@ -15,6 +15,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Collections.Generic;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
@@ -26,30 +27,43 @@ namespace Microsoft.Scripting {
     /// </summary>
     /// <typeparam name="TupleType"></typeparam>
     public sealed class FunctionEnvironmentDictionary<TupleType> : TupleDictionary<TupleType> where TupleType : NewTuple {
+        private Dictionary<SymbolId, int> _slotDict;
+
         public FunctionEnvironmentDictionary(TupleType data, SymbolId[] names) :
             base(data) {
             Extra = names;
         }
 
         protected internal override bool TrySetExtraValue(SymbolId key, object value) {
-            for (int i = 0; i < Extra.Length; i++) {
-                if (Extra[i] == key) {
-                    Tuple.SetValue(i + 1, value);
-                    return true;
-                }
+            if (_slotDict == null) MakeSlotDict();
+
+            int val;
+            if (_slotDict.TryGetValue(key, out val)) {
+                Tuple.SetValue(val, value);
+                return true;
             }
+
             return false;
         }
 
         protected internal override bool TryGetExtraValue(SymbolId key, out object value) {
-            for (int index = 0; index < Extra.Length; index++) {
-                if (Extra[index] == key) {
-                    value = Tuple.GetValue(index + 1);
-                    return true;
-                }
+            if (_slotDict == null) MakeSlotDict();
+
+            int val;
+            if (_slotDict.TryGetValue(key, out val)) {
+                value = Tuple.GetValue(val);
+                return true;
             }
             value = null;
             return false;
+        }
+
+        private void MakeSlotDict() {            
+            Dictionary<SymbolId, int> slotDict = new Dictionary<SymbolId, int>();
+            for (int index = 0; index < Extra.Length; index++) {
+                slotDict[Extra[index]] = index + 1;
+            }
+            _slotDict = slotDict;            
         }
     }
     

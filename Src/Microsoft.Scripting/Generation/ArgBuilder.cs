@@ -21,10 +21,6 @@ using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
     public abstract class ArgBuilder {
-        public virtual bool CanGenerate {
-            get { return true; }
-        }
-
         public abstract int Priority {
             get;
         }
@@ -41,7 +37,5 @@ namespace Microsoft.Scripting.Generation {
 
         public abstract object Build(CodeContext context, object[] args);
         public virtual void UpdateFromReturn(object callArg, object[] args) { }
-
-        public abstract void Generate(CodeGen cg, IList<Slot> argSlots);
     }
 }

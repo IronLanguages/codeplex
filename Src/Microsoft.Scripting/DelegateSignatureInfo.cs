@@ -161,7 +161,7 @@ namespace Microsoft.Scripting {
             Debug.Assert(clone[_target] == DelegateSignatureInfo.TargetPlaceHolder);
 #endif
             clone[_target] = target;
-            return CodeGen.CreateDelegate(_method, delegateType, clone);
+            return Utils.Reflection.CreateDelegate(_method, delegateType, clone);
         }
     }
 }

@@ -51,7 +51,7 @@ namespace Microsoft.Scripting {
                 if (pis[argIndex++].ParameterType != typeof(object)) return null;
             }
 
-            return CodeGen.CreateDelegate(mi, CallTargets.GetTargetType(needsContext, nargs));
+            return Utils.Reflection.CreateDelegate(mi, CallTargets.GetTargetType(needsContext, nargs));
         }
 
         protected FastCallable() { }

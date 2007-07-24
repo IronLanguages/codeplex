@@ -48,14 +48,8 @@ namespace IronPython.Runtime.Operations {
     public static partial class PythonOps {
         #region Shared static data
 
-        private static List<object> InfiniteRepr {
-            get {
-                return ThreadStatics.Ops_InfiniteRepr;
-            }
-            set {
-                ThreadStatics.Ops_InfiniteRepr = value;
-            }
-        }
+        [ThreadStatic]
+        private static List<object> InfiniteRepr;
 
         /// <summary> Singleton NotImplemented object of NotImplementedType.  Initialized after type has been created in static constructor </summary>
         public static readonly object NotImplemented;
@@ -70,7 +64,8 @@ namespace IronPython.Runtime.Operations {
         /// <summary> stored for copy_reg module, used for reduce protocol </summary>
         public static BuiltinFunction PythonReconstructor;
 
-        private static FastDynamicSite<object, object, int> CompareSite = new FastDynamicSite<object, object, int>(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
+        private static FastDynamicSite<object, object, int> CompareSite = FastDynamicSite<object, object, int>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
+        private static DynamicSite<object, string, Tuple, IAttributesCollection, object> MetaclassSite;
 
         #endregion
 
@@ -241,10 +236,13 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static string ToString(object o) {
+            string x = o as string;
+            Array ax;
+            if (x != null) return x;
             if (o == null) return "None";
             if (o is double) return DoubleOps.ToString((double)o);
             if (o is float) return DoubleOps.ToString((float)o);
-            if (o is Array) return StringRepr(o);
+            if ((ax = o as Array) != null) return StringRepr(ax);
 
             object res;
             if (!DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default,
@@ -635,13 +633,13 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static FastDynamicSite<object, object, object> EqualSharedSite =
-            new FastDynamicSite<object, object, object>(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equal));
+            FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equal));
 
         public static object Equal(object x, object y) {
             return EqualSharedSite.Invoke(x, y);
         }
         private static FastDynamicSite<object, object, bool> EqualBooleanSharedSite =
-            new FastDynamicSite<object, object, bool>(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equal));
+            FastDynamicSite<object, object, bool>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equal));
 
         public static bool EqualRetBool(object x, object y) {
             //TODO just can't seem to shake these fast paths
@@ -1231,7 +1229,7 @@ namespace IronPython.Runtime.Operations {
         private static void SlowSetIndex(object o, object index, object value) {
             Array array = o as Array;
             if (array != null) {
-                ArrayOps.SetIndex(array, index, value);
+                ArrayOps.SetItem(array, index, value);
                 return;
             }
 
@@ -1561,17 +1559,18 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static object GetUserDescriptor(object o, object instance, object context) {
             if (o != null && o.GetType() == typeof(OldInstance)) return o;   // only new-style classes can have descriptors
-
-            // slow, but only encountred for user defined descriptors.
-            PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "__get__");
-            object ret;
-            if (TryInvokeOperator(DefaultContext.Default,
-                Operators.GetDescriptor,
-                o,
-                instance,
-                context,
-                out ret))
-                return ret;
+            if (o is ISuperDynamicObject) {
+                // slow, but only encountred for user defined descriptors.
+                PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "__get__");
+                object ret;
+                if (TryInvokeOperator(DefaultContext.Default,
+                    Operators.GetDescriptor,
+                    o,
+                    instance,
+                    context,
+                    out ret))
+                    return ret;
+            }
 
             return o;
         }
@@ -1634,8 +1633,8 @@ namespace IronPython.Runtime.Operations {
             return DynamicHelpers.GetDynamicType(target).TryInvokeTernaryOperator(context, name, target, value1, value2, out ret);
         }
 
-        private static FastDynamicSite<object, object> _flushSite = new FastDynamicSite<object, object>(DefaultContext.Default, CallAction.Simple);
-        private static FastDynamicSite<object, string, object> _writeSite = new FastDynamicSite<object, string, object>(DefaultContext.Default, CallAction.Simple);
+        private static FastDynamicSite<object, object> _flushSite = FastDynamicSite<object, object>.Create(DefaultContext.Default, CallAction.Simple);
+        private static FastDynamicSite<object, string, object> _writeSite = FastDynamicSite<object, string, object>.Create(DefaultContext.Default, CallAction.Simple);
 
         public static void Write(object f, string text) {
             SystemState state = SystemState.Instance;
@@ -1940,7 +1939,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception NameError(SymbolId name) {
-            return new UnboundNameException(string.Format("name {0} is not defined", SymbolTable.IdToString(name)));
+            return new UnboundNameException(string.Format("name '{0}' is not defined", SymbolTable.IdToString(name)));
         }
 
 
@@ -2093,7 +2092,19 @@ namespace IronPython.Runtime.Operations {
             // __metaclass__ = foo
             // class bar: pass
             // calls our function...
-            return PythonOps.CallWithContext(context, metaclass, name, tupleBases, vars);
+            EnsureMetaclassSite();
+
+            return MetaclassSite.Invoke(context, metaclass, name, tupleBases, vars);
+        }
+
+        private static void EnsureMetaclassSite() {
+            if (MetaclassSite == null) {
+                Interlocked.CompareExchange<DynamicSite<object, string, Tuple, IAttributesCollection, object>>(
+                    ref MetaclassSite,
+                    DynamicSite<object, string, Tuple, IAttributesCollection, object>.Create(CallAction.Simple),
+                    null
+                );
+            }
         }
 
         /// <summary>
@@ -2615,6 +2626,11 @@ namespace IronPython.Runtime.Operations {
 
         public static Exception UnexpectedKeywordArgumentError(PythonFunction function, string name) {
             return TypeError("{0}() got an unexpected keyword argument '{1}'", function.Name, name);
+        }
+
+        public static object InitializeUserTypeSlots(Type type) {
+            return NewTuple.MakeTuple(type, 
+                CompilerHelpers.MakeRepeatedArray<object>(Uninitialized.Instance, NewTuple.GetSize(type)));
         }
     }
 }

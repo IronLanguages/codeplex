@@ -40,6 +40,10 @@ namespace IronPython.Runtime.Types {
             return PythonOps.TrySetUserDescriptor(Value, instance, value);
         }
 
+        public override bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
+            object dummy;
+            return PythonOps.TryGetBoundAttr(context, Value, Symbols.SetDescriptor, out dummy);
+        }
         public object Value {
             get {
                 return _value;

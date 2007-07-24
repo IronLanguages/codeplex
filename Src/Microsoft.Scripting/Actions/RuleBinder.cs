@@ -23,21 +23,22 @@ namespace Microsoft.Scripting.Actions {
     class RuleBinder : Walker {
         private readonly Expression _test;
         private readonly Statement _target;
-        private readonly List<Variable> _temps;
 
         private Dictionary<Variable, VariableReference> _refs;
 
-        public static VariableReference[] Bind(Expression test, Statement target, List<Variable> temps) {
-            RuleBinder rb = new RuleBinder(test, target, temps);
+        public static VariableReference[] Bind(Expression test, Statement target) {
+            Utils.Assert.NotNull(test, target);
+
+            RuleBinder rb = new RuleBinder(test, target);
             test.Walk(rb);
             target.Walk(rb);
             return rb.GetReferences();
         }
 
-        private RuleBinder(Expression test, Statement target, List<Variable> temps) {
+        private RuleBinder(Expression test, Statement target) {
+            Utils.Assert.NotNull(test, target);
             _test = test;
             _target = target;
-            _temps = temps;
         }
 
         public override bool Walk(BoundAssignment node) {

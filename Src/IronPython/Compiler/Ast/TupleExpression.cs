@@ -29,10 +29,18 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
+            if (_expandable) {
+                return Ast.NewArray(
+                    Span,
+                    typeof(object[]),
+                    ag.Transform(Items)
+                );
+            }
+
             return Ast.Call(
                 Span,
                 null,
-                AstGenerator.GetHelperMethod(_expandable ? "MakeExpandableTuple" : "MakeTuple"),
+                AstGenerator.GetHelperMethod("MakeTuple"),
                 ag.Transform(Items)
             );
         }
@@ -46,6 +54,12 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+
+        internal bool IsExpandable {
+            get {
+                return _expandable;
+            }
         }
     }
 }

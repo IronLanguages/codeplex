@@ -71,7 +71,7 @@ namespace Microsoft.Scripting.Actions {
                 )
             );
 
-            if (IsParamsCallWorker(action)) {
+            if (action.IsParamsCall()) {
                 test = Ast.AndAlso(test, MakeParamsTest(rule, args));
                 IList<object> listArgs = args[args.Length - 1] as IList<object>;
 

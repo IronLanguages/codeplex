@@ -100,6 +100,10 @@ namespace IronPython.Runtime.Calls {
             return DeleteAttribute(instance);
         }
 
+        public override bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
+            return fset != null;
+        }
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value")]
         public object Documentation {
             [PythonName("__doc__")]

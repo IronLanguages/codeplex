@@ -44,6 +44,7 @@ namespace Microsoft.Scripting {
         private static int _curId;
 
         #region Static factories
+
         public static BuiltinFunction MakeMethod(string name, MethodBase info, FunctionType ft) {
             return new BuiltinFunction(name, new MethodBase[] { info }, ft);
         }
@@ -60,6 +61,7 @@ namespace Microsoft.Scripting {
                 return MakeMethod(name, mi, funcType);
             }
         }
+
         #endregion
 
         public BuiltinFunction() {
@@ -68,21 +70,21 @@ namespace Microsoft.Scripting {
 
         public BuiltinFunction(string name, FunctionType functionType)
             : this() {
+            Utils.Assert.NotNull(name);
+            
             _name = name;
             _funcType = functionType;
         }
+
         #region Private Constructors
 
         private BuiltinFunction(string name, MethodBase[] originalTargets, FunctionType functionType) : this() {
-            Debug.Assert(originalTargets != null, "originalTargets array is null");
-
-            MethodBase target = originalTargets[0];
-            Debug.Assert(target != null, "no targets passed to make BuiltinFunction");
-            Debug.Assert(name != null, String.Format("name is null for {0}", target.Name));
+            Utils.Assert.NotNull(name);
+            Utils.Assert.NotNullItems(originalTargets);
 
             _funcType = functionType;
             _targets = originalTargets;
-            this._name = name;
+            _name = name;
         }
 
         private BuiltinFunction(string name, MethodBase target, FunctionType functionType)
@@ -110,6 +112,8 @@ namespace Microsoft.Scripting {
         }
 
         public void AddMethod(MethodBase info) {
+            Utils.Assert.NotNull(info);
+
             if (_targets != null) {
                 MethodBase[] ni = new MethodBase[_targets.Length + 1];
                 _targets.CopyTo(ni, 0);
@@ -134,6 +138,7 @@ namespace Microsoft.Scripting {
                 return IsBinaryOperator ? BinderType.BinaryOperator : BinderType.Normal;
             }
         }
+
         [OperatorMethod]
         public override object Call(CodeContext context, params object[] args) {
             if (IsReversedOperator && args.Length == 2) {

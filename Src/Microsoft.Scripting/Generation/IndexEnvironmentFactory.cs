@@ -70,8 +70,10 @@ namespace Microsoft.Scripting.Generation {
         public override void EmitStorage(CodeGen cg) {            
             cg.EmitInt(_size);
             cg.Emit(OpCodes.Newarr, typeof(object));
-
+            cg.Emit(OpCodes.Dup);
+            cg.EmitCall(typeof(RuntimeHelpers), "UninitializeEnvironmentArray");
         }
+
         public override void EmitNewEnvironment(CodeGen cg) {
             ConstructorInfo ctor = EnvironmentType.GetConstructor(
                 new Type[] {

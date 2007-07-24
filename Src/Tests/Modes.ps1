@@ -1,3 +1,18 @@
+#####################################################################################
+#
+#  Copyright (c) Microsoft Corporation. All rights reserved.
+#
+# This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+# copy of the license can be found in the License.html file at the root of this distribution. If 
+# you cannot locate the  Microsoft Permissive License, please send an email to 
+# ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+# by the terms of the Microsoft Permissive License.
+#
+# You must not remove this notice, or any other, from this software.
+#
+#
+#####################################################################################
+
 ###################################################################################
 #Tests the various combinations/permutations of executable modes
 #TODO:
@@ -20,7 +35,7 @@ $global:TRACEBACK = "$global:TEST_DIR\traceback_test.py"
 $global:IS_DEBUG = "$env:ROWAN_BIN".ToLower().EndsWith("bin\debug")
 
 #Some tests fail under x64
-$global:IS_64 = "$env:PROCESSOR_ARCHITECTURE" -eq "AMD64"
+$global:IS_64 = (test-path $env:SystemRoot\SYSWOW64) -or (test-path $env:systemroot\SYSWOW64)
 
 ###################################################################################
 function test-setup

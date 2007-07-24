@@ -144,6 +144,10 @@ namespace IronPythonTest {
             }
         }
 
+        public static implicit operator int(BaseClass from) {
+            return from.Area + 1001;
+        }
+
         protected string ProtectedMethod() {
             return "BaseClass.Protected";
         }

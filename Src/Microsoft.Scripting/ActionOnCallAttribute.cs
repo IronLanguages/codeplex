@@ -31,6 +31,6 @@ namespace Microsoft.Scripting {
         public ActionOnCallAttribute() {
         }
 
-        public abstract StandardRule<T> GetRule<T>(object[] args);
+        public abstract StandardRule<T> GetRule<T>(CodeContext callerContext, object[] args);
     }
 }

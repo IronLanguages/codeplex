@@ -377,38 +377,17 @@ namespace IronPython.Hosting {
 
 #if SILVERLIGHT // stack trace
         private string FormatStackTraces(Exception e) {
-            
-            // TODO:
-            
-            string[] frames = e.ToString().Split('\n');
-
-            if (frames.Length == 0) return e.ToString();
 
             StringBuilder result = new StringBuilder();
             result.AppendLine("Traceback (most recent call last):");
-
-            const string prefix = "   at ";
-            
-            for (int i = frames.Length - 1; i >=1 ; i--) {
-                if (!frames[i].StartsWith(prefix) ||
-                    frames[i].StartsWith(prefix + "IronPython.") ||
-                    frames[i].StartsWith(prefix + "ReflectOpt.") ||
-                    frames[i].StartsWith(prefix + "System.Reflection.") ||
-                    frames[i].StartsWith(prefix + "System.Runtime") ||
-                    frames[i].StartsWith(prefix + "Microsoft.Scripting") ||
-                    frames[i].StartsWith(prefix + "IronPythonConsole.")) {
-                    continue;
-                }
-
-                int end = frames[i].IndexOfAny(new char[] { '(', '#', '$' });
-                if (end == -1) end = frames[i].Length;
-                result.AppendFormat("  in {0}()", frames[i].Substring(prefix.Length, end - prefix.Length));
-                result.AppendLine();
+            DynamicStackFrame[] dfs = DynamicHelpers.GetDynamicStackFrames(e);
+            for (int i = 0; i < dfs.Length; ++i) {
+                DynamicStackFrame frame = dfs[i];
+                result.AppendFormat("  at {0} in {1}, line {2}\n", frame.GetMethodName(), frame.GetFileName(), frame.GetFileLineNumber());
             }
 
             if (Options.ExceptionDetail) {
                 result.AppendLine(e.Message);
-                result.AppendLine(e.StackTrace);
             }
             
             return result.ToString();

@@ -82,7 +82,6 @@ namespace Microsoft.Scripting.Ast {
             _outFile.WriteLine("# AST {0}", name);
             node.Walk(this);
             Debug.Assert(_depth == 0);
-            _outFile.Close();
         }
 
 

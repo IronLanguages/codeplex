@@ -55,7 +55,8 @@ namespace IronPython.Runtime.Calls {
 
         // hi-perf thread static data:
         private static int[] _depth_fast = new int[20];
-        private static int DepthSlow { get { return ThreadStatics.PythonFunction_Depth; } set { ThreadStatics.PythonFunction_Depth = value;  } }
+        [ThreadStatic]
+        private static int DepthSlow;
         internal static int _MaximumDepth = 1001;          // maximum recursion depth allowed before we throw 
         internal static bool EnforceRecursion = false;    // true to enforce maximum depth, false otherwise
         private static int _CurrentId = 1;
@@ -646,7 +647,7 @@ namespace IronPython.Runtime.Calls {
             /// Makes the test for our rule.
             /// </summary>
             private Expression MakeTest() {
-                if (IsSimpleAction) {
+                if (!Action.HasNamedArgument()) {
                     return MakeSimpleTest();
                 } 
 
@@ -707,17 +708,19 @@ namespace IronPython.Runtime.Calls {
 
                 // walk all the provided args and find out where they go...
                 for (int i = 0; i < args.Length; i++) {
-                    if (!Action.IsSimple) {
-                        if (Action.ArgumentKinds[i].ExpandDictionary) {
+                    switch (Action.GetArgumentKind(i)) {
+                        case ArgumentKind.Dictionary:
                             MakeDictionaryCopy(_rule.Parameters[i + 1]); 
                             continue;
-                        } else if (Action.ArgumentKinds[i].ExpandList) {
+
+                        case ArgumentKind.List:    
                             _userProvidedParams = _rule.Parameters[i + 1];
                             continue;
-                        } else if (Action.ArgumentKinds[i].Name != SymbolId.Empty) {
+
+                        case ArgumentKind.Named:
                             bool foundName = false;
                             for (int j = 0; j < _func.NormalArgumentCount; j++) {
-                                if (_func.ArgNames[j] == SymbolTable.IdToString(Action.ArgumentKinds[i].Name)) {
+                                if (_func.ArgNames[j] == SymbolTable.IdToString(Action.ArgumentInfos[i].Name)) {
                                     if (exprArgs[j] != null) {
                                         // kw-argument provided for already provided normal argument.
                                         return null;
@@ -731,10 +734,9 @@ namespace IronPython.Runtime.Calls {
 
                             if (!foundName) {
                                 if (namedArgs == null) namedArgs = new Dictionary<SymbolId, Expression>();
-                                namedArgs[Action.ArgumentKinds[i].Name] = _rule.Parameters[i + 1];
+                                namedArgs[Action.GetArgumentName(i)] = _rule.Parameters[i + 1];
                             }
                             continue;
-                        }
                     }
 
                     if (i < _func.NormalArgumentCount) {
@@ -949,8 +951,8 @@ namespace IronPython.Runtime.Calls {
                     typeof(PythonOps).GetMethod("ExtractDictionaryArgument"),
                     GetFunctionParam(),                         // function
                     Ast.Constant(name),                         // name
-                    Ast.Constant(Action.ArgumentKinds.Length),  // arg count
-                    Ast.ReadDefined(_dict)                          // dictionary
+                    Ast.Constant(Action.ArgumentCount),         // arg count
+                    Ast.ReadDefined(_dict)                      // dictionary
                 );
             }
 
@@ -1023,7 +1025,7 @@ namespace IronPython.Runtime.Calls {
                 return Ast.Call(null,
                     typeof(PythonOps).GetMethod("ExtractParamsArgument"),
                     GetFunctionParam(),                             // function
-                    Ast.Constant(Action.ArgumentKinds.Length),      // arg count
+                    Ast.Constant(Action.ArgumentCount),      // arg count
                     Ast.ReadDefined(_params)                            // list
                 );
             }
@@ -1053,24 +1055,6 @@ namespace IronPython.Runtime.Calls {
                 }
 
                 return exprArgs;
-            }
-             
-            /// <summary>
-            /// Gets the number of positional arguments the user provided at the call site.
-            /// </summary>
-            /// <returns></returns>          
-            private int GetProvidedPositionalArgumentCount() {
-                if (Action.IsSimple) return _rule.Parameters.Length - 1;
-
-                int cnt = Action.ArgumentKinds.Length;
-                for (int i = 0; i < Action.ArgumentKinds.Length; i++) {
-                    if (Action.ArgumentKinds[i].ExpandDictionary || 
-                        Action.ArgumentKinds[i].ExpandList ||
-                        Action.ArgumentKinds[i].Name != SymbolId.Empty) {
-                        cnt--;
-                    }
-                }
-                return cnt;
             }
 
             /// <summary>
@@ -1138,7 +1122,7 @@ namespace IronPython.Runtime.Calls {
                         Ast.Assign(_paramsLen,
                             Ast.Add(
                                 Ast.ReadProperty(Ast.ReadDefined(_params), typeof(List).GetProperty("Count")),
-                                Ast.Constant(GetProvidedPositionalArgumentCount())
+                                Ast.Constant(Action.GetProvidedPositionalArgumentCount(_rule.Parameters.Length))
                             )
                         )
                     )
@@ -1175,7 +1159,7 @@ namespace IronPython.Runtime.Calls {
                     foreach (KeyValuePair<SymbolId, Expression> kvp in namedArgs) {
                         dictCreator[index++] = Ast.Call(
                             dictRef,
-                            typeof(PythonDictionary).GetMethod("set_Item"),
+                            typeof(PythonDictionary).GetMethod("set_Item", new Type[] { typeof(object), typeof(object) }),
                             Ast.Constant(SymbolTable.IdToString(kvp.Key)),
                             kvp.Value);
                     }
@@ -1253,31 +1237,6 @@ namespace IronPython.Runtime.Calls {
                 return stmt;
             }
 
-            private bool IsSimpleAction {
-                get {
-                    if (Action.IsSimple) return true;
-
-                    foreach (ArgumentKind ac in Action.ArgumentKinds) {
-                        if (ac.Name != SymbolId.Empty) return false;
-                    }
-
-                    return true;
-                }
-            }
-
-            private bool KeywordCall {
-                get {
-                    if (Action.IsSimple) return false;
-
-                    foreach (ArgumentKind ak in Action.ArgumentKinds) {
-                        if (ak.ExpandDictionary || ak.Name != SymbolId.Empty) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-            }
-
             private void MakeUnexpectedKeywordError(Dictionary<SymbolId, Expression> namedArgs) {
                 string name = null;
                 foreach (SymbolId id in namedArgs.Keys) {
@@ -1299,8 +1258,8 @@ namespace IronPython.Runtime.Calls {
                 return _rule.MakeError(Context.LanguageContext.Binder,
                     Ast.Call(
                         GetFunctionParam(),
-                        typeof(PythonFunction).GetMethod(KeywordCall ? "BadKeywordArgumentError" : "BadArgumentError"),
-                        Ast.Constant(GetProvidedPositionalArgumentCount())
+                        typeof(PythonFunction).GetMethod(Action.HasKeywordArgument() ? "BadKeywordArgumentError" : "BadArgumentError"),
+                        Ast.Constant(Action.GetProvidedPositionalArgumentCount(_rule.Parameters.Length))
                     )
                 );
             }

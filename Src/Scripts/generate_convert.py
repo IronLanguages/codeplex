@@ -266,7 +266,13 @@ public static %(to_type)s ConvertTo%(to_type)s(object value) {"""
 conversion_routine_footer = (
 """result = default(%(to_type)s);
 return false;""",
-"""throw CannotConvertTo("%(to_type)s", value);""")
+"""
+Object result;
+if(TryConvertObject(value, typeof(%(to_type)s), out result) && result is %(to_type)s) {
+    return (%(to_type)s)result;
+}
+
+throw CannotConvertTo("%(to_type)s", value);""")
 
 null_conversion = ("result = null; return true;", "return null;")
 
