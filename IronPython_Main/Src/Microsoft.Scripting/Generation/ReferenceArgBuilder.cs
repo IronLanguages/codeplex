@@ -53,10 +53,5 @@ namespace Microsoft.Scripting.Generation {
         public override void UpdateFromReturn(object callArg, object[] args) {
             ((IReference)args[Index]).Value = callArg;
         }
-
-        //TODO there's no really need for this limitation
-        public override bool CanGenerate {
-            get { return false; }
-        }
     }
 }

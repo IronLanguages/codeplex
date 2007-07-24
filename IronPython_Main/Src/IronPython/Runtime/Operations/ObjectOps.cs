@@ -278,32 +278,32 @@ namespace IronPython.Runtime.Operations {
         /// Provides fast access for object.__getattribute__ by inlining the attribute lookup.
         /// </summary>
         class GetAttributeActionAttribute : ActionOnCallAttribute {
-            public override StandardRule<T> GetRule<T>(object[] args) {
+            public override StandardRule<T> GetRule<T>(CodeContext callerContext, object[] args) {
                 switch (args.Length) {
                     // someObj.__getattribute__(name)
-                    case 2: return MakeRule<T>(args, ((BoundBuiltinFunction)args[0]).Self, args[1]);
+                    case 2: return MakeRule<T>(callerContext, args, ((BoundBuiltinFunction)args[0]).Self, args[1]);
                     // object.__getattribute__(object, name)                        
-                    case 3: return MakeRule<T>(args, args[1], args[2]);
+                    case 3: return MakeRule<T>(callerContext, args, args[1], args[2]);
                 }
                 return null;
             }
 
-            private StandardRule<T> MakeRule<T>(object[] args, object self, object attribute) {
+            private StandardRule<T> MakeRule<T>(CodeContext context, object[] args, object self, object attribute) {
                 string strAttr = attribute as string;
                 if (strAttr == null) return null;
                 if (self is ICustomMembers) return null;
 
                 DynamicType selfType = DynamicHelpers.GetDynamicType(self);
 
-                return MakeGetMemberRule<T>(strAttr, selfType, args) ?? CreateCallRule<T>(args, strAttr);
+                return MakeGetMemberRule<T>(context, strAttr, selfType, args) ?? CreateCallRule<T>(context, args, strAttr);
             }
 
-            private StandardRule<T> MakeGetMemberRule<T>(string strAttr, DynamicType selfType, object[] args) {
+            private StandardRule<T> MakeGetMemberRule<T>(CodeContext context, string strAttr, DynamicType selfType, object[] args) {
                 DynamicTypeSlot dts;
-                if (selfType.TryResolveSlot(DefaultContext.Default, SymbolTable.StringToId(strAttr), out dts)) {
+                if (selfType.TryResolveSlot(context, SymbolTable.StringToId(strAttr), out dts)) {
                     StandardRule<T> rule = new StandardRule<T>();
 
-                    GetMemberBinderHelper<T> helper = new GetMemberBinderHelper<T>(DefaultContext.Default.LanguageContext.Binder, GetMemberAction.Make(strAttr));
+                    GetMemberBinderHelper<T> helper = new GetMemberBinderHelper<T>(context, GetMemberAction.Make(strAttr));
 
                     if (helper.TryMakeGetMemberRule(rule, dts, GetTargetObject(rule, args))) {
                         rule.SetTest(MakeTest(args, strAttr, rule));
@@ -313,11 +313,11 @@ namespace IronPython.Runtime.Operations {
                 return null;
             }
 
-            private StandardRule<T> CreateCallRule<T>(object[] args, string strAttr) {
+            private StandardRule<T> CreateCallRule<T>(CodeContext context, object[] args, string strAttr) {
                 StandardRule<T> res = new StandardRule<T>();
                 res.SetTest(MakeTest<T>(args, strAttr, res));
                 res.SetTarget(
-                    res.MakeReturn(DefaultContext.Default.LanguageContext.Binder,
+                    res.MakeReturn(context.LanguageContext.Binder,
                         Ast.Call(
                             null,
                             typeof(ObjectOps).GetMethod("GetAttribute"),

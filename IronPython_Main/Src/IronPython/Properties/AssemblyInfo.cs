@@ -47,8 +47,14 @@ using System;
 //
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
-[assembly: AssemblyVersion("2.0.0.200")]
-[assembly: AssemblyFileVersion("2.0.10627.00")]
+
+[assembly: AssemblyFileVersion("2.0.10724.00")]
 [assembly: SecurityTransparent]
 [assembly: AssemblyInformationalVersion("2.0")]
 [assembly: CLSCompliant(false)]
+
+// hack in order to pass AssemblyInfoTask 
+// AssemblyVersion attribute has been decorated in AssemblyVersion.cs
+#if FALSE
+[assembly: AssemblyVersion("2.0.0.00")]
+#endif

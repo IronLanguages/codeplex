@@ -99,6 +99,10 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
+        public override bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
+            return true;
+        }
+
         private static void PropagateAttributeCustomization(CodeContext context, DynamicType dt, DynamicTypeBuilder dtb, IList<DynamicMixin> mro) {
             if (dt.CustomBoundGetter != null) {
                 // we already have a __getattribute__, figure out if it's inherited

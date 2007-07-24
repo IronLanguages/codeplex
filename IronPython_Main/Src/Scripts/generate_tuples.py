@@ -67,6 +67,12 @@ def gen_tuple(cw, size, prevSize):
 	cw.exit_block()
 	cw.exit_block()
 
+	cw.enter_block('public override int Capacity')
+	cw.enter_block('get')
+	cw.write('return %d;' % size)
+	cw.exit_block()
+	cw.exit_block()
+    
 	cw.exit_block()
 	
 tuples = [1, 2, 4, 8, 16, 32, 64, 128]

@@ -13,8 +13,10 @@
 #
 #####################################################################################
 
-from lib.assert_util import *
+# CodePlex work item #11812. This has to be run first: importing lib.assert_util masks the bug.
+dir(True)
 
+from lib.assert_util import *
 
 def test_callable():
     class C: x=1

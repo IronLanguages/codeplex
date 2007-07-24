@@ -26,12 +26,6 @@ namespace Microsoft.Scripting.Generation {
     public static class CompilerHelpers {
         public static MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
        
-        public static Type[] GetTypes(ParameterInfo[] parameterInfos) {
-            Type[] ret = new Type[parameterInfos.Length];
-            for (int i = 0; i < parameterInfos.Length; i++) ret[i] = parameterInfos[i].ParameterType;
-            return ret;
-        }
-
         public static string[] GetArgumentNames(ParameterInfo[] parameterInfos) {
             string[] ret = new string[parameterInfos.Length];
             for (int i = 0; i < parameterInfos.Length; i++) ret[i] = parameterInfos[i].Name;
@@ -39,7 +33,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static Type[] GetTypesWithThis(MethodBase mi) {
-            Type[] types = GetTypes(mi.GetParameters());
+            Type[] types = Utils.Reflection.GetParameterTypes(mi.GetParameters());
             if(IsStatic(mi)) {
                 return types;
             }
@@ -63,7 +57,10 @@ namespace Microsoft.Scripting.Generation {
             return IsParamsMethod(method.GetParameters());
         }
         public static bool IsParamsMethod(ParameterInfo[] pis) {
-            return pis.Length > 0 && (IsParamArray(pis[pis.Length - 1]));
+            foreach (ParameterInfo pi in pis) {
+                if (IsParamArray(pi)) return true;
+            }
+            return false;
         }
 
         public static bool IsParamArray(ParameterInfo parameter) {
@@ -158,8 +155,9 @@ namespace Microsoft.Scripting.Generation {
         /// <returns>New ScopeAllocator</returns>
         public static ScopeAllocator CreateLocalStorageAllocator(CodeGen outer, CodeGen codeGen) {
             LocalStorageAllocator allocator = new LocalStorageAllocator(new LocalSlotFactory(codeGen));
-            return new ScopeAllocator(outer.Allocator, allocator);
+            return new ScopeAllocator(outer.HasAllocator ? outer.Allocator : null, allocator);
         }
+
         /// <summary>
         /// allocates slots out of a FunctionEnvironment.
         /// </summary>
@@ -200,10 +198,10 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public static void EmitStackTraceFaultBlock(CodeGen cg, string name, SourceUnit sourceUnit) {
+        public static void EmitStackTraceFaultBlock(CodeGen cg, string name, string displayName) {
             if (cg == null) throw new ArgumentNullException("cg");
             if (name == null) throw new ArgumentNullException("name");
-            if (sourceUnit == null) throw new ArgumentNullException("sourceUnit");
+            if (displayName == null) throw new ArgumentNullException("name");
 
             if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
                 // push a fault block (runs only if there's an exception, doesn't handle the exception)
@@ -218,11 +216,11 @@ namespace Microsoft.Scripting.Generation {
                 if (cg.IsDynamicMethod) {
                     cg.ConstantPool.AddData(cg.MethodBase).EmitGet(cg);
                 } else {
-                    cg.Emit(OpCodes.Ldtoken, cg.MethodInfo);                    
-                    cg.EmitCall(typeof(MethodBase), "GetMethodFromHandle", new Type[]{typeof(RuntimeMethodHandle)});
+                    cg.Emit(OpCodes.Ldtoken, cg.MethodInfo);
+                    cg.EmitCall(typeof(MethodBase), "GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
                 }
                 cg.EmitString(name);
-                cg.EmitString(sourceUnit.DisplayName);
+                cg.EmitString(displayName);
                 cg.EmitGetCurrentLine();
                 cg.EmitCall(typeof(RuntimeHelpers), "UpdateStackTrace");
 
@@ -290,7 +288,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         internal static bool NeedDebuggableDynamicCodeGenerator(CompilerContext context) {
-            return context.SourceUnit.Engine.Options.ClrDebuggingEnabled && context.SourceUnit.IsVisibleToDebugger;
+            return context != null && context.SourceUnit.Engine.Options.ClrDebuggingEnabled && context.SourceUnit.IsVisibleToDebugger;
         }
 
         #endregion

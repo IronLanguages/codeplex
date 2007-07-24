@@ -33,13 +33,34 @@ namespace Microsoft.Scripting.Ast {
     /// requested type.
     /// </summary>
     public class CodeBlockExpression : Expression {
-        private CodeBlock _block;
-        private bool _forceWrapperMethod;
+        private readonly CodeBlock _block;
+        private readonly bool _forceWrapperMethod;
+        private readonly bool _stronglyTyped;
+        private readonly Type _delegateType;
+        
+        /// <summary>
+        /// Whether this expression declares the block. If so, the declaring code's variable are accessible from within the block (a closure is created).
+        /// Otherwise, the block is only referred to by the containing block and do not share it's scope.
+        /// </summary>
+        private readonly bool _isDeclarative;
 
-        internal CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapperMethod)
+        public bool IsDeclarative {
+            get { return _isDeclarative; }
+        }
+
+        internal CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapperMethod, bool stronglyTyped, bool isDeclarative, Type delegateType)
             : base(span) {
+            Utils.Assert.NotNull(block);
+
+            if (isDeclarative) {
+                block.DeclarativeReferenceAdded();
+            }
+
             _block = block;
             _forceWrapperMethod = forceWrapperMethod;
+            _stronglyTyped = stronglyTyped;
+            _isDeclarative = isDeclarative;
+            _delegateType = delegateType;
         }
 
         public CodeBlock Block {
@@ -47,7 +68,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override void Walk(Walker walker) {
-            if (walker.Walk(this)) {
+            // do not walk into the referenced code block - we have already been there:
+            if (_isDeclarative && walker.Walk(this)) {
                 _block.Walk(walker);
             }
             walker.PostWalk(this);
@@ -60,20 +82,40 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override object Evaluate(CodeContext context) {
-            return _block.GetInterpretedDelegate();
+            return _block.GetDelegateForInterpreter(context, _forceWrapperMethod);
         }
 
         public override void Emit(CodeGen cg) {
-            _block.EmitDelegate(cg, _forceWrapperMethod);
+            _block.EmitDelegateConstruction(cg, _forceWrapperMethod, _stronglyTyped, _delegateType);
         }
     }
 
     public static partial class Ast {
+
+        // TODO: rename to CodeBlockDeclaration?
+
         public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool forceWrapper) {
-            return CodeBlockExpression(SourceSpan.None, block, forceWrapper);
+            return new CodeBlockExpression(SourceSpan.None, block, forceWrapper, false, true, null);
         }
+
         public static CodeBlockExpression CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapper) {
-            return new CodeBlockExpression(span, block, forceWrapper);
+            return new CodeBlockExpression(span, block, forceWrapper, false, true, null);
+        }
+
+        public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool forceWrapper, bool stronglyTyped) {
+            return new CodeBlockExpression(SourceSpan.None, block, forceWrapper, stronglyTyped, true, null);
+        }
+
+        public static CodeBlockExpression CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapper, bool stronglyTyped) {
+            return new CodeBlockExpression(span, block, forceWrapper, stronglyTyped, true, null);
+        }
+
+        public static CodeBlockExpression CodeBlockExpression(SourceSpan span, CodeBlock block, bool stronglyTyped, Type delegateType) {
+            return new CodeBlockExpression(span, block, false, stronglyTyped, true, delegateType);
+        }
+
+        public static CodeBlockExpression CodeBlockReference(SourceSpan span, CodeBlock block, Type delegateType) {
+            return new CodeBlockExpression(span, block, false, true, false, delegateType);
         }
     }
 }

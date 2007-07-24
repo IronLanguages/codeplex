@@ -109,94 +109,308 @@ namespace System {
         White = 15,
     }
 
+    // BitArray, Queue<T>, Stack<T>, LinkedList<T> and LinkedListNode<T> were removed from CoreCLR
+    // Recreating simple versions here.
 
-    // BitArray was removed from CoreCLR, recreate a simple version here
-    public class BitArray {
-        readonly int[] _data;
-        readonly int _count;
+    namespace Collections {
+        #region BitArray
+        
+        public class BitArray {
+            readonly int[] _data;
+            readonly int _count;
 
-        public int Length {
-            get { return _count; }
-        }
+            public int Length {
+                get { return _count; }
+            }
 
-        public int Count {
-            get { return _count; }
-        }
+            public int Count {
+                get { return _count; }
+            }
 
-        public BitArray(int count)
-            : this(count, false) {
-        }
+            public BitArray(int count)
+                : this(count, false) {
+            }
 
-        public BitArray(int count, bool value) {
-            this._count = count;
-            this._data = new int[(count + 31) / 32];
-            if (value) {
-                Not();
+            public BitArray(int count, bool value) {
+                this._count = count;
+                this._data = new int[(count + 31) / 32];
+                if (value) {
+                    Not();
+                }
+            }
+
+            public BitArray(BitArray bits) {
+                _count = bits._count;
+                _data = (int[])bits._data.Clone();
+            }
+
+            public bool Get(int index) {
+                if (index < 0 || index >= _count) {
+                    throw new IndexOutOfRangeException();
+                }
+                int elem = index / 32, mask = 1 << (index % 32);
+                return (_data[elem] & mask) != 0;
+            }
+
+            public void Set(int index, bool value) {
+                if (index < 0 || index >= _count) {
+                    throw new IndexOutOfRangeException();
+                }
+                int elem = index / 32, mask = 1 << (index % 32);
+                if (value) {
+                    _data[elem] |= mask;
+                } else {
+                    _data[elem] &= ~mask;
+                }
+            }
+
+            public void SetAll(bool value) {
+                int set = value ? -1 : 0;
+                for (int i = 0; i < _data.Length; ++i) {
+                    _data[i] = set;
+                }
+            }
+
+            public void And(BitArray bits) {
+                if (bits == null) {
+                    throw new ArgumentNullException();
+                } else if (bits._count != _count) {
+                    throw new ArgumentException("Array lengths differ");
+                }
+                for (int i = 0; i < _data.Length; ++i) {
+                    _data[i] &= bits._data[i];
+                }
+            }
+
+            public void Or(BitArray bits) {
+                if (bits == null) {
+                    throw new ArgumentNullException();
+                } else if (bits._count != _count) {
+                    throw new ArgumentException("Array lengths differ");
+                }
+                for (int i = 0; i < _data.Length; ++i) {
+                    _data[i] |= bits._data[i];
+                }
+            }
+
+            public BitArray Not() {
+                for (int i = 0; i < _data.Length; ++i) {
+                    _data[i] = ~_data[i];
+                }
+                return this;
             }
         }
-
-        public BitArray(BitArray bits) {
-            _count = bits._count;
-            _data = (int[])bits._data.Clone();
-        }
-
-        public bool Get(int index) {
-            if (index < 0 || index >= _count) {
-                throw new IndexOutOfRangeException();
-            }
-            int elem = index / 32, mask = 1 << (index % 32);
-            return (_data[elem] & mask) != 0;
-        }
-
-        public void Set(int index, bool value) {
-            if (index < 0 || index >= _count) {
-                throw new IndexOutOfRangeException();
-            }
-            int elem = index / 32, mask = 1 << (index % 32);
-            if (value) {
-                _data[elem] |= mask;
-            } else {
-                _data[elem] &= ~mask;
-            }
-        }
-
-        public void SetAll(bool value) {
-            int set = value ? -1 : 0;
-            for (int i = 0; i < _data.Length; ++i) {
-                _data[i] = set;
-            }
-        }
-
-        public void And(BitArray bits) {
-            if (bits == null) {
-                throw new ArgumentNullException();
-            } else if (bits._count != _count) {
-                throw new ArgumentException("Array lengths differ");
-            }
-            for (int i = 0; i < _data.Length; ++i) {
-                _data[i] &= bits._data[i];
-            }
-        }
-
-        public void Or(BitArray bits) {
-            if (bits == null) {
-                throw new ArgumentNullException();
-            } else if (bits._count != _count) {
-                throw new ArgumentException("Array lengths differ");
-            }
-            for (int i = 0; i < _data.Length; ++i) {
-                _data[i] |= bits._data[i];
-            }
-        }
-
-        public BitArray Not() {
-            for (int i = 0; i < _data.Length; ++i) {
-                _data[i] = ~_data[i];
-            }
-            return this;
-        }
+        #endregion
     }
 
+    namespace Collections.Generic {
+
+        #region Stack<T>
+
+        public class Stack<T> : IEnumerable<T> {
+            List<T> _list;
+            int _version;
+
+            public Stack() {
+                _list = new List<T>();
+            }
+
+            public Stack(int capacity) {
+                _list = new List<T>(capacity);
+            }
+
+            public Stack(IEnumerable<T> collection) {
+                _list = new List<T>(collection);
+            }
+
+            public T Peek() {
+                if (_list.Count == 0) throw new InvalidOperationException();
+                return _list[_list.Count - 1];
+            }
+
+            public T Pop() {
+                if (_list.Count == 0) throw new InvalidOperationException();
+                T result = _list[_list.Count - 1];
+                _version++;
+                _list.RemoveAt(_list.Count - 1);
+                return result;
+            }
+
+            public bool Contains(T t) {
+                return _list.Contains(t);
+            }
+
+            public void Clear() {
+                _version++;
+                _list.Clear();
+            }
+
+            public void Push(T item) {
+                _version++;
+                _list.Add(item);
+            }
+
+            public int Count {
+                get { return _list.Count; }
+            }
+
+            public IEnumerator<T> GetEnumerator() {
+                int version = _version;
+                for (int i = _list.Count - 1; i >= 0; i--) {
+                    yield return _list[i];
+                    if (_version != version) {
+                        throw new InvalidOperationException("Stack changed while enumerating");
+                    }
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() {
+                return GetEnumerator();
+            }
+        }
+
+
+        #endregion
+
+        #region LinkedList<T>, LinkedListNode<T>
+        public class LinkedListNode<T> {
+            internal LinkedListNode<T> _previous, _next;
+            internal T _value;
+
+            internal LinkedListNode(T value) {
+                this._value = value;
+            }
+
+            public LinkedListNode<T> Previous {
+                get { return _previous; }
+            }
+
+            public LinkedListNode<T> Next {
+                get { return _next; }
+            }
+
+            public T Value {
+                get { return _value; }
+            }
+
+        }
+
+        public class LinkedList<T> {
+            private LinkedListNode<T> _first;
+            private LinkedListNode<T> _last;
+
+            public LinkedList() { }
+
+            public LinkedListNode<T> Last {
+                get { return _last; }
+            }
+
+            public LinkedListNode<T> First {
+                get { return _first; }
+            }
+
+            public void AddFirst(T value) {
+                AddFirst(new LinkedListNode<T>(value));
+            }
+
+            public void AddFirst(LinkedListNode<T> node) {
+                if (node._next != null || node._previous != null) {
+                    throw new ArgumentException("Node is already a member of another list");
+                }
+                node._next = _first;
+                if (_first != null) {
+                    _first._previous = node;
+                }
+                _first = node;
+                if (_last == null) {
+                    _last = node;
+                }
+            }
+
+            public void AddLast(T value) {
+                AddLast(new LinkedListNode<T>(value));
+            }
+
+            public void AddLast(LinkedListNode<T> node) {
+                if (node._next != null || node._previous != null) {
+                    throw new ArgumentException("Node is already a member of another list");
+                }
+                node._previous = _last;
+                if (_last != null) {
+                    _last._next = node;
+                }
+                _last = node;
+                if (_first == null) {
+                    _first = node;
+                }
+            }
+
+            public void Remove(LinkedListNode<T> node) {
+                if (node._previous == null) {
+                    _first = node._next;
+                } else {
+                    node._previous._next = node._next;
+                    node._previous = null;
+                }
+
+                if (node._next == null) {
+                    _last = node._previous;
+                } else {
+                    node._next._previous = node._previous;
+                    node._next = null;
+                }
+            }
+        }
+
+        #endregion
+
+        #region Queue<T>
+
+        public class Queue<T> {
+            private readonly static T[] _EmptyArray = new T[0];
+            private T[] _array = _EmptyArray;
+            private int _head, _size;
+
+            public void Enqueue(T obj) {
+                // Expand the queue, if needed
+                if (_size == _array.Length) {
+                    int len = _array.Length * 2;
+                    if (len < 4) len = 4;
+                    T[] a = new T[len];
+
+                    for (int i = 0; i < _size; i++) {
+                        a[i] = _array[(_head + i) % _array.Length];
+                    }
+
+                    _array = a;
+                    _head = 0;
+                }
+
+                _array[(_head + _size) % _array.Length] = obj;
+                _size++;
+            }
+
+            public T Dequeue() {
+                if (_size == 0) {
+                    throw new InvalidOperationException("Queue is empty");
+                }
+
+                T obj = _array[_head];
+                _array[_head] = default(T); // release the reference to obj (T might be a class)
+                _size--;
+                _head = (_head + 1) % _array.Length;
+                return obj;
+            }
+
+            public int Count {
+                get {
+                    return _size;
+                }
+            }
+        }
+
+        #endregion
+    }
 }
 
 #endif

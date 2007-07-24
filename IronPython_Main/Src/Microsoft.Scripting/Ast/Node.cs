@@ -47,5 +47,16 @@ namespace Microsoft.Scripting.Ast {
                 return new SourceSpan(_start, _end);
             }
         }
+
+#if DEBUG
+        public string Dump {
+            get {
+                using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
+                    AstWriter.ForceDump(this, null, writer);
+                    return writer.ToString();
+                }
+            }
+        }
+#endif
     }
 }

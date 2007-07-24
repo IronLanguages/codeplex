@@ -38,15 +38,8 @@ namespace IronPython.Runtime {
     }
 
     class CompareUtil {
-        
-        private static Stack<object> CmpStack { 
-            get { 
-                return ThreadStatics.CompareUtil_CmpStack; 
-            }
-            set {
-                ThreadStatics.CompareUtil_CmpStack = value;
-            }
-        }
+        [ThreadStatic]
+        private static Stack<object> CmpStack;
 
         internal static bool Check(object o) {
             if (CmpStack == null) {

@@ -77,21 +77,6 @@ namespace Microsoft.Scripting.Generation {
             return _defaultValue;
         }
 
-        public override void Generate(CodeGen cg, IList<Slot> argSlots) {
-            if (_argumentType.IsByRef) {
-                Type baseType = _argumentType.GetElementType();
-                Slot tmp = cg.GetLocalTmp(baseType);
-                // Emit the default value as the base type
-                EmitDefaultValue(cg, _defaultValue, baseType);
-                tmp.EmitSet(cg);
-                // And pass the reference to the callee
-                tmp.EmitGetAddr(cg);
-            } else {
-                // Emit the default value directly as the argument type
-                EmitDefaultValue(cg, _defaultValue, _argumentType);
-            }
-        }
-
         private static void EmitDefaultValue(CodeGen cg, object value, Type type) {
             if (value is Missing) {
                 cg.EmitMissingValue(type);

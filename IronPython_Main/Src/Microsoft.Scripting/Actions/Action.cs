@@ -24,6 +24,7 @@ namespace Microsoft.Scripting.Actions {
         GetMember,
         SetMember,
         DeleteMember,
+        InvokeMember,
 
         Call,
         CreateInstance
@@ -34,16 +35,19 @@ namespace Microsoft.Scripting.Actions {
 
         // This is an experimental simple serialization/de-serialization scheme
         public abstract string ParameterString { get; }
-        private static ulong counter = 0;
+        private static ulong counter;
         public static string MakeName(Action action) {
-            return string.Format("{0}-{1}-{2}", action.Kind, action.ParameterString, counter++);
+            return action.Kind.ToString() + "-" + action.ParameterString + "-" + (counter++).ToString();
         }
 
         public static Action ParseName(string name) {
-            Debug.Assert(name.IndexOf('-') != -1, "Action name is bad: " + name);
-            ActionKind kind = (ActionKind)Enum.Parse(typeof(ActionKind), name.Substring(0, name.IndexOf('-')), false);
-            string param = name.Substring(name.IndexOf('-')+1);
-            param = param.Substring(0, param.LastIndexOf('-'));
+            int separator = name.IndexOf('-');
+            Debug.Assert(separator != -1, "Action name is bad: " + name);
+
+            ActionKind kind = (ActionKind)Enum.Parse(typeof(ActionKind), name.Substring(0, separator), false);
+            int lastSeparator = name.LastIndexOf('-');
+            string param = name.Substring(separator + 1, lastSeparator - separator - 1);
+
             switch (kind) {
                 case ActionKind.DoOperation:
                     return DoOperationAction.Make(param);
@@ -53,6 +57,8 @@ namespace Microsoft.Scripting.Actions {
                     return GetMemberAction.Make(param);
                 case ActionKind.SetMember:
                     return SetMemberAction.Make(param);
+                case ActionKind.InvokeMember:
+                    return InvokeMemberAction.Make(param);
                 case ActionKind.Call:
                     return CallAction.Make(param);
                 default:

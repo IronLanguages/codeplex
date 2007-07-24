@@ -173,7 +173,7 @@ namespace IronPython.Compiler.Ast {
 
         private MSAst.Expression MakeExitCall(MSAst.BoundExpression exit) {
             return Ast.Action.Call(
-                CallAction.Make(new ArgumentKind(false, true, false, SymbolId.Empty)),
+                CallAction.Make(new ArgumentInfo(MSAst.ArgumentKind.List)),
                 typeof(bool),
                 exit,
                 Ast.Call(

@@ -26,6 +26,7 @@ using System.IO;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Ast {
 
@@ -41,6 +42,7 @@ namespace Microsoft.Scripting.Ast {
     public partial class CodeBlock : Node {
         private static int _Counter = 0;
 
+        private readonly Type _returnType;
         private string _name;
         private CodeBlock _parent;
         private Statement _body;
@@ -60,9 +62,27 @@ namespace Microsoft.Scripting.Ast {
         private bool _visibleScope = true;
         private bool _parameterArray;
 
-        internal CodeBlock(SourceSpan span, string name)
+        /// <summary>
+        /// True, if the block is referenced by a declarative reference (CodeBlockExpression).
+        /// </summary>
+        private bool _declarativeReferenceExists;
+
+        private Expression _explicitCodeContextExpression;
+
+        internal CodeBlock(SourceSpan span, string name, Type returnType)
             : base(span) {
+            Utils.Assert.NotNull(returnType);
+
             _name = name;
+            _returnType = returnType;
+        }
+
+        internal CodeBlock(SourceSpan span, string name)
+            : this(span, name, typeof(object)) {
+        }
+
+        public Type ReturnType {
+            get { return _returnType; }
         }
 
         public List<Variable> Parameters {
@@ -72,6 +92,11 @@ namespace Microsoft.Scripting.Ast {
         public string Name {
             get { return _name; }
             set { _name = value; }
+        }
+
+        public Expression ExplicitCodeContextExpression {
+            get { return _explicitCodeContextExpression; }
+            set { _explicitCodeContextExpression = value; }
         }
 
         /// <summary>
@@ -164,6 +189,11 @@ namespace Microsoft.Scripting.Ast {
 
         protected internal int GeneratorTemps {
             get { return _generatorTemps; }
+        }
+
+        internal void DeclarativeReferenceAdded() {
+            if (_declarativeReferenceExists) throw new InvalidOperationException("Block cannot be declared twice");
+            _declarativeReferenceExists = true;
         }
 
         public Variable CreateParameter(SymbolId name, Expression defaultValue) {
@@ -330,7 +360,7 @@ namespace Microsoft.Scripting.Ast {
             if (HasEnvironment) {
                 // we're an environment slot, we need our own environment slot, and we're
                 // going to update our Context slot to point to a CodeContext which has
-                // it's Locals pointing at our Environment.
+                // its Locals pointing at our Environment.
                 cg.EnvironmentSlot = EmitEnvironmentAllocation(cg);
                 cg.ContextSlot = CreateEnvironmentContext(cg);
             }
@@ -372,13 +402,15 @@ namespace Microsoft.Scripting.Ast {
                 CodeBlock current = this;
                 do {
                     CodeBlock parent = current._parent;
-                    scope.EmitGet(cg);
+                    if (parent._environmentFactory != null) {
+                        scope.EmitGet(cg);
 
-                    cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(parent._environmentFactory.StorageType));
-    
-                    Slot storage = new LocalSlot(cg.DeclareLocal(parent._environmentFactory.StorageType), cg);
-                    storage.EmitSet(cg);
-                    allocator.AddScopeAccessSlot(parent, storage);
+                        cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(parent._environmentFactory.StorageType));
+
+                        Slot storage = new LocalSlot(cg.DeclareLocal(parent._environmentFactory.StorageType), cg);
+                        storage.EmitSet(cg);
+                        allocator.AddScopeAccessSlot(parent, storage);
+                    }
 
                     scope.EmitGet(cg);
                     cg.EmitPropertyGet(typeof(Scope), "Parent");
@@ -405,11 +437,15 @@ namespace Microsoft.Scripting.Ast {
         }
 
 
-        public object Execute(CodeContext context, params object[] args) {
-            for (int i = 0; i < _parameters.Count; i++) {
-                context.Scope.SetName(_parameters[i].Name, args[i]);
+        public object Execute(CodeContext context) {
+            object ret;
+            try {
+                ret = Body.Execute(context);
+            } catch {
+                // TODO: MethodBase.GetCurrentMethod() instead of null?
+                RuntimeHelpers.UpdateStackTrace(context, null, _name, context.ModuleContext.Module.FileName, 0);
+                throw;
             }
-            object ret = Body.Execute(context);
             if (ret == Statement.NextStatement) {
                 return null;
             } else {
@@ -418,8 +454,8 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private bool NeedsWrapperMethod() {
-            return _parameters.Count > CallTargets.MaximumCallArgs;
+        protected bool NeedsWrapperMethod(bool stronglyTyped) {
+            return _parameters.Count > (stronglyTyped ? Utils.Reflection.MaxSignatureSize - 1 : CallTargets.MaximumCallArgs);
         }
 
         protected ConstantPool GetStaticDataForBody(CodeGen cg) {
@@ -433,46 +469,39 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public object ExecuteWithChildContext(CodeContext parent, params object[] args) {
-            CodeContext child = new CodeContext(new Scope(parent.Scope.ModuleScope, new SymbolDictionary()), parent.LanguageContext, parent.ModuleContext);
-            return Execute(child, args);
+            CodeContext child = RuntimeHelpers.CreateNestedCodeContext(parent, new SymbolDictionary(), IsVisible);
+            for (int i = 0; i < _parameters.Count; i++) {
+                RuntimeHelpers.SetName(child, _parameters[i].Name, args[i]);
+            }
+            return Execute(child);
         }
 
-        // Return a delegate to this.Execute, for use in interpreted mode
-        public Delegate GetInterpretedDelegate() {
+        // Return a delegate to execute this block in interpreted mode.
+        public virtual Delegate GetDelegateForInterpreter(CodeContext context, bool forceWrapperMethod) {
             FlowChecker.Check(this);
 
-            //TODO: return a better match than CallTargetWithContextN
-            /*Type delegateType;
-            if (_parameterArray) {
-                delegateType = typeof(CallTargetWithContextN);
-            } else {
-                delegateType = CallTargets.GetTargetType(true, _parameters.Count);
-            }
-            
-            List<Type> paramTypes = new List<Type>();
-            paramTypes.Add(typeof(CodeContext));
-            for (int i = 0; i < _parameters.Count; i++) {
-                paramTypes.Add(_parameters[i].Type);
-            }
-            MethodInfo exec = typeof(CodeBlock).GetMethod("ExecuteWithChildContext");
-            return CodeGen.CreateDelegate(exec, delegateType, this);*/
+            //TODO: return a better match than CallTargetWithContextN.
+            // This will fix the incorrect func_code.co_flags (which is computed based on the type of delegate)
             return new CallTargetWithContextN(ExecuteWithChildContext);
         }
 
-        public void EmitDelegate(CodeGen cg, bool forceWrapperMethod) {
+        
+        public void EmitDelegateConstruction(CodeGen cg, bool forceWrapperMethod, bool stronglyTyped, Type delegateType) {
             FlowChecker.Check(this);
-            bool createWrapperMethod = _parameterArray ? false : forceWrapperMethod || NeedsWrapperMethod();
 
-            bool hasContextParameter =
-                createWrapperMethod ||
+            // TODO: explicit delegate type may be wrapped...
+            bool createWrapperMethod = _parameterArray ? false : forceWrapperMethod || NeedsWrapperMethod(stronglyTyped);
+
+            bool hasContextParameter = _explicitCodeContextExpression == null && 
+                (createWrapperMethod ||
                 IsClosure ||
                 !(cg.ContextSlot is StaticFieldSlot) ||
-                _parameterArray;
+                _parameterArray);
 
             bool hasThis = false;
 
             for (int index = 0; index < _parameters.Count; index++) {
-                if (! _parameters[index].InParameterArray) {
+                if (!_parameters[index].InParameterArray) {
                     // Currently only one parameter can be out of parameter array
                     // TODO: Any number of parameters to be taken out of parameter array
                     Debug.Assert(hasThis == false);
@@ -483,37 +512,56 @@ namespace Microsoft.Scripting.Ast {
 
             cg.EmitSequencePointNone();
 
-            CodeGen impl = CreateMethod(cg, hasContextParameter, hasThis);
+            // TODO: storing implementations on code gen doesn't allow blocks being referenced from different methods
+            // the implementations should be stored on some kind of Module when available
+            CodeGen impl = cg.ProvideCodeBlockImplementation(this, hasContextParameter, hasThis);
             
-            EmitFunctionImplementation(impl);
-            impl.Finish();
-
             // if the method has more than our maximum # of args wrap
             // it in a method that takes an object[] instead.
             if (createWrapperMethod) {
                 CodeGen wrapper = MakeWrapperMethodN(cg, impl, hasThis);
                 wrapper.Finish();
-                if (hasThis) {
-                    cg.EmitDelegate(wrapper, typeof(CallTargetWithContextAndThisN));
-                } else {
-                    cg.EmitDelegate(wrapper, typeof(CallTargetWithContextN));
+                
+                if (delegateType == null) {
+                    delegateType = hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
                 }
+
+                cg.EmitDelegateConstruction(wrapper, delegateType);
             } else if (_parameterArray) {
-                if (hasThis) {
-                    cg.EmitDelegate(impl, typeof(CallTargetWithContextAndThisN));
-                } else {
-                    cg.EmitDelegate(impl, typeof(CallTargetWithContextN));
+                if (delegateType == null) {
+                    delegateType = hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
                 }
+                cg.EmitDelegateConstruction(impl, delegateType);
             } else {
-                cg.EmitDelegate(impl, CallTargets.GetTargetType(hasContextParameter, _parameters.Count));
+                if (delegateType == null) {
+                    if (stronglyTyped) {
+                        delegateType = Utils.Reflection.GetDelegateType(GetParameterTypes(hasContextParameter), _returnType);
+                    } else {
+                        delegateType = CallTargets.GetTargetType(hasContextParameter, _parameters.Count);
+                    }
+                }
+                cg.EmitDelegateConstruction(impl, delegateType);
             }
+        }
+
+        private Type[] GetParameterTypes(bool hasContextParameter) {
+            Type[] result = new Type[_parameters.Count + (hasContextParameter ? 1 : 0)];
+            int j = 0;
+            if (hasContextParameter) {
+                result[j++] = typeof(CodeContext);
+            }
+
+            for (int i = 0; i < _parameters.Count; i++) {
+                result[j++] = _parameters[i].Type;
+            }
+            return result;
         }
 
         /// <summary>
         /// Defines the method with the correct signature and sets up the context slot appropriately.
         /// </summary>
         /// <returns></returns>
-        private CodeGen CreateMethod(CodeGen outer, bool hasContextParameter, bool hasThis) {
+        internal CodeGen CreateMethod(CodeGen outer, bool hasContextParameter, bool hasThis) {
             List<Type> paramTypes = new List<Type>();
             List<SymbolId> paramNames = new List<SymbolId>();
             CodeGen impl;
@@ -552,16 +600,33 @@ namespace Microsoft.Scripting.Ast {
             string implName = _name + "$" + Interlocked.Increment(ref _Counter);
 
             // create the new method & setup its locals
-            impl = outer.DefineMethod(implName, typeof(object),
+            impl = outer.DefineMethod(implName, _returnType,
                 paramTypes, SymbolTable.IdsToStrings(paramNames), GetStaticDataForBody(outer));
 
-            impl.ContextSlot = hasContextParameter ? impl.GetArgumentSlot(0) : outer.ContextSlot;
+            if (_explicitCodeContextExpression != null) {
+                Slot localContextSlot = impl.GetLocalTmp(typeof(CodeContext));
+                
+                // cannot access code context slot during emit:
+                _explicitCodeContextExpression.Emit(impl);
+
+                localContextSlot.EmitSet(impl);
+                impl.ContextSlot = localContextSlot;
+
+            } else {
+                impl.ContextSlot = hasContextParameter ? impl.GetArgumentSlot(0) : outer.ContextSlot;
+            }
+            
             if (_parameterArray) {
                 impl.ParamsSlot = impl.GetArgumentSlot(parameterIndex);
             }
 
             // create the new method & setup its locals
             impl.Allocator = CompilerHelpers.CreateLocalStorageAllocator(outer, impl);
+
+            if (outer.FastEval) {
+                impl.Binder = outer.Binder;
+                impl.FastEval = true;
+            }
 
             return impl;
         }
@@ -580,7 +645,7 @@ namespace Microsoft.Scripting.Ast {
             bool hasContextParameter = impl.ArgumentSlots.Count > 0
                 && impl.ArgumentSlots[0].Type == typeof(CodeContext);
 
-            if (impl.ConstantPool != null) {
+            if (impl.ConstantPool.IsBound) {
                 staticData = impl.ConstantPool.CopyData();
             }
 
@@ -589,7 +654,7 @@ namespace Microsoft.Scripting.Ast {
             if (hasContextParameter) {
                 if (hasThis) {
                     wrapper = outer.DefineMethod(implName,
-                        typeof(object),
+                        _returnType,
                         new Type[] { typeof(CodeContext), typeof(object), typeof(object[]) },
                         null, staticData);
                     contextSlot = wrapper.GetArgumentSlot(0);
@@ -597,7 +662,7 @@ namespace Microsoft.Scripting.Ast {
                     argSlot = wrapper.GetArgumentSlot(2);
                 } else {
                     wrapper = outer.DefineMethod(implName,
-                        typeof(object),
+                        _returnType,
                         new Type[] { typeof(CodeContext), typeof(object[]) },
                         null, staticData);
                     contextSlot = wrapper.GetArgumentSlot(0);
@@ -608,18 +673,18 @@ namespace Microsoft.Scripting.Ast {
                 // have a TypeGen we'll create a DynamicMethod but we won't flow context w/ it.
                 Debug.Assert(outer.TypeGen != null);
                 if (hasThis) {
-                    wrapper = outer.DefineMethod(implName, typeof(object), new Type[] { typeof(object), typeof(object[]) },
+                    wrapper = outer.DefineMethod(implName, _returnType, new Type[] { typeof(object), typeof(object[]) },
                         null, staticData);
                     thisSlot = wrapper.GetArgumentSlot(0);
                     argSlot = wrapper.GetArgumentSlot(1);
                 } else {
-                    wrapper = outer.DefineMethod(implName, typeof(object), new Type[] { typeof(object[]) },
+                    wrapper = outer.DefineMethod(implName, _returnType, new Type[] { typeof(object[]) },
                         null, staticData);
                     argSlot = wrapper.GetArgumentSlot(0);
                 }
             }
 
-            if (wrapper.ConstantPool != null) {
+            if (wrapper.ConstantPool.IsBound) {
                 wrapper.ConstantPool.Slot.EmitGet(wrapper);
             }
 
@@ -637,19 +702,20 @@ namespace Microsoft.Scripting.Ast {
                 argSlot.EmitGet(wrapper);
                 wrapper.EmitInt(pi - startIndex);
                 wrapper.Emit(OpCodes.Ldelem_Ref);
+                wrapper.EmitCast(typeof(object), _parameters[pi].Type);
             }
             wrapper.EmitCall(impl.MethodInfo);
             wrapper.Emit(OpCodes.Ret);
             return wrapper;
         }
 
-        public void EmitFunctionImplementation(CodeGen _impl) {
-            CompilerHelpers.EmitStackTraceTryBlockStart(_impl);
+        public void EmitFunctionImplementation(CodeGen impl) {
+            CompilerHelpers.EmitStackTraceTryBlockStart(impl);
 
             // emit the actual body
-            EmitBody(_impl);
+            EmitBody(impl);
 
-            CompilerHelpers.EmitStackTraceFaultBlock(_impl, _name, _impl.Context.SourceUnit);
+            CompilerHelpers.EmitStackTraceFaultBlock(impl, _name, impl.HasContext ? impl.Context.SourceUnit.DisplayName : _name);
         }
 
         public virtual void EmitBody(CodeGen cg) {
@@ -700,6 +766,7 @@ namespace Microsoft.Scripting.Ast {
             cg.EmitSequencePointNone();
         }
 
+        // This is used for compiling the toplevel CodeBlock object.
         public T CreateDelegate<T>(CompilerContext context) 
             where T : class {
             CodeGen cg = CompilerHelpers.CreateDynamicCodeGenerator(context);
@@ -725,7 +792,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static CodeBlock CodeBlock(SourceSpan span, string name) {
-            return new CodeBlock(span, name);
+            return new CodeBlock(span, name, typeof(object));
+        }
+
+        public static CodeBlock CodeBlock(string name, Type returnType) {
+            return new CodeBlock(SourceSpan.None, name, returnType);
         }
 
         public static CodeBlock CodeBlock(SymbolId name) {
@@ -734,6 +805,23 @@ namespace Microsoft.Scripting.Ast {
 
         public static CodeBlock CodeBlock(SourceSpan span, SymbolId name) {
             return CodeBlock(span, SymbolTable.IdToString(name));
+        }
+
+        public static CodeBlock EventHandlerBlock(string name, EventInfo eventInfo) {
+            if (name == null) throw new ArgumentNullException("name");
+            if (eventInfo == null) throw new ArgumentNullException("eventInfo");
+
+            ParameterInfo returnInfo;
+            ParameterInfo[] parameterInfos;
+
+            Utils.Reflection.GetDelegateSignature(eventInfo.EventHandlerType, out parameterInfos, out returnInfo);
+
+            CodeBlock result = Ast.CodeBlock(name, returnInfo.ParameterType);
+            for (int i = 0; i < parameterInfos.Length; i++) {
+                result.Parameters.Add(Variable.Parameter(result, SymbolTable.StringToId("$" + i), parameterInfos[i].ParameterType));
+            }
+
+            return result;
         }
     }
 }

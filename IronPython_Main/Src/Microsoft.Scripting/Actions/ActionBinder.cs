@@ -27,18 +27,26 @@ namespace Microsoft.Scripting.Actions {
     /// performing operators, and getting members using the ActionBinder's conversion semantics.
     /// </summary>
     public abstract class ActionBinder {
-        private readonly CodeContext _context;
-
+        private CodeContext _context;
         private readonly Dictionary<Action, BigRuleSet> _rules = new Dictionary<Action,BigRuleSet>();
 
         protected ActionBinder(CodeContext context) {
-            if (context == null) throw new ArgumentNullException("context");
-
-            this._context = context;
+            _context = context;
         }
 
-        public CodeContext Context {
-            get { return _context; }
+        /// <summary>
+        /// Deprecated - only used by DelegateSignatureInfo.GenerateDelegateStub.  Use CodeContext
+        /// passed in at rule creation time instead.
+        /// </summary>
+        internal CodeContext Context {
+            get {
+                return _context;
+            }
+        }
+
+        // TODO: internal and friendly UnitTests
+        public void ClearRuleCache() {
+            _rules.Clear();
         }
 
         /// <summary>
@@ -47,14 +55,15 @@ namespace Microsoft.Scripting.Actions {
         /// <typeparam name="T">The type of the DynamicSite the rule is being produced for.</typeparam>
         /// <param name="action">The Action the rule is being produced for.</param>
         /// <param name="args">The arguments to the rule as provided from the call site at runtime.</param>
+        /// <param name="callerContext">The CodeContext that is requesting the rule and that should be used for conversions.</param>
         /// <returns>The new rule.</returns>
-        public StandardRule<T> GetRule<T>(Action action, object[] args) {
+        public StandardRule<T> GetRule<T>(CodeContext callerContext, Action action, object[] args) {
             if (action == null) throw new ArgumentNullException("action");
 
             BigRuleSet ruleSet;
             lock (_rules) {
                 if (!_rules.TryGetValue(action, out ruleSet)) {
-                    ruleSet = new BigRuleSet(_context);
+                    ruleSet = new BigRuleSet(callerContext);
                     _rules[action] = ruleSet;
                 }
             }
@@ -66,11 +75,12 @@ namespace Microsoft.Scripting.Actions {
 
             IDynamicObject ndo = args[0] as IDynamicObject;
             if (ndo != null) {
-                rule = ndo.GetRule<T>(action, _context, args);
+                rule = ndo.GetRule<T>(action, callerContext, args);
+                Debug.Assert(rule == null || rule.Target != null && rule.Test != null);
             }
 
-            rule = rule ?? MakeRule<T>(action, args);
-            Debug.Assert(rule != null);
+            rule = rule ?? MakeRule<T>(callerContext, action, args);
+            Debug.Assert(rule != null && rule.Target != null && rule.Test != null);
 #if DEBUG
             AstWriter.DumpRule(rule);
 #endif
@@ -99,17 +109,18 @@ namespace Microsoft.Scripting.Actions {
         /// <typeparam name="T">The type of the DynamicSite the rule is being produced for.</typeparam>
         /// <param name="action">The Action that is being performed.</param>
         /// <param name="args">The arguments to the action as provided from the call site at runtime.</param>
+        /// <param name="callerContext">The CodeContext that is requesting the rule and should be use</param>
         /// <returns></returns>
-        protected virtual StandardRule<T> MakeRule<T>(Action action, object[] args) {
+        protected virtual StandardRule<T> MakeRule<T>(CodeContext callerContext, Action action, object[] args) {
             switch (action.Kind) {
                 case ActionKind.Call:
-                    return new CallBinderHelper<T>(_context, (CallAction)action).MakeRule(args);
+                    return new CallBinderHelper<T>(callerContext, (CallAction)action).MakeRule(args);
                 case ActionKind.GetMember:
-                    return new GetMemberBinderHelper<T>(_context.LanguageContext.Binder, (GetMemberAction)action).MakeNewRule(args);
+                    return new GetMemberBinderHelper<T>(callerContext, (GetMemberAction)action).MakeNewRule(args);
                 case ActionKind.SetMember:
-                    return new SetMemberBinderHelper<T>(_context.LanguageContext.Binder, (SetMemberAction)action).MakeNewRule(args);
+                    return new SetMemberBinderHelper<T>(callerContext, (SetMemberAction)action).MakeNewRule(args);
                 case ActionKind.CreateInstance:
-                    return new CreateInstanceBinderHelper<T>(_context, (CreateInstanceAction)action).MakeRule(args);
+                    return new CreateInstanceBinderHelper<T>(callerContext, (CreateInstanceAction)action).MakeRule(args);
                 case ActionKind.DoOperation:
                 default:
                     throw new NotImplementedException(action.ToString());

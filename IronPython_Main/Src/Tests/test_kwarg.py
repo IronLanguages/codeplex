@@ -704,6 +704,35 @@ for base in [int, long, float]:
         def __new__(cls, args=None): return base()
     c = C(args=1)
 
+def test_kw_splat():
+    def foo(**kw): pass
+    
+    # should raise because only strings are allowed
+    try:
+        foo(**{2:3})
+        AssertUnreachable()
+    except TypeError:
+        pass
+        
+    def foo(a, b, **kw): return a, b, kw
+    
+    AreEqual(foo(1,2,**{'abc':3}), (1, 2, {'abc': 3}))
+    AreEqual(foo(1,b=2,**{'abc':3}), (1, 2, {'abc': 3}))
+    AreEqual(foo(1,**{'abc':3, 'b':7}), (1, 7, {'abc': 3}))
+    AreEqual(foo(a=11,**{'abc':3, 'b':7}), (11, 7, {'abc': 3}))
+    
+    def f(a, b): return a, b
+
+    AreEqual(f(*(1,), **{'b':7}), (1,7))
+    AreEqual(f(*(1,2), **{}), (1,2))
+    AreEqual(f(*(), **{'a':2, 'b':7}), (2,7))
+    
+    try:
+        f(**{'a':2, 'b':3, 'c':4})
+        AssertUnreachable()
+    except TypeError:
+        pass
+    
 def test_sequence_as_stararg():
     def f(x, *args): return x, args
     

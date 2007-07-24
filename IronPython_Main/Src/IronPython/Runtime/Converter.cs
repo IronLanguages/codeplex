@@ -58,6 +58,8 @@ namespace IronPython.Runtime {
                 if (ConvertToInt32Impl(newValue, out result)) return result;
             }
 
+            if (TryConvertObject(value, typeof(Int32), out newValue) && newValue is Int32) return (Int32)newValue;
+
             throw CannotConvertTo("Int32", value);
         }
 
@@ -88,6 +90,8 @@ namespace IronPython.Runtime {
                 if (ConvertToDoubleImpl(newValue, out result)) return result;
             }
 
+            if (TryConvertObject(value, typeof(Double), out newValue) && newValue is Double) return (Double)newValue;
+
             throw CannotConvertTo("Double", value);
         }
 
@@ -117,6 +121,8 @@ namespace IronPython.Runtime {
                 // Convert resulting object to the desired type
                 if (ConvertToBigIntegerImpl(newValue, out result)) return result;
             }
+
+            if (TryConvertObject(value, typeof(BigInteger), out newValue) && newValue is BigInteger) return (BigInteger)newValue;
 
             throw CannotConvertTo("BigInteger", value);
         }
@@ -162,6 +168,8 @@ namespace IronPython.Runtime {
                 return new Complex64(dresult);
             }
 
+            if (TryConvertObject(value, typeof(Complex64), out newValue) && newValue is Complex64) return (Complex64)newValue;
+
             throw CannotConvertTo("Complex64", value);
         }
 
@@ -170,6 +178,7 @@ namespace IronPython.Runtime {
         //
         public static String ConvertToString(object value) {
             // Fast Paths
+            Object res;
             String result;
             ExtensibleString es;
 
@@ -177,6 +186,7 @@ namespace IronPython.Runtime {
             if (value == null) return null;
             if (value is Char) return RuntimeHelpers.CharToString((Char)value);
             if ((Object)(es = value as ExtensibleString) != null) return es.Value;
+            if (TryConvertObject(value, typeof(String), out res) && res is String) return (String)res;
 
             throw CannotConvertTo("String", value);
         }
@@ -186,12 +196,14 @@ namespace IronPython.Runtime {
         //
         public static Char ConvertToChar(object value) {
             // Fast Paths
+            Object res;
             string str;
             ExtensibleString es;
 
             if (value is Char) return (Char)value;
             if ((object)(str = value as string) != null && str.Length == 1) return str[0];
             if ((object)(es = value as ExtensibleString) != null && es.Value.Length == 1) return es.Value[0];
+            if (TryConvertObject(value, typeof(Char), out res) && res is Char) return (Char)res;
 
             throw CannotConvertTo("Char", value);
         }
@@ -259,6 +271,8 @@ namespace IronPython.Runtime {
             if (value is Extensible<int>) return (Int32)((Extensible<int>)value).Value != (Int32)0;
             if (value is Extensible<BigInteger>) return ((Extensible<BigInteger>)value).Value != BigInteger.Zero;
             if (value is Extensible<double>) return ((Extensible<double>)value).Value != (Double)0;
+
+            if (TryConvertObject(value, typeof(bool), out newValue) && newValue is Boolean) return (bool)newValue;
 
             // Non-null value is true
             result = true;
@@ -347,27 +361,54 @@ namespace IronPython.Runtime {
 
             if (to.IsArray) return ConvertToArray(value, to);
 
+            Object result;
+            if (TrySlowConvert(value, to, out result)) return result;
+
+            throw MakeTypeError(to, value);
+        }
+
+        internal static bool TrySlowConvert(object value, Type to, out object result) {
             // check for implicit conversions 
             DynamicType tt = DynamicHelpers.GetDynamicTypeFromType(to);
             DynamicType dt = DynamicHelpers.GetDynamicType(value);
 
             if (tt.IsSystemType && dt.IsSystemType) {
-                object result;
-                if (dt.TryConvertTo(value, tt, out result)) return result;
-                if (tt.TryConvertFrom(value, out result)) return result;
+                if (dt.TryConvertTo(value, tt, out result)) {
+                    return true;
+                }
+
+                if (tt.TryConvertFrom(value, out result)) {
+                    return true;
+                }
             }
 
             if (to.IsGenericType) {
                 Type genTo = to.GetGenericTypeDefinition();
-                if (genTo == NullableOfTType) return ConvertToNullableT(value, to.GetGenericArguments());
-                if (genTo == IListOfTType) return ConvertToIListT(value, to.GetGenericArguments());
-                if (genTo == IDictOfTType) return ConvertToIDictT(value, to.GetGenericArguments());
-                if (genTo == IEnumerableOfTType) return ConvertToIEnumerableT(value, to.GetGenericArguments());
+                if (genTo == NullableOfTType) {
+                    result = ConvertToNullableT(value, to.GetGenericArguments());
+                    return true;
+                }
+
+                if (genTo == IListOfTType) {
+                    result = ConvertToIListT(value, to.GetGenericArguments());
+                    return true;
+                }
+
+                if (genTo == IDictOfTType) {
+                    result = ConvertToIDictT(value, to.GetGenericArguments());
+                    return true;
+                }
+
+                if (genTo == IEnumerableOfTType) {
+                    result = ConvertToIEnumerableT(value, to.GetGenericArguments());
+                    return true;
+                }
             }
 
-            if (from.IsValueType) {
+            if (value.GetType().IsValueType) {
                 if (to == ValueTypeType) {
-                    return (System.ValueType)value;
+                    result = (System.ValueType)value;
+                    return true;
                 }
             }
 
@@ -381,13 +422,30 @@ namespace IronPython.Runtime {
                     if (tc == null) continue;
 
                     if (tc.CanConvertFrom(value.GetType())) {
-                        return tc.ConvertFrom(value);
+                        result = tc.ConvertFrom(value);
+                        return true;
                     }
                 }
             }
 #endif
 
-            throw MakeTypeError(to, value);
+            result = null;
+            return false;
+        }
+
+        internal static bool TryConvertObject(object value, Type to, out object result) {
+            //This is the fallback call for every fast path converter. If we land here,
+            //then 'value' has to be a reference type which might have a custom converter
+            //defined on its dynamic type. (Value Type conversions if any would have 
+            //already taken place during the fast conversions and should not occur through
+            //the dynamic types). 
+            
+            if (value == null || value.GetType().IsValueType) {
+                result = null;
+                return false;
+            }
+
+            return TrySlowConvert(value, to, out result);
         }
 
         // TODO: Make internal once JS has its own converter
@@ -981,6 +1039,11 @@ namespace IronPython.Runtime {
                 if (toType == CharType && fromType == StringType) return true;
                 //if (toType == Int32Type && fromType == BigIntegerType) return true;
                 //if (IsIntegral(fromType) && IsIntegral(toType)) return true;
+
+                //Check if there is an implicit convertor defined on fromType to toType
+                if (HasImplicitConversion(fromType, toType)) {
+                    return true;
+                }
             }
 
 
@@ -1021,6 +1084,18 @@ namespace IronPython.Runtime {
 
             return false;
         }
+
+        private static bool HasImplicitConversion(Type fromType, Type toType) {
+            foreach (MethodInfo method in fromType.GetMethods()) {
+                if (method.Name == "op_Implicit" &&
+                    method.GetParameters()[0].ParameterType == fromType &&
+                    method.ReturnType == toType) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private static bool IsIntegral(Type t) {
             switch (Type.GetTypeCode(t)) {
                 case TypeCode.DateTime:

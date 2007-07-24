@@ -24,12 +24,11 @@ using Microsoft.Scripting.Generation;
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
-    public class SetMemberBinderHelper<T> {
-        private ActionBinder _binder;
-        private SetMemberAction _action;
-        public SetMemberBinderHelper(ActionBinder binder, SetMemberAction action) {
-            this._binder = binder;
-            this._action = action;
+    public class SetMemberBinderHelper<T> : 
+        BinderHelper<T, SetMemberAction> {
+
+        public SetMemberBinderHelper(CodeContext context, SetMemberAction action)
+            : base(context, action) {
         }
 
         public StandardRule<T> MakeNewRule(object[] args) {
@@ -47,7 +46,7 @@ namespace Microsoft.Scripting.Actions {
                     // Disable caching for the dynamic cases
                     if (IsNonSystemMutableType(target, targetType) ||
                         targetType.Version == DynamicMixin.DynamicVersion ||
-                        targetType.HasDynamicMembers(_binder.Context)) {
+                        targetType.HasDynamicMembers(Context)) {
                         return MakeDynamicRule(targetType);
                     }
                 }
@@ -60,12 +59,12 @@ namespace Microsoft.Scripting.Actions {
 
         private StandardRule<T> MakeSetMemberRule(Type type) {
             // properties take precedence over fields (per the order of init from ReflectedTypeBuilder).
-            PropertyInfo pi = type.GetProperty(SymbolTable.IdToString(_action.Name));
+            PropertyInfo pi = type.GetProperty(SymbolTable.IdToString(Action.Name));
             if (pi != null) {
                 return MakePropertyRule(type, pi);
             }
 
-            FieldInfo fi = type.GetField(SymbolTable.IdToString(_action.Name));
+            FieldInfo fi = type.GetField(SymbolTable.IdToString(Action.Name));
             if (fi != null) {
                 return MakeFieldRule(type, fi);
             }
@@ -113,7 +112,7 @@ namespace Microsoft.Scripting.Actions {
             }
             for (int arg = 0; arg < infos.Length; arg++) {
                 if (parameter < parameters.Length) {
-                    callArgs[arg] = _binder.ConvertExpression(parameters[parameter++], infos[arg].ParameterType);
+                    callArgs[arg] = Binder.ConvertExpression(parameters[parameter++], infos[arg].ParameterType);
                 } else {
                     return InvalidArgumentCount(method, infos.Length, parameters.Length);
                 }
@@ -151,13 +150,13 @@ namespace Microsoft.Scripting.Actions {
                 rule.MakeTest(targetType);
                 rule.SetTarget(
                     rule.MakeReturn(
-                        _binder,
+                        Binder,
                         Ast.AssignField(
                             field.IsStatic ?
                                 null :
                                 rule.Parameters[0],
                             field,
-                            _binder.ConvertExpression(rule.Parameters[1], field.FieldType)
+                            Binder.ConvertExpression(rule.Parameters[1], field.FieldType)
                         )
                     )
                 );
@@ -177,9 +176,9 @@ namespace Microsoft.Scripting.Actions {
                     typeof(RuntimeHelpers).GetMethod("SetMember"),
                     rule.Parameters[1],
                     rule.Parameters[0],
-                    Ast.Constant(this._action.Name),
+                    Ast.Constant(Action.Name),
                     Ast.CodeContext());
-            rule.SetTarget(rule.MakeReturn(_binder, expr));
+            rule.SetTarget(rule.MakeReturn(Binder, expr));
             return rule;
         }
     }

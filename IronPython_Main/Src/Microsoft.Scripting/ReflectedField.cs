@@ -68,6 +68,10 @@ namespace Microsoft.Scripting {
             return false;
         }
 
+        public override bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
+            return (info.Attributes & FieldAttributes.InitOnly) != 0;
+        }
+
         public override bool TryDeleteValue(CodeContext context, object instance, DynamicMixin owner) {
             if (ShouldSetOrDelete(instance, owner)) {
                 return base.TryDeleteValue(context, instance, owner);

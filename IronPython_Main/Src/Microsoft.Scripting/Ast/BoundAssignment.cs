@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Ast {
     public class BoundAssignment : Expression {
@@ -71,14 +72,29 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        public override void EmitAddress(CodeGen cg, Type asType) {
+            EmitValue(cg);
+
+            _vr.Slot.EmitSet(cg);
+
+            _vr.Slot.EmitGetAddr(cg);
+        }
+
         public override void Emit(CodeGen cg) {
+            EmitValue(cg);
+
+            cg.Emit(OpCodes.Dup);
+            _vr.Slot.EmitSet(cg);
+        }
+
+        private void EmitValue(CodeGen cg) {
             if (_op == Operators.None) {
                 _value.EmitAs(cg, _vr.Slot.Type);
             } else {
                 cg.EmitInPlaceOperator(
                     _op,
                     _variable.Type,
-                    delegate (CodeGen _cg, Type _as) {
+                    delegate(CodeGen _cg, Type _as) {
                         _cg.EmitGet(_vr.Slot, _variable.Name, !_defined);
                         _cg.EmitConvert(_variable.Type, _as);
                     },
@@ -87,29 +103,39 @@ namespace Microsoft.Scripting.Ast {
                 );
                 cg.EmitConvert(typeof(object), _vr.Slot.Type);
             }
-
-            cg.Emit(OpCodes.Dup);
-            _vr.Slot.EmitSet(cg);
         }
 
         public override object Evaluate(CodeContext context) {
-            object result;
+            object value;
             if (_op == Operators.None) { // Just an assignment
-                result = _value.Evaluate(context);
+                value = _value.Evaluate(context);
             } else {
-                //TODO: is constructing an ActionExpression on the fly really necessary?
+                //TODO: cache this action?
                 ActionExpression action = Ast.Action.Operator(
                     _op, _variable.Type,
                     Ast.ReadDefined(_variable), _value);
-                result = action.Evaluate(context);
+                value = action.Evaluate(context);
             }
+            // Do an explicit conversion to mirror the emit case
+            value = context.LanguageContext.Binder.Convert(value, _variable.Type);
 
-            if (_variable.Kind == Variable.VariableKind.Global) {
-                RuntimeHelpers.SetGlobalName(context, _variable.Name, result);
-            } else {
-                RuntimeHelpers.SetName(context, _variable.Name, result);
+            EvaluateAssign(context, _variable, value);
+            return value;
+        }
+
+        internal static void EvaluateAssign(CodeContext context, Variable var, object value) {
+            switch (var.Kind) {
+                case Variable.VariableKind.Temporary:
+                case Variable.VariableKind.GeneratorTemporary:
+                    context.Scope.TemporaryStorage[var] = value;
+                    break;
+                case Variable.VariableKind.Global:
+                    RuntimeHelpers.SetGlobalName(context, var.Name, value);
+                    break;
+                default:
+                    RuntimeHelpers.SetName(context, var.Name, value);
+                    break;
             }
-            return result;
         }
 
         public override void Walk(Walker walker) {
@@ -121,6 +147,26 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
+        public static Statement Write(Variable rhsVariable, Expression lhsValue) {
+            return Statement(Assign(rhsVariable, lhsValue));
+        }
+
+        public static Statement Write(Variable rhsVariable, FieldInfo rhsField, Expression lhsValue) {
+            return Statement(AssignField(Read(rhsVariable), rhsField, lhsValue));
+        }
+
+        public static Statement Write(Variable rhsVariable, FieldInfo rhsField, Variable lhsVariable) {
+            return Statement(AssignField(Read(rhsVariable), rhsField, Read(lhsVariable)));
+        }
+
+        public static Statement Write(Variable rhsVariable, Variable lhsVariable, FieldInfo lhsField) {
+            return Statement(Assign(rhsVariable, ReadField(Read(lhsVariable), lhsField)));
+        }
+
+        public static Statement Write(Variable rhsVariable, FieldInfo rhsField, Variable lhsVariable, FieldInfo lhsField) {
+            return Statement(AssignField(Read(rhsVariable), rhsField, ReadField(Read(lhsVariable), lhsField)));
+        }
+
         public static BoundAssignment Assign(Variable variable, Expression value) {
             return Assign(SourceSpan.None, variable, value, Operators.None);
         }

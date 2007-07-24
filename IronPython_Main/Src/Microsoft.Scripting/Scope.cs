@@ -19,24 +19,25 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting {
     /// <summary>
     /// Represents a context of execution.  A context of execution has a set of variables
-    /// associated with it (it's dictionary) and a parent context.  
+    /// associated with it (its dictionary) and a parent context.  
     /// 
     /// When looking up a name from a context first the local context is searched.  If the
     /// name is not found there the name lookup will be done against the parent context.
     /// 
     /// Scopes can have language-sensitive variables that are only exposed to a single
-    /// language based upon it's calling context.  When searching the
+    /// language based upon its calling context.  When searching the
     /// language-sensitive dictionary is searched first.  If no matches are found the lookup
     /// is delegated back to the LanguageContext.  If the LanguageContext fails to lookup
     /// the name it delegates back to the (Host or ScriptEnvironment?)
     /// 
     /// Each member of the Scope can optionally have a certain set of attributes associated
     /// with it (ScopeMemberAttributes).  These permit members of the scope to be read-only,
-    /// non-deletable, or hiding members from enumeration.
+    /// non-deletable, or hidden from enumeration.
     /// 
     /// Scopes, like IAttrbibuteCollections, support both being indexed by SymbolId for fast
     /// access as well as being indexed by object.  The preferred access is via SymbolId and
@@ -52,6 +53,7 @@ namespace Microsoft.Scripting {
         private IAttributesCollection _dict;
         private ScopeAttributeDictionary _attrs;
         private ContextSensitiveScope _contextScopes;
+        private IDictionary<Variable,object> _temps;
         private bool _isVisible;
 
         /// <summary>
@@ -86,6 +88,7 @@ namespace Microsoft.Scripting {
             _parent = parent;
             _dict = dictionary ?? new SymbolDictionary();
             _isVisible = isVisible;
+            _temps = null;
         }
 
         /// <summary>
@@ -104,6 +107,57 @@ namespace Microsoft.Scripting {
         public bool IsVisible {
             get {
                 return _isVisible;
+            }
+        }
+
+        /// <summary>
+        /// Gets the current container for temporary variables. These might need to be nested in a manner
+        /// different than the Scope objects, so separate functions exist for pushing and popping them relative
+        /// to the current scope.
+        /// </summary>
+        public IDictionary<Ast.Variable,object> TemporaryStorage {
+            get {
+                if (_temps == null) {
+                    _temps = new Dictionary<Variable,object>();
+                }
+                return _temps;
+            }
+            set {
+                _temps = value;
+            }
+        }
+
+        /// <summary>
+        /// Create a context for keeping track of allocated temporary variables inside of TemporaryStorage.
+        /// When this function is called, the variables given by paramVars will be set to the values given by paramValues;
+        /// when the returned object is disposed of, the supplied paramVars and tempVars variables will be removed from temporary storage.
+        /// </summary>
+        public IDisposable TemporaryVariableContext(Variable[] tempVars, Variable[] paramVars, object[] paramValues) {
+            return new TemporaryContextHelper(TemporaryStorage, tempVars, paramVars, paramValues);
+        }
+
+        // Keep track of temporary variables and parameters set in a given context (e.g. during the evaluation of a rule).
+        // If we did not do so, we would break object lifetimes (and thus __del__ methods) by unnecessarily holding onto references inside
+        // the scope's TemporaryStorage.
+        private class TemporaryContextHelper : IDisposable {
+            IDictionary<Variable, object> _temps;
+            Variable[] _paramVars;
+            Variable[] _tempVars;
+            public TemporaryContextHelper(IDictionary<Variable, object> temps, Variable[] tempVars, Variable[] paramVars, object[] paramValues) {
+                _temps = temps;
+                _paramVars = paramVars;
+                _tempVars = tempVars;
+                for (int i = 0; i < paramValues.Length; i++) {
+                    _temps[paramVars[i]] = paramValues[i];
+                }
+            }
+            public void Dispose() {
+                foreach (Variable v in _paramVars) {
+                    _temps.Remove(v);
+                }
+                foreach (Variable v in _tempVars) {
+                    _temps.Remove(v);
+                }
             }
         }
 
@@ -243,7 +297,7 @@ namespace Microsoft.Scripting {
 
             return res;
         }
-
+        
         /// <summary>
         /// Sets the name to the specified value for the current context.
         /// </summary>

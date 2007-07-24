@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 
 using IronPython.Runtime;
+using Microsoft.Scripting;
 
 namespace IronPython.Compiler.Generation {
     /// <summary>
@@ -60,8 +61,11 @@ namespace IronPython.Compiler.Generation {
                 }
 
                 if (_slots != null) {
-                    for (int i = 0; i < _slots.Count; i++) {
-                        hashCode ^= _slots[i].GetHashCode();
+                    if (_slots.Contains("__dict__")) {
+                        hashCode ^= 6551;
+                    }
+                    if (_slots.Contains("__weakref__")) {
+                        hashCode ^= 23;
                     }
                 }
 
@@ -79,23 +83,23 @@ namespace IronPython.Compiler.Generation {
             if (_baseType.Equals(other._baseType) &&
                 _interfaceTypes.Count == other._interfaceTypes.Count &&
                 ((_slots == null && other._slots == null) ||
-                (_slots != null && other._slots != null && _slots.Count == other._slots.Count))) {
+                (_slots != null && other._slots != null))) {
 
                 for (int i = 0; i < _interfaceTypes.Count; i++) {
                     if (!_interfaceTypes[i].Equals(other._interfaceTypes[i])) return false;
                 }
 
                 if (_slots != null) {
-                    for (int i = 0; i < _slots.Count; i++) {
-                        if (_slots[i] != other._slots[i]) return false;
+                    if (_slots.Contains("__dict__") != other._slots.Contains("__dict__")) {
+                        return false;
+                    }
+                    if (_slots.Contains("__weakref__") != other._slots.Contains("__weakref__")) {
+                        return false;
                     }
                 }
-
                 return true;
             }
             return false;
-        }
+        }        
     }
-
-
 }

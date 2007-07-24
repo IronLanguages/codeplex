@@ -77,20 +77,29 @@ namespace Microsoft.Scripting.Ast {
         public static ConstantExpression True() {
             return new ConstantExpression(SourceSpan.None, true);
         }
+
         public static ConstantExpression False() {
             return new ConstantExpression(SourceSpan.None, false);
         }
+
         public static ConstantExpression Zero() {
             return new ConstantExpression(SourceSpan.None, 0);
         }
+
         public static ConstantExpression Null() {
             return new ConstantExpression(SourceSpan.None, null);
         }
+
         public static ConstantExpression Constant(object value) {
             return Constant(SourceSpan.None, value);
         }
+
         public static ConstantExpression Constant(SourceSpan span, object value) {
             return new ConstantExpression(span, value);
+        }
+
+        public static ConstantExpression RuntimeConstant(object value) {
+            return new ConstantExpression(SourceSpan.None, new RuntimeConstant(value));
         }
     }
 }

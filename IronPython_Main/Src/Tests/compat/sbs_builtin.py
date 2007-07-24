@@ -192,4 +192,30 @@ class test_builtin(object):
                         printwith('case', a, x, y)
                         printwith('same', pow(a, x, y))
         
+    def xtest_file_mode(self):
+        arw = ['', 'a', 'r', 'w', 'U', 'rU', 'Ur', 'wU', 'Uw', 'Ua', 'aU']
+        bt = ['', 'b', 't']
+        plus = ['', '+']
+        modes = []
+
+        for x in arw:
+            for y in bt:
+                for z in plus:
+                    modes.append(x + y + z)
+            for y in plus:
+                for z in bt:
+                    modes.append(x + y + z)
+        
+        filename = 'tempfile.txt'
+        for m in modes: 
+            printwith('case', m)
+            try:
+                f = file(filename, m)
+                s = str(f)
+                atPos = s.find('at')
+                printwith('same', s[:atPos])
+                f.close()
+            except: 
+                printwith("same", 'throw')
+
 runtests(test_builtin)

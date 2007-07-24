@@ -49,15 +49,8 @@ namespace Microsoft.Scripting.Actions {
 
             if (CanGenerateRule) {
                 BuiltinFunction bf = TryConvertToBuiltinFunction(target);
-                BoundBuiltinFunction bbf = target as BoundBuiltinFunction;
-                if (bbf != null) {
-                    ISuperDynamicObject sdo = bbf.Self as ISuperDynamicObject;
-                    if (!CanOptimizeUserCall(sdo, bbf)) {
-                        return MakeDynamicCallRule(bbf, types);
-                    }
-                }
 
-                if (bf != null && (!bf.DeclaringType.UnderlyingSystemType.IsValueType || bf.DeclaringType.UnderlyingSystemType.IsPrimitive)) {
+                if (bf != null) {
                     return MakeBuiltinFunctionRule(bf, args) ?? MakeDynamicCallRule(types);
                 }
 
@@ -73,24 +66,8 @@ namespace Microsoft.Scripting.Actions {
 
         private bool CanGenerateRule {
             get {
-                if (!Action.IsSimple) {
-                    foreach (ArgumentKind ak in Action.ArgumentKinds) {
-                        if (ak.ExpandDictionary) return false;
-                    }
-                }
-
-                return true;
+                return !Action.HasDictionaryArgument();
             }
-        }
-
-        private static bool CanOptimizeUserCall(ISuperDynamicObject sdo, BoundBuiltinFunction bbf) {
-            if (sdo == null) return true;
-
-            foreach (MethodBase mb in bbf.Target.Targets) {
-                if (mb.IsVirtual) return false;
-            }
-
-            return true;
         }
 
         private StandardRule<T> MakeDynamicCallRule(DynamicType[] types) {
@@ -133,7 +110,7 @@ namespace Microsoft.Scripting.Actions {
             DynamicType[] argTypes = GetArgumentTypes(args);
             if (argTypes == null) return null;
 
-            SymbolId[] argNames = GetArgumentNames();
+            SymbolId[] argNames = Action.GetArgumentNames();
 
             MethodCandidate cand = GetMethodCandidate(args[0], bf, argTypes, argNames);
 
@@ -146,7 +123,7 @@ namespace Microsoft.Scripting.Actions {
                 StandardRule<T> rule;
                 object []attrs = cand.Target.Method.GetCustomAttributes(typeof(ActionOnCallAttribute), false);
                 if (attrs.Length > 0) {
-                    rule = ((ActionOnCallAttribute)attrs[0]).GetRule<T>(args);
+                    rule = ((ActionOnCallAttribute)attrs[0]).GetRule<T>(Context, args);
                     if (rule != null) return rule;
                 }
                 
@@ -155,7 +132,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression test = MakeBuiltinFunctionTest(rule, args[0], bf.Id);
                 Expression[] exprargs = GetArgumentExpressions(cand, Action, rule, args);
 
-                if (IsParamsCallWorker(Action)) {
+                if (Action.IsParamsCall()) {
                     test = Ast.AndAlso(test, MakeParamsTest(rule, args));
                 }
                 if (argTypes.Length > 0) {
@@ -169,7 +146,7 @@ namespace Microsoft.Scripting.Actions {
                 rule.SetTarget(rule.MakeReturn(
                     Binder,
                     cand.Target.MakeExpression(Binder, exprargs)));
-
+                
                 return rule;
             }
             return null;
@@ -183,7 +160,7 @@ namespace Microsoft.Scripting.Actions {
                 return binder.MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(argTypes), argNames);
             }
 
-            DynamicType[] types = Utils.Array.Insert(bf.DeclaringType, argTypes);
+            DynamicType[] types = Utils.Array.Insert(DynamicHelpers.GetDynamicType(boundbf.Self), argTypes);
             if (bf.IsReversedOperator) {
                 Utils.Array.SwapLastTwo(types);
                 if (argNames.Length >= 2) {
@@ -327,19 +304,6 @@ namespace Microsoft.Scripting.Actions {
             return GetArgumentTypes(Action, args);
         }
 
-        private SymbolId[] GetArgumentNames() {
-            if (Action.IsSimple) return SymbolId.EmptySymbols;
-
-            List<SymbolId> res = new List<SymbolId>();
-            foreach (ArgumentKind ak in Action.ArgumentKinds) {
-                if (ak.Name != SymbolId.Empty) {
-                    res.Add(ak.Name);
-                }
-            }
-
-            return res.ToArray();
-        }
-
         private static DynamicType[] GetReversedArgumentTypes(DynamicType[] types) {
             if (types.Length < 3) throw new InvalidOperationException("need 3 types or more for reversed operator");
 
@@ -360,21 +324,33 @@ namespace Microsoft.Scripting.Actions {
             bool argsTuple = false, keywordDict = false;
             int kwCnt = 0, extraArgs = 0;
             for (int i = 0; i < rule.ParameterCount - 1; i++) {
-                if (action.IsSimple) {
-                    args.Add(Arg.Simple(rule.Parameters[i + 1]));
-                } else if (action.ArgumentKinds[i].IsThis) {
-                    instance = rule.Parameters[i + 1];
-                } else if (action.ArgumentKinds[i].ExpandDictionary) {
-                    args.Add(Arg.Dictionary(rule.Parameters[i + 1]));
-                    keywordDict = true; extraArgs++;
-                } else if (action.ArgumentKinds[i].ExpandList) {
-                    args.Add(Arg.List(rule.Parameters[i + 1]));
-                    argsTuple = true; extraArgs++;
-                } else if (action.ArgumentKinds[i].Name != SymbolId.Empty) {
-                    args.Add(Arg.Named(action.ArgumentKinds[i].Name, rule.Parameters[i + 1]));
-                    kwCnt++;
-                } else {
-                    args.Add(Arg.Simple(rule.Parameters[i + 1]));
+                switch (action.GetArgumentKind(i)) {
+                    case ArgumentKind.Instance:
+                        instance = rule.Parameters[i + 1];
+                        break;
+
+                    case ArgumentKind.Dictionary:
+                        args.Add(Arg.Dictionary(rule.Parameters[i + 1]));
+                        keywordDict = true; 
+                        extraArgs++;
+                        break;
+                    
+                    case ArgumentKind.List:
+                        args.Add(Arg.List(rule.Parameters[i + 1]));
+                        argsTuple = true; 
+                        extraArgs++;
+                        break;
+
+                    case ArgumentKind.Named:
+                        args.Add(Arg.Named(action.GetArgumentName(i), rule.Parameters[i + 1]));
+                        kwCnt++;
+                        break;
+
+                    case ArgumentKind.Simple:
+                    default:
+                        args.Add(Arg.Simple(rule.Parameters[i + 1]));
+                        break;
+
                 }
             }
 

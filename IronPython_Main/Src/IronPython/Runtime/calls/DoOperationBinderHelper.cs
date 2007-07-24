@@ -84,6 +84,8 @@ namespace IronPython.Runtime.Calls {
                 } else {
                     MakeDynamicTarget(DynamicInvokeCompareOperation, ret);
                 }
+            } else if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem) {
+                return MakeDynamicIndexRule(Action, Context, types);
             } else {
                 MakeDynamicTarget(DynamicInvokeBinaryOperation, ret);
             }
@@ -152,6 +154,14 @@ namespace IronPython.Runtime.Calls {
             if (IsComparision) {
                 return MakeComparisonRule(types, op);
             }
+
+            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem) {
+                // Indexers need to see if the index argument is an expandable tuple.  This will
+                // be captured in the AbstractValue in the future but today is captured in the
+                // real value.
+                return MakeIndexerRule(types);
+            }
+
             return MakeSimpleRule(types, op);
         }
         
@@ -365,6 +375,102 @@ namespace IronPython.Runtime.Calls {
             rule.SetTarget(Ast.Block(stmts));
             return rule;
         }
+
+        private StandardRule<T> MakeIndexerRule(DynamicType[] types) {
+            Debug.Assert(types.Length >= 2);
+
+            DynamicType indexedType = types[0];
+            SymbolId getOrSet = Action.Operation == Operators.GetItem ? Symbols.GetItem : Symbols.SetItem;
+            SymbolId altAction = Action.Operation == Operators.GetItem ? Symbols.GetSlice : Symbols.SetSlice;
+            BuiltinFunction bf;
+            for (int i = 0; i < types.Length; i++) {
+                if (!types[i].UnderlyingSystemType.IsPublic && !types[i].UnderlyingSystemType.IsNestedPublic) {
+                    return MakeDynamicIndexRule(Action, Context, types);
+                }
+            }
+
+            if (!HasBadSlice(indexedType, altAction) &&
+                TryGetStaticFunction(getOrSet, indexedType, out bf) && 
+                bf != null) {
+
+                MethodBinder binder = MethodBinder.MakeBinder(Binder,
+                    "index",
+                    bf.Targets,
+                    BinderType.Normal);
+
+                StandardRule<T> ret = new StandardRule<T>();
+                ret.MakeTest(types);
+
+                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, types);
+                if (cand != null) {
+                    Expression call;
+
+                    if (Action.Operation == Operators.GetItem) {
+                        call = cand.Target.MakeExpression(Binder,
+                            ret.Parameters,
+                            CompilerHelpers.ConvertToTypes(types));
+                    } else {
+                        call = Ast.Comma(0,
+                            ret.Parameters[ret.Parameters.Length - 1],
+                            cand.Target.MakeExpression(
+                                Binder,
+                                ret.Parameters,
+                                CompilerHelpers.ConvertToTypes(types))
+                        );
+                    }
+                    ret.SetTarget(ret.MakeReturn(Binder, call));
+                    return ret;
+                } 
+            }
+
+            return MakeDynamicIndexRule(Action, Context, types);
+        }
+
+        /// <summary>
+        /// Checks for __getslice__/__setslice__ which prevents an optimized index operation.
+        /// 
+        /// getslice/setslice are legacy operations but the user can still override them on a subclass
+        /// of a built-in type.  We just don't the optimized call on these types right now.
+        /// </summary>
+        private bool HasBadSlice(DynamicType indexedType, SymbolId altAction) {
+            BuiltinFunction bf;
+            return !TryGetStaticFunction(altAction, indexedType, out bf) ||
+                        (bf != null && 
+                        bf.DeclaringType != indexedType);
+        }        
+
+        internal static StandardRule<T> MakeDynamicIndexRule(DoOperationAction action, CodeContext context, DynamicType[] types) {
+            StandardRule<T> ret = new StandardRule<T>();
+            ret.MakeTest(types);
+            Expression retExpr;
+            if (action.Operation == Operators.GetItem) {
+                Expression arg;
+                if (types.Length == 2) {
+                    arg = ret.Parameters[1];
+                } else {
+                    arg = Ast.Call(null, typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetGetIndexParameters(ret));
+                }
+                retExpr = Ast.DynamicReadItem(ret.Parameters[0], arg);
+            } else {
+                Expression arg;
+                if (types.Length == 3) {
+                    arg = ret.Parameters[1];
+                } else {
+                    arg = Ast.Call(null, typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetSetIndexParameters(ret));
+                }
+                retExpr = Ast.DynamicAssignItem(ret.Parameters[0], arg, ret.Parameters[ret.Parameters.Length - 1]);
+            }
+            ret.SetTarget(ret.MakeReturn(context.LanguageContext.Binder, retExpr));
+            return ret;
+        }
+
+        private static Expression[] GetSetIndexParameters(StandardRule<T> ret) {
+            return Utils.Array.RemoveLast(Utils.Array.RemoveFirst(ret.Parameters));
+        }
+
+        private static Expression[] GetGetIndexParameters(StandardRule<T> ret) {
+            return Utils.Array.RemoveFirst(ret.Parameters);
+        }        
 
         private Expression MakeCall(MethodTarget target, StandardRule<T> block, bool reverse) {
             Expression[] vars = block.Parameters;

@@ -147,7 +147,15 @@ fieldList = [
 
 def generate_symbols(cw):
     for x in fieldList:
+        cw.writeline("private static SymbolId _%s;" % (x[1],))
+    
+    for x in fieldList:
         cw.writeline("///<summary>Symbol for '%s'</summary> " % x[0])
-        cw.writeline("public static readonly SymbolId %s = MakeSymbolId(\"%s\");" % (x[1],x[0]))
+        cw.enter_block("public static SymbolId %s" % x[1])
+        cw.enter_block('get')
+        cw.writeline("if (_%s == SymbolId.Empty) _%s = MakeSymbolId(\"%s\");" % (x[1], x[1], x[0]))
+        cw.writeline("return _%s;" % (x[1],))
+        cw.exit_block()
+        cw.exit_block()
 
 CodeGenerator("Symbols - Other Symbols", generate_symbols).doit()

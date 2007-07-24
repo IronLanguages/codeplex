@@ -98,7 +98,7 @@ namespace Microsoft.Scripting.Generation {
 #if SILVERLIGHT && DEBUG // TODO: drop when Silverlight gets fixed
             } catch (System.Security.SecurityException) {
                 throw new System.Security.SecurityException(String.Format("Access to method '{0}' denied.", 
-                    Utils.Reflection.FormatSignature(Method)));
+                    Utils.Reflection.FormatSignature(new System.Text.StringBuilder(), Method)));
 #endif
             } catch (TargetInvocationException tie) {
                 throw ExceptionHelpers.UpdateForRethrow(tie.InnerException);
@@ -110,21 +110,6 @@ namespace Microsoft.Scripting.Generation {
             }
 
             return _returnBuilder.Build(context, callArgs, result);
-        }
-
-        public bool CanMakeCallTarget() {
-            if (!CompilerHelpers.CanOptimizeMethod(Method)) return false;
-
-            if (ParameterCount > CallTargets.MaximumCallArgs) {
-                return false;
-            }
-
-            if (!_returnBuilder.CanGenerate) return false;
-
-            foreach (ArgBuilder ab in _argBuilders) {
-                if (!ab.CanGenerate) return false;
-            }
-            return true;
         }
 
         public Expression MakeExpression(ActionBinder binder, Expression[] parameters) {
@@ -140,6 +125,26 @@ namespace Microsoft.Scripting.Generation {
             } else {
                 return Ast.New((ConstructorInfo)Method, args);
             }
+        }
+
+        /// <summary>
+        /// Creates a call to this MethodTarget with the specified parameters.  Casts are inserted to force
+        /// the types to the provided known types.
+        /// </summary>
+        /// <param name="binder"></param>
+        /// <param name="parameters"></param>
+        /// <param name="knownTypes"></param>
+        /// <returns></returns>
+        public Expression MakeExpression(ActionBinder binder, Expression[] parameters, Type[] knownTypes) {
+            Expression[] args = new Expression[parameters.Length];
+            for (int i = 0; i < args.Length; i++) {
+                args[i] = parameters[i];
+                if (!knownTypes[i].IsAssignableFrom(parameters[i].ExpressionType)) {
+                    args[i] = Ast.Cast(parameters[i], knownTypes[i]);
+                }
+            }
+
+            return MakeExpression(binder, args);
         }
 
         public AbstractValue AbstractCall(AbstractContext context, IList<AbstractValue> args) {
@@ -235,13 +240,47 @@ namespace Microsoft.Scripting.Generation {
 
             if (argCount < ParameterCount - 1) return null;
 
-            List<ArgBuilder> newArgBuilders = new List<ArgBuilder>(_argBuilders);
+            List<ArgBuilder> newArgBuilders = new List<ArgBuilder>(_argBuilders.Count);
+            
+            // current argument that we consume, initially skip this if we have it.
+            int curArg = CompilerHelpers.IsStatic(_method) ? 0 : 1; 
 
-            Type elementType = ((SimpleArgBuilder)_argBuilders[_argBuilders.Count - 1]).Type.GetElementType();
-            int start = ParameterCount - 1;
-            newArgBuilders[newArgBuilders.Count-1] = new ParamsArgBuilder(start, argCount - start, elementType);
+            foreach (ArgBuilder ab in _argBuilders) {
+                SimpleArgBuilder sab = ab as SimpleArgBuilder;
+                if (sab != null) {
+                    // we consume one or more incoming argument(s)
+                    if (!sab.IsParams) {
+                        // consume the next argument
+                        newArgBuilders.Add(new SimpleArgBuilder(curArg++, sab.Type));
+                    } else {
+                        // consume all the extra arguments
+                        int paramsUsed = argCount -
+                            GetConsumedArguments() +
+                            (CompilerHelpers.IsStatic(_method) ? 1 : 0);
+
+                        newArgBuilders.Add(new ParamsArgBuilder(
+                            curArg,
+                            paramsUsed,
+                            sab.Type.GetElementType()));
+
+                        curArg += paramsUsed;
+                    }
+                } else {
+                    // CodeContext, null, default, etc...  we don't consume an 
+                    // actual incoming argument.
+                    newArgBuilders.Add(ab);
+                }
+            }
 
             return new MethodTarget(_binder, Method, argCount, _instanceBuilder, newArgBuilders, _returnBuilder);
+        }
+
+        private int GetConsumedArguments() {
+            int consuming = 0;
+            foreach (ArgBuilder argb in _argBuilders) {
+                if (argb is SimpleArgBuilder) consuming++;
+            }
+            return consuming;
         }
     }
 }

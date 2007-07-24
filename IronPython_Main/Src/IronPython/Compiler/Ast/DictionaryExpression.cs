@@ -56,7 +56,7 @@ namespace IronPython.Compiler.Ast {
             );
 
             // 4. Get the setter to call on each value inserted into the dictionary
-            System.Reflection.MethodInfo setter = typeof(PythonDictionary).GetProperty("Item").GetSetMethod();
+            System.Reflection.MethodInfo setter = typeof(PythonDictionary).GetProperty("Item", null, new Type[] { typeof(object) }).GetSetMethod();
 
             // 5. Transform the slices into method calls and assignments
             int index;

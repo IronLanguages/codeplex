@@ -76,6 +76,7 @@ namespace Microsoft.Scripting.Ast {
         public static AndExpression And(Expression left, Expression right) {
             return And(SourceSpan.None, left, right);
         }
+
         public static AndExpression And(SourceSpan span, Expression left, Expression right) {
             return new AndExpression(span, left, right);
         }

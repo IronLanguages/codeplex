@@ -70,7 +70,7 @@ namespace Microsoft.Scripting {
             return Interlocked.Increment(ref MasterVersion);
         }
 
-        protected void UpdateVersion() {
+        protected virtual void UpdateVersion() {
             if (_version != DynamicVersion) {
                 _version = GetNextVersion();
             }
@@ -582,6 +582,7 @@ namespace Microsoft.Scripting {
 
             for (int i = 0; i < _resolutionOrder.Count; i++) {
                 DynamicMixin dt = _resolutionOrder[i];
+                dt.Initialize();
 
                 foreach (KeyValuePair<SymbolId, SlotInfo> kvp in dt._dict) {                    
                     if (keys.ContainsKey(kvp.Key)) continue;
@@ -1465,7 +1466,7 @@ namespace Microsoft.Scripting {
                 _dict[name] = new SlotInfo(_slotCreator(value));
             }
 
-            _version = DynamicVersion;
+            UpdateVersion();
             if (dtc != null) {
                 dtc(this, new DynamicTypeChangedEventArgs(context, name, ChangeType.Added, previous, value));
             }
@@ -1497,6 +1498,7 @@ namespace Microsoft.Scripting {
                     name.ToString()));
             }
 
+            UpdateVersion();
             if (dtc != null) {
                 dtc(this, new DynamicTypeChangedEventArgs(context, name, ChangeType.Removed, previous, null));
             }

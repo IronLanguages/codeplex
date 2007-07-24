@@ -63,5 +63,9 @@ namespace Microsoft.Scripting {
         public virtual bool IsVisible(CodeContext context, DynamicMixin owner) {
             return true;
         }
+
+        public virtual bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
+            return false;
+        }
     }
 }

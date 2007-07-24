@@ -156,7 +156,7 @@ namespace IronPython.Runtime {
                 return false;
             }
 
-            if (PythonOps.TryGetBoundAttr(builtins, name, out value)) return true;
+            if (sm.Scope.TryGetName(context.LanguageContext, name, out value)) return true;            
 
             return base.TryLookupGlobal(context, name, out value);
         }

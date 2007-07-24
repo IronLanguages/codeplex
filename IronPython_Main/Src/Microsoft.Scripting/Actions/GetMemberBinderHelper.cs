@@ -25,21 +25,22 @@ using System.Collections.Generic;
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
-    public class GetMemberBinderHelper<T> {
-        private readonly ActionBinder _binder;
-        private readonly GetMemberAction _action;
+    public class GetMemberBinderHelper<T> : BinderHelper<T, GetMemberAction> {
+        private Type _strongBoxType;
 
-        public GetMemberBinderHelper(ActionBinder binder, GetMemberAction action) {
-            Utils.Assert.NotNull(binder, action);
-
-            this._binder = binder;
-            this._action = action;
+        public GetMemberBinderHelper(CodeContext context, GetMemberAction action)
+            : base(context, action) {
+            Utils.Assert.NotNull(context, action);
         }
 
         public StandardRule<T> MakeNewRule(object[] args) {
             Debug.Assert(args != null && args.Length == 1);
 
             object target = args[0];
+            if (IsStrongBox(target)) {
+                _strongBoxType = target.GetType();
+                target = ((IStrongBox)target).Value;
+            }
 
             DynamicType targetType = DynamicHelpers.GetDynamicType(target);
 
@@ -52,7 +53,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private StandardRule<T> MakeRule(Type type) {
-            string finding = SymbolTable.IdToString(_action.Name);
+            string finding = SymbolTable.IdToString(Action.Name);
             try {
                 PropertyInfo pi = type.GetProperty(finding);
                 if (pi != null) {
@@ -89,16 +90,34 @@ namespace Microsoft.Scripting.Actions {
                 return MakeGetMemberRule(type, fi);
             }
 
-            return MakeDynamicRule(type);        
+            if (_strongBoxType != null) {
+                // TODO: We should support this in more general cases to enable composable sites that avoid
+                // production of the BoundBuiltinFunction.
+
+                BuiltinFunction bf = ReflectionCache.GetMethodGroup(type, finding);
+                if(bf != null) {
+                    return MakeMethodRule(bf, _strongBoxType);
+                }
+            }
+
+            return MakeDynamicRule(_strongBoxType ?? type);        
         }
 
         private StandardRule<T> MakeGetMemberRule(Type targetType, MemberInfo mi) {
             StandardRule<T> rule = new StandardRule<T>();
-            if (TryMakeGetMemberRule(rule, mi, rule.Parameters)) {
-                rule.MakeTest(targetType);
+            if (TryMakeGetMemberRule(rule, mi, GetParametersForRule(rule))) {
+                rule.MakeTest(_strongBoxType ?? targetType);
                 return rule;
             }
-            return MakeDynamicRule(targetType);
+            return MakeDynamicRule(_strongBoxType ?? targetType);
+        }
+
+        private Expression[] GetParametersForRule(StandardRule<T> rule) {
+            if (_strongBoxType == null) return rule.Parameters;
+
+            Expression[] prms = (Expression[])rule.Parameters.Clone();
+            prms[0] = Ast.ReadField(Ast.Cast(prms[0], _strongBoxType), _strongBoxType.GetField("Value"));
+            return prms;
         }
 
         /// <summary>
@@ -134,7 +153,7 @@ namespace Microsoft.Scripting.Actions {
             if (target is ICustomMembers || IsNonSystemMutableType(target, targetType)) return true;
 
             if (!targetType.IsSystemType || targetType.IsExtended) {
-                return targetType.Version == DynamicMixin.DynamicVersion || targetType.HasDynamicMembers(_binder.Context);
+                return targetType.Version == DynamicMixin.DynamicVersion || targetType.HasDynamicMembers(Context);
             }
 
             return false;
@@ -175,7 +194,7 @@ namespace Microsoft.Scripting.Actions {
             }
             for (int arg = 0; arg < infos.Length; arg++) {
                 if (parameter < parameters.Length) {
-                    callArgs[arg] = _binder.ConvertExpression(
+                    callArgs[arg] = Binder.ConvertExpression(
                         parameters[parameter++],
                         infos[arg].ParameterType);
                 } else {
@@ -208,7 +227,7 @@ namespace Microsoft.Scripting.Actions {
             if (!field.IsStatic && CompilerHelpers.CanOptimizeField(field)) {
                 rule.SetTarget(
                     rule.MakeReturn(
-                        _binder,
+                        Binder,
                         Ast.ReadField(
                             field.IsStatic ?
                                 null :
@@ -223,6 +242,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        
         private StandardRule<T> MakeDynamicRule(Type targetType) {
             return MakeDynamicRule(DynamicHelpers.GetDynamicTypeFromType(targetType));
         }
@@ -234,8 +254,8 @@ namespace Microsoft.Scripting.Actions {
                     typeof(RuntimeHelpers).GetMethod("GetBoundMember"),
                     Ast.CodeContext(),
                     rule.Parameters[0],
-                    Ast.Constant(this._action.Name));
-            rule.SetTarget(rule.MakeReturn(_binder, expr));
+                    Ast.Constant(Action.Name));
+            rule.SetTarget(rule.MakeReturn(Binder, expr));
             return rule;
         }
     }

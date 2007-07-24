@@ -37,6 +37,10 @@ namespace Microsoft.Scripting.Ast {
             get { return _index; }
         }
 
+        public override object Evaluate(CodeContext context) {
+            return context.LanguageContext.DeleteIndex(context, _target.Evaluate(context), _index.Evaluate(context));
+        }
+
         public override void Emit(CodeGen cg) {
             cg.EmitPosition(Start, End);
 

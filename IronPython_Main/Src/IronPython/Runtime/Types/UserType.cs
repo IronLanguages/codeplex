@@ -80,6 +80,7 @@ namespace IronPython.Runtime.Types {
             private FastDynamicSite<BuiltinFunction, DynamicType, object> _site;
             private FastDynamicSite<BuiltinFunction, DynamicType, object, object> _site1;
             private FastDynamicSite<BuiltinFunction, DynamicType, object, object, object> _site2;
+            private FastDynamicSite<BuiltinFunction, DynamicType, object, object, object, object> _site3;
 
             public TypePrepender(DynamicType dt, BuiltinFunction realCtor) {
                 _type = dt;
@@ -94,24 +95,31 @@ namespace IronPython.Runtime.Types {
                     case 0: 
                         if(_site == null) {
                             Interlocked.CompareExchange(ref _site,
-                                new FastDynamicSite<BuiltinFunction, DynamicType, object>(DefaultContext.Default, CallAction.Simple),
+                                FastDynamicSite<BuiltinFunction, DynamicType, object>.Create(DefaultContext.Default, CallAction.Simple),
                                 null);
                         }
                         return _site.Invoke(_ctor, _type);
                     case 1: 
                         if(_site1 == null) {
                             Interlocked.CompareExchange(ref _site1,
-                                new FastDynamicSite<BuiltinFunction, DynamicType, object, object>(DefaultContext.Default, CallAction.Simple),
+                                FastDynamicSite<BuiltinFunction, DynamicType, object, object>.Create(DefaultContext.Default, CallAction.Simple),
                                 null);
                         }
                         return _site1.Invoke(_ctor, _type, args[0]);
                     case 2: 
                         if(_site2 == null) {
                             Interlocked.CompareExchange(ref _site2,
-                                new FastDynamicSite<BuiltinFunction, DynamicType, object, object, object>(DefaultContext.Default, CallAction.Simple),
+                                FastDynamicSite<BuiltinFunction, DynamicType, object, object, object>.Create(DefaultContext.Default, CallAction.Simple),
                                 null);
                         }
                         return _site2.Invoke(_ctor, _type, args[0], args[1]);
+                    case 3:
+                        if (_site3 == null) {
+                            Interlocked.CompareExchange(ref _site3,
+                                FastDynamicSite<BuiltinFunction, DynamicType, object, object, object, object>.Create(DefaultContext.Default, CallAction.Simple),
+                                null);
+                        }
+                        return _site3.Invoke(_ctor, _type, args[0], args[1], args[2]);
                 }
 
                 return _ctor.Call(context, Utils.Array.Insert<object>(_type, args));
@@ -149,8 +157,9 @@ namespace IronPython.Runtime.Types {
 
             if (fastDict.ContainsKey(Symbols.Slots)) {
                 HasSlots = true;
-                if (fastDict.ContainsKey(Symbols.Dict)) HasDictionary = true;
-                if (fastDict.ContainsKey(Symbols.WeakRef)) HasWeakRef = true;
+                List<string> slots = NewTypeMaker.SlotsToList(fastDict[Symbols.Slots]);
+                if (slots.Contains("__dict__")) HasDictionary = true;
+                if (slots.Contains("__weakref__")) HasWeakRef = true;
             } else {
                 HasDictionary = true;
                 HasWeakRef = true;
@@ -695,7 +704,7 @@ namespace IronPython.Runtime.Types {
             internal bool HookedGetAttribute(CodeContext context, object instance, SymbolId name, out object value) {
                 if (_getAttrSite == null) {
                     Interlocked.CompareExchange<DynamicSite<object,object,string,object>>(ref _getAttrSite, 
-                        new DynamicSite<object, object, string, object>(CallAction.Simple), 
+                        DynamicSite<object, object, string, object>.Create(CallAction.Simple), 
                         null);
                 }
 
@@ -711,7 +720,7 @@ namespace IronPython.Runtime.Types {
             internal void HookedSetAttribute(CodeContext context, object instance, SymbolId name, object value) {
                 if (_setAttrSite == null) {
                     Interlocked.CompareExchange<DynamicSite<object, object, string, object, object>>(ref _setAttrSite, 
-                        new DynamicSite<object, object, string, object, object>(CallAction.Simple), 
+                        DynamicSite<object, object, string, object, object>.Create(CallAction.Simple), 
                         null);
                 }
                 _setAttrSite.Invoke(context, _func, instance, SymbolTable.IdToString(name), value);
@@ -720,7 +729,7 @@ namespace IronPython.Runtime.Types {
             internal void HookedDeleteAttribute(CodeContext context, object instance, SymbolId name) {
                 if (_delAttrSite == null) {
                     Interlocked.CompareExchange<DynamicSite<object, object, string, object>>(ref _delAttrSite, 
-                        new DynamicSite<object, object, string, object>(CallAction.Simple), 
+                        DynamicSite<object, object, string, object>.Create(CallAction.Simple), 
                         null);
                 }
                 _delAttrSite.Invoke(context, _func, instance, SymbolTable.IdToString(name));

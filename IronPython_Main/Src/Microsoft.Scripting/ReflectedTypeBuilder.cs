@@ -196,6 +196,8 @@ namespace Microsoft.Scripting {
                     if (_type == type) {
                         AddConstructors();
                     }
+
+                    AddInheritedStaticMethods(defaultMembers, bf);
                 }
 
                 AddOps();
@@ -486,6 +488,25 @@ namespace Microsoft.Scripting {
             
             if(getter != null || setter != null) {
                 SetValue(SymbolTable.StringToId(pi.Name), ContextId.Empty, new ReflectedIndexer(pi, NameType.Property));
+            }
+        }
+
+        private void AddInheritedStaticMethods(MemberInfo[] defaultMembers, BindingFlags bf) {
+            if (_type != typeof(object)) {
+                Type curType = _type.BaseType;
+                while (curType != null && curType != typeof(object) && curType != typeof(ValueType)) {
+                    foreach (MethodInfo mi in curType.GetMethods(bf & ~BindingFlags.Instance)) {
+                        // Only inherit op_Implicit.  
+                        if (!mi.IsSpecialName || mi.Name != "op_Implicit") continue;
+
+                        foreach (TransformedName tn in _transform(curType, TransformReason.Method)) {
+                            if(tn.Name != null) {
+                                AddReflectedMethod(mi, defaultMembers);
+                            }
+                        }
+                    }
+                    curType = curType.BaseType;
+                }
             }
         }
 

@@ -17,27 +17,25 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting.Ast;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting.Actions {
-    public class CallAction : Action {
-        private static readonly CallAction _simple = new CallAction();
-        private readonly ArgumentKind[] _argumentKinds;
+    public class CallAction : Action, IEquatable<CallAction> {
+        private static readonly CallAction _simple = new CallAction(null);
+        private readonly ArgumentInfo[] _argumentInfos;
 
-        protected CallAction() {
-        }
-
-        protected CallAction(ArgumentKind[] args) {
-            _argumentKinds = args;
+        protected CallAction(ArgumentInfo[] args) {
+            _argumentInfos = args;
         }
 
         public static CallAction Make(params Arg[] args) {
             if (args == null) return Simple;
 
-            ArgumentKind[] argkind = new ArgumentKind[args.Length];
+            ArgumentInfo[] argkind = new ArgumentInfo[args.Length];
             bool nonSimple = false;
             for (int i = 0; i < args.Length; i++) {
-                argkind[i] = Transform(args[i]);
-                if (args[i].Kind != Arg.ArgumentKind.Simple) nonSimple = true;
+                argkind[i] = args[i].Info;
+                if (args[i].Kind != ArgumentKind.Simple) nonSimple = true;
             }
 
             if (nonSimple) {
@@ -48,11 +46,11 @@ namespace Microsoft.Scripting.Actions {
         }
 
 
-        public static CallAction Make(params ArgumentKind[] args) {
+        public static CallAction Make(params ArgumentInfo[] args) {
             if (args == null) return Simple;
 
             for (int i = 0; i < args.Length; i++) {
-                if (args[i] != ArgumentKind.Simple) {
+                if (args[i].Kind != ArgumentKind.Simple) {
                     return new CallAction(args);
                 }
             }
@@ -60,21 +58,8 @@ namespace Microsoft.Scripting.Actions {
             return CallAction.Simple;
         }
 
-        private static ArgumentKind Transform(Arg arg) {
-            switch(arg.Kind) {
-                case Arg.ArgumentKind.Dictionary: return new ArgumentKind(false, false, true, arg.Name);
-                case Arg.ArgumentKind.List: return new ArgumentKind(false, true, false, arg.Name);
-                case Arg.ArgumentKind.Named: return new ArgumentKind(false, false, false, arg.Name);
-                case Arg.ArgumentKind.Simple: return new ArgumentKind(false, false, false, arg.Name);
-                case Arg.ArgumentKind.Instance: return new ArgumentKind(true, false, false, arg.Name);
-                default: throw new InvalidOperationException();
-            }
-        }
-
         public static CallAction Make(string s) {
-            if (s == "Simple") return Simple;
-
-            return new CallAction(ArgumentKind.ParseAll(s));
+            return new CallAction(ArgumentInfo.ParseAll(s));
         }
 
         public static CallAction Simple {
@@ -83,13 +68,13 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public ArgumentKind[] ArgumentKinds {
-            get { return _argumentKinds; }
+        public ArgumentInfo[] ArgumentInfos {
+            get { return _argumentInfos; }
         }
 
         public bool IsSimple {
             get {
-                return _argumentKinds == null;
+                return _argumentInfos == null;
             }
         }
 
@@ -99,74 +84,174 @@ namespace Microsoft.Scripting.Actions {
 
         public override string ParameterString {
             get {
-                return ArgumentKind.ToParameterString(_argumentKinds);
+                return ArgumentInfo.ToParameterString(_argumentInfos);
             }
         }
 
-        public override bool Equals(object obj) {
-            CallAction other = obj as CallAction;
-            if (other == null) return false;
+        public bool Equals(CallAction other) {
+            if (other == null || other.GetType() != GetType()) return false;
 
-            if (other.GetType() != GetType()) return false;
-
-            if (_argumentKinds == null) {
-                return other.ArgumentKinds == null;
-            } else if (other.ArgumentKinds == null) {
+            if (_argumentInfos == null) {
+                return other.ArgumentInfos == null;
+            } else if (other.ArgumentInfos == null) {
                 return false;
             }
 
-            if (_argumentKinds.Length != other.ArgumentKinds.Length) return false;
+            if (_argumentInfos.Length != other.ArgumentInfos.Length) return false;
 
-            for (int i = 0; i < _argumentKinds.Length; i++) {
-                if (!_argumentKinds[i].Equals(other.ArgumentKinds[i])) return false;
+            for (int i = 0; i < _argumentInfos.Length; i++) {
+                if (!_argumentInfos[i].Equals(other.ArgumentInfos[i])) return false;
             }
+
             return true;
         }
 
+        public override bool Equals(object obj) {
+            return Equals(obj as CallAction);
+        }
+
         public override int GetHashCode() {
-            return ArgumentKind.GetHashCode(Kind, _argumentKinds);
+            return ArgumentInfo.GetHashCode(Kind, _argumentInfos);
         }
+
+        #region Helpers
+
+        public int ArgumentCount {
+            get {
+                Utils.Assert.NotNull(_argumentInfos);
+                return _argumentInfos.Length;
+            }
+        }
+
+        // TODO: this is incorrect
+        public bool IsParamsCall() {
+            if (IsSimple) return false;
+
+            foreach (ArgumentInfo info in _argumentInfos) {
+                if (info.Kind == ArgumentKind.Named || info.Kind == ArgumentKind.Dictionary || info.Kind == ArgumentKind.Instance) {
+                    return false;
+                }
+            }
+
+            return _argumentInfos[_argumentInfos.Length - 1].Kind == ArgumentKind.List;
+        }
+
+        public ArgumentKind GetArgumentKind(int i) {
+            Debug.Assert(i >= 0 && (_argumentInfos == null || i < _argumentInfos.Length));
+            return _argumentInfos != null ? _argumentInfos[i].Kind : ArgumentKind.Simple;
+        }
+
+        public SymbolId GetArgumentName(int i) {
+            Debug.Assert(i >= 0 && (_argumentInfos == null || i < _argumentInfos.Length));
+            return _argumentInfos != null ? _argumentInfos[i].Name : SymbolId.Empty;
+        }
+
+        /// <summary>
+        /// Gets the number of positional arguments the user provided at the call site.
+        /// </summary>
+        public int GetProvidedPositionalArgumentCount(int parameterCount) {
+            if (IsSimple) return parameterCount - 1;
+
+            int cnt = _argumentInfos.Length;
+            for (int i = 0; i < _argumentInfos.Length; i++) {
+                ArgumentKind kind = _argumentInfos[i].Kind;
+                
+                if (kind == ArgumentKind.Dictionary || kind == ArgumentKind.List || kind == ArgumentKind.Named) {
+                    cnt--;
+                }
+            }
+
+            return cnt;
+        }
+
+        public bool HasKeywordArgument() {
+            if (IsSimple) return false;
+
+            foreach (ArgumentInfo info in _argumentInfos) {
+                if (info.Kind == ArgumentKind.Dictionary || info.Kind == ArgumentKind.Named) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool HasDictionaryArgument() {
+            if (IsSimple) return false;
+
+            foreach (ArgumentInfo info in _argumentInfos) {
+                if (info.Kind == ArgumentKind.Dictionary) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool HasNamedArgument() {
+            if (IsSimple) return false;
+
+            foreach (ArgumentInfo info in _argumentInfos) {
+                if (info.Kind == ArgumentKind.Named) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public SymbolId[] GetArgumentNames() {
+            if (IsSimple) return SymbolId.EmptySymbols;
+
+            List<SymbolId> res = new List<SymbolId>();
+            foreach (ArgumentInfo info in _argumentInfos) {
+                if (info.Name != SymbolId.Empty) {
+                    res.Add(info.Name);
+                }
+            }
+
+            return res.ToArray();
+        }
+
+        #endregion
     }
+
     /// <summary>
-    /// TODO: Just use Arg objects directly?
+    /// TODO: Alternatively, it should be sufficient to remember indices for this, list, dict and block.
     /// </summary>
-    public class ArgumentKind {
-        private bool _isThis;
-        private bool _expandList;
-        private bool _expandDictionary;
+    public struct ArgumentInfo : IEquatable<ArgumentInfo> {
+        private readonly ArgumentKind _kind;
+        private readonly SymbolId _name;
 
-        private SymbolId _name;
+        public static readonly ArgumentInfo Simple = new ArgumentInfo(ArgumentKind.Simple, SymbolId.Empty);
 
-        public static readonly ArgumentKind Simple = new ArgumentKind(false, false, false, SymbolId.Empty);
-
-        public ArgumentKind(bool isThis, bool expandList, bool expandDictionary, SymbolId name) {
-            this._isThis = isThis;
-            this._expandList = expandList;
-            this._expandDictionary = expandDictionary;
-            this._name = name;
-        }
-
-        public bool IsThis { get { return _isThis; } }
-        public bool ExpandList { get { return _expandList; } }
-        public bool ExpandDictionary { get { return _expandDictionary; } }
+        public ArgumentKind Kind { get { return _kind; } }
         public SymbolId Name { get { return _name; } }
 
-        public override bool Equals(object obj) {
-            ArgumentKind o = obj as ArgumentKind;
-            if (o == null) return false;
+        public ArgumentInfo(SymbolId name) {
+            _kind = ArgumentKind.Named;
+            _name = name;
+        }
 
-            return _isThis == o._isThis && 
-                _expandList == o._expandList && 
-                _expandDictionary == o._expandDictionary &&
-                _name == o._name;
+        public ArgumentInfo(ArgumentKind kind) {
+            _kind = kind;
+            _name = SymbolId.Empty;
+        }
+
+        public ArgumentInfo(ArgumentKind kind, SymbolId name) {
+            Debug.Assert((kind == ArgumentKind.Named) ^ (name == SymbolId.Empty));
+            _kind = kind;
+            _name = name;
+        }
+
+        public override bool Equals(object obj) {
+            return obj is ArgumentInfo && Equals((ArgumentInfo)obj);
+        }
+
+        public bool Equals(ArgumentInfo other) {
+            return _kind == other._kind && _name == other._name;
         }
 
         public override int GetHashCode() {
-            int ret = _name.GetHashCode();
-            if (_isThis) ret ^= 0x10000000;
-            if (_expandList) ret ^= 0x20000000;
-            if (_expandDictionary) ret ^= 0x40000000;
-            return ret;
+            return _name.GetHashCode() ^ (int)_kind << 7;
         }
 
         public bool IsSimple {
@@ -177,25 +262,22 @@ namespace Microsoft.Scripting.Actions {
 
         public string ParameterString {
             get {
-                StringBuilder b = new StringBuilder();
-                if (_isThis) b.Append('!');
-                if (_expandList) b.Append('@');
-                if (_expandDictionary) b.Append('#');
-                if (_name != SymbolId.Empty) b.Append(SymbolTable.IdToString(_name));
-                return b.ToString();
+                return String.Concat((char)('0' + (int)_kind), SymbolTable.IdToString(_name));
             }
         }
 
-        public static ArgumentKind[] ParseAll(string s) {
+        public static ArgumentInfo[] ParseAll(string s) {
+            if (s == "Simple") return null;
+
             string[] pieces = s.Split(',');
-            ArgumentKind[] kinds = new ArgumentKind[pieces.Length];
+            ArgumentInfo[] kinds = new ArgumentInfo[pieces.Length];
             for (int i = 0; i < kinds.Length; i++) {
-                kinds[i] = ArgumentKind.Parse(pieces[i]);
+                kinds[i] = ArgumentInfo.Parse(pieces[i]);
             }
             return kinds;
         }
 
-        public static string ToParameterString(ArgumentKind[] kinds) {
+        public static string ToParameterString(ArgumentInfo[] kinds) {
             if (kinds == null) return "Simple";
 
             StringBuilder b = new StringBuilder();
@@ -206,37 +288,22 @@ namespace Microsoft.Scripting.Actions {
             return b.ToString();
         }
 
-        public static int GetHashCode(ActionKind kind, ArgumentKind[] kinds) {
+        public static int GetHashCode(ActionKind kind, ArgumentInfo[] kinds) {
             int h = 6551;
             if (kinds != null) {
-                foreach (ArgumentKind k in kinds) {
+                foreach (ArgumentInfo k in kinds) {
                     h ^= (h << 5) ^ k.GetHashCode();
                 }
             }
             return (int)kind << 28 ^ h;
         }
 
-        public static ArgumentKind Parse(string s) {
-            if (s.Length == 0) return Simple;
-            ArgumentKind ret = new ArgumentKind(false, false, false, SymbolId.Empty);
-            int i = 0;
-            if (s[i] == '!') {
-                i += 1;
-                ret._isThis = true;
-                if (i >= s.Length) return ret;
-            }
-            if (s[i] == '@') {
-                i += 1;
-                ret._expandList = true;
-                if (i >= s.Length) return ret;
-            }
-            if (s[i] == '#') {
-                i += 1;
-                ret._expandDictionary = true;
-                if (i >= s.Length) return ret;
-            }
-            ret._name = SymbolTable.StringToId(s.Substring(i));
-            return ret;
+        public static ArgumentInfo Parse(string s) {
+            if (String.IsNullOrEmpty(s)) return Simple;
+            
+            Debug.Assert(s[0] >= '0');
+            string name = s.Substring(1);
+            return new ArgumentInfo((ArgumentKind)(s[0] - '0'), name.Length > 0 ? SymbolTable.StringToId(name) : SymbolId.Empty);
         }
     }
 }

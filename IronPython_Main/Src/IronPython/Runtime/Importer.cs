@@ -74,7 +74,7 @@ namespace IronPython.Runtime {
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object> MakeImportSite() {
             // cant be FastDynamicSite because we need to flow our caller's true context because import is a meta-programming feature.
-            return new DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object>(CallAction.Simple);
+            return DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object>.Create(CallAction.Simple);
         }
 
         /// <summary>

@@ -86,8 +86,12 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void Dump() {
+            Dump(null);
+        }
+
+        public void Dump(string fileName) {
             if (_assembly != null && _assembly.SaveAndReloadAssemblies) {
-                _assembly.Dump();
+                _assembly.Dump(fileName);
                 _assembly = null;
             }
 

@@ -24,35 +24,26 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class RuleTree<T> {
-        public static RuleTree<T> MakeRuleTree(CodeContext context) {
+        public static RuleTree<T> MakeRuleTree(LanguageContext context) {
             if (context == null) throw new ArgumentNullException("context");
 
             return new RuleTree<T>(context);
         }
-        private CodeContext _context;
+        private LanguageContext _context;
         private LinkedList<StandardRule<T>> _rules = new LinkedList<StandardRule<T>>();
 
-        private RuleTree(CodeContext context) {
+        private RuleTree(LanguageContext context) {
             Debug.Assert(context != null);
             _context = context;
         }
 
-        private Scope MakeScope(object[] args) {
+        public StandardRule<T> GetRule(object[] args) {
+            // Create fake context for evaluating the rule tests
+            CodeContext context = new CodeContext(new Scope(), _context);
             if (DynamicSiteHelpers.IsBigTarget(typeof(T))) {
                 args = new object[] { NewTuple.MakeTuple(typeof(T).GetGenericArguments()[0], args) };
             }
-
-            Scope s = new Scope();
-            for (int i = 0; i < args.Length; i++) {
-                s.SetName(SymbolTable.StringToId("$arg" + i), args[i]);
-            }
-            return s;
-        }
-
-
-        public StandardRule<T> GetRule(object[] args) {
-            CodeContext context = new CodeContext(MakeScope(args), _context.LanguageContext, _context.ModuleContext);
-
+            
             //TODO insert some instrumentation to catch large sets of rules (but what is large?)
 
             LinkedListNode<StandardRule<T>> node = _rules.First;
@@ -65,11 +56,13 @@ namespace Microsoft.Scripting.Actions {
                     continue;
                 }
 
-                if (rule.Test == null || (bool)rule.Test.Evaluate(context)) {
-                    // Tentative optimization of moving rule to front of list when found
-                    _rules.Remove(node);
-                    _rules.AddFirst(node);
-                    return rule;
+                using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    if (rule.Test == null || (bool)rule.Test.Evaluate(context)) {
+                        // Tentative optimization of moving rule to front of list when found
+                        _rules.Remove(node);
+                        _rules.AddFirst(node);
+                        return rule;
+                    }
                 }
                 node = node.Next;
             }

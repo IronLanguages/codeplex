@@ -35,10 +35,6 @@ namespace Microsoft.Scripting.Generation {
             get { return -1; }
         }
 
-        public override void Generate(CodeGen cg, IList<Slot> argSlots) {
-            cg.EmitCodeContext();
-        }
-
         public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
             return Ast.CodeContext();
         }

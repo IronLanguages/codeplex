@@ -91,6 +91,7 @@
     <Compile Include="_sre.cs" />
     <Compile Include="_weakref.cs" />
     <Compile Include="_weakref.Generated.cs" />
+    <Compile Include="..\AssemblyVersion.cs" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

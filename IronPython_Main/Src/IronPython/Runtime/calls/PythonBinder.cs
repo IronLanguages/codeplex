@@ -37,22 +37,23 @@ namespace IronPython.Runtime.Calls {
             : base(context) {
         }
 
-        private StandardRule<T> MakeRuleWorker<T>(Action action, object[] args) {
+        private StandardRule<T> MakeRuleWorker<T>(CodeContext context, Action action, object[] args) {
             switch (action.Kind) {
                 case ActionKind.DoOperation:
-                    return new DoOperationBinderHelper<T>(this, Context, (DoOperationAction)action).MakeRule(args);
-                case ActionKind.GetMember:                    
+                    return new DoOperationBinderHelper<T>(this, context, (DoOperationAction)action).MakeRule(args);
+                case ActionKind.GetMember:
+                    return new PythonGetMemberBinderHelper<T>(context, (GetMemberAction)action).MakeRule(args);
                 case ActionKind.SetMember:
                     return null;    // default implementation is good enough.
                 case ActionKind.Call:
-                    return new PythonCallBinderHelper<T>(Context, (CallAction)action).MakeRule(args);
+                    return new PythonCallBinderHelper<T>(context, (CallAction)action).MakeRule(args);
                 default:
                     throw new NotImplementedException(action.ToString());
             }
         }
 
-        protected override StandardRule<T> MakeRule<T>(Action action, object[] args) {
-            return MakeRuleWorker<T>(action, args) ?? base.MakeRule<T>(action, args);
+        protected override StandardRule<T> MakeRule<T>(CodeContext context, Action action, object[] args) {
+            return MakeRuleWorker<T>(context, action, args) ?? base.MakeRule<T>(context, action, args);
         }
 
         public override Expression ConvertExpression(Expression expr, Type toType) {

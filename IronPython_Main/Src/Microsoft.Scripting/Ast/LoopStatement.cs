@@ -64,7 +64,7 @@ namespace Microsoft.Scripting.Ast {
             while (_test == null || context.LanguageContext.IsTrue(_test.Evaluate(context))) {
                 ret = _body.Execute(context);
                 if (ret == Statement.Break) {
-                    break;
+                    return NextStatement;
                 } else if (!(ret is ControlFlow)) {
                     return ret;
                 }
@@ -72,7 +72,9 @@ namespace Microsoft.Scripting.Ast {
                     _increment.Evaluate(context);
                 }
             }
-
+            if (_else != null) {
+                return _else.Execute(context);
+            }
             return NextStatement;
         }
 

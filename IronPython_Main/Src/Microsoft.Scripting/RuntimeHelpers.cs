@@ -310,6 +310,9 @@ namespace Microsoft.Scripting {
         #region Calls
 
         public static object CallWithContext(CodeContext context, object func, params object[] args) {
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call(context, args);
+
             return context.LanguageContext.Call(context, func, args);
         }
 
@@ -363,6 +366,28 @@ namespace Microsoft.Scripting {
 
         public static IAttributesCollection GetLocalDictionary(CodeContext context) {
             return context.Scope.Dict;
+        }
+
+        /// <summary>
+        /// Initializes all but the 1st member of a environement tuple to Uninitialized.Instance
+        /// 
+        /// Called from generated code for environment initialization.
+        /// </summary>
+        public static void UninitializeEnvironmentTuple(NewTuple tuple) {
+            for (int i = 1; i < tuple.Capacity; i++) {
+                tuple.SetValue(i, Uninitialized.Instance);
+            }
+        }
+
+        /// <summary>
+        /// Initializes all but the 1st member of an environment array to Uninitialized.Instance.
+        /// 
+        /// Called from generated code for environment initialization.
+        /// </summary>
+        public static void UninitializeEnvironmentArray(object[] array) {
+            for (int i = 1; i < array.Length; i++) {
+                array[i] = Uninitialized.Instance;
+            }
         }
     }
 }

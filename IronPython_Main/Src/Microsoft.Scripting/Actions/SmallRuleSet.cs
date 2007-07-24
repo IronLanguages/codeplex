@@ -70,7 +70,7 @@ namespace Microsoft.Scripting.Actions {
             CodeGen cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
                 "_stub_",
                 mi.ReturnType,
-                CompilerHelpers.GetTypes(mi.GetParameters()),
+                Utils.Reflection.GetParameterTypes(mi.GetParameters()),
                 new ConstantPool()
             );
 

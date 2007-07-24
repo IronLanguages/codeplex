@@ -174,15 +174,23 @@ class Operator(Symbol):
         cw.writeline()
 
     def genSymbolTableSymbols(self, cw):
-        cw.writeline("///<summary>SymbolId for '__%s__'</summary>" % self.name)
-        cw.writeline("public static readonly SymbolId Operator%s = MakeSymbolId(\"__%s__\");" % (self.title_name(),self.name))
+        def gen_one_symbol(titleName, name, op):
+            cw.writeline("private static SymbolId _Operator%s;" % (titleName,))
+            
+            cw.writeline("///<summary>SymbolId for '%s'</summary>" % (op, ))
+            cw.enter_block("public static SymbolId Operator%s" % (titleName, ))
+            cw.enter_block('get')
+            cw.writeline("if (_Operator%s == SymbolId.Empty) _Operator%s = MakeSymbolId(\"%s\");" % (titleName, titleName, op))
+            cw.writeline("return _Operator%s;" % (titleName,))
+            cw.exit_block()
+            cw.exit_block()
+
+        gen_one_symbol(self.title_name(), self.name, '__' + self.name + '__')
         
         if self.isCompare(): return
         
-        cw.writeline("///<summary>SymbolId for '__%s__'</summary>" % self.rname)
-        cw.writeline("public static readonly SymbolId OperatorReverse%s = MakeSymbolId(\"__%s__\");" % (self.title_name(),self.rname))
-        cw.writeline("///<summary>SymbolId for '__i%s__'</summary>" % self.name)
-        cw.writeline("public static readonly SymbolId OperatorInPlace%s = MakeSymbolId(\"__i%s__\");" % (self.title_name(),self.name))
+        gen_one_symbol('Reverse' + self.title_name(), self.rname, '__' + self.rname + '__')
+        gen_one_symbol('InPlace' + self.title_name(), self.name, '__i' + self.name + '__')
 
     def genWeakRefOperatorNames(self, cw):
         cw.writeline("AddWrapperOperator(Symbols.%s, res);" % (self.symbol_name()))
@@ -406,7 +414,7 @@ CodeGenerator("Tokens", tokens_generator).doit()
 
 IBINOP = """
 private static FastDynamicSite<object, object, object> %(name)sSharedSite =
-    new FastDynamicSite<object, object, object>(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.%(name)s));
+    FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.%(name)s));
 
 public static object %(name)s(object x, object y) {
     return %(name)sSharedSite.Invoke(x, y);
@@ -416,7 +424,7 @@ BINOP = IBINOP
 
 CMPOP2 = """
 private static FastDynamicSite<object, object, bool> %(name)sBooleanSharedSite =
-    new FastDynamicSite<object, object, bool>(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.%(name)s));
+    FastDynamicSite<object, object, bool>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.%(name)s));
 
 public static bool %(name)sRetBool(object x, object y) {
     return %(name)sBooleanSharedSite.Invoke(x, y);

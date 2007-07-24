@@ -84,8 +84,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Utilities\Silverlight\x86ret\System.dll</HintPath>
     </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionOnCallAttribute.cs" />
@@ -103,6 +101,7 @@
     <Compile Include="Actions\EmptyRuleSet.cs" />
     <Compile Include="Actions\GetMemberAction.cs" />
     <Compile Include="Actions\GetMemberBinderHelper.cs" />
+    <Compile Include="Actions\InvokeMemberAction.cs" />
     <Compile Include="Actions\MemberAction.cs" />
     <Compile Include="Actions\RuleSet.cs" />
     <Compile Include="Actions\RuleTree.cs" />
@@ -126,6 +125,7 @@
     <Compile Include="Ast\DynamicTryStatementHandler.cs" />
     <Compile Include="Ast\IfStatementBuilder.cs" />
     <Compile Include="Ast\MemberAssignment.cs" />
+    <Compile Include="Ast\RuntimeConstant.cs" />
     <Compile Include="Ast\TryFlowAnalyzer.cs" />
     <Compile Include="Ast\TryStatementBuilder.cs" />
     <Compile Include="Ast\TypeBinaryExpression.cs" />
@@ -233,9 +233,11 @@
     <Compile Include="Generation\StaticFieldSlotFactory.cs" />
     <Compile Include="Generation\StubGenerator.cs" />
     <Compile Include="Generation\TupleSlotFactory.cs" />
+    <Compile Include="Generation\TypeMemberConstant.cs" />
     <Compile Include="Hosting\CodeDomCodeGen.cs" />
     <Compile Include="IParameterSequence.cs" />
     <Compile Include="KwArgBinder.cs" />
+    <Compile Include="MemberGroupConstant.cs" />
     <Compile Include="ModuleContext.cs" />
     <Compile Include="MethodBinder.cs" />
     <Compile Include="MethodCandidate.cs" />
@@ -312,6 +314,7 @@
     <Compile Include="ReflectedPackage.cs" />
     <Compile Include="ReflectedProperty.cs" />
     <Compile Include="ReflectedTypeBuilder.cs" />
+    <Compile Include="ReflectionCache.cs" />
     <Compile Include="RuntimeHelpers.Generated.cs" />
     <Compile Include="ScopeMemberAttributes.cs" />
     <Compile Include="ModuleChangeEventArgs.cs" />
@@ -327,7 +330,7 @@
     <Compile Include="ParamDictionaryAttribute.cs" />
     <Compile Include="FastCallable.cs" />
     <Compile Include="FastCallable.Generated.cs" />
-    <Compile Include="Generation\StaticData.cs" />
+    <Compile Include="Generation\ConstantPool.cs" />
     <Compile Include="Hosting\ErrorSink.cs" />
     <Compile Include="Hosting\LanguageProvider.Remote.cs" />
     <Compile Include="Hosting\ParserSink.cs" />
@@ -350,6 +353,7 @@
     <Compile Include="DynamicStackFrame.cs" />
     <Compile Include="StaticExtensionMethodAttribute.cs" />
     <Compile Include="StaticThisAttribute.cs" />
+    <Compile Include="StrongBox.cs" />
     <Compile Include="SymbolDictionary.cs" />
     <Compile Include="BaseSymbolDictionary.cs" />
     <Compile Include="SyntaxErrorException.cs" />

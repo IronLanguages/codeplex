@@ -46,17 +46,40 @@ namespace Microsoft.Scripting.Ast {
 
         public override object Evaluate(CodeContext context) {
             object callee = _target.Evaluate(context);
+            object[] cargs = new object[_args.Length - _extraArgs];
+            object argsTuple = null, keywordDict = null;
+            string[] keywordNames = new string[_keywordCount];
+            int index = 0, keywordIndex = 0;
 
-            object[] cargs = new object[_args.Length];
-            int index = 0;
             foreach (Arg arg in _args) {
-                if (arg.Name != SymbolId.Empty) throw new NotImplementedException("keywords");
+                switch (arg.Kind) {
+                    case ArgumentKind.List:
+                        argsTuple = arg.Expression.Evaluate(context);
+                        continue;
+
+                    case ArgumentKind.Dictionary:
+                        keywordDict = arg.Expression.Evaluate(context);
+                        continue;
+
+                    case ArgumentKind.Simple:
+                        break;
+
+                    case ArgumentKind.Named:
+                        Debug.Assert(arg.Name != SymbolId.Empty);
+                        keywordNames[keywordIndex++] = SymbolTable.IdToString(arg.Name);
+                        break;
+
+                }
                 cargs[index++] = arg.Expression.Evaluate(context);
             }
-
-            switch (cargs.Length) {
-                case 0: return RuntimeHelpers.CallWithContext(context, callee);
-                default: return RuntimeHelpers.CallWithContext(context, callee, cargs);
+            if (_hasKeywordDict || (_hasArgsTuple && _keywordCount > 0)) {
+                return RuntimeHelpers.CallWithArgsKeywordsTupleDict(context, callee, cargs, keywordNames, argsTuple, keywordDict);
+            } else if (_hasArgsTuple) {
+                return RuntimeHelpers.CallWithArgsTuple(context, callee, cargs, argsTuple);
+            } else if (_keywordCount > 0) {
+                return RuntimeHelpers.CallWithKeywordArgs(context, callee, cargs, keywordNames);
+            } else {
+                return RuntimeHelpers.CallWithContext(context, callee, cargs);
             }
         }
 
@@ -67,15 +90,15 @@ namespace Microsoft.Scripting.Ast {
             int index = 0, keywordIndex = 0;
             foreach (Arg arg in _args) {
                 switch (arg.Kind) {
-                    case Arg.ArgumentKind.List:
+                    case ArgumentKind.List:
                         argsTuple = arg.Expression;
                         continue;
-                    case Arg.ArgumentKind.Dictionary:
+                    case ArgumentKind.Dictionary:
                         keywordDict = arg.Expression;
                         continue;
-                    case Arg.ArgumentKind.Simple:
+                    case ArgumentKind.Simple:
                         break;
-                    case Arg.ArgumentKind.Named:
+                    case ArgumentKind.Named:
                         Debug.Assert(arg.Name != SymbolId.Empty);
                         keywordNames[keywordIndex++] = SymbolTable.IdToString(arg.Name);
                         break;

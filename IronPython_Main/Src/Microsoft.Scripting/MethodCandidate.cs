@@ -19,6 +19,7 @@ using System.Collections.Generic;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting {
     public class MethodCandidate {
@@ -135,12 +136,24 @@ namespace Microsoft.Scripting {
         public MethodCandidate MakeParamsExtended(ActionBinder binder, int count) {
             if (count < _parameters.Count - 1) return null;
 
-            List<ParameterWrapper> newParameters = _parameters.GetRange(0, _parameters.Count - 1);
-            Type elementType = _parameters[_parameters.Count - 1].Type.GetElementType();
+            List<ParameterWrapper> newParameters = new List<ParameterWrapper>(_parameters.Count - 1);
+            Type elementType = null;
+            int index = -1;
+            for (int i = 0; i < _parameters.Count; i++) {
+                ParameterWrapper pw = _parameters[i];
+
+                if (!_parameters[i].IsParameterArray) {
+                    newParameters.Add(pw);
+                } else {
+                    elementType = pw.Type.GetElementType();
+                    index = i;
+                }
+            }
+            Debug.Assert(elementType != null);
 
             while (newParameters.Count < count) {
                 ParameterWrapper param = new ParameterWrapper(binder, elementType);
-                newParameters.Add(param);
+                newParameters.Insert(index, param);
             }
 
             return new MethodCandidate(_target.MakeParamsExtended(count), newParameters);

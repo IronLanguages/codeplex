@@ -174,7 +174,7 @@ namespace IronPython.Runtime.Operations {
         public static void SetItem(Array data, int index, object value) {
             if (data == null) throw PythonOps.TypeError("expected Array, got None");
 
-            SetIndex(data, index, value);
+            data.SetValue(Converter.Convert(value, data.GetType().GetElementType()), PythonOps.FixIndex(index, data.Length) + data.GetLowerBound(0));
         }
 
         [OperatorMethod, PythonName("__repr__")]
@@ -266,6 +266,18 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
+        internal static object[] GetSlice(object[] data, Slice slice) {
+            int start, stop, step;
+            slice.Indicies(data.Length, out start, out stop, out step);
+
+            if (step == 1) return GetSlice(data, start, stop);
+
+            object[] res = new object[GetSliceSize(start, stop, step)];
+            for (int i = 0, index = start; i < res.Length; i++, index += step) {
+                res[i] = data[index];
+            }
+            return res;
+        }
 
         internal static Array GetSlice(Array data, int size, Slice slice) {
             if (data.Rank != 1) throw PythonOps.NotImplementedError("slice on multi-dimensional array");
@@ -285,9 +297,8 @@ namespace IronPython.Runtime.Operations {
                 Array ret = Array.CreateInstance(data.GetType().GetElementType(), n);
                 Array.Copy(data, start + data.GetLowerBound(0), ret, 0, n);
                 return ret;
-            } else {
-                // could cause overflow (?)
-                int n = step > 0 ? (stop - start + step - 1) / step : (stop - start + step + 1) / step;
+            } else {                
+                int n = GetSliceSize(start, stop, step);
                 Array ret = Array.CreateInstance(data.GetType().GetElementType(), n);
                 int ri = 0;
                 for (int i = 0, index = start; i < n; i++, index += step) {
@@ -295,6 +306,11 @@ namespace IronPython.Runtime.Operations {
                 }
                 return ret;
             }
+        }
+
+        private static int GetSliceSize(int start, int stop, int step) {
+            // could cause overflow (?)
+            return step > 0 ? (stop - start + step - 1) / step : (stop - start + step + 1) / step;
         }
 
         internal static object GetIndex(Array a, object index) {
@@ -326,7 +342,8 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.TypeErrorForBadInstance("bad array index: {0}", index);
         }
 
-        internal static void SetIndex(Array a, object index, object value) {
+        [OperatorMethod, PythonName("__setitem__")]
+        public static void SetItem(Array a, object index, object value) {
             Type t = a.GetType();
             Debug.Assert(t.HasElementType);
 

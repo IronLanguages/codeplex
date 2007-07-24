@@ -23,7 +23,7 @@ namespace Microsoft.Scripting {
     public static class SymbolTable {
         private static object _lockObj = new object();
 
-        private static Dictionary<string, int> _idDict = new Dictionary<string, int>();
+        private static Dictionary<string, int> _idDict = new Dictionary<string, int>(InitialTableSize);
 
         private const int InitialTableSize = 256;
         private static Dictionary<int, string> _fieldDict = new Dictionary<int, string>(InitialTableSize);

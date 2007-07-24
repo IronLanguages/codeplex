@@ -67,5 +67,8 @@ namespace Microsoft.Scripting {
             return NameType == NameType.PythonProperty;
         }
 
+        public override bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
+            return Setter != null;
+        }
     }
 }

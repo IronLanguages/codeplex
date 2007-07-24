@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Ast {
             if (condition == null) throw new ArgumentNullException("condition");
             if (body == null) throw new ArgumentNullException("body");
 
-            _clauses = Utils.MakeList(new IfStatementTest(conditionSpan, header, condition, body));
+            _clauses = Utils.Collections.MakeList(new IfStatementTest(conditionSpan, header, condition, body));
             _statementSpan = statementSpan;
         }
 

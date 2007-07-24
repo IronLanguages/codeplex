@@ -51,6 +51,10 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
+        public override bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
+            return true;
+        }
+
         public override bool TryDeleteValue(CodeContext context, object instance, DynamicMixin owner) {
             throw PythonOps.AttributeErrorForReadonlyAttribute(DynamicTypeOps.GetName(instance), Symbols.Class);
         }

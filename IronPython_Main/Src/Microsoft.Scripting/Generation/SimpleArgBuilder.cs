@@ -23,23 +23,34 @@ namespace Microsoft.Scripting.Generation {
     public class SimpleArgBuilder : ArgBuilder {
         private int _index;
         private Type _parameterType;
+        private bool _isParams;
+
         public SimpleArgBuilder(int index, Type parameterType) {
-            this._index = index;
-            this._parameterType = parameterType;
+            _index = index;
+            _parameterType = parameterType;
+        }
+
+        public SimpleArgBuilder(int index, Type parameterType, bool isParams) {
+            if (index < 0) throw new ArgumentOutOfRangeException("index");
+            if (parameterType == null) throw new ArgumentNullException("parameterType");
+
+            _index = index;
+            _parameterType = parameterType;
+            _isParams = isParams;
         }
 
         public override int Priority {
             get { return 0; }
         }
 
-
-
-        public override object Build(CodeContext context, object[] args) {
-            return context.LanguageContext.Binder.Convert(args[_index], _parameterType);
+        public bool IsParams {
+            get {
+                return _isParams;
+            }
         }
 
-        public override void Generate(CodeGen cg, IList<Slot> argSlots) {
-            argSlots[_index].EmitGetAs(cg, _parameterType);
+        public override object Build(CodeContext context, object[] args) {            
+            return context.LanguageContext.Binder.Convert(args[_index], _parameterType);
         }
 
         public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {

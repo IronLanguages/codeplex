@@ -38,6 +38,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using IronPython.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
 
 namespace IronPython.Compiler.Generation {
     /// <summary>
@@ -52,21 +53,21 @@ namespace IronPython.Compiler.Generation {
     /// generated IL using "ipy.exe -X:SaveAssemblies", and then inspect the
     /// persisted IL using ildasm.
     /// </summary>
-    public class NewTypeMaker {
+    class NewTypeMaker {
         public const string VtableNamesField = "#VTableNames#";
         public const string TypePrefix = "IronPython.NewTypes.";
         private static Publisher<NewTypeInfo, Type> _newTypes = new Publisher<NewTypeInfo, Type>();
-        private static int _typeCount = 0;
+        private static int _typeCount;
 
         protected Type _baseType;
         protected IList<string> _slots;
         protected TypeGen _tg;
-        protected Slot _typeField, _dictField, _weakrefField;
+        protected Slot _typeField, _dictField, _weakrefField, _slotsField;
+        protected Type _tupleType;
         protected IEnumerable<Type> _interfaceTypes;
         protected Tuple _baseClasses;
 
-        private bool _hasBaseTypeField = false;
-        private IList<Slot> _slotsSlots;
+        private bool _hasBaseTypeField;
 
         private Dictionary<string, VTableEntry> _vtable = new Dictionary<string, VTableEntry>();
 
@@ -89,15 +90,23 @@ namespace IronPython.Compiler.Generation {
                 });
 
             if (typeInfo.Slots != null) {
-                // update dict w/ slots that point at the correct fields.
+                Type tupleType = NewTuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray(typeof(object), typeInfo.Slots.Count));
+                ret = ret.MakeGenericType(tupleType);
 
-                for (int i = 0; i < typeInfo.Slots.Count; i++) {
-                    PropertyInfo pi = ret.GetProperty(typeInfo.Slots[i]);
+                for (int i = 0; i < typeInfo.Slots.Count; i++) {                    
                     string name = typeInfo.Slots[i];
                     if (name.StartsWith("__") && !name.EndsWith("__")) {
                         name = "_" + typeName + name;
                     }
-                    dict[SymbolTable.StringToId(name)] = new ReflectedSlotProperty(pi, pi.GetGetMethod(), pi.GetSetMethod(), NameType.PythonProperty);
+
+                    if (name == "__dict__") {
+                        dict[SymbolTable.StringToId(name)] = new DynamicTypeDictSlot();
+                        continue;
+                    } else if (name == "__weakref__") {
+                        continue;
+                    }
+                    
+                    dict[SymbolTable.StringToId(name)] = new ReflectedSlotProperty(name, ret, i);
                 }
             }
 
@@ -202,7 +211,8 @@ namespace IronPython.Compiler.Generation {
                     if (IsInstanceType(curTypeToExtend)) {
                         DynamicTypeSlot dummy;
                         baseInterfaces = new List<Type>();
-                        if (!curBasePythonType.TryLookupSlot(DefaultContext.Default, Symbols.Slots, out dummy)) {
+                        if (!curBasePythonType.TryLookupSlot(DefaultContext.Default, Symbols.Slots, out dummy) &&
+                            (slots == null || slots.Count == 0)) {
                             curTypeToExtend = GetBaseTypeFromUserType(curBasePythonType, baseInterfaces, curTypeToExtend.BaseType);
                         }
                     }
@@ -306,13 +316,9 @@ namespace IronPython.Compiler.Generation {
 
         // Build a name which is unique to this TypeInfo.
         protected virtual string GetName() {
-            string baseName;
-            if (_baseType.IsGenericType) {
-                baseName = _baseType.Name;
-            } else {
-                baseName = _baseType.FullName;
-            }
-            StringBuilder name = new StringBuilder(baseName);
+            StringBuilder name = new StringBuilder(_baseType.Namespace);
+            name.Append('.');
+            name.Append(_baseType.Name);
             foreach (Type interfaceType in _interfaceTypes) {
                 name.Append("#");
                 name.Append(interfaceType.Name);
@@ -514,14 +520,12 @@ namespace IronPython.Compiler.Generation {
 
             // initialize all slots to Uninitialized.instance
             if (_slots != null) {
-                for (int i = 0; i < _slots.Count; i++) {
-                    if (_slots[i] != "__weakref__" && _slots[i] != "__dict__") {
-                        cg.EmitUninitialized();
-                    } else {
-                        cg.Emit(OpCodes.Ldnull);
-                    }
-                    _slotsSlots[i].EmitSet(cg);
-                }
+                MethodInfo init = typeof(PythonOps).GetMethod("InitializeUserTypeSlots");
+
+                cg.EmitType(_tupleType);
+                cg.EmitCall(init);
+                cg.Emit(OpCodes.Unbox_Any, _tupleType);
+                _slotsField.EmitSet(cg);
             }
 
             CallBaseConstructor(parentConstructor, pis, overrideParams, cg);
@@ -829,50 +833,23 @@ namespace IronPython.Compiler.Generation {
 
         private void ImplementSlots() {
             if (_slots != null) {
-                _slotsSlots = new List<Slot>();
-                for (int i = 0; i < _slots.Count; i++) {
-                    Slot s;
-                    switch (_slots[i]) {
-                        case "__weakref__": CreateWeakRefField(); s = _weakrefField; break;
-                        case "__dict__": s = _dictField; break;
-                        default:
-                            // mangled w/ a . to never collide w/ any regular names
-                            s = _tg.AddField(typeof(object), "." + _slots[i]);
-                            break;
-                    }
+                GenericTypeParameterBuilder[] tbp = _tg.TypeBuilder.DefineGenericParameters("Slots");
+                _slotsField = _tg.AddField(tbp[0], ".SlotValues");
+                _tupleType = tbp[0];
 
-                    _slotsSlots.Add(s);
+                PropertyBuilder pb = _tg.DefineProperty("$SlotValues", PropertyAttributes.None, tbp[0]);
 
-                    PropertyBuilder pb = _tg.DefineProperty(_slots[i], PropertyAttributes.None, s.Type);
-
-                    CodeGen getter = _tg.DefineMethod(MethodAttributes.Public,
-                        "get_" + _slots[i],
-                        s.Type,
+                CodeGen getter = _tg.DefineMethod(MethodAttributes.Public,
+                        "get_$SlotValues",
+                        tbp[0],
                         new Type[0],
                         new string[0]);
-                    s.EmitGet(getter);
-                    getter.Emit(OpCodes.Dup);
-                    getter.EmitThis();
-                    getter.EmitString(_slots[i]);
-                    getter.EmitCall(typeof(PythonOps), "CheckInitializedAttribute");
-                    getter.EmitReturn();
-                    getter.Finish();
 
-                    CodeGen setter = _tg.DefineMethod(MethodAttributes.Public,
-                        "set_" + _slots[i],
-                        typeof(void),
-                        new Type[] { s.Type },
-                        new string[] { "value" });
+                _slotsField.EmitGet(getter);
+                getter.EmitReturn();
+                getter.Finish();
 
-                    setter.EmitArgGet(0);
-                    s.EmitSet(setter);
-                    setter.EmitReturn();
-
-                    setter.Finish();
-
-                    pb.SetGetMethod(getter.MethodInfo as MethodBuilder);
-                    pb.SetSetMethod(setter.MethodInfo as MethodBuilder);
-                }
+                pb.SetGetMethod(getter.MethodInfo as MethodBuilder);
             }
         }
 
@@ -1079,12 +1056,13 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void CreateVTableMethodOverride(MethodInfo mi, VTableEntry methField) {
+            ParameterInfo[] parameters = mi.GetParameters();
             CodeGen cg = (mi.IsVirtual && !mi.IsFinal) ? _tg.DefineMethodOverride(mi) : _tg.DefineMethod(
                 mi.IsVirtual ? (mi.Attributes | MethodAttributes.NewSlot) : mi.Attributes,
                     mi.Name,
                     mi.ReturnType,
-                    CompilerHelpers.GetTypes(mi.GetParameters()),
-                    CompilerHelpers.GetArgumentNames(mi.GetParameters()));
+                    Utils.Reflection.GetParameterTypes(parameters),
+                    CompilerHelpers.GetArgumentNames(parameters));
 
             Label instanceCall = cg.DefineLabel();
             Slot callTarget = cg.GetLocalTmp(typeof(object));
@@ -1128,7 +1106,7 @@ namespace IronPython.Compiler.Generation {
 
         public static CodeGen CreateVirtualMethodHelper(TypeGen tg, MethodInfo mi) {
             ParameterInfo[] parms = mi.GetParameters();
-            Type[] types = CompilerHelpers.GetTypes(parms);
+            Type[] types = Utils.Reflection.GetParameterTypes(parms);
             string[] paramNames = new string[parms.Length];
             Type miType = mi.DeclaringType;
             for (int i = 0; i < types.Length; i++) {

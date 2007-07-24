@@ -43,15 +43,47 @@ def test_trivial():
 def test_fasteval():
     global pe
 
-    # pe.Options.FastEvaluation is tested at compile time, so we need
-    # to import another module here for the option to take effect.
+    # pe.Options.FastEvaluation is tested at compile time:
+    # it will take effect not immediately, but in modules we import
     save = pe.Options.FastEvaluation
     pe.Options.FastEvaluation = True
+    modules = sys.modules.copy()
     try:
-        import fasteval
-        fasteval.do_fasteval_test()
+        # For now, just import modules that work in FastEval mode.
+        # This is an interim test method until we can properly run all the tests using -X:FastEval.
+
+        # The following tests still fail
+        #import test_delegate
+        #import test_generator # fails until FastEval generators support wrapper methods
+        #import test_methoddispatch
+        #import test_exceptions # fails b/c our tracebacks are wrong
+        #import test_ipye # fails b/c our tracebacks are wrong
+        #import test_function # fails b/c func_code.co_flags is wrong
+        
+        import test_closure
+        import test_namebinding
+        import test_operator
+        import test_exec
+        import test_list
+        # These two pass, but take forever to run
+        #import test_numtypes
+        #import test_number
+        import test_str
+        import test_math
+        import test_statics
+        import test_property
+        import test_weakref
+        import test_specialcontext
+        import test_thread
+        import test_dict
+        import test_set
+        import test_tuple
+        import test_syntax
     finally:
         pe.Options.FastEvaluation = save
+        # "Un-import" these modules so that they get re-imported in emit mode
+        sys.modules = modules
+        
 
 def skip_test_CreateMethod():
     """Test cases specific to PythonEngine.CreateMethod<DelegateType>"""

@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         public static void  EmitClrCallStub(CodeGen cg, Slot callTarget, int firstArg, CallType functionAttributes, Action<Exception> handler) {
             if (handler != null) {
-                if (cg.ConstantPool == null) {
+                if (!cg.ConstantPool.IsBound) {
                     throw new InvalidOperationException("calling stubs with exception handlers requires constant pool");
                 }
                 cg.BeginExceptionBlock();

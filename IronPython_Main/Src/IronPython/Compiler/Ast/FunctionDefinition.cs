@@ -182,7 +182,7 @@ namespace IronPython.Compiler.Ast {
                 binder.ReportSyntaxError(
                     String.Format(
                         System.Globalization.CultureInfo.InvariantCulture,
-                        "unqualified exec is not allowed in function '{0}' it contains a nested function with free variables",
+                        "unqualified exec is not allowed in function '{0}' because it contains a nested function with free variables",
                         SymbolTable.IdToString(Name)),
                     this);
             }
@@ -190,7 +190,7 @@ namespace IronPython.Compiler.Ast {
                 binder.ReportSyntaxError(
                     String.Format(
                         System.Globalization.CultureInfo.InvariantCulture,
-                        "unqualified exec is not allowed in function '{0}' it is a nested function",
+                        "unqualified exec is not allowed in function '{0}' because it is a nested function",
                         SymbolTable.IdToString(Name)),
                     this);
             }

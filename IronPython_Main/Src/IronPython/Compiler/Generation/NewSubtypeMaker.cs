@@ -63,24 +63,24 @@ namespace IronPython.Compiler.Generation {
             if (NeedsDictionary) {
                 // override our bases slots implementation w/ one that
                 // can use dicts
-                CodeGen cg = _tg.DefineMethodOverride(_baseType.GetMethod("get_Dict"));
+                CodeGen cg = _tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("get_Dict"));
                 _dictField.EmitGet(cg);
                 cg.EmitReturn();
                 cg.Finish();
 
-                cg = _tg.DefineMethodOverride(_baseType.GetMethod("get_HasDictionary"));
+                cg = _tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("get_HasDictionary"));
                 cg.EmitBoolean(true);
                 cg.EmitReturn();
                 cg.Finish();
 
-                cg = _tg.DefineMethodOverride(_baseType.GetMethod("ReplaceDict"));
+                cg = _tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("ReplaceDict"));
                 cg.EmitArgGet(0);
                 _dictField.EmitSet(cg);
                 cg.EmitBoolean(true);
                 cg.EmitReturn();
                 cg.Finish();
 
-                cg = _tg.DefineMethodOverride(_baseType.GetMethod("SetDict"));
+                cg = _tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("SetDict"));
                 _dictField.EmitGetAddr(cg);
                 cg.EmitArgGet(0);
                 cg.EmitCall(typeof(UserTypeOps), "SetDictHelper");

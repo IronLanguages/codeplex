@@ -39,6 +39,8 @@ namespace Microsoft.Scripting.Generation {
         private ConstructorBuilder _defaultCtor;
         private ActionBinder _binder;
 
+        private static readonly Type[] SymbolIdIntCtorSig = new Type[] { typeof(int) };
+
         public TypeGen(AssemblyGen myAssembly, TypeBuilder myType) {
             this._myAssembly = myAssembly;
             this._myType = myType;
@@ -140,12 +142,13 @@ namespace Microsoft.Scripting.Generation {
             MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
             attrs |= MethodAttributes.NewSlot | MethodAttributes.Final;
 
+            Type[] baseSignature = Utils.Reflection.GetParameterTypes(baseMethod.GetParameters());
             MethodBuilder mb = _myType.DefineMethod(
                 baseMethod.DeclaringType.Name + "." + baseMethod.Name,
                 attrs,
                 baseMethod.ReturnType,
-                CompilerHelpers.GetTypes(baseMethod.GetParameters()));
-            CodeGen ret = CreateCodeGen(mb, mb.GetILGenerator(), CompilerHelpers.GetTypes(baseMethod.GetParameters()));
+                baseSignature);
+            CodeGen ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
             ret.MethodToOverride = baseMethod;
             return ret;
         }
@@ -161,9 +164,9 @@ namespace Microsoft.Scripting.Generation {
             if (baseMethod == null) throw new ArgumentNullException("baseMethod");
 
             MethodAttributes finalAttrs = (baseMethod.Attributes & ~MethodAttributesToEraseInOveride) | extraAttrs;
-            MethodBuilder mb = _myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType,
-                CompilerHelpers.GetTypes(baseMethod.GetParameters()));
-            CodeGen ret = CreateCodeGen(mb, mb.GetILGenerator(), CompilerHelpers.GetTypes(baseMethod.GetParameters()));
+            Type[] baseSignature = Utils.Reflection.GetParameterTypes(baseMethod.GetParameters());
+            MethodBuilder mb = _myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType, baseSignature);
+            CodeGen ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
             ret.MethodToOverride = baseMethod;
             return ret;
         }
@@ -314,7 +317,7 @@ namespace Microsoft.Scripting.Generation {
             }
 
             value.EmitGet(cg);
-            cg.EmitNew(typeof(SymbolId), new Type[] { typeof(int) });
+            cg.EmitNew(typeof(SymbolId), SymbolIdIntCtorSig);
         }
 
 

@@ -78,6 +78,10 @@ namespace Microsoft.Scripting {
             return true;
         }
 
+        public override bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
+            return true;
+        }
+
         private MissingMemberException ReadOnlyException(DynamicMixin dt) {
             Utils.Assert.NotNull(dt);
             return new MissingMemberException(String.Format("attribute '{1}' of '{0}' object is read-only", dt.Name, SymbolTable.StringToId(_eventInfo.Name)));

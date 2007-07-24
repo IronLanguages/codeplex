@@ -240,6 +240,20 @@ namespace Microsoft.Scripting.Ast {
                 return new ActionExpression(span, SetMemberAction.Make(name), arguments, result);
             }
 
+            // TODO:
+            public static ActionExpression InvokeMember(SymbolId name, Type result, InvokeMemberActionFlags flags, ArgumentInfo[] argumentInfos, 
+                params Expression[] arguments) {
+
+                return InvokeMember(SourceSpan.None, name, result, flags, argumentInfos, arguments);
+            }
+
+            // TODO:
+            public static ActionExpression InvokeMember(SourceSpan span, SymbolId name, Type result, InvokeMemberActionFlags flags,
+                ArgumentInfo[] argumentInfos, params Expression[] arguments) {
+
+                return new ActionExpression(span, new InvokeMemberAction(name, flags, argumentInfos), arguments, result);
+            }
+       
             /// <summary>
             /// Creates ActionExpression representing a Call action.
             /// </summary>

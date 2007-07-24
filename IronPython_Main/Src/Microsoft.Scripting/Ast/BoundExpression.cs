@@ -62,7 +62,27 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override object Evaluate(CodeContext context) {
-            return context.LanguageContext.LookupName(context, Name);
+            object ret;
+            switch (_variable.Kind) {
+                case Variable.VariableKind.Temporary:
+                case Variable.VariableKind.GeneratorTemporary:
+                    if (!context.Scope.TemporaryStorage.TryGetValue(_variable, out ret) || ret == Uninitialized.Instance) {
+                        throw context.LanguageContext.MissingName(_variable.Name);
+                    } else {
+                        return ret;
+                    }
+                case Variable.VariableKind.Parameter:
+                    // This is sort of ugly: parameter variables can be stored either as locals or as temporaries (in case of $argn).
+                    if (!context.Scope.TemporaryStorage.TryGetValue(_variable, out ret) || ret == Uninitialized.Instance) {
+                        return RuntimeHelpers.LookupName(context, _variable.Name);
+                    } else {
+                        return ret;
+                    }
+                case Variable.VariableKind.Global:
+                    return RuntimeHelpers.LookupGlobalName(context, _variable.Name);
+                default:
+                    return RuntimeHelpers.LookupName(context, _variable.Name);
+            }
         }
 
         public override AbstractValue AbstractEvaluate(AbstractContext context) {

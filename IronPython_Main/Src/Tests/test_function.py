@@ -851,6 +851,15 @@ def test_defaults():
         helperFunc3("stuff")
         AreEqual(helperFunc3.func_defaults, (default, [42, default]))
 
+def test_splat_defaults():
+    def g(a, b, x=None):
+        return a, b, x
+        
+    def f(x, *args):        
+        return g(x, *args)
+        
+    AreEqual(f(1, *(2,)), (1,2,None))
+
 def test_argument_eval_order():
     """Check order of evaluation of function arguments"""
     x = [1]

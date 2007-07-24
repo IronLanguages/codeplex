@@ -24,6 +24,8 @@ using Microsoft.Scripting.Ast;
 namespace Microsoft.Scripting {
     public abstract class NewTuple {
         public const int MaxSize = 128;
+        private static Dictionary<Type, int> _sizeDict = new Dictionary<Type, int>();
+
         public abstract object GetValue(int index);
         public abstract void SetValue(int index, object value);
         /// <summary>
@@ -80,8 +82,9 @@ namespace Microsoft.Scripting {
         public static int GetSize(Type tupleType) {
             if (tupleType == null) throw new ArgumentNullException("tupleType");
 
-            Stack<Type> types = new Stack<Type>(tupleType.GetGenericArguments());
             int count = 0;
+            lock(_sizeDict) if (_sizeDict.TryGetValue(tupleType, out count)) return count;
+            Stack<Type> types = new Stack<Type>(tupleType.GetGenericArguments());            
 
             while (types.Count != 0) {
                 Type t = types.Pop();
@@ -98,6 +101,7 @@ namespace Microsoft.Scripting {
                 count++;
             }
 
+            lock (_sizeDict) _sizeDict[tupleType] = count;
             return count;
         }
 
@@ -251,6 +255,10 @@ namespace Microsoft.Scripting {
 
             return type.MakeGenericType(nestedTypes);
         }
+
+        public abstract int Capacity {
+            get;
+        }
     }
 
     #region Generated Tuples
@@ -285,6 +293,11 @@ namespace Microsoft.Scripting {
                 default: throw new ArgumentException("index");
             }
         }
+        public override int Capacity {
+            get {
+                return 1;
+            }
+        }
     }
     public class Tuple<T0, T1> : Tuple<T0> {
         public Tuple() { }
@@ -314,6 +327,11 @@ namespace Microsoft.Scripting {
                 case 0: Item000 = (T0)value; break;
                 case 1: Item001 = (T1)value; break;
                 default: throw new ArgumentException("index");
+            }
+        }
+        public override int Capacity {
+            get {
+                return 2;
             }
         }
     }
@@ -355,6 +373,11 @@ namespace Microsoft.Scripting {
                 case 2: Item002 = (T2)value; break;
                 case 3: Item003 = (T3)value; break;
                 default: throw new ArgumentException("index");
+            }
+        }
+        public override int Capacity {
+            get {
+                return 4;
             }
         }
     }
@@ -416,6 +439,11 @@ namespace Microsoft.Scripting {
                 case 6: Item006 = (T6)value; break;
                 case 7: Item007 = (T7)value; break;
                 default: throw new ArgumentException("index");
+            }
+        }
+        public override int Capacity {
+            get {
+                return 8;
             }
         }
     }
@@ -517,6 +545,11 @@ namespace Microsoft.Scripting {
                 case 14: Item014 = (T14)value; break;
                 case 15: Item015 = (T15)value; break;
                 default: throw new ArgumentException("index");
+            }
+        }
+        public override int Capacity {
+            get {
+                return 16;
             }
         }
     }
@@ -698,6 +731,11 @@ namespace Microsoft.Scripting {
                 case 30: Item030 = (T30)value; break;
                 case 31: Item031 = (T31)value; break;
                 default: throw new ArgumentException("index");
+            }
+        }
+        public override int Capacity {
+            get {
+                return 32;
             }
         }
     }
@@ -1039,6 +1077,11 @@ namespace Microsoft.Scripting {
                 case 62: Item062 = (T62)value; break;
                 case 63: Item063 = (T63)value; break;
                 default: throw new ArgumentException("index");
+            }
+        }
+        public override int Capacity {
+            get {
+                return 64;
             }
         }
     }
@@ -1700,6 +1743,11 @@ namespace Microsoft.Scripting {
                 case 126: Item126 = (T126)value; break;
                 case 127: Item127 = (T127)value; break;
                 default: throw new ArgumentException("index");
+            }
+        }
+        public override int Capacity {
+            get {
+                return 128;
             }
         }
     }

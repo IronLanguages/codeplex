@@ -20,12 +20,12 @@ using System.Diagnostics;
 namespace Microsoft.Scripting.Actions {
 
     internal class BigRuleSet {
-        private CodeContext _context;
+        private LanguageContext _context;
         private Dictionary<Type, object> _trees = new Dictionary<Type,object>();
 
         public BigRuleSet(CodeContext context) {
             Debug.Assert(context != null);
-            _context = context;
+            _context = context.LanguageContext;
         }
 
         private RuleTree<T> GetOrMakeTree<T>() {

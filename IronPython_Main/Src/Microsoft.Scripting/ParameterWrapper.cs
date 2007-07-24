@@ -23,7 +23,7 @@ using Microsoft.Scripting.Actions;
 namespace Microsoft.Scripting {
     public class ParameterWrapper {
         private Type _type;
-        private bool _prohibitNull;
+        private bool _prohibitNull, _isParams;
         private ActionBinder _binder;
         private SymbolId _name;
 
@@ -50,8 +50,9 @@ namespace Microsoft.Scripting {
 
         public ParameterWrapper(ActionBinder binder, ParameterInfo info)
             : this(binder, info.ParameterType) {
-            _name = SymbolTable.StringToId(info.Name);
-            this._prohibitNull = info.IsDefined(typeof(NotNullAttribute), false);
+            _name = SymbolTable.StringToId(info.Name ?? "<unknown>");
+            _prohibitNull = info.IsDefined(typeof(NotNullAttribute), false);
+            _isParams = info.IsDefined(typeof(ParamArrayAttribute), false);
         }
 
         public static int? CompareParameters(IList<ParameterWrapper> parameters1, IList<ParameterWrapper> parameters2) {
@@ -92,6 +93,10 @@ namespace Microsoft.Scripting {
                     return true;
                 }
                 return !Type.IsValueType;
+            } else if (ty.IsGenericType && ty.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
+                // like ref and out params the parameter types must match exactly - you cannot
+                // use a subtype or convertible type to make a StrongBox call.
+                return ty.GetGenericArguments()[0] == Type;
             } else {
                 return _binder.CanConvertFrom(ty, Type, allowNarrowing);
             }
@@ -135,6 +140,12 @@ namespace Microsoft.Scripting {
         public SymbolId Name {
             get {
                 return _name;
+            }
+        }
+
+        public bool IsParameterArray {
+            get {
+                return _isParams;
             }
         }
 

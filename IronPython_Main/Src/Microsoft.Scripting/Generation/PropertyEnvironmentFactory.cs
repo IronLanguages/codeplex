@@ -28,9 +28,7 @@ namespace Microsoft.Scripting.Generation {
     class PropertyEnvironmentFactory : EnvironmentFactory {
         private Type _type;
         private Type _envType;
-        private PropertyInfo[] _properties;
         private int _index;
-        private static Dictionary<Type, PropertyInfo[]> _cachedProps;
 
         /// <summary>
         /// Creates a new PropertyEnvironmentFactory backed by the specified type of tuple and
@@ -41,10 +39,9 @@ namespace Microsoft.Scripting.Generation {
 
             _type = tupleType;
             _envType = envType;
-            _properties = GetProperties(tupleType);
 
-            // 1st entry always points back to our dictionary
-            MakeEnvironmentReference(SymbolTable.StringToId("$env"), typeof(IAttributesCollection));
+            // 1st entry always points back to our dictionary            
+            _index = 1;
         }
 
         public override Type EnvironmentType {
@@ -58,14 +55,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override Storage MakeEnvironmentReference(SymbolId name, Type type) {
-            Debug.Assert(_index < _properties.Length);
-            return new PropertyEnvironmentReference(_properties[_index++], type);
-        }
-
-        protected PropertyInfo[] Properties {
-            get {
-                return _properties;
-            }
+            return new PropertyEnvironmentReference(_type.GetProperty("Item" + (_index++).ToString("D3")), type);
         }
 
         protected int Index {
@@ -75,6 +65,8 @@ namespace Microsoft.Scripting.Generation {
 
         public override void EmitStorage(CodeGen cg) {
             cg.EmitNew(StorageType.GetConstructor(new Type[0]));
+            cg.Emit(OpCodes.Dup);
+            cg.EmitCall(typeof(RuntimeHelpers), "UninitializeEnvironmentTuple");
         }
 
         public override void EmitNewEnvironment(CodeGen cg) {
@@ -108,26 +100,6 @@ namespace Microsoft.Scripting.Generation {
 
         public override EnvironmentSlot CreateEnvironmentSlot(CodeGen cg) {
             return new FunctionEnvironmentSlot(cg.GetNamedLocal(StorageType, "$environment"), StorageType);
-        }
-
-        /// <summary>
-        /// Private helper to return the list of properties for our underlying tuple storage type.
-        /// </summary>
-        private static PropertyInfo[] GetProperties(Type type) {
-            PropertyInfo[] props;
-
-            if (_cachedProps == null || !_cachedProps.TryGetValue(type, out props)) {
-                props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-
-                // need to sort the names as reflection can pull them out in any order
-                Array.Sort(props, delegate(PropertyInfo x, PropertyInfo y) {
-                    return string.Compare(x.Name, y.Name);
-                });
-
-                if (_cachedProps == null) _cachedProps = new Dictionary<Type, PropertyInfo[]>();
-                _cachedProps[type] = props;
-            }
-            return props;
         }
 
         [Conditional("DEBUG")]
