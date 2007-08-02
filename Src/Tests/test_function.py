@@ -868,4 +868,13 @@ def test_argument_eval_order():
     noop(x.append(2), x.append(3), x.append(4))
     AreEqual(x, [1,2,3,4])
 
+def test_method_attr_access():
+    class foo(object):
+        def f(self): pass
+        abc = 3
+    
+    method = type(foo.f)    
+    
+    AreEqual(method(foo, 'abc').abc, 3)
+
 run_test(__name__)

@@ -75,10 +75,10 @@ namespace IronPython.Compiler.Ast {
             MSAst.BoundExpression exit = ag.MakeGeneratorTempExpression("with_exit", SourceSpan.None);
             statements[1] = AstGenerator.MakeAssignment(
                 exit.Variable,
-                Ast.DynamicReadMember(
-                    manager,
+                Ast.Action.GetMember(
                     SymbolTable.StringToId("__exit__"),
-                    MSAst.MemberBinding.Bound
+                    typeof(object),
+                    manager
                 )
             );
 
@@ -89,10 +89,10 @@ namespace IronPython.Compiler.Ast {
                 Ast.Action.Call(
                     CallAction.Simple,
                     typeof(object),
-                    Ast.DynamicReadMember(
-                        manager,
+                    Ast.Action.GetMember(
                         SymbolTable.StringToId("__enter__"),
-                        MSAst.MemberBinding.Bound
+                        typeof(object),
+                        manager
                     )                
                 )
             );

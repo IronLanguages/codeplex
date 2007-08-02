@@ -24,12 +24,25 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _test;
         private readonly Expression _true;
         private readonly Expression _false;
+        private readonly Type _expressionType;
 
-        internal ConditionalExpression(SourceSpan span, Expression testExpression, Expression trueExpression, Expression falseExpression)
+        internal ConditionalExpression(SourceSpan span, Expression testExpression, Expression trueExpression, Expression falseExpression, bool allowUpcast)
             : base(span) {
             _test = testExpression;
             _true = trueExpression;
             _false = falseExpression;
+
+            if (_true.ExpressionType.IsAssignableFrom(_false.ExpressionType)) {
+                _expressionType = _true.ExpressionType;
+            } else if (_false.ExpressionType.IsAssignableFrom(_true.ExpressionType)) {
+                _expressionType = _false.ExpressionType;
+            } else if (allowUpcast) {
+                _expressionType = typeof(object);
+                _true = Ast.Cast(_true, _expressionType);
+                _false = Ast.Cast(_false, _expressionType);
+            } else {
+                throw new ArgumentException(String.Format("Cannot determine the type of the conditional expression: {0}, {1}.", _true.ExpressionType, _false.ExpressionType));
+            }            
         }
 
         public Expression FalseExpression {
@@ -46,7 +59,7 @@ namespace Microsoft.Scripting.Ast {
 
         public override Type ExpressionType {
             get {
-                return _true.ExpressionType;
+                return _expressionType;
             }
         }
 
@@ -64,10 +77,10 @@ namespace Microsoft.Scripting.Ast {
             Label next = cg.DefineLabel();
             _test.EmitAs(cg, typeof(bool));
             cg.Emit(OpCodes.Brfalse, next);
-            _true.Emit(cg);
+            _true.EmitCast(cg, _expressionType);
             cg.Emit(OpCodes.Br, eoi);
             cg.MarkLabel(next);
-            _false.Emit(cg);
+            _false.EmitCast(cg, _expressionType);
             cg.MarkLabel(eoi);
         }
 
@@ -83,24 +96,26 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static ConditionalExpression Condition(Expression test, Expression trueValue, Expression falseValue) {
-            return Condition(SourceSpan.None, test, trueValue, falseValue);
+            return Condition(SourceSpan.None, test, trueValue, falseValue, false);
+        }
+
+        public static ConditionalExpression Condition(Expression test, Expression trueValue, Expression falseValue, bool allowUpcast) {
+            return Condition(SourceSpan.None, test, trueValue, falseValue, allowUpcast);
         }
 
         public static ConditionalExpression Condition(SourceSpan span, Expression test, Expression trueValue, Expression falseValue) {
-            if (test == null) {
-                throw new ArgumentNullException("test");
-            }
-            if (trueValue == null) {
-                throw new ArgumentNullException("trueValue");
-            }
-            if (falseValue == null) {
-                throw new ArgumentNullException("falseValue");
-            }
-            if (trueValue.ExpressionType != falseValue.ExpressionType) {
-                throw new ArgumentException(String.Format("Cannot determine the type of the conditional expression: {0}, {1}.", trueValue.ExpressionType, falseValue.ExpressionType));
-            }
+            return Condition(span, test, trueValue, falseValue, false);
+        }
 
-            return new ConditionalExpression(span, test, trueValue, falseValue);
+        /// <summary>
+        /// AllowUpcast: casts both expressions to Object if neither is a subtype of the other.
+        /// </summary>
+        public static ConditionalExpression Condition(SourceSpan span, Expression test, Expression trueValue, Expression falseValue, bool allowUpcast) {
+            if (test == null) throw new ArgumentNullException("test");
+            if (trueValue == null) throw new ArgumentNullException("trueValue");
+            if (falseValue == null) throw new ArgumentNullException("falseValue");
+            
+            return new ConditionalExpression(span, test, trueValue, falseValue, allowUpcast);
         }
     }
 }

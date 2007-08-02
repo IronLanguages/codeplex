@@ -18,9 +18,9 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting;
 
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Generation {
     public class ByRefReturnBuilder : ReturnBuilder {
         private IList<int> _returnArgs;
         private ActionBinder _binder;

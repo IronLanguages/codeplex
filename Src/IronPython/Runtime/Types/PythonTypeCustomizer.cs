@@ -284,6 +284,12 @@ namespace IronPython.Runtime.Types {
                 AddProtocolMethod(Symbols.GeneratorNext, "NextMethod");
             }
 
+            if (type != typeof(string)) {   // no __iter__ on string, just __getitem__
+                if (typeof(System.Collections.IEnumerable).IsAssignableFrom(type)) {
+                    AddProtocolMethod(Symbols.Iterator, "IterMethod");
+                }
+            }
+
             if (typeof(DynamicTypeSlot).IsAssignableFrom(type)) {
                 AddProtocolMethod(Symbols.GetDescriptor, "GetMethod");
                 // TODO: Set & delete
@@ -510,7 +516,10 @@ namespace IronPython.Runtime.Types {
                     functionType | FunctionType.Method | FunctionType.AlwaysVisible);
             }
 
-            AddOperator(PythonContext.Id, method, PythonExtensionTypeAttribute._pythonOperatorTable[symbol]);
+            OperatorMapping opMap;
+            if (PythonExtensionTypeAttribute._pythonOperatorTable.TryGetValue(symbol, out opMap)) {
+                AddOperator(PythonContext.Id, method, opMap);
+            }
         }
 
         private void AddTupleExpansionGetOrDeleteItem(SymbolId op, MethodInfo mi) {

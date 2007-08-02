@@ -17,12 +17,6 @@ from lib.assert_util import *
 if is_silverlight==False:
     from lib.file_util import *
 
-# Some of these tests only apply to Python 2.5 compatibility
-import sys
-isPython25 = ((sys.version_info[0] == 2) and (sys.version_info[1] >= 5)) or (sys.version_info[0] > 2)
-
-Assert(isPython25 or not is_cli)
-
 import marshal
 
 if is_silverlight==False:
@@ -51,18 +45,13 @@ def test_functionality():
                 { 'abc' : {} },
                 {1:2}, {1:2, 4:'4', 5:None},
                 0+1j, 2-3.23j,
-              ]
-
-    if isPython25:
-        objects.extend(
-            [
                 set(),
                 set(['abc', -5]),
                 set([1, (2.1, 3L), frozenset([5]), 'x']),
                 frozenset(),
                 frozenset(['abc', -5]),
                 frozenset([1, (2.1, 3L), frozenset([5]), 'x'])
-            ])
+            ]
     
     if is_cli or is_silverlight:
         import System

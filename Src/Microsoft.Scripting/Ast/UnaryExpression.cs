@@ -17,20 +17,25 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting.Ast {
+    public enum UnaryOperators {
+        Cast,
+        Not
+    }
+
     public class UnaryExpression : Expression {
         private readonly Expression _operand;
-        private readonly Operators _op;
-        private readonly Type _type;
-        private readonly MethodInfo _method;
+        private readonly UnaryOperators _op;
+        private readonly Type _expressionType;
 
-        internal UnaryExpression(SourceSpan span, Expression operand, Operators op, Type type, MethodInfo method)
+        internal UnaryExpression(SourceSpan span, Expression expression, UnaryOperators op, Type type)
             : base(span) {
-            _operand = operand;
+
+            _operand = expression;
             _op = op;
-            _type = type;
-            _method = method;
+            _expressionType = type;
         }
 
         public Expression Operand {
@@ -38,21 +43,26 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override Type ExpressionType {
-            get { return _type; }
+            get { return _expressionType; }
+        }
+
+        public UnaryOperators Operator {
+            get { return _op; }
         }
 
         public override void Emit(CodeGen cg) {
             switch (_op) {
-                case Operators.Coerce:
-                    _operand.EmitAs(cg, _operand.ExpressionType);
-                    cg.EmitCast(_operand.ExpressionType, _type);
+                case UnaryOperators.Cast:
+                    _operand.EmitCast(cg, _expressionType);
                     break;
+
+                case UnaryOperators.Not:
+                    _operand.EmitAs(cg, typeof(bool));
+                    cg.Emit(OpCodes.Ldc_I4_0);
+                    cg.Emit(OpCodes.Ceq);
+                    break;
+
                 default:
-                    if (_method != null) {
-                        _operand.EmitAs(cg, _method.IsStatic ? _method.GetParameters()[0].ParameterType : _method.DeclaringType);
-                        cg.EmitCall(_method);
-                        break;
-                    }
                     throw new NotImplementedException();
             }
         }
@@ -60,8 +70,13 @@ namespace Microsoft.Scripting.Ast {
         public override object Evaluate(CodeContext context) {
             object x = _operand.Evaluate(context);
             switch (_op) {
-                case Operators.Coerce:
-                    return context.LanguageContext.Binder.Convert(x, _type);
+                case UnaryOperators.Cast:
+                    // TODO: static cast only:
+                    return context.LanguageContext.Binder.Convert(x, _expressionType);
+
+                case UnaryOperators.Not:
+                    return ((bool)context.LanguageContext.Binder.Convert(x, typeof(bool))) ? RuntimeHelpers.False : RuntimeHelpers.True;
+
                 default:
                     throw new NotImplementedException();
             }
@@ -84,15 +99,21 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static UnaryExpression Cast(SourceSpan span, Expression expression, Type type) {
-            return new UnaryExpression(span, expression, Operators.Coerce, type, null);
+            if (expression == null) throw new ArgumentNullException("expression");
+            if (type == null) throw new ArgumentNullException("type");
+            if (!type.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
+
+            return new UnaryExpression(span, expression, UnaryOperators.Cast, type);
         }
 
-        public static UnaryExpression Not(Expression expression, MethodInfo not) {
-            return new UnaryExpression(SourceSpan.None, expression, Operators.Not, not.ReturnType, not);
+        public static UnaryExpression Not(Expression expression) {
+            return Not(SourceSpan.None, expression);
         }
 
-        public static UnaryExpression Unary(Operators op, Expression expression, MethodInfo method) {
-            return new UnaryExpression(SourceSpan.None, expression, op, method.ReturnType, method);
+        public static UnaryExpression Not(SourceSpan span, Expression expression) {
+            if (expression == null) throw new ArgumentNullException("expression");
+
+            return new UnaryExpression(span, expression, UnaryOperators.Not, typeof(bool));
         }
     }
 }

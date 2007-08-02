@@ -41,13 +41,13 @@ namespace IronPython.Runtime {
         #region Dictionary Public API Surface
 
         [OperatorMethod]
-        public static bool Contains([StaticThis]IDictionary<object, object> self, object value) {
+        public static bool __contains__([StaticThis]IDictionary<object, object> self, object value) {
             return self.ContainsKey(value);
         }
 
-        [OperatorMethod, PythonName("__cmp__")]
+        [OperatorMethod]
         [return: MaybeNotImplemented]
-        public static object CompareTo(IDictionary<object, object> self, object other) {
+        public static object __cmp__(IDictionary<object, object> self, object other) {
             IDictionary<object, object> oth = other as IDictionary<object, object>;
             // CompareTo is allowed to throw (string, int, etc... all do it if they don't get a matching type)
             if (oth == null) {
@@ -89,7 +89,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         [OperatorMethod]
         public static object GreaterThanOrEqual(IDictionary<object, object> self, object other) {
-            object res = CompareTo(self, other);
+            object res = __cmp__(self, other);
             if (res == PythonOps.NotImplemented) return res;
 
             return ((int)res) >= 0;
@@ -98,42 +98,41 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         [OperatorMethod]
         public static object GreaterThan(IDictionary<object, object> self, object other) {
-            object res = CompareTo(self, other);
+            object res = __cmp__(self, other);
             if (res == PythonOps.NotImplemented) return res;
 
             return ((int)res) > 0;
         }
 
-        [OperatorMethod, PythonName("__delitem__")]
-        public static void DelIndex(IDictionary<object, object> self, object key) {
+        [OperatorMethod]
+        public static void __delitem__(IDictionary<object, object> self, object key) {
             if (!self.Remove(key)) {
                 throw PythonOps.KeyError(key);
             }
         }
 
-        [PythonName("__iter__")]
-        public static IEnumerator GetEnumerator(IDictionary<object, object> self) {
+        public static IEnumerator __iter__(IDictionary<object, object> self) {
             return new DictionaryKeyEnumerator(self);
         }
 
         [return: MaybeNotImplemented]
         [OperatorMethod]
         public static object LessThanOrEqual(IDictionary<object, object> self, object other) {
-            object res = CompareTo(self, other);
+            object res = __cmp__(self, other);
             if (res == PythonOps.NotImplemented) return res;
 
             return ((int)res) <= 0;
         }
 
-        [OperatorMethod, PythonName("__len__")]
-        public static int Length(IDictionary<object, object> self) {
+        [OperatorMethod]
+        public static int __len__(IDictionary<object, object> self) {
             return self.Count;
         }
 
         [return: MaybeNotImplemented]
         [OperatorMethod]
         public static object LessThan(IDictionary<object, object> self, object other) {
-            object res = CompareTo(self, other);
+            object res = __cmp__(self, other);
             if (res == PythonOps.NotImplemented) return res;
 
             return ((int)res) < 0;
@@ -148,13 +147,13 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        [OperatorMethod, PythonName("__repr__")]
-        public static string ToCodeString(IDictionary<object, object> self) {
-            return ToString(self);
+        [OperatorMethod]
+        public static string __repr__(IDictionary<object, object> self) {
+            return __str__(self);
         }
 
-        [OperatorMethod, PythonName("__str__")]
-        public static string ToString(IDictionary<object, object> self) {
+        [OperatorMethod]
+        public static string __str__(IDictionary<object, object> self) {
             StringBuilder buf = new StringBuilder();
             buf.Append("{");
             bool first = true;
@@ -181,35 +180,29 @@ namespace IronPython.Runtime {
             return buf.ToString();
         }
 
-        [PythonName("clear")]
-        public static void Clear(IDictionary<object, object> self) {
+        public static void clear(IDictionary<object, object> self) {
             self.Clear();
         }
 
-        [PythonName("copy")]
-        public static object Clone(IDictionary<object, object> self) {
+        public static object copy(IDictionary<object, object> self) {
             return new PythonDictionary(new Dictionary<object, object>(self));
         }
 
-        [PythonName("get")]
-        public static object GetIndex(IDictionary<object, object> self, object key) {
-            return GetIndex(self, key, null);
+        public static object get(IDictionary<object, object> self, object key) {
+            return get(self, key, null);
         }
 
-        [PythonName("get")]
-        public static object GetIndex(IDictionary<object, object> self, object key, object defaultValue) {
+        public static object get(IDictionary<object, object> self, object key, object defaultValue) {
             object ret;
             if (self.TryGetValue(key, out ret)) return ret;
             return defaultValue;
         }
 
-        [PythonName("has_key")]
-        public static bool HasKey(IDictionary<object, object> self, object key) {
+        public static bool has_key(IDictionary<object, object> self, object key) {
             return self.ContainsKey(key);
         }
 
-        [PythonName("items")]
-        public static List Items(IDictionary<object, object> self) {
+        public static List items(IDictionary<object, object> self) {
             List ret = List.MakeEmptyList(self.Count);
             foreach (KeyValuePair<object, object> kv in self) {
                 ret.AddNoLock(Tuple.MakeTuple(kv.Key, kv.Value));
@@ -217,23 +210,19 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        [PythonName("iteritems")]
-        public static IEnumerator IterItems(IDictionary<object, object> self) {
-            return Items(self).GetEnumerator();
+        public static IEnumerator iteritems(IDictionary<object, object> self) {
+            return items(self).GetEnumerator();
         }
 
-        [PythonName("iterkeys")]
-        public static IEnumerator IterKeys(IDictionary<object, object> self) {
-            return Keys(self).GetEnumerator();
+        public static IEnumerator iterkeys(IDictionary<object, object> self) {
+            return keys(self).GetEnumerator();
         }
 
-        [PythonName("itervalues")]
-        public static IEnumerator IterValues(IDictionary<object, object> self) {
-            return Values(self).GetEnumerator();
+        public static IEnumerator itervalues(IDictionary<object, object> self) {
+            return values(self).GetEnumerator();
         }
 
-        [PythonName("keys")]
-        public static List Keys(IDictionary<object, object> self) {
+        public static List keys(IDictionary<object, object> self) {
             List l = List.Make(self.Keys);
             for (int i = 0; i < l.Count; i++) {
                 if (l[i] == nullObject) {
@@ -244,8 +233,7 @@ namespace IronPython.Runtime {
             return l;
         }
 
-        [PythonName("pop")]
-        public static object Pop(IDictionary<object, object> self, object key) {
+        public static object pop(IDictionary<object, object> self, object key) {
             //??? perf won't match expected Python perf
             object ret;
             if (self.TryGetValue(key, out ret)) {
@@ -256,8 +244,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        [PythonName("pop")]
-        public static object Pop(IDictionary<object, object> self, object key, object defaultValue) {
+        public static object pop(IDictionary<object, object> self, object key, object defaultValue) {
             //??? perf won't match expected Python perf
             object ret;
             if (self.TryGetValue(key, out ret)) {
@@ -268,8 +255,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        [PythonName("popitem")]
-        public static Tuple PopItem(IDictionary<object, object> self) {
+        public static Tuple popitem(IDictionary<object, object> self) {
             IEnumerator<KeyValuePair<object, object>> ie = self.GetEnumerator();
             if (ie.MoveNext()) {
                 object key = ie.Current.Key;
@@ -280,30 +266,25 @@ namespace IronPython.Runtime {
             throw PythonOps.KeyError("dictionary is empty");
         }
 
-        [PythonName("setdefault")]
-        public static object SetDefault(IDictionary<object, object> self, object key) {
-            return SetDefault(self, key, null);
+        public static object setdefault(IDictionary<object, object> self, object key) {
+            return setdefault(self, key, null);
         }
 
-        [PythonName("setdefault")]
-        public static object SetDefault(IDictionary<object, object> self, object key, object defaultValue) {
+        public static object setdefault(IDictionary<object, object> self, object key, object defaultValue) {
             object ret;
             if (self.TryGetValue(key, out ret)) return ret;
             self[key] = defaultValue;
             return defaultValue;
         }
 
-        [PythonName("values")]
-        public static List Values(IDictionary<object, object> self) {
+        public static List values(IDictionary<object, object> self) {
             return List.Make(self.Values);
         }
 
-        [PythonName("update")]
-        public static void Update(IDictionary<object, object> self) {
+        public static void update(IDictionary<object, object> self) {
         }
 
-        [PythonName("update")]
-        public static void Update(IDictionary<object, object> self, object b) {
+        public static void update(IDictionary<object, object> self, object b) {
             object keysFunc;
             IDictionary dict = b as IDictionary;
             if (dict != null) {
@@ -335,7 +316,7 @@ namespace IronPython.Runtime {
 
         #region Dictionary Helper APIs
 
-        public static bool TryGetValueVirtual(CodeContext context, IMapping self, object key, ref object DefaultGetItem, out object value) {
+        internal static bool TryGetValueVirtual(CodeContext context, IMapping self, object key, ref object DefaultGetItem, out object value) {
             ISuperDynamicObject sdo = self as ISuperDynamicObject;
             if (sdo != null) {
                 Debug.Assert(sdo != null);
@@ -373,7 +354,7 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        public static bool AddKeyValue(IDictionary<object, object> self, object o) {
+        internal static bool AddKeyValue(IDictionary<object, object> self, object o) {
             IEnumerator i = PythonOps.GetEnumerator(o); //c.GetEnumerator();
             if (i.MoveNext()) {
                 object key = i.Current;
@@ -387,28 +368,28 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        public static object NullToObj(object o) {
+        internal static object NullToObj(object o) {
             if (o == null) return nullObject;
             return o;
         }
 
-        public static object ObjToNull(object o) {
+        internal static object ObjToNull(object o) {
             if (o == nullObject) return null;
             return o;
         }
 
-        public static int CompareTo(IDictionary<object, object> left, IDictionary<object, object> right) {
+        internal static int CompareTo(IDictionary<object, object> left, IDictionary<object, object> right) {
             int lcnt = left.Count;
             int rcnt = right.Count;
 
             if (lcnt != rcnt) return lcnt > rcnt ? 1 : -1;
 
-            List ritems = DictionaryOps.Items(right);
+            List ritems = DictionaryOps.items(right);
             return CompareToWorker(left, ritems);
         }
 
-        public static int CompareToWorker(IDictionary<object, object> left, List ritems) {
-            List litems = DictionaryOps.Items(left);
+        internal static int CompareToWorker(IDictionary<object, object> left, List ritems) {
+            List litems = DictionaryOps.items(left);
 
             litems.Sort();
             ritems.Sort();
@@ -416,7 +397,7 @@ namespace IronPython.Runtime {
             return litems.CompareToWorker(ritems);
         }
 
-        public static bool EqualsHelper(IDictionary<object, object> self, object other) {
+        internal static bool EqualsHelper(IDictionary<object, object> self, object other) {
             IDictionary<object, object> oth = other as IDictionary<object, object>;
             if (oth == null) return false;
 
@@ -424,7 +405,7 @@ namespace IronPython.Runtime {
 
             // we cannot call Compare here and compare against zero because Python defines
             // value equality as working even if the keys/values are unordered.
-            List myKeys = Keys(self);
+            List myKeys = keys(self);
 
             foreach (object o in myKeys) {
                 object res;

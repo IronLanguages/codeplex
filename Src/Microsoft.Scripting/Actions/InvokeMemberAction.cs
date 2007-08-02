@@ -27,50 +27,20 @@ namespace Microsoft.Scripting.Actions {
         IsCallWithThis = 2      // HasExplicitTarget
     }
 
-    public class InvokeMemberAction : MemberAction {
-        private readonly SymbolId _memberName;
+    public class InvokeMemberAction : MemberAction, IEquatable<InvokeMemberAction> {
         private readonly InvokeMemberActionFlags _flags;
         private readonly ArgumentInfo[] _argumentInfos;
 
         public bool ReturnNonCallable { get { return (_flags & InvokeMemberActionFlags.ReturnNonCallable) != 0; } }
         public bool HasExplicitTarget { get { return (_flags & InvokeMemberActionFlags.IsCallWithThis) != 0; } }
-        public SymbolId MemberName { get { return _memberName; } }
         public ArgumentInfo[] ArgumentInfos { get { return _argumentInfos; } }
 
         public InvokeMemberAction(SymbolId memberName, InvokeMemberActionFlags flags, ArgumentInfo[] argumentKinds)
-            : base(MakeName(memberName, flags, argumentKinds)) {
+            : base(memberName) {
             Utils.Assert.NotNull(argumentKinds);
 
-            _memberName = memberName;
             _flags = flags;
             _argumentInfos = argumentKinds;
-        }
-
-        private static SymbolId MakeName(SymbolId memberName, InvokeMemberActionFlags flags, ArgumentInfo[] argumentKinds) {
-            return SymbolTable.StringToId(String.Concat(
-                (flags & InvokeMemberActionFlags.ReturnNonCallable) != 0 ? "t" : "f",
-                (flags & InvokeMemberActionFlags.IsCallWithThis) != 0 ? "t" : "f",
-                "-",
-                SymbolTable.IdToString(memberName), 
-                "-",
-                ArgumentInfo.ToParameterString(argumentKinds)));
-        }
-
-        public static InvokeMemberAction Make(string s) {
-            Utils.Assert.NotNull(s);
-            const int FlagCount = 2;
-
-            int lastDash = s.LastIndexOf('-');
-
-            // s ~ [t|f]{FlagCount}-name-ArgumentKind(,ArgumentKind)*
-            Debug.Assert(s.Length > FlagCount && s[FlagCount] == '-' && lastDash != -1);
-
-            return new InvokeMemberAction(
-                SymbolTable.StringToId(s.Substring(FlagCount + 1, lastDash - FlagCount - 1)),
-                (s[0] == 't' ? InvokeMemberActionFlags.ReturnNonCallable : InvokeMemberActionFlags.None) |
-                (s[1] == 't' ? InvokeMemberActionFlags.IsCallWithThis : InvokeMemberActionFlags.None),
-                ArgumentInfo.ParseAll(s.Substring(lastDash + 1))
-            );
         }
 
         public override ActionKind Kind {
@@ -85,5 +55,30 @@ namespace Microsoft.Scripting.Actions {
             }
             return -1;
         }
+
+        public override bool Equals(object obj) {
+            return Equals(obj as InvokeMemberAction);
+        }
+
+        public override int GetHashCode() {
+            return ArgumentInfo.GetHashCode(Kind, _argumentInfos);
+        }
+
+        public override string ToString() {
+            return base.ToString() + " " + _flags.ToString() + " " + ArgumentInfo.GetString(_argumentInfos);
+        }
+
+
+        #region IEquatable<InvokeMemberAction> Members
+
+        public bool Equals(InvokeMemberAction other) {
+            if (other == null) return false;
+
+            return Name == other.Name &&
+                _flags == other._flags &&
+                ArgumentInfo.ArrayEquals(_argumentInfos, other._argumentInfos);
+        }
+
+        #endregion
     }
 }

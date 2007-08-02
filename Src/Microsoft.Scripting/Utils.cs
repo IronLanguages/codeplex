@@ -89,6 +89,19 @@ namespace Microsoft.Scripting {
                     Debug.Assert(item != null);
                 }
             }
+
+            [Conditional("DEBUG")]
+            internal static void SignatureEquals(MethodInfo method, params Type[] requiredSignature) {
+                Type[] actualTypes = Utils.Reflection.GetParameterTypes(method.GetParameters());
+                Debug.Assert(actualTypes.Length == requiredSignature.Length - 1);
+                int i = 0;
+                while (i < actualTypes.Length) {
+                    Debug.Assert(actualTypes[i] == requiredSignature[i]);
+                    i++;
+                }
+
+                Debug.Assert(method.ReturnType == requiredSignature[i]);
+            }
         }
 
         #endregion
@@ -297,6 +310,12 @@ namespace Microsoft.Scripting {
                 MethodInfo[] result = new MethodInfo[delegates.Length];
                 for (int i = 0; i < delegates.Length; i++) result[i] = delegates[i].Method;
                 return result;
+            }
+
+            public static MethodBase[] GetMethodInfos(MemberInfo[] members) {
+                return Utils.Array.ConvertAll<MemberInfo, MethodBase>(
+                    members,
+                    delegate(MemberInfo inp) { return (MethodBase)inp; });
             }
 
             public static Type[] GetParameterTypes(ParameterInfo[] parameterInfos) {

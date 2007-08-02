@@ -28,10 +28,6 @@ namespace Microsoft.Scripting.Ast {
         public virtual bool Walk(ActionExpression node) { return true; }
         public virtual void PostWalk(ActionExpression node) { }
 
-        // AndExpression
-        public virtual bool Walk(AndExpression node) { return true; }
-        public virtual void PostWalk(AndExpression node) { }
-
         // ArrayIndexAssignment
         public virtual bool Walk(ArrayIndexAssignment node) { return true; }
         public virtual void PostWalk(ArrayIndexAssignment node) { }
@@ -88,21 +84,9 @@ namespace Microsoft.Scripting.Ast {
         public virtual bool Walk(DeleteDynamicMemberExpression node) { return true; }
         public virtual void PostWalk(DeleteDynamicMemberExpression node) { }
 
-        // DeleteIndexExpression
-        public virtual bool Walk(DeleteIndexExpression node) { return true; }
-        public virtual void PostWalk(DeleteIndexExpression node) { }
-
         // DeleteUnboundExpression
         public virtual bool Walk(DeleteUnboundExpression node) { return true; }
         public virtual void PostWalk(DeleteUnboundExpression node) { }
-
-        // DynamicMemberAssignment
-        public virtual bool Walk(DynamicMemberAssignment node) { return true; }
-        public virtual void PostWalk(DynamicMemberAssignment node) { }
-
-        // DynamicMemberExpression
-        public virtual bool Walk(DynamicMemberExpression node) { return true; }
-        public virtual void PostWalk(DynamicMemberExpression node) { }
 
         // DynamicNewExpression
         public virtual bool Walk(DynamicNewExpression node) { return true; }
@@ -111,14 +95,6 @@ namespace Microsoft.Scripting.Ast {
         // EnvironmentExpression
         public virtual bool Walk(EnvironmentExpression node) { return true; }
         public virtual void PostWalk(EnvironmentExpression node) { }
-
-        // IndexAssignment
-        public virtual bool Walk(IndexAssignment node) { return true; }
-        public virtual void PostWalk(IndexAssignment node) { }
-
-        // IndexExpression
-        public virtual bool Walk(IndexExpression node) { return true; }
-        public virtual void PostWalk(IndexExpression node) { }
 
         // MemberAssignment
         public virtual bool Walk(MemberAssignment node) { return true; }
@@ -139,10 +115,6 @@ namespace Microsoft.Scripting.Ast {
         // NewExpression
         public virtual bool Walk(NewExpression node) { return true; }
         public virtual void PostWalk(NewExpression node) { }
-
-        // OrExpression
-        public virtual bool Walk(OrExpression node) { return true; }
-        public virtual void PostWalk(OrExpression node) { }
 
         // ParamsExpression
         public virtual bool Walk(ParamsExpression node) { return true; }

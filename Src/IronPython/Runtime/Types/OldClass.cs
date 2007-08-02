@@ -63,7 +63,7 @@ namespace IronPython.Runtime.Types {
         IDynamicObject {
 
         [NonSerialized]
-        private IList<OldClass> _bases;
+        private List<OldClass> _bases;
         private DynamicType _type = null;
 
         public IAttributesCollection __dict__;
@@ -83,7 +83,7 @@ namespace IronPython.Runtime.Types {
             Init(name, dict, instanceNames);
         }
         
-        internal OldClass(string name, IList<OldClass> bases, IAttributesCollection dict, string instanceNames) {
+        internal OldClass(string name, List<OldClass> bases, IAttributesCollection dict, string instanceNames) {
             Utils.Assert.NotNullItems(bases);
             _bases = bases;
             Init(name, dict, instanceNames);
@@ -203,7 +203,7 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        public IList<OldClass> BaseClasses {
+        public List<OldClass> BaseClasses {
             get {
                 return _bases;
             }
@@ -306,6 +306,14 @@ namespace IronPython.Runtime.Types {
         #region ICustomMembers Members
 
         public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
+            return TryGetBoundMember(context, name, null, out value);
+        }
+
+        public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
+            return TryGetBoundMember(context, name, null, out value);
+        }
+
+        public bool TryGetBoundMember(CodeContext context, SymbolId name, object instance, out object value) {
             if (name == Symbols.Bases) { value = Tuple.Make(_bases); return true; }
             if (name == Symbols.Name) { value = __name__; return true; }
             if (name == Symbols.Dict) {
@@ -315,14 +323,10 @@ namespace IronPython.Runtime.Types {
             }
 
             if (TryLookupSlot(name, out value)) {
-                value = GetOldStyleDescriptor(context, value, null, this);
+                value = GetOldStyleDescriptor(context, value, instance, this);
                 return true;
             }
             return false;
-        }
-
-        public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
-            return TryGetCustomMember(context, name, out value);
         }
 
         private List<OldClass> ValidateBases(object value) {
@@ -425,7 +429,7 @@ namespace IronPython.Runtime.Types {
             OldClass dt = other as OldClass;
             if (dt == null) return false;
 
-            IList<OldClass> bases = _bases;
+            List<OldClass> bases = _bases;
             foreach (OldClass bc in bases) {
                 if (bc.IsSubclassOf(other)) {
                     return true;
@@ -680,7 +684,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public override string ToString() {
-            return DictionaryOps.ToString(this);
+            return DictionaryOps.__str__(this);
         }
     }
 
@@ -1134,7 +1138,7 @@ namespace IronPython.Runtime.Types {
             object value;
 
             if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
-                return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, value, args, new string[0], null, dict);
+                return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, value, args, Utils.Array.EmptyStrings, null, dict);
             }
 
             throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);

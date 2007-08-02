@@ -177,7 +177,7 @@ namespace IronPython.Modules {
             public void Start() {
                 try {
                     if (kwargs != null) {
-                        PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, new string[0], args, kwargs);
+                        PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, Utils.Array.EmptyStrings, args, kwargs);
                     } else {
                         PythonOps.CallWithArgsTuple(func, RuntimeHelpers.EmptyObjectArray, args);
                     }

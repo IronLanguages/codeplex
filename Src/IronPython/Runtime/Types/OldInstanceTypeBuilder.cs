@@ -48,7 +48,7 @@ namespace IronPython.Runtime.Types {
             DynamicHelpers.GetDynamicType(instance).TryDeleteNonCustomMember(context, instance, name);
         }
 
-        private static bool TryGetMemberCustomizer(CodeContext context, object instance, SymbolId name, out object value) {
+        internal static bool TryGetMemberCustomizer(CodeContext context, object instance, SymbolId name, out object value) {
             ISuperDynamicObject sdo = instance as ISuperDynamicObject;
             if (sdo != null) {
                 IAttributesCollection iac = sdo.Dict;

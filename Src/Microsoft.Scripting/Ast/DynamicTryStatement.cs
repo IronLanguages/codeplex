@@ -135,11 +135,12 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
         }
-        
+
         public override object Execute(CodeContext context) {
             object ret = Statement.NextStatement;
             Exception savedExc = null;
             bool rethrow = false;
+            bool doElse = true;
             try {
                 try {
                     ret = _body.Execute(context);
@@ -156,6 +157,7 @@ namespace Microsoft.Scripting.Ast {
                                 }
                                 if (target != null) {
                                     rethrow = false;
+                                    doElse = false;
                                     if (handler.Variable != null) {
                                         BoundAssignment.EvaluateAssign(context, handler.Variable, target);
                                     }
@@ -168,13 +170,14 @@ namespace Microsoft.Scripting.Ast {
                         RuntimeHelpers.PopExceptionHandler(context);
                     }
                 }
-                if (_else != null && rethrow) {
+                if (_else != null && doElse) {
                     try {
                         ret = _else.Execute(context);
                     } catch (Exception exc) {
                         // The interaction of else and finally here differs from the emit case
                         // (see work item #268351)
                         savedExc = exc;
+                        rethrow = true;
                     }
                 }
             } finally {

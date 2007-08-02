@@ -16,23 +16,35 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using System.Diagnostics;
+
 using Microsoft.Scripting.Generation;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Ast {
     public class SwitchStatement : Statement {
         private readonly SourceLocation _header;
         private readonly Expression _testValue;
 
+        private readonly MethodInfo _tryGetSwitchIndexMethod;
+        private readonly MethodInfo _equalMethod;
+
         // TODO: Make SwitchCase[]
         private readonly List<SwitchCase> _cases;
 
         private const int JMPTABLE_SPARSITY = 10;
 
-        internal SwitchStatement(SourceSpan span, SourceLocation header, Expression testValue, List<SwitchCase> cases)
+        internal SwitchStatement(SourceSpan span, SourceLocation header, Expression testValue, List<SwitchCase> cases, 
+            MethodInfo tryGetSwitchIndexMethod, MethodInfo equalMethod)
             : base(span) {
+            Utils.Assert.NotNullItems(cases);
+            Utils.Assert.NotNull(tryGetSwitchIndexMethod, equalMethod);
+            
             _testValue = testValue;
             _cases = cases;
             _header = header;
+            _tryGetSwitchIndexMethod = tryGetSwitchIndexMethod;
+            _equalMethod = equalMethod;
         }
 
         public Expression TestValue {
@@ -120,7 +132,7 @@ namespace Microsoft.Scripting.Ast {
                     cg.EmitCodeContext(); 
                     _cases[i].Value.EmitAsObject(cg);
                     testValueSlot.EmitGet(cg);
-                    cg.EmitCall(typeof(RuntimeHelpers), "Equal");
+                    cg.EmitCall(_equalMethod);
                     cg.Emit(OpCodes.Brtrue, labels[i]);
                 }
             }
@@ -173,7 +185,7 @@ namespace Microsoft.Scripting.Ast {
             Slot testValueSlot = cg.GetNamedLocal(typeof(object), "switchTestValue");
             testValueSlot.EmitSet(cg);
 
-            // Call RuntimeHelpers.TryGetSwitchIndex(codeContext, testValue, out index)
+            // Call TryGetSwitchIndex(codeContext, testValue, out index)
             cg.EmitCodeContext();
             testValueSlot.EmitGet(cg);
 
@@ -181,7 +193,7 @@ namespace Microsoft.Scripting.Ast {
             indexSlot.EmitGetAddr(cg);
 
             // Call the helper method to determine if the value is int/double and get it's range
-            cg.EmitCall(typeof(RuntimeHelpers), "TryGetSwitchIndex");
+            cg.EmitCall(_tryGetSwitchIndexMethod);
 
             // If the helper returns false (switch val not int/double) goto the default target
             cg.Emit(OpCodes.Brfalse, defaultTarget);
@@ -260,8 +272,13 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// </summary>
     public static partial class Ast {
-        public static SwitchStatement Switch(SourceSpan span, SourceLocation header, Expression testValue, List<SwitchCase> cases) {
-            return new SwitchStatement(span, header, testValue, cases);
+        public static SwitchStatement Switch(SourceSpan span, SourceLocation header, Expression testValue, List<SwitchCase> cases, 
+            MethodInfo tryGetSwitchIndexMethod, MethodInfo equalMethod) {
+
+            Utils.Assert.SignatureEquals(tryGetSwitchIndexMethod, typeof(CodeContext), typeof(object), typeof(int).MakeByRefType(), typeof(bool));
+            Utils.Assert.SignatureEquals(equalMethod, typeof(CodeContext), typeof(object), typeof(object), typeof(bool));
+
+            return new SwitchStatement(span, header, testValue, cases, tryGetSwitchIndexMethod, equalMethod);
         }
     }
 }

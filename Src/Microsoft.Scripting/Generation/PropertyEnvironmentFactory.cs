@@ -64,7 +64,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override void EmitStorage(CodeGen cg) {
-            cg.EmitNew(StorageType.GetConstructor(new Type[0]));
+            cg.EmitNew(StorageType.GetConstructor(Utils.Reflection.EmptyTypes));
             cg.Emit(OpCodes.Dup);
             cg.EmitCall(typeof(RuntimeHelpers), "UninitializeEnvironmentTuple");
         }

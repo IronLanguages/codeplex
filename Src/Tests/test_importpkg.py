@@ -246,37 +246,40 @@ def test_c2cs():
     # first let's load Foo<T>
     compileAndRef('c2_a', c2cs, '/d:TEST1')    
     import ImportTestNS
-    
     x = ImportTestNS.Foo[int]()
     AreEqual(x.Test(), 'Foo<T>')
     
-    compileAndRef('c2_b', c2cs, '/d:TEST2')
-    
     # ok, now let's get a Foo<T,Y> going on...
-    import ImportTestNS
+    compileAndRef('c2_b', c2cs, '/d:TEST2')
     x = ImportTestNS.Foo[int,int]()
     AreEqual(x.Test(), 'Foo<T,Y>')
     
     # that worked, let's make sure Foo<T> is still available...
     x = ImportTestNS.Foo[int]()
     AreEqual(x.Test(), 'Foo<T>')
-    
+
+    # Lets load Foo<T,Y,Z>    
     compileAndRef('c2_c', c2cs, '/d:TEST3')
-    
-    import ImportTestNS
     x = ImportTestNS.Foo[int,int,int]()
     AreEqual(x.Test(), 'Foo<T,Y,Z>')
     
-    # make sure the other two are still available
+    # make sure Foo<T> and Foo<T,Y> are still available
     x = ImportTestNS.Foo[int,int]()
     AreEqual(x.Test(), 'Foo<T,Y>')    
     x = ImportTestNS.Foo[int]()
     AreEqual(x.Test(), 'Foo<T>')
     
+    # now let's try replacing the Foo<T> and Foo<T,Y>
+    compileAndRef('c2_replacing_generic_Foos', c2cs, '/d:TEST6,TEST7')
+    x = ImportTestNS.Foo[int]()
+    AreEqual(x.Test(), 'Foo2<T>')
+    x = ImportTestNS.Foo[int, int]()
+    AreEqual(x.Test(), 'Foo2<T,Y>')
+    # and then we will put them back
+    compileAndRef('c2_putting_back_original_generic_Foos', c2cs, '/d:TEST1,TEST2')
+
     # ok, now let's get plain Foo in the picture...
     compileAndRef('c2_d', c2cs, '/d:TEST4')
-    import ImportTestNS
-    
     x = ImportTestNS.Foo()
     AreEqual(x.Test(), 'Foo')
     
@@ -290,8 +293,6 @@ def test_c2cs():
     
     # now let's try replacing the non-generic Foo
     compileAndRef('c2_e', c2cs, '/d:TEST5')
-    import ImportTestNS
-    
     x = ImportTestNS.Foo()
     AreEqual(x.Test(), 'Foo2')
     
@@ -306,10 +307,8 @@ def test_c2cs():
     # finally, let's now replace one of the 
     # generic overloads...
     compileAndRef('c2_f', c2cs, '/d:TEST6')
-    import ImportTestNS
-
     x = ImportTestNS.Foo[int]()
-    AreEqual(x.Test(), 'Foo<T>2')
+    AreEqual(x.Test(), 'Foo2<T>')
 
     # and make sure the old ones are still there too..
     x = ImportTestNS.Foo()
@@ -317,7 +316,17 @@ def test_c2cs():
     x = ImportTestNS.Foo[int,int,int]()
     AreEqual(x.Test(), 'Foo<T,Y,Z>')
     x = ImportTestNS.Foo[int,int]()
-    AreEqual(x.Test(), 'Foo<T,Y>')    
+    AreEqual(x.Test(), 'Foo<T,Y>')
+    
+    # Load a namespace called Foo
+    compileAndRef('c2_with_Foo_namespace', c2cs, '/d:TEST8')
+    x = ImportTestNS.Foo.Bar()
+    AreEqual(x.Test(), 'Bar')
+    # Now put back the type Foo
+    compileAndRef('c2_with_Foo_of_T_type', c2cs, '/d:TEST1')
+    x = ImportTestNS.Foo[int]()
+    AreEqual(x.Test(), 'Foo<T>')
+    
     
 if not is_silverlight:
     Assert(sys.modules.has_key("__main__"))

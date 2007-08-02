@@ -29,6 +29,7 @@ namespace Microsoft.Scripting.Generation {
         public CastSlot(Slot instance, Type type) {
             if (instance == null) throw new ArgumentNullException("instance");
             if (type == null) throw new ArgumentNullException("type");
+            if (!type.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
 
             this._instance = instance;
             this._type = type;

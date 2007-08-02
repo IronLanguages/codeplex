@@ -53,18 +53,18 @@ def test_fasteval():
         # This is an interim test method until we can properly run all the tests using -X:FastEval.
 
         # The following tests still fail
-        #import test_delegate
         #import test_generator # fails until FastEval generators support wrapper methods
-        #import test_methoddispatch
-        #import test_exceptions # fails b/c our tracebacks are wrong
+        #import test_methoddispatch # fails b/c of mutating method calls on StrongBox instances
         #import test_ipye # fails b/c our tracebacks are wrong
-        #import test_function # fails b/c func_code.co_flags is wrong
         
+        import test_delegate
+        import test_function
         import test_closure
         import test_namebinding
         import test_operator
         import test_exec
         import test_list
+        import test_exceptions
         # These two pass, but take forever to run
         #import test_numtypes
         #import test_number
@@ -78,7 +78,12 @@ def test_fasteval():
         import test_dict
         import test_set
         import test_tuple
-        import test_syntax
+        import test_class
+        if not is_silverlight:
+            #Fails on Silverlight because of an introspected call to System.Type.IsAssignableFrom
+            import test_cliclass
+            #This particular test corrupts the run - CodePlex Work Item 11830
+            import test_syntax
     finally:
         pe.Options.FastEvaluation = save
         # "Un-import" these modules so that they get re-imported in emit mode

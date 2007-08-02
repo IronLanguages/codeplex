@@ -252,6 +252,7 @@ namespace Microsoft.Scripting {
             if (_inits != null) {
 
                 for (int i = 0; i < _inits.Count; i++) {
+                    PerfTrack.NoteEvent(PerfTrack.Categories.OverAllocate, "DynamicTypeInit " + _building.Name);
                     _inits[i](this);
                 }
                 _inits = null;

@@ -91,22 +91,20 @@ namespace Microsoft.Scripting.Generation {
         public virtual void EmitCheck(CodeGen cg, SymbolId name) {
             if (cg == null) throw new ArgumentNullException("cg");
 
-            if (ScriptDomainManager.Options.CheckInitialized) {
-                Label endCheck = cg.DefineLabel();
-                cg.Emit(OpCodes.Dup);
-                cg.EmitUninitialized();
-                cg.Emit(OpCodes.Bne_Un_S, endCheck);
-                if (_local) {
-                    cg.EmitSymbolId(name);
-                    cg.EmitCall(typeof(RuntimeHelpers), "ThrowUnboundLocalError");
-                } else {
-                    cg.Emit(OpCodes.Pop);
-                    cg.EmitCodeContext();
-                    cg.EmitSymbolId(name);
-                    cg.EmitCall(typeof(RuntimeHelpers), "LookupName");
-                }
-                cg.MarkLabel(endCheck);
+            Label endCheck = cg.DefineLabel();
+            cg.Emit(OpCodes.Dup);
+            cg.EmitUninitialized();
+            cg.Emit(OpCodes.Bne_Un_S, endCheck);
+            if (_local) {
+                cg.EmitSymbolId(name);
+                cg.EmitCall(typeof(RuntimeHelpers), "ThrowUnboundLocalError");
+            } else {
+                cg.Emit(OpCodes.Pop);
+                cg.EmitCodeContext();
+                cg.EmitSymbolId(name);
+                cg.EmitCall(typeof(RuntimeHelpers), "LookupName");
             }
+            cg.MarkLabel(endCheck);
         }
 
         public void EmitGetAs(CodeGen cg, Type asType) {
@@ -115,7 +113,7 @@ namespace Microsoft.Scripting.Generation {
 
             EmitGet(cg);
             if (asType == typeof(object) && this.Type.IsValueType) {
-                cg.EmitConvertToObject(this.Type);
+                cg.EmitBoxing(this.Type);
                 return;
             }
 
@@ -142,7 +140,7 @@ namespace Microsoft.Scripting.Generation {
                 if (this.Type != typeof(object)) {
                     // TODO make this efficient, for now just go to object and back
                     //throw new InvalidOperationException();
-                    cg.EmitConvertToObject(this.Type);
+                    cg.EmitBoxing(this.Type);
                 }
                 cg.EmitConvertFromObject(asType);
             }

@@ -159,7 +159,7 @@ namespace IronPython.Runtime.Types {
 
         [PythonName("__iter__")]
         public System.Collections.IEnumerator GetEnumerator() {
-            return DictionaryOps.IterKeys(_dt.GetMemberDictionary(DefaultContext.Default).AsObjectKeyedDictionary());
+            return DictionaryOps.iterkeys(_dt.GetMemberDictionary(DefaultContext.Default).AsObjectKeyedDictionary());
         }
 
         #endregion

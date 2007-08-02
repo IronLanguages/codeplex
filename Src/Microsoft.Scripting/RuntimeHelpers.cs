@@ -81,12 +81,23 @@ namespace Microsoft.Scripting {
             return ((ISuperDynamicObject)o).DynamicType.Version == version;
         }
 
+        /// <summary>
+        /// Helper method for DynamicSite rules that check the version of their dynamic object
+        /// TODO - Remove this method for more direct field accesses
+        /// </summary>
+        /// <param name="o"></param>
+        /// <param name="version"></param>
+        /// <returns></returns>
+        public static bool CheckAlternateTypeVersion(object o, int version) {
+            return ((ISuperDynamicObject)o).DynamicType.AlternateVersion == version;
+        }
+
         // formalNormalArgumentCount - does not include FuncDefFlags.ArgList and FuncDefFlags.KwDict
         // defaultArgumentCount - How many arguments in the method declaration have a default value?
         // providedArgumentCount - How many arguments are passed in at the call site?
         // hasArgList - Is the method declaration of the form "foo(*argList)"?
         // keywordArgumentsProvided - Does the call site specify keyword arguments?
-        public static Exception TypeErrorForIncorrectArgumentCount(
+        public static ArgumentTypeException TypeErrorForIncorrectArgumentCount(
             string methodName,
             int formalNormalArgumentCount,
             int defaultArgumentCount,
@@ -121,12 +132,15 @@ namespace Microsoft.Scripting {
                                 providedArgumentCount)); // 5
         }
 
-        public static Exception TypeErrorForIncorrectArgumentCount(string name, int formalNormalArgumentCount, int defaultArgumentCount, int providedArgumentCount) {
+        public static ArgumentTypeException TypeErrorForIncorrectArgumentCount(string name, int formalNormalArgumentCount, int defaultArgumentCount, int providedArgumentCount) {
             return TypeErrorForIncorrectArgumentCount(name, formalNormalArgumentCount, defaultArgumentCount, providedArgumentCount, false, false);
         }
 
+        public static ArgumentTypeException TypeErrorForIncorrectArgumentCount(string name, int expected, int received) {
+            return TypeErrorForIncorrectArgumentCount(name, expected, 0, received);
+        }
 
-        public static Exception SimpleTypeError(string message) {
+        public static ArgumentTypeException SimpleTypeError(string message) {
             return new ArgumentTypeException(message);
         }
 
@@ -196,22 +210,6 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Called from generated code, a helpert to get index of the target.
-        /// </summary>
-        public static object GetIndex(CodeContext context, object target, object index) {
-            return context.LanguageContext.GetIndex(context, target, index);
-        }
-
-        /// <summary>
-        /// Called from generated code, a helper to set value on the target at a given index
-        /// The unusual order of parameters makes it easier to do a codegen for this call.
-        /// </summary>
-        public static object SetIndex(object value, object target, object index, CodeContext context) {
-            context.LanguageContext.SetIndex(context, target, index, value);
-            return value;
-        }
-
-        /// <summary>
         /// Called from the generated code. a helper to get a member from the target with a given name.
         /// </summary>
         public static object GetMember(CodeContext context, object target, SymbolId name) {
@@ -241,10 +239,6 @@ namespace Microsoft.Scripting {
             return context.LanguageContext.CallWithThis(context, function, instance, args);
         }
 
-        public static bool Equal(CodeContext context, object x, object y) {
-            return context.LanguageContext.EqualReturnBool(context, x, y);
-        }
-
         public static void InitializeModuleField(CodeContext context, SymbolId name, ref ModuleGlobalWrapper wrapper) {
             ModuleGlobalCache mgc = context.LanguageContext.GetModuleCache(name);
 
@@ -268,7 +262,20 @@ namespace Microsoft.Scripting {
         public static void UpdateStackTrace(CodeContext context, MethodBase method, string funcName, string filename, int line) {
             if (_stackFrames == null) _stackFrames = new List<DynamicStackFrame>();
 
+            if (line == SourceLocation.None.Line) {
+                line = 0;
+            }
             _stackFrames.Add(new DynamicStackFrame(context, method, funcName, filename, line));
+        }
+
+        public static List<DynamicStackFrame> AssociateDynamicStackFrames(Exception clrException) {
+            if (_stackFrames != null) {
+                Utils.GetDataDictionary(clrException)[typeof(DynamicStackFrame)] = _stackFrames;
+            }
+            return _stackFrames;
+        }
+        public static void ClearDynamicStackFrames() {
+            _stackFrames = null;
         }
 
         public static object PushExceptionHandler(CodeContext context, Exception clrException) {
@@ -276,9 +283,7 @@ namespace Microsoft.Scripting {
             if (LanguageContext._currentExceptions == null) LanguageContext._currentExceptions = new List<Exception>();
             LanguageContext._currentExceptions.Add(clrException);
 
-            if (_stackFrames != null) {
-                Utils.GetDataDictionary(clrException)[typeof(DynamicStackFrame)] = _stackFrames;
-            }
+            AssociateDynamicStackFrames(clrException);
 
             return context.LanguageContext.PushExceptionHandler(context, clrException);
         }
@@ -352,10 +357,6 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        public static bool TryGetSwitchIndex(CodeContext context, object exprVal, out int index) {
-            return context.LanguageContext.TryGetSwitchIndex(context, exprVal, out index);
-        }
-
         /// <summary>
         /// Helper method to create an instance.  Work around for Silverlight where Activator.CreateInstance
         /// is SecuritySafeCritical.
@@ -388,6 +389,10 @@ namespace Microsoft.Scripting {
             for (int i = 1; i < array.Length; i++) {
                 array[i] = Uninitialized.Instance;
             }
+        }
+
+        public static ReflectedEvent.BoundEvent MakeBoundEvent(ReflectedEvent eventObj, object instance, Type type) {
+            return new ReflectedEvent.BoundEvent(eventObj, instance, DynamicHelpers.GetDynamicTypeFromType(type));
         }
     }
 }

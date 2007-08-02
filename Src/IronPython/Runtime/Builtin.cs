@@ -166,7 +166,7 @@ namespace IronPython.Runtime {
 
         [PythonName("apply")]
         public static object Apply(CodeContext context, object func, object args, object kws) {
-            return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, new string[0], args, kws);
+            return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, Utils.Array.EmptyStrings, args, kws);
         }
 
         public static object basestring = DynamicHelpers.GetDynamicTypeFromType(typeof(string));
@@ -345,7 +345,7 @@ namespace IronPython.Runtime {
 
             Microsoft.Scripting.Scope scope = GetExecEvalScope(context, globals, locals);
 
-            return code.Call(context, scope);
+            return code.Call(context, scope, false); // Do not try FastEval for compiled code
 
         }
 
@@ -389,7 +389,7 @@ namespace IronPython.Runtime {
             // TODO: remove TrimStart
             SourceUnit expr_code = new ExpressionSourceCode(context.LanguageContext.Engine, expression.TrimStart(' ', '\t'));
 
-            return PythonModuleOps.CompileFlowTrueDivision(expr_code, context.LanguageContext).Run(scope, context.ModuleContext);
+            return PythonModuleOps.CompileFlowTrueDivision(expr_code, context.LanguageContext).Run(scope, context.ModuleContext, true);
         }
 
 
@@ -431,7 +431,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.IOError(x);
             }
 
-            code.Run(execScope, context.ModuleContext);
+            code.Run(execScope, context.ModuleContext, false); // Do not attempt FastEval
         }
 
         public static object file = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFile));

@@ -356,6 +356,15 @@ namespace IronPython.Runtime.Types {
 
     [
     ComImport,
+    InterfaceType(ComInterfaceType.InterfaceIsIDispatch),
+    Guid("00020400-0000-0000-C000-000000000046")
+    ]
+    interface IDispatchForReflection
+    {
+    }
+
+    [
+    ComImport,
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown),
     Guid("00020400-0000-0000-C000-000000000046")
     ]
@@ -661,6 +670,9 @@ namespace IronPython.Runtime.Types {
     ///    VB6 deal with ref arguments and IDispatch?
     /// </summary>
     class IDispatchObject : GenericComObject {
+
+        private Dictionary<SymbolId, ComTypes.FUNCDESC> _funcs;
+
         internal IDispatchObject(object rcw)
             : base(rcw) {
             Debug.Assert(rcw is IDispatch);
@@ -696,11 +708,6 @@ namespace IronPython.Runtime.Types {
             return hresult;
         }
 
-        #region Values for wFlags argument of IDispatch::Invoke
-        const int DISPATCH_PROPERTYGET = 1;
-        const int DISPATCH_PROPERTYPUT = 2;
-        #endregion
-
         static int Invoke(IDispatch dispatch, int memberDispId, out object result) {
             Guid emtpyRiid = Guid.Empty;
             ComTypes.DISPPARAMS dispParams = new ComTypes.DISPPARAMS();
@@ -710,7 +717,7 @@ namespace IronPython.Runtime.Types {
                 memberDispId,
                 ref emtpyRiid,
                 0,
-                DISPATCH_PROPERTYGET,
+                (ushort)ComTypes.INVOKEKIND.INVOKE_PROPERTYGET,
                 out dispParams,
                 out result,
                 out excepInfo,
@@ -732,9 +739,19 @@ namespace IronPython.Runtime.Types {
                 throw PythonOps.AttributeError("Could not get DispId for {0} (error:0x{1:X})", name, hresult);
             }
 
-            // There is a member with the given name. Since we cannot distinguish between a property and a method,
-            // we assume it to be a method and create a bound method object which can be invoked.
-            value = new DispMethod(DispatchObject, SymbolTable.IdToString(name));
+            // There is a member with the given name.
+            // It might be a property of a method.
+            // 1. If this is a method we will return a callable object this defering the execution
+            //    (notice that execution of parameterized properties is also defered)
+            // 2. If this is a property - we will return the result of 
+            //    invoking the property
+            bool isProperty = IsProperty(name);
+            DispMethod dispMethod = new DispMethod(DispatchObject, SymbolTable.IdToString(name), isProperty);
+            if (isProperty == true && HasParams(name) == false)
+                value = dispMethod.Call(context, new object[0]);
+            else
+                value = dispMethod;
+
             return true;
         }
 
@@ -748,11 +765,18 @@ namespace IronPython.Runtime.Types {
             try {
                 // We use Type.InvokeMember instead of IDispatch.Invoke so that we do not
                 // have to worry about marshalling the arguments. Type.InvokeMember will use
-                // IDispatch.Invoke under the hood.                
-                typeof(IDispatch).InvokeMember(
+                // IDispatch.Invoke under the hood.
+                // This technique also only works on types declared with 
+                // InterfaceType(ComInterfaceType.InterfaceIsIDispatch) attribute. This is
+                // why IDispatchForReflection type is used instead of IDispatch.
+
+                BindingFlags bindingFlags = 0;
+                bindingFlags |= System.Reflection.BindingFlags.SetProperty;
+                bindingFlags |= System.Reflection.BindingFlags.Instance;
+
+                typeof(IDispatchForReflection).InvokeMember(
                     SymbolTable.IdToString(name),
-                    System.Reflection.BindingFlags.SetProperty |
-                    System.Reflection.BindingFlags.SetField,
+                    bindingFlags,
                     Type.DefaultBinder,
                     Obj,
                     new object[1] { value }
@@ -766,7 +790,9 @@ namespace IronPython.Runtime.Types {
         }
 
         override internal IList<SymbolId> GetAttrNames(CodeContext context) {
-            return new List<SymbolId>();
+
+            EnsureScanDefinedFunctions();
+            return new List<SymbolId>(_funcs.Keys);
         }
 
         override internal IDictionary<object, object> GetAttrDict(CodeContext context) {
@@ -775,16 +801,126 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
+        internal static void GetTypeAttrForTypeInfo(ComTypes.ITypeInfo typeInfo, out ComTypes.TYPEATTR typeAttr) {
+            IntPtr pAttrs = IntPtr.Zero;
+            typeInfo.GetTypeAttr(out pAttrs);
+
+            // GetTypeAttr should never return null, this is just to be safe
+            if (pAttrs == IntPtr.Zero) {
+                throw new COMException("ResolveComReference.CannotRetrieveTypeInformation");
+            }
+
+            try {
+                typeAttr = (ComTypes.TYPEATTR)Marshal.PtrToStructure(pAttrs, typeof(ComTypes.TYPEATTR));
+            } finally {
+                typeInfo.ReleaseTypeAttr(pAttrs);
+            }
+        }
+
+        internal static ComTypes.ITypeInfo GetITypeInfoFromIDispatch(IDispatch dispatch) {
+            IntPtr pTypeInfo = IntPtr.Zero;
+            dispatch.GetTypeInfo(0, 0, out pTypeInfo);
+
+            ComTypes.ITypeInfo typeInfo = null;
+            try {
+                if (pTypeInfo != IntPtr.Zero)
+                    typeInfo = Marshal.GetObjectForIUnknown(pTypeInfo) as ComTypes.ITypeInfo;
+            } finally {
+                if (pTypeInfo != IntPtr.Zero)
+                    Marshal.Release(pTypeInfo);
+                pTypeInfo = IntPtr.Zero;
+            }
+
+            return typeInfo;
+        }
+
+        internal static void GetFuncDescForDescIndex(ITypeInfo typeInfo, int funcIndex, out ComTypes.FUNCDESC funcDesc, out IntPtr funcDescHandle) {
+            IntPtr pFuncDesc = IntPtr.Zero;
+            typeInfo.GetFuncDesc(funcIndex, out pFuncDesc);
+
+            // GetFuncDesc should never return null, this is just to be safe
+            if (pFuncDesc == IntPtr.Zero) {
+                throw new COMException("ResolveComReference.CannotRetrieveTypeInformation");
+            }
+
+            funcDesc = (ComTypes.FUNCDESC)Marshal.PtrToStructure(pFuncDesc, typeof(ComTypes.FUNCDESC));
+            funcDescHandle = pFuncDesc;
+        }
+
+        private bool IsProperty(SymbolId name) {
+            EnsureScanDefinedFunctions();
+
+            return (_funcs[name].invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYGET) != 0;
+        }
+
+        private bool HasParams(SymbolId name) {
+            EnsureScanDefinedFunctions();
+
+            return _funcs[name].cParams != 0;
+        }
+
+        private void EnsureScanDefinedFunctions() {
+            if (_funcs != null)
+                return;
+
+            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(this.DispatchObject);
+            ComTypes.TYPEATTR typeAttr;
+
+            GetTypeAttrForTypeInfo(typeInfo, out typeAttr);
+
+            Dictionary<SymbolId, ComTypes.FUNCDESC> funcs;
+            funcs = new Dictionary<SymbolId, ComTypes.FUNCDESC>(typeAttr.cFuncs);
+
+            for (int definedFuncIndex = 0; definedFuncIndex < typeAttr.cFuncs; definedFuncIndex++) {
+                IntPtr funcDescHandleToRelease = IntPtr.Zero;
+
+                try {
+                    ComTypes.FUNCDESC funcDesc;
+                    GetFuncDescForDescIndex(typeInfo, definedFuncIndex, out funcDesc, out funcDescHandleToRelease);
+
+                    // we are not interested in hidden or restricted functions for now.
+                    if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FHIDDEN) != 0)
+                        continue;
+                    if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FRESTRICTED) != 0)
+                        continue;
+
+                    // we do not need to store any info for property_put's as well - we will wait
+                    // for corresponding property_get to come along.
+                    if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0)
+                        continue;
+
+                    string strName;
+                    string strDocString;
+                    int dwHelpContext;
+                    string strHelpFile;
+
+                    typeInfo.GetDocumentation(funcDesc.memid, out strName, out strDocString, out dwHelpContext, out strHelpFile);
+
+                    SymbolId name = SymbolTable.StringToId(strName);
+                    funcs.Add(name, funcDesc);
+                } finally {
+                    if (funcDescHandleToRelease != IntPtr.Zero) {
+                        typeInfo.ReleaseFuncDesc(funcDescHandleToRelease);
+                    }
+                }
+
+                _funcs = funcs;
+            }
+        }
+
+
         /// <summary>
         /// This represents a bound dispmethod on a IDispatch object.
         /// </summary>
         class DispMethod : ICallableWithCodeContext {
             private readonly IDispatch _dispatch;
             private readonly string _methodName;
+            private readonly bool _isProperty;
 
-            internal DispMethod(IDispatch dispatch, string methodName) {
+            internal DispMethod(IDispatch dispatch, string methodName, bool isProperty) {
                 _dispatch = dispatch;
                 _methodName = methodName;
+                _isProperty = isProperty;
             }
 
             public override string ToString() {
@@ -792,6 +928,9 @@ namespace IronPython.Runtime.Types {
             }
 
             static object[] GetArgsForCall(object[] originalArgs, out ParameterModifier parameterModifiers) {
+                if (originalArgs.Length == 0)
+                    return originalArgs;
+
                 object[] argsForCall = new object[originalArgs.Length];
                 parameterModifiers = new ParameterModifier(originalArgs.Length);
                 for (int i = 0; i < originalArgs.Length; i++) {
@@ -819,12 +958,14 @@ namespace IronPython.Runtime.Types {
                     ParameterModifier parameterModifiers;
                     object[] argsForCall = GetArgsForCall(args, out parameterModifiers);
 
+                    BindingFlags bindingFlags = _isProperty ? BindingFlags.GetProperty : BindingFlags.InvokeMethod;
+
                     // We use Type.InvokeMember instead of IDispatch.Invoke so that we do not
                     // have to worry about marshalling the arguments. Type.InvokeMember will use
                     // IDispatch.Invoke under the hood.
                     object retVal = _dispatch.GetType().InvokeMember(
                         _methodName,
-                        System.Reflection.BindingFlags.InvokeMethod,
+                        bindingFlags,
                         Type.DefaultBinder,
                         _dispatch,
                         argsForCall,

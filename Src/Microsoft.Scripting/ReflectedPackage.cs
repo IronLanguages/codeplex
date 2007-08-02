@@ -199,19 +199,21 @@ namespace Microsoft.Scripting {
 
             object ret;
             if (_dict.TryGetValue(SymbolTable.StringToId(childName), out ret)) {
-                // if it's not a module, we'll wipe it out below, eg "def System(): pass" then 
+                // If we have a module, then we add the assembly to the InnerModule
+                // If it's not a module, we'll wipe it out below, eg "def System(): pass" then 
                 // "import System" will result in the namespace being visible.
-                ScriptModule pm = ret as ScriptModule;
-                ReflectedPackage res;
-                do {
-                    res = pm.InnerModule as ReflectedPackage;
-                    if (res != null) {
-                        if (!res._packageAssemblies.Contains(assem)) res._packageAssemblies.Add(assem);
-                        return res;
+                ScriptModule scriptModule = ret as ScriptModule;
+                while (scriptModule != null) {
+                    ReflectedPackage existingChildPackage = scriptModule.InnerModule as ReflectedPackage;
+                    if (existingChildPackage != null) {
+                        if (!existingChildPackage._packageAssemblies.Contains(assem)) {
+                            existingChildPackage._packageAssemblies.Add(assem);
+                        }
+                        return existingChildPackage;
                     }
 
-                    pm = pm.InnerModule as ScriptModule;
-                } while (pm != null);
+                    scriptModule = scriptModule.InnerModule as ScriptModule;
+                }
             }
 
             return MakeChildPackage(childName, assem);
@@ -266,12 +268,20 @@ namespace Microsoft.Scripting {
 
             string normalizedTypeName = TypeCollision.GetNormalizedTypeName(typeName);
             if (_dict.ContainsObjectKey(normalizedTypeName)) {
-                // A similarly named type already exists. We need to unify the types
+                // A similarly named type, namespace, or module already exists.
                 DynamicType newDynamicType = LoadType(assem, GetFullChildName(typeName));
                 SymbolId normalizedTypeNameId = SymbolTable.StringToId(normalizedTypeName);
 
-                IConstructorWithCodeContext existingTypeEntity = (IConstructorWithCodeContext)_dict[normalizedTypeNameId];
-                _dict[normalizedTypeNameId] = TypeCollision.UpdateTypeEntity(existingTypeEntity, newDynamicType);
+                object existingValue = _dict[normalizedTypeNameId];
+                IConstructorWithCodeContext existingTypeEntity = existingValue as IConstructorWithCodeContext;
+                if (existingTypeEntity == null) {
+                    // Replace the existing namespace or module with the new type
+                    Debug.Assert(existingValue is ScriptModule);
+                    _dict[normalizedTypeNameId] = newDynamicType;
+                } else {
+                    // Unify the new type with the existing type
+                    _dict[normalizedTypeNameId] = TypeCollision.UpdateTypeEntity(existingTypeEntity, newDynamicType);
+                }
                 return;
             }
         }

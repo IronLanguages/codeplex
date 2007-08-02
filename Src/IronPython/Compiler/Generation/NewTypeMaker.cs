@@ -202,7 +202,7 @@ namespace IronPython.Compiler.Generation {
                     throw PythonOps.TypeError(typeName + ": unsupported base type for new-style class: " + baseCLIType);
                 }
 
-                IList<Type> baseInterfaces = new Type[0];
+                IList<Type> baseInterfaces = Utils.Reflection.EmptyTypes;
                 Type curTypeToExtend = curBasePythonType.ExtensionType;
                 if (curBasePythonType.ExtensionType.IsInterface) {
                     baseInterfaces = new Type[] { curTypeToExtend };
@@ -608,7 +608,7 @@ namespace IronPython.Compiler.Generation {
             }
 
             cg.EmitCall(typeof(CustomTypeDescHelpers), m.Name, paramTypes);
-            cg.EmitConvertToObject(m.ReturnType);
+            cg.EmitBoxing(m.ReturnType);
             cg.EmitReturn();
             cg.Finish();
         }
@@ -842,8 +842,8 @@ namespace IronPython.Compiler.Generation {
                 CodeGen getter = _tg.DefineMethod(MethodAttributes.Public,
                         "get_$SlotValues",
                         tbp[0],
-                        new Type[0],
-                        new string[0]);
+                        Utils.Reflection.EmptyTypes,
+                        Utils.Array.EmptyStrings);
 
                 _slotsField.EmitGet(getter);
                 getter.EmitReturn();
@@ -1029,7 +1029,7 @@ namespace IronPython.Compiler.Generation {
             callTarget.EmitGet(cg);  // property
             cg.EmitThis();           // instance
             cg.EmitArgGet(0);
-            cg.EmitConvertToObject(mi.GetParameters()[0].ParameterType);    // newValue
+            cg.EmitBoxing(mi.GetParameters()[0].ParameterType);    // newValue
             EmitSymbolId(cg, methField.name);    // name
             cg.EmitCall(typeof(UserTypeOps), "SetPropertyHelper");
 
@@ -1047,7 +1047,7 @@ namespace IronPython.Compiler.Generation {
             cg.EmitThis();
             _typeField.EmitGet(cg);
             cg.EmitArgGet(0);
-            cg.EmitConvertToObject(mi.GetParameters()[0].ParameterType);
+            cg.EmitBoxing(mi.GetParameters()[0].ParameterType);
             EmitSymbolId(cg, methField.name);
             cg.EmitCall(typeof(UserTypeOps), "AddRemoveEventHelper");
 

@@ -54,13 +54,18 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            return Ast.While(
-                Span,
-                _header,
-                ag.TransformAndConvert(_test, typeof(bool)),
-                ag.Transform(_body),
-                ag.Transform(_else)
-            );
+            ag.EnterLoop();
+            try {
+                return Ast.While(
+                    Span,
+                    _header,
+                    ag.TransformAndConvert(_test, typeof(bool)),
+                    ag.Transform(_body),
+                    ag.Transform(_else)
+                );
+            } finally {
+                ag.ExitLoop();
+            }
         }
 
         public override void Walk(PythonWalker walker) {

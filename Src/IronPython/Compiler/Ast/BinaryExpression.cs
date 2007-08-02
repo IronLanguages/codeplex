@@ -114,7 +114,7 @@ namespace IronPython.Compiler.Ast {
             ag.FreeTemp(temp);
 
             // return (left (op) (temp = rleft)) and (rright)
-            return Ast.And(Span, comparison, rright);
+            return Ast.CoalesceTrue(Span, ag.Block, comparison, rright, AstGenerator.GetHelperMethod("IsTrue"));
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {

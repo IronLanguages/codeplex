@@ -26,10 +26,6 @@ namespace Microsoft.Scripting.Actions {
             : base(args) {
         }
 
-        public static new CreateInstanceAction Make(string s) {
-            return new CreateInstanceAction(ArgumentInfo.ParseAll(s));
-        }
-
         public static new CreateInstanceAction Make(params ArgumentInfo[] args) {
             if (args == null) return Simple;
 
@@ -53,7 +49,20 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public bool Equals(CreateInstanceAction other) {
-            return other != null && ParameterString == other.ParameterString;
+            if (other != null) {
+                if (other.ArgumentCount != ArgumentCount) {
+                    return false;
+                }
+
+                for (int i = 0; i < other.ArgumentInfos.Length; i++) {
+                    if (!other.ArgumentInfos[i].Equals(ArgumentInfos[i])) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            return false;
         }
 
         public override int GetHashCode() {

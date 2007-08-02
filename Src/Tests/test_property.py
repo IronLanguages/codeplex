@@ -98,7 +98,7 @@ def test_reflected_extension_property_ops():
                 ]
     
     for stuff in t_list:
-        AreEqual(stuff.__doc__(), "Get: str Name(builtin_function_or_method self)\r\n")
+        AreEqual(stuff.__doc__(), "Get: str Name(builtin_function_or_method self)" + newline)
                 
         
 

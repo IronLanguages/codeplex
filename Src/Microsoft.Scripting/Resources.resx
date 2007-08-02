@@ -252,6 +252,9 @@
   <data name="TooManyVersions" xml:space="preserve">
     <value>too many versions</value>
   </data>
+  <data name="TypeMustBeVisible" xml:space="preserve">
+    <value>"type must be visible"</value>
+  </data>
   <data name="UnhandledException" xml:space="preserve">
     <value>Unhandled exception</value>
   </data>

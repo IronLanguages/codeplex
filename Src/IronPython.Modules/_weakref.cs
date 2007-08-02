@@ -727,6 +727,7 @@ namespace IronPython.Modules {
         }
     }
 
+    [PythonType("slot-wrapper")]
     class SlotWrapper : DynamicTypeSlot, ICodeFormattable {
         SymbolId name;
         DynamicType type;

@@ -31,8 +31,13 @@ using TypeCache = IronPython.Runtime.Types.TypeCache;
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Threading;
+using IronPython.Runtime.Operations;
+    using IronPython.Runtime.Types;
 
     public class PythonBinder : ActionBinder {
+        private static Dictionary<string, string[]> _memberMapping;
+
         public PythonBinder(CodeContext context)
             : base(context) {
         }
@@ -224,5 +229,172 @@ namespace IronPython.Runtime.Calls {
         public override object GetByRefArray(object[] args) {
             return Tuple.MakeTuple(args);
         }
+
+
+        #region .NET member binding
+
+        public override MemberInfo[] GetMember(Type type, string name) {
+            // Python type customization:
+            switch (name) {
+                case "__str__":
+                    MethodInfo tostr = type.GetMethod("ToString", Utils.Reflection.EmptyTypes);
+                    if (tostr != null && tostr.DeclaringType != typeof(object)) {
+                        return new MemberInfo[] { typeof(InstanceOps).GetMethod("ToStringMethod") };
+                    }
+                    break;
+                case "__repr__":
+                    if (typeof(ICodeFormattable).IsAssignableFrom(type) && !type.IsInterface) {
+                        return new MemberInfo[] { typeof(InstanceOps).GetMethod("ReprHelper") };
+                    }
+                    return new MemberInfo[] { typeof(InstanceOps).GetMethod("FancyRepr") };
+                case "__init__":
+                    // non-default init would have been handled by the Python binder.
+                    return new MemberInfo[] { typeof(InstanceOps).GetMethod("DefaultInit"), typeof(InstanceOps).GetMethod("DefaultInitKW") };
+                case "next":
+                    if (typeof(IEnumerator).IsAssignableFrom(type)) {
+                        return new MemberInfo[] { typeof(InstanceOps).GetMethod("NextMethod") };
+                    }
+                    break;
+                case "__get__":
+                    if (typeof(DynamicTypeSlot).IsAssignableFrom(type)) {
+                        return new MemberInfo[] { typeof(InstanceOps).GetMethod("GetMethod") };
+                    }
+                    break;
+            }
+
+
+            // normal binding
+            MemberInfo[] res = base.GetMember(type, name);
+            if (res.Length > 0) {
+                return res;
+            }
+            
+            if (ScriptDomainManager.Options.PrivateBinding) {
+                // in private binding mode Python exposes private members under a mangled name.
+                string header = "_" + type.Name + "__";
+                if (name.StartsWith(header)) {
+                    string memberName = name.Substring(header.Length);
+                    const BindingFlags bf = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+                    
+                    res = type.GetMember(memberName, bf);
+                    if (res.Length > 0) {
+                        return FilterFieldAndEvent(res);
+                    }
+                    
+                    res = type.GetMember(memberName, BindingFlags.FlattenHierarchy | bf);
+                    if (res.Length > 0) {
+                        return FilterFieldAndEvent(res);
+                    }
+                }
+            }
+
+            // Python exposes protected members as public            
+            res = Utils.Array.FindAll(type.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly);
+            if (res.Length > 0) {
+                return res;
+            }
+
+            // try alternate mapping to support backwards compatibility of calling extension methods.
+            EnsureMemberMapping();
+            string[] newNames;
+            if (_memberMapping.TryGetValue(name, out newNames)) {
+                List<MemberInfo> oldRes = new List<MemberInfo>();
+                foreach (string newName in newNames) {
+                    oldRes.AddRange(base.GetMember(type, newName));
+                }
+                return oldRes.ToArray();
+            }
+
+            return res;
+        }
+
+        public override Expression MakeMissingMemberError(Type type, string name) {
+            return Ast.New(
+                typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type)), name))
+            );
+        }
+
+        private bool ProtectedOnly(MemberInfo input) {
+            switch (input.MemberType) {
+                case MemberTypes.Method:
+                    return ((MethodInfo)input).IsFamily || ((MethodInfo)input).IsFamilyOrAssembly;
+                case MemberTypes.Property:
+                    MethodInfo mi = ((PropertyInfo)input).GetGetMethod(true);
+                    if(mi != null) return ProtectedOnly(mi);
+                    return false;
+                case MemberTypes.Field:
+                    return ((FieldInfo)input).IsFamily || ((FieldInfo)input).IsFamilyOrAssembly;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// When private binding is enabled we can have a collision between the private Event
+        /// and private field backing the event.  We filter this out and favor the event.
+        /// 
+        /// This matches the v1.0 behavior of private binding.
+        /// </summary>
+        private MemberInfo[] FilterFieldAndEvent(MemberInfo []members) {
+            MemberTypes mt = 0;
+            foreach (MemberInfo mi in members) {
+                mt |= mi.MemberType;
+            }
+
+            if (mt == (MemberTypes.Event | MemberTypes.Field)) {
+                List<MemberInfo> res = new List<MemberInfo>();
+                foreach (MemberInfo mi in members) {
+                    if (mi.MemberType == MemberTypes.Event) {
+                        res.Add(mi);
+                    }
+                }
+                return res.ToArray();
+            }
+            return members;
+        }
+
+        private void EnsureMemberMapping() {
+            if (_memberMapping != null) return;
+
+            Dictionary<string, string[]> res = new Dictionary<string, string[]>();
+
+            /* common object ops */
+            AddMapping(res, "GetAttribute", "__getattribute__");
+            AddMapping(res, "DelAttrMethod", "__delattr__");
+            AddMapping(res, "SetAttrMethod", "__setattr__");
+            AddMapping(res, "PythonToString", "__str__");
+            AddMapping(res, "Hash", "__hash__");
+            AddMapping(res, "Reduce", "__reduce__", "__reduce_ex__");
+            AddMapping(res, "CodeRepresentation", "__repr__");
+
+            AddMapping(res, "Contains", "__contains__");
+            AddMapping(res, "CompareTo", "__cmp__");
+            AddMapping(res, "DelIndex", "__delitem__");
+            AddMapping(res, "GetEnumerator", "__iter__");
+            AddMapping(res, "Length", "__len__");
+            AddMapping(res, "Clear", "clear");
+            AddMapping(res, "Clone", "copy");
+            AddMapping(res, "GetIndex", "get");
+            AddMapping(res, "HasKey", "has_key");
+            AddMapping(res, "Items", "items");
+            AddMapping(res, "IterItems", "iteritems");
+            AddMapping(res, "IterKeys", "iterkeys");
+            AddMapping(res, "IterValues", "itervalues");
+            AddMapping(res, "Keys", "keys");
+            AddMapping(res, "Pop", "pop");
+            AddMapping(res, "PopItem", "popitem");
+            AddMapping(res, "SetDefault", "setdefault");
+            AddMapping(res, "Values", "values");
+            AddMapping(res, "Update", "update");
+
+            Interlocked.Exchange(ref _memberMapping, res);
+        }
+
+        private void AddMapping(Dictionary<string, string[]> res, string name, params string[] names) {
+            res[name] = names;
+        }
+
+        #endregion
     }
 }

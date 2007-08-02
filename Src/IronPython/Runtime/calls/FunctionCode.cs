@@ -44,12 +44,12 @@ namespace IronPython.Runtime.Calls {
         private Delegate _target;
         //private Statement _body;
 
-        private object varnames;
+        private object _varnames;
         private ScriptCode _code;
-        private PythonFunction func;
-        private string filename;
-        private int lineNo;
-        private FunctionAttributes flags;      // future division, generator
+        private PythonFunction _func;
+        private string _filename;
+        private int _lineNo;
+        private FunctionAttributes _flags;      // future division, generator
         #endregion
 
         internal FunctionCode(Delegate target) {
@@ -60,15 +60,15 @@ namespace IronPython.Runtime.Calls {
             : this(code) {
 
             if ((compilerFlags & CompileFlags.CO_FUTURE_DIVISION) != 0)
-                flags |= FunctionAttributes.FutureDivision;
+                _flags |= FunctionAttributes.FutureDivision;
         }
 
         internal FunctionCode(ScriptCode code) {
-            this._code = code;
+            _code = code;
         }
 
         internal FunctionCode(PythonFunction f) {
-            this.func = f;
+            _func = f;
         }
 
         #region Public constructors
@@ -101,10 +101,10 @@ namespace IronPython.Runtime.Calls {
         public object VarNames {
             [PythonName("co_varnames")]
             get {
-                if (varnames == null) {
-                    varnames = GetArgNames();
+                if (_varnames == null) {
+                    _varnames = GetArgNames();
                 }
-                return varnames;
+                return _varnames;
             }
         }
 
@@ -112,7 +112,7 @@ namespace IronPython.Runtime.Calls {
             [PythonName("co_argcount")]
             get {
                 if (_code != null) return 0;
-                return func.ArgNames.Length;
+                return _func.ArgNames.Length;
             }
         }
 
@@ -140,28 +140,21 @@ namespace IronPython.Runtime.Calls {
         public object Filename {
             [PythonName("co_filename")]
             get {
-                return filename;
+                return _filename;
             }
         }
 
         public object FirstLineNumber {
             [PythonName("co_firstlineno")]
             get {
-                return lineNo;
+                return _lineNo;
             }
         }
 
         public object Flags {
             [PythonName("co_flags")]
             get {
-                FunctionAttributes res = flags;
-                FunctionN funcN = func as FunctionN;
-                FunctionX funcX = func as FunctionX;
-                if (funcX != null) {
-                    res |= funcX.Flags;
-                } else if (funcN != null) res |= FunctionAttributes.ArgumentList;
-                
-                return (int)res;
+                return (int)_flags;
             }
         }
 
@@ -182,7 +175,7 @@ namespace IronPython.Runtime.Calls {
         public object Name {
             [PythonName("co_name")]
             get {
-                if (func != null) return func.Name;
+                if (_func != null) return _func.Name;
                 if (_code != null) return _code.GetType().Name;
 
                 throw PythonOps.NotImplementedError("");
@@ -213,28 +206,26 @@ namespace IronPython.Runtime.Calls {
 
         #region Public setters called from PythonFunction factory method
         internal void SetFilename(string sourceFile) {
-            filename = sourceFile;
+            _filename = sourceFile;
         }
 
         internal void SetLineNumber(int line) {
-            lineNo = line;
+            _lineNo = line;
         }
 
-        // This is only used to set the value of FutureDivision and Generator flags
-        internal void SetFlags(CodeContext context, int value) {
-            this.flags = (FunctionAttributes)value & (FunctionAttributes.FutureDivision | FunctionAttributes.Generator);
-            if (((PythonContext)context.LanguageContext).TrueDivision) this.flags |= FunctionAttributes.FutureDivision;
+        internal void SetFlags(FunctionAttributes flags) {
+            _flags = flags;
         }
 
         #endregion
 
         #region Internal API Surface
 
-        public object Call(CodeContext context, Microsoft.Scripting.Scope scope) {
+        public object Call(CodeContext context, Microsoft.Scripting.Scope scope, bool tryEvaluate) {
             if (_code != null) {
-                return _code.Run(scope, context.ModuleContext);
-            } else if (func != null) {
-                return func.Call(context);
+                return _code.Run(scope, context.ModuleContext, tryEvaluate);
+            } else if (_func != null) {
+                return _func.Call(context);
             }
 
             throw PythonOps.TypeError("bad code");
@@ -250,13 +241,13 @@ namespace IronPython.Runtime.Calls {
             List<Tuple> nested = new List<Tuple>();
 
 
-            for (int i = 0; i < func.ArgNames.Length; i++) {
-                if (func.ArgNames[i].IndexOf('#') != -1 && func.ArgNames[i].IndexOf('!') != -1) {
+            for (int i = 0; i < _func.ArgNames.Length; i++) {
+                if (_func.ArgNames[i].IndexOf('#') != -1 && _func.ArgNames[i].IndexOf('!') != -1) {
                     names.Add("." + (i * 2));
                     // TODO: need to get local variable names here!!!
                     //nested.Add(FunctionDefinition.DecodeTupleParamName(func.ArgNames[i]));
                 } else {
-                    names.Add(func.ArgNames[i]);
+                    names.Add(_func.ArgNames[i]);
                 }
             }
 
@@ -283,8 +274,8 @@ namespace IronPython.Runtime.Calls {
 
             if (_code != null) {
                 return _code == other._code;
-            } else if (func != null) {
-                return func == other.func;
+            } else if (_func != null) {
+                return _func == other._func;
             }
 
             throw PythonOps.TypeError("bad code");
@@ -293,8 +284,8 @@ namespace IronPython.Runtime.Calls {
         public override int GetHashCode() {
             if (_code != null) {
                 return _code.GetHashCode();
-            } else if (func != null) {
-                return func.GetHashCode();
+            } else if (_func != null) {
+                return _func.GetHashCode();
             }
 
             throw PythonOps.TypeError("bad code");

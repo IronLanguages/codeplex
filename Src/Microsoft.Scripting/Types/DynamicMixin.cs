@@ -50,11 +50,12 @@ namespace Microsoft.Scripting {
         private CreateTypeSlot _slotCreator;                // used for creating default value slot (used for Python user types so we can implement user-defined descriptor protocol).
         private List<object> _contextTags;                  // tag info specific to the context
         private int _version = GetNextVersion();            // version of the type
+        private int _altVersion;
         private static DynamicType _nullType = DynamicHelpers.GetDynamicTypeFromType(typeof(None));
 
 
         public const int DynamicVersion = Int32.MinValue;   // all lookups should be dynamic
-        private static int MasterVersion = 1;
+        private static int MasterVersion = 1, MasterAlternateVersion;
 
         /// <summary>
         /// This will return a unique integer for every version of every type in the system.
@@ -70,9 +71,23 @@ namespace Microsoft.Scripting {
             return Interlocked.Increment(ref MasterVersion);
         }
 
+        private static int GetNextAlternateVersion() {
+            if (MasterAlternateVersion  < 0) {
+                throw new InvalidOperationException(Resources.TooManyVersions);
+            }
+            return Interlocked.Increment(ref MasterAlternateVersion);
+        }
+
+        public void Mutate() {
+            UpdateVersion();
+        }
+
         protected virtual void UpdateVersion() {
             if (_version != DynamicVersion) {
                 _version = GetNextVersion();
+                _altVersion = 0;
+            } else {
+                _altVersion = GetNextAlternateVersion();
             }
         }
                 
@@ -888,6 +903,16 @@ namespace Microsoft.Scripting {
             }
         }
 
+        /// <summary>
+        /// Temporary until DynamicVersion goes away and we handle dynamic cases in-line.  This provides
+        /// a version number which can be used to disambiguate types with a version == DynamicVersion.
+        /// </summary>
+        public int AlternateVersion {
+            get {
+                return _altVersion;
+            }
+        }
+
         public bool IsNull {
             get { return Object.ReferenceEquals(this, _nullType); }
         }
@@ -944,7 +969,13 @@ namespace Microsoft.Scripting {
                 return _getboundmem;
             }
             set {
-                _version = (value != null) ? DynamicVersion : GetNextVersion();
+                if (value != null) {
+                    _version = DynamicVersion;
+                    _altVersion = GetNextAlternateVersion();
+                } else {
+                    _version = GetNextVersion();
+                    _altVersion = 0;
+                }
                 _getboundmem = value;
             }
         }
@@ -1250,6 +1281,7 @@ namespace Microsoft.Scripting {
 
             if (_getboundmem != null || _setmem != null || _delmem != null) {
                 _version = DynamicVersion;
+                UpdateVersion();
             }
         }
 
@@ -1418,6 +1450,12 @@ namespace Microsoft.Scripting {
                     return true;
             }
 
+            // search the type
+            DynamicMixin myType = DynamicHelpers.GetDynamicType(this);
+            if (this != myType) {
+                return myType.TryGetMember(context, this, name, out value);
+            }
+
             value = null;
             return false;
         }
@@ -1429,6 +1467,13 @@ namespace Microsoft.Scripting {
                     return true;
                 }
             }
+
+            // search the type
+            DynamicMixin myType = DynamicHelpers.GetDynamicType(this);
+            if (this != myType) {
+                return myType.TryGetBoundMember(context, this, name, out value);
+            }
+
             value = null;
             return false;
         }

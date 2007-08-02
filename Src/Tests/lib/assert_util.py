@@ -185,6 +185,17 @@ def AssertError(exc, func, *args, **kwargs):
     except exc: return
     else :      Fail("Expected %r but got no exception" % exc)
 
+def AssertDocEqual(received, expected):
+    expected = expected.split(newline)
+    received = received.split(newline)
+    for x in received:
+        if not x in expected:
+            raise AssertionError('Extra doc string: ' + x)
+        index = expected.index(x)
+        del expected[index]
+    
+    if expected: raise AssertionError('Missing doc strings: ' + expected.join(', '))
+    
 def AssertInOrNot(l, in_list, not_in_list):
     for x in in_list:
         Assert(x in l, "%s should be in %s" % (x, l))
@@ -280,25 +291,38 @@ class skip:
             self.platforms = platforms[0].split()
         else: 
             self.platforms = platforms
+
+    def silverlight_test(self):
+        return is_silverlight
+    def cli64_test(self):
+        return is_cli64
+    def orcas_test(self):
+        return is_orcas
+    def fasteval_test(self):
+        if is_cli:
+            import IronPython
+            return IronPython.Hosting.PythonEngine.CurrentEngine.Options.FastEvaluation
+        else:
+            return False
+    
     def __call__(self, f):
-        #hack: skip  questionable tests:
+        #skip questionable tests
         if is_silverlight and 'silverlightbug?' in self.platforms:
             msg = '... TODO, investigate Silverlight failure @ %s' % f.func_name
             return _do_nothing(msg)
-        elif is_silverlight and 'silverlight' in self.platforms:
-            msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
+        elif sys.platform in self.platforms:
+            msg = '... Decorated with @skip(%s), skipping %s ...' % (
+                self.platforms, f.func_name)
             return _do_nothing(msg)
-        elif sys.platform in self.platforms: 
-            msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
-            return _do_nothing(msg)
-        elif ("cli64" in self.platforms) and is_cli64:
-            msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
-            return _do_nothing(msg)
-        elif ("orcas" in self.platforms) and is_orcas:
-            msg = '... Decorated with @skip(%s), skipping %s ...' % (self.platforms, f.func_name)
-            return _do_nothing(msg)
-        else: 
-            return f
+
+        platforms = 'silverlight', 'cli64', 'orcas', 'fasteval'
+        for to_skip in platforms:
+            platform_test = getattr(self, to_skip + '_test')
+            if to_skip in self.platforms and platform_test():
+                msg = '... Decorated with @skip(%s), skipping %s ...' % (
+                    self.platforms, f.func_name)
+                return _do_nothing(msg)
+        return f
    
 class runonly: 
     def __init__(self, *platforms):
@@ -400,5 +424,12 @@ if sys.platform=="win32":
         is_64 = True
 else:
     is_32, is_64 = is_cli32, is_cli64
+    
+    
+if is_cli or is_silverlight:
+    newline = System.Environment.NewLine
+else:
+    import os
+    newline = os.linesep
 
 

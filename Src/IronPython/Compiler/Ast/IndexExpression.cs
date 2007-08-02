@@ -42,12 +42,12 @@ namespace IronPython.Compiler.Ast {
                 Span,
                 Operators.GetItem,
                 type,
-                GetActionArgumentsForGet(ag)
+                GetActionArgumentsForGetOrDelete(ag)
             );
             
         }
 
-        private MSAst.Expression[] GetActionArgumentsForGet(AstGenerator ag) {
+        private MSAst.Expression[] GetActionArgumentsForGetOrDelete(AstGenerator ag) {
             TupleExpression te = _index as TupleExpression;
             if (te != null && te.IsExpandable) {
                 return Utils.Array.Insert(ag.Transform(_target), ag.Transform(te.Items));
@@ -78,7 +78,7 @@ namespace IronPython.Compiler.Ast {
                             Ast.Action.Operator(
                                 Operators.GetItem,
                                 typeof(object),
-                                GetActionArgumentsForGet(ag)
+                                GetActionArgumentsForGetOrDelete(ag)
                             ),
                             right
                         );
@@ -96,11 +96,11 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Statement TransformDelete(AstGenerator ag) {
             return Ast.Statement(
-                Span,
-                Ast.Delete(
+                Ast.Action.Operator(
                     Span,
-                    ag.Transform(_target),
-                    ag.Transform(_index)
+                    Operators.DeleteItem,
+                    typeof(object),
+                    GetActionArgumentsForGetOrDelete(ag)
                 )
             );
         }

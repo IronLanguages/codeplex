@@ -63,7 +63,12 @@ namespace IronPython.Compiler.Ast {
                 typeof(IEnumerator)
             );
 
-            return TransformForStatement(ag, enumerator, _list, _left, _body, _else, Span, _header);
+            ag.EnterLoop();
+            try {
+                return TransformForStatement(ag, enumerator, _list, _left, _body, _else, Span, _header);
+            } finally {
+                ag.ExitLoop();
+            }
         }
 
         public override void Walk(PythonWalker walker) {

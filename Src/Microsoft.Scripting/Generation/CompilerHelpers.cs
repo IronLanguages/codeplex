@@ -371,7 +371,6 @@ namespace Microsoft.Scripting.Generation {
 
         public static bool CanOptimizeMethod(MethodBase method) {
             if (method.ContainsGenericParameters ||
-                method.IsAbstract ||
                 method.IsFamily ||
                 method.IsPrivate ||
                 method.IsFamilyOrAssembly ||
@@ -379,6 +378,32 @@ namespace Microsoft.Scripting.Generation {
                 return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// Given a MethodInfo which may be declared on a non-public type this attempts to
+        /// return a MethodInfo which will dispatch to the original MethodInfo but is declared
+        /// on a public type.
+        /// </summary>
+        public static MethodInfo GetCallableMethod(MethodInfo getter) {
+            if (getter.DeclaringType.IsVisible) return getter;
+            // first try and get it from the base type we're overriding...
+            getter = getter.GetBaseDefinition();
+
+            if (getter.DeclaringType.IsVisible) return getter;
+            // maybe we can get it from an interface...
+            Type[] interfaces = getter.DeclaringType.GetInterfaces();
+            foreach (Type iface in interfaces) {
+                InterfaceMapping mapping = getter.DeclaringType.GetInterfaceMap(iface);
+                for (int i = 0; i < mapping.TargetMethods.Length; i++) {
+                    if (mapping.TargetMethods[i] == getter) {
+                        return mapping.InterfaceMethods[i];
+                    }
+                }
+            }
+
+            // well, we couldn't do any better.
+            return getter;
         }
 
         public static bool CanOptimizeField(FieldInfo fi) {
@@ -391,6 +416,17 @@ namespace Microsoft.Scripting.Generation {
                     yt.EnsureLabel(cg);
                 }
             }
+        }
+
+        public static Type GetVisibleType(object value) {
+            return GetVisibleType(GetType(value));
+        }
+
+        public static Type GetVisibleType(Type t) {
+            while (!t.IsVisible) {
+                t = t.BaseType;
+            }
+            return t;
         }
     }
 }

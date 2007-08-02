@@ -71,6 +71,8 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static TypeBinaryExpression TypeIs(Expression expression, Type type) {
+            if (!type.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
+
             return TypeIs(SourceSpan.None, expression, type);
         }
         public static TypeBinaryExpression TypeIs(SourceSpan span, Expression expression, Type type) {

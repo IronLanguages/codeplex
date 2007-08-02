@@ -26,7 +26,6 @@ namespace Microsoft.Scripting.Hosting {
         private bool _engineDebug;
         private bool _verbose;
         private bool _traceBackSupport = (IntPtr.Size == 4);  // currently only enabled on 32-bit
-        private bool _checkInitialized = true;
         private bool _debugCodeGen = true;
         private bool _trackPerformance;
         private bool _optimizeEnvironments = true;
@@ -34,11 +33,8 @@ namespace Microsoft.Scripting.Hosting {
         private AssemblyGenAttributes _assemblyGenAttributes = AssemblyGenAttributes.GenerateDebugAssemblies;
         private string _binariesDirectory;
         private bool _privateBinding;
-        private bool _generateSafeCasts = true;
-        private bool _doNotCacheConstants;
         private bool _generateModulesAsSnippets;
         private bool _bufferedStdOutAndError = true;
-        private bool _fastOps = true;
         private bool _showASTs = false;
         private bool _dumpASTs = false;
         private bool _showRules = false;
@@ -47,18 +43,6 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         #region Public accessors
-
-        /// <summary>
-        /// True if fast-paths through ops are enabled, false other wise.
-        /// </summary>
-        public bool FastOps {
-            get {
-                return _fastOps;
-            }
-            set {
-                _fastOps = value;
-            }
-        }
 
         /// <summary>
         ///  Is this a debug mode? "__debug__" is defined, and Asserts are active
@@ -95,14 +79,6 @@ namespace Microsoft.Scripting.Hosting {
             set { _traceBackSupport = value; }
         }
 
-        /// <summary>
-        /// Emit CheckInitialized calls
-        /// </summary>
-        public bool CheckInitialized {
-            get { return _checkInitialized; }
-            set { _checkInitialized = value; }
-        }
-
         public bool TrackPerformance {
             get { return _trackPerformance; }
             set { _trackPerformance = value; }
@@ -132,24 +108,6 @@ namespace Microsoft.Scripting.Hosting {
         public bool Frames {
             get { return _frames; }
             set { _frames = value; }
-        }
-
-        /// <summary>
-        /// Constants can be generated either by caching the boxed value in a static,
-        /// or by boxing it every time its needed.
-        /// </summary>
-        public bool DoNotCacheConstants {
-            get { return _doNotCacheConstants; }
-            set { _doNotCacheConstants = value; }
-        }
-
-        /// <summary>
-        /// Explicitly call Ops.InvalidType() for cast operations that will fail
-        /// to give richer information of failing casts.
-        /// </summary>
-        public bool GenerateSafeCasts {
-            get { return _generateSafeCasts; }
-            set { _generateSafeCasts = value; }
         }
 
         public AssemblyGenAttributes AssemblyGenAttributes {

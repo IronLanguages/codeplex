@@ -171,6 +171,10 @@ namespace IronPython.Runtime.Operations {
             return type\u00F8.CreateInstance(context, args, names);
         }
 
+        public static object IterMethod(object self) {
+            return PythonOps.GetEnumeratorForIteration(self);
+        }
+
         public static object NextMethod(object self) {
             IEnumerator i = (IEnumerator)self;
             if (i.MoveNext()) return i.Current;

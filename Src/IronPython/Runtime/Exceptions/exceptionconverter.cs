@@ -691,7 +691,11 @@ namespace IronPython.Runtime.Exceptions {
         internal static OldClass DefaultExceptionCreator(string name, string module, object baseType) {
             IAttributesCollection dict = new SymbolDictionary();
             dict[Symbols.Module] = module;
-            OldClass oc = new OldClass(name, baseType != null ? new OldClass[] { (OldClass)baseType } : new OldClass[0], dict, "");
+            List<OldClass> bt = new List<OldClass>(1);
+            if (baseType != null) {
+                bt.Add((OldClass)baseType);
+            }
+            OldClass oc = new OldClass(name, bt, dict, "");
             oc.SetCustomMember(DefaultContext.Default, Symbols.Init, exceptionInitMethod);
             oc.SetCustomMember(DefaultContext.Default, Symbols.GetItem, exceptionGetItemMethod);
             oc.SetCustomMember(DefaultContext.Default, Symbols.String, exceptionStrMethod);

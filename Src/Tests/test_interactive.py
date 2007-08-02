@@ -298,7 +298,7 @@ def test_comments():
     ipi.ExecutePartialLine("#     this is some indented comment line inside if")
     ipi.ExecutePartialLine("    print 200")
     response = ipi.ExecuteLine("")
-    AreEqual(response, "100\r\n200")
+    AreEqual(response, "100" + newline + "200")
     ipi.End()
     
 def test_global_values():

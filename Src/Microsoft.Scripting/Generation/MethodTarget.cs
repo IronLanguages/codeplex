@@ -140,7 +140,7 @@ namespace Microsoft.Scripting.Generation {
             for (int i = 0; i < args.Length; i++) {
                 args[i] = parameters[i];
                 if (!knownTypes[i].IsAssignableFrom(parameters[i].ExpressionType)) {
-                    args[i] = Ast.Cast(parameters[i], knownTypes[i]);
+                    args[i] = Ast.Cast(parameters[i], CompilerHelpers.GetVisibleType(knownTypes[i]));
                 }
             }
 

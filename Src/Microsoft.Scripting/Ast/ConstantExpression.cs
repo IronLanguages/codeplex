@@ -101,5 +101,16 @@ namespace Microsoft.Scripting.Ast {
         public static ConstantExpression RuntimeConstant(object value) {
             return new ConstantExpression(SourceSpan.None, new RuntimeConstant(value));
         }
+
+        /// <summary>
+        /// Wraps the given value in a WeakReference and returns a tree that will retrieve
+        /// the value from the WeakReference.
+        /// </summary>
+        public static MemberExpression WeakConstant(object value) {
+            return Ast.ReadProperty(
+                Ast.RuntimeConstant(new WeakReference(value)),
+                typeof(WeakReference).GetProperty("Target")
+            );
+        }
     }
 }

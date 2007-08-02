@@ -360,7 +360,7 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitNull();
             cg.Emit(OpCodes.Ceq);
             cg.Emit(OpCodes.Brtrue_S, ok);
-            cg.EmitNew(typeof(InvalidOperationException), new Type[0]);
+            cg.EmitNew(typeof(InvalidOperationException), Utils.Reflection.EmptyTypes);
             cg.Emit(OpCodes.Throw);
             cg.MarkLabel(ok);
 

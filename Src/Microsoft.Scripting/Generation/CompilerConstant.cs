@@ -19,7 +19,7 @@ using System.Text;
 
 using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Represents a constant value created during compilation.  
     /// </summary>

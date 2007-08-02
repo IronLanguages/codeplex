@@ -50,6 +50,13 @@ namespace IronPython.Runtime.Types {
         }
 
         private void Initialize() {
+            string name;
+            if (!PythonTypeCustomizer.SystemTypes.TryGetValue(Extends, out name)) {
+                NameConverter.TryGetName(Extends, out name);
+
+                PythonTypeCustomizer.SystemTypes[Extends] = name;
+            }
+
             _type = DynamicHelpers.GetDynamicTypeFromType(base.Extends);
 
             PythonTypeContext ctx = new PythonTypeContext();

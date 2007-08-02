@@ -192,12 +192,12 @@ namespace Microsoft.Scripting.Actions {
 
                 } else {
                     test = Ast.AndAlso(test,
-                               Ast.NotEqual(
+                               Ast.Equal(
                                    Ast.TypeIs(
                                        Ast.ReadProperty(
                                             Ast.Cast(rule.Parameters[0], typeof(BoundBuiltinFunction)),
                                             typeof(BoundBuiltinFunction).GetProperty("Self")),
-                                       typeof(ISuperDynamicObject)),
+                                       CompilerHelpers.GetVisibleType(bbf.Self)),
                                    Ast.True()));
                 }
             }

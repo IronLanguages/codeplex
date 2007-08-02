@@ -21,11 +21,6 @@ namespace Microsoft.Scripting.Actions {
     public class DoOperationAction : Action {
         private Operators _operation;
 
-        public static DoOperationAction Make(string operation) {
-            Operators op = (Operators)Enum.Parse(typeof(Operators), operation, false);
-            return Make(op);
-        }
-        
         public static DoOperationAction Make(Operators operation) {
             return new DoOperationAction(operation);
         }
@@ -40,10 +35,6 @@ namespace Microsoft.Scripting.Actions {
 
         public override ActionKind Kind {
             get { return ActionKind.DoOperation; }
-        }
-
-        public override string ParameterString {
-            get { return _operation.ToString(); }
         }
 
         public override bool Equals(object obj) {
@@ -127,6 +118,10 @@ namespace Microsoft.Scripting.Actions {
                     default: throw new NotImplementedException();
                 }
             }
+        }
+
+        public override string ToString() {
+            return base.ToString() + " " + _operation.ToString();
         }
     }
 }

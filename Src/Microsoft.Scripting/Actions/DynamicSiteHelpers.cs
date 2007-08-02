@@ -38,15 +38,6 @@ namespace Microsoft.Scripting.Actions {
             return type.Name.StartsWith("Big");
         }
 
-        //
-        // Dynamic sites
-        //
-        public static Slot MakeSlot(Action action, CodeGen cg, params Type[] types) {
-            Type siteType = MakeDynamicSiteType(types);
-
-            return cg.TypeGen.AddStaticField(siteType, "#" + types.Length.ToString() + "#" + Action.MakeName(action));
-        }
-
         private delegate object CreateSite(Action action);
         private delegate object CreateFastSite(CodeContext context, Action action);
 
@@ -59,16 +50,6 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return (DynamicSite)ctor(action);
-        }
-
-        //
-        // Fast Dynamic sites
-        //
-                
-        public static Slot MakeFastSlot(Action action, CodeGen cg, params Type[] types) {
-            Type siteType = MakeFastDynamicSiteType(types);
-            
-            return cg.TypeGen.AddStaticField(siteType, "#" + types.Length.ToString() + "#" + Action.MakeName(action));            
         }
 
         public static FastDynamicSite MakeFastSite(CodeContext context, Action action, Type siteType) {

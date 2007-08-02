@@ -61,6 +61,9 @@ namespace Microsoft.Scripting.Ast {
         private bool _isGlobal;
         private bool _visibleScope = true;
         private bool _parameterArray;
+        
+        // FastEval: Cache for emitted delegate so that we only generate code once.
+        private Delegate _delegate;
 
         /// <summary>
         /// True, if the block is referenced by a declarative reference (CodeBlockExpression).
@@ -363,8 +366,14 @@ namespace Microsoft.Scripting.Ast {
                 // its Locals pointing at our Environment.
                 cg.EnvironmentSlot = EmitEnvironmentAllocation(cg);
                 cg.ContextSlot = CreateEnvironmentContext(cg);
+                if (!cg.HasAllocator) {
+                    // In FastEval mode, we delay creating an allocator
+                    // until we have the correct nested CodeContext to attach it to.
+                    cg.Allocator = CompilerHelpers.CreateFrameAllocator(cg.ContextSlot);
+                }
             }
-
+            cg.Allocator.ActiveScope = this;
+            
             CreateOuterScopeAccessSlots(cg);
 
             foreach (Variable prm in _parameters) {
@@ -436,16 +445,21 @@ namespace Microsoft.Scripting.Ast {
             walker.PostWalk(this);
         }
 
-
-        public object Execute(CodeContext context) {
+        private object DoExecute(CodeContext context) {
             object ret;
-            try {
-                ret = Body.Execute(context);
-            } catch {
-                // TODO: MethodBase.GetCurrentMethod() instead of null?
-                RuntimeHelpers.UpdateStackTrace(context, null, _name, context.ModuleContext.Module.FileName, 0);
-                throw;
+
+            // Make sure that locals owned by this block mask any identically-named variables in outer scopes
+            if (!IsGlobal) {
+                foreach (Variable v in _variables) {
+                    if (v.Kind == Variable.VariableKind.Local && v.Uninitialized && v.Block == this) {
+                        BoundAssignment.EvaluateAssign(context, v, Uninitialized.Instance);
+                    }
+                }
             }
+
+            context.Scope.SourceLocation = Span.Start;
+            ret = Body.Execute(context);
+
             if (ret == Statement.NextStatement) {
                 return null;
             } else {
@@ -454,8 +468,50 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        public object Execute(CodeContext context) {
+            try {
+                return DoExecute(context);
+            } catch (Exception e) {
+#if !SILVERLIGHT
+                MethodBase method = MethodBase.GetCurrentMethod();
+#else
+                MethodBase method = null;
+#endif
+                RuntimeHelpers.UpdateStackTrace(context, method, _name,
+                    context.ModuleContext.CompilerContext.SourceUnit.DisplayName,
+                    context.Scope.SourceLocation.Line);
+                RuntimeHelpers.AssociateDynamicStackFrames(e);
+                throw ExceptionHelpers.UpdateForRethrow(e);
+            }
+        }
+
+        internal object TopLevelExecute(CodeContext context) {
+            FlowChecker.Check(this);
+
+            try {
+                return Execute(context);
+            } finally {
+                //RuntimeHelpers.ClearDynamicStackFrames();
+                //throw; // ExceptionHelpers.UpdateForRethrow(e);
+            }
+        }
+
         protected bool NeedsWrapperMethod(bool stronglyTyped) {
             return _parameters.Count > (stronglyTyped ? Utils.Reflection.MaxSignatureSize - 1 : CallTargets.MaximumCallArgs);
+        }
+
+        private bool HasThis() {
+            bool hasThis = false;
+            for (int index = 0; index < _parameters.Count; index++) {
+                if (!_parameters[index].InParameterArray) {
+                    // Currently only one parameter can be out of parameter array
+                    // TODO: Any number of parameters to be taken out of parameter array
+                    Debug.Assert(hasThis == false);
+                    Debug.Assert(index == 0);
+                    hasThis = true;
+                }
+            }
+            return hasThis;
         }
 
         protected ConstantPool GetStaticDataForBody(CodeGen cg) {
@@ -476,21 +532,78 @@ namespace Microsoft.Scripting.Ast {
             return Execute(child);
         }
 
+        public object ExecuteWithChildContextAndThis(CodeContext parent, object @this, params object[] args) {
+            CodeContext child = RuntimeHelpers.CreateNestedCodeContext(parent, new SymbolDictionary(), IsVisible);
+            RuntimeHelpers.SetName(child, _parameters[0].Name, @this);
+            for (int i = 1; i < _parameters.Count; i++) {
+                RuntimeHelpers.SetName(child, _parameters[i].Name, args[i-1]);
+            }
+            return Execute(child);
+        }
+
         // Return a delegate to execute this block in interpreted mode.
         public virtual Delegate GetDelegateForInterpreter(CodeContext context, bool forceWrapperMethod) {
             FlowChecker.Check(this);
 
-            //TODO: return a better match than CallTargetWithContextN.
-            // This will fix the incorrect func_code.co_flags (which is computed based on the type of delegate)
-            return new CallTargetWithContextN(ExecuteWithChildContext);
+            // Determine whether to emit this CodeBlock or interpret it
+            // In debug mode, if FastEval is on, we always evaluate; otherwise, walk the tree and decide what to do
+#if DEBUG
+            if (context.LanguageContext.Engine.Options.FastEvaluation || FastEvalWalker.CanEvaluate(this)) {
+#else
+            if (FastEvalWalker.CanEvaluate(this)) {
+#endif
+                if (HasThis()) {
+                    return new CallTargetWithContextAndThisN(ExecuteWithChildContextAndThis);
+                } else {
+                    return new CallTargetWithContextN(ExecuteWithChildContext);
+                }
+            } else {
+                // TODO: maybe emit a delegate that keeps track of how many times it has been called
+                // and eventually emits code
+                lock (this) {
+                    if (_delegate == null) {
+                        _delegate = GetCompiledDelegate(context, forceWrapperMethod);
+                    }
+                    return _delegate;
+                }
+            }
+
         }
 
-        
+        private Delegate GetCompiledDelegate(CodeContext context, bool forceWrapperMethod) {
+            EmitLocalDictionary = true;
+            HasEnvironment = true;
+
+            bool createWrapperMethod = _parameterArray ? false : forceWrapperMethod || NeedsWrapperMethod(false);
+
+            bool hasThis = HasThis();
+
+            CodeGen cg = CreateMethod(context, hasThis);
+            EmitFunctionImplementation(cg);
+            cg.Finish();
+
+            Type delegateType;
+            if (createWrapperMethod) {
+                CodeGen wrapper = MakeWrapperMethodN(null, cg, hasThis);
+                wrapper.Finish();
+                delegateType = hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
+                return wrapper.CreateDelegate(delegateType);
+                //throw new NotImplementedException("Wrapper methods not implemented for code blocks in FastEval mode");
+            } else if (_parameterArray) {
+                delegateType = hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
+                return cg.CreateDelegate(delegateType);
+                //throw new NotImplementedException("Parameter arrays not implemented for code blocks in FastEval mode");
+            } else {
+                delegateType = CallTargets.GetTargetType(true, _parameters.Count);
+                return cg.CreateDelegate(delegateType);
+            }
+        }
+
         public void EmitDelegateConstruction(CodeGen cg, bool forceWrapperMethod, bool stronglyTyped, Type delegateType) {
             FlowChecker.Check(this);
 
             // TODO: explicit delegate type may be wrapped...
-            bool createWrapperMethod = _parameterArray ? false : forceWrapperMethod || NeedsWrapperMethod(stronglyTyped);
+            bool createWrapperMethod = _parameterArray ? false : (forceWrapperMethod || NeedsWrapperMethod(stronglyTyped));
 
             bool hasContextParameter = _explicitCodeContextExpression == null && 
                 (createWrapperMethod ||
@@ -498,17 +611,7 @@ namespace Microsoft.Scripting.Ast {
                 !(cg.ContextSlot is StaticFieldSlot) ||
                 _parameterArray);
 
-            bool hasThis = false;
-
-            for (int index = 0; index < _parameters.Count; index++) {
-                if (!_parameters[index].InParameterArray) {
-                    // Currently only one parameter can be out of parameter array
-                    // TODO: Any number of parameters to be taken out of parameter array
-                    Debug.Assert(hasThis == false);
-                    Debug.Assert(index == 0);
-                    hasThis = true;
-                }
-            }
+            bool hasThis = HasThis();
 
             cg.EmitSequencePointNone();
 
@@ -557,14 +660,12 @@ namespace Microsoft.Scripting.Ast {
             return result;
         }
 
-        /// <summary>
-        /// Defines the method with the correct signature and sets up the context slot appropriately.
-        /// </summary>
-        /// <returns></returns>
-        internal CodeGen CreateMethod(CodeGen outer, bool hasContextParameter, bool hasThis) {
-            List<Type> paramTypes = new List<Type>();
-            List<SymbolId> paramNames = new List<SymbolId>();
-            CodeGen impl;
+        protected int ComputeSignature(bool hasContextParameter, bool hasThis,
+            out List<Type> paramTypes, out List<SymbolId> paramNames, out string implName) {
+
+            paramTypes = new List<Type>();
+            paramNames = new List<SymbolId>();
+
             int parameterIndex = 0;
 
             if (hasContextParameter) {
@@ -573,7 +674,6 @@ namespace Microsoft.Scripting.Ast {
                 parameterIndex = 1;
             }
 
-            // Parameters
             if (_parameterArray) {
                 int startIndex = 0;
                 if (hasThis) {
@@ -597,7 +697,22 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
 
-            string implName = _name + "$" + Interlocked.Increment(ref _Counter);
+            implName = _name + "$" + Interlocked.Increment(ref _Counter);
+
+            return parameterIndex;
+        }
+
+        /// <summary>
+        /// Defines the method with the correct signature and sets up the context slot appropriately.
+        /// </summary>
+        /// <returns></returns>
+        internal CodeGen CreateMethod(CodeGen outer, bool hasContextParameter, bool hasThis) {
+            List<Type> paramTypes = new List<Type>();
+            List<SymbolId> paramNames = new List<SymbolId>();
+            CodeGen impl;
+            string implName;
+            
+            int lastParamIndex = ComputeSignature(hasContextParameter, hasThis, out paramTypes, out paramNames, out implName);
 
             // create the new method & setup its locals
             impl = outer.DefineMethod(implName, _returnType,
@@ -617,20 +732,54 @@ namespace Microsoft.Scripting.Ast {
             }
             
             if (_parameterArray) {
-                impl.ParamsSlot = impl.GetArgumentSlot(parameterIndex);
+                impl.ParamsSlot = impl.GetArgumentSlot(lastParamIndex);
             }
 
-            // create the new method & setup its locals
             impl.Allocator = CompilerHelpers.CreateLocalStorageAllocator(outer, impl);
-
-            if (outer.FastEval) {
-                impl.Binder = outer.Binder;
-                impl.FastEval = true;
-            }
 
             return impl;
         }
 
+        private CodeGen CreateMethod(CodeContext context, bool hasThis) {
+            List<Type> paramTypes;
+            List<SymbolId> paramNames;
+            CodeGen impl;
+            string implName;
+
+            int lastParamIndex = ComputeSignature(true, hasThis, out paramTypes, out paramNames, out implName);
+
+            impl = CompilerHelpers.CreateDynamicCodeGenerator(
+                    implName,
+                    typeof(object),
+                    paramTypes.ToArray(),
+                    new ConstantPool());
+            impl.FastEval = true;
+            impl.ContextSlot = impl.ArgumentSlots[0];
+            impl.Context = context.ModuleContext.CompilerContext;
+            impl.EnvironmentSlot = new EnvironmentSlot(
+                new PropertySlot(
+                    new PropertySlot(impl.ContextSlot,
+                        typeof(CodeContext).GetProperty("Scope")),
+                    typeof(Scope).GetProperty("Dict"))
+                );
+            if (_parameterArray) {
+                impl.ParamsSlot = impl.GetArgumentSlot(lastParamIndex);
+            }
+
+            // Note that we do not attach an allocator just yet:
+            // LocalStorageAllocator won't work because we lack an outer CodeGen object,
+            // and we can't use a NamedFrameAllocator because do not create the nested CodeContext until later.
+            
+            return impl;
+        }
+
+        private CodeGen CreateWrapperCodeGen(CodeGen outer, string implName, List<Type> paramTypes, ConstantPool staticData) {
+            if (outer == null) {
+                return CompilerHelpers.CreateDynamicCodeGenerator(implName, typeof(object), paramTypes, staticData);
+            } else {
+                return outer.DefineMethod(implName, typeof(object), paramTypes.ToArray(), null, staticData);
+            }
+        }
         /// <summary>
         /// Creates a wrapper method for the user-defined function.  This allows us to use the CallTargetN
         /// delegate against the function when we don't have a CallTarget# which is large enough.
@@ -651,35 +800,35 @@ namespace Microsoft.Scripting.Ast {
 
             string implName = impl.MethodBase.Name;
 
+            List<Type> paramTypes = new List<Type>();
             if (hasContextParameter) {
+                paramTypes.Add(typeof(CodeContext));
                 if (hasThis) {
-                    wrapper = outer.DefineMethod(implName,
-                        _returnType,
-                        new Type[] { typeof(CodeContext), typeof(object), typeof(object[]) },
-                        null, staticData);
+                    paramTypes.Add(typeof(object));
+                    paramTypes.Add(typeof(object[]));
+                    wrapper = CreateWrapperCodeGen(outer, implName, paramTypes, staticData);
                     contextSlot = wrapper.GetArgumentSlot(0);
                     thisSlot = wrapper.GetArgumentSlot(1);
                     argSlot = wrapper.GetArgumentSlot(2);
                 } else {
-                    wrapper = outer.DefineMethod(implName,
-                        _returnType,
-                        new Type[] { typeof(CodeContext), typeof(object[]) },
-                        null, staticData);
+                    paramTypes.Add(typeof(object[]));
+                    wrapper = CreateWrapperCodeGen(outer, implName, paramTypes, staticData);
                     contextSlot = wrapper.GetArgumentSlot(0);
                     argSlot = wrapper.GetArgumentSlot(1);
                 }
             } else {
                 // Context weirdness: DynamicMethods need to flow their context, and if we don't
                 // have a TypeGen we'll create a DynamicMethod but we won't flow context w/ it.
-                Debug.Assert(outer.TypeGen != null);
+                Debug.Assert(outer == null || outer.TypeGen != null);
                 if (hasThis) {
-                    wrapper = outer.DefineMethod(implName, _returnType, new Type[] { typeof(object), typeof(object[]) },
-                        null, staticData);
+                    paramTypes.Add(typeof(object));
+                    paramTypes.Add(typeof(object[]));
+                    wrapper = CreateWrapperCodeGen(outer, implName, paramTypes, staticData);
                     thisSlot = wrapper.GetArgumentSlot(0);
                     argSlot = wrapper.GetArgumentSlot(1);
                 } else {
-                    wrapper = outer.DefineMethod(implName, _returnType, new Type[] { typeof(object[]) },
-                        null, staticData);
+                    paramTypes.Add(typeof(object[]));
+                    wrapper = CreateWrapperCodeGen(outer, implName, paramTypes, staticData);
                     argSlot = wrapper.GetArgumentSlot(0);
                 }
             }
@@ -719,9 +868,15 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public virtual void EmitBody(CodeGen cg) {
-            cg.Allocator.ActiveScope = this;
             CreateEnvironmentFactory(false);
             CreateSlots(cg);
+            if (cg.FastEval) {
+                foreach (VariableReference vr in _references) {
+                    if (vr.Variable.Kind == Variable.VariableKind.Local && vr.Variable.Block == this) {
+                        vr.Slot.EmitSetUninitialized(cg);
+                    }
+                }
+            }
 
             EmitStartPosition(cg);
 

@@ -239,7 +239,7 @@ namespace Microsoft.Scripting.Hosting {
             if (ps.Length == 1 && ps[0].ParameterType.IsAssignableFrom(typeof(string[]))) {
                 result = method.Invoke(null, new object[] { args });
             } else {
-                result = method.Invoke(null, new object[0]);
+                result = method.Invoke(null, RuntimeHelpers.EmptyObjectArray);
             }
 
             return (result is int) ? (int)result : Environment.ExitCode;

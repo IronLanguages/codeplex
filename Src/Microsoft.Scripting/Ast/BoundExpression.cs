@@ -66,7 +66,7 @@ namespace Microsoft.Scripting.Ast {
             switch (_variable.Kind) {
                 case Variable.VariableKind.Temporary:
                 case Variable.VariableKind.GeneratorTemporary:
-                    if (!context.Scope.TemporaryStorage.TryGetValue(_variable, out ret) || ret == Uninitialized.Instance) {
+                    if (!context.Scope.TemporaryStorage.TryGetValue(_variable, out ret)) {
                         throw context.LanguageContext.MissingName(_variable.Name);
                     } else {
                         return ret;

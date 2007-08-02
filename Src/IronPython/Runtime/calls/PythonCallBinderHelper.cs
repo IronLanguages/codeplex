@@ -56,17 +56,17 @@ namespace IronPython.Runtime.Calls {
         }
 
         private StandardRule<T> MakePythonTypeCallRule(DynamicType creating, DynamicType[] types, DynamicType[] argTypes, object[] args) {
-            // can't optimize types w/ metaclasses yet.
-            DynamicTypeSlot mc;
-            if (creating.TryResolveSlot(Context, Symbols.MetaClass, out mc)
-                || creating.Version == DynamicMixin.DynamicVersion) {
-                // Limiting on DynamicVersion is too agressive here - we can limit on less because all of this
-                // comes from type info and instances can't customize it.  But because we can't do a good check
-                // on type version ID we need to do this independently.
-                return MakeDynamicTypeRule(creating, args);
-            }
-
             StandardRule<T> rule = new StandardRule<T>();
+            if (!Mro.IsOldStyle(creating)) {
+                foreach (DynamicType dt in creating.ResolutionOrder) {
+                    if (Mro.IsOldStyle(dt)) {
+                        // mixed new-style/old-style class, we can't handle
+                        // __init__ in an old-style class yet (it doesn't show
+                        // up in a slot).
+                        return MakeDynamicTypeRule(creating, args);
+                    }
+                }
+            }
 
             // TODO: Pass in MethodCandidate when we support kw-args
             if (!TooManyArgsForDefaultNew(creating, ArgumentCount(Action, rule) > 0)) {

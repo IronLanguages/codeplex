@@ -84,6 +84,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Utilities\Silverlight\x86ret\System.dll</HintPath>
     </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionOnCallAttribute.cs" />
@@ -123,9 +125,10 @@
     <Compile Include="Ast\DoStatementBuilder.cs" />
     <Compile Include="Ast\DynamicTryStatement.cs" />
     <Compile Include="Ast\DynamicTryStatementHandler.cs" />
+    <Compile Include="Ast\FastEvalWalker.cs" />
     <Compile Include="Ast\IfStatementBuilder.cs" />
     <Compile Include="Ast\MemberAssignment.cs" />
-    <Compile Include="Ast\RuntimeConstant.cs" />
+    <Compile Include="Generation\RuntimeConstant.cs" />
     <Compile Include="Ast\TryFlowAnalyzer.cs" />
     <Compile Include="Ast\TryStatementBuilder.cs" />
     <Compile Include="Ast\TypeBinaryExpression.cs" />
@@ -137,13 +140,10 @@
     <Compile Include="Ast\CodeBlock.Generated.cs" />
     <Compile Include="Ast\CodeBlockExpression.cs" />
     <Compile Include="Ast\DeleteStatement.cs" />
-    <Compile Include="Ast\DynamicMemberAssignment.cs" />
-    <Compile Include="Ast\DynamicMemberExpression.cs" />
     <Compile Include="Ast\DynamicNewExpression.cs" />
     <Compile Include="Ast\FlowChecker.cs" />
     <Compile Include="Ast\GeneratorCodeBlock.cs" />
     <Compile Include="Ast\ActionExpression.cs" />
-    <Compile Include="Ast\AndExpression.cs" />
     <Compile Include="Ast\Arg.cs" />
     <Compile Include="Ast\ArrayIndexAssignment.cs" />
     <Compile Include="Ast\ArrayIndexExpression.cs" />
@@ -158,12 +158,9 @@
     <Compile Include="Ast\ConditionalExpression.cs" />
     <Compile Include="Ast\ConstantExpression.cs" />
     <Compile Include="Ast\ContinueStatement.cs" />
-    <Compile Include="Ast\IndexAssignment.cs" />
-    <Compile Include="Ast\IndexExpression.cs" />
     <Compile Include="Ast\MemberBinding.cs" />
     <Compile Include="Ast\NewExpression.cs" />
     <Compile Include="Ast\DeleteDynamicMemberExpression.cs" />
-    <Compile Include="Ast\DeleteIndexExpression.cs" />
     <Compile Include="Ast\DoStatement.cs" />
     <Compile Include="Ast\EmptyStatement.cs" />
     <Compile Include="Ast\EnvironmentExpression.cs" />
@@ -177,7 +174,6 @@
     <Compile Include="Ast\Expression.cs" />
     <Compile Include="Ast\MethodCallExpression.cs" />
     <Compile Include="Ast\Node.cs" />
-    <Compile Include="Ast\OrExpression.cs" />
     <Compile Include="Ast\ParamsExpression.cs" />
     <Compile Include="Ast\ParenthesizedExpression.cs" />
     <Compile Include="Ast\ReturnStatement.cs" />
@@ -202,7 +198,7 @@
     <Compile Include="BinderType.cs" />
     <Compile Include="BuiltinFunction.cs" />
     <Compile Include="BuiltinFunction.Generated.cs" />
-    <Compile Include="ByRefReturnBuilder.cs" />
+    <Compile Include="Generation\ByRefReturnBuilder.cs" />
     <Compile Include="Actions\CallBinderHelper.cs" />
     <Compile Include="CallTargets.cs" />
     <Compile Include="ArgumentTypeException.cs" />
@@ -212,7 +208,6 @@
     <Compile Include="DelegateSignatureInfo.cs" />
     <Compile Include="DynamicTypeExtender.cs" />
     <Compile Include="FunctionType.cs" />
-    <Compile Include="Generation\DelegateConstant.cs" />
     <Compile Include="Generation\FieldSlotFactory.cs" />
     <Compile Include="Generation\LocalFrameSlotFactory.cs" />
     <Compile Include="Generation\LocalSlotFactory.cs" />
@@ -233,11 +228,9 @@
     <Compile Include="Generation\StaticFieldSlotFactory.cs" />
     <Compile Include="Generation\StubGenerator.cs" />
     <Compile Include="Generation\TupleSlotFactory.cs" />
-    <Compile Include="Generation\TypeMemberConstant.cs" />
     <Compile Include="Hosting\CodeDomCodeGen.cs" />
     <Compile Include="IParameterSequence.cs" />
     <Compile Include="KwArgBinder.cs" />
-    <Compile Include="MemberGroupConstant.cs" />
     <Compile Include="ModuleContext.cs" />
     <Compile Include="MethodBinder.cs" />
     <Compile Include="MethodCandidate.cs" />
@@ -248,7 +241,7 @@
     <Compile Include="ParameterWrapper.cs" />
     <Compile Include="ParamsMethodMaker.cs" />
     <Compile Include="PositionTrackingWriter.cs" />
-    <Compile Include="CompilerConstant.cs" />
+    <Compile Include="Generation\CompilerConstant.cs" />
     <Compile Include="CustomSymbolDictionary.cs" />
     <Compile Include="DictionaryUnionEnumerator.cs" />
     <Compile Include="ExplicitConversionMethodAttribute.cs" />

@@ -16,13 +16,15 @@
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Reflection;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Generation;
 
     public class BinderHelper<T, ActionType> where ActionType : Action {
         private CodeContext _context;
@@ -76,7 +78,7 @@ namespace Microsoft.Scripting.Actions {
                 rule.MakeReturn(
                     Binder,
                     Ast.New(typeof(BoundBuiltinFunction).GetConstructor(new Type[] { typeof(BuiltinFunction), typeof(object) }),
-                        Ast.Constant(new MemberGroupConstant(bf)),
+                        Ast.RuntimeConstant(bf),
                         rule.Parameters[0]
                     )
                 )
@@ -221,6 +223,79 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
             return res.ToArray();
+        }
+        
+        internal static MethodInfo GetMethod(Type type, string name) {
+            // declaring type takes precedence
+            MethodInfo mi = type.GetMethod(name);
+            if(mi != null) {
+                return mi;
+            }
+
+            // then search extension types.
+            Type curType = type;
+            do {
+                Type[] extTypes = DynamicHelpers.GetExtensionTypes(curType);
+                foreach (Type t in extTypes) {
+                    MethodInfo next = t.GetMethod(name);
+                    if (next != null) {
+                        if (mi != null) {
+                            throw new AmbiguousMatchException();
+                        }
+
+                        mi = next;
+                    }
+                }
+
+                if (mi != null) {
+                    return mi;
+                }
+
+                curType = curType.BaseType;
+            } while (curType != null);
+
+            return null;
+        }
+
+        /// <summary>
+        /// Emits a call to the provided method using the given expressions.  If the
+        /// method is not static the first parameter is used for the instance.
+        /// </summary>
+        public Expression MakeCallExpression(MethodInfo method, params Expression[] parameters) {
+            ParameterInfo[] infos = method.GetParameters();
+            Expression callInst = null;
+            int parameter = 0;
+            Expression[] callArgs = new Expression[infos.Length];
+
+            if (!method.IsStatic) {
+                callInst = parameters[0];
+                parameter = 1;
+            }
+            for (int arg = 0; arg < infos.Length; arg++) {
+                if (parameter < parameters.Length) {
+                    callArgs[arg] = Binder.ConvertExpression(
+                        parameters[parameter++],
+                        infos[arg].ParameterType);
+                } else {
+                    return null;
+                }
+            }
+
+            // check that we used all parameters
+            if (parameter != parameters.Length) {
+                return null;
+            }
+
+            return Ast.Call(callInst, method, callArgs);
+        }
+
+        public Statement MakeCallStatement(MethodInfo method, params Expression[] parameters) {
+            // TODO: Ast.Return not right, we need to go through the binder
+            Expression call = MakeCallExpression(method, parameters);
+            if (call != null) {
+                return Ast.Return(call);
+            }
+            return null;
         }
     }
 }

@@ -658,4 +658,8 @@ def test_lastindex():
             ]:
         AreEqual(re.match(pat, 'aab').lastindex, index)
 
+def test_empty_split():
+    import re
+    AreEqual(re.split(':*', 'a:b::c') , ['a', 'b', 'c'])
+
 run_test(__name__)

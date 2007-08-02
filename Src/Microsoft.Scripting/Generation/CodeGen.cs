@@ -220,22 +220,11 @@ namespace Microsoft.Scripting.Generation {
 
         /// <summary>
         /// Returns true if we are attempting to generate code while in FastEval mode;
-        /// this means variables need to always be looked up via RuntimeHelpers.
+        /// this changes some variable scoping behavior.
         /// </summary>
         public bool FastEval {
             get { return _fastEval; }
-            set {
-                _fastEval = value;
-                if (value == true) {
-                    // we also lack a CompilerContext, so we don't have line numbers
-                    EmitLineInfo = false;
-                }
-            }
-        }
-
-        public bool InLoop() {
-            return (_targets.Count != 0 &&
-                (_targets.Peek()).breakLabel != Targets.NoLabel);
+            set { _fastEval = value; }
         }
 
         public void PushExceptionBlock(TargetBlockType type, Slot returnFlag) {
@@ -417,106 +406,207 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        /// <summary>
-        /// This method should support emitting a primitive cast from one type to
-        /// another.  This is different from EmitConvert in that it doesn't use
-        /// any language-specific conversion rules but only operates on IL types
-        /// using primitive operations.
-        /// TODO - Add support for casting between numeric value types.
-        /// </summary>
-        public void EmitCast(Type fromType, Type toType) {
-            if (fromType == toType) {
-                // Types are the same, no action necessary
+        public void EmitConvert(Type fromType, Type toType) {
+            if (TryEmitCast(fromType, toType, true)) {
                 return;
             }
 
-            if (toType.IsAssignableFrom(fromType)) {
-                // Converting to Nullable<>?
-                if (toType.IsGenericType && (toType.GetGenericTypeDefinition() == typeof(Nullable<>))) {
-                    Type genericArgument = toType.GetGenericArguments()[0];
-                    // Cast the type on the top of the stack to the type of the generic argument
-                    EmitCast(fromType, genericArgument);
-                    EmitNew(toType.GetConstructor(new Type[] { genericArgument }));
-                    return;
-                }
+            //TODO this is clearly not the most efficient conversion pattern...
+            this.EmitBoxing(fromType);
+            this.EmitConvertFromObject(toType);
+        }
 
-                if (toType.IsValueType == fromType.IsValueType) {
-                    return;
-                }
+        public void EmitConvertFromObject(Type toType) {
+            if (TryEmitCast(typeof(object), toType, true)) {
+                return;
             }
 
-            if (toType == typeof(object)) {
-                EmitConvertToObject(fromType);
-            } else {
-                if (toType.IsValueType && fromType.IsValueType) {
-                    throw new NotImplementedException();
-                } else {
-                    this.Emit(OpCodes.Unbox_Any, toType);
-                }
+            Binder.EmitConvertFromObject(this, toType);
+        }
+
+        public void EmitCast(Type fromType, Type toType) {
+            if (!TryEmitCast(fromType, toType, false)) {
+                throw new ArgumentException(String.Format("Cannot cast from '{0}' to '{1}'", fromType, toType));
             }
         }
 
-        // TODO: Extract common code with EmitCast to a utility function.
-        public void EmitConvert(Type fromType, Type toType) {
+        /// <summary>
+        /// Tries to emit a cast in a language independent way. If not successful, returns false.
+        /// </summary>
+        public bool TryEmitCast(Type fromType, Type toType, bool implicitOnly) {
             if (fromType == null) throw new ArgumentNullException("fromType");
             if (toType == null) throw new ArgumentNullException("toType");
 
             if (fromType == toType) {
-                // Types are the same, no action necessary
-                return;
+                return true;
             }
 
             if (toType.IsAssignableFrom(fromType)) {
-                // Converting to Nullable<>?
+                // T -> Nullable<T>
                 if (toType.IsGenericType && (toType.GetGenericTypeDefinition() == typeof(Nullable<>))) {
                     Type genericArgument = toType.GetGenericArguments()[0];
                     // Cast the type on the top of the stack to the type of the generic argument
                     EmitCast(fromType, genericArgument);
                     EmitNew(toType.GetConstructor(new Type[] { genericArgument }));
-                    return;
+                    return true;
                 }
 
-                if (toType.IsValueType == fromType.IsValueType) {
-                    return;
+                Debug.Assert(!toType.IsValueType, "no type is assignable to a different value type, except for Nullable<T>");
+                
+                // Value -> object/interface (boxing)
+                if (fromType.IsValueType) {
+                    if (toType == typeof(object)) {
+                        EmitBoxing(fromType);
+                        return true;
+                    }
+
+                    if (toType.IsInterface) {
+                        // If toType is an interface, emit a box, which the JIT will optimize away.
+                        // (also EmitBoxing won't work here because it will leave a System.Object on
+                        // the stack for Int32 and Boolean, and that can't be converted to an interface)
+                        Emit(OpCodes.Box, fromType);
+                        return true;
+                    }
+                }
+
+                // Sub -> Superclass, reference -> interface, covariant arrays
+                return true;
+            }
+
+            if (toType == typeof(void)) {
+                Emit(OpCodes.Pop);
+                return true;
+            }
+
+            // object -> Value (unboxing)
+            if (toType.IsValueType && fromType == typeof(object)) {
+                if (implicitOnly) return false;
+                Emit(OpCodes.Unbox_Any, toType);
+                return true;
+            }
+
+            if (toType.IsValueType != fromType.IsValueType) {
+                return false;
+            }
+
+            // downcast:
+            if (!toType.IsValueType) {
+                if (implicitOnly) return false;
+                if (!toType.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
+                Emit(OpCodes.Castclass, toType);
+                return true;
+            }
+
+            // integer/enum <-> enum (not assignable)
+            toType = (toType.IsEnum) ? Enum.GetUnderlyingType(toType) : toType;
+            fromType = (fromType.IsEnum) ? Enum.GetUnderlyingType(fromType) : fromType;
+
+            if (toType == fromType) {
+                return true;
+            }
+
+            if (TryEmitNumericCast(fromType, toType, implicitOnly)) { 
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool TryEmitNumericCast(Type fromType, Type toType, bool implicitOnly) {
+            TypeCode fc = Type.GetTypeCode(fromType);
+            TypeCode tc = Type.GetTypeCode(toType);
+            int fx, fy, tx, ty;
+
+            if (!GetNumericConversionOrder(fc, out fx, out fy) || !GetNumericConversionOrder(tc, out tx, out ty)) {
+                // numeric <-> non-numeric
+                return false;
+            }
+
+            bool isImplicit = IsImplicitlyConvertible(fx, fy, tx, ty);
+
+            if (implicitOnly && !isImplicit) {
+                return false;
+            }
+            
+            // IL conversion instruction also needed for floating point -> integer:
+            if (!isImplicit || ty == 2 || tx == 2) {
+                switch (tc) {
+                    case TypeCode.SByte: Emit(OpCodes.Conv_I1); break;
+                    case TypeCode.Int16: Emit(OpCodes.Conv_I2); break;
+                    case TypeCode.Int32: Emit(OpCodes.Conv_I4); break;
+                    case TypeCode.Int64: Emit(OpCodes.Conv_I8); break;
+                    case TypeCode.Byte: Emit(OpCodes.Conv_U1); break;
+                    case TypeCode.UInt16: Emit(OpCodes.Conv_U1); break;
+                    case TypeCode.UInt32: Emit(OpCodes.Conv_U2); break;
+                    case TypeCode.UInt64: Emit(OpCodes.Conv_U4); break;
+                    case TypeCode.Single: Emit(OpCodes.Conv_R4); break;
+                    case TypeCode.Double: Emit(OpCodes.Conv_R8); break;
+                    default: throw Utils.Assert.Unreachable;
                 }
             }
 
-            //TODO this is clearly not the most efficient conversion pattern...
-            this.EmitConvertToObject(fromType);
-            this.EmitConvertFromObject(toType);
+            return true;
         }
 
-        public void EmitConvertFromObject(Type paramType) {
-            if (paramType == null) throw new ArgumentNullException("paramType");
-            if (paramType == typeof(object)) return;
+        private static bool IsImplicitlyConvertible(int fromX, int fromY, int toX, int toY) {
+            return fromX <= toX && fromY <= toY;
+        }
+        
+        private static bool GetNumericConversionOrder(TypeCode code, out int x, out int y) {
+            // implicit conversions:
+            //     0     1     2     3     4
+            // 0:       U1 -> U2 -> U4 -> U8
+            //          |     |     |
+            //          v     v     v
+            // 1: I1 -> I2 -> I4 -> I8
+            //          |     |     
+            //          v     v     
+            // 2:       R4 -> R8
 
-            Binder.EmitConvertFromObject(this, paramType);
+            switch (code) {
+                case TypeCode.Byte: x = 0; y = 0; break;
+                case TypeCode.UInt16: x = 1; y = 0; break;
+                case TypeCode.UInt32: x = 2; y = 0; break;
+                case TypeCode.UInt64: x = 3; y = 0; break;
+
+                case TypeCode.SByte: x = 0; y = 1; break;
+                case TypeCode.Int16: x = 1; y = 1; break;
+                case TypeCode.Int32: x = 2; y = 1; break;
+                case TypeCode.Int64: x = 3; y = 1; break;
+
+                case TypeCode.Single: x = 1; y = 2; break;
+                case TypeCode.Double: x = 2; y = 2; break;
+
+                default:
+                    x = y = 0;
+                    return false;
+            }
+            return true;
         }
 
         /// <summary>
-        /// Converts the value on the top of the stack to a System.Object.  If there is nothing
-        /// to convert then this will push a null on the stack.  For almost all value types this method
+        /// Boxes the value of the stack. No-op for reference types. Void is converted to a null reference. For almost all value types this method
         /// will box them in the standard way.  Int32 and Boolean are handled with optimized conversions
         /// that reuse the same object for small values.  For Int32 this is purely a performance
         /// optimization.  For Boolean this is use to ensure that True and False are always the same
         /// objects.
         /// </summary>
-        /// <param name="retType"></param>
-        public void EmitConvertToObject(Type retType) {
-            if (retType == null) throw new ArgumentNullException("retType");
+        /// <param name="type"></param>
+        public void EmitBoxing(Type type) {
+            if (type == null) throw new ArgumentNullException("type");
+            Debug.Assert(typeof(void).IsValueType);
 
-            if (retType == typeof(void)) {
-                Emit(OpCodes.Ldnull);
-            } else if (retType.IsValueType) {
-                if (retType == typeof(int)) {
+            if (type.IsValueType) {
+                if (type == typeof(void)) {
+                    Emit(OpCodes.Ldnull);
+                } else if (type == typeof(int)) {
                     EmitCall(typeof(RuntimeHelpers), "Int32ToObject");
-                } else if (retType == typeof(bool)) {
+                } else if (type == typeof(bool)) {
                     EmitCall(typeof(RuntimeHelpers), "BooleanToObject");
                 } else {
-                    Emit(OpCodes.Box, retType);
+                    Emit(OpCodes.Box, type);
                 }
             }
-            // otherwise it's already an object
         }
 
         public void EmitReturnValue() {
@@ -1075,6 +1165,7 @@ namespace Microsoft.Scripting.Generation {
         public void EmitCall(Type type, String name) {
             if (type == null) throw new ArgumentNullException("type");
             if (name == null) throw new ArgumentNullException("name");
+            if (!type.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
 
             EmitCall(type.GetMethod(name));
         }
@@ -1136,7 +1227,12 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitType(Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            if (type == null) throw new ArgumentNullException("type");            
+            if (!(type is TypeBuilder) && !type.IsGenericParameter && !type.IsVisible) {
+                // can't ldtoken on a non-visible type, refer to it via a runtime constant...
+                EmitConstant(new RuntimeConstant(type));
+                return;
+            }
 
             Emit(OpCodes.Ldtoken, type);
             EmitCall(typeof(Type), "GetTypeFromHandle");
@@ -1511,7 +1607,7 @@ namespace Microsoft.Scripting.Generation {
             } else if (value is Type) {
                 EmitType((Type)value);
             } else if (value is RuntimeTypeHandle) {
-                Emit(OpCodes.Ldtoken, Type.GetTypeFromHandle((RuntimeTypeHandle)value));
+                Emit(OpCodes.Ldtoken,  Type.GetTypeFromHandle((RuntimeTypeHandle)value));
             } else if (value is MethodInfo) {
                 Emit(OpCodes.Ldtoken, (MethodInfo)value);
                 EmitCall(typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
@@ -1680,6 +1776,7 @@ namespace Microsoft.Scripting.Generation {
             }
 
             if (_context != null) res.Context = _context;
+            res.FastEval = _fastEval;
             return res;
         }
 

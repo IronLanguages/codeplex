@@ -26,6 +26,7 @@ namespace Microsoft.Scripting {
 
         /// <summary> Table of dynamicly generated delegates which are shared based upon method signature. </summary>
         private static Publisher<DelegateSignatureInfo, DelegateInfo> _dynamicDelegateCache = new Publisher<DelegateSignatureInfo, DelegateInfo>();
+        private static Dictionary<Type, List<Type>> _extensionTypes = new Dictionary<Type, List<Type>>();
 
         public static DynamicType GetDynamicTypeFromType(Type type) {
             if (type == null) throw new ArgumentNullException("type");
@@ -50,9 +51,8 @@ namespace Microsoft.Scripting {
             if (frames == null) {
                 // we may have missed a dynamic catch, and our host is looking
                 // for the exception...
-                frames = RuntimeHelpers._stackFrames;
-                Utils.GetDataDictionary(e)[typeof(DynamicStackFrame)] = frames;
-                RuntimeHelpers._stackFrames = null;
+                frames = RuntimeHelpers.AssociateDynamicStackFrames(e);
+                RuntimeHelpers.ClearDynamicStackFrames();
             }
 
             if (frames == null) {
@@ -63,24 +63,26 @@ namespace Microsoft.Scripting {
             frames = new List<DynamicStackFrame>(frames);
             List<DynamicStackFrame> res = new List<DynamicStackFrame>();
 
-            // the list of _stackFraames we build up in RuntimeHelpers can have
+            // the list of _stackFrames we build up in RuntimeHelpers can have
             // too many frames if exceptions are thrown from script code and
             // caught outside w/o calling GetDynamicStackFrames.  Therefore we
             // filter down to only script frames which we know are associated
             // w/ the exception here.
             try {
-                StackTrace clrFrames = new StackTrace(e);
+                StackTrace outermostTrace = new StackTrace(e);
+                IList<StackTrace> otherTraces = ExceptionHelpers.GetExceptionStackTraces(e) ?? new List<StackTrace>();
+                List<StackFrame> clrFrames = new List<StackFrame>();
+                foreach (StackTrace trace in otherTraces) {
+                    clrFrames.AddRange(trace.GetFrames());
+                }
+                clrFrames.AddRange(outermostTrace.GetFrames());
+                
                 int lastFound = 0;
-                for (int i = 0; i < clrFrames.FrameCount; i++) {
-                    MethodBase method = clrFrames.GetFrame(i).GetMethod();
+                foreach (StackFrame clrFrame in clrFrames) {
+                    MethodBase method = clrFrame.GetMethod();
 
                     for (int j = lastFound; j < frames.Count; j++) {
                         MethodBase other = frames[j].GetMethod();
-                        if (other == null) {
-                            // GetMethod() can return null for CodeBlocks executed in interpreted mode
-                            continue;
-                        }
-
                         // method info's don't always compare equal, check based
                         // upon name/module/declaring type which will always be a correct
                         // check for dynamic methods.
@@ -207,7 +209,20 @@ namespace Microsoft.Scripting {
             }
         }
 
+        private static void RegisterOneExtension(Type extending, Type extension) {
+            lock (_extensionTypes) {
+                List<Type> extensions;
+                if (!_extensionTypes.TryGetValue(extending, out extensions)) {
+                    _extensionTypes[extending] = extensions = new List<Type>();
+                }
+                extensions.Add(extension);
+            }
+        }
+
         public static void ExtendOneType(ExtensionTypeAttribute et, DynamicType dt) {
+            // new-style extensions:
+            RegisterOneExtension(et.Extends, et.Type);
+
             ExtensionTypeAttribute.RegisterType(et.Extends, et.Type, dt);
 
             DynamicTypeExtender.ExtendType(dt, et.Type, et.Transformer);
@@ -217,6 +232,17 @@ namespace Microsoft.Scripting {
             } else if (et.DerivationType != null) {
                 DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetExtensionType(et.DerivationType);
             }
+        }
+
+        internal static Type[] GetExtensionTypes(Type t) {
+            lock (_extensionTypes) {
+                List<Type> res;
+                if (_extensionTypes.TryGetValue(t, out res)) {
+                    return res.ToArray();
+                }
+            }
+
+            return Utils.Reflection.EmptyTypes;
         }
     }
 }

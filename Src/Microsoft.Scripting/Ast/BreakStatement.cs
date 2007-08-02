@@ -31,11 +31,6 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override void Emit(CodeGen cg) {
-            if (!cg.InLoop()) {
-                cg.Context.AddError("'break' not properly in loop", this);
-                return;
-            }
-
             cg.EmitPosition(Start, End);
 
             if (_statement != null) {
