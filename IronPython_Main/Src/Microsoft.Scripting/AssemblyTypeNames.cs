@@ -73,7 +73,7 @@ namespace Microsoft.Scripting {
             try {
                 return asm.GetTypes();
             } catch (Exception) {
-                return new Type[0];
+                return Utils.Reflection.EmptyTypes;
             }
 #else
             try {

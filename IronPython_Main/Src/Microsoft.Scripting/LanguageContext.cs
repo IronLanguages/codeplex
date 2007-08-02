@@ -143,7 +143,7 @@ namespace Microsoft.Scripting {
             if (context.Scope.TryLookupName(this, name, out value)) {
                 return true;
             }
-
+            
             return TryLookupGlobal(context, name, out value);
         }
 
@@ -155,7 +155,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         public virtual object LookupName(CodeContext context, SymbolId name) {
             object value;
-            if (!TryLookupName(context, name, out value)) {
+            if (!TryLookupName(context, name, out value) || value == Uninitialized.Instance) {
                 throw MissingName(name);
             }
 
@@ -304,38 +304,6 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Delete From Array target, the value index
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="target">Object on which it is to be deleted</param>
-        /// <param name="index">Array index</param>
-        /// <returns>returns null by default.</returns>
-        public virtual object DeleteIndex(CodeContext context, object target, object index) {
-            return null;
-        }
-
-        /// <summary>
-        /// Get value from the target at the specified index:  target[index]
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="target">Target</param>
-        /// <param name="index">Index</param>
-        /// <returns></returns>
-        public virtual object GetIndex(CodeContext context, object target, object index) {
-            return null;
-        }
-
-        /// <summary>
-        /// Set the value on the target at the specified index.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="target">Target of the operation</param>
-        /// <param name="index">Index</param>
-        /// <param name="value">Value to set at the given index.</param>
-        public virtual void SetIndex(CodeContext context, object target, object index, object value) {
-        }
-
-        /// <summary>
         /// Get the value of the member with given name from the target
         /// </summary>
         /// <param name="context"></param>
@@ -428,30 +396,8 @@ namespace Microsoft.Scripting {
             return null;
         }
 
-        /// <summary>
-        /// Determines object equality in the given context.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="x">First object to compare</param>
-        /// <param name="y">Second object to compare</param>
-        /// <returns>bool</returns>
+        // used only by ReflectedEvent.HandlerList
         public virtual bool EqualReturnBool(CodeContext context, object x, object y) {
-            return false;
-        }
-
-        /// <summary>
-        /// Used by the Switch statment to check if a given object can be used as a valid case
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="exprVal">Object which is the case expression</param>
-        /// <param name="index">The actual index to be used for switching</param>
-        /// <returns>True if a index was found successfully</returns>
-        public virtual bool TryGetSwitchIndex(CodeContext context, object exprVal, out int index) {
-            if (exprVal is int) {
-                index = (int)exprVal;
-                return true;
-            }
-            index = -1;
             return false;
         }
 
@@ -463,10 +409,8 @@ namespace Microsoft.Scripting {
             throw new MissingMemberException("the specified operator is not implemented");
         }
 
-        public virtual string GetTypeName(object o) {
-            return DynamicHelpers.GetDynamicType(o).Name;
-        }
 
+        // used by DynamicHelpers.GetDelegate
         /// <summary>
         /// Checks whether the target is callable with given number of arguments.
         /// </summary>

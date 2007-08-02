@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Generation {
                 refSlot.EmitGet(cg);
                 return new ReturnFixer(refSlot, argSlot);
             } else {
-                cg.EmitConvertToObject(argSlot.Type);
+                cg.EmitBoxing(argSlot.Type);
                 return null;
             }
         }

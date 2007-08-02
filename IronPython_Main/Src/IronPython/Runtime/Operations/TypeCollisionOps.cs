@@ -28,10 +28,14 @@ namespace IronPython.Runtime.Operations {
         [OperatorMethod, PythonName("__repr__")]
         public static string ToCodeRepresentation(TypeCollision self) {
             StringBuilder sb = new StringBuilder("<types ");
-            sb.Append(PythonOps.StringRepr(DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(self.DefaultType))));
-            for (int i = 0; i < self.OtherTypes.Count; i++) {
-                sb.Append(", ");
-                sb.Append(PythonOps.StringRepr(DynamicTypeOps.GetName(self.OtherTypes[i])));
+            bool pastFirstType = false;
+            foreach(Type type in self.Types) {
+                if (pastFirstType) { 
+                    sb.Append(", ");
+                }
+                DynamicType dt = DynamicHelpers.GetDynamicTypeFromType(type);
+                sb.Append(PythonOps.StringRepr(DynamicTypeOps.GetName(dt)));
+                pastFirstType = true;
             }
             sb.Append(">");
 

@@ -272,7 +272,7 @@ namespace IronPython.Runtime.Operations {
             maxArgCnt = 0;
 
             if (fo != null) {
-                if (fo is FunctionN == false) {
+                if ((fo.Flags & (FunctionAttributes.ArgumentList | FunctionAttributes.KeywordDictionary)) == 0) {
                     maxArgCnt = fo.NormalArgumentCount;
                     minArgCnt = fo.NormalArgumentCount - fo.FunctionDefaults.Count;
 
@@ -375,6 +375,13 @@ namespace IronPython.Runtime.Operations {
                 }
                 return false;
             }
+
+            if (dt.UnderlyingSystemType.IsInterface) {
+                // interfaces aren't in bases, and therefore IsSubclassOf doesn't do this check.
+                if (dt.UnderlyingSystemType.IsAssignableFrom(c.UnderlyingSystemType)) {
+                    return true;
+                }
+            } 
 
             return c.IsSubclassOf(dt);
         }
@@ -1301,21 +1308,10 @@ namespace IronPython.Runtime.Operations {
         public static bool TryGetAttr(CodeContext context, object o, SymbolId name, out object ret) {
             ICustomMembers ids = o as ICustomMembers;
             if (ids != null) {
-                if (ids.TryGetCustomMember(context, name, out ret)) {
-                    return true;
-                }
-
-                //!!! should go into DynamicType ICustomAttributes implementation, but we don't have
-                // the type cache to do this... (see GetAttr for more info)
-                if (o.GetType() != typeof(DynamicType) && !o.GetType().IsSubclassOf(typeof(ExtensibleType))) 
-                    return false;
+                return ids.TryGetCustomMember(context, name, out ret);
             }
             
-            if (DynamicHelpers.GetDynamicType(o).TryGetMember(context, o, name, out ret)) {
-                //!!! needs to go (should be bulit-in to DynamicType)
-                return true;
-            }
-            return false;
+            return DynamicHelpers.GetDynamicType(o).TryGetMember(context, o, name, out ret);
         }
 
         public static bool TryGetBoundAttr(object o, SymbolId name, out object ret) {
@@ -1325,21 +1321,10 @@ namespace IronPython.Runtime.Operations {
         public static bool TryGetBoundAttr(CodeContext context, object o, SymbolId name, out object ret) {
             ICustomMembers icm = o as ICustomMembers;
             if (icm != null) {
-                if (icm.TryGetBoundCustomMember(context, name, out ret)) {
-                    return true;
-                }
-
-                //!!! should go into DynamicType ICustomAttributes implementation, but we don't have
-                // the type cache to do this... (see GetAttr for more info)
-                if (o.GetType() != typeof(DynamicType) && !o.GetType().IsSubclassOf(typeof(ExtensibleType)))
-                    return false;
+                return icm.TryGetBoundCustomMember(context, name, out ret);
             }
 
-            if (DynamicHelpers.GetDynamicType(o).TryGetBoundMember(context, o, name, out ret)) {
-                //!!! needs to go (should be bulit-in to DynamicType)
-                return true;
-            }
-            return false;
+            return DynamicHelpers.GetDynamicType(o).TryGetBoundMember(context, o, name, out ret);
         }
 
         public static bool HasAttr(CodeContext context, object o, SymbolId name) {
@@ -1353,28 +1338,8 @@ namespace IronPython.Runtime.Operations {
 
         public static object GetAttr(CodeContext context, object o, SymbolId name) {
             ICustomMembers ifca = o as ICustomMembers;
-            object ret;
-
             if (ifca != null) {
-                if (ifca.TryGetCustomMember(context, name, out ret)) {
-                    //!!! needs to go (should be bulit-in to DynamicType)
-                    return ret;                    
-                }
-                //!!! this DynamicType check can go away when the typecache
-                // lives in Microsoft.Scripting & DynamicType's CustomAttrs
-                // implementation can look in type
-                if (o.GetType() == typeof(DynamicType) || o.GetType().IsSubclassOf(typeof(ExtensibleType))) {
-                    // we have an instance of a class that is built w/
-                    // a meta-class.  We need to check the metaclasses
-                    // properties as well, which ICustomAttrs didn't do.
-                    // we'll fall through to GetAttr (we should probably
-                    // do special overrides in NewTypeMaker instead)
-                } else if (o is OldClass) {
-                    throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
-                        ((OldClass)o).Name, SymbolTable.IdToString(name));
-                } else {
-                    throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetDynamicType(o).Name, SymbolTable.IdToString(name));
-                }
+                return GetCustomMembers(context, ifca, name);
             }
 
             // fall through to normal case...
@@ -1388,16 +1353,8 @@ namespace IronPython.Runtime.Operations {
                 if (icm.TryGetBoundCustomMember(context, name, out value)) {
                     return value;
                 }
-                //!!! this DynamicType check can go away when the typecache
-                // lives in Microsoft.Scripting & DynamicType's CustomAttrs
-                // implementation can look in type
-                if (o.GetType() == typeof(DynamicType) || o.GetType().IsSubclassOf(typeof(ExtensibleType))) {
-                    // we have an instance of a class that is built w/
-                    // a meta-class.  We need to check the metaclasses
-                    // properties as well, which ICustomAttrs didn't do.
-                    // we'll fall through to GetAttr (we should probably
-                    // do special overrides in NewTypeMaker instead)
-                } else if (o is OldClass) {
+               
+                if (o is OldClass) {
                     throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
                         ((OldClass)o).Name, SymbolTable.IdToString(name));
                 } else {
@@ -1444,23 +1401,7 @@ namespace IronPython.Runtime.Operations {
         public static object ObjectGetAttribute(CodeContext context, object o, SymbolId name) {
             ICustomMembers ifca = o as ICustomMembers;
             if (ifca != null) {
-                object ret;
-                if (ifca.TryGetBoundCustomMember(context, name, out ret)) return ret;
-                //!!! this DynamicType check can go away when the typecache
-                // lives in Microsoft.Scripting & DynamicType's CustomAttrs
-                // implementation can look in type
-                if (o.GetType() == typeof(DynamicType)) {
-                    // we have an instance of a class that is built w/
-                    // a meta-class.  We need to check the metaclasses
-                    // properties as well, which ICustomAttrs didn't do.
-                    // we'll fall through to GetBoundAttr (we should probably
-                    // do special overrides in NewTypeMaker instead)
-                } else if (o is OldClass) {
-                    throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
-                        ((OldClass)o).Name, SymbolTable.IdToString(name));
-                } else {
-                    throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetDynamicType(o).Name, SymbolTable.IdToString(name));
-                }
+                return GetCustomMembers(context, ifca, name);
             }
 
             object value;
@@ -1469,6 +1410,17 @@ namespace IronPython.Runtime.Operations {
             }            
 
             throw PythonOps.AttributeErrorForMissingAttribute(DynamicHelpers.GetDynamicType(o).Name, name);
+        }
+
+        private static object GetCustomMembers(CodeContext context, ICustomMembers ifca, SymbolId name) {
+            object ret;
+            if (ifca.TryGetBoundCustomMember(context, name, out ret)) return ret;
+
+            if (ifca is OldClass) {
+                throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'", ((OldClass)ifca).Name, SymbolTable.IdToString(name));
+            } else {
+                throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetDynamicType(ifca).Name, SymbolTable.IdToString(name));
+            }
         }
 
         public static void SetAttr(CodeContext context, object o, SymbolId name, object value) {
@@ -1919,7 +1871,6 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception InvalidType(object o, RuntimeTypeHandle handle) {
-            System.Diagnostics.Debug.Assert(ScriptDomainManager.Options.GenerateSafeCasts);
             Type type = Type.GetTypeFromHandle(handle);
             return TypeError("Object {0} is not of type {1}", o == null ? "None" : o, type);
         }
@@ -2067,10 +2018,11 @@ namespace IronPython.Runtime.Operations {
                     for (int i = 0; i < bases.Length; i++) {
                         TypeCollision tc = bases[i] as TypeCollision;
                         if (tc != null) {
-                            if (tc.NonGenericType == null) {
+                            Type nonGenericType;
+                            if (!tc.TryGetNonGenericType(out nonGenericType)) {
                                 throw PythonOps.TypeError("cannot derive from open generic types " + Builtin.Repr(tc).ToString());
                             }
-                            newBases[i] = DynamicHelpers.GetDynamicTypeFromType(tc.NonGenericType);
+                            newBases[i] = DynamicHelpers.GetDynamicTypeFromType(nonGenericType);
                         } else {
                             newBases[i] = bases[i];
                         }
@@ -2112,12 +2064,13 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         /// <param name="msg">Object representing the assertion message</param>
         public static void RaiseAssertionError(object msg) {
-            string message = PythonOps.ToString(msg);
-            if (message == null) {
+            if (msg == null) {
                 throw PythonOps.AssertionError(String.Empty, RuntimeHelpers.EmptyObjectArray);
             } else {
+                string message = PythonOps.ToString(msg);
                 throw PythonOps.AssertionError("{0}", new object[] { message });
             }
+                
         }
 
         /// <summary>
@@ -2407,6 +2360,7 @@ namespace IronPython.Runtime.Operations {
             Stream cs;
 
             bool line_feed = true;
+            bool tryEvaluate = false;
 
             // TODO: use SourceUnitReader when available
             if ((pf = code as PythonFile) != null) {
@@ -2437,6 +2391,7 @@ namespace IronPython.Runtime.Operations {
 
                 ScriptCode sc = PythonModuleOps.CompileFlowTrueDivision(code_unit, context.LanguageContext);
                 code = new FunctionCode(sc);
+                tryEvaluate = true; // do FastEval only on strings -- not on files, streams, or code objects
             }
 
             FunctionCode fc = code as FunctionCode;
@@ -2459,7 +2414,7 @@ namespace IronPython.Runtime.Operations {
 
             Microsoft.Scripting.Scope scope = new Microsoft.Scripting.Scope(new Microsoft.Scripting.Scope(globals), attrLocals);
 
-            fc.Call(context, scope);
+            fc.Call(context, scope, tryEvaluate);
         }
 
         #endregion        
@@ -2631,6 +2586,11 @@ namespace IronPython.Runtime.Operations {
         public static object InitializeUserTypeSlots(Type type) {
             return NewTuple.MakeTuple(type, 
                 CompilerHelpers.MakeRepeatedArray<object>(Uninitialized.Instance, NewTuple.GetSize(type)));
+        }
+
+        public static bool IsClsVisible(CodeContext context) {
+            PythonModuleContext pmc = context.ModuleContext as PythonModuleContext;
+            return pmc == null || pmc.ShowCls;
         }
     }
 }

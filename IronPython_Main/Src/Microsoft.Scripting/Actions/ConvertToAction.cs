@@ -17,12 +17,8 @@ using System;
 
 namespace Microsoft.Scripting.Actions {
 
-    public class ConvertToAction : Action {
+    public class ConvertToAction : Action, IEquatable<ConvertToAction> {
         private Type _type;
-
-        public static ConvertToAction Make(string type) {
-            return Make(Type.GetType(type));
-        }
 
         public static ConvertToAction Make(Type type) {
             return new ConvertToAction(type);
@@ -32,17 +28,27 @@ namespace Microsoft.Scripting.Actions {
 
         public Type ToType { get { return _type; } }
         public override ActionKind Kind { get { return ActionKind.ConvertTo; } }
-        public override string ParameterString { get { return _type.AssemblyQualifiedName; } }
 
         public override bool Equals(object obj) {
-            ConvertToAction other = obj as ConvertToAction;
-            if (other == null) return false;
-            return _type == other._type;
+            return Equals(obj as ConvertToAction);
         }
 
         public override int GetHashCode() {
             return (int)Kind << 28 ^ _type.GetHashCode();
         }
+
+        public override string ToString() {
+            return base.ToString() + " to " + _type.ToString();
+        }
+
+        #region IEquatable<ConvertToAction> Members
+
+        public bool Equals(ConvertToAction other) {
+            if (other == null) return false;
+            return _type == other._type;
+        }
+
+        #endregion
     }
 
 }

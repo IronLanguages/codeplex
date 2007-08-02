@@ -94,7 +94,7 @@ namespace Microsoft.Scripting.Ast {
 
             // box "this" if it is a value type (in case _method tries to modify it)
             // -- this keeps the same semantics as Emit().
-            if (_method.DeclaringType.IsValueType)
+            if (_method.DeclaringType != null && _method.DeclaringType.IsValueType)
                 instance = System.Runtime.CompilerServices.RuntimeHelpers.GetObjectValue(instance);
 
             object[] parameters = new object[_pi.Length];

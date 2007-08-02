@@ -448,12 +448,11 @@ namespace IronPython.Runtime {
             return TrySlowConvert(value, to, out result);
         }
 
-        // TODO: Make internal once JS has its own converter
         /// <summary>
         /// This function tries to convert an object to IEnumerator, or wraps it into an adapter
         /// Do not use this function directly. It is only meant to be used by Ops.GetEnumerator.
         /// </summary>
-        public static bool TryConvertToIEnumerator(object o, out IEnumerator e) {
+        internal static bool TryConvertToIEnumerator(object o, out IEnumerator e) {
             if (o is string) {
                 e = StringOps.GetEnumerator((string)o);
                 return true;
@@ -740,7 +739,12 @@ namespace IronPython.Runtime {
             if (DynamicTypeVal != null) return DynamicTypeVal.UnderlyingSystemType;
 
             TypeCollision typeCollision = value as TypeCollision;
-            if (typeCollision != null && typeCollision.NonGenericType != null) return typeCollision.NonGenericType;
+            if (typeCollision != null) {
+                Type nonGenericType;
+                if (typeCollision.TryGetNonGenericType(out nonGenericType)) {
+                    return nonGenericType;
+                }
+            }
 
             throw MakeTypeError("Type", value);
         }

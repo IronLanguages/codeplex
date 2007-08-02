@@ -383,7 +383,7 @@ namespace IronPython.Runtime {
         }
 
         public void Clear() {
-            DictionaryOps.Clear(dict);
+            DictionaryOps.clear(dict);
         }
 
         public bool Contains(KeyValuePair<TKey, TValue> item) {

@@ -34,7 +34,6 @@ using Microsoft.Scripting.Generation;
 namespace IronPython.Runtime.Calls {
     [PythonType("instancemethod")]
     public sealed partial class Method : FastCallable, IFancyCallable, IWeakReferenceable, ICustomMembers, IDynamicObject {
-        //??? can I type this to Function
         private object _func;
         private object _inst;
         private object _declaringClass;
@@ -231,7 +230,7 @@ namespace IronPython.Runtime.Calls {
             if (TypeCache.Method.TryGetBoundMember(context, this, name, out value)) return true;
 
             // Forward to the func
-            return ((PythonFunction)_func).TryGetBoundCustomMember(context, name, out value);
+            return PythonOps.TryGetAttr(context, _func, name, out value);
         }
 
         public void SetCustomMember(CodeContext context, SymbolId name, object value) {

@@ -102,15 +102,15 @@ namespace IronPython.Runtime.Calls {
         }
 
         public static PythonFunction MakeFunction(CodeContext context, string name, Delegate target, string[] argNames, object[] defaults,
-            FunctionAttributes attributes, string docString, int lineNumber, string fileName, int flags) {
+            FunctionAttributes attributes, string docString, int lineNumber, string fileName) {
             PythonFunction ret = MakeFunction(context, name, target, argNames, defaults, attributes);
             if (docString != null) ret.Documentation = docString;
             ret.FunctionCode.SetLineNumber(lineNumber);
             ret.FunctionCode.SetFilename(fileName);
-            ret.FunctionCode.SetFlags(context, flags);
+            ret.FunctionCode.SetFlags(attributes);
             return ret;
         }
-                       
+        
         #region Public APIs
 
         public string[] ArgNames {

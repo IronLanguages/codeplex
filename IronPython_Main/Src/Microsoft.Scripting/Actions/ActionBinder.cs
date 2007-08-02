@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -116,7 +117,7 @@ namespace Microsoft.Scripting.Actions {
                 case ActionKind.Call:
                     return new CallBinderHelper<T>(callerContext, (CallAction)action).MakeRule(args);
                 case ActionKind.GetMember:
-                    return new GetMemberBinderHelper<T>(callerContext, (GetMemberAction)action).MakeNewRule(args);
+                    return new GetMemberBinderHelper<T>(callerContext, (GetMemberAction)action, args).MakeNewRule();
                 case ActionKind.SetMember:
                     return new SetMemberBinderHelper<T>(callerContext, (SetMemberAction)action).MakeNewRule(args);
                 case ActionKind.CreateInstance:
@@ -163,5 +164,65 @@ namespace Microsoft.Scripting.Actions {
         public virtual object GetByRefArray(object[] args) {
             return args;
         }
+
+        /// <summary>
+        /// Gets the members that are visible from the provided type of the specified name.
+        /// 
+        /// The default implemetnation first searches the type, then the flattened heirachy of the type, and then
+        /// registered extension methods.
+        /// </summary>
+        public virtual MemberInfo[] GetMember(Type type, string name) {
+            MemberInfo[] members = type.GetMember(name);
+            if (members.Length == 0) {
+                members = type.GetMember(name, BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
+                if (members.Length == 0) {
+                    members = GetExtensionMembers(name, type);
+                }
+            }
+            return members;
+        }
+
+        /// <summary>
+        /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
+        /// doing this for the time being until we get a more robust error return mechanism.
+        /// </summary>
+        public virtual Expression MakeMissingMemberError(Type type, string name) {
+            return Ast.Ast.New(
+                typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                Ast.Ast.Constant(name)
+            );           
+        }
+
+        private static MemberInfo[] GetExtensionMembers(string name, Type type) {
+                Type curType = type;
+                do {
+                    Type[] extTypes = DynamicHelpers.GetExtensionTypes(curType);
+                    List<MemberInfo> members = new List<MemberInfo>();
+
+                    foreach (Type ext in extTypes) {
+                        foreach (MemberInfo mi in ext.GetMember(name)) {
+                            members.Add(mi);
+                        }
+
+                        foreach (MemberInfo mi in ext.GetMember("Get" + name)) {
+                            if (!mi.IsDefined(typeof(PropertyMethodAttribute), false)) continue;
+                            // TODO: ExtProperties
+                        }
+
+                        foreach (MemberInfo mi in ext.GetMember("Set" + name)) {
+                            if (!mi.IsDefined(typeof(PropertyMethodAttribute), false)) continue;
+                            // TODO: ExtProperties
+                        }
+                    }
+
+                    if (members.Count != 0) {
+                        return members.ToArray();
+                    }
+
+                    curType = curType.BaseType;
+                } while (curType != null);
+
+                return new MemberInfo[0];
+            }   
     }
 }

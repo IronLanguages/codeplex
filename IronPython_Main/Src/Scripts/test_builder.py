@@ -13,6 +13,15 @@
 #
 #####################################################################################
 
+import sys
+if sys.platform=="win32":
+    import os
+    newline = os.linesep    
+else:
+    newline = System.Environment.NewLine
+    
+    
+
 pats = [0L, 1L, 42L, 0x7fffffffL, 0x80000000L, 0xabcdef01L, 0xffffffffL]
 nums = []
 for p0 in pats:
@@ -64,10 +73,10 @@ def buildit(name, nums):
                         sz = str(z)
                     if fp:
                         fp.write(sz)
-                        fp.write('\r\n')
+                        fp.write(newline)
                 except:
                     if fp:
-                        fp.write('ERROR\r\n')
+                        fp.write('ERROR' + newline)
         if fp: fp.close()
     t1 = time.clock()
     print 'time', (t1-t0)

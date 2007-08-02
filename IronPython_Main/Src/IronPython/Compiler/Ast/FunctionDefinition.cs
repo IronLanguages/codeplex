@@ -263,9 +263,6 @@ namespace IronPython.Compiler.Ast {
                 if (p.DefaultValue != null) defaults.Add(p.DefaultValue);
             }
 
-            FunctionAttributes codeFlags = 0;
-            if (_generator) codeFlags |= FunctionAttributes.Generator;
-
             string filename = _sourceUnit.DisplayName;
 
             MSAst.Expression ret = Ast.Call(
@@ -280,8 +277,7 @@ namespace IronPython.Compiler.Ast {
                 Ast.Constant(flags),                                            // 6. flags
                 Ast.Constant(_body.Documentation),                              // 7. doc string or null
                 Ast.Constant(this.Start.Line),                                  // 8. line number
-                Ast.Constant(filename),                                         // 9. filename
-                Ast.Constant((int)codeFlags)                                    // 10. code flags
+                Ast.Constant(filename)                                          // 9. filename
             );
 
             // add decorators

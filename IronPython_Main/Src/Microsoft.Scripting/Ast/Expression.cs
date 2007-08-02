@@ -60,7 +60,12 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="cg">Where to emit the code.</param>
         public void EmitAsObject(CodeGen cg) {
             this.Emit(cg);  // emit as ExpressionType
-            cg.EmitConvertToObject(ExpressionType);
+            cg.EmitBoxing(ExpressionType);
+        }
+
+        internal void EmitCast(CodeGen cg, Type asType) {
+            this.Emit(cg);  // emit as ExpressionType
+            cg.EmitCast(ExpressionType, asType);
         }
 
         /// <summary>

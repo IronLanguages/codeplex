@@ -109,11 +109,11 @@ namespace IronPython.Runtime {
         }
 
         public override string ToString() {
-            return DictionaryOps.ToString(this);
+            return DictionaryOps.__str__(this);
         }
 
         public string ToCodeString(CodeContext context) {
-            return DictionaryOps.ToCodeString(this);
+            return DictionaryOps.__repr__(this);
         }
 
     }

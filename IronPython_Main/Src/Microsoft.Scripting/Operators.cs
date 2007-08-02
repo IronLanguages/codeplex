@@ -166,7 +166,6 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        AndAlso,
         /// <summary>
         /// Binary operator.
         /// 

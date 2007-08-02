@@ -254,7 +254,7 @@ def test_autodoc():
     
     #Assert(Thread.__new__.__doc__.find('__new__(cls, ThreadStart start)') != -1)
     
-    #AreEqual(Thread.__new__.Overloads[ThreadStart].__doc__, '__new__(cls, ThreadStart start)\r\n')
+    #AreEqual(Thread.__new__.Overloads[ThreadStart].__doc__, '__new__(cls, ThreadStart start)' + newline)
     
 
 #IronPythonTest.TypeDescTests is not available for silverlight
@@ -712,6 +712,16 @@ def test_property_get_set():
         temp.Width = i
         AreEqual(temp.Width, i)    
 
+def test_write_only_property_set():
+    from IronPythonTest import WriteOnly
+    obj = WriteOnly()
+    
+    AssertError(AttributeError, getattr, obj, 'Writer')
+
+def test_isinstance_interface():
+    import System
+    Assert(isinstance('abc', System.Collections.IEnumerable))
+
 def test_constructor_function():
     '''
     Test to hit IronPython.Runtime.Operations.ConstructionFunctionOps.
@@ -725,7 +735,7 @@ def test_constructor_function():
     
     for constr in t_list:
         AreEqual(constr.__name__, "__new__")
-        AreEqual(constr.__doc__, "ConstructorFunction(builtin_function_or_method realTarget, Array[MethodBase] constructors)\r\n")
+        AreEqual(constr.__doc__, "ConstructorFunction(builtin_function_or_method realTarget, Array[MethodBase] constructors)" + newline)
 
 
 run_test(__name__)

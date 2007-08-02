@@ -17,13 +17,23 @@ using System;
 using System.Diagnostics;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Ast {
+    public enum BinaryOperators {
+        Equal,
+        NotEqual,
+        AndAlso,
+        OrElse,
+        Add,
+        Multiply,
+    }
+
     public class BinaryExpression : Expression {
         private readonly Expression _left, _right;
-        private readonly Operators _op;
+        private readonly BinaryOperators _op;
 
-        internal BinaryExpression(SourceSpan span, Operators op, Expression left, Expression right)
+        internal BinaryExpression(SourceSpan span, BinaryOperators op, Expression left, Expression right)
             : base(span) {
             Debug.Assert(left != null);
             Debug.Assert(right != null);
@@ -44,27 +54,29 @@ namespace Microsoft.Scripting.Ast {
         public override Type ExpressionType {
             get {
                 switch (_op) {
-                    case Operators.Equal:
-                    case Operators.NotEqual:
+                    case BinaryOperators.Equal:
+                    case BinaryOperators.NotEqual:
+                    case BinaryOperators.AndAlso:
+                    case BinaryOperators.OrElse:
                         return typeof(bool);
-                    case Operators.AndAlso:
-                        return typeof(bool);
-                    case Operators.Add:
-                    case Operators.Multiply:
+
+                    case BinaryOperators.Add:
+                    case BinaryOperators.Multiply:
                         return typeof(int);
+                    
                     default:
                         throw new NotImplementedException();
                 }
             }
         }
 
-        public Operators Op {
+        public BinaryOperators Operator {
             get { return _op; }
         }
 
-        private bool EmitBranchTrue(CodeGen cg, Operators op, Label label) {
+        private bool EmitBranchTrue(CodeGen cg, BinaryOperators op, Label label) {
             switch (op) {
-                case Operators.Equal:
+                case BinaryOperators.Equal:
                     if (_left.IsConstant(null)) {
                         _right.EmitAsObject(cg);
                         cg.Emit(OpCodes.Brfalse, label);
@@ -77,7 +89,8 @@ namespace Microsoft.Scripting.Ast {
                         cg.Emit(OpCodes.Beq, label);
                     }
                     return true;
-                case Operators.NotEqual:
+
+                case BinaryOperators.NotEqual:
                     if (_left.IsConstant(null)) {
                         _right.EmitAsObject(cg);
                         cg.Emit(OpCodes.Brtrue, label);
@@ -91,36 +104,62 @@ namespace Microsoft.Scripting.Ast {
                         cg.Emit(OpCodes.Brfalse, label);
                     }
                     return true;
-                case Operators.AndAlso:
-                    Label falseBranch = cg.DefineLabel();
-                    _left.EmitBranchFalse(cg, falseBranch);
+
+                case BinaryOperators.AndAlso:
+                    // if (left AND right) branch label
+                    
+                    // if (left) then 
+                    //   if (right) branch label
+                    // endif
+                    Label endif = cg.DefineLabel();
+                    _left.EmitBranchFalse(cg, endif);
                     _right.EmitBranchTrue(cg, label);
-                    cg.MarkLabel(falseBranch);
+                    cg.MarkLabel(endif);
                     return true;
-                default:
+
+                case BinaryOperators.OrElse:
+                    // if (left OR right) branch label
+
+                    // if (left) then branch label endif
+                    // if (right) then branch label endif
+                    _left.EmitBranchTrue(cg, label);
+                    _right.EmitBranchTrue(cg, label);
+                    return true;
+
+                case BinaryOperators.Add:
+                case BinaryOperators.Multiply:
                     return false;
+                   
+                default:
+                    throw Utils.Assert.Unreachable;
             }
         }
 
         private Type GetEmitType() {
-            if (_op == Operators.Multiply) return typeof(int);
+            if (_op == BinaryOperators.Multiply) return typeof(int);
 
             return _left.ExpressionType == _right.ExpressionType ? _left.ExpressionType : typeof(object);
         }
 
         public override void EmitBranchFalse(CodeGen cg, Label label) {
             switch (_op) {
-                case Operators.Equal:
-                    EmitBranchTrue(cg, Operators.NotEqual, label);
+                case BinaryOperators.Equal:
+                    EmitBranchTrue(cg, BinaryOperators.NotEqual, label);
                     break;
-                case Operators.NotEqual:
-                    EmitBranchTrue(cg, Operators.Equal, label);
+
+                case BinaryOperators.NotEqual:
+                    EmitBranchTrue(cg, BinaryOperators.Equal, label);
                     break;
-                case Operators.AndAlso:
+
+                case BinaryOperators.AndAlso:
+                    // if NOT (left AND right) branch label
+
                     if (_left.IsConstant(false)) {
                         cg.Emit(OpCodes.Br, label);
                     } else {
-                        if (!_left.IsConstant(true)) _left.EmitBranchFalse(cg, label);
+                        if (!_left.IsConstant(true)) {
+                            _left.EmitBranchFalse(cg, label);
+                        }
 
                         if (_right.IsConstant(false)) {
                             cg.Emit(OpCodes.Br, label);
@@ -129,9 +168,35 @@ namespace Microsoft.Scripting.Ast {
                         }
                     } 
                     break;
-                default:
-                    base.EmitBranchFalse(cg, label);
+
+                case BinaryOperators.OrElse:
+                    // if NOT left AND NOT right branch label
+
+                    if (!_left.IsConstant(true) && !_right.IsConstant(true)) {
+                        if (_left.IsConstant(false)) {
+                            _right.EmitBranchFalse(cg, label);
+                        } else if (_right.IsConstant(false)) {
+                            _left.EmitBranchFalse(cg, label);
+                        } else {
+                            // if (NOT left) then 
+                            //   if (NOT right) branch label
+                            // endif
+                            
+                            Label endif = cg.DefineLabel();
+                            _left.EmitBranchTrue(cg, endif);
+                            _right.EmitBranchFalse(cg, label);
+                            cg.MarkLabel(endif);
+                        }
+                    }
                     break;
+
+                case BinaryOperators.Add:
+                case BinaryOperators.Multiply:
+                    base.EmitBranchFalse(cg, label);
+                    return;
+
+                default:
+                    throw Utils.Assert.Unreachable;
             }
         }
 
@@ -142,17 +207,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override void Emit(CodeGen cg) {
-            if (_op == Operators.AndAlso) {
-                Label falseBranch = cg.DefineLabel();
-                _left.EmitBranchFalse(cg, falseBranch);
 
-                //TODO code gen will be suboptimal for chained AndAlsos and AndAlso inside If
-                _right.EmitAs(cg, typeof(bool));
-                Label skipFalseBranch = cg.DefineLabel();
-                cg.Emit(OpCodes.Br, skipFalseBranch);
-                cg.MarkLabel(falseBranch);
-                cg.EmitInt(0);
-                cg.MarkLabel(skipFalseBranch);
+            // TODO: code gen will be suboptimal for chained AndAlsos and AndAlso inside If
+            if (_op == BinaryOperators.AndAlso || _op == BinaryOperators.OrElse) {
+                EmitBooleanOperator(cg, _op == BinaryOperators.AndAlso);
                 return;
             }
 
@@ -160,48 +218,84 @@ namespace Microsoft.Scripting.Ast {
             _right.EmitAs(cg, GetEmitType());
 
             switch (_op) {
-                case Operators.Equal:
+                case BinaryOperators.Equal:
                     cg.Emit(OpCodes.Ceq);
                     break;
-                case Operators.NotEqual:
+
+                case BinaryOperators.NotEqual:
                     cg.Emit(OpCodes.Ceq);
                     cg.EmitInt(0);
                     cg.Emit(OpCodes.Ceq);
                     break;
-                case Operators.Multiply:
+
+                case BinaryOperators.Multiply:
                     cg.Emit(OpCodes.Mul);
                     break;
-                case Operators.Add:
+
+                case BinaryOperators.Add:
                     cg.Emit(OpCodes.Add);
                     break;
+
                 default:
-                    throw new NotImplementedException();
+                    throw Utils.Assert.Unreachable;
             }
         }
 
+        private void EmitBooleanOperator(CodeGen cg, bool isAnd) {
+            Label otherwise = cg.DefineLabel();
+            Label endif = cg.DefineLabel();
+
+            // if (_left) 
+            _left.EmitBranchFalse(cg, otherwise);
+            // then
+
+            if (isAnd) {
+                _right.EmitAs(cg, typeof(bool));
+            } else {
+                cg.EmitInt(1);
+            }
+
+            cg.Emit(OpCodes.Br, endif);
+            // otherwise
+            cg.MarkLabel(otherwise);
+
+            if (isAnd) {
+                cg.EmitInt(0);
+            } else {
+                _right.EmitAs(cg, typeof(bool));
+            }
+
+            // endif
+            cg.MarkLabel(endif);
+            return;
+        }
+
         public override object Evaluate(CodeContext context) {
-            if (_op == Operators.AndAlso) {
+            if (_op == BinaryOperators.AndAlso) {
                 object ret = _left.Evaluate(context);
-                if ((bool)ret) {
-                    return _right.Evaluate(context);
-                } else {
-                    return ret;
-                }
+                return ((bool)ret) ? _right.Evaluate(context) : ret;
+            } else if (_op == BinaryOperators.OrElse) {
+                object ret = _left.Evaluate(context);
+                return ((bool)ret) ? ret : _right.Evaluate(context);
             }
 
             object l = _left.Evaluate(context);
             object r = _right.Evaluate(context);
             switch (_op) {
-                case Operators.Equal:
+                case BinaryOperators.Equal:
                     return RuntimeHelpers.BooleanToObject(TestEquals(l, r));
-                case Operators.NotEqual:
+
+                case BinaryOperators.NotEqual:
                     return RuntimeHelpers.BooleanToObject(!TestEquals(l, r));
-                case Operators.Multiply:
+
+                case BinaryOperators.Multiply:
                     return (int)context.LanguageContext.Binder.Convert(l, typeof(int)) *
                             (int)context.LanguageContext.Binder.Convert(r, typeof(int));
-                case Operators.Add:
+
+                case BinaryOperators.Add:
                     return (int)context.LanguageContext.Binder.Convert(l, typeof(int)) +
                             (int)context.LanguageContext.Binder.Convert(r, typeof(int));
+
                 default:
                     throw new NotImplementedException();
             }
@@ -229,14 +323,127 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static BinaryExpression Equal(Expression left, Expression right) {
-            return Binary(SourceSpan.None, Operators.Equal, left, right);
+            return Binary(SourceSpan.None, BinaryOperators.Equal, left, right);
         }
+
         public static BinaryExpression NotEqual(Expression left, Expression right) {
-            return Binary(SourceSpan.None, Operators.NotEqual, left, right);
+            return Binary(SourceSpan.None, BinaryOperators.NotEqual, left, right);
         }
+
+        #region Boolean Expressions
+
         public static Expression AndAlso(Expression left, Expression right) {
-            return Binary(SourceSpan.None, Operators.AndAlso, left, right);
+            return Binary(SourceSpan.None, BinaryOperators.AndAlso, left, right);
         }
+
+        public static Expression AndAlso(SourceSpan span, Expression left, Expression right) {
+            return Binary(span, BinaryOperators.AndAlso, left, right);
+        }
+
+        public static Expression OrElse(Expression left, Expression right) {
+            return Binary(SourceSpan.None, BinaryOperators.OrElse, left, right);
+        }
+
+        public static Expression OrElse(SourceSpan span, Expression left, Expression right) {
+            return Binary(span, BinaryOperators.OrElse, left, right);
+        }
+
+        #endregion
+
+        #region Coalescing Expressions
+
+        /// <summary>
+        /// Null coalescing expression (LINQ).
+        /// {result} ::= ((tmp = {_left}) == null) ? {right} : tmp
+        /// '??' operator in C#.
+        /// </summary>
+        public static Expression Coalesce(CodeBlock currentBlock, Expression left, Expression right) {
+            return CoalesceInternal(SourceSpan.None, currentBlock, left, right, null, false);
+        }
+
+        /// <summary>
+        /// Null coalescing expression (LINQ).
+        /// {result} ::= ((tmp = {_left}) == null) ? {right} : tmp
+        /// '??' operator in C#.
+        /// </summary>
+        public static Expression Coalesce(SourceSpan span, CodeBlock currentBlock, Expression left, Expression right) {
+            return CoalesceInternal(span, currentBlock, left, right, null, false);
+        }
+
+        /// <summary>
+        /// True coalescing expression.
+        /// {result} ::= IsTrue(tmp = {left}) ? {right} : tmp
+        /// Generalized AND semantics.
+        /// </summary>
+        public static Expression CoalesceTrue(CodeBlock currentBlock, Expression left, Expression right, MethodInfo isTrue) {
+            RequiresPredicate(isTrue);
+            return CoalesceInternal(SourceSpan.None, currentBlock, left, right, isTrue, false);
+        }
+
+        /// <summary>
+        /// True coalescing expression.
+        /// {result} ::= IsTrue(tmp = {left}) ? {right} : tmp
+        /// Generalized AND semantics.
+        /// </summary>
+        public static Expression CoalesceTrue(SourceSpan span, CodeBlock currentBlock, Expression left, Expression right, MethodInfo isTrue) {
+            RequiresPredicate(isTrue);
+            return CoalesceInternal(span, currentBlock, left, right, isTrue, false);
+        }
+        
+        /// <summary>
+        /// False coalescing expression.
+        /// {result} ::= IsTrue(tmp = {left}) ? tmp : {right}
+        /// Generalized OR semantics.
+        /// </summary>
+        public static Expression CoalesceFalse(CodeBlock currentBlock, Expression left, Expression right, MethodInfo isTrue) {
+            RequiresPredicate(isTrue);
+            return CoalesceInternal(SourceSpan.None, currentBlock, left, right, isTrue, true);
+        }
+
+        /// <summary>
+        /// False coalescing expression.
+        /// {result} ::= IsTrue(tmp = {left}) ? tmp : {right}
+        /// Generalized OR semantics.
+        /// </summary>
+        public static Expression CoalesceFalse(SourceSpan span, CodeBlock currentBlock, Expression left, Expression right, MethodInfo isTrue) {
+            RequiresPredicate(isTrue);
+            return CoalesceInternal(span, currentBlock, left, right, isTrue, true);
+        }
+
+        private static Expression CoalesceInternal(SourceSpan span, CodeBlock currentBlock, Expression left, Expression right, MethodInfo isTrueOperator, bool isReverse) {
+            if (currentBlock == null) throw new ArgumentNullException("currentBlock");
+            if (left == null) throw new ArgumentNullException("left");
+            if (right == null) throw new ArgumentNullException("right");
+
+            Variable tmp = currentBlock.CreateTemporaryVariable(SymbolTable.StringToId("tmp_left"), left.ExpressionType);
+
+            Expression c;
+            if (isTrueOperator != null) {
+                // TODO: Optimization: take MethodInfo[] and choose an overload according to the type of the argument.
+                c = Call(null, isTrueOperator, Assign(tmp, left));
+            } else {
+                c = Equal(Assign(tmp, left), Null());
+            }
+
+            Expression t, f;
+            if (isReverse) {
+                t = Read(tmp);
+                f = right;
+            } else {
+                t = right;
+                f = Read(tmp);
+            }
+
+            return Condition(span, c, t, f, true);
+        }
+
+        private static void RequiresPredicate(MethodInfo method) {
+            if (method == null) throw new ArgumentNullException("method");
+            Utils.Assert.SignatureEquals(method, typeof(object), typeof(bool));
+            Debug.Assert(method.IsStatic && method.IsPublic);
+        }
+
+        #endregion
 
         /// <summary>
         /// Multiples two Int32 values.
@@ -246,7 +453,7 @@ namespace Microsoft.Scripting.Ast {
                 throw new NotSupportedException(String.Format("multiply only supports ints, got {0} {1}", left.ExpressionType.Name, right.ExpressionType.Name));
             }
 
-            return Binary(SourceSpan.None, Operators.Multiply, left, right);
+            return Binary(SourceSpan.None, BinaryOperators.Multiply, left, right);
         }
 
         /// <summary>
@@ -257,10 +464,10 @@ namespace Microsoft.Scripting.Ast {
                 throw new NotSupportedException(String.Format("add only supports ints, got {0} {1}", left.ExpressionType.Name, right.ExpressionType.Name));
             }
 
-            return Binary(SourceSpan.None, Operators.Add, left, right);
+            return Binary(SourceSpan.None, BinaryOperators.Add, left, right);
         }
 
-        public static BinaryExpression Binary(SourceSpan span, Operators op, Expression left, Expression right) {
+        public static BinaryExpression Binary(SourceSpan span, BinaryOperators op, Expression left, Expression right) {
             if (left == null) {
                 throw new ArgumentNullException("left");
             }

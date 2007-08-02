@@ -67,8 +67,30 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        public override void EmitBranchTrue(CodeGen cg, Label label) {
+            if (_valueIndex == _expressions.Count - 1) {
+                Emit(cg, _valueIndex);
+                _expressions[_valueIndex].EmitBranchTrue(cg, label);
+            } else {
+                base.EmitBranchTrue(cg, label);
+            }
+        }
+
+        public override void EmitBranchFalse(CodeGen cg, Label label) {
+            if (_valueIndex == _expressions.Count - 1) {
+                Emit(cg, _valueIndex);
+                _expressions[_valueIndex].EmitBranchFalse(cg, label);
+            } else {
+                base.EmitBranchFalse(cg, label);
+            }
+        }
+
         public override void Emit(CodeGen cg) {
-            for (int index = 0; index < _expressions.Count; index++) {
+            Emit(cg, _expressions.Count);
+        }
+
+        private void Emit(CodeGen cg, int count) {
+            for (int index = 0; index < count; index++) {
                 Expression current = _expressions[index];
 
                 // Emit the expression

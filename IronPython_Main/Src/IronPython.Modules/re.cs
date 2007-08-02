@@ -355,20 +355,22 @@ namespace IronPython.Modules {
                     int lastPos = 0; // is either start of the string, or first position *after* the last match
                     int nSplits = 0; // how many splits have occurred?
                     foreach (Match m in matches) {
-                        // add substring from lastPos to beginning of current match
-                        result.AddNoLock(theStr.Substring(lastPos, m.Index - lastPos));
-                        // if there are subgroups of the match, add their match or None
-                        if (m.Groups.Count > 1)
-                            for (int i = 1; i < m.Groups.Count; i++)
-                                if (m.Groups[i].Success)
-                                    result.AddNoLock(m.Groups[i].Value);
-                                else
-                                    result.AddNoLock(null);
-                        // update lastPos, nSplits
-                        lastPos = m.Index + m.Length;
-                        nSplits++;
-                        if (nSplits == maxSplit)
-                            break;
+                        if (m.Length > 0) {
+                            // add substring from lastPos to beginning of current match
+                            result.AddNoLock(theStr.Substring(lastPos, m.Index - lastPos));
+                            // if there are subgroups of the match, add their match or None
+                            if (m.Groups.Count > 1)
+                                for (int i = 1; i < m.Groups.Count; i++)
+                                    if (m.Groups[i].Success)
+                                        result.AddNoLock(m.Groups[i].Value);
+                                    else
+                                        result.AddNoLock(null);
+                            // update lastPos, nSplits
+                            lastPos = m.Index + m.Length;
+                            nSplits++;
+                            if (nSplits == maxSplit)
+                                break;
+                        }
                     }
                     // add tail following last match
                     result.AddNoLock(theStr.Substring(lastPos));

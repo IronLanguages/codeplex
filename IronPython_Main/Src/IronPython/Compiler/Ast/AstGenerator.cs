@@ -34,6 +34,7 @@ namespace IronPython.Compiler.Ast {
         private List<MSAst.Variable> _temps;
         private readonly CompilerContext _context;
         private readonly bool _print;
+        private int _loopDepth = 0;
 
         public AstGenerator(MSAst.CodeBlock block, CompilerContext context)
             : this(block, context, false) {
@@ -55,6 +56,18 @@ namespace IronPython.Compiler.Ast {
 
         public bool PrintExpressions {
             get { return _print; }
+        }
+
+        public void EnterLoop() {
+            _loopDepth++;
+        }
+        public void ExitLoop() {
+            _loopDepth--;
+            Debug.Assert(_loopDepth >= 0);
+        }
+
+        public bool InLoop {
+            get { return _loopDepth > 0; }
         }
 
         internal static MSAst.CodeBlock TransformAst(CompilerContext context, PythonAst ast, bool print) {
@@ -164,7 +177,13 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.CodeBlock Transform(PythonAst from) {
-            return from != null ? from.TransformToAst(this, _context) : null;
+            if (from == null) {
+                return null;
+            } else {
+                MSAst.CodeBlock ret = from.TransformToAst(this, _context);
+                Debug.Assert(_loopDepth == 0);
+                return ret;
+            }
         }
 
         internal MSAst.Expression TransformOrConstantNull(Expression expression, Type type) {

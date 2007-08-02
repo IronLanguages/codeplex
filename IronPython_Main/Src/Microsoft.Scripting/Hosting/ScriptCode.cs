@@ -93,15 +93,18 @@ namespace Microsoft.Scripting {
             }
         }
 
-        private object Run(CodeContext codeContext) {
+        private object Run(CodeContext codeContext, bool tryEvaluate) {
+            codeContext.ModuleContext.CompilerContext =_compilerContext;
             _languageContext.ModuleContextEntering(codeContext.ModuleContext);
 
-            if (_languageContext.Engine.Options.FastEvaluation) {
-                return CodeBlock.Execute(codeContext);
+            if (_languageContext.Engine.Options.FastEvaluation ||
+                (tryEvaluate && Ast.FastEvalWalker.CanEvaluate(CodeBlock))) {
+                return CodeBlock.TopLevelExecute(codeContext);
             }
             
             if (codeContext.Scope == _optimizedScope) { // flag on scope - "IsOptimized"?
-                return _optimizedTarget(new CodeContext(_optimizedScope, _languageContext, codeContext.ModuleContext)); // TODO: why do we create a code context here?
+                // TODO: why do we create a code context here?
+                return _optimizedTarget(new CodeContext(_optimizedScope, _languageContext, codeContext.ModuleContext));
             }
 
             EnsureCompiled();
@@ -112,13 +115,19 @@ namespace Microsoft.Scripting {
             Utils.Assert.NotNull(module);
             
             ModuleContext moduleContext = _languageContext.EnsureModuleContext(module);
-            return Run(new CodeContext(module.Scope, _languageContext, moduleContext));
+            return Run(new CodeContext(module.Scope, _languageContext, moduleContext), false);
         }
 
         public object Run(Scope scope, ModuleContext moduleContext) {
             Utils.Assert.NotNull(scope, moduleContext);
 
-            return Run(new CodeContext(scope, _languageContext, moduleContext));
+            return Run(new CodeContext(scope, _languageContext, moduleContext), false);
+        }
+
+        public object Run(Scope scope, ModuleContext moduleContext, bool tryEvaluate) {
+            Utils.Assert.NotNull(scope, moduleContext);
+
+            return Run(new CodeContext(scope, _languageContext, moduleContext), tryEvaluate);
         }
 
         public override string ToString() {

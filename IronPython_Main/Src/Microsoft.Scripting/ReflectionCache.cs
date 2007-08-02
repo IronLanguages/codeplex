@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -25,6 +26,8 @@ namespace Microsoft.Scripting {
     /// </summary>
     class ReflectionCache {
         private static Dictionary<MethodBaseCache, BuiltinFunction> _functions = new Dictionary<MethodBaseCache,BuiltinFunction>();
+        private static Dictionary<EventInfo, ReflectedEvent> _eventCache = new Dictionary<EventInfo, ReflectedEvent>();
+        private static Dictionary<PropertyInfo, ReflectedIndexer> _indexerCache = new Dictionary<PropertyInfo, ReflectedIndexer>();        
 
         /// <summary>
         /// Gets a singleton method group from the provided type.
@@ -37,8 +40,6 @@ namespace Microsoft.Scripting {
             if (type == null) throw new ArgumentNullException("type");
             if (name == null) throw new ArgumentNullException("name");
 
-            BuiltinFunction res = null;
-
             MemberInfo[] mems = type.FindMembers(MemberTypes.Method,
                 BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.InvokeMethod,
                 delegate(MemberInfo mem, object filterCritera) {
@@ -46,30 +47,74 @@ namespace Microsoft.Scripting {
                 },
                 null);
 
-            MethodBase[] bases = Utils.Array.ConvertAll<MemberInfo, MethodBase>(
-                mems,
-                delegate(MemberInfo inp) { return (MethodBase)inp; });
+            return GetMethodGroup(type, name, mems);
+        }
+
+        public static BuiltinFunction GetMethodGroup(Type type, string name, MemberInfo[] mems) {
+            BuiltinFunction res = null;
+
+            MethodBase[] bases = Utils.Reflection.GetMethodInfos(mems);
 
             if (mems.Length != 0) {
-                MethodBaseCache cache = new MethodBaseCache(bases);
+                MethodBaseCache cache = new MethodBaseCache(name, bases);
                 lock (_functions) {
-                    if (!_functions.TryGetValue(cache, out res)) {                       
+                    if (!_functions.TryGetValue(cache, out res)) {
                         _functions[cache] = res = BuiltinFunction.MakeMethod(
                             name,
                             bases,
-                            GetMethodFunctionType(bases));
+                            GetMethodFunctionType(type, bases));
                     }
                 }
-            }                
+            }
 
             return res;
         }
 
-        private static FunctionType GetMethodFunctionType(MethodBase[] methods) {
+        public static ReflectedIndexer GetReflectedIndexer(PropertyInfo info) {
+            ReflectedIndexer res;
+
+            lock (_indexerCache) {
+                if (!_indexerCache.TryGetValue(info, out res)) {
+                    _indexerCache[info] = res = new ReflectedIndexer(info, NameType.PythonProperty);
+                }
+            }
+
+            return res;
+        }
+
+        public static ReflectedEvent GetReflectedEvent(EventInfo info) {
+            ReflectedEvent res;
+
+            lock (_eventCache) {
+                if (!_eventCache.TryGetValue(info, out res)) {
+                    _eventCache[info] = res = new ReflectedEvent(info, false);
+                }
+            }
+
+            return res;
+        }
+
+        private static FunctionType GetMethodFunctionType(Type type, MethodBase[] methods) {
             FunctionType ft = FunctionType.None;
             foreach (MethodInfo mi in methods) {
-                if (methods[0].IsStatic) ft |= FunctionType.Function;
-                else ft |= FunctionType.Method;
+                if (mi.IsStatic &&
+                    (mi.IsDefined(typeof(OperatorMethodAttribute), false) || mi.IsSpecialName)) {
+
+                    ParameterInfo[] pis = mi.GetParameters();
+                    if (pis.Length == 2 || (pis.Length == 3 && pis[0].ParameterType == typeof(CodeContext))) {
+                        ft |= FunctionType.BinaryOperator;
+
+                        if (pis[pis.Length - 2].ParameterType != type && pis[pis.Length - 1].ParameterType == type) {
+                            ft |= FunctionType.ReversedOperator;
+                        }
+                    }
+                }
+
+                if (mi.IsStatic && mi.DeclaringType.IsAssignableFrom(type)) {
+                    ft |= FunctionType.Function;
+                } else {
+                    ft |= FunctionType.Method;
+                }
             }
 
             return ft;
@@ -77,8 +122,9 @@ namespace Microsoft.Scripting {
 
         private class MethodBaseCache {
             private MethodBase[] _members;
+            private string _name;
 
-            public MethodBaseCache(MethodBase [] members) {
+            public MethodBaseCache(string name, MethodBase [] members) {
                 // sort by token so that the Equals / GetHashCode doesn't have
                 // to line up members if reflection returns them in different orders.
                 Array.Sort<MethodBase>(members, delegate(MethodBase x, MethodBase y) {
@@ -87,12 +133,14 @@ namespace Microsoft.Scripting {
                     if (res < 0) return -1;
                     return 1;
                 });
+                _name = name;
                 _members = members;
             }            
 
             public override bool Equals(object obj) {
                 MethodBaseCache other = obj as MethodBaseCache;
                 if (other == null || _members.Length != other._members.Length) return false;
+                if (other._name != _name) return false;
 
                 for (int i = 0; i < _members.Length; i++) {
                     if (_members[i].DeclaringType != other._members[i].DeclaringType ||
@@ -122,8 +170,9 @@ namespace Microsoft.Scripting {
                 int res = 6551;
                 foreach (MemberInfo mi in _members) {
                     res ^= res << 5 ^ mi.DeclaringType.GetHashCode() ^ mi.MetadataToken;
-
                 }
+                res ^= _name.GetHashCode();
+
                 return res;
             }
         }

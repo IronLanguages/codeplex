@@ -30,6 +30,7 @@ namespace Microsoft.Scripting {
 
         private readonly ScriptModule _module;
         private bool _showCls;
+        private CompilerContext _compilerContext;
 
         /// <summary>
         /// Optional.
@@ -51,6 +52,18 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
+        /// Returns the optional compiler context associated with this module.
+        /// </summary>
+        public CompilerContext CompilerContext {
+            get {
+                return _compilerContext;
+            }
+            set {
+                _compilerContext = value;
+            }
+        }
+
+        /// <summary>
         /// Creates a module context.
         /// </summary>
         /// <param name="module">Optional. <c>null</c> for default and invariant contexts.</param>
@@ -65,6 +78,7 @@ namespace Microsoft.Scripting {
             if (context == null) throw new ArgumentNullException("context");
             _module = context._module;
             _showCls = context._showCls;
+            _compilerContext = context._compilerContext;
         }
 
         internal protected virtual void ModuleReloading() {

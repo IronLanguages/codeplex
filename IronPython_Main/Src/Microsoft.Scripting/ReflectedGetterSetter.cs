@@ -91,6 +91,10 @@ namespace Microsoft.Scripting {
         public object CallGetter(CodeContext context, object instance, object[] args) {
             if (instance == null && (Getter == null || !Getter.IsStatic)) return this;
 
+            if (Getter == null) {
+                throw new MissingMemberException("unreadable property");
+            }
+
             MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { Getter }, BinderType.Normal);
 
             if (instance != null) {                

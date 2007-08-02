@@ -58,10 +58,6 @@ namespace Microsoft.Scripting.Actions {
             return CallAction.Simple;
         }
 
-        public static CallAction Make(string s) {
-            return new CallAction(ArgumentInfo.ParseAll(s));
-        }
-
         public static CallAction Simple {
             get {
                 return _simple;
@@ -82,28 +78,10 @@ namespace Microsoft.Scripting.Actions {
             get { return ActionKind.Call; }
         }
 
-        public override string ParameterString {
-            get {
-                return ArgumentInfo.ToParameterString(_argumentInfos);
-            }
-        }
-
         public bool Equals(CallAction other) {
             if (other == null || other.GetType() != GetType()) return false;
 
-            if (_argumentInfos == null) {
-                return other.ArgumentInfos == null;
-            } else if (other.ArgumentInfos == null) {
-                return false;
-            }
-
-            if (_argumentInfos.Length != other.ArgumentInfos.Length) return false;
-
-            for (int i = 0; i < _argumentInfos.Length; i++) {
-                if (!_argumentInfos[i].Equals(other.ArgumentInfos[i])) return false;
-            }
-
-            return true;
+            return ArgumentInfo.ArrayEquals(_argumentInfos, other._argumentInfos);
         }
 
         public override bool Equals(object obj) {
@@ -112,6 +90,13 @@ namespace Microsoft.Scripting.Actions {
 
         public override int GetHashCode() {
             return ArgumentInfo.GetHashCode(Kind, _argumentInfos);
+        }
+
+        public override string ToString() {
+            if (IsSimple) {
+                return base.ToString() + " Simple";
+            }
+            return base.ToString() + ArgumentInfo.GetString(ArgumentInfos);
         }
 
         #region Helpers
@@ -260,35 +245,34 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public string ParameterString {
-            get {
-                return String.Concat((char)('0' + (int)_kind), SymbolTable.IdToString(_name));
+        internal static string GetString(ArgumentInfo[] args) {
+            StringBuilder sb = new StringBuilder("(");
+            foreach (ArgumentInfo arg in args) {
+                if (sb.Length != 0) {
+                    sb.Append(", ");
+                }
+                sb.Append(arg.ToString());
             }
+            sb.Append(")");
+            return sb.ToString();
         }
 
-        public static ArgumentInfo[] ParseAll(string s) {
-            if (s == "Simple") return null;
-
-            string[] pieces = s.Split(',');
-            ArgumentInfo[] kinds = new ArgumentInfo[pieces.Length];
-            for (int i = 0; i < kinds.Length; i++) {
-                kinds[i] = ArgumentInfo.Parse(pieces[i]);
+        internal static bool ArrayEquals(ArgumentInfo[] self, ArgumentInfo[] other) {
+            if (self == null) {
+                return other == null;
+            } else if (other == null) {
+                return false;
             }
-            return kinds;
+
+            if (self.Length != other.Length) return false;
+
+            for (int i = 0; i < self.Length; i++) {
+                if (!self[i].Equals(other[i])) return false;
+            }
+            return true;
         }
 
-        public static string ToParameterString(ArgumentInfo[] kinds) {
-            if (kinds == null) return "Simple";
-
-            StringBuilder b = new StringBuilder();
-            for (int i = 0; i < kinds.Length; i++) {
-                if (i > 0) b.Append(',');
-                b.Append(kinds[i].ParameterString);
-            }
-            return b.ToString();
-        }
-
-        public static int GetHashCode(ActionKind kind, ArgumentInfo[] kinds) {
+        internal static int GetHashCode(ActionKind kind, ArgumentInfo[] kinds) {
             int h = 6551;
             if (kinds != null) {
                 foreach (ArgumentInfo k in kinds) {
@@ -296,14 +280,6 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
             return (int)kind << 28 ^ h;
-        }
-
-        public static ArgumentInfo Parse(string s) {
-            if (String.IsNullOrEmpty(s)) return Simple;
-            
-            Debug.Assert(s[0] >= '0');
-            string name = s.Substring(1);
-            return new ArgumentInfo((ArgumentKind)(s[0] - '0'), name.Length > 0 ? SymbolTable.StringToId(name) : SymbolId.Empty);
         }
     }
 }

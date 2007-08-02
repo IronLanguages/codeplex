@@ -25,10 +25,6 @@ namespace Microsoft.Scripting.Actions {
             get { return _name; }
         }
 
-        public override string ParameterString {
-            get { return SymbolTable.IdToString(_name); }
-        }
-
         public override bool Equals(object obj) {
             MemberAction other = obj as MemberAction;
             if (other == null) return false;
@@ -37,6 +33,10 @@ namespace Microsoft.Scripting.Actions {
 
         public override int GetHashCode() {
             return (int)Kind << 28 ^ _name.GetHashCode();
+        }
+
+        public override string ToString() {
+            return base.ToString() + " " + SymbolTable.IdToString(_name);
         }
     }
 }

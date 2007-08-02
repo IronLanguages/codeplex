@@ -835,4 +835,9 @@ def test_main_dict():
     AreEqual(t_list, g_list)
     
 
+def test_update():
+    x = {}
+    x.update(k='v')
+    AreEqual(x, {'k':'v'})
+
 run_test(__name__)

@@ -27,8 +27,8 @@ using IronPython.Runtime.Operations;
 [assembly: PythonExtensionType(typeof(ReflectedProperty), typeof(ReflectedPropertyOps))]
 namespace IronPython.Runtime.Operations {
     public static class ReflectedPropertyOps {
-        [OperatorMethod, PythonName("__get__")]
-        public static object GetAttribute(ReflectedProperty self, object instance, object owner) {
+        [OperatorMethod]
+        public static object __get__(ReflectedProperty self, object instance, object owner) {
             if (self.Getter == null)
                 throw PythonOps.AttributeError("attribute '{0}' of '{1}' object is write-only",
                     self.Name,
@@ -40,14 +40,14 @@ namespace IronPython.Runtime.Operations {
             return value;
         }
 
-        [OperatorMethod, PythonName("__set__")]
-        public static void SetAttribute(ReflectedProperty self, object instance, object value) {
+        [OperatorMethod]
+        public static void __set__(ReflectedProperty self, object instance, object value) {
             // TODO: Throw?  currently we have a test that verifies we never throw when this is called directly.
             self.TrySetValue(DefaultContext.Default, instance, DynamicHelpers.GetDynamicType(instance), value);
         }
 
-        [OperatorMethod, PythonName("__delete__")]
-        public static void DeleteAttribute(ReflectedProperty self, object instance) {
+        [OperatorMethod]
+        public static void __delete__(ReflectedProperty self, object instance) {
             if (self.Setter != null)
                 throw PythonOps.AttributeErrorForReadonlyAttribute(
                     DynamicHelpers.GetDynamicTypeFromType(self.DeclaringType).Name,
@@ -58,19 +58,19 @@ namespace IronPython.Runtime.Operations {
                     SymbolTable.StringToId(self.Name));
         }
 
-        [OperatorMethod, PythonName("__str__")]
-        public static string ToString(ReflectedProperty self) {
-            return ToCodeRepresentation(self);
+        [OperatorMethod]
+        public static string __str__(ReflectedProperty self) {
+            return __repr__(self);
         }
 
-        [PropertyMethod, PythonName("__doc__")]
-        public static string GetDocumentation(ReflectedProperty info)  {
+        [PropertyMethod]
+        public static string __doc__(ReflectedProperty info) {
                 return DocBuilder.DocOneInfo(info.Info);
         }
 
 
-        [OperatorMethod, PythonName("__repr__")]
-        public static string ToCodeRepresentation(ReflectedProperty self) {
+        [OperatorMethod]
+        public static string __repr__(ReflectedProperty self) {
             return string.Format("<property# {0} on {1}>", 
                 self.Name,
                 DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(self.DeclaringType)));

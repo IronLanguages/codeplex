@@ -62,7 +62,26 @@ namespace ImportTestNS {
 #if TEST6
     public class Foo<T> {
         public string Test(){
-            return "Foo<T>2";
+            return "Foo2<T>";
+        }
+    }
+
+#endif
+
+#if TEST7
+    public class Foo<T,Y> {
+        public string Test(){
+            return "Foo2<T,Y>";
+        }
+    }
+#endif
+
+#if TEST8
+    namespace Foo {
+        public class Bar {
+            public string Test(){
+                return "Bar";
+            }
         }
     }
 #endif

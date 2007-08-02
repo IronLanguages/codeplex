@@ -78,7 +78,7 @@ namespace IronPython.Runtime {
 
         #region Object overrides
         public override string ToString() {
-            return DictionaryOps.ToString(this);
+            return DictionaryOps.__str__(this);
         }
 
         public override bool Equals(object obj) {
@@ -187,12 +187,12 @@ namespace IronPython.Runtime {
 
         [PythonName("get")]
         public object GetValue(object key) {
-            return DictionaryOps.GetIndex(this, key);
+            return DictionaryOps.get(this, key);
         }
 
         [PythonName("get")]
         public object GetValue(object key, object defaultValue) {
-            return DictionaryOps.GetIndex(this, key, defaultValue);
+            return DictionaryOps.get(this, key, defaultValue);
         }
 
         public virtual object this[params object[] key] {
@@ -246,7 +246,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__delitem__")]
         public virtual bool DeleteItem(object key) {
-            DictionaryOps.DelIndex(this, key);
+            DictionaryOps.__delitem__(this, key);
             return true;
         }
 
@@ -256,12 +256,12 @@ namespace IronPython.Runtime {
 
         [OperatorMethod, PythonName("__len__")]
         public int GetLength() {
-            return DictionaryOps.Length(this);
+            return DictionaryOps.__len__(this);
         }
 
         [OperatorMethod, PythonName("__contains__")]
         public bool ContainsValue(object value) {
-            return DictionaryOps.Contains(this, value);
+            return DictionaryOps.__contains__(this, value);
         }
 
         #endregion
@@ -270,62 +270,62 @@ namespace IronPython.Runtime {
 
         [PythonName("has_key")]
         public bool HasKey(object key) {
-            return DictionaryOps.HasKey(this, key);
+            return DictionaryOps.has_key(this, key);
         }
 
         [PythonName("pop")]
         public object Pop(object key) {
-            return DictionaryOps.Pop(this, key);
+            return DictionaryOps.pop(this, key);
         }
 
         [PythonName("pop")]
         public object Pop(object key, object defaultValue) {
-            return DictionaryOps.Pop(this, key, defaultValue);
+            return DictionaryOps.pop(this, key, defaultValue);
         }
 
         [PythonName("popitem")]
         public Tuple PopItem() {
-            return DictionaryOps.PopItem(this);
+            return DictionaryOps.popitem(this);
         }
 
         [PythonName("setdefault")]
         public object SetDefault(object key) {
-            return DictionaryOps.SetDefault(this, key);
+            return DictionaryOps.setdefault(this, key);
         }
 
         [PythonName("setdefault")]
         public object SetDefault(object key, object defaultValue) {
-            return DictionaryOps.SetDefault(this, key, defaultValue);
+            return DictionaryOps.setdefault(this, key, defaultValue);
         }
 
         [PythonName("keys")]
         public List KeysAsList() {
-            return DictionaryOps.Keys(this);
+            return DictionaryOps.keys(this);
         }
 
         [PythonName("values")]
         public List ValuesAsList() {
-            return DictionaryOps.Values(this);
+            return DictionaryOps.values(this);
         }
 
         [PythonName("items")]
         public List Items() {
-            return DictionaryOps.Items(this);
+            return DictionaryOps.items(this);
         }
 
         [PythonName("iteritems")]
         public IEnumerator IterItems() {
-            return DictionaryOps.IterItems(this);
+            return DictionaryOps.iteritems(this);
         }
 
         [PythonName("iterkeys")]
         public IEnumerator IterKeys() {
-            return DictionaryOps.IterKeys(this);
+            return DictionaryOps.iterkeys(this);
         }
 
         [PythonName("itervalues")]
         public IEnumerator IterValues() {
-            return DictionaryOps.IterValues(this);
+            return DictionaryOps.itervalues(this);
         }
 
         [PythonName("update")]
@@ -333,8 +333,13 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("update")]
+        public void Update([ParamDictionary]IAttributesCollection b) {
+            DictionaryOps.update(this, b);
+        }
+
+        [PythonName("update")]
         public void Update(object b) {
-            DictionaryOps.Update(this, b);
+            DictionaryOps.update(this, b);
         }
 
         internal static object FromKeys(object[] keys) {
@@ -470,7 +475,7 @@ namespace IronPython.Runtime {
         }
 
         void IDictionary.Clear() {
-            DictionaryOps.Clear(this);
+            DictionaryOps.clear(this);
         }
 
         bool IDictionary.Contains(object key) {

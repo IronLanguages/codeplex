@@ -93,36 +93,11 @@ namespace Microsoft.Scripting.Actions {
 
                 StandardRule<T> rule = new StandardRule<T>();
                 rule.MakeTest(targetType);
-                rule.SetTarget(MakeCallExpression(setter, rule.Parameters));
+                rule.SetTarget(MakeCallStatement(setter, rule.Parameters));
                 return rule;
             } 
 
             return MakeDynamicRule(targetType);            
-        }
-
-        private Statement MakeCallExpression(MethodInfo method, Expression[] parameters) {
-            ParameterInfo[] infos = method.GetParameters();
-            Expression callInst = null;
-            int parameter = 0;
-            Expression[] callArgs = new Expression[infos.Length];
-
-            if (!method.IsStatic) {
-                callInst = parameters[0];
-                parameter = 1;
-            }
-            for (int arg = 0; arg < infos.Length; arg++) {
-                if (parameter < parameters.Length) {
-                    callArgs[arg] = Binder.ConvertExpression(parameters[parameter++], infos[arg].ParameterType);
-                } else {
-                    return InvalidArgumentCount(method, infos.Length, parameters.Length);
-                }
-            }
-
-            // check that we used all parameters
-            if (parameter != parameters.Length) {
-                return InvalidArgumentCount(method, infos.Length, parameters.Length);
-            }
-            return Ast.Return(Ast.Call(callInst, method, callArgs));
         }
 
         private static Statement InvalidArgumentCount(MethodInfo method, int expected, int provided) {

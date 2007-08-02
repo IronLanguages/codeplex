@@ -24,11 +24,10 @@ from IronPythonTest import *
 gm = GenMeth()
 
 # Check that the documentation strings for all the instance methods (they all have the same name) is as expected.
-expected_inst_methods = 'str InstMeth[T](self)\r\nstr InstMeth[(T, U)](self)\r\nstr InstMeth[T](self, int arg1)\r\nstr InstMeth[T](self, str arg1)\r\nstr InstMeth[(T, U)](self, int arg1)\r\nstr InstMeth[T](self, T arg1)\r\nstr InstMeth[(T, U)](self, T arg1, U arg2)\r\nstr InstMeth(self)\r\nstr InstMeth(self, int arg1)\r\nstr InstMeth(self, str arg1)';
-Assert(gm.InstMeth.__doc__ == expected_inst_methods)
+AssertDocEqual(gm.InstMeth.__doc__, 'str InstMeth[T](self)' + newline + 'str InstMeth[(T, U)](self)' + newline + 'str InstMeth[T](self, int arg1)' + newline +'str InstMeth[T](self, str arg1)' + newline + 'str InstMeth[(T, U)](self, int arg1)' + newline + 'str InstMeth[T](self, T arg1)' + newline + 'str InstMeth[(T, U)](self, T arg1, U arg2)' + newline + 'str InstMeth(self)' + newline + 'str InstMeth(self, int arg1)' + newline + 'str InstMeth(self, str arg1)')
 
 # And the same for the static methods.
-expected_static_methods = 'str StaticMeth[T]()\r\nstr StaticMeth[(T, U)]()\r\nstr StaticMeth[T](int arg1)\r\nstr StaticMeth[T](str arg1)\r\nstr StaticMeth[(T, U)](int arg1)\r\nstr StaticMeth[T](T arg1)\r\nstr StaticMeth[(T, U)](T arg1, U arg2)\r\nstr StaticMeth()\r\nstr StaticMeth(int arg1)\r\nstr StaticMeth(str arg1)'
+expected_static_methods = 'str StaticMeth[T]()' + newline + 'str StaticMeth[(T, U)]()' + newline + 'str StaticMeth[T](int arg1)' + newline + 'str StaticMeth[T](str arg1)' + newline + 'str StaticMeth[(T, U)](int arg1)' + newline + 'str StaticMeth[T](T arg1)' + newline + 'str StaticMeth[(T, U)](T arg1, U arg2)' + newline + 'str StaticMeth()' + newline + 'str StaticMeth(int arg1)' + newline + 'str StaticMeth(str arg1)'
 Assert(GenMeth.StaticMeth.__doc__ == expected_static_methods)
 
 # Check that we bind to the correct method based on type and call arguments for each of our instance methods. We can validate this

@@ -37,40 +37,36 @@ namespace IronPython.Runtime.Operations {
         // Types for which the pickle module has built-in support (from PEP 307 case 2)
         private static Dictionary<DynamicType, object> nativelyPickleableTypes = null;
 
-        [PythonName("__class__")]
-        public static readonly DynamicTypeSlot Class = new DynamicTypeTypeSlot();
-        [PythonName("__module__")]
-        public static readonly DynamicTypeSlot Module = new DynamicTypeValueSlot("__builtin__");
+        public static readonly DynamicTypeSlot __class__ = new DynamicTypeTypeSlot();
+        public static readonly DynamicTypeSlot __module__ = new DynamicTypeValueSlot("__builtin__");
 
-        [OperatorMethod, PythonName("__repr__")]
-        public static string CodeRepresentation(object self) {
+        [OperatorMethod]
+        public static string __repr__(object self) {
             return String.Format("<{0} object at {1}>",
                 DynamicTypeOps.GetName(DynamicHelpers.GetDynamicType(self)),
                 PythonOps.HexId(self));
         }
 
-        [PythonName("__getattribute__"), GetAttributeAction]
-        public static object GetAttribute(CodeContext context, object self, string name) {
+        [GetAttributeAction]
+        public static object __getattribute__(CodeContext context, object self, string name) {
             return PythonOps.ObjectGetAttribute(context, self, SymbolTable.StringToId(name));
         }
-            
-        [PythonName("__delattr__")]
-        public static void DelAttrMethod(CodeContext context, object self, string name) {
+
+        public static void __delattr__(CodeContext context, object self, string name) {
             PythonOps.ObjectDeleteAttribute(context, self, SymbolTable.StringToId(name));
         }
 
-        [PythonName("__setattr__")]
-        public static void SetAttrMethod(CodeContext context, object self, string name, object value) {
+        public static void __setattr__(CodeContext context, object self, string name, object value) {
             PythonOps.ObjectSetAttribute(context, self, SymbolTable.StringToId(name), value);
         }
 
-        [OperatorMethod, PythonName("__str__")]
-        public static string PythonToString(object o) {
-            return CodeRepresentation(o);
+        [OperatorMethod]
+        public static string __str__(object o) {
+            return __repr__(o);
         }
 
-        [OperatorMethod, PythonName("__hash__")]
-        public static int Hash(object self) {
+        [OperatorMethod]
+        public static int __hash__(object self) {
             if (self == null) return NoneTypeOps.HashCode;
             return self.GetHashCode();
         }
@@ -101,13 +97,11 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__reduce__")]
-        public static object Reduce(CodeContext context, object self) {
-            return Reduce(context, self, 0);
+        public static object __reduce__(CodeContext context, object self) {
+            return __reduce_ex__(context, self, 0);
         }
 
-        [PythonName("__reduce_ex__")]
-        public static object Reduce(CodeContext context, object self, object protocol) {
+        public static object __reduce_ex__(CodeContext context, object self, object protocol) {
             object objectReduce = PythonOps.GetBoundAttr(context, DynamicHelpers.GetDynamicTypeFromType(typeof(object)), Symbols.Reduce);
             object myReduce;
             if (PythonOps.TryGetBoundAttr(context, DynamicHelpers.GetDynamicType(self), Symbols.Reduce, out myReduce)) {
@@ -291,7 +285,7 @@ namespace IronPython.Runtime.Operations {
             private StandardRule<T> MakeRule<T>(CodeContext context, object[] args, object self, object attribute) {
                 string strAttr = attribute as string;
                 if (strAttr == null) return null;
-                if (self is ICustomMembers) return null;
+                if (self is ICustomMembers || self is ISuperDynamicObject) return null;
 
                 DynamicType selfType = DynamicHelpers.GetDynamicType(self);
 
@@ -303,9 +297,9 @@ namespace IronPython.Runtime.Operations {
                 if (selfType.TryResolveSlot(context, SymbolTable.StringToId(strAttr), out dts)) {
                     StandardRule<T> rule = new StandardRule<T>();
 
-                    GetMemberBinderHelper<T> helper = new GetMemberBinderHelper<T>(context, GetMemberAction.Make(strAttr));
-
-                    if (helper.TryMakeGetMemberRule(rule, dts, GetTargetObject(rule, args))) {
+                    PythonGetMemberBinderHelper<T> helper = new PythonGetMemberBinderHelper<T>(context, GetMemberAction.Make(strAttr));
+                    
+                    if (helper.TryMakeGetMemberRule(rule, selfType, dts, GetTargetObject(rule, args))) {
                         rule.SetTest(MakeTest(args, strAttr, rule));
                         return rule;
                     }
@@ -320,7 +314,7 @@ namespace IronPython.Runtime.Operations {
                     res.MakeReturn(context.LanguageContext.Binder,
                         Ast.Call(
                             null,
-                            typeof(ObjectOps).GetMethod("GetAttribute"),
+                            typeof(ObjectOps).GetMethod("__getattribute__"),
                             Ast.CodeContext(),
                             GetTargetObject<T>(res, args),
                             Ast.Constant(strAttr)

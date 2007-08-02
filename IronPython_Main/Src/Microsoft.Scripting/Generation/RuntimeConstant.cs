@@ -14,23 +14,24 @@
  * ***************************************************************************/
 
 using System;
-
-using Microsoft.Scripting;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Microsoft.Scripting.Generation {
-    public class TypeMemberConstant : CompilerConstant {
-        private WeakReference _value;
+    public sealed class RuntimeConstant : CompilerConstant {
+        private object/*!*/ _value;
 
-        public TypeMemberConstant(WeakReference value) {
+        internal RuntimeConstant(object/*!*/ value) {
+            if (value == null) throw new ArgumentNullException("value");
             _value = value;
         }
 
         public override Type Type {
-            get { return typeof(WeakReference); }
+            get { return CompilerHelpers.GetVisibleType(_value); }
         }
 
-        public override void EmitCreation(Microsoft.Scripting.Generation.CodeGen cg) {
-            throw new NotImplementedException();
+        public override void EmitCreation(CodeGen cg) {
+            throw new InvalidOperationException();
         }
 
         public override object Create() {

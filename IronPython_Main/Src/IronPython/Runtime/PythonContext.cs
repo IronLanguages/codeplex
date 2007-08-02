@@ -306,7 +306,7 @@ namespace IronPython.Runtime {
             for (int i = frames.Length - 1; i >= 0; i--) {
                 DynamicStackFrame frame = frames[i];
 
-                PythonFunction fx = new Function0(frame.CodeContext, frame.GetMethodName(), null, new string[0], RuntimeHelpers.EmptyObjectArray);
+                PythonFunction fx = new Function0(frame.CodeContext, frame.GetMethodName(), null, Utils.Array.EmptyStrings, RuntimeHelpers.EmptyObjectArray);
 
                 TraceBackFrame tbf = new TraceBackFrame(
                     new GlobalsDictionary(frame.CodeContext.Scope),
@@ -380,20 +380,6 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        // Python's delete operator doesn't have a return value. Return null
-        public override object DeleteIndex(CodeContext context, object obj, object index) {
-            PythonOps.DelIndex(obj, index);
-            return null;
-        }
-
-        public override object GetIndex(CodeContext context, object target, object index) {
-            return PythonOps.GetIndex(target, index);
-        }
-
-        public override void SetIndex(CodeContext context, object target, object index, object value) {
-            PythonOps.SetIndex(target, index, value);
-        }
-
         public override object GetMember(CodeContext context, object target, SymbolId name) {
             return PythonOps.GetAttr(context, target, name);
         }
@@ -432,10 +418,6 @@ namespace IronPython.Runtime {
 
         public override object GetNotImplemented(params MethodCandidate[] candidates) {
             return PythonOps.NotImplemented;
-        }
-
-        public override string GetTypeName(object o) {
-            return PythonOps.GetPythonTypeName(o);
         }
 
         public override bool IsCallable(object obj, int argumentCount, out int min, out int max) {

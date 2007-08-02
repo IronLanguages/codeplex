@@ -13,12 +13,14 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
 
 #if DEBUG
 namespace Microsoft.Scripting.Ast {
@@ -95,7 +97,7 @@ namespace Microsoft.Scripting.Ast {
             Debug.Assert(_depth >= 0);
         }
         public void Write(string s) {
-            _outFile.WriteLine(new string(' ', _depth * 2) + s);
+            _outFile.WriteLine(new string(' ', _depth * 3) + s);
         }
 
 
@@ -114,6 +116,7 @@ namespace Microsoft.Scripting.Ast {
             DoOperationAction doa;
             GetMemberAction gma;
             SetMemberAction sma;
+            InvokeMemberAction ima;
             ConvertToAction cta;
             CallAction cla;
 
@@ -123,6 +126,8 @@ namespace Microsoft.Scripting.Ast {
                 return "GetMember " + SymbolTable.IdToString(gma.Name);
             } else if ((sma = action as SetMemberAction) != null) {
                 return "SetMember " + SymbolTable.IdToString(sma.Name);
+            } else if ((ima = action as InvokeMemberAction) != null) {
+                return "InvokeMember " + ima.Name;
             } else if ((cta = action as ConvertToAction) != null) {
                 return "ConvertTo " + cta.ToType.ToString();
             } else if ((cla = action as CallAction) != null) {
@@ -134,19 +139,11 @@ namespace Microsoft.Scripting.Ast {
 
         // ActionExpression
         public override bool Walk(ActionExpression node) {
-            Push("<action> Kind: " + FormatAction(node.Action));
+            Push("<action> Kind:" + FormatAction(node.Action));
             return DefaultWalk(node, "<args>");
         }
         public override void PostWalk(ActionExpression node) {
             Pop();
-            Pop();
-        }
-
-        // AndExpression
-        public override bool Walk(AndExpression node) {
-            return DefaultWalk(node, "<and>");
-        }
-        public override void PostWalk(AndExpression node) {
             Pop();
         }
 
@@ -168,7 +165,7 @@ namespace Microsoft.Scripting.Ast {
 
         // BinaryExpression
         public override bool Walk(BinaryExpression node) {
-            return DefaultWalk(node, "<binaryexpr> Op:" + node.Op.ToString());
+            return DefaultWalk(node, "<binaryexpr> Op:" + node.Operator.ToString());
         }
         public override void PostWalk(BinaryExpression node) {
             Pop();
@@ -193,10 +190,9 @@ namespace Microsoft.Scripting.Ast {
 
         // BoundAssignment
         public override bool Walk(BoundAssignment node) {
-            string descr = "<boundassignment> Op:" + AssignmentOp(node.Operator);
-            if (node.Variable != null)
-                descr += " Target:" + SymbolTable.IdToString(node.Variable.Name);
-            return DefaultWalk(node, descr);
+            Push("<boundassignment>");
+            Write(String.Format("{0} {1} ...", SymbolTable.IdToString(node.Variable.Name), AssignmentOp(node.Operator)));
+            return true;
         }
         public override void PostWalk(BoundAssignment node) {
             Pop();
@@ -260,25 +256,24 @@ namespace Microsoft.Scripting.Ast {
 
         // ConstantExpression
         public override bool Walk(ConstantExpression node) {
-            return DefaultWalk(node, node.Value == null ? "(null)" : node.Value.ToString());
+            return DefaultWalk(node, GetConstantDisplay(node));
         }
+
+        private static string GetConstantDisplay(ConstantExpression node) {
+            if (node.Value == null) return "(null)";
+
+            CompilerConstant cc = node.Value as CompilerConstant;
+
+            if (cc != null) {
+                return cc.Name + " " + cc.Type + " " + cc.Create().ToString();
+            } else if (node.Value is Type) {
+                return "Type: " + ((Type)node.Value).FullName;
+            }
+
+            return node.ToString();
+        }
+
         public override void PostWalk(ConstantExpression node) {
-            Pop();
-        }
-
-        // DynamicMemberAssignment
-        public override bool Walk(DynamicMemberAssignment node) {
-            return DefaultWalk(node, AssignmentOp(node.Op) + " Name:" + SymbolTable.IdToString(node.Name));
-        }
-        public override void PostWalk(DynamicMemberAssignment node) {
-            Pop();
-        }
-
-        // DynamicMemberExpression
-        public override bool Walk(DynamicMemberExpression node) {
-            return DefaultWalk(node, "< . > Name:" + SymbolTable.IdToString(node.Name));
-        }
-        public override void PostWalk(DynamicMemberExpression node) {
             Pop();
         }
 
@@ -287,22 +282,6 @@ namespace Microsoft.Scripting.Ast {
             return DefaultWalk(node, "<$env>");
         }
         public override void PostWalk(EnvironmentExpression node) {
-            Pop();
-        }
-
-        // IndexAssignment
-        public override bool Walk(IndexAssignment node) {
-            return DefaultWalk(node, "< []= >: " + AssignmentOp(node.Op));
-        }
-        public override void PostWalk(IndexAssignment node) {
-            Pop();
-        }
-
-        // IndexExpression
-        public override bool Walk(IndexExpression node) {
-            return DefaultWalk(node, "< [] >");
-        }
-        public override void PostWalk(IndexExpression node) {
             Pop();
         }
 
@@ -316,11 +295,11 @@ namespace Microsoft.Scripting.Ast {
 
         // MethodCallExpression
         public override bool Walk(MethodCallExpression node) {
-            Push("<methodcall> Name:" + node.Method.Name);
-            Push("<instance>");
+            Push("<methodcall> Name:" + node.Method.ReflectedType.Name + "." + node.Method.Name);
+            Push("instance:");
             Child(node.Instance);
             Pop();
-            Push("<args>");
+            Push("args:");
             foreach (Expression e in node.Arguments) {
                 Child(e);
             }
@@ -332,7 +311,7 @@ namespace Microsoft.Scripting.Ast {
 
         // NewArrayExpression
         public override bool Walk(NewArrayExpression node) {
-            return DefaultWalk(node, "<newarray> Type:" + node.ExpressionType.Name);
+            return DefaultWalk(node, "<newarray> Type:" + node.ExpressionType.FullName);
         }
         public override void PostWalk(NewArrayExpression node) {
             Pop();
@@ -340,8 +319,8 @@ namespace Microsoft.Scripting.Ast {
 
         // NewExpression
         public override bool Walk(NewExpression node) {
-            Push("<new> Name:" + node.Constructor.Name);
-            Push("<args>");
+            Push("<new> Name:" + node.Constructor.DeclaringType.FullName);
+            Push("args:");
             foreach (Expression e in node.Arguments) {
                 Child(e);
             }
@@ -350,14 +329,6 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
-
-        // OrExpression
-        public override bool Walk(OrExpression node) {
-            return DefaultWalk(node, "<or>");
-        }
-        public override void PostWalk(OrExpression node) {
-            Pop();
-        }
 
         // ParamsExpression
         public override bool Walk(ParamsExpression node) {
@@ -468,7 +439,7 @@ namespace Microsoft.Scripting.Ast {
             foreach (IfStatementTest ist in node.Tests) {
                 Child(ist);
             }
-            Push("<else>");
+            Push("else:");
             Child(node.ElseStatement);
             Pop();
             Pop();
@@ -494,7 +465,6 @@ namespace Microsoft.Scripting.Ast {
         // SwitchStatement
         public override bool Walk(SwitchStatement node) {
             Push("<switch>");
-            Push("<test>");
             Child(node.TestValue);
             Pop();
             foreach (SwitchCase sc in node.Cases) {
@@ -529,12 +499,12 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
             if (node.ElseStatement != null) {
-                Push("<else>");
+                Push("else:");
                 Child(node.ElseStatement);
                 Pop();
             }
             if (node.FinallyStatement != null) {
-                Push("<finally>");
+                Push("finally:");
                 Child(node.FinallyStatement);
                 Pop();
             }
@@ -590,23 +560,30 @@ namespace Microsoft.Scripting.Ast {
         // CodeBlock
         public override bool Walk(CodeBlock node) {
             Push("<codeblock> Name:" + node.Name);
-            Push("<variables>");
-            foreach (Variable v in node.Variables) {
-                DumpVariable(v);
-            }
-            Pop();
-            Push("<parameters>");
+
+            Push("params:");
             foreach (Variable v in node.Parameters) {
                 DumpVariable(v);
             }
             Pop();
+            
+            Push("vars:");
+            foreach (Variable v in node.Variables) {
+                DumpVariable(v);
+            }
+            Pop();
+
             Child(node.Body);
             Pop();
             return false;
         }
 
         private void DumpVariable(Variable v) {
-            Push(SymbolTable.IdToString(v.Name));
+            string descr = String.Format("{0} Kind:{1} Type:{2}", SymbolTable.IdToString(v.Name), v.Kind.ToString(), v.Type.Name);
+            if (v.Lift) { descr += " Lift"; }
+            if (v.InParameterArray) { descr += " InParameterArray"; }            
+            Push(descr);
+
             if (v.DefaultValue != null) {
                 Child(v.DefaultValue);
             }
@@ -616,7 +593,7 @@ namespace Microsoft.Scripting.Ast {
         // GeneratorCodeBlock
         public override bool Walk(GeneratorCodeBlock node) {
             Push("<generator> Name:" + node.Name);
-            Push("<parms>");
+            Push("params:");
             foreach (Variable v in node.Parameters) {
                 DumpVariable(v);
             }
@@ -640,6 +617,13 @@ namespace Microsoft.Scripting.Ast {
             return DefaultWalk(node, "<catch>");
         }
         public override void PostWalk(DynamicTryStatementHandler node) {
+            Pop();
+        }
+
+        public override bool Walk(ScopeStatement node) {
+            return DefaultWalk(node, "<scope>");
+        }
+        public override void PostWalk(ScopeStatement node) {
             Pop();
         }
 

@@ -328,11 +328,18 @@ namespace Microsoft.Scripting.Actions {
 
                 if (!isStaticType) {
                     int version = type.Version;
-                    test = Ast.AndAlso(test,
-                        Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"),
-                            tested, Ast.Constant(version)));
-
-                    AddValidator(new DynamicTypeValidator(new WeakReference(type), version).Validate);
+                    if (version != DynamicType.DynamicVersion) {
+                        test = Ast.AndAlso(test,
+                            Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"),
+                                tested, Ast.Constant(version)));
+                        AddValidator(new DynamicTypeValidator(new WeakReference(type), version).Validate);
+                    } else {
+                        version = type.AlternateVersion;
+                        test = Ast.AndAlso(test,
+                            Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckAlternateTypeVersion"),
+                                tested, Ast.Constant(version)));
+                        AddValidator(new DynamicTypeValidator(new WeakReference(type), version).AlternateValidate);
+                    }
                 }
                 return test;
             }
@@ -401,6 +408,10 @@ namespace Microsoft.Scripting.Actions {
             public bool Validate() {
                 DynamicType dt = _dynamicType.Target as DynamicType;
                 return dt != null && dt.Version == _version;
+            }
+            public bool AlternateValidate() {
+                DynamicType dt = _dynamicType.Target as DynamicType;
+                return dt != null && dt.AlternateVersion == _version;
             }
         }
 

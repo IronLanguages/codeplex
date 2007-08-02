@@ -184,7 +184,7 @@ namespace IronPython.Runtime {
         }
 
         public override string ToString() {
-            return DictionaryOps.ToString(this);
+            return DictionaryOps.__str__(this);
         }
     }
 }

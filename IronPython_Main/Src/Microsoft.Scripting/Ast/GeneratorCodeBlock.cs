@@ -52,7 +52,6 @@ namespace Microsoft.Scripting.Ast {
         private static string[] _GeneratorSigNames = new string[] { "$gen", "$ret" };
 
         // FastEval: Cache for emitted delegate so that we only generate code once.
-        //private WeakObject<Delegate> _delegate;
         private Delegate _delegate;
 
         public GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next)
@@ -83,7 +82,7 @@ namespace Microsoft.Scripting.Ast {
                             v.ParameterIndex = paramIndex++;
                         }
                     }
-
+                    
                     CodeGen cg = CompilerHelpers.CreateDynamicCodeGenerator(
                         "$generator" + Interlocked.Increment(ref _Counter),
                         typeof(object),
@@ -93,14 +92,14 @@ namespace Microsoft.Scripting.Ast {
                     // Use the constant pool to propagate our context into the CodeGen we are creating
                     cg.ContextSlot = cg.ConstantPool.AddData(context);
                     cg.Allocator = CompilerHelpers.CreateFrameAllocator(cg.ContextSlot);
-                    cg.Binder = context.LanguageContext.Binder;
+                    cg.Context = context.ModuleContext.CompilerContext;
                     cg.EnvironmentSlot = new EnvironmentSlot(
                         new PropertySlot(
                             new PropertySlot(cg.ContextSlot,
                                 typeof(CodeContext).GetProperty("Scope")),
                             typeof(Scope).GetProperty("Dict"))
                         );
-
+                    
                     EmitFunctionImplementation(cg);
                     cg.Finish();
 
@@ -163,11 +162,6 @@ namespace Microsoft.Scripting.Ast {
 
             // We are emitting generator, mark the CodeGen
             ncg.IsGenerator = true;
-
-            if (_impl.FastEval) {
-                ncg.Binder = _impl.Binder;
-                ncg.FastEval = true;
-            }
 
             return ncg;
         }

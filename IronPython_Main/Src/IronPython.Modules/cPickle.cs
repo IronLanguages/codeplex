@@ -472,7 +472,7 @@ namespace IronPython.Modules {
                 }
 
                 WritePut(obj);
-                BatchSetItems(context, (DictionaryOps.IterItems((IDictionary<object, object>)obj)));
+                BatchSetItems(context, (DictionaryOps.iteritems((IDictionary<object, object>)obj)));
             }
 
             private void SaveFloat(CodeContext context, object obj) {

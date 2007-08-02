@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static DebugStatement Debug(string marker) {
+        public static DebugStatement DebugMarker(string marker) {
             return new DebugStatement(marker);
         }
     }

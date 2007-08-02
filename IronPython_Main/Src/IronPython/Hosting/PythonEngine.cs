@@ -440,17 +440,18 @@ namespace IronPython.Hosting {
                 result += "Traceback (most recent call last):" + Environment.NewLine;
                 printedHeader = true;
             }
-            result += FormatStackTrace(new StackTrace(e, true), fsf);
+            List<DynamicStackFrame> dynamicFrames = new List<DynamicStackFrame>(DynamicHelpers.GetDynamicStackFrames(e));
             IList<StackTrace> traces = ExceptionHelpers.GetExceptionStackTraces(e);
             if (traces != null && traces.Count > 0) {
-                for (int i = 0; i < traces.Count; i++) {
-                    result += FormatStackTrace(traces[i], fsf);
+                for (int i = traces.Count - 1; i >= 0; i--) {
+                    result += FormatStackTrace(traces[i], dynamicFrames, fsf);
                 }
             }
+            result += FormatStackTrace(new StackTrace(e, true), dynamicFrames, fsf);
             return result;
         }
 
-        private string FormatStackTrace(StackTrace st, FilterStackFrame fsf) {
+        private string FormatStackTrace(StackTrace st, List<DynamicStackFrame> dynamicFrames, FilterStackFrame fsf) {
             string result = "";
 
             StackFrame[] frames = st.GetFrames();
@@ -458,9 +459,17 @@ namespace IronPython.Hosting {
 
             for (int i = frames.Length - 1; i >= 0; i--) {
                 StackFrame frame = frames[i];
-                Type parentType = frame.GetMethod().DeclaringType;
+                MethodBase method = frame.GetMethod();
+                Type parentType = method.DeclaringType;
                 if (parentType != null) {
                     string typeName = parentType.FullName;
+                    if (typeName == "Microsoft.Scripting.Ast.CodeBlock" && method.Name == "DoExecute") {
+                        // Evaluated frame -- Replace with dynamic frame
+                        Debug.Assert(dynamicFrames.Count > 0);
+                        result += FrameToString(dynamicFrames[dynamicFrames.Count-1]) + Environment.NewLine;
+                        dynamicFrames.RemoveAt(dynamicFrames.Count - 1);
+                        continue;
+                    }
                     if (typeName.StartsWith("IronPython.") ||
                         typeName.StartsWith("ReflectOpt.") ||
                         typeName.StartsWith("System.Reflection.") ||
@@ -470,14 +479,22 @@ namespace IronPython.Hosting {
                         continue;
                     }
                 }
+                
 
                 if (fsf != null && !fsf(frame)) continue;
 
+                // TODO: also try to use dynamic frames for non-FastEval dynamic methods
                 result += FrameToString(frame) + Environment.NewLine;
             }
 
             return result;
         }
+
+        private string FrameToString(DynamicStackFrame frame) {
+            return String.Format("  File {0}, line {1}, in {2}",
+                frame.GetFileName(), frame.GetFileLineNumber(), frame.GetMethodName());
+        }
+        
 
         private string FrameToString(StackFrame frame) {
             if (frame.GetMethod().DeclaringType != null &&

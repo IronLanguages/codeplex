@@ -55,6 +55,7 @@ namespace Microsoft.Scripting {
         private ContextSensitiveScope _contextScopes;
         private IDictionary<Variable,object> _temps;
         private bool _isVisible;
+        private SourceLocation _sourceLocation;
 
         /// <summary>
         /// Creates a new top-level scope with a new empty dictionary.  The scope
@@ -107,6 +108,17 @@ namespace Microsoft.Scripting {
         public bool IsVisible {
             get {
                 return _isVisible;
+            }
+        }
+
+        public SourceLocation SourceLocation {
+            get {
+                return _sourceLocation;
+            }
+            set {
+                if (value != SourceLocation.None && value != SourceLocation.Invalid) {
+                    _sourceLocation = value;
+                }
             }
         }
 
@@ -429,8 +441,11 @@ namespace Microsoft.Scripting {
             bool fRemoved = false;
 
             if (_contextScopes != null) fRemoved = _contextScopes.TryRemoveName(context, name);
-
-            if (_attrs == null || _attrs.CheckDeletable(name)) {
+            
+            // TODO: Ideally, we could do this without having to do two lookups.
+            object removedObject;
+            if ((_attrs == null || _attrs.CheckDeletable(name))
+                && _dict.TryGetValue(name, out removedObject) && removedObject != Uninitialized.Instance) {
                 fRemoved = _dict.Remove(name) || fRemoved;
             }
 

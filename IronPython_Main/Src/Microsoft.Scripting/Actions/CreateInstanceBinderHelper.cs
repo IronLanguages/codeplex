@@ -20,6 +20,7 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Diagnostics;
 
     public class CreateInstanceBinderHelper<T> : BinderHelper<T, CreateInstanceAction> {
         public CreateInstanceBinderHelper(CodeContext context, CreateInstanceAction action)
@@ -63,13 +64,22 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static Expression MakeTestForTypeCall(CallAction action, DynamicType creating, StandardRule<T> rule, object[] args) {
-            Expression test = Ast.AndAlso(
-                rule.MakeTestForTypes(CompilerHelpers.ObjectTypes(args), 0),
-                Ast.Equal(
+            Expression typeTest;
+            int version = creating.Version;
+            if (version != DynamicMixin.DynamicVersion) {
+                typeTest = Ast.Equal(
                     Ast.ReadProperty(rule.Parameters[0], typeof(DynamicType).GetProperty("Version")),
                     Ast.Constant(creating.Version)
-                )
-            );
+                );
+            } else {
+                Debug.Assert(creating.AlternateVersion != 0);
+                typeTest = Ast.Equal(
+                    Ast.ReadProperty(rule.Parameters[0], typeof(DynamicType).GetProperty("AlternateVersion")),
+                    Ast.Constant(creating.AlternateVersion)
+                );
+            }
+
+            Expression test = Ast.AndAlso(rule.MakeTestForTypes(CompilerHelpers.ObjectTypes(args), 0), typeTest);
 
             if (action.IsParamsCall()) {
                 test = Ast.AndAlso(test, MakeParamsTest(rule, args));

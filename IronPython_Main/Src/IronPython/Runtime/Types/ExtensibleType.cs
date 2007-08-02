@@ -61,7 +61,7 @@ namespace IronPython.Runtime.Types {
                     return true;
             }
 
-            return TypeCache.DynamicType.TryGetCustomMember(context, name, out value);
+            return DynamicHelpers.GetDynamicType(this).TryGetMember(context, this, name, out value);
         }
 
         bool ICustomMembers.TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
@@ -78,7 +78,7 @@ namespace IronPython.Runtime.Types {
                     return true;
             }
 
-            return TypeCache.DynamicType.TryGetBoundCustomMember(context, name, out value);
+            return DynamicHelpers.GetDynamicType(this).TryGetMember(context, this, name, out value);
         }
 
         void ICustomMembers.SetCustomMember(CodeContext context, SymbolId name, object value) {

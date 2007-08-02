@@ -104,7 +104,7 @@ namespace Microsoft.Scripting.Ast {
                     return field.GetValue(self);
                 case MemberTypes.Property:                    
                     PropertyInfo property = (PropertyInfo)_member;
-                    return property.GetValue(self, new object[0]);
+                    return property.GetValue(self, RuntimeHelpers.EmptyObjectArray);
                 default:
                     Debug.Assert(false, "Invalid member type");
                     break;

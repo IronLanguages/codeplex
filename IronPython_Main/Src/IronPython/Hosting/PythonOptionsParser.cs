@@ -121,7 +121,6 @@ namespace IronPython.Hosting {
                 case "-X:PrivateBinding": GlobalOptions.PrivateBinding = true; break;
                 case "-X:SaveAssemblies": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.SaveAndReloadAssemblies; break;
                 case "-X:ShowClrExceptions": _engineOptions.ShowClrExceptions = true; break;
-                case "-X:SlowOps": GlobalOptions.FastOps = false; break;
                 case "-X:StaticMethods": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.GenerateStaticMethods; break;
                 case "-X:TrackPerformance": // accepted but ignored on retail builds
 #if DEBUG

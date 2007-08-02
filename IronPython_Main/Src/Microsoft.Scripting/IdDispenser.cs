@@ -15,7 +15,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+using SRC = System.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting {
 
@@ -127,7 +127,7 @@ namespace Microsoft.Scripting {
             public Wrapper(Object obj, long uniqueId) {
                 _weakReference = new WeakReference(obj, true);
 
-                _hashCode = (obj == null) ? 0 : obj.GetHashCode();
+                _hashCode = (obj == null) ? 0 : SRC.RuntimeHelpers.GetHashCode(obj);
                 _id = uniqueId;
             }
 
@@ -175,10 +175,8 @@ namespace Microsoft.Scripting {
             }
 
             private static int GetHashCodeWorker(object o) {
-                // TODO: Replace w/ RuntimeHelpers.GetHashCode when available in Silverlight
                 if (o == null) return 0;
-
-                return o.GetHashCode();
+                return SRC.RuntimeHelpers.GetHashCode(o);
             }
         }
 

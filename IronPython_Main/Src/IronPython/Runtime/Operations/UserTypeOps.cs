@@ -92,19 +92,27 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static StandardRule<T> MakeGetMemberRule<T>(CodeContext context, GetMemberAction action, object[] args) {
-            StandardRule<T> rule = new StandardRule<T>();
+            DynamicTypeSlot dts;
             ISuperDynamicObject sdo = (ISuperDynamicObject)args[0];
-            if (sdo.DynamicType.Version != DynamicType.DynamicVersion && !(args[0] is ICustomMembers)) {
-                rule.MakeTest(sdo.DynamicType);
+            StandardRule<T> rule = new StandardRule<T>();
+            Variable tmp = rule.GetTemporary(typeof(object), "lookupRes");
 
-                // fast path (mainly for slots)... the property is a get/set descriptor, 
-                // it always takes precedence.  Additionally the user can't remove the 
-                // descriptor through the DictProxy therefore it's always guaranteed to
-                // be there.
+            rule.MakeTest(sdo.DynamicType);
+
+            if (TryGetGetAttribute(context, sdo, out dts)) {
+                // type defines __getattribute__, just call it.
+
+                rule.SetTarget(MakeGetAttrRule<T>(context, action, rule, Ast.Empty(), tmp, dts));
+            } else if (!(args[0] is ICustomMembers)) {
+                // fast path for accessing properties from a derived type.
                 Type t = args[0].GetType();
                 PropertyInfo pi = t.GetProperty(SymbolTable.IdToString(action.Name));
                 if (pi != null) {
-                    if (new GetMemberBinderHelper<T>(context, action).TryMakeGetMemberRule(rule, pi, rule.Parameters[0])) {
+                    MethodInfo getter = pi.GetGetMethod();
+                    if (getter != null && getter.IsPublic) {
+                        rule.SetTarget(rule.MakeReturn(
+                            context.LanguageContext.Binder, 
+                            Ast.Call(rule.Parameters[0], pi.GetGetMethod())));
                         return rule;
                     }
                 }
@@ -121,11 +129,15 @@ namespace IronPython.Runtime.Operations {
                 // a get/set descriptor we'll only ever use that directly.  Otherwise if we have a get descriptor
                 // we'll first check the dictionary and then invoke the get descriptor.  If we have no descriptor
                 // at all we'll just check the dictionary.  If both lookups fail we'll raise an exception.
-                
-                DynamicTypeSlot dts;
-                sdo.DynamicType.TryResolveSlot(context, action.Name, out dts);
 
-                Variable tmp = rule.GetTemporary(typeof(object), "res");
+                int slotLocation = -1;
+                IList<DynamicMixin> mro = sdo.DynamicType.ResolutionOrder;
+                for (int i = 0; i < mro.Count; i++) {
+                    if (mro[i].TryLookupSlot(context, action.Name, out dts)) {
+                        slotLocation = i;
+                        break;
+                    }
+                }
 
                 ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
                 if (rsp != null) {
@@ -150,17 +162,29 @@ namespace IronPython.Runtime.Operations {
 
                 Statement body = Ast.Empty();
 
-                if (sdo.HasDictionary && (dts == null || !dts.IsSetDescriptor(context, sdo.DynamicType))) {
-                    body = MakeDictionaryAccess<T>(context, action, rule, tmp);
+                bool isOldStyle = false;
+                foreach (DynamicType dt in sdo.DynamicType.ResolutionOrder) {
+                    if (Mro.IsOldStyle(dt)) {
+                        isOldStyle = true;
+                        break;
+                    }
                 }
 
-                if (dts != null) {
-                    body = MakeSlotAccess<T>(context, rule, dts, body, tmp);
+                if (!isOldStyle) {
+                    if (sdo.HasDictionary && (dts == null || !dts.IsSetDescriptor(context, sdo.DynamicType))) {
+                        body = MakeDictionaryAccess<T>(context, action, rule, tmp);
+                    }
+
+                    if (dts != null) {
+                        body = MakeSlotAccess<T>(context, rule, dts, body, tmp);
+                    }
+                } else {
+                    body = MakeOldStyleAccess(context, rule, action.Name, sdo, body, tmp);
                 }
 
                 // fall back to __getattr__ if it's defined.
                 DynamicTypeSlot getattr;
-                if(sdo.DynamicType.TryResolveSlot(context, Symbols.GetBoundAttr, out getattr)) {
+                if (sdo.DynamicType.TryResolveSlot(context, Symbols.GetBoundAttr, out getattr)) {
                     body = MakeGetAttrRule<T>(context, action, rule, body, tmp, getattr);
                 }
 
@@ -168,10 +192,101 @@ namespace IronPython.Runtime.Operations {
                 body = MakeTypeError<T>(context, action, rule, body);
 
                 rule.SetTarget(body);
-                return rule;
+            } else {
+                // TODO: When ICustomMembers goes away, or as it slowly gets replaced w/ IDynamicObject,
+                // we'll need to call the base GetRule instead and merge that with our normal lookup
+                // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
+                rule.SetTarget(MakeCustomMembersBody(context, action, DynamicTypeOps.GetName(sdo.DynamicType), rule));       
             }
 
-            return MakeDynamicGetMemberRule<T>(action.Name, sdo.DynamicType);
+            return rule;
+        }
+
+        internal static Statement MakeCustomMembersBody<T>(CodeContext context, GetMemberAction action, string typeName, StandardRule<T> rule) {
+            Variable tmp = rule.GetTemporary(typeof(object), "custmemres");
+
+            return Ast.IfThenElse(
+                        Ast.Call(
+                            Ast.Cast(rule.Parameters[0], typeof(ICustomMembers)),
+                            typeof(ICustomMembers).GetMethod("TryGetBoundCustomMember"),
+                            Ast.CodeContext(),
+                            Ast.Constant(action.Name),
+                            Ast.Read(tmp)
+                        ),
+                        rule.MakeReturn(context.LanguageContext.Binder, Ast.Read(tmp)),
+                        rule.MakeError(context.LanguageContext.Binder,
+                            Ast.Call(null,
+                                typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
+                                Ast.Constant(typeName),
+                                Ast.Constant(action.Name)
+                            )
+                        )
+                    );
+        }
+        
+        /// <summary>
+        /// Checks to see if this type has __getattribute__ that overrides all other attribute lookup.
+        /// 
+        /// This is more complex then it needs to be.  The problem is that when we have a 
+        /// mixed new-style/old-style class we have a weird __getattribute__ defined.  When
+        /// we always dispatch through rules instead of DynamicTypes it should be easy to remove
+        /// this.
+        /// </summary>
+        private static bool TryGetGetAttribute(CodeContext context, ISuperDynamicObject sdo, out DynamicTypeSlot dts) {
+            if (sdo.DynamicType.TryResolveSlot(context, Symbols.GetAttribute, out dts)) {
+                BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
+                if (bmd == null || bmd.DeclaringType != TypeCache.Object ||
+                    bmd.Template.Targets.Length != 1 ||
+                    bmd.Template.Targets[0].DeclaringType != typeof(ObjectOps) ||
+                    bmd.Template.Targets[0].Name != "__getattribute__") {
+
+                    DynamicTypeGetAttributeSlot gas = dts as DynamicTypeGetAttributeSlot;
+                    if (gas != null) {
+                        // inherited __getattribute__ slots won't provide their value so
+                        // we need to get the one that's actually going to provide a value.
+                        if (gas.Inherited) {
+                            for (int i = 1; i < sdo.DynamicType.ResolutionOrder.Count; i++) {
+                                if (sdo.DynamicType.ResolutionOrder[i] != TypeCache.Object &&
+                                    sdo.DynamicType.ResolutionOrder[i].TryLookupSlot(context, Symbols.GetAttribute, out dts)) {
+                                    gas = dts as DynamicTypeGetAttributeSlot;
+                                    if (gas == null || !gas.Inherited) break;
+
+                                    dts = null;
+                                }
+                            }
+                        }
+                    }
+
+                    return dts != null;
+                }                
+            }
+            return false;
+        }
+
+        public static bool TryGetMixedNewStyleOldStyleSlot(CodeContext context, object instance, SymbolId name, out object value) {
+            return OldInstanceTypeBuilder.TryGetMemberCustomizer(context, instance, name, out value);
+        }
+
+        /// <summary>
+        /// Checks a range of the MRO to perform old-style class lookups if any old-style classes
+        /// are present.  We will call this twice to produce a search before a slot and after
+        /// a slot.
+        /// </summary>
+        private static Statement MakeOldStyleAccess<T>(CodeContext context, StandardRule<T> rule, SymbolId name, ISuperDynamicObject sdo, Statement body, Variable tmp) {
+            return Ast.Block(
+                body,
+                Ast.If(
+                    Ast.Call(
+                        null,
+                        typeof(UserTypeOps).GetMethod("TryGetMixedNewStyleOldStyleSlot"),
+                        Ast.CodeContext(),
+                        rule.Parameters[0],
+                        Ast.Constant(name),
+                        Ast.ReadDefined(tmp)
+                    ),
+                    rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadDefined(tmp))
+                )
+            );
         }
 
         private static Statement MakeGetAttrRule<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Statement body, Variable tmp, DynamicTypeSlot getattr) {
@@ -179,10 +294,7 @@ namespace IronPython.Runtime.Operations {
                 body,
                 Ast.If(
                     Ast.Call(
-                        Ast.ReadProperty(
-                            Ast.Constant(new TypeMemberConstant(new WeakReference(getattr))),
-                            typeof(WeakReference).GetProperty("Target")
-                        ),
+                        Ast.WeakConstant(getattr),
                         typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
                         Ast.CodeContext(),
                         rule.Parameters[0],
@@ -229,10 +341,7 @@ namespace IronPython.Runtime.Operations {
                 body,
                 Ast.If(
                     Ast.Call(
-                        Ast.ReadProperty(
-                            Ast.Constant(new TypeMemberConstant(new WeakReference(dts))),
-                            typeof(WeakReference).GetProperty("Target")
-                        ),
+                        Ast.WeakConstant(dts),
                         typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
                         Ast.CodeContext(),
                         rule.Parameters[0],
@@ -423,10 +532,7 @@ namespace IronPython.Runtime.Operations {
 
         private static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, DynamicTypeSlot dts, Variable tmp) {
             return Ast.Call(
-                Ast.ReadProperty(
-                    Ast.Constant(new TypeMemberConstant(new WeakReference(dts))),
-                    typeof(WeakReference).GetProperty("Target")
-                ),
+                Ast.WeakConstant(dts),
                 typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
                 Ast.CodeContext(),
                 rule.Parameters[0],

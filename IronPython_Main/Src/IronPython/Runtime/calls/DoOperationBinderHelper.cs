@@ -84,7 +84,7 @@ namespace IronPython.Runtime.Calls {
                 } else {
                     MakeDynamicTarget(DynamicInvokeCompareOperation, ret);
                 }
-            } else if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem) {
+            } else if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem || Action.Operation == Operators.DeleteItem) {
                 return MakeDynamicIndexRule(Action, Context, types);
             } else {
                 MakeDynamicTarget(DynamicInvokeBinaryOperation, ret);
@@ -160,6 +160,8 @@ namespace IronPython.Runtime.Calls {
                 // be captured in the AbstractValue in the future but today is captured in the
                 // real value.
                 return MakeIndexerRule(types);
+            } else if (Action.Operation == Operators.DeleteItem) {
+                return MakeDynamicIndexRule(Action, Context, types);
             }
 
             return MakeSimpleRule(types, op);
@@ -443,14 +445,16 @@ namespace IronPython.Runtime.Calls {
             StandardRule<T> ret = new StandardRule<T>();
             ret.MakeTest(types);
             Expression retExpr;
-            if (action.Operation == Operators.GetItem) {
+            if (action.Operation == Operators.GetItem || action.Operation == Operators.DeleteItem) {
                 Expression arg;
                 if (types.Length == 2) {
                     arg = ret.Parameters[1];
                 } else {
                     arg = Ast.Call(null, typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetGetIndexParameters(ret));
                 }
-                retExpr = Ast.DynamicReadItem(ret.Parameters[0], arg);
+                
+                string call = action.Operation == Operators.GetItem ? "GetIndex" : "DelIndex";
+                retExpr = Ast.Call(null, typeof(PythonOps).GetMethod(call), ret.Parameters[0], arg);
             } else {
                 Expression arg;
                 if (types.Length == 3) {
@@ -458,7 +462,7 @@ namespace IronPython.Runtime.Calls {
                 } else {
                     arg = Ast.Call(null, typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetSetIndexParameters(ret));
                 }
-                retExpr = Ast.DynamicAssignItem(ret.Parameters[0], arg, ret.Parameters[ret.Parameters.Length - 1]);
+                retExpr = Ast.Call(null, typeof(PythonOps).GetMethod("SetIndex"), ret.Parameters[0], arg, ret.Parameters[ret.Parameters.Length - 1]);
             }
             ret.SetTarget(ret.MakeReturn(context.LanguageContext.Binder, retExpr));
             return ret;
@@ -962,7 +966,7 @@ namespace IronPython.Runtime.Calls {
                     if (notExpr.ExpressionType == typeof(bool)) {
                         notExpr = Ast.Equal(notExpr, Ast.False());
                     } else {
-                        notExpr = Ast.Not(notExpr, typeof(PythonOps).GetMethod("Not"));
+                        notExpr = Ast.Call(null, typeof(PythonOps).GetMethod("Not"), notExpr);
                     }
                 } else {
                     // call len, compare w/ zero

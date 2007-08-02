@@ -74,7 +74,8 @@ def test_references():
     #AssertError(TypeError, refs.__add__, "I am not a tuple")
 
     s = str(refs)
-    AreEqual(s, '(' + ',\r\n'.join(map((lambda x:'<'+x.ToString()+'>'), refs)) + ')\r\n')
+    temp = ',' + newline
+    AreEqual(s, '(' + temp.join(map((lambda x:'<'+x.ToString()+'>'), refs)) + ')' + newline)
 
 def test_gac():
     import System
@@ -96,8 +97,8 @@ def test_gac():
             process.WaitForExit()
             if process.ExitCode == 0:
                 try:
-                    divByNewline = result.split('\r\n  ')[1:]
-                    divByNewline[-1] = divByNewline[-1].split('\r\n\r\n')[0]
+                    divByNewline = result.split(newline + '  ')[1:]
+                    divByNewline[-1] = divByNewline[-1].split(newline + newline)[0]
                     return divByNewline
                 except Exception:
                     return []

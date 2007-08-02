@@ -267,6 +267,7 @@ def test_misc():
     y = C.m
     y = C.n
 
+    Assert('__dict__' not in str.__dict__)
 
 ############################################################
 def test_dir_in_init():
@@ -1342,6 +1343,27 @@ def test_slots():
     for x in range(256):
         AreEqual(x, getattr(a, 'a' + str(x)))
 
+
+    # new-style / old-style mixed with slots, slots take precedence
+    class foo:
+        abc = 3
+
+    class bar(object):
+        __slots__ = ['abc']
+        def __init__(self): self.abc = 5
+
+    class bar2(object):
+        abc = 5
+
+    class baz(foo, bar): pass
+    
+    class baz2(foo, bar2): pass
+
+    AreEqual(baz().abc, 5)
+    
+    # but if it's just a class member we respect MRO
+    AreEqual(baz2().abc, 3)
+    
 ############################################################
 def test_inheritance_cycle():
     """test for inheritance cycle"""
@@ -1970,5 +1992,90 @@ def test_mutate_base():
         
         AreEqual(subtype.xyz, 7)
         AreEqual(subtype().xyz, 7)
+
+def test_mixed_newstyle_oldstyle_init():
+    """mixed new-style & old-style class should run init if its defined in the old-style class"""
+    class foo:
+        def __init__(self):
+            self.x = 3
+    
+    class bar(foo):
+        def __init__(self):
+            self.x = 4
+    
+    class baz(foo): pass
+    
+    class ns(object): pass
+    
+    class full(bar, baz, ns): pass
+    
+    a = full()
+    AreEqual(a.x, 4)
+    
+    class full(bar, baz, ns): 
+        def __init__(self):
+            self.x = 5
+    
+    a = full()
+    AreEqual(a.x, 5)
+
+    class ns(object): 
+        def __init__(self):
+            self.x = 6
+    
+    class full(bar, baz, ns): pass
+    a = full()
+    AreEqual(a.x, 4)
+
+def test_getattr_exceptions():
+    """verify the original exception propagates out"""
+    class AttributeTest(object):
+        def __getattr__(self, name): raise AttributeError('catch me')
         
+    x = AttributeTest()
+    try:
+        y = x.throws
+    except AttributeError, ex:
+        AreEqual(ex.args, ('catch me',))
+
+def test_descriptor_meta_magic():
+    class valueDescriptor(object):
+        def __init__(self,x=None): self.value = x
+        def __get__(self,ob,cls):   return self.value
+        def __set__(self,ob,x):     self.value = x
+    
+    class Ameta(type):
+        def createShared( cls, nm, initValue=None ):
+            o = valueDescriptor(initValue)
+            setattr( cls,nm, o )
+            setattr( cls.__class__,nm, o )    
+    
+    class A:
+        __metaclass__ = Ameta
+    
+    class B( A ):
+        A.createShared("cls2",1)
+    
+    def test(value):        
+        AreEqual(o.cls2, value)
+        AreEqual(o2.cls2, value)
+        AreEqual(A.cls2, value)
+        AreEqual(B.cls2, value)
+        
+    o = A()
+    o2 = B()
+    test(1)
+        
+    B.cls2 = 2
+    test(2)
+        
+    A.cls2 = 3
+    test(3)
+    
+    o.cls2 = 4
+    test(4)
+    
+    o2.cls2 = 5
+    test(5)
+
 run_test(__name__)

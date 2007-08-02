@@ -58,8 +58,9 @@ namespace Microsoft.Scripting.Ast {
             foreach (IfStatementTest t in _tests) {
                 Label next = cg.DefineLabel();
                 cg.EmitPosition(t.Start, t.Header);
-                t.Test.EmitAs(cg, typeof(bool));
-                cg.Emit(OpCodes.Brfalse, next);
+
+                t.Test.EmitBranchFalse(cg, next);
+
                 t.Body.Emit(cg);
                 // optimize no else case                
                 cg.EmitSequencePointNone();     // hide compiler generated branch.

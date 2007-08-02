@@ -23,7 +23,12 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            return Ast.Break(Span);
+            if (ag.InLoop) {
+                return Ast.Break(Span);
+            } else {
+                ag.AddError("'break' not properly in loop", Span);
+                return null;
+            }
         }
 
         public override void Walk(PythonWalker walker) {

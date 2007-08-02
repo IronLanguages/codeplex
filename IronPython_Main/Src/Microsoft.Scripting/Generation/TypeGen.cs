@@ -118,7 +118,7 @@ namespace Microsoft.Scripting.Generation {
             FieldBuilder contextField = _myType.DefineField(CodeContext.ContextFieldName,
                     typeof(CodeContext),
                     FieldAttributes.Public | FieldAttributes.Static);
-            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(new Type[0]), Runtime.Operations.RuntimeHelpers.EmptyObjectArray));
+            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(Utils.Reflection.EmptyTypes), Runtime.Operations.RuntimeHelpers.EmptyObjectArray));
             _contextSlot = new StaticFieldSlot(contextField);
         }
 
@@ -154,7 +154,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public PropertyBuilder DefineProperty(string name, PropertyAttributes attrs, Type returnType) {
-            return _myType.DefineProperty(name, attrs, returnType, new Type[0]);
+            return _myType.DefineProperty(name, attrs, returnType, Utils.Reflection.EmptyTypes);
         }
 
         private const MethodAttributes MethodAttributesToEraseInOveride =

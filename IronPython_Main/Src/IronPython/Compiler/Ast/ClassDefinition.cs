@@ -214,7 +214,7 @@ namespace IronPython.Compiler.Ast {
                     return SymbolTable.IdsToStrings(new List<SymbolId>(finder._names.Keys));
                 } else {
                     // no point analyzing function with no parameters
-                    return new String[0];
+                    return Utils.Array.EmptyStrings;
                 }
             }
 

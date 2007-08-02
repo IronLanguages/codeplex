@@ -188,8 +188,11 @@ namespace IronPython.Compiler {
                     res |= NameType.Python;
                     name = attr.Name;
                 }
+            } else if (!mi.DeclaringType.IsAssignableFrom(dt.UnderlyingSystemType)) {
+                // extension types are all python names
+                res |= NameType.Python;
             }
-            
+
             if (mi.IsDefined(typeof(PropertyMethodAttribute), false)) {
                 res = (res & ~NameType.BaseTypeMask) | NameType.Property;
             }
