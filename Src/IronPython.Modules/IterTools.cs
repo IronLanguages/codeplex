@@ -17,12 +17,17 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
+using System.Runtime.CompilerServices;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
+using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("itertools", typeof(IronPython.Modules.PythonIterTools))]
 namespace IronPython.Modules {
@@ -52,7 +57,7 @@ namespace IronPython.Modules {
                 TeeIterator ti = iterable as TeeIterator;
                 res[0] = ti;
                 for (int i = 1; i < n; i++) {
-                    res[1] = new TeeIterator(ti.iter, ti.data);
+                    res[1] = new TeeIterator(ti._iter, ti._data);
                 }
             }
 
@@ -63,20 +68,25 @@ namespace IronPython.Modules {
         /// Base class used for iterator wrappers.
         /// </summary>
         public class IterBase : IEnumerator {
-            protected IEnumerator inner;
+            private IEnumerator _inner;
+
+            protected IEnumerator InnerEnumerator {
+                get { return _inner; }
+                set { _inner = value; }
+            }
 
             #region IEnumerator Members
 
             public object Current {
-                get { return inner.Current; }
+                get { return _inner.Current; }
             }
 
             public bool MoveNext() {
-                return inner.MoveNext();
+                return _inner.MoveNext();
             }
 
             public void Reset() {
-                inner.Reset();
+                _inner.Reset();
             }
 
             #endregion
@@ -90,7 +100,7 @@ namespace IronPython.Modules {
                 for (int i = 0; i < iterables.Length; i++) {
                     this.iterables[i] = PythonOps.GetEnumerator(iterables[i]);
                 }
-                inner = Yielder();
+                InnerEnumerator = Yielder();
             }
 
             IEnumerator<object> Yielder() {
@@ -104,34 +114,34 @@ namespace IronPython.Modules {
 
         [PythonType("count")]
         public class Count : IEnumerator {
-            int cur, start;
+            private int _cur, _start;
 
             public Count() {
-                cur = start = -1;
+                _cur = _start = -1;
             }
             public Count(int n) {
-                cur = start = (n - 1);
+                _cur = _start = (n - 1);
             }
             #region IEnumerator Members
 
             public object Current {
-                get { return cur; }
+                get { return _cur; }
             }
 
             public bool MoveNext() {
-                cur++;
+                _cur++;
                 return true;
             }
 
             public void Reset() {
-                cur = start;
+                _cur = _start;
             }
 
             #endregion
 
             #region Object overrides
             public override string ToString() {
-                return String.Format("{0}({1})", PythonOps.GetPythonTypeName(this), cur + 1);
+                return String.Format("{0}({1})", PythonOps.GetPythonTypeName(this), _cur + 1);
             }
             #endregion
         }
@@ -139,7 +149,7 @@ namespace IronPython.Modules {
         [PythonType("cycle")]
         public class Cycle : IterBase {
             public Cycle(object iterable) {
-                inner = Yielder(PythonOps.GetEnumerator(iterable));
+                InnerEnumerator = Yielder(PythonOps.GetEnumerator(iterable));
             }
 
             IEnumerator<object> Yielder(IEnumerator iter) {
@@ -160,13 +170,15 @@ namespace IronPython.Modules {
 
         [PythonType("dropwhile")]
         public class DropWhile : IterBase {
+            private FastDynamicSite<object, object, bool> _callSite = FastDynamicSite<object, object, bool>.Create(DefaultContext.Default, CallAction.Simple);
+
             public DropWhile(object predicate, object iterable) {
-                inner = Yielder(predicate, PythonOps.GetEnumerator(iterable));
+                InnerEnumerator = Yielder(predicate, PythonOps.GetEnumerator(iterable));
             }
 
             IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
                 while (MoveNextHelper(iter)) {
-                    if (!PythonOps.IsTrue(PythonCalls.Call(predicate, iter.Current))) {
+                    if (!_callSite.Invoke(predicate, iter.Current)) {
                         yield return iter.Current;
                         break;
                     }
@@ -180,50 +192,62 @@ namespace IronPython.Modules {
 
         [PythonType("groupby")]
         public class GroupBy : IterBase {
-            static object starterKey = new object();
-            bool fFinished = false;
+            private static object _starterKey = new object();
+            private bool _fFinished = false;
+            private object _key;
+            private FastDynamicSite<object, object, object> _callSite;
+            private FastDynamicSite<object, object, bool> _eqSite = FastDynamicSite<object,object,bool>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Equal));
 
             public GroupBy(object iterable) {
-                inner = Yielder(PythonOps.GetEnumerator(iterable), null);
+                InnerEnumerator = Yielder(PythonOps.GetEnumerator(iterable));
             }
 
             public GroupBy(object iterable, object key) {
-                inner = Yielder(PythonOps.GetEnumerator(iterable), key);
+                InnerEnumerator = Yielder(PythonOps.GetEnumerator(iterable));
+                if (key != null) {
+                    _key = key;
+                    _callSite = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, CallAction.Simple);
+                }
             }
 
-            IEnumerator<object> Yielder(IEnumerator iter, object keyFunc) {
-                object curKey = starterKey;
+            private IEnumerator<object> Yielder(IEnumerator iter) {
+                object curKey = _starterKey;
                 if (MoveNextHelper(iter)) {
-                    while (!fFinished) {
-                        while (PythonOps.EqualRetBool(GetKey(iter.Current, keyFunc), curKey)) {
-                            if (!MoveNextHelper(iter)) { fFinished = true; yield break; }
+                    while (!_fFinished) {
+                        while (_eqSite.Invoke(GetKey(iter.Current), curKey)) {
+                            if (!MoveNextHelper(iter)) { _fFinished = true; yield break; }
                         }
-                        curKey = GetKey(iter.Current, keyFunc);
-                        yield return Tuple.MakeTuple(curKey, Grouper(iter, curKey, keyFunc));
+                        curKey = GetKey(iter.Current);
+                        yield return Tuple.MakeTuple(curKey, Grouper(iter, curKey));
                     }
                 }
             }
 
-            IEnumerator<object> Grouper(IEnumerator iter, object curKey, object keyFunc) {
-                while (PythonOps.EqualRetBool(GetKey(iter.Current, keyFunc), curKey)) {
+            IEnumerator<object> Grouper(IEnumerator iter, object curKey) {
+                while (_eqSite.Invoke(GetKey(iter.Current), curKey)) {
                     yield return iter.Current;
-                    if (!MoveNextHelper(iter)) { fFinished = true; yield break; }
+                    if (!MoveNextHelper(iter)) { _fFinished = true; yield break; }
                 }
             }
 
-            static object GetKey(object val, object keyFunc) {
-                if (keyFunc == null) return val;
-                return PythonCalls.Call(keyFunc, val);
+            object GetKey(object val) {
+                if (_key == null) return val;
+                return _callSite.Invoke(_key, val);
             }
         }
 
         [PythonType("ifilter")]
         public class IteratorFilter : IterBase {
+            private FastDynamicSite<object, object, bool> _callSite;
+
             public IteratorFilter(object predicate, object iterable) {
-                inner = Yielder(predicate, PythonOps.GetEnumerator(iterable));
+                InnerEnumerator = Yielder(predicate, PythonOps.GetEnumerator(iterable));
+                if (predicate != null) {
+                    _callSite = FastDynamicSite<object, object, bool>.Create(DefaultContext.Default, CallAction.Simple);
+                }
             }
 
-            IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
+            private IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
                 while (MoveNextHelper(iter)) {
                     if (ShouldYield(predicate, iter.Current)) {
                         yield return iter.Current;
@@ -231,19 +255,25 @@ namespace IronPython.Modules {
                 }
             }
 
-            static bool ShouldYield(object predicate, object current) {
+            private bool ShouldYield(object predicate, object current) {
                 if (predicate == null) return PythonOps.IsTrue(current);
-                return PythonOps.IsTrue(PythonCalls.Call(predicate, current));
+
+                return _callSite.Invoke(predicate, current);
             }
         }
 
         [PythonType("ifilterfalse")]
         public class IteratorFilterFalse : IterBase {
+            private FastDynamicSite<object, object, bool> _callSite;
+
             public IteratorFilterFalse(object predicate, object iterable) {
-                inner = Yielder(predicate, PythonOps.GetEnumerator(iterable));
+                InnerEnumerator = Yielder(predicate, PythonOps.GetEnumerator(iterable));
+                if (predicate != null) {
+                    _callSite = FastDynamicSite<object, object, bool>.Create(DefaultContext.Default, CallAction.Simple);
+                }
             }
 
-            IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
+            private IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
                 while (MoveNextHelper(iter)) {
                     if (ShouldYield(predicate, iter.Current)) {
                         yield return iter.Current;
@@ -251,24 +281,29 @@ namespace IronPython.Modules {
                 }
             }
 
-            static bool ShouldYield(object predicate, object current) {
+            private bool ShouldYield(object predicate, object current) {
                 if (predicate == null) return !PythonOps.IsTrue(current);
-                return !PythonOps.IsTrue(PythonCalls.Call(predicate, current));
+                return !_callSite.Invoke(predicate, current);
             }
         }
 
         [PythonType("imap")]
         public class IteratorMap : IEnumerator {
-            object function;
-            IEnumerator[] iterables;
+            private object _function;
+            private IEnumerator[] _iterables;
+            private FastDynamicSite<object, object[], object> _callSite;
 
             public IteratorMap(object function, params object[] iterables) {
                 if (iterables.Length < 1) throw PythonOps.TypeError("imap() must have at least two arguments");
 
-                this.function = function;
-                this.iterables = new IEnumerator[iterables.Length];
+                this._function = function;
+                if (function != null) {
+                    _callSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, CallAction.Make(new ArgumentInfo(ArgumentKind.List)));                
+                }
+
+                this._iterables = new IEnumerator[iterables.Length];
                 for (int i = 0; i < iterables.Length; i++) {
-                    this.iterables[i] = PythonOps.GetEnumerator(iterables[i]);
+                    this._iterables[i] = PythonOps.GetEnumerator(iterables[i]);
                 }
             }
 
@@ -276,28 +311,28 @@ namespace IronPython.Modules {
 
             public object Current {
                 get {
-                    object[] args = new object[iterables.Length];
+                    object[] args = new object[_iterables.Length];
                     for (int i = 0; i < args.Length; i++) {
-                        args[i] = iterables[i].Current;
+                        args[i] = _iterables[i].Current;
                     }
-                    if (function == null) {
+                    if (_function == null) {
                         return new Tuple(false, args);
                     } else {
-                        return PythonCalls.Call(function, args);
+                        return _callSite.Invoke(_function, args);
                     }
                 }
             }
 
             public bool MoveNext() {
-                for (int i = 0; i < iterables.Length; i++) {
-                    if (!MoveNextHelper(iterables[i])) return false;
+                for (int i = 0; i < _iterables.Length; i++) {
+                    if (!MoveNextHelper(_iterables[i])) return false;
                 }
                 return true;
             }
 
             public void Reset() {
-                for (int i = 0; i < iterables.Length; i++) {
-                    iterables[i].Reset();
+                for (int i = 0; i < _iterables.Length; i++) {
+                    _iterables[i].Reset();
                 }
             }
 
@@ -327,7 +362,7 @@ namespace IronPython.Modules {
 
                 if (step <= 0) throw PythonOps.ValueError("step must be 1 or greater for islice");
 
-                inner = Yielder(PythonOps.GetEnumerator(iterable), startInt, stopInt, step);
+                InnerEnumerator = Yielder(PythonOps.GetEnumerator(iterable), startInt, stopInt, step);
             }
 
             IEnumerator<object> Yielder(IEnumerator iter, int start, int stop, int step) {
@@ -397,12 +432,12 @@ namespace IronPython.Modules {
 
             public Repeat(object @object) {
                 obj = @object;
-                inner = Yielder();
+                InnerEnumerator = Yielder();
                 fInfinite = true;
             }
             public Repeat(object @object, int times) {
                 obj = @object;
-                inner = Yielder();
+                InnerEnumerator = Yielder();
                 remaining = times;
             }
 
@@ -423,7 +458,7 @@ namespace IronPython.Modules {
             }
             #endregion
 
-            [OperatorMethod, PythonName("__len__")]
+            [SpecialName, PythonName("__len__")]
             public int GetLength() {
                 if (fInfinite) throw PythonOps.TypeError("len of unsized object");
                 return Math.Max(remaining, 0);
@@ -432,11 +467,12 @@ namespace IronPython.Modules {
 
         [PythonType("starmap")]
         public class StarMap : IterBase {
+            private FastDynamicSite<object, object[], object> _callSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, CallAction.Make(new ArgumentInfo(ArgumentKind.List)));
             public StarMap(CodeContext context, object function, object iterable) {
-                inner = Yielder(context, function, PythonOps.GetEnumerator(iterable));
+                InnerEnumerator = Yielder(context, function, PythonOps.GetEnumerator(iterable));
             }
 
-            IEnumerator<object> Yielder(CodeContext context, object function, IEnumerator iter) {
+            private IEnumerator<object> Yielder(CodeContext context, object function, IEnumerator iter) {
                 while (MoveNextHelper(iter)) {
                     Tuple args = iter.Current as Tuple;
                     if (args == null) throw PythonOps.TypeError("iterator must be a tuple");
@@ -445,62 +481,64 @@ namespace IronPython.Modules {
                     for (int i = 0; i < objargs.Length; i++) {
                         objargs[i] = args[i];
                     }
-                    yield return PythonOps.CallWithContext(context, function, objargs);
+                    yield return _callSite.Invoke(function, objargs);
                 }
             }
         }
 
         [PythonType("takewhile")]
         public class TakeWhile : IterBase {
+            private FastDynamicSite<object, object, bool> _callSite = FastDynamicSite<object, object, bool>.Create(DefaultContext.Default, CallAction.Simple);
+
             public TakeWhile(object predicate, object iterable) {
-                inner = Yielder(predicate, PythonOps.GetEnumerator(iterable));
+                InnerEnumerator = Yielder(predicate, PythonOps.GetEnumerator(iterable));
             }
 
-            IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
+            private IEnumerator<object> Yielder(object predicate, IEnumerator iter) {
                 while (MoveNextHelper(iter)) {
-                    if (!PythonOps.IsTrue(PythonCalls.Call(predicate, iter.Current))) break;
+                    if (!_callSite.Invoke(predicate, iter.Current)) break;
                     yield return iter.Current;
                 }
             }
         }
 
         public class TeeIterator : IEnumerator, IWeakReferenceable {
-            internal IEnumerator iter;
-            internal List data;
-            int curIndex = -1;
-            WeakRefTracker weakRef;
+            internal IEnumerator _iter;
+            internal List _data;
+            private int _curIndex = -1;
+            private WeakRefTracker _weakRef;
 
             public TeeIterator(object iterable) {
                 TeeIterator other = iterable as TeeIterator;
                 if (other != null) {
-                    this.iter = other.iter;
-                    this.data = other.data;
+                    this._iter = other._iter;
+                    this._data = other._data;
                 } else {
-                    this.iter = PythonOps.GetEnumerator(iterable);
-                    data = new List();
+                    this._iter = PythonOps.GetEnumerator(iterable);
+                    _data = new List();
                 }
             }
 
             public TeeIterator(IEnumerator iter, List dataList) {
-                this.iter = iter;
-                this.data = dataList;
+                this._iter = iter;
+                this._data = dataList;
             }
 
             #region IEnumerator Members
 
             public object Current {
                 get {
-                    return data[curIndex];
+                    return _data[_curIndex];
                 }
             }
 
             public bool MoveNext() {
-                lock (data) {
-                    curIndex++;
-                    if (curIndex >= data.Count && MoveNextHelper(iter)) {
-                        data.Add(iter.Current);
+                lock (_data) {
+                    _curIndex++;
+                    if (_curIndex >= _data.Count && MoveNextHelper(_iter)) {
+                        _data.Add(_iter.Current);
                     }
-                    return curIndex < data.Count;
+                    return _curIndex < _data.Count;
                 }
             }
 
@@ -513,11 +551,11 @@ namespace IronPython.Modules {
             #region IWeakReferenceable Members
 
             public WeakRefTracker GetWeakRef() {
-                return (weakRef);
+                return (_weakRef);
             }
 
             public bool SetWeakRef(WeakRefTracker value) {
-                weakRef = value;
+                _weakRef = value;
                 return true;
             }
 

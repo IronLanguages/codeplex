@@ -19,13 +19,16 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Compiler;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime.Types {
     class PythonTypeCustomizer : CoreReflectedTypeBuilder {
@@ -150,7 +153,7 @@ namespace IronPython.Runtime.Types {
                     }
                 }
 
-                if (!mi.IsSpecialName && !mi.IsDefined(typeof(OperatorMethodAttribute), false)) {
+                if (!mi.IsSpecialName) {
                     continue;
                 }
 
@@ -353,7 +356,7 @@ namespace IronPython.Runtime.Types {
             Type sysType = Builder.UnfinishedType.UnderlyingSystemType;
             if (sysType == typeof(object)) return;
 
-            MethodInfo toStringMethod = sysType.GetMethod("ToString", Utils.Reflection.EmptyTypes);
+            MethodInfo toStringMethod = sysType.GetMethod("ToString", ReflectionUtils.EmptyTypes);
 
             if (toStringMethod != null && toStringMethod.DeclaringType == sysType) {
                 AddProtocolMethod(Symbols.String, "ToStringMethod");

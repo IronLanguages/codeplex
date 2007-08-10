@@ -31,6 +31,14 @@ namespace Microsoft.Scripting.Actions {
             else return this;
         }
 
+        public override StandardRule<T> GetRule(CodeContext context, params object[] args) {
+            return null;
+        }
+
+        public override bool HasMonomorphicTarget(T target) {
+            return false;
+        }
+
         protected override T MakeTarget(CodeContext context) {
             if (DynamicSiteHelpers.IsBigTarget(typeof(T))) {
                 if (DynamicSiteHelpers.IsFastTarget(typeof(T))) {

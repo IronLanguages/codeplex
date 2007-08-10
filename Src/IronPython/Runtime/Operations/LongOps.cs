@@ -17,9 +17,11 @@ using System;
 using System.Text;
 using System.Collections;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -107,7 +109,7 @@ namespace IronPython.Runtime.Operations {
 
         #region Binary operators
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(BigInteger x, object y, object z) {
             if (y is int) {
                 return Power(x, (int)y, z);
@@ -119,7 +121,7 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.NotImplemented;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(BigInteger x, int y, object z) {
             if (z is int) {
                 return Power(x, y, BigInteger.Create((int)z));
@@ -133,7 +135,7 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.NotImplemented;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(BigInteger x, BigInteger y, object z) {
             if (z is int) {
                 return Power(x, y, BigInteger.Create((int)z));
@@ -147,7 +149,7 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.NotImplemented;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(BigInteger x, int y, BigInteger z) {
             if (y < 0) {
                 throw PythonOps.TypeError("power", y, "power must be >= 0");
@@ -166,7 +168,7 @@ namespace IronPython.Runtime.Operations {
             return result;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(BigInteger x, BigInteger y, BigInteger z) {
             if (y < BigInteger.Zero) {
                 throw PythonOps.TypeError("power", y, "power must be >= 0");
@@ -186,7 +188,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power([NotNull]BigInteger x, int y) {
             if (y < 0) {
                 return DoubleOps.Power(x.ToFloat64(), y);
@@ -194,7 +196,7 @@ namespace IronPython.Runtime.Operations {
             return x.Power(y);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power([NotNull]BigInteger x, [NotNull]BigInteger y) {
             if (Object.ReferenceEquals(x, null)) throw PythonOps.TypeError("unsupported operands for __pow__: NoneType and long");
             if (Object.ReferenceEquals(y, null)) throw PythonOps.TypeError("unsupported operands for __pow__: long and NoneType");
@@ -253,25 +255,25 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger Add([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x + y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger Subtract([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x - y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger Multiply([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x * y;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger FloorDivide([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return Divide(x, y);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide([NotNull]BigInteger x, [NotNull]BigInteger y) {
             if (y == BigInteger.Zero) {
                 throw new DivideByZeroException();
@@ -279,13 +281,13 @@ namespace IronPython.Runtime.Operations {
             return x.ToFloat64() / y.ToFloat64();
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger Divide([NotNull]BigInteger x, [NotNull]BigInteger y) {
             BigInteger r;
             return DivMod(x, y, out r);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger Mod([NotNull]BigInteger x, [NotNull]BigInteger y) {
             BigInteger r;
             DivMod(x, y, out r);
@@ -293,7 +295,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger LeftShift([NotNull]BigInteger x, int y) {
             if (y < 0) {
                 throw PythonOps.ValueError("negative shift count");
@@ -301,7 +303,7 @@ namespace IronPython.Runtime.Operations {
             return x << y;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger RightShift([NotNull]BigInteger x, int y) {
             BigInteger q;
             if (y < 0) {
@@ -317,12 +319,12 @@ namespace IronPython.Runtime.Operations {
             return q;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger LeftShift([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return LeftShift(x, y.ToInt32());
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger RightShift([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return RightShift(x, y.ToInt32());
         }
@@ -336,37 +338,37 @@ namespace IronPython.Runtime.Operations {
 
         #region Unary operators
 
-        [OperatorMethod, PythonName("__abs__")]
+        [SpecialName, PythonName("__abs__")]
         public static object Abs(BigInteger x) {
             return x.Abs();
         }
 
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool ConvertToBoolean(BigInteger x) {
             return !x.IsZero();
         }
 
-        [OperatorMethod, PythonName("__neg__")]
+        [SpecialName, PythonName("__neg__")]
         public static object Negate(BigInteger x) {
             return -x;
         }
 
-        [OperatorMethod, PythonName("__pos__")]
+        [SpecialName, PythonName("__pos__")]
         public static object Positive(BigInteger x) {
             return x;
         }
 
-        [OperatorMethod, PythonName("__int__")]
+        [SpecialName, PythonName("__int__")]
         public static int ToInt(BigInteger x) {
             return x.ToInt32();
         }
 
-        [OperatorMethod, PythonName("__float__")]
+        [SpecialName, PythonName("__float__")]
         public static object ToFloat(BigInteger self) {
             return self.ToFloat64();
         }
 
-        [OperatorMethod, PythonName("__oct__")]
+        [SpecialName, PythonName("__oct__")]
         public static string Oct(BigInteger x) {
             if (x == BigInteger.Zero) {
                 return "0L";
@@ -377,7 +379,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [OperatorMethod, PythonName("__hex__")]
+        [SpecialName, PythonName("__hex__")]
         public static string Hex(BigInteger x) {
             if (x < 0) {
                 return "-0x" + (-x).ToString(16) + "L";
@@ -405,113 +407,113 @@ namespace IronPython.Runtime.Operations {
         internal static BigInteger FloorDivideImpl(BigInteger x, BigInteger y) {
             return FloorDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger BitwiseAnd([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x & y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger BitwiseOr([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x | y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger ExclusiveOr([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x ^ y;
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x != y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal([NotNull]BigInteger x, ulong y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual([NotNull]BigInteger x, ulong y) {
             return x != y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(ulong y, [NotNull]BigInteger x) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(ulong y, [NotNull]BigInteger x) {
             return x != y;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(BigInteger x, double y) {
             return DoubleOps.Compare(x, y) < 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(BigInteger x, double y) {
             return DoubleOps.Compare(x, y) <= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(BigInteger x, double y) {
             return DoubleOps.Compare(x, y) > 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(BigInteger x, double y) {
             return DoubleOps.Compare(x, y) >= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(BigInteger x, double y) {
             return DoubleOps.Compare(x, y) == 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(BigInteger x, double y) {
             return DoubleOps.Compare(x, y) != 0;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(BigInteger x, decimal y) {
             return DecimalOps.Compare(x, y) < 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(BigInteger x, decimal y) {
             return DecimalOps.Compare(x, y) <= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(BigInteger x, decimal y) {
             return DecimalOps.Compare(x, y) > 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(BigInteger x, decimal y) {
             return DecimalOps.Compare(x, y) >= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(BigInteger x, decimal y) {
             return DecimalOps.Compare(x, y) == 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(BigInteger x, decimal y) {
             return DecimalOps.Compare(x, y) != 0;
         }
 
 
-        [OperatorMethod, PythonName("__cmp__")]
+        [SpecialName, PythonName("__cmp__")]
         [return: MaybeNotImplemented]
         public static object Compare(CodeContext context, BigInteger x, object y) {
             if (y == null) return 1;

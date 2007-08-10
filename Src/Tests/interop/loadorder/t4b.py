@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_4")
@@ -27,9 +28,7 @@ clr.AddReference("loadorder_4")
 
 
 import NS
-print dir(NS)
-#print NS.Target.Flag
-#print NS.Target[int].Flag
+AreEqual(dir(NS), ['Target'])
 
 clr.AddReference("loadorder_4b")
 
@@ -39,10 +38,11 @@ clr.AddReference("loadorder_4b")
 #     }
 # }
 
-print dir(NS)
+AreEqual(dir(NS), ['Target'])
 
-print NS.Target.Flag
+AreEqual(NS.Target.Flag, "NS.Target")
+AreEqual(NS.Target[int].Flag, "NS.Target`1_Same")
 
-print dir(NS)
-print NS.__dict__
-print NS.Target[int].Flag
+AreEqual(dir(NS), ['Target'])
+
+

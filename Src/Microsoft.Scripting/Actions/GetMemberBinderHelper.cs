@@ -26,6 +26,7 @@ using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     /// <summary>
     /// Builds a rule for a GetMemberAction.  Supports all built-in .NET members, ICustomMembers, the OperatorMethod 
@@ -37,23 +38,18 @@ namespace Microsoft.Scripting.Actions {
     /// 
     /// The target of the rule is built up using a series of block statements as the body.  
     /// </summary>
-    public class GetMemberBinderHelper<T> : BinderHelper<T, GetMemberAction> {
-        private StandardRule<T> _rule;              // the rule being produced
-        private Type _strongBoxType;                // null or the specific instantiated type of StrongBox
-        private object[] _args;                     // the arguments we're creating a rule for
+    public class GetMemberBinderHelper<T> : MemberBinderHelper<T, GetMemberAction> {
         private Statement _body = Ast.Empty();      // the body of the rule as it's built up
         private Expression _instance;               // the expression the specifies the instance or null for rule.Parameters[0]
         private bool _bound;                        // true if we're forcing a bound lookup, false otherwise.  Only alters methods
 
         public GetMemberBinderHelper(CodeContext context, GetMemberAction action, object[] args)
-            : base(context, action) {
-            _rule = new StandardRule<T>();
-            _args = args;
+            : base(context, action, args) {
         }
 
         public GetMemberBinderHelper(CodeContext context, GetMemberAction action, StandardRule<T> rule, bool bound, Expression self)
-            : base(context, action) {
-            _rule = rule;
+            : base(context, action, new object[1]) {
+            Rule = rule;
             _instance = self;
             _bound = bound;
         }
@@ -64,26 +60,18 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public StandardRule<T> MakeNewRule() {
-            // strong-box support, we make this transparent to everyone accept for
-            // calling GetTestType / GetInstance to handle the unwrapping.
-            object target = _args[0];
-            if (IsStrongBox(target)) {
-                _strongBoxType = target.GetType();
-                target = ((IStrongBox)target).Value;
-            }
+            Rule.MakeTest(StrongBoxType ?? CompilerHelpers.GetType(Target));
+            Rule.SetTarget(MakeGetMemberTarget());
 
-            _rule.MakeTest(_strongBoxType ?? CompilerHelpers.GetType(target));
-            _rule.SetTarget(MakeGetMemberTarget(target));
-
-            return _rule;
+            return Rule;
         }
 
         public Statement MakeRuleBody(Type type, params MemberInfo[] members) {
             return MakeBodyHelper(type, members);
         }
 
-        private Statement MakeGetMemberTarget(object target) {
-            Type type = CompilerHelpers.GetType(target);
+        private Statement MakeGetMemberTarget() {
+            Type type = CompilerHelpers.GetType(Target);
 
             // This goes away when ICustomMembers goes away.
             if (typeof(ICustomMembers).IsAssignableFrom(type)) {
@@ -91,30 +79,25 @@ namespace Microsoft.Scripting.Actions {
                 return _body;
             }
 
-            MemberInfo[] members = Context.LanguageContext.Binder.GetMember(type, StringName);
+            MemberInfo[] members = Binder.GetMember(type, StringName);
 
             // if lookup failed try the strong-box type if available.
-            if (members.Length == 0 && _strongBoxType != null) {
-                _strongBoxType = null;
+            if (members.Length == 0 && StrongBoxType != null) {
+                StrongBoxType = null;
                 type = typeof(StrongBox<>).MakeGenericType(type);
 
-                members = Context.LanguageContext.Binder.GetMember(type, StringName);
+                members = Binder.GetMember(type, StringName);
             }
 
             return MakeBodyHelper(type, members);
         }
 
         private Statement MakeBodyHelper(Type type, params MemberInfo[] members) {
-            MemberTypes memberType = MemberTypes.All;
-            for (int i = 0; i < members.Length; i++) {
-                MemberInfo mi = members[i];
-                if (mi.MemberType != memberType) {
-                    if (memberType != MemberTypes.All) {
-                        MakeAmbigiousMatchError(members);
-                        return _body;
-                    }
-                    memberType = mi.MemberType;
-                }
+            Expression error;
+            MemberTypes memberType = GetMemberType(members, out error);
+            if (error != null) {
+                _body = Ast.Block(_body, Rule.MakeError(Binder, error));
+                return _body;
             }
 
             switch (memberType) {
@@ -140,7 +123,7 @@ namespace Microsoft.Scripting.Actions {
             ReflectedEvent re = ReflectionCache.GetReflectedEvent(ei);
 
             _body = Ast.Block(_body,
-                _rule.MakeReturn(
+                Rule.MakeReturn(
                     Binder,
                     Ast.Call(null,
                         typeof(RuntimeHelpers).GetMethod("MakeBoundEvent"),
@@ -157,14 +140,14 @@ namespace Microsoft.Scripting.Actions {
 
             if (fi.IsPublic && fi.DeclaringType.IsPublic) {
                 _body = Ast.Block(_body,
-                    _rule.MakeReturn(
+                    Rule.MakeReturn(
                         Binder,
                         Ast.ReadField(fi.IsStatic ? null : Instance, fi)
                     )
                 );
             } else {
                 _body = Ast.Block(_body,
-                    _rule.MakeReturn(
+                    Rule.MakeReturn(
                         Binder,
                         Ast.Call(
                             Ast.RuntimeConstant(fi),
@@ -182,16 +165,16 @@ namespace Microsoft.Scripting.Actions {
             if ((target.FunctionType & FunctionType.FunctionMethodMask) != FunctionType.Function || _bound) {
                 // for strong box we need to bind the strong box, so we don't use Instance here.
                 _body = Ast.Block(_body,
-                    _rule.MakeReturn(
+                    Rule.MakeReturn(
                     Binder,                        
                     Ast.New(typeof(BoundBuiltinFunction).GetConstructor(new Type[] { typeof(BuiltinFunction), typeof(object) }),
                         Ast.RuntimeConstant(target),
-                        _instance ?? _rule.Parameters[0]    
+                        _instance ?? Rule.Parameters[0]    
                     )
                 ));
             } else {
                 _body = Ast.Block(_body,
-                    _rule.MakeReturn(
+                    Rule.MakeReturn(
                         Binder,
                         Ast.RuntimeConstant(target)
                     )
@@ -201,7 +184,7 @@ namespace Microsoft.Scripting.Actions {
 
         private void MakeTypeBody(Type type, MemberInfo[] members) {
             _body = Ast.Block(_body,
-                _rule.MakeReturn(Binder,
+                Rule.MakeReturn(Binder,
                 Ast.Call(null,
                     typeof(DynamicHelpers).GetMethod("GetDynamicTypeFromType"),
                     Ast.Constant(type)
@@ -229,7 +212,7 @@ namespace Microsoft.Scripting.Actions {
 
             if (pi.GetIndexParameters().Length > 0) {
                 _body = Ast.Block(_body,
-                    _rule.MakeReturn(Binder,
+                    Rule.MakeReturn(Binder,
                         Ast.New(typeof(ReflectedIndexer).GetConstructor(new Type[] { typeof(ReflectedIndexer), typeof(object) }),
                             Ast.RuntimeConstant(ReflectionCache.GetReflectedIndexer(pi)),
                             Instance
@@ -246,7 +229,7 @@ namespace Microsoft.Scripting.Actions {
                 _body = Ast.Block(_body, MakeCallStatement(getter, Instance));
             } else {
                 _body = Ast.Block(_body,
-                    _rule.MakeReturn(
+                    Rule.MakeReturn(
                         Binder,
                         Ast.Call(
                             Ast.RuntimeConstant(pi),
@@ -262,8 +245,8 @@ namespace Microsoft.Scripting.Actions {
         /// <summary> if a member-injector is defined-on or registered-for this type call it </summary>
         private void MakeOperatorGetMemberBodyOrError(Type type) {
             MethodInfo getMem = GetMethod(type, "GetBoundMember");
-            if (getMem != null && getMem.IsDefined(typeof(OperatorMethodAttribute), true)) {
-                Variable tmp = _rule.GetTemporary(typeof(object), "getVal");
+            if (getMem != null && getMem.IsSpecialName) {
+                Variable tmp = Rule.GetTemporary(typeof(object), "getVal");
                 _body = Ast.Block(_body,
                     Ast.If(
                         Ast.NotEqual(
@@ -273,7 +256,7 @@ namespace Microsoft.Scripting.Actions {
                             ),
                             Ast.ReadField(null, typeof(DBNull).GetField("Value"))
                         ),
-                        _rule.MakeReturn(Binder, Ast.Read(tmp))
+                        Rule.MakeReturn(Binder, Ast.Read(tmp))
                     )
                 );
             }
@@ -282,7 +265,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void MakeCustomMembersBody(Type type) {
-            Variable tmp = _rule.GetTemporary(typeof(object), "lookupRes");
+            Variable tmp = Rule.GetTemporary(typeof(object), "lookupRes");
             _body = Ast.Block(_body,
                         Ast.If(
                             Ast.Call(
@@ -292,7 +275,7 @@ namespace Microsoft.Scripting.Actions {
                                 Ast.Constant(Action.Name),
                                 Ast.Read(tmp)
                             ),
-                            _rule.MakeReturn(Context.LanguageContext.Binder, Ast.Read(tmp))
+                            Rule.MakeReturn(Binder, Ast.Read(tmp))
                         )
                     );
             // if the lookup fails throw an exception
@@ -300,18 +283,12 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary> Gets the Expression that represents the instance we're looking up </summary>
-        private Expression Instance {
+        private new Expression Instance {
             get {
                 if (_instance != null) return _instance;
-                if (_strongBoxType == null) return _rule.Parameters[0];
 
-                return Ast.ReadField(Ast.Cast(_rule.Parameters[0], _strongBoxType), _strongBoxType.GetField("Value"));
+                return base.Instance;
             }
-        }
-
-        /// <summary> helper to grab the name of the member we're looking up as a string </summary>
-        private string StringName {
-            get { return SymbolTable.IdToString(Action.Name); }
         }
 
         private static MemberInfo[] GetCallableMethods(MemberInfo[] members) {
@@ -323,31 +300,10 @@ namespace Microsoft.Scripting.Actions {
 
         #region Error rules
 
-        private void MakeAmbigiousMatchError(MemberInfo[] members) {
-            StringBuilder sb = new StringBuilder();
-            foreach (MemberInfo mi in members) {
-                if (sb.Length != 0) sb.Append(", ");
-                sb.Append(mi.MemberType);
-                sb.Append(" : ");
-                sb.Append(mi.ToString());
-            }
-
-            _body = Ast.Block(_body,
-                _rule.MakeError(Context.LanguageContext.Binder,
-                    Ast.New(
-                        typeof(AmbiguousMatchException).GetConstructor(new Type[] { typeof(string) }),
-                        Ast.Constant(sb.ToString()))));
-        }
-
         private void MakeIncorrectArgumentCountError() {
             _body = Ast.Block(_body,
-                _rule.MakeError(Binder,
-                    Ast.Call(null,
-                        typeof(RuntimeHelpers).GetMethod("TypeErrorForIncorrectArgumentCount", new Type[] { typeof(string), typeof(int), typeof(int) }),
-                        Ast.Constant(StringName),
-                        Ast.Constant(0),
-                        Ast.Constant(0)
-                    )
+                Rule.MakeError(Binder,
+                    MakeIncorrectArgumentExpression(0, 0)
                 )
             );
         }
@@ -355,24 +311,22 @@ namespace Microsoft.Scripting.Actions {
         private void MakeGenericPropertyError() {
             // TODO: Better exception
             _body = Ast.Block(_body, 
-                _rule.MakeError(Binder,
-                    Ast.New(
-                        typeof(MemberAccessException).GetConstructor(new Type[] { typeof(string) }),
-                        Ast.Constant(StringName)
-                    )
+                Rule.MakeError(Binder,
+                    MakeGenericPropertyExpression()
                 )
             );
         }
 
         private void MakeMissingMemberError(Type type) {                
             _body = Ast.Block(_body,
-                _rule.MakeError(
-                    Context.LanguageContext.Binder,
+                Rule.MakeError(
+                    Binder,
                     Binder.MakeMissingMemberError(type, StringName)
                 )
             );
         }
         
         #endregion
+
     }
 }

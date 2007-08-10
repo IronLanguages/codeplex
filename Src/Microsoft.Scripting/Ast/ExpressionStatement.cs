@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _expression; }
         }
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             _expression.Evaluate(context);
             return NextStatement;
         }

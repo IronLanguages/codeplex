@@ -12,15 +12,17 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
+
 import clr
-clr.AddReferenceToFileAndPath(r"D:\merlin2\Main\Test\ClrAssembly\folder1\loadorder_6.dll") # TODO
+clr.AddReferenceToFileAndPath(testpath.rowan_root + r"\Test\ClrAssembly\folder1\loadorder_6.dll") # TODO
 
 import Namespace_ToBeRemoved
 
 for x in clr.References: 
     print x, x.Location
 
-clr.AddReferenceToFileAndPath(r"D:\merlin2\Main\Test\ClrAssembly\folder2\loadorder_6.dll") # TODO
+clr.AddReferenceToFileAndPath(testpath.rowan_root + r"\Test\ClrAssembly\folder2\loadorder_6.dll") # TODO
 
 for x in clr.References: 
     print x, x.Location

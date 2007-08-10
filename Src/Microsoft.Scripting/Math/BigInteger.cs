@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Math {
     /// <summary>
@@ -380,7 +381,7 @@ namespace Microsoft.Scripting.Math {
         }
 
         public bool TryToFloat64(out double result) {
-            return Utils.TryParseDouble(ToString(10), 
+            return StringUtils.TryParseDouble(ToString(10), 
                 System.Globalization.NumberStyles.Number, 
                 System.Globalization.CultureInfo.InvariantCulture.NumberFormat,
                 out result);
@@ -1261,10 +1262,10 @@ namespace Microsoft.Scripting.Math {
         public string ToString(uint radix)
         {
             if (radix < 2) {
-                throw Utils.MakeArgumentOutOfRangeException("radix", radix, MathResources.RadixLessThan2);
+                throw ExceptionUtils.MakeArgumentOutOfRangeException("radix", radix, MathResources.RadixLessThan2);
             }
             if (radix > 36) {
-                throw Utils.MakeArgumentOutOfRangeException("radix", radix, MathResources.RadixGreaterThan36);
+                throw ExceptionUtils.MakeArgumentOutOfRangeException("radix", radix, MathResources.RadixGreaterThan36);
             }
 
             int len = Length;

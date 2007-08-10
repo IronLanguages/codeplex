@@ -16,26 +16,28 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
-using Microsoft.Scripting;
-
 [assembly: PythonExtensionType(typeof(ReflectedField), typeof(ReflectedFieldOps))]
 namespace IronPython.Runtime.Operations {
     public static class ReflectedFieldOps {
-        [OperatorMethod, PythonName("__str__")]
+        [SpecialName, PythonName("__str__")]
         public static string ToString(ReflectedField field) {
             return CodeRepresentation(field);
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string CodeRepresentation(ReflectedField field) {
             return string.Format("<field# {0} on {1}>", field.info.Name, field.info.DeclaringType.Name);
         }
 
-        [OperatorMethod, PythonName("__get__")]
+        [SpecialName, PythonName("__get__")]
         public static object GetDescriptor(ReflectedField self, object instance, object typeContext) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, self);
             if (instance == null) {
@@ -49,7 +51,7 @@ namespace IronPython.Runtime.Operations {
             }            
         }
 
-        [OperatorMethod, PythonName("__set__")]
+        [SpecialName, PythonName("__set__")]
         public static void SetDescriptor(ReflectedField self, object instance, object value) {
             if (instance == null && self.info.IsStatic) {
                 DoSet(self, null, value);
@@ -60,7 +62,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [OperatorMethod, PythonName("__delete__")]
+        [SpecialName, PythonName("__delete__")]
         public static void DeleteDescriptor(ReflectedField self, object instance) {
             throw PythonOps.AttributeErrorForBuiltinAttributeDeletion(self.info.DeclaringType.Name, SymbolTable.StringToId(self.info.Name));
         }

@@ -21,6 +21,7 @@ using System.Collections.Generic;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -40,6 +41,7 @@ namespace Microsoft.Scripting.Actions {
     internal class SmallRuleSet<T> : RuleSet<T> {
         private const int MaxRules = 10;
         private IList<StandardRule<T>> _rules;
+        private DynamicMethod _monomorphicTemplate;
 
         internal SmallRuleSet(IList<StandardRule<T>> rules) {
             this._rules = rules;
@@ -65,12 +67,49 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        public override StandardRule<T> GetRule(CodeContext context, params object[] args) {
+            context = DynamicSiteHelpers.GetEvaluationContext<T>(context.LanguageContext, ref args);
+
+            for(int i = 0; i<_rules.Count; i++) {
+                StandardRule<T> rule = _rules[i];
+
+                using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
+                    if (!rule.IsValid) {
+                        continue;
+                    }
+
+                    if (rule.Test == null || (bool)rule.Test.Evaluate(context)) {
+                        return rule;
+                    }
+                }
+            }
+            return null;
+        }
+
+        public override bool HasMonomorphicTarget(T target) {
+            Debug.Assert(target != null);
+
+            foreach (StandardRule<T> rule in _rules) {
+                if (target.Equals(rule.MonomorphicRuleSet.RawTarget)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         protected override T MakeTarget(CodeContext context) {
+            if (_rules.Count == 1 && this != _rules[0].MonomorphicRuleSet) {
+                // use the monomorphic rule if we only have 1 rule.
+                return _rules[0].MonomorphicRuleSet.GetOrMakeTarget(context);
+            }
+
+            PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "GenerateRule");
+
             MethodInfo mi = typeof(T).GetMethod("Invoke");
             CodeGen cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
-                "_stub_",
+                StubName,
                 mi.ReturnType,
-                Utils.Reflection.GetParameterTypes(mi.GetParameters()),
+                ReflectionUtils.GetParameterTypes(mi.GetParameters()),
                 new ConstantPool()
             );
 
@@ -90,6 +129,13 @@ namespace Microsoft.Scripting.Actions {
             }
             EmitNoMatch(cg);
 
+            if (_rules.Count == 1 &&
+                this == _rules[0].MonomorphicRuleSet &&
+                _rules[0].TemplateParameterCount > 0 &&
+                cg.IsDynamicMethod) {
+                _monomorphicTemplate = (DynamicMethod)cg.MethodInfo;
+            }
+
             return (T)(object)cg.CreateDelegate(typeof(T));
         }
 
@@ -102,5 +148,35 @@ namespace Microsoft.Scripting.Actions {
             cg.EmitReturn();
             cg.Finish();
         }
+
+        internal DynamicMethod MonomorphicTemplate {
+            get {
+                return _monomorphicTemplate;
+            }
+        }
+
+#if DEBUG
+        private string StubName {
+            get {
+                Walker w = new Walker();
+                _rules[0].Target.Walk(w);
+                return w.Name;
+            }
+
+        }
+
+        class Walker : Ast.Walker {
+            public string Name = "_stub_";
+
+            public override bool Walk(MethodCallExpression node) {
+                if (Name == "_stub_") {
+                    Name = node.Method.ReflectedType + "." + node.Method.Name;
+                }
+                return false;
+            }
+        }
+#else
+        private const string StubName = "_stub_";
+#endif
     }
 }

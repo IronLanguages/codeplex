@@ -26,6 +26,7 @@ using Microsoft.Scripting.Types;
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler {
     /// <summary>
@@ -105,7 +106,7 @@ namespace IronPython.Compiler {
 
             string namePrefix = "";
 
-            if ((Utils.Reflection.IsNested(t) && !t.IsNestedPublic) || (t.IsNestedAssembly && !t.IsNestedFamORAssem)) {
+            if ((ReflectionUtils.IsNested(t) && !t.IsNestedPublic) || (t.IsNestedAssembly && !t.IsNestedFamORAssem)) {
                 if (!ScriptDomainManager.Options.PrivateBinding) {
                     return NameType.None;
                 } else {
@@ -137,7 +138,7 @@ namespace IronPython.Compiler {
             }
 
             int backtickIndex;
-            if ((backtickIndex = name.IndexOf(Utils.Reflection.GenericArityDelimiter)) != -1) {
+            if ((backtickIndex = name.IndexOf(ReflectionUtils.GenericArityDelimiter)) != -1) {
                 name = name.Substring(0, backtickIndex);
                 Type[] typeOf = t.GetGenericArguments();
                 StringBuilder sb = new StringBuilder(name);

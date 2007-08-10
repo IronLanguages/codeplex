@@ -46,6 +46,7 @@ namespace Microsoft.Scripting {
             DictInvoke,     // Dictionary accesses
             OperatorInvoke, // Invoking an operator against a DynamicType
             OverAllocate,   // a spot where we have an un-ideal algorithm that needs to allocate more than necessary
+            Rules,          // related to rules / actions.
             Count
 
         }

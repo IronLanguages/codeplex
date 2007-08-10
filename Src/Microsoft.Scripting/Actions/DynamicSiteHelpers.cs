@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     public static partial class DynamicSiteHelpers {
@@ -88,7 +89,7 @@ namespace Microsoft.Scripting.Actions {
         private static Type MakeBigDynamicSiteType(params Type[] types) {
             if (types.Length < 2) throw new ArgumentException("must have at least 2 types");
 
-            Type tupleType = NewTuple.MakeTupleType(Utils.Array.RemoveLast(types));
+            Type tupleType = NewTuple.MakeTupleType(ArrayUtils.RemoveLast(types));
 
             return typeof(BigDynamicSite<,>).MakeGenericType(tupleType, types[types.Length - 1]);            
         }
@@ -97,7 +98,7 @@ namespace Microsoft.Scripting.Actions {
         public static Type MakeBigFastDynamicSiteType(params Type[] types) {
             if (types.Length < 2) throw new ArgumentException("must have at least 2 types");
 
-            Type tupleType = NewTuple.MakeTupleType(Utils.Array.RemoveLast(types));
+            Type tupleType = NewTuple.MakeTupleType(ArrayUtils.RemoveLast(types));
 
             return typeof(BigFastDynamicSite<,>).MakeGenericType(tupleType, types[types.Length - 1]);
         }
@@ -140,6 +141,14 @@ namespace Microsoft.Scripting.Actions {
         public static Delegate MakeUninitializedBigFastTarget(Type targetType) {
             Type dType = typeof(BigUninitializedTargetHelper<,>).MakeGenericType(targetType.GetGenericArguments());
             return Delegate.CreateDelegate(targetType, Activator.CreateInstance(dType), "BigFastInvoke");
+        }
+
+        internal static CodeContext GetEvaluationContext<T>(LanguageContext languageContext, ref object []args) {
+            CodeContext context = new CodeContext(new Scope(), languageContext);
+            if (DynamicSiteHelpers.IsBigTarget(typeof(T))) {
+                args = new object[] { NewTuple.MakeTuple(typeof(T).GetGenericArguments()[0], args) };
+            }
+            return context;
         }
     }
 }

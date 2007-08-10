@@ -23,6 +23,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 using System.Text;
 using System.Runtime.Remoting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -167,7 +168,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <c>dictionary</c> can be <c>null</c>
         /// <returns></returns>
         public IScriptModule CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes) {
-            Utils.Array.CheckNonNullElements(compiledCodes, "compiledCodes");
+            Contract.RequiresNonNullItems(compiledCodes, "compiledCodes");
 
             ScriptCode[] script_codes = new ScriptCode[compiledCodes.Length];
             for (int i = 0; i < compiledCodes.Length; i++) {

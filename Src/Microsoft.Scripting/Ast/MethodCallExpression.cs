@@ -23,6 +23,7 @@ using System.Reflection.Emit;
 using System.Diagnostics;
 
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class MethodCallExpression : Expression {
@@ -34,18 +35,10 @@ namespace Microsoft.Scripting.Ast {
         internal MethodCallExpression(SourceSpan span, MethodInfo method, Expression instance, IList<Expression> arguments)
             : base(span) {
 
-            VerifyArguments(method, arguments);
-
             _method = method;
             _instance = instance;
             _arguments = new ReadOnlyCollection<Expression>(arguments);
             _pi = _method.GetParameters();
-        }
-
-        private static void VerifyArguments(MethodInfo method, IList<Expression> arguments) {
-            if (arguments == null) throw new ArgumentNullException("arguments");
-            if (method == null) throw new ArgumentNullException("method");
-            Utils.Array.CheckNonNullElements(arguments, "arguments");
         }
 
         public MethodInfo Method {
@@ -84,7 +77,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object instance = null;
             // Evaluate the instance first (if the method is non-static)
             if (!Method.IsStatic) {
@@ -260,6 +253,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static MethodCallExpression Call(SourceSpan span, Expression instance, MethodInfo method, params Expression[] arguments) {
+            Contract.RequiresNotNull(method, "method");
+            Contract.RequiresNonNullItems(arguments, "arguments");
+
             return new MethodCallExpression(span, method, instance, arguments);
         }
     }

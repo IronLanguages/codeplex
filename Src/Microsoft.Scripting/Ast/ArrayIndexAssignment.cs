@@ -57,7 +57,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object value = _value.Evaluate(context); // evaluate the value first
             object[] array = (object[])_array.Evaluate(context);
             int index = (int)context.LanguageContext.Binder.Convert(_index.Evaluate(context), typeof(int));

@@ -18,11 +18,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
-
 using System.Reflection;
-
 using System.Globalization;
 using System.Threading;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -31,9 +36,6 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Compiler;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Hosting;
 
 [assembly: PythonExtensionType(typeof(string), typeof(StringOps), DerivationType=typeof(ExtensibleString))]
 namespace IronPython.Runtime.Operations {
@@ -63,7 +65,7 @@ namespace IronPython.Runtime.Operations {
 
         #region ICodeFormattable Members
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public virtual string ToCodeString(CodeContext context) {
             return StringOps.Quote(_self);
         }
@@ -162,12 +164,12 @@ namespace IronPython.Runtime.Operations {
 
         #region IPythonContainer Members
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public virtual int GetLength() {
             return _self.Length;
         }
 
-        [OperatorMethod, PythonName("__contains__")]
+        [SpecialName, PythonName("__contains__")]
         public virtual bool ContainsValue(object value) {
             if (value is string) return _self.Contains((string)value);
             else if (value is ExtensibleString) return _self.Contains(((ExtensibleString)value)._self);
@@ -256,27 +258,27 @@ namespace IronPython.Runtime.Operations {
 
         #region Python __ methods
 
-        [OperatorMethod, PythonName("__contains__")]
+        [SpecialName, PythonName("__contains__")]
         public static bool Contains(string s, string item) {
             return s.Contains(item);
         }
 
-        [OperatorMethod, PythonName("__contains__")]
+        [SpecialName, PythonName("__contains__")]
         public static bool Contains(string s, char item) {
             return s.IndexOf(item) != -1;
         }
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public static int GetLength(string s) {
             return s.Length;
         }
 
-        [OperatorMethod, PythonName("__getitem__")]
+        [SpecialName, PythonName("__getitem__")]
         public static string GetItem(string s, int index) {
             return RuntimeHelpers.CharToString(s[PythonOps.FixIndex(index, s.Length)]);
         }
 
-        [OperatorMethod, PythonName("__getitem__")]
+        [SpecialName, PythonName("__getitem__")]
         public static string GetItem(string s, Slice slice) {
             if (slice == null) throw PythonOps.TypeError("string indicies must be slices or integers");
             int start, stop, step;
@@ -1038,17 +1040,17 @@ namespace IronPython.Runtime.Operations {
         #endregion
 
         #region operators
-        [OperatorMethod]
+        [SpecialName]
         public static string Add(string self, string other) {
             return self + other;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static string Mod(string self, object other) {
             return new StringFormatter(self, other).Format();
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static string Multiply(string s, int count) {
             if (count <= 0) return String.Empty;
             if (count == 1) return s;
@@ -1066,43 +1068,43 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static string Multiply(int other, string self) {
             return Multiply(self, other);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(string self, object count) {
             return PythonOps.MultiplySequence<string>(Multiply, self, count, true);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(object count, string self) {
             return PythonOps.MultiplySequence<string>(Multiply, self, count, false);
         }
 
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(string x, string y) {
             return string.CompareOrdinal(x, y) > 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(string x, string y) {
             return string.CompareOrdinal(x, y) < 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(string x, string y) {
             return string.CompareOrdinal(x, y) <= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(string x, string y) {
             return string.CompareOrdinal(x, y) >= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(string x, string y) {
             return string.Equals(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(string x, string y) {
             return !string.Equals(x, y);
         }
@@ -1121,7 +1123,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        [OperatorMethod, PythonName("__cmp__")]
+        [SpecialName, PythonName("__cmp__")]
         [return: MaybeNotImplemented]
         public static object Compare(string self, object obj) {
             if (obj == null) return 1;
@@ -1186,7 +1188,7 @@ namespace IronPython.Runtime.Operations {
 #if SILVERLIGHT // EncodingInfo
             switch (NormalizeEncodingName(name)) {
                 case "us_ascii":
-                case "ascii": encoding = Utils.AsciiEncoding; return true;
+                case "ascii": encoding = StringUtils.AsciiEncoding; return true;
                 case "utf_8": encoding = Encoding.UTF8; return true;
                 case "utf_16_le": encoding = Encoding.Unicode; return true;
                 case "utf_16_be": encoding = Encoding.BigEndianUnicode; return true;
@@ -1514,7 +1516,7 @@ namespace IronPython.Runtime.Operations {
                 //  If the optional second argument sep is absent or None, the words are separated 
                 //  by arbitrary strings of whitespace characters (space, tab, newline, return, formfeed);
                 
-                r = Utils.String.Split(self, seps, (maxsplit == -1) ? Int32.MaxValue : maxsplit + 1, 
+                r = StringUtils.Split(self, seps, (maxsplit == -1) ? Int32.MaxValue : maxsplit + 1, 
                     (seps == null) ? StringSplitOptions.RemoveEmptyEntries : StringSplitOptions.None);
      
                 List ret = List.MakeEmptyList(r.Length);
@@ -1527,7 +1529,7 @@ namespace IronPython.Runtime.Operations {
             if (self == String.Empty) {
                 return SplitEmptyString(separator != null);
             } else {
-                string[] r = Utils.String.Split(self, separator, (maxsplit == -1) ? Int32.MaxValue : maxsplit + 1, StringSplitOptions.None);
+                string[] r = StringUtils.Split(self, separator, (maxsplit == -1) ? Int32.MaxValue : maxsplit + 1, StringSplitOptions.None);
 
                 List ret = List.MakeEmptyList(r.Length);
                 foreach (string s in r) ret.AddNoLock(s);

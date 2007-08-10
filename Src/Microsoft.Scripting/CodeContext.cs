@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -48,7 +49,7 @@ namespace Microsoft.Scripting {
         }
 
         public CodeContext(Scope scope, LanguageContext languageContext, ModuleContext moduleContext) {
-            Utils.Assert.NotNull(scope, languageContext, moduleContext);
+            Assert.NotNull(scope, languageContext, moduleContext);
 
             _languageContext = languageContext;
             _moduleContext = moduleContext;
@@ -59,7 +60,7 @@ namespace Microsoft.Scripting {
         /// Called only from OptimizedModuleGenerator. ModuleContext will be set later.
         /// </summary>
         internal CodeContext(Scope scope, LanguageContext languageContext) {
-            Utils.Assert.NotNull(scope, languageContext);
+            Assert.NotNull(scope, languageContext);
 
             _languageContext = languageContext;
             _moduleContext = null;
@@ -86,7 +87,7 @@ namespace Microsoft.Scripting {
             }
             // friend: ScriptDomainManager.CreateModule
             internal set {
-                Utils.Assert.NotNull(value);
+                Assert.NotNull(value);
                 _moduleContext = value;
             }
         }

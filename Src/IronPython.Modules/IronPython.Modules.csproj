@@ -59,6 +59,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition="'$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release'">
+      <Link>Properties\SilverlightVersion.cs</Link>
+    </Compile>
     <Compile Include="binascii.cs" />
     <Compile Include="codecs.cs" />
     <Compile Include="collections.cs" />
@@ -91,9 +94,13 @@
     <Compile Include="_sre.cs" />
     <Compile Include="_weakref.cs" />
     <Compile Include="_weakref.Generated.cs" />
-    <Compile Include="..\AssemblyVersion.cs" />
+    <Compile Include="..\AssemblyVersion.cs">
+      <Link>Properties\AssemblyVersion.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
+      <Link>Properties\25StrongName.snk</Link>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">

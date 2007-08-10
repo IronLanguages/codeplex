@@ -34,6 +34,8 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public abstract RuleSet<T> AddRule(StandardRule<T> newRule);
+        public abstract StandardRule<T> GetRule(CodeContext context, params object [] args);
+        public abstract bool HasMonomorphicTarget(T target);       
 
         protected abstract T MakeTarget(CodeContext context);
 
@@ -42,6 +44,15 @@ namespace Microsoft.Scripting.Actions {
                 _target = MakeTarget(context);
             }
             return _target;
+        }
+
+        public T RawTarget {
+            get {
+                return _target;
+            }
+            set {
+                _target = value;
+            }
         }
     }
 }

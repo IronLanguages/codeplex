@@ -22,6 +22,7 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Shell;
 using System.Globalization;
 using System.Runtime.Serialization;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
 
@@ -110,7 +111,7 @@ namespace Microsoft.Scripting {
         }
 
         protected string[] PopRemainingArgs() {
-            string[] result = Utils.Array.ShiftLeft(_args, _current);
+            string[] result = ArrayUtils.ShiftLeft(_args, _current);
             _current = _args.Length;
             return result;
         }
@@ -153,13 +154,13 @@ namespace Microsoft.Scripting {
 
             if (options != null) {
                 output.WriteLine("{0}:", Resources.Options);
-                Utils.Array.PrintTable(output, options);
+                ArrayUtils.PrintTable(output, options);
                 output.WriteLine();
             }
 
             if (environment_variables != null) {
                 output.WriteLine("{0}:", Resources.EnvironmentVariables);
-                Utils.Array.PrintTable(output, environment_variables);
+                ArrayUtils.PrintTable(output, environment_variables);
                 output.WriteLine();
             }
 

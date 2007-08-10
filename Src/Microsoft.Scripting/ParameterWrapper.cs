@@ -19,6 +19,7 @@ using System.Text;
 using System.Reflection;
 
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     public class ParameterWrapper {

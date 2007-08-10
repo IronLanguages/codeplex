@@ -29,11 +29,19 @@ import sys
 from System import Type, Activator, Environment, IntPtr, Array, Object, Int32
 from System.Reflection import BindingFlags
 
+if not is_silverlight:
+    remove_ironpython_dlls(testpath.public_testdir)
+    load_iron_python_dll()
 
+import IronPython
+pe = IronPython.Hosting.PythonEngine.CurrentEngine
+preferComDispatch = pe.Options.PreferComDispatchOverTypeInfo
 
 windir = get_environ_variable("windir")
 scriptpw_path = path_combine(windir, r"system32\scriptpw.dll")
 agentsvr_path = path_combine(windir, r"msagent\agentsvr.exe")
+
+
 
 # TEST MATRIX:
 #
@@ -88,8 +96,14 @@ if file_exists(scriptpw_path) and file_exists_in_path("tlbimp.exe"):
         
         _test_common_on_object(pwcInst)
         
-        # looks like: "<System.__ComObject  (TypeInfo : Password)>"
-        for x in ['__ComObject', 'Password']:
+        if preferComDispatch:
+            # looks like: "<System.__ComObject  (TypeInfo : IPassword)>"
+            types = ['__ComObject', 'IPassword']
+        else:
+            # looks like: "<System.__ComObject  (TypeInfo : Password)>"
+            types = ['__ComObject', 'Password']
+
+        for x in types:
             Assert(x in repr(pwcInst), x + " not in repr(pwcInst)")
     
     #Merlin Work Item #203712
@@ -136,7 +150,7 @@ if file_exists(agentsvr_path) and file_exists_in_path("tlbimp.exe"):
         import clr
         from time import sleep
         clr.AddReference("AgentServerObjects.dll")
-            
+
         from AgentServerObjects import * 
         a = AgentServerClass()    
         Assert('Equals' in dir(a))
@@ -152,7 +166,8 @@ if file_exists(agentsvr_path) and file_exists_in_path("tlbimp.exe"):
         c.Play('Read')
         c.GestureAt(True, False)
         c.GestureAt(100, 200)
-        AssertError(TypeError, c.GestureAt, 11.34, 32) # Cannot convert float(11.34) to Int16
+        if not preferComDispatch:
+            AssertError(TypeError, c.GestureAt, 11.34, 32) # Cannot convert float(11.34) to Int16
 
         c.Speak('hello world', None)
 
@@ -196,7 +211,7 @@ def TryLoadInteropAssembly():
 if IsExcelInstalled():
     def test_excel():
         TryLoadInteropAssembly()
-        
+
         try: import Microsoft.Office.Interop.Excel as Excel
         except ImportError: 
             print "Skip: VSTO/Excel is not installed"
@@ -209,14 +224,16 @@ if IsExcelInstalled():
             #ex.Visible = True
             nb = ex.Workbooks.Add()
             ws = nb.Worksheets[1]
-            
+
             AreEqual('Sheet1', ws.Name)
-            AssertError(EnvironmentError, lambda: ws.Rows[0])
-            
+
+            if not preferComDispatch:
+                AssertError(EnvironmentError, lambda: ws.Rows[0])
+
             for i in range(1, 10):
                 for j in range(1, 10):
                     ws.Cells[i, j] = i * j
-            
+
             rng = ws.Range['A1', 'B3']
             AreEqual(6, rng.Count)
 

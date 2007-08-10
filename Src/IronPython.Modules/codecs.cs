@@ -24,6 +24,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("_codecs", typeof(IronPython.Modules.PythonCodecs))]
 namespace IronPython.Modules {
@@ -138,7 +139,7 @@ namespace IronPython.Modules {
 
         [PythonName("ascii_decode")]
         public static object AsciiDecode(object input, string errors) {
-            return DoDecode(Utils.AsciiEncoding, input, errors, true);
+            return DoDecode(StringUtils.AsciiEncoding, input, errors, true);
         }
 
         [PythonName("ascii_encode")]
@@ -148,7 +149,7 @@ namespace IronPython.Modules {
 
         [PythonName("ascii_encode")]
         public static object AsciiEncode(object input, string errors) {
-            return DoEncode(Utils.AsciiEncoding, input, errors);
+            return DoEncode(StringUtils.AsciiEncoding, input, errors);
         }
 
         #endregion

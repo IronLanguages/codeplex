@@ -16,8 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;

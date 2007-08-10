@@ -15,8 +15,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -64,30 +66,22 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static Expression MakeTestForTypeCall(CallAction action, DynamicType creating, StandardRule<T> rule, object[] args) {
-            Expression typeTest;
-            int version = creating.Version;
-            if (version != DynamicMixin.DynamicVersion) {
-                typeTest = Ast.Equal(
-                    Ast.ReadProperty(rule.Parameters[0], typeof(DynamicType).GetProperty("Version")),
-                    Ast.Constant(creating.Version)
-                );
-            } else {
-                Debug.Assert(creating.AlternateVersion != 0);
-                typeTest = Ast.Equal(
-                    Ast.ReadProperty(rule.Parameters[0], typeof(DynamicType).GetProperty("AlternateVersion")),
-                    Ast.Constant(creating.AlternateVersion)
-                );
-            }
+            Expression typeTest = MakeTypeTestForCreateInstance(creating, rule);
 
             Expression test = Ast.AndAlso(rule.MakeTestForTypes(CompilerHelpers.ObjectTypes(args), 0), typeTest);
 
+            test = MakeTypeTestForParams(action, rule, args, test);
+            return test;
+        }
+
+        public static Expression MakeTypeTestForParams(CallAction action, StandardRule<T> rule, object[] args, Expression test) {
             if (action.IsParamsCall()) {
                 test = Ast.AndAlso(test, MakeParamsTest(rule, args));
                 IList<object> listArgs = args[args.Length - 1] as IList<object>;
 
                 for (int i = 0; i < listArgs.Count; i++) {
                     test = Ast.AndAlso(test,
-                        rule.MakeTypeTest(DynamicHelpers.GetDynamicType(listArgs[i]),
+                        rule.MakeTypeTest(CompilerHelpers.GetType(listArgs[i]),
                             Ast.Call(
                                 GetParamsList(rule),
                                 typeof(IList<object>).GetMethod("get_Item"),
@@ -100,14 +94,36 @@ namespace Microsoft.Scripting.Actions {
             return test;
         }
 
-        private MethodCandidate GetTypeConstructor(DynamicType creating, DynamicType[] argTypes) {
+        public static Expression MakeTypeTestForCreateInstance(DynamicType creating, StandardRule<T> rule) {
+            Expression typeTest;
+            int version = creating.Version;
+            if (version != DynamicMixin.DynamicVersion) {
+                typeTest = Ast.Equal(
+                    Ast.ReadProperty(
+                        Ast.Cast(rule.Parameters[0], typeof(DynamicType)), 
+                        typeof(DynamicType).GetProperty("Version")),
+                    Ast.Constant(creating.Version)
+                );
+            } else {
+                Debug.Assert(creating.AlternateVersion != 0);
+                typeTest = Ast.Equal(
+                    Ast.ReadProperty(
+                        Ast.Cast(rule.Parameters[0], typeof(DynamicType)), 
+                        typeof(DynamicType).GetProperty("AlternateVersion")),
+                    Ast.Constant(creating.AlternateVersion)
+                );
+            }
+            return typeTest;
+        }
+
+        private MethodCandidate GetTypeConstructor(DynamicType creating, Type[] argTypes) {
             return GetTypeConstructor(Binder, creating, argTypes);
         }
 
         /// <summary>
         /// Generates an expression which calls a .NET constructor directly.
         /// </summary>
-        public static MethodCandidate GetTypeConstructor(ActionBinder binder, DynamicType creating, DynamicType[] argTypes) {
+        public static MethodCandidate GetTypeConstructor(ActionBinder binder, DynamicType creating, Type[] argTypes) {
             // type has no __new__ override, call .NET ctor directly
             MethodBinder mb = MethodBinder.MakeBinder(binder,
                 creating.Name,

@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class TryStatementBuilder {
@@ -111,7 +112,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static implicit operator TryStatement(TryStatementBuilder builder) {
-            Utils.Assert.NotNull(builder);
+            Assert.NotNull(builder);
             return new TryStatement(
                 builder._statementSpan,
                 builder._header,

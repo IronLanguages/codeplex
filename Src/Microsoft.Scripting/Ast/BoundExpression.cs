@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Ast {
             return "BoundExpression : " + SymbolTable.IdToString(Name);
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object ret;
             switch (_variable.Kind) {
                 case Variable.VariableKind.Temporary:
@@ -81,7 +81,14 @@ namespace Microsoft.Scripting.Ast {
                 case Variable.VariableKind.Global:
                     return RuntimeHelpers.LookupGlobalName(context, _variable.Name);
                 default:
-                    return RuntimeHelpers.LookupName(context, _variable.Name);
+                    if (!context.LanguageContext.TryLookupName(context, _variable.Name, out ret)) {
+                        throw context.LanguageContext.MissingName(_variable.Name);
+                    } else if (ret == Uninitialized.Instance) {
+                        RuntimeHelpers.ThrowUnboundLocalError(_variable.Name);
+                        return null;
+                    } else {
+                        return ret;
+                    }
             }
         }
 

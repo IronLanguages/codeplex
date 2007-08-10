@@ -20,8 +20,8 @@ namespace Microsoft.Scripting {
     /// <summary>
     /// Represents a sequence which may have been provided as a set of parameters to an indexer.
     /// 
-    /// TODO: This should be removed, and all uses of this should go to [OperatorMethod]object GetItem(..., params object[] keys)
-    /// and [OperatorMethod]void SetItem(..., params object [] keys) or this[params object[]xyz] which is also legal.  
+    /// TODO: This should be removed, and all uses of this should go to [SpecialName]object GetItem(..., params object[] keys)
+    /// and [SpecialName]void SetItem(..., params object [] keys) or this[params object[]xyz] which is also legal.  
     /// 
     /// currently this exists for backwards compatibility w/ IronPython's "expandable tuples".
     /// </summary>

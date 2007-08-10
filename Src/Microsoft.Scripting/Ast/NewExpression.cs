@@ -58,12 +58,16 @@ namespace Microsoft.Scripting.Ast {
             cg.EmitNew(_constructor);
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object[] args = new object[_arguments.Count];
             for (int i = 0; i < _arguments.Count; i++) {
                 args[i] = _arguments[i].Evaluate(context);
             }
-            return _constructor.Invoke(args);
+            try {
+                return _constructor.Invoke(args);
+            } catch (TargetInvocationException e) {
+                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+            }
         }
 
         public override void Walk(Walker walker) {

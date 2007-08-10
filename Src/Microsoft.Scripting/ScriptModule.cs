@@ -18,11 +18,13 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Diagnostics;
+using System.Runtime.Remoting;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
-using System.Runtime.Remoting;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     [Flags]
@@ -86,10 +88,10 @@ namespace Microsoft.Scripting {
         /// Can ONLY be called from ScriptDomainManager.CreateModule factory (due to host notification).
         /// </summary>
         internal ScriptModule(string name, ScriptModuleKind kind, Scope scope, ScriptCode[] codeBlocks) {
-            Utils.Assert.NotNull(name, scope, codeBlocks);
-            Utils.Assert.NotNull(codeBlocks);
+            Assert.NotNull(name, scope, codeBlocks);
+            Assert.NotNull(codeBlocks);
 
-            _codeBlocks = Utils.Array.Copy(codeBlocks);
+            _codeBlocks = ArrayUtils.Copy(codeBlocks);
             _name = name;
             _scope = scope;
             _kind = kind;

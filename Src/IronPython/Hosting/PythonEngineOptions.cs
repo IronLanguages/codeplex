@@ -17,6 +17,7 @@ using System;
 using Microsoft.Scripting;
 using System.Collections.Generic;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython {
 
@@ -32,13 +33,14 @@ namespace IronPython {
     [Serializable]
     public sealed class PythonEngineOptions : EngineOptions {
 
-        private string[] _arguments = Utils.Array.EmptyStrings;
+        private string[] _arguments = ArrayUtils.EmptyStrings;
         private bool _skipFistSourceLine;
         private List<string> _warningFilters;
         private int _maximumRecursion = Int32.MaxValue;
         private Severity _indentationInconsistencySeverity;
         private PythonDivisionOptions _division;
-        
+        private bool _preferComDispatchOverTypeInfo;
+
         /// <summary>
         /// Skip the first line of the code to execute. This is useful for executing Unix scripts which
         /// have the command to execute specified in the first line.
@@ -82,6 +84,15 @@ namespace IronPython {
         public PythonDivisionOptions DivisionOptions {
             get { return _division; }
             set { _division = value; }
+        }
+
+        /// <summary>
+        /// Use pure IDispatch-based invocation when calling methods/proeprties 
+        /// on System.__ComObject
+        /// </summary>
+        public bool PreferComDispatchOverTypeInfo {
+            get { return _preferComDispatchOverTypeInfo; }
+            set { _preferComDispatchOverTypeInfo = value; }
         }
 
         public new PythonEngineOptions Clone() {

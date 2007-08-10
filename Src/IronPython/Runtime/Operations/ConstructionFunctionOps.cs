@@ -17,8 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -32,7 +34,7 @@ namespace IronPython.Runtime.Operations {
             return "__new__";
         }
 
-        [OperatorMethod, PythonName("__doc__")]
+        [SpecialName, PythonName("__doc__")]
         public static string GetDocumentation(ConstructorFunction self) {
             StringBuilder sb = new StringBuilder();
             MethodBase[] targets = self.ConstructorTargets;

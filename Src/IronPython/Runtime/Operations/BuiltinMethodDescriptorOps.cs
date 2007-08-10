@@ -16,8 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -36,7 +38,7 @@ namespace IronPython.Runtime.Operations {
             return PythonBuiltinFunctionOps.GetDocumentation(self.Template);
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static object ToCodeRepresentation(BuiltinMethodDescriptor self) {
             BuiltinFunction bf = self.Template as BuiltinFunction;
             if (bf != null) {

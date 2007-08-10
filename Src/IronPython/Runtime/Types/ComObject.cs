@@ -26,23 +26,27 @@ using System.Reflection;
 using System.Diagnostics.SymbolStore;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
-using Microsoft.Win32;
+using System.Runtime.CompilerServices;
 
+using ComTypes = System.Runtime.InteropServices.ComTypes;
 using System.Diagnostics;
 using System.Threading;
+
+using Microsoft.Win32;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Hosting;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Calls;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
 
     public static class ComOps {
-        [OperatorMethod]
+        [SpecialName]
         public static object GetBoundMember([StaticThis]object self, string name) {
             if (!ComObject.Is__ComObject(self.GetType())) {
                 return PythonOps.NotImplemented;
@@ -56,7 +60,7 @@ namespace IronPython.Runtime.Types {
             return DBNull.Value;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static void SetMember([StaticThis]object self, string name, object value) {
             if (!ComObject.Is__ComObject(self.GetType())) {
                 return;
@@ -66,7 +70,7 @@ namespace IronPython.Runtime.Types {
             com.SetAttr(DefaultContext.Default, SymbolTable.StringToId(name), value);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static IList<SymbolId> GetMemberNames([StaticThis]object self) {
             List<SymbolId> ret = new List<SymbolId>();
 
@@ -87,7 +91,7 @@ namespace IronPython.Runtime.Types {
             return ret; 
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string ComObjectToString(object self) {
             if (!ComObject.Is__ComObject(self.GetType())) return self.ToString();  // subtype of ComObject
 
@@ -102,7 +106,7 @@ namespace IronPython.Runtime.Types {
         /// that COM can't override __nonzero__ this prevents us from hitting one
         /// of those common paths (we need the context if we generate a typelib).
         /// </summary>
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool IsNonZero(object self) {
             return true;
         }
@@ -275,19 +279,14 @@ namespace IronPython.Runtime.Types {
             return res;
         }
 
-#if DEBUG
-        // IDispatch gives a sub-optimal experience compared with type info, so this is false. However,
-        // it can be set to true for testing
-        static bool PreferIDispatchOverTypeInfo = false;
-#endif
-
         static ComObject CreateComObject(object rcw) {
-#if DEBUG
-            if (PreferIDispatchOverTypeInfo && (rcw is IDispatch)) {
+            PythonEngineOptions engineOptions;
+            engineOptions = PythonOps.GetLanguageContext().Engine.Options as PythonEngineOptions;
+            if (engineOptions.PreferComDispatchOverTypeInfo && (rcw is IDispatch))
+            {
                 // We can do method invocations on IDispatch objects
                 return new IDispatchObject(rcw);
             }
-#endif
             ComObject comObject;
             
             // First check if we can associate metadata with the COM object
@@ -483,10 +482,7 @@ namespace IronPython.Runtime.Types {
             try {
                 typeLibAttr = (ComTypes.TYPELIBATTR)Marshal.PtrToStructure(typeLibAttrPtr, typeof(ComTypes.TYPELIBATTR));
             } finally {
-                
-#if DISABLED // There is no API like ReleaseTypeLibAttr. Do we need to do anything here?
-                typeInfo.ReleaseTypeLibAttr(typeAttrPtr);
-#endif
+                typeLib.ReleaseTLibAttr(typeLibAttrPtr);
             }
 
             return typeAttr;
@@ -671,7 +667,9 @@ namespace IronPython.Runtime.Types {
     /// </summary>
     class IDispatchObject : GenericComObject {
 
-        private Dictionary<SymbolId, ComTypes.FUNCDESC> _funcs;
+        private string _typeName;
+        private Dictionary<SymbolId, ComDispatch.ComMethodDesc> _funcs;
+        private static Dictionary<Guid, Dictionary<SymbolId, ComDispatch.ComMethodDesc>> _cacheComTypeInfo;
 
         internal IDispatchObject(object rcw)
             : base(rcw) {
@@ -679,13 +677,22 @@ namespace IronPython.Runtime.Types {
         }
 
         public override string ToString() {
-            return "<System.__ComObject (IDispatch)>";
+            
+            EnsureScanDefinedFunctions();
+
+            string typeName;
+            if (String.IsNullOrEmpty(this._typeName))
+                typeName = "IDispatch";
+            else
+                typeName = this._typeName;
+
+            return String.Format("<System.__ComObject ({0})>", typeName);
         }
 
         IDispatch DispatchObject { get { return (IDispatch)Obj; } }
 
         #region HRESULT values returned by IDispatch::GetIDsOfNames and IDispatch::Invoke
-        const int S_SUCCESS = 0;
+        const int S_OK = 0;
         // The requested member does not exist, or the call to Invoke tried to set the value of a read-only property.
         const int DISP_E_MEMBERNOTFOUND = unchecked((int)0x80020003);
         // One or more of the names were not known
@@ -730,13 +737,27 @@ namespace IronPython.Runtime.Types {
 
         override internal bool TryGetAttr(CodeContext context, SymbolId name, out object value) {
             // Check if the name exists
-            int dispId;
-            int hresult = GetIDsOfNames(DispatchObject, name, out dispId);
-            if (hresult == DISP_E_UNKNOWNNAME) {
-                value = null;
-                return false;
-            } else if (hresult != S_SUCCESS) {
-                throw PythonOps.AttributeError("Could not get DispId for {0} (error:0x{1:X})", name, hresult);
+
+            EnsureScanDefinedFunctions();
+
+            ComDispatch.ComMethodDesc methodDesc;
+
+            // TODO: We have a thread-safety issue here right now
+            // TODO: since we are mutating _funcs array
+            // TODO: The workaround is to use Hashtable (which is thread-safe
+            // TODO: on read operations) to fetch the value out.
+            if (_funcs.TryGetValue(name, out methodDesc) == false) {
+                int dispId;
+                int hresult = GetIDsOfNames(DispatchObject, name, out dispId);
+                if (hresult == DISP_E_UNKNOWNNAME) {
+                    value = null;
+                    return false;
+                } else if (hresult != S_OK) {
+                    throw PythonOps.AttributeError("Could not get DispId for {0} (error:0x{1:X})", name, hresult);
+                }
+
+                methodDesc = new ComDispatch.ComMethodDesc(name.ToString());
+                _funcs.Add(name, methodDesc);
             }
 
             // There is a member with the given name.
@@ -745,12 +766,16 @@ namespace IronPython.Runtime.Types {
             //    (notice that execution of parameterized properties is also defered)
             // 2. If this is a property - we will return the result of 
             //    invoking the property
-            bool isProperty = IsProperty(name);
-            DispMethod dispMethod = new DispMethod(DispatchObject, SymbolTable.IdToString(name), isProperty);
-            if (isProperty == true && HasParams(name) == false)
-                value = dispMethod.Call(context, new object[0]);
-            else
-                value = dispMethod;
+
+            if (methodDesc != null && methodDesc.IsPropertyGet) {
+                if (methodDesc.Parameters.Length == 0) {
+                    value = new ComDispatch.DispMethod(DispatchObject, methodDesc).Call(context, new object[0]);
+                } else {
+                    value = new ComDispatch.DispIndexer(DispatchObject, methodDesc);
+                }
+            } else {
+                value = new ComDispatch.DispMethod(DispatchObject, methodDesc);
+            }
 
             return true;
         }
@@ -847,29 +872,32 @@ namespace IronPython.Runtime.Types {
             funcDescHandle = pFuncDesc;
         }
 
-        private bool IsProperty(SymbolId name) {
-            EnsureScanDefinedFunctions();
-
-            return (_funcs[name].invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYGET) != 0;
-        }
-
-        private bool HasParams(SymbolId name) {
-            EnsureScanDefinedFunctions();
-
-            return _funcs[name].cParams != 0;
-        }
 
         private void EnsureScanDefinedFunctions() {
             if (_funcs != null)
                 return;
 
             ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(this.DispatchObject);
-            ComTypes.TYPEATTR typeAttr;
 
+            ComTypes.TYPEATTR typeAttr;
             GetTypeAttrForTypeInfo(typeInfo, out typeAttr);
 
-            Dictionary<SymbolId, ComTypes.FUNCDESC> funcs;
-            funcs = new Dictionary<SymbolId, ComTypes.FUNCDESC>(typeAttr.cFuncs);
+            // TODO: accessing _cacheComTypeInfo is currently not thread-safe
+            // TODO: Suggested workaround is to use Hashtable
+            if (_cacheComTypeInfo == null) {
+                _cacheComTypeInfo = new Dictionary<Guid, Dictionary<SymbolId, IronPython.Runtime.Types.ComDispatch.ComMethodDesc> >();
+            }  else if (_cacheComTypeInfo.TryGetValue(typeAttr.guid, out this._funcs) == true) {
+                return;
+            }
+
+            string typeName;
+            string typeDocString;
+            int dwHelpContext;
+            string helpFile;
+            typeInfo.GetDocumentation(-1, out this._typeName, out typeDocString, out dwHelpContext, out helpFile);
+
+            Dictionary<SymbolId, ComDispatch.ComMethodDesc> funcs;
+            funcs = new Dictionary<SymbolId, ComDispatch.ComMethodDesc>(typeAttr.cFuncs);
 
             for (int definedFuncIndex = 0; definedFuncIndex < typeAttr.cFuncs; definedFuncIndex++) {
                 IntPtr funcDescHandleToRelease = IntPtr.Zero;
@@ -884,106 +912,42 @@ namespace IronPython.Runtime.Types {
                     if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FRESTRICTED) != 0)
                         continue;
 
+                    ComDispatch.ComMethodDesc methodDesc;
+                    SymbolId name;
                     // we do not need to store any info for property_put's as well - we will wait
                     // for corresponding property_get to come along.
-                    if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0)
+                    if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0 ||
+                        (funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0)
+                    {
+                        if (funcDesc.memid == 0) //DISPID_VALUE
+                        {
+                            methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
+                            name = SymbolTable.StringToId("__setitem__");
+                            funcs.Add(name, methodDesc);
+                        }
                         continue;
+                    }
 
-                    string strName;
-                    string strDocString;
-                    int dwHelpContext;
-                    string strHelpFile;
+                    methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
+                    name = SymbolTable.StringToId(methodDesc.Name);
+                    funcs.Add(name, methodDesc);
 
-                    typeInfo.GetDocumentation(funcDesc.memid, out strName, out strDocString, out dwHelpContext, out strHelpFile);
+                    if (funcDesc.memid == 0) //DISPID_VALUE
+                    {
+                        methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
+                        name = SymbolTable.StringToId("__getitem__");
+                        funcs.Add(name, methodDesc);
+                    }
 
-                    SymbolId name = SymbolTable.StringToId(strName);
-                    funcs.Add(name, funcDesc);
                 } finally {
                     if (funcDescHandleToRelease != IntPtr.Zero) {
                         typeInfo.ReleaseFuncDesc(funcDescHandleToRelease);
                     }
                 }
-
-                _funcs = funcs;
-            }
-        }
-
-
-        /// <summary>
-        /// This represents a bound dispmethod on a IDispatch object.
-        /// </summary>
-        class DispMethod : ICallableWithCodeContext {
-            private readonly IDispatch _dispatch;
-            private readonly string _methodName;
-            private readonly bool _isProperty;
-
-            internal DispMethod(IDispatch dispatch, string methodName, bool isProperty) {
-                _dispatch = dispatch;
-                _methodName = methodName;
-                _isProperty = isProperty;
             }
 
-            public override string ToString() {
-                return String.Format("<bound dispmethod {0}>", _methodName);
-            }
-
-            static object[] GetArgsForCall(object[] originalArgs, out ParameterModifier parameterModifiers) {
-                if (originalArgs.Length == 0)
-                    return originalArgs;
-
-                object[] argsForCall = new object[originalArgs.Length];
-                parameterModifiers = new ParameterModifier(originalArgs.Length);
-                for (int i = 0; i < originalArgs.Length; i++) {
-                    object arg = originalArgs[i];
-                    if (arg is IReference) {
-                        argsForCall[i] = (arg as IReference).Value;
-                        parameterModifiers[i] = true;
-                    } else {
-                        argsForCall[i] = arg;
-                    }
-                }
-                return argsForCall;
-            }
-
-            static void UpdateByrefArguments(object[] originalArgs, object[] argsForCall, ParameterModifier parameterModifiers) {
-                for (int i = 0; i < originalArgs.Length; i++) {
-                    if (parameterModifiers[i]) {
-                        (originalArgs[i] as IReference).Value = argsForCall[i];
-                    }
-                }
-            }
-
-            public object Call(CodeContext context, params object[] args) {
-                try {
-                    ParameterModifier parameterModifiers;
-                    object[] argsForCall = GetArgsForCall(args, out parameterModifiers);
-
-                    BindingFlags bindingFlags = _isProperty ? BindingFlags.GetProperty : BindingFlags.InvokeMethod;
-
-                    // We use Type.InvokeMember instead of IDispatch.Invoke so that we do not
-                    // have to worry about marshalling the arguments. Type.InvokeMember will use
-                    // IDispatch.Invoke under the hood.
-                    object retVal = _dispatch.GetType().InvokeMember(
-                        _methodName,
-                        bindingFlags,
-                        Type.DefaultBinder,
-                        _dispatch,
-                        argsForCall,
-                        new ParameterModifier[] { parameterModifiers },
-                        null,
-                        null
-                        );
-
-                    UpdateByrefArguments(args, argsForCall, parameterModifiers);
-
-                    return retVal;
-                } catch (Exception e) {
-                    if (e.InnerException != null) {
-                        throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
-                    }
-                    throw;
-                }
-            }
+            _funcs = funcs;
+            _cacheComTypeInfo.Add(typeAttr.guid, _funcs);
         }
     }
 }

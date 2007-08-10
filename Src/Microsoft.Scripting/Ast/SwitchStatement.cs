@@ -20,6 +20,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting.Generation;
 using System.Reflection;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class SwitchStatement : Statement {
@@ -37,8 +38,8 @@ namespace Microsoft.Scripting.Ast {
         internal SwitchStatement(SourceSpan span, SourceLocation header, Expression testValue, List<SwitchCase> cases, 
             MethodInfo tryGetSwitchIndexMethod, MethodInfo equalMethod)
             : base(span) {
-            Utils.Assert.NotNullItems(cases);
-            Utils.Assert.NotNull(tryGetSwitchIndexMethod, equalMethod);
+            Assert.NotNullItems(cases);
+            Assert.NotNull(tryGetSwitchIndexMethod, equalMethod);
             
             _testValue = testValue;
             _cases = cases;
@@ -248,7 +249,7 @@ namespace Microsoft.Scripting.Ast {
             return ret;
         }
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             throw new NotImplementedException();
         }
 
@@ -275,8 +276,8 @@ namespace Microsoft.Scripting.Ast {
         public static SwitchStatement Switch(SourceSpan span, SourceLocation header, Expression testValue, List<SwitchCase> cases, 
             MethodInfo tryGetSwitchIndexMethod, MethodInfo equalMethod) {
 
-            Utils.Assert.SignatureEquals(tryGetSwitchIndexMethod, typeof(CodeContext), typeof(object), typeof(int).MakeByRefType(), typeof(bool));
-            Utils.Assert.SignatureEquals(equalMethod, typeof(CodeContext), typeof(object), typeof(object), typeof(bool));
+            Debug.Assert(ReflectionUtils.SignatureEquals(tryGetSwitchIndexMethod, typeof(CodeContext), typeof(object), typeof(int).MakeByRefType(), typeof(bool)));
+            Debug.Assert(ReflectionUtils.SignatureEquals(equalMethod, typeof(CodeContext), typeof(object), typeof(object), typeof(bool)));
 
             return new SwitchStatement(span, header, testValue, cases, tryGetSwitchIndexMethod, equalMethod);
         }

@@ -19,17 +19,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
-
-using IronPython.Runtime.Operations;
-using IronPython.Compiler;
-using IronPython.Runtime.Types;
-using IronPython.Hosting;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Operations;
+using IronPython.Compiler;
+using IronPython.Runtime.Types;
+using IronPython.Hosting;
 
 namespace IronPython.Runtime.Calls {
     /// <summary>
@@ -221,12 +224,12 @@ namespace IronPython.Runtime.Calls {
             return Call(context, PrependInstance(instance, args));
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public override object Call(CodeContext context, params object[] args) {            
             throw new NotImplementedException();
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public object Call(CodeContext context, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
             object[] realArgs = new object[args.Length + dictArgs.Count];
             string[] argNames = new string[dictArgs.Count];
@@ -342,6 +345,13 @@ namespace IronPython.Runtime.Calls {
         }
 
         public static void PushFrame() {
+            //HACK ALERT:
+            // In interpreted mode, cap the recursion limit at 200, since our stack grows 30x faster than normal.
+            //TODO: remove this when we switch to a non-recursive interpretation strategy
+            if (PythonEngine.CurrentEngine.Options.InterpretedMode) {
+                if (Depth > 200) throw PythonOps.RuntimeError("maximum recursion depth exceeded");
+            }
+            
             if (++Depth > _MaximumDepth)
                 throw PythonOps.RuntimeError("maximum recursion depth exceeded");
         }
@@ -591,7 +601,7 @@ namespace IronPython.Runtime.Calls {
             if (action.Kind != ActionKind.Call)
                 return null;
 
-            return new FunctionBinderHelper<T>(context, (CallAction)action, this).MakeRule(Utils.Array.RemoveFirst(args));
+            return new FunctionBinderHelper<T>(context, (CallAction)action, this).MakeRule(ArrayUtils.RemoveFirst(args));
         }
 
         /// <summary>
@@ -1051,7 +1061,7 @@ namespace IronPython.Runtime.Calls {
                         Ast.NewArray(typeof(object[]), exprArgs) 
                     };
                 } else if (NeedsContext) {
-                    exprArgs = Utils.Array.Insert(GetContextExpression(), exprArgs);
+                    exprArgs = ArrayUtils.Insert(GetContextExpression(), exprArgs);
                 }
 
                 return exprArgs;
@@ -1288,7 +1298,7 @@ namespace IronPython.Runtime.Calls {
             this.target = target;            
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public override object Call(CodeContext context, params object[] args) {
             int nparams = ArgNames.Length;
             int nargs = args.Length;
@@ -1332,7 +1342,7 @@ namespace IronPython.Runtime.Calls {
             : base(context, name, target, argNames, defaults, flags) {
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public override object Call(CodeContext context, params object[] args) {
             int nargs = args.Length;
             object argList = null;
@@ -1382,7 +1392,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public override object Call(CodeContext context, object[] args, string[] names) {
             KwArgBinder argBinder = new KwArgBinder(context, null, args, names);
             object[] defaults = this.Defaults;

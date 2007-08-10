@@ -24,6 +24,8 @@ class CallableClass(object):
     def __call__(self, *args):
         return 42
 
+def keep_alive(o): pass
+
 def test_proxy_dir():
     # dir on a deletex proxy should return an empty list,
     # not throw.
@@ -44,7 +46,7 @@ def test_proxy_dir():
             #This will fail if original object has not been garbage collected.
             AreEqual(dir(prxy), [])
 
-def test_special_methods():
+def test_special_methods():    
     for cls in [NonCallableClass, CallableClass]:
         # calling repr should give us weakproxy's repr,
         # calling __repr__ should give us the underlying objects
@@ -56,6 +58,8 @@ def test_special_methods():
         
         AreEqual(repr(a), b.__repr__())
         
+        keep_alive(a)
+        
     # calling a special method should work
     class strable(object):
             def __str__(self): return 'abc'
@@ -63,10 +67,8 @@ def test_special_methods():
     a = strable()
     b = _weakref.proxy(a)
     AreEqual(str(b), 'abc')
-    
-    if is_cli:
-        from System import GC
-        GC.KeepAlive(a)
+
+    keep_alive(a)    
 
 
 def test_type_call():

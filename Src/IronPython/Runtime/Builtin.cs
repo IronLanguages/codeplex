@@ -21,6 +21,15 @@ using System.Runtime.InteropServices;
 using System.Reflection;
 using System.Diagnostics;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
@@ -30,12 +39,6 @@ using IronPython.Compiler.Generation;
 using IronPython.Runtime.Operations;
 using IronPython.Hosting;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 
 [assembly: PythonModule("__builtin__", typeof(Builtin))]
 namespace IronPython.Runtime {
@@ -102,7 +105,6 @@ namespace IronPython.Runtime {
                         } catch (PythonImportErrorException) {
                             continue;
                         }
-                        mod.Scope.SetName(SymbolTable.StringToId(strAttrName), attrValue);
                     }
                 }
             }
@@ -166,7 +168,7 @@ namespace IronPython.Runtime {
 
         [PythonName("apply")]
         public static object Apply(CodeContext context, object func, object args, object kws) {
-            return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, Utils.Array.EmptyStrings, args, kws);
+            return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, ArrayUtils.EmptyStrings, args, kws);
         }
 
         public static object basestring = DynamicHelpers.GetDynamicTypeFromType(typeof(string));
@@ -345,7 +347,7 @@ namespace IronPython.Runtime {
 
             Microsoft.Scripting.Scope scope = GetExecEvalScope(context, globals, locals);
 
-            return code.Call(context, scope, false); // Do not try FastEval for compiled code
+            return code.Call(context, scope, false); // Do not try evaluate mode for compiled code
 
         }
 
@@ -431,7 +433,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.IOError(x);
             }
 
-            code.Run(execScope, context.ModuleContext, false); // Do not attempt FastEval
+            code.Run(execScope, context.ModuleContext, false); // Do not attempt evaluation mode for execfile
         }
 
         public static object file = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFile));

@@ -31,6 +31,7 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using System.Text;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -85,7 +86,7 @@ namespace Microsoft.Scripting.Generation {
 
         // This is true if we are emitting code while in an interpreted context.
         // This flag should always be flowed through to other CodeGen objects created from this one.
-        private bool _fastEval = false;
+        private bool _interpretedMode = false;
 
         public CodeGen(TypeGen typeGen, AssemblyGen assemblyGen, MethodBase mi, ILGenerator ilg,
             IList<Type> paramTypes, ConstantPool constantPool) {
@@ -134,8 +135,8 @@ namespace Microsoft.Scripting.Generation {
         }
 
         private string GetPerfTrackName(MethodBase mi) {
-            for (int i = 0; i < mi.Name.Length; i++) {
-                if (!Char.IsLetter(mi.Name[i])) {
+            for (int i = 0; i < mi.Name.Length; i++) {                
+                if (!Char.IsLetter(mi.Name[i]) && mi.Name[i] != '.') {
                     return mi.Name.Substring(0, i);
                 }
             }
@@ -219,12 +220,12 @@ namespace Microsoft.Scripting.Generation {
         }
 
         /// <summary>
-        /// Returns true if we are attempting to generate code while in FastEval mode;
+        /// Returns true if we are attempting to generate code while in interpreted mode;
         /// this changes some variable scoping behavior.
         /// </summary>
-        public bool FastEval {
-            get { return _fastEval; }
-            set { _fastEval = value; }
+        public bool InterpretedMode {
+            get { return _interpretedMode; }
+            set { _interpretedMode = value; }
         }
 
         public void PushExceptionBlock(TargetBlockType type, Slot returnFlag) {
@@ -541,7 +542,7 @@ namespace Microsoft.Scripting.Generation {
                     case TypeCode.UInt64: Emit(OpCodes.Conv_U4); break;
                     case TypeCode.Single: Emit(OpCodes.Conv_R4); break;
                     case TypeCode.Double: Emit(OpCodes.Conv_R8); break;
-                    default: throw Utils.Assert.Unreachable;
+                    default: throw Assert.Unreachable;
                 }
             }
 
@@ -1744,9 +1745,9 @@ namespace Microsoft.Scripting.Generation {
             if (delegateType == null) throw new ArgumentNullException("delegateType");
 
             if (ConstantPool.IsBound) {
-                return Utils.Reflection.CreateDelegate(CreateDelegateMethodInfo(), delegateType, _constantPool.Data);
+                return ReflectionUtils.CreateDelegate(CreateDelegateMethodInfo(), delegateType, _constantPool.Data);
             } else {
-                return Utils.Reflection.CreateDelegate(CreateDelegateMethodInfo(), delegateType);
+                return ReflectionUtils.CreateDelegate(CreateDelegateMethodInfo(), delegateType);
             }
         }
 
@@ -1754,7 +1755,7 @@ namespace Microsoft.Scripting.Generation {
             if (delegateType == null) throw new ArgumentNullException("delegateType");
             Debug.Assert(!ConstantPool.IsBound);
 
-            return Utils.Reflection.CreateDelegate(CreateDelegateMethodInfo(), delegateType, target);
+            return ReflectionUtils.CreateDelegate(CreateDelegateMethodInfo(), delegateType, target);
         }
 
         public CodeGen DefineMethod(string name, Type retType, IList<Type> paramTypes, string[] paramNames, ConstantPool constantPool) {
@@ -1776,7 +1777,7 @@ namespace Microsoft.Scripting.Generation {
             }
 
             if (_context != null) res.Context = _context;
-            res.FastEval = _fastEval;
+            res.InterpretedMode = _interpretedMode;
             return res;
         }
 
@@ -1951,8 +1952,8 @@ namespace Microsoft.Scripting.Generation {
             Debug.Assert(_typeGen != null);
 
             string full_method_name = ((_methodInfo.DeclaringType != null) ? _methodInfo.DeclaringType.FullName + "." : "") + _methodInfo.Name;
-            
-            string filename = String.Format("gen_{0}_{1}.il", Utils.ToValidFileName(full_method_name), 
+
+            string filename = String.Format("gen_{0}_{1}.il", IOUtils.ToValidFileName(full_method_name), 
                 System.Threading.Interlocked.Increment(ref count));
             
             string tempFolder = Path.Combine(Path.GetTempPath(), "IronPython");
@@ -2025,17 +2026,17 @@ namespace Microsoft.Scripting.Generation {
 
         private static string MakeSignature(MethodBase method) {
 #if DEBUG
-            return Utils.Reflection.FormatSignature(new StringBuilder(), method).ToString();
+            return ReflectionUtils.FormatSignature(new StringBuilder(), method).ToString();
 #else
-            throw Utils.Assert.Unreachable;
+            throw Assert.Unreachable;
 #endif
         }
 
         private static string MakeTypeName(Type type) {
 #if DEBUG
-            return Utils.Reflection.FormatTypeName(new StringBuilder(), type).ToString();
+            return ReflectionUtils.FormatTypeName(new StringBuilder(), type).ToString();
 #else
-            throw Utils.Assert.Unreachable;
+            throw Assert.Unreachable;
 #endif
         }
 
@@ -2307,7 +2308,7 @@ namespace Microsoft.Scripting.Generation {
         /// Emits the code block implementation if it hasn't been emitted yet.
         /// </summary>
         internal CodeGen ProvideCodeBlockImplementation(CodeBlock block, bool hasContextParameter, bool hasThis) {
-            Utils.Assert.NotNull(block);
+            Assert.NotNull(block);
             CodeGen impl;
 
             // emit the code block method if it has:

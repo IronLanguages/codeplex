@@ -18,11 +18,13 @@ using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
 
 using IronPython.Hosting;
 using IronPython.Compiler;
@@ -76,13 +78,13 @@ namespace IronPython.Runtime.Types {
         }
 
         [PythonName("__repr__")]
-        [OperatorMethod]
+        [SpecialName]
         public static string ToCodeString(ScriptModule module) {
             return ToString(module);
         }
 
         [PythonName("__str__")]
-        [OperatorMethod]
+        [SpecialName]
         public static string ToString(ScriptModule module) {
             if (GetFileName(module) == null) {
                 if (module.InnerModule != null) {

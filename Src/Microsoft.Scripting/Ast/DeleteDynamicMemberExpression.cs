@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _name; }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             return context.LanguageContext.DeleteMember(context, _target.Evaluate(context), _name);
         }
 

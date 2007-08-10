@@ -21,18 +21,17 @@ using System.Diagnostics;
 using System.Collections;
 using System.IO;
 using System.Threading;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
     public interface IScriptHost : IRemotable {
         // virtual file-system ops:
         string NormalizePath(string path);  // throws ArgumentException
-        bool SourceFileExists(string path);
-        bool SourceDirectoryExists(string path);
         string[] GetSourceFileNames(string mask, string searchPattern);
         
         // source units:
-        SourceFileUnit GetSourceFileUnit(IScriptEngine engine, string path, string name);
+        SourceFileUnit TryGetSourceFileUnit(IScriptEngine engine, string path, string name);
         SourceFileUnit ResolveSourceFileUnit(string name);
 
         // notifications:
@@ -66,7 +65,7 @@ namespace Microsoft.Scripting.Hosting {
         public virtual IScriptModule DefaultModule {
             get {
                 if (_defaultModule == null) {
-                    if (Utils.IsRemote(_environment)) 
+                    if (Utilities.IsRemote(_environment)) 
                         throw new InvalidOperationException("Default module should by created in the remote appdomain.");
 
                     CreateDefaultModule(ref _defaultModule);
@@ -98,7 +97,7 @@ namespace Microsoft.Scripting.Hosting {
         static internal void CreateDefaultModule(ref ScriptModule defaultModule) {
            // create a module and throw it away if there is already one:
             ScriptModule module = ScriptDomainManager.CurrentManager.CreateModule("<default>", null, ScriptCode.EmptyArray);
-            Utils.MemoryBarrier();
+            Utilities.MemoryBarrier();
             Interlocked.CompareExchange<ScriptModule>(ref defaultModule, module, null);
         }
 
@@ -115,14 +114,6 @@ namespace Microsoft.Scripting.Hosting {
         /// </remarks>
         public virtual string NormalizePath(string path) {
             return (path != "") ? ScriptDomainManager.CurrentManager.PAL.GetFullPath(path) : "";
-        }
-
-        public virtual bool SourceFileExists(string path) {
-            return ScriptDomainManager.CurrentManager.PAL.FileExists(path);
-        }
-
-        public virtual bool SourceDirectoryExists(string path) {
-            return ScriptDomainManager.CurrentManager.PAL.DirectoryExists(path);
         }
 
         public virtual string[] GetSourceFileNames(string mask, string searchPattern) {
@@ -148,8 +139,11 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        public virtual SourceFileUnit GetSourceFileUnit(IScriptEngine engine, string path, string name) {
-            return new SourceFileUnit(engine, path, name, Encoding.Default);
+        public virtual SourceFileUnit TryGetSourceFileUnit(IScriptEngine engine, string path, string name) {
+            if (ScriptDomainManager.CurrentManager.PAL.FileExists(path)) {
+                return new SourceFileUnit(engine, path, name, Encoding.Default);
+            }
+            return null;
         }
 
         /// <summary>
@@ -172,16 +166,14 @@ namespace Microsoft.Scripting.Hosting {
 
                 foreach (string extension in _environment.GetRegisteredFileExtensions()) {
                     string full_path = Path.Combine(directory, name + extension);
-                    
-                    if (SourceFileExists(full_path)) {
+
+                    if (ScriptDomainManager.CurrentManager.PAL.FileExists(full_path)) {
                         if (result != null) {
                             throw new InvalidOperationException(String.Format(Resources.AmbigiousModule, full_path, final_path));
                         }
 
-                        ILanguageProvider provider;
-                        try {
-                            provider = _environment.GetLanguageProviderByFileExtension(extension);
-                        } catch (ArgumentException) {
+                        LanguageProvider provider;
+                        if (!ScriptDomainManager.CurrentManager.TryGetLanguageProviderByFileExtension(extension, out provider)) {
                             // provider may have been unregistered, let's pick another one: 
                             continue;    
                         }

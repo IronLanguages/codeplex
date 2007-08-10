@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_2")
@@ -35,10 +36,10 @@ clr.AddReference("loadorder_2f")
 from First import *
 from Second import *
 
-print Nongeneric1.Flag
-print Nongeneric2[int].Flag
+AreEqual(Nongeneric1.Flag, "First.Nongeneric1")
+AreEqual(Nongeneric2[int].Flag, "Second.Nongeneric2`1")
 
 import First, Second
 
-print First.Nongeneric1.Flag
-print Second.Nongeneric2[str].Flag
+AreEqual(First.Nongeneric1.Flag, "First.Nongeneric1")
+AreEqual(Second.Nongeneric2[str].Flag, "Second.Nongeneric2`1")

@@ -18,14 +18,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
 
 namespace IronPython.Runtime {
 
@@ -254,12 +256,12 @@ namespace IronPython.Runtime {
 
         #region IPythonContainer Members
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int GetLength() {
             return DictionaryOps.__len__(this);
         }
 
-        [OperatorMethod, PythonName("__contains__")]
+        [SpecialName, PythonName("__contains__")]
         public bool ContainsValue(object value) {
             return DictionaryOps.__contains__(this, value);
         }
@@ -413,7 +415,7 @@ namespace IronPython.Runtime {
         // needs a custom __eq__ / __ne__ implementation.
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__eq__")]
+        [SpecialName, PythonName("__eq__")]
         public object RichEquals(object other) {
             if (!(other is PythonDictionary || other is CustomSymbolDictionary || other is SymbolDictionary))
                 return PythonOps.NotImplemented;
@@ -422,7 +424,7 @@ namespace IronPython.Runtime {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__ne__")]
+        [SpecialName, PythonName("__ne__")]
         public object RichNotEquals(object other) {
             object res = RichEquals(other);
             if (res != PythonOps.NotImplemented) return PythonOps.Not(res);
@@ -539,7 +541,7 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public virtual string ToCodeString(CodeContext context) {
             return ToString();
         }
@@ -604,7 +606,7 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        [OperatorMethod, PythonName("__cmp__")]
+        [SpecialName, PythonName("__cmp__")]
         [return: MaybeNotImplemented]
         public object CompareTo(CodeContext context, object other) {
             IDictionary<object, object> oth = other as IDictionary<object, object>;
@@ -712,7 +714,7 @@ namespace IronPython.Runtime {
             return this;
         }
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int GetLength() {
             return size - pos - 1;
         }
@@ -831,7 +833,7 @@ namespace IronPython.Runtime {
             return this;
         }
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int GetLength() {
             return _size - _pos - 1;
         }

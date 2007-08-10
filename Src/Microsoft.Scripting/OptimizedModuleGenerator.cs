@@ -27,6 +27,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -124,7 +125,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void BindGeneratedCodeToModule(ScriptModule module) {
-            Utils.Assert.NotNull(module);
+            Assert.NotNull(module);
             foreach (CodeContext codeContext in _codeContexts) {
                 codeContext.ModuleContext = codeContext.LanguageContext.EnsureModuleContext(module);
             }
@@ -331,7 +332,7 @@ namespace Microsoft.Scripting.Generation {
                 fileName = Path.GetFileNameWithoutExtension(fullPath);
             } else {
                 outDir = null;
-                fileName = Utils.ToValidFileName(sourceUnit.Name);
+                fileName = IOUtils.ToValidFileName(sourceUnit.Name);
             }
         }
 
@@ -360,7 +361,7 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitNull();
             cg.Emit(OpCodes.Ceq);
             cg.Emit(OpCodes.Brtrue_S, ok);
-            cg.EmitNew(typeof(InvalidOperationException), Utils.Reflection.EmptyTypes);
+            cg.EmitNew(typeof(InvalidOperationException), ReflectionUtils.EmptyTypes);
             cg.Emit(OpCodes.Throw);
             cg.MarkLabel(ok);
 

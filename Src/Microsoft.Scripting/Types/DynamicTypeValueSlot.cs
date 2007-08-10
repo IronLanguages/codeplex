@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Types {
     public class DynamicTypeValueSlot : DynamicTypeSlot {
         private object _value;
 

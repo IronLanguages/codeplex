@@ -47,11 +47,11 @@ using System.Security;
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
 
-[assembly: AssemblyFileVersion("2.0.10802.00")]
-[assembly: AssemblyInformationalVersion("2.0")]
 [assembly: SecurityTransparent]
 
 #if !SILVERLIGHT
+[assembly: AssemblyFileVersion("2.0.10810.00")]
+[assembly: AssemblyInformationalVersion("2.0")]
 [assembly: AllowPartiallyTrustedCallers]
 #endif
 

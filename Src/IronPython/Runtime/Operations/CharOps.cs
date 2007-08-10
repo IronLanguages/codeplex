@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 
@@ -32,17 +33,17 @@ namespace IronPython.Runtime.Operations {
     /// </summary>
 
     public static class CharOps {
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(char self, char other) {
             return self == other;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(char self, char other) {
             return self != other;
         }
 
-        [OperatorMethod, PythonName("__hash__")]
+        [SpecialName, PythonName("__hash__")]
         public static int GetHashCode(char self) {
             return new String(self, 1).GetHashCode();
         }

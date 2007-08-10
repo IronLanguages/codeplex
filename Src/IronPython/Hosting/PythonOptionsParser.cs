@@ -23,6 +23,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Hosting {
 
@@ -92,13 +93,14 @@ namespace IronPython.Hosting {
                     break;
 
 
-                case "-X:FastEval": _engineOptions.FastEvaluation = true; break;
+                case "-X:Interpret": _engineOptions.InterpretedMode = true; break;
                 case "-X:Frames": GlobalOptions.Frames = true; break;
                 case "-X:GenerateAsSnippets": GlobalOptions.GenerateModulesAsSnippets = true; break;
                 case "-X:GenerateReleaseAssemblies": GlobalOptions.AssemblyGenAttributes &= ~AssemblyGenAttributes.GenerateDebugAssemblies; break;
                 case "-X:ILDebug": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.ILDebug; break;
 
                 case "-X:PassExceptions": _consoleOptions.HandleExceptions = false; break;
+                case "-X:PreferComDispatch": _engineOptions.PreferComDispatchOverTypeInfo = true; break;
 // TODO: #if !IRONPYTHON_WINDOW
                 case "-X:ColorfulConsole": _consoleOptions.ColorfulConsole = true; break;
                 case "-X:ExceptionDetail": _engineOptions.ExceptionDetail = true; break;
@@ -112,7 +114,7 @@ namespace IronPython.Hosting {
                 
                 case "-X:MaxRecursion":
                     int max_rec;
-                    if (!Utils.TryParseInt32(PopNextArg(), out max_rec))
+                    if (!StringUtils.TryParseInt32(PopNextArg(), out max_rec))
                         throw new InvalidOptionException(String.Format("The argument for the {0} option must be an integer.", arg));
 
                     _engineOptions.MaximumRecursion = max_rec;
@@ -206,7 +208,7 @@ namespace IronPython.Hosting {
                 { "-X:ColorfulConsole",     "Enable ColorfulConsole" },
 #endif
                 { "-X:ExceptionDetail",     "Enable ExceptionDetail mode" },
-                { "-X:FastEval",            "Enable fast eval" },
+                { "-X:Interpret",           "Enable interpreted mode" },
                 { "-X:Frames",              "Generate custom frames" },
                 { "-X:GenerateAsSnippets",  "Generate code to run in snippet mode" },
                 { "-X:ILDebug",             "Output generated IL code to a text file for debugging" },
@@ -217,6 +219,9 @@ namespace IronPython.Hosting {
                 { "-X:NoOptimize",          "Disable JIT optimization in generated code" },
                 { "-X:NoTraceback",         "Do not emit traceback code" },
                 { "-X:PassExceptions",      "Do not catch exceptions that are unhandled by Python code" },
+#if !SILVERLIGHT
+                { "-X:PreferComDispatch",   "Prefer calling COM methods using IDispatch" },
+#endif
                 { "-X:PrivateBinding",      "Enable binding to private members" },
                 { "-X:SaveAssemblies",      "Save generated assemblies" },
                 { "-X:ShowClrExceptions",   "Display CLS Exception information" },

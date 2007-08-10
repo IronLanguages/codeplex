@@ -20,6 +20,7 @@ using System.Reflection;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;

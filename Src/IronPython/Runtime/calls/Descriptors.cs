@@ -15,7 +15,9 @@
 
 using System;
 using System.Runtime.InteropServices;
+
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
@@ -76,87 +78,74 @@ namespace IronPython.Runtime.Calls {
         #endregion
     }
 
-    [PythonType("property")]
     public class PythonProperty : DynamicTypeSlot {
-        private object fget, fset, fdel, doc;
+        private object _fget, _fset, _fdel, _doc;
 
         public PythonProperty([DefaultParameterValueAttribute(null)]object fget,
                         [DefaultParameterValueAttribute(null)]object fset,
                         [DefaultParameterValueAttribute(null)]object fdel,
                         [DefaultParameterValueAttribute(null)]object doc) {
-            this.fget = fget; this.fset = fset; this.fdel = fdel; this.doc = doc;
+            _fget = fget; _fset = fset; _fdel = fdel; _doc = doc;
         }
 
         public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
-            value = GetAttribute(instance, PythonOps.ToPythonType(owner));
+            value = __get__(instance, PythonOps.ToPythonType(owner));
             return true;
         }
 
         public override bool TrySetValue(CodeContext context, object instance, DynamicMixin owner, object value) {
-            return SetAttribute(instance, value);
+            return __set__(instance, value);
         }
 
         public override bool TryDeleteValue(CodeContext context, object instance, DynamicMixin owner) {
-            return DeleteAttribute(instance);
+            return __delete__(instance);
         }
 
         public override bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
-            return fset != null;
+            return _fset != null;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value")]
-        public object Documentation {
-            [PythonName("__doc__")]
-            get { return doc; }
-            [PythonName("__doc__")]
+        public object __doc__ {
+            get { return _doc; }
             set {
                 throw PythonOps.TypeError("'property' object is immutable");
             }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value")]
-        public object Deleter {
-            [PythonName("fdel")]
-            get { return fdel; }
-            [PythonName("fdel")]
+        public object fdel {
+            get { return _fdel; }
             set {
                 throw PythonOps.TypeError("'property' object is immutable");
             }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value")]
-        public object Setter {
-            [PythonName("fset")]
-            get { return fset; }
-            [PythonName("fset")]
+        public object fset {
+            get { return _fset; }
             set {
                 throw PythonOps.TypeError("'property' object is immutable");
             }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value")]
-        public object Getter {
-            [PythonName("fget")]
-            get { return fget; }
-            [PythonName("fget")]
+        public object fget {
+            get { return _fget; }
             set {
                 throw PythonOps.TypeError("'property' object is immutable");
             }
         }
 
-        #region IDataDescriptor Members
-        [PythonName("__get__")]
-        public object GetAttribute(object instance) { return GetAttribute(instance, null); }
+        public object __get__(object instance) { return __get__(instance, null); }
 
-        [PythonName("__get__")]
-        public object GetAttribute(object instance, object owner) {
+        public object __get__(object instance, object owner) {
             if (instance == null) return this;
             if (fget != null) return PythonCalls.Call(fget, instance);
             throw PythonOps.AttributeError("unreadable attribute");
         }
 
-        [PythonName("__set__")]
-        public bool SetAttribute(object instance, object value) {
+        public bool __set__(object instance, object value) {
             if (fset != null) {
                 PythonCalls.Call(fset, instance, value);
                 return true;
@@ -167,8 +156,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        [PythonName("__delete__")]
-        public bool DeleteAttribute(object instance) {
+        public bool __delete__(object instance) {
             if (fdel != null) {
                 PythonCalls.Call(fdel, instance);
                 return true;
@@ -178,7 +166,6 @@ namespace IronPython.Runtime.Calls {
                 throw PythonOps.AttributeError("undeletable attribute");
             }
         }
-        #endregion
     }
 
 }

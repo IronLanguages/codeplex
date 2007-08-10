@@ -19,12 +19,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Runtime.CompilerServices;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
-using Microsoft.Scripting;
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
@@ -172,30 +174,30 @@ namespace IronPython.Modules {
                 return new PythonTimeDelta((double)self._days / other, (double)self._seconds / other, (double)self._microseconds / other);
             }
 
-            [OperatorMethod, PythonName("__pos__")]
+            [SpecialName, PythonName("__pos__")]
             public PythonTimeDelta Positive() { return +this; }
-            [OperatorMethod, PythonName("__neg__")]
+            [SpecialName, PythonName("__neg__")]
             public PythonTimeDelta Negate() { return -this; }
-            [OperatorMethod, PythonName("__abs__")]
+            [SpecialName, PythonName("__abs__")]
             public PythonTimeDelta Abs() { return (_days > 0) ? this : -this; }
-            [OperatorMethod, PythonName("__mul__")]
+            [SpecialName, PythonName("__mul__")]
             public PythonTimeDelta Mulitply(object y) {
                 return this * Converter.ConvertToInt32(y);
             }
-            [OperatorMethod, PythonName("__rmul__")]
+            [SpecialName, PythonName("__rmul__")]
             public PythonTimeDelta ReverseMulitply(object y) {
                 return this * Converter.ConvertToInt32(y);
             }
-            [OperatorMethod, PythonName("__floordiv__")]
+            [SpecialName, PythonName("__floordiv__")]
             public PythonTimeDelta FloorDivide(object y) {
                 return this / Converter.ConvertToInt32(y);
             }
-            [OperatorMethod, PythonName("__rfloordiv__")]
+            [SpecialName, PythonName("__rfloordiv__")]
             public PythonTimeDelta ReverseFloorDivide(object y) {
                 return this / Converter.ConvertToInt32(y);
             }
 
-            [OperatorMethod, PythonName("__nonzero__")]
+            [SpecialName, PythonName("__nonzero__")]
             public bool NonZero() {
                 return this._days != 0 || this._seconds != 0 || this._microseconds != 0;
             }
@@ -431,7 +433,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [OperatorMethod, PythonName("__radd__")]
+            [SpecialName, PythonName("__radd__")]
             public object ReverseAdd(PythonTimeDelta delta) { return this + delta; }
             public static PythonDate operator -(PythonDate self, PythonTimeDelta delta) {
                 try {
@@ -445,7 +447,7 @@ namespace IronPython.Modules {
                 return new PythonTimeDelta(0, ts.TotalSeconds, ts.Milliseconds * 1000);
             }
 
-            [OperatorMethod, PythonName("__nonzero__")]
+            [SpecialName, PythonName("__nonzero__")]
             public bool NonZero() { return true; }
 
             [PythonName("__reduce__")]
@@ -609,12 +611,12 @@ namespace IronPython.Modules {
                 return self.CompareTo(other) <= 0;
             }
 
-            [OperatorMethod, PythonName("__eq__")]
+            [SpecialName, PythonName("__eq__")]
             public bool RichEquals(object other) {
                 return Equals(other);
             }
 
-            [OperatorMethod, PythonName("__ne__")]
+            [SpecialName, PythonName("__ne__")]
             public bool RichNotEquals(object other) {
                 return !Equals(other);
             }
@@ -791,7 +793,7 @@ namespace IronPython.Modules {
             public static PythonDateTimeCombo operator +([NotNull]PythonTimeDelta delta, [NotNull]PythonDateTimeCombo date) {
                 return new PythonDateTimeCombo(date.InternalDateTime.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
             }
-            [OperatorMethod, PythonName("__radd__")]
+            [SpecialName, PythonName("__radd__")]
             public new PythonDateTimeCombo ReverseAdd(PythonTimeDelta delta) { return this + delta; }
             public static PythonDateTimeCombo operator -(PythonDateTimeCombo date, PythonTimeDelta delta) {
                 return new PythonDateTimeCombo(date.InternalDateTime.Subtract(delta.TimeSpanWithDaysAndSeconds), date._lostMicroseconds - delta._microseconds, date._tz);
@@ -1153,7 +1155,7 @@ namespace IronPython.Modules {
                 return new PythonDateTimeTime(date._timeSpan.Subtract(delta.TimeSpanWithDaysAndSeconds), date._lostMicroseconds - delta._microseconds, date._tz);
             }
 
-            [OperatorMethod, PythonName("__nonzero__")]
+            [SpecialName, PythonName("__nonzero__")]
             public bool NonZero() {
                 return this.UtcTime.TimeSpan.Ticks != 0 || this.UtcTime.LostMicroseconds != 0;
             }

@@ -17,18 +17,20 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
-
 using System.Threading;
 using System.Diagnostics;
-
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
 using System.ComponentModel;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Types;
+
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -84,7 +86,7 @@ namespace IronPython.Runtime.Types {
         }
         
         internal OldClass(string name, List<OldClass> bases, IAttributesCollection dict, string instanceNames) {
-            Utils.Assert.NotNullItems(bases);
+            Assert.NotNullItems(bases);
             _bases = bases;
             Init(name, dict, instanceNames);
         }
@@ -262,7 +264,7 @@ namespace IronPython.Runtime.Types {
         }
 
         #region ICallableWithCodeContext Members
-        [OperatorMethod]
+        [SpecialName]
         public object Call(CodeContext context, params object[] args) {
             OldInstance inst = new OldInstance(this);
             object value;
@@ -534,7 +536,7 @@ namespace IronPython.Runtime.Types {
             }
 
             // TODO: If we know __init__ wasn't present we could construct the OldInstance directly.
-            rule.SetTest(rule.MakeTypeTest(TypeCache.OldClass, 0));
+            rule.SetTest(rule.MakeTypeTest(typeof(OldClass), 0));
             rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Call(
                     Ast.Cast(
@@ -923,7 +925,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable Members
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public string ToCodeString(CodeContext context) {
             object ret;
 
@@ -941,7 +943,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        [OperatorMethod, PythonName("__divmod__")]
+        [SpecialName, PythonName("__divmod__")]
         public object DivMod(CodeContext context, object divmod) {
             object value;
 
@@ -952,7 +954,7 @@ namespace IronPython.Runtime.Types {
 
             return PythonOps.NotImplemented;
         }
-        [OperatorMethod, PythonName("__rdivmod__")]
+        [SpecialName, PythonName("__rdivmod__")]
         public object ReverseDivMod(CodeContext context, object divmod) {
             object value;
 
@@ -964,7 +966,7 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        [OperatorMethod, PythonName("__coerce__")]
+        [SpecialName, PythonName("__coerce__")]
         public object Coerce(CodeContext context, object other) {
             object value;
 
@@ -975,7 +977,7 @@ namespace IronPython.Runtime.Types {
             return PythonOps.NotImplemented;
         }
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public object GetLength(CodeContext context) {
             object value;
 
@@ -986,7 +988,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.Length);
         }
 
-        [OperatorMethod, PythonName("__pos__")]
+        [SpecialName, PythonName("__pos__")]
         public object Positive(CodeContext context) {
             object value;
 
@@ -997,7 +999,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.Positive);
         }
 
-        [OperatorMethod, PythonName("__getitem__")]
+        [SpecialName, PythonName("__getitem__")]
         public object GetItem(CodeContext context, object item) {
             Slice slice = item as Slice;
             if (slice != null && slice.Step == null) {
@@ -1012,7 +1014,7 @@ namespace IronPython.Runtime.Types {
             return PythonOps.InvokeWithContext(context, this, Symbols.GetItem, item);
         }
 
-        [OperatorMethod, PythonName("__setitem__")]
+        [SpecialName, PythonName("__setitem__")]
         public void SetItem(CodeContext context, object item, object value) {
             Slice slice = item as Slice;
             if (slice != null && slice.Step == null) {
@@ -1028,7 +1030,7 @@ namespace IronPython.Runtime.Types {
             PythonOps.InvokeWithContext(context, this, Symbols.SetItem, item, value);
         }
 
-        [OperatorMethod, PythonName("__delitem__")]
+        [SpecialName, PythonName("__delitem__")]
         public object DeleteItem(CodeContext context, object item) {
             object value;
 
@@ -1039,7 +1041,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.DelItem);
         }
 
-        [OperatorMethod, PythonName("__neg__")]
+        [SpecialName, PythonName("__neg__")]
         public object Negate(CodeContext context) {
             object value;
 
@@ -1051,7 +1053,7 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        [OperatorMethod, PythonName("__abs__")]
+        [SpecialName, PythonName("__abs__")]
         public object Absolute(CodeContext context) {
             object value;
 
@@ -1062,7 +1064,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.AbsoluteValue);
         }
 
-        [OperatorMethod, PythonName("__invert__")]
+        [SpecialName, PythonName("__invert__")]
         public object Invert(CodeContext context) {
             object value;
 
@@ -1073,7 +1075,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.OperatorOnesComplement);
         }
 
-        [OperatorMethod, PythonName("__contains__")]
+        [SpecialName, PythonName("__contains__")]
         public object Contains(CodeContext context, object index) {
             object value;
 
@@ -1089,7 +1091,7 @@ namespace IronPython.Runtime.Types {
             return RuntimeHelpers.False;
         }
 
-        [OperatorMethod, PythonName("__pow__")]
+        [SpecialName, PythonName("__pow__")]
         public object Power(CodeContext context, object exp, object mod) {
             object value;
             if (TryGetBoundCustomMember(context, Symbols.OperatorPower, out value)) {
@@ -1099,12 +1101,12 @@ namespace IronPython.Runtime.Types {
             return PythonOps.NotImplemented;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public object Call(CodeContext context) {
             return Call(context, RuntimeHelpers.EmptyObjectArray);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public object Call(CodeContext context, object args) {
             object value;
 
@@ -1122,7 +1124,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public object Call(CodeContext context, params object[] args) {
             object value;
 
@@ -1133,18 +1135,18 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public object Call(CodeContext context, [ParamDictionary]IAttributesCollection dict, params object[] args) {
             object value;
 
             if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
-                return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, value, args, Utils.Array.EmptyStrings, null, dict);
+                return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, value, args, ArrayUtils.EmptyStrings, null, dict);
             }
 
             throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);
         }
 
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public object IsNonZero(CodeContext context) {
             object value;
 
@@ -1164,7 +1166,7 @@ namespace IronPython.Runtime.Types {
             return RuntimeHelpers.True;
         }
 
-        [OperatorMethod, PythonName("__hex__")]
+        [SpecialName, PythonName("__hex__")]
         public object ConvertToHex(CodeContext context) {
             object value;
             if (TryGetBoundCustomMember(context, Symbols.ConvertToHex, out value)) {
@@ -1174,7 +1176,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.ConvertToHex);
         }
 
-        [OperatorMethod, PythonName("__oct__")]
+        [SpecialName, PythonName("__oct__")]
         public object ConvertToOctal(CodeContext context) {
             object value;
             if (TryGetBoundCustomMember(context, Symbols.ConvertToOctal, out value)) {
@@ -1184,7 +1186,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.ConvertToOctal);
         }
 
-        [OperatorMethod, PythonName("__int__")]
+        [SpecialName, PythonName("__int__")]
         public object ConvertToInt(CodeContext context) {
             object value;
 
@@ -1195,7 +1197,7 @@ namespace IronPython.Runtime.Types {
             return PythonOps.NotImplemented;
         }
 
-        [OperatorMethod, PythonName("__long__")]
+        [SpecialName, PythonName("__long__")]
         public object ConvertToLong(CodeContext context) {
             object value;
 
@@ -1206,7 +1208,7 @@ namespace IronPython.Runtime.Types {
             return PythonOps.NotImplemented;
         }
 
-        [OperatorMethod, PythonName("__float__")]
+        [SpecialName, PythonName("__float__")]
         public object ConvertToFloat(CodeContext context) {
             object value;
 
@@ -1217,7 +1219,7 @@ namespace IronPython.Runtime.Types {
             return PythonOps.NotImplemented;
         }
 
-        [OperatorMethod, PythonName("__complex__")]
+        [SpecialName, PythonName("__complex__")]
         public object ConvertToComplex(CodeContext context) {
             object value;
 
@@ -1361,7 +1363,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        [OperatorMethod, PythonName("__cmp__")]
+        [SpecialName, PythonName("__cmp__")]
         [return: MaybeNotImplemented]
         public object CompareTo(CodeContext context, object other) {
             OldInstance oiOther = other as OldInstance;
@@ -1493,7 +1495,7 @@ namespace IronPython.Runtime.Types {
         #region Rich Equality
         // Specific rich equality support for when the user calls directly from oldinstance type.
 
-        [OperatorMethod, PythonName("__hash__")]
+        [SpecialName, PythonName("__hash__")]
         public object RichGetHashCode() {
             object func;
             if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.Hash, out func)) {
@@ -1513,7 +1515,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__eq__")]
+        [SpecialName, PythonName("__eq__")]
         public object RichEquals(object other) {
             object func;
             if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorEqual, out func)) {
@@ -1541,7 +1543,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__ne__")]
+        [SpecialName, PythonName("__ne__")]
         public object RichNotEquals(object other) {
             object func;
             if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorNotEqual, out func)) {

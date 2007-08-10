@@ -16,6 +16,7 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -37,7 +38,7 @@ namespace Microsoft.Scripting.Actions {
 
         public InvokeMemberAction(SymbolId memberName, InvokeMemberActionFlags flags, ArgumentInfo[] argumentKinds)
             : base(memberName) {
-            Utils.Assert.NotNull(argumentKinds);
+            Assert.NotNull(argumentKinds);
 
             _flags = flags;
             _argumentInfos = argumentKinds;

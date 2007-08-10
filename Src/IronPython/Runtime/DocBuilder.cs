@@ -28,6 +28,7 @@ using IronPython.Runtime.Operations;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
     static class DocBuilder {
@@ -303,7 +304,7 @@ namespace IronPython.Runtime {
             // Append XML Doc Info if available
             if (summary != null) {
                 retType.AppendLine(); retType.AppendLine();
-                retType.AppendLine(Utils.String.SplitWords(summary, true, lineWidth));
+                retType.AppendLine(StringUtils.SplitWords(summary, true, lineWidth));
             }
 
             if (parameters != null && parameters.Count > 0) {
@@ -314,7 +315,7 @@ namespace IronPython.Runtime {
                             retType.Append("    ");
                             retType.Append(parameters[i].Key);
                             retType.Append(": ");
-                            retType.AppendLine(Utils.String.SplitWords(parameters[i].Value, false, lineWidth));
+                            retType.AppendLine(StringUtils.SplitWords(parameters[i].Value, false, lineWidth));
                             break;
                         }
                     }
@@ -324,7 +325,7 @@ namespace IronPython.Runtime {
             if (returns != null) {
                 retType.AppendLine();
                 retType.Append("    Returns: ");
-                retType.AppendLine(Utils.String.SplitWords(returns, false, lineWidth));
+                retType.AppendLine(StringUtils.SplitWords(returns, false, lineWidth));
             }
 
             return retType.ToString();
@@ -423,7 +424,7 @@ namespace IronPython.Runtime {
             }
 
             if (curType.IsGenericParameter) {
-                res.Append(Utils.Reflection.GenericArityDelimiter);
+                res.Append(ReflectionUtils.GenericArityDelimiter);
                 res.Append(curType.GenericParameterPosition);
             } else if (curType.ContainsGenericParameters) {
                 res.Append(curType.Namespace);
@@ -435,7 +436,7 @@ namespace IronPython.Runtime {
                     if (j != 0) res.Append(',');
 
                     if (types[j].IsGenericParameter) {
-                        res.Append(Utils.Reflection.GenericArityDelimiter);
+                        res.Append(ReflectionUtils.GenericArityDelimiter);
                         res.Append(types[j].GenericParameterPosition);
                     } else {
                         AppendTypeFormat(types[j], res);
@@ -653,7 +654,7 @@ namespace IronPython.Runtime {
                             switch (xr.Name) {
                                 case "see":
                                     if (xr.MoveToFirstAttribute() && xr.ReadAttributeValue()) {
-                                        int arity = xr.Value.IndexOf(Utils.Reflection.GenericArityDelimiter);
+                                        int arity = xr.Value.IndexOf(ReflectionUtils.GenericArityDelimiter);
                                         if (arity != -1)
                                             text.Append(xr.Value, 2, arity - 2);
                                         else

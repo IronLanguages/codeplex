@@ -25,6 +25,7 @@ using System.Security.Permissions;
 
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     public class TypeGen {
@@ -57,7 +58,7 @@ namespace Microsoft.Scripting.Generation {
             get {
                 if (_initializer == null) {
                     _initializer = _myType.DefineTypeInitializer();
-                    _initGen = CreateCodeGen(_initializer, _initializer.GetILGenerator(), Utils.Reflection.EmptyTypes);
+                    _initGen = CreateCodeGen(_initializer, _initializer.GetILGenerator(), ReflectionUtils.EmptyTypes);
                 }
                 return _initGen;
             }
@@ -118,7 +119,7 @@ namespace Microsoft.Scripting.Generation {
             FieldBuilder contextField = _myType.DefineField(CodeContext.ContextFieldName,
                     typeof(CodeContext),
                     FieldAttributes.Public | FieldAttributes.Static);
-            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(Utils.Reflection.EmptyTypes), Runtime.Operations.RuntimeHelpers.EmptyObjectArray));
+            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(Reflection.EmptyTypes), Runtime.Operations.RuntimeHelpers.EmptyObjectArray));
             _contextSlot = new StaticFieldSlot(contextField);
         }
 
@@ -142,7 +143,7 @@ namespace Microsoft.Scripting.Generation {
             MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
             attrs |= MethodAttributes.NewSlot | MethodAttributes.Final;
 
-            Type[] baseSignature = Utils.Reflection.GetParameterTypes(baseMethod.GetParameters());
+            Type[] baseSignature = ReflectionUtils.GetParameterTypes(baseMethod.GetParameters());
             MethodBuilder mb = _myType.DefineMethod(
                 baseMethod.DeclaringType.Name + "." + baseMethod.Name,
                 attrs,
@@ -154,7 +155,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public PropertyBuilder DefineProperty(string name, PropertyAttributes attrs, Type returnType) {
-            return _myType.DefineProperty(name, attrs, returnType, Utils.Reflection.EmptyTypes);
+            return _myType.DefineProperty(name, attrs, returnType, ReflectionUtils.EmptyTypes);
         }
 
         private const MethodAttributes MethodAttributesToEraseInOveride =
@@ -164,7 +165,7 @@ namespace Microsoft.Scripting.Generation {
             if (baseMethod == null) throw new ArgumentNullException("baseMethod");
 
             MethodAttributes finalAttrs = (baseMethod.Attributes & ~MethodAttributesToEraseInOveride) | extraAttrs;
-            Type[] baseSignature = Utils.Reflection.GetParameterTypes(baseMethod.GetParameters());
+            Type[] baseSignature = ReflectionUtils.GetParameterTypes(baseMethod.GetParameters());
             MethodBuilder mb = _myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType, baseSignature);
             CodeGen ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
             ret.MethodToOverride = baseMethod;
@@ -229,7 +230,7 @@ namespace Microsoft.Scripting.Generation {
 
         public CodeGen DefineStaticConstructor() {
             ConstructorBuilder cb = _myType.DefineTypeInitializer();
-            return CreateCodeGen(cb, cb.GetILGenerator(), Utils.Reflection.EmptyTypes);
+            return CreateCodeGen(cb, cb.GetILGenerator(), ReflectionUtils.EmptyTypes);
         }
 
         public void SetCustomAttribute(Type type, object[] values) {

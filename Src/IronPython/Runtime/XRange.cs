@@ -17,6 +17,7 @@ using System;
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
 
@@ -51,7 +52,7 @@ namespace IronPython.Runtime {
         }
 
         #region ISequence Members
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int GetLength() {
             return _length;
         }

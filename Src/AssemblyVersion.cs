@@ -16,7 +16,9 @@
 using System;
 using System.Reflection;
 
+#if !SILVERLIGHT
 [assembly: AssemblyVersion("2.0.0.300")]
+#endif
 
 namespace IronPython {
     static class VersionInfo {

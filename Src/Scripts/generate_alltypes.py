@@ -102,20 +102,20 @@ for type in SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Do
 bigint = types[-1]
 
 identity_method = """\
-[OperatorMethod]
+[SpecialName]
 public static %(type)s %(method_name)s(%(type)s x) {
     return x;
 }"""
 
 simple_method = """\
-[OperatorMethod]
+[SpecialName]
 public static %(type)s %(method_name)s(%(type)s x) {
     return (%(type)s)(%(symbol)s(x));
 }"""
     
 
 signed_abs = """\
-[OperatorMethod]
+[SpecialName]
 public static object Abs(%(type)s x) {
     if (x < 0) {
         if (x == %(type)s.MinValue) return -(%(bigger_signed)s)%(type)s.MinValue;
@@ -126,14 +126,14 @@ public static object Abs(%(type)s x) {
 }"""
 
 signed_negate = """\
-[OperatorMethod]
+[SpecialName]
 public static object Negate(%(type)s x) {
     if (x == %(type)s.MinValue) return -(%(bigger_signed)s)%(type)s.MinValue;
     else return (%(type)s)(-x);
 }"""
 
 unsigned_negate_or_invert = """\
-[OperatorMethod]
+[SpecialName]
 public static object %(method_name)s(%(type)s x) {
     return %(bigger_signed)sOps.%(method_name)s((%(bigger_signed)s)x);
 }"""
@@ -155,14 +155,14 @@ def gen_unaryops(cw, ty):
         cw.write(unsigned_negate_or_invert, method_name="OnesComplement")
     
     if (ty.type is not complex) and (ty.type is not bigint):
-        cw.writeline('[OperatorMethod, PythonName("__nonzero__")]')
+        cw.writeline('[SpecialName, PythonName("__nonzero__")]')
         cw.enter_block('public static bool NonZero(%s x)' % (ty.name))
         cw.writeline('return (x != 0);')
         cw.exit_block()
     
     
 binop_decl = """\
-[OperatorMethod]
+[SpecialName]
 public static %(return_type)s %(method_name)s(%(rtype)s x, %(ltype)s y)"""
 
 simple_body = "return x %(symbol)s y;"

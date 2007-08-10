@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using Ops = IronPython.Runtime.Operations.PythonOps;
 using IronPython.Runtime.Types;
@@ -27,7 +28,7 @@ using Microsoft.Scripting;
 namespace IronPython.Runtime.Operations {
     public static class EnumOps {
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(object self, object other) {
             if (self is Enum) {
                 if (other is Enum) {
@@ -60,12 +61,12 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("Equal cannot be applied to {0} and {1}", self.GetType(), other.GetType());
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(object self, object other) {
             return !Equal(self, other);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object BitwiseOr(object self, object other) {
             if (self is Enum && other is Enum) {
                 Type selfType = self.GetType();
@@ -96,7 +97,7 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("bitwise or cannot be applied to {0} and {1}", self.GetType(), other.GetType());
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object BitwiseAnd(object self, object other) {
             if (self is Enum && other is Enum) {
                 Type selfType = self.GetType();
@@ -127,7 +128,7 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("bitwise and cannot be applied to {0} and {1}", self.GetType(), other.GetType());
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object ExclusiveOr(object self, object other) {
             if (self is Enum && other is Enum) {
                 Type selfType = self.GetType();
@@ -158,7 +159,7 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("bitwise xor cannot be applied to {0} and {1}", self.GetType(), other.GetType());
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object OnesComplement(object self) {
             if (self is Enum) {
                 Type selfType = self.GetType();

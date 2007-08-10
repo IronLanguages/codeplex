@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.Remoting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     public interface IRemotable {
@@ -68,7 +69,7 @@ namespace Microsoft.Scripting.Hosting {
 
             RemoteWrapper remote_wrapper = remotable as RemoteWrapper;
             if (remote_wrapper == null) return (T)remotable;
-            if (!Utils.IsRemote(remote_wrapper)) return (T)remote_wrapper.LocalObject;
+            if (!Utilities.IsRemote(remote_wrapper)) return (T)remote_wrapper.LocalObject;
 
             return null;
         }

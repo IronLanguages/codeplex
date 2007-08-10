@@ -40,30 +40,29 @@ for s in dir(et):
 def test_trivial():
     Assert(IronPython.Hosting.PythonEngine.Version != "")
 
-def test_fasteval():
+def test_interpreted():
     global pe
 
-    # pe.Options.FastEvaluation is tested at compile time:
+    # pe.Options.InterpretedMode is tested at compile time:
     # it will take effect not immediately, but in modules we import
-    save = pe.Options.FastEvaluation
-    pe.Options.FastEvaluation = True
+    save = pe.Options.InterpretedMode
+    pe.Options.InterpretedMode = True
     modules = sys.modules.copy()
     try:
-        # For now, just import modules that work in FastEval mode.
-        # This is an interim test method until we can properly run all the tests using -X:FastEval.
+        # Just try some important tests.
+        # The full test suite should pass using -X:Interpret; this is just a lightweight check for "run 0".
 
-        # The following tests still fail
-        #import test_generator # fails until FastEval generators support wrapper methods
-        #import test_methoddispatch # fails b/c of mutating method calls on StrongBox instances
-        #import test_ipye # fails b/c our tracebacks are wrong
-        
         import test_delegate
         import test_function
         import test_closure
         import test_namebinding
+        import test_generator
+        import test_tcf
+        import test_methoddispatch
         import test_operator
         import test_exec
         import test_list
+        import test_cliclass
         import test_exceptions
         # These two pass, but take forever to run
         #import test_numtypes
@@ -80,15 +79,30 @@ def test_fasteval():
         import test_tuple
         import test_class
         if not is_silverlight:
-            #Fails on Silverlight because of an introspected call to System.Type.IsAssignableFrom
-            import test_cliclass
             #This particular test corrupts the run - CodePlex Work Item 11830
             import test_syntax
     finally:
-        pe.Options.FastEvaluation = save
+        pe.Options.InterpretedMode = save
         # "Un-import" these modules so that they get re-imported in emit mode
         sys.modules = modules
-        
+
+def test_deferred_compilation():
+    global pe
+    
+    save1 = pe.Options.InterpretedMode
+    save2 = pe.Options.ProfileDrivenCompilation
+    modules = sys.modules.copy()
+    pe.Options.ProfileDrivenCompilation = True # this will enable interpreted mode
+    Assert(pe.Options.InterpretedMode)
+    try:
+        # Just import some modules to make sure we can switch to compilation without blowing up
+        import test_namebinding
+        import test_function
+        import test_tcf
+    finally:
+        pe.Options.InterpretedMode = save1
+        pe.Options.ProfileDrivenCompilation = save2
+        sys.modules = modules
 
 def skip_test_CreateMethod():
     """Test cases specific to PythonEngine.CreateMethod<DelegateType>"""

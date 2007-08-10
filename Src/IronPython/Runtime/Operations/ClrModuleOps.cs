@@ -15,14 +15,17 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Reflection;
+using System.Collections;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
-using System.Reflection;
-using System.Collections;
 
 [assembly: PythonExtensionType(typeof(ClrModule), typeof(ClrModuleOps))]
 [assembly: PythonExtensionType(typeof(ClrModule.ReferencesList), typeof(ClrReferencesListOps))]
@@ -131,7 +134,7 @@ namespace IronPython.Runtime.Operations {
                 ValidateArgs(args);
 
                 if (_inst != null) {
-                    return PythonOps.CallWithContext(context, _func, Utils.Array.Insert(_inst, args));
+                    return PythonOps.CallWithContext(context, _func, ArrayUtils.Insert(_inst, args));
                 } else {
                     return PythonOps.CallWithContext(context, _func, args);
                 }
@@ -198,7 +201,7 @@ namespace IronPython.Runtime.Operations {
             public object Call(CodeContext context, params object[] args) {
                 object ret;
                 if (_inst != null) {
-                    ret = PythonOps.CallWithContext(context, _func, Utils.Array.Insert(_inst, args));
+                    ret = PythonOps.CallWithContext(context, _func, ArrayUtils.Insert(_inst, args));
                 } else {
                     ret = PythonOps.CallWithContext(context, _func, args);
                 }
@@ -230,7 +233,7 @@ namespace IronPython.Runtime.Operations {
     }
 
     public static class ClrReferencesListOps {
-        [OperatorMethod]
+        [SpecialName]
         public static ClrModule.ReferencesList Add(ClrModule.ReferencesList self, object other) {
             IEnumerator ie = PythonOps.GetEnumerator(other);
             while (ie.MoveNext()) {
@@ -242,12 +245,12 @@ namespace IronPython.Runtime.Operations {
             return self;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static string ToString(ClrModule.ReferencesList self) {
             return ToCodeRepresentation(self);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static string ToCodeRepresentation(ClrModule.ReferencesList self) {
             StringBuilder res = new StringBuilder("(");
             string comma = "";

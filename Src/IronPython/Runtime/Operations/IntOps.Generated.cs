@@ -17,9 +17,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
@@ -88,16 +90,16 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("invalid value for SByte.__new__");
         }
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static SByte Plus(SByte x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Negate(SByte x) {
             if (x == SByte.MinValue) return -(Int16)SByte.MinValue;
             else return (SByte)(-x);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Abs(SByte x) {
             if (x < 0) {
                 if (x == SByte.MinValue) return -(Int16)SByte.MinValue;
@@ -106,17 +108,17 @@ namespace IronPython.Runtime.Operations {
                 return x;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static SByte OnesComplement(SByte x) {
             return (SByte)(~(x));
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(SByte x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(SByte x, SByte y) {
             Int16 result = (Int16)(((Int16)x) + ((Int16)y));
             if (SByte.MinValue <= result && result <= SByte.MaxValue) {
@@ -125,7 +127,7 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(SByte x, SByte y) {
             Int16 result = (Int16)(((Int16)x) - ((Int16)y));
             if (SByte.MinValue <= result && result <= SByte.MaxValue) {
@@ -134,7 +136,7 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(SByte x, SByte y) {
             Int16 result = (Int16)(((Int16)x) * ((Int16)y));
             if (SByte.MinValue <= result && result <= SByte.MaxValue) {
@@ -143,16 +145,16 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(SByte x, SByte y) {
             return FloorDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(SByte x, SByte y) {
             return DoubleOps.TrueDivide((double)x, (double)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(SByte x, SByte y) {
             if (y == -1 && x == SByte.MinValue) {
                 return -(Int16)SByte.MinValue;
@@ -160,67 +162,67 @@ namespace IronPython.Runtime.Operations {
                 return (SByte)Int32Ops.FloorDivideImpl((Int32)x, (Int32)y);
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static SByte Mod(SByte x, SByte y) {
             return (SByte)Int32Ops.Mod((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(SByte x, SByte y) {
             return Int32Ops.Power((Int32)x, (Int32)y);
         }
 
         // Binary Operations - Bitwise
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(SByte x, [NotNull]BigInteger y) {
             return BigIntegerOps.LeftShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static SByte RightShift(SByte x, [NotNull]BigInteger y) {
             return (SByte)BigIntegerOps.RightShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(SByte x, Int32 y) {
             return Int32Ops.LeftShift((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static SByte RightShift(SByte x, Int32 y) {
             return (SByte)Int32Ops.RightShift((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static SByte BitwiseAnd(SByte x, SByte y) {
             return (SByte)(x & y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static SByte BitwiseOr(SByte x, SByte y) {
             return (SByte)(x | y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static SByte ExclusiveOr(SByte x, SByte y) {
             return (SByte)(x ^ y);
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(SByte x, SByte y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(SByte x, SByte y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(SByte x, SByte y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(SByte x, SByte y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(SByte x, SByte y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(SByte x, SByte y) {
             return x != y;
         }
@@ -302,29 +304,29 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("invalid value for Byte.__new__");
         }
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static Byte Plus(Byte x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Negate(Byte x) {
             return Int16Ops.Negate((Int16)x);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Byte Abs(Byte x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object OnesComplement(Byte x) {
             return Int16Ops.OnesComplement((Int16)x);
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(Byte x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(Byte x, Byte y) {
             Int16 result = (Int16)(((Int16)x) + ((Int16)y));
             if (Byte.MinValue <= result && result <= Byte.MaxValue) {
@@ -333,15 +335,15 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(Byte x, SByte y) {
             return Int16Ops.Add((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(SByte x, Byte y) {
             return Int16Ops.Add((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(Byte x, Byte y) {
             Int16 result = (Int16)(((Int16)x) - ((Int16)y));
             if (Byte.MinValue <= result && result <= Byte.MaxValue) {
@@ -350,15 +352,15 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(Byte x, SByte y) {
             return Int16Ops.Subtract((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(SByte x, Byte y) {
             return Int16Ops.Subtract((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(Byte x, Byte y) {
             Int16 result = (Int16)(((Int16)x) * ((Int16)y));
             if (Byte.MinValue <= result && result <= Byte.MaxValue) {
@@ -367,200 +369,200 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(Byte x, SByte y) {
             return Int16Ops.Multiply((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(SByte x, Byte y) {
             return Int16Ops.Multiply((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(Byte x, Byte y) {
             return FloorDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(Byte x, SByte y) {
             return Int16Ops.Divide((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(SByte x, Byte y) {
             return Int16Ops.Divide((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(Byte x, Byte y) {
             return DoubleOps.TrueDivide((double)x, (double)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(Byte x, SByte y) {
             return Int16Ops.TrueDivide((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(SByte x, Byte y) {
             return Int16Ops.TrueDivide((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Byte FloorDivide(Byte x, Byte y) {
             return (Byte)(x / y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(Byte x, SByte y) {
             return Int16Ops.FloorDivide((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(SByte x, Byte y) {
             return Int16Ops.FloorDivide((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Byte Mod(Byte x, Byte y) {
             return (Byte)(x % y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 Mod(Byte x, SByte y) {
             return Int16Ops.Mod((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 Mod(SByte x, Byte y) {
             return Int16Ops.Mod((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(Byte x, Byte y) {
             return Int32Ops.Power((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(Byte x, SByte y) {
             return Int16Ops.Power((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(SByte x, Byte y) {
             return Int16Ops.Power((Int16)x, (Int16)y);
         }
 
         // Binary Operations - Bitwise
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(Byte x, [NotNull]BigInteger y) {
             return BigIntegerOps.LeftShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Byte RightShift(Byte x, [NotNull]BigInteger y) {
             return (Byte)BigIntegerOps.RightShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(Byte x, Int32 y) {
             return Int32Ops.LeftShift((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Byte RightShift(Byte x, Int32 y) {
             return (Byte)Int32Ops.RightShift((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Byte BitwiseAnd(Byte x, Byte y) {
             return (Byte)(x & y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 BitwiseAnd(Byte x, SByte y) {
             return Int16Ops.BitwiseAnd((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 BitwiseAnd(SByte x, Byte y) {
             return Int16Ops.BitwiseAnd((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Byte BitwiseOr(Byte x, Byte y) {
             return (Byte)(x | y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 BitwiseOr(Byte x, SByte y) {
             return Int16Ops.BitwiseOr((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 BitwiseOr(SByte x, Byte y) {
             return Int16Ops.BitwiseOr((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Byte ExclusiveOr(Byte x, Byte y) {
             return (Byte)(x ^ y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 ExclusiveOr(Byte x, SByte y) {
             return Int16Ops.ExclusiveOr((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 ExclusiveOr(SByte x, Byte y) {
             return Int16Ops.ExclusiveOr((Int16)x, (Int16)y);
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Byte x, Byte y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Byte x, SByte y) {
             return Int16Ops.LessThan((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(SByte x, Byte y) {
             return Int16Ops.LessThan((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Byte x, Byte y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Byte x, SByte y) {
             return Int16Ops.LessThanOrEqual((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(SByte x, Byte y) {
             return Int16Ops.LessThanOrEqual((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Byte x, Byte y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Byte x, SByte y) {
             return Int16Ops.GreaterThan((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(SByte x, Byte y) {
             return Int16Ops.GreaterThan((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Byte x, Byte y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Byte x, SByte y) {
             return Int16Ops.GreaterThanOrEqual((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(SByte x, Byte y) {
             return Int16Ops.GreaterThanOrEqual((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Byte x, Byte y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Byte x, SByte y) {
             return Int16Ops.Equal((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(SByte x, Byte y) {
             return Int16Ops.Equal((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Byte x, Byte y) {
             return x != y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Byte x, SByte y) {
             return Int16Ops.NotEqual((Int16)x, (Int16)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(SByte x, Byte y) {
             return Int16Ops.NotEqual((Int16)x, (Int16)y);
         }
@@ -642,16 +644,16 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("invalid value for Int16.__new__");
         }
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 Plus(Int16 x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Negate(Int16 x) {
             if (x == Int16.MinValue) return -(Int32)Int16.MinValue;
             else return (Int16)(-x);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Abs(Int16 x) {
             if (x < 0) {
                 if (x == Int16.MinValue) return -(Int32)Int16.MinValue;
@@ -660,17 +662,17 @@ namespace IronPython.Runtime.Operations {
                 return x;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 OnesComplement(Int16 x) {
             return (Int16)(~(x));
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(Int16 x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(Int16 x, Int16 y) {
             Int32 result = (Int32)(((Int32)x) + ((Int32)y));
             if (Int16.MinValue <= result && result <= Int16.MaxValue) {
@@ -679,7 +681,7 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(Int16 x, Int16 y) {
             Int32 result = (Int32)(((Int32)x) - ((Int32)y));
             if (Int16.MinValue <= result && result <= Int16.MaxValue) {
@@ -688,7 +690,7 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(Int16 x, Int16 y) {
             Int32 result = (Int32)(((Int32)x) * ((Int32)y));
             if (Int16.MinValue <= result && result <= Int16.MaxValue) {
@@ -697,16 +699,16 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(Int16 x, Int16 y) {
             return FloorDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(Int16 x, Int16 y) {
             return DoubleOps.TrueDivide((double)x, (double)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(Int16 x, Int16 y) {
             if (y == -1 && x == Int16.MinValue) {
                 return -(Int32)Int16.MinValue;
@@ -714,67 +716,67 @@ namespace IronPython.Runtime.Operations {
                 return (Int16)Int32Ops.FloorDivideImpl((Int32)x, (Int32)y);
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 Mod(Int16 x, Int16 y) {
             return (Int16)Int32Ops.Mod((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(Int16 x, Int16 y) {
             return Int32Ops.Power((Int32)x, (Int32)y);
         }
 
         // Binary Operations - Bitwise
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(Int16 x, [NotNull]BigInteger y) {
             return BigIntegerOps.LeftShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 RightShift(Int16 x, [NotNull]BigInteger y) {
             return (Int16)BigIntegerOps.RightShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(Int16 x, Int32 y) {
             return Int32Ops.LeftShift((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 RightShift(Int16 x, Int32 y) {
             return (Int16)Int32Ops.RightShift((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 BitwiseAnd(Int16 x, Int16 y) {
             return (Int16)(x & y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 BitwiseOr(Int16 x, Int16 y) {
             return (Int16)(x | y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int16 ExclusiveOr(Int16 x, Int16 y) {
             return (Int16)(x ^ y);
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Int16 x, Int16 y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Int16 x, Int16 y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Int16 x, Int16 y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Int16 x, Int16 y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Int16 x, Int16 y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Int16 x, Int16 y) {
             return x != y;
         }
@@ -856,29 +858,29 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("invalid value for UInt16.__new__");
         }
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static UInt16 Plus(UInt16 x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Negate(UInt16 x) {
             return Int32Ops.Negate((Int32)x);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt16 Abs(UInt16 x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object OnesComplement(UInt16 x) {
             return Int32Ops.OnesComplement((Int32)x);
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(UInt16 x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(UInt16 x, UInt16 y) {
             Int32 result = (Int32)(((Int32)x) + ((Int32)y));
             if (UInt16.MinValue <= result && result <= UInt16.MaxValue) {
@@ -887,15 +889,15 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(UInt16 x, Int16 y) {
             return Int32Ops.Add((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(Int16 x, UInt16 y) {
             return Int32Ops.Add((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(UInt16 x, UInt16 y) {
             Int32 result = (Int32)(((Int32)x) - ((Int32)y));
             if (UInt16.MinValue <= result && result <= UInt16.MaxValue) {
@@ -904,15 +906,15 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(UInt16 x, Int16 y) {
             return Int32Ops.Subtract((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(Int16 x, UInt16 y) {
             return Int32Ops.Subtract((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(UInt16 x, UInt16 y) {
             Int32 result = (Int32)(((Int32)x) * ((Int32)y));
             if (UInt16.MinValue <= result && result <= UInt16.MaxValue) {
@@ -921,200 +923,200 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(UInt16 x, Int16 y) {
             return Int32Ops.Multiply((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(Int16 x, UInt16 y) {
             return Int32Ops.Multiply((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(UInt16 x, UInt16 y) {
             return FloorDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(UInt16 x, Int16 y) {
             return Int32Ops.Divide((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(Int16 x, UInt16 y) {
             return Int32Ops.Divide((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(UInt16 x, UInt16 y) {
             return DoubleOps.TrueDivide((double)x, (double)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(UInt16 x, Int16 y) {
             return Int32Ops.TrueDivide((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(Int16 x, UInt16 y) {
             return Int32Ops.TrueDivide((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt16 FloorDivide(UInt16 x, UInt16 y) {
             return (UInt16)(x / y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(UInt16 x, Int16 y) {
             return Int32Ops.FloorDivide((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(Int16 x, UInt16 y) {
             return Int32Ops.FloorDivide((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt16 Mod(UInt16 x, UInt16 y) {
             return (UInt16)(x % y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 Mod(UInt16 x, Int16 y) {
             return Int32Ops.Mod((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 Mod(Int16 x, UInt16 y) {
             return Int32Ops.Mod((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(UInt16 x, UInt16 y) {
             return Int32Ops.Power((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(UInt16 x, Int16 y) {
             return Int32Ops.Power((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(Int16 x, UInt16 y) {
             return Int32Ops.Power((Int32)x, (Int32)y);
         }
 
         // Binary Operations - Bitwise
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(UInt16 x, [NotNull]BigInteger y) {
             return BigIntegerOps.LeftShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt16 RightShift(UInt16 x, [NotNull]BigInteger y) {
             return (UInt16)BigIntegerOps.RightShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(UInt16 x, Int32 y) {
             return Int32Ops.LeftShift((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt16 RightShift(UInt16 x, Int32 y) {
             return (UInt16)Int32Ops.RightShift((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt16 BitwiseAnd(UInt16 x, UInt16 y) {
             return (UInt16)(x & y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 BitwiseAnd(UInt16 x, Int16 y) {
             return Int32Ops.BitwiseAnd((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 BitwiseAnd(Int16 x, UInt16 y) {
             return Int32Ops.BitwiseAnd((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt16 BitwiseOr(UInt16 x, UInt16 y) {
             return (UInt16)(x | y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 BitwiseOr(UInt16 x, Int16 y) {
             return Int32Ops.BitwiseOr((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 BitwiseOr(Int16 x, UInt16 y) {
             return Int32Ops.BitwiseOr((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt16 ExclusiveOr(UInt16 x, UInt16 y) {
             return (UInt16)(x ^ y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 ExclusiveOr(UInt16 x, Int16 y) {
             return Int32Ops.ExclusiveOr((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 ExclusiveOr(Int16 x, UInt16 y) {
             return Int32Ops.ExclusiveOr((Int32)x, (Int32)y);
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(UInt16 x, UInt16 y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(UInt16 x, Int16 y) {
             return Int32Ops.LessThan((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Int16 x, UInt16 y) {
             return Int32Ops.LessThan((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(UInt16 x, UInt16 y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(UInt16 x, Int16 y) {
             return Int32Ops.LessThanOrEqual((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Int16 x, UInt16 y) {
             return Int32Ops.LessThanOrEqual((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(UInt16 x, UInt16 y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(UInt16 x, Int16 y) {
             return Int32Ops.GreaterThan((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Int16 x, UInt16 y) {
             return Int32Ops.GreaterThan((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(UInt16 x, UInt16 y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(UInt16 x, Int16 y) {
             return Int32Ops.GreaterThanOrEqual((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Int16 x, UInt16 y) {
             return Int32Ops.GreaterThanOrEqual((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(UInt16 x, UInt16 y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(UInt16 x, Int16 y) {
             return Int32Ops.Equal((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Int16 x, UInt16 y) {
             return Int32Ops.Equal((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(UInt16 x, UInt16 y) {
             return x != y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(UInt16 x, Int16 y) {
             return Int32Ops.NotEqual((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Int16 x, UInt16 y) {
             return Int32Ops.NotEqual((Int32)x, (Int32)y);
         }
@@ -1160,16 +1162,16 @@ namespace IronPython.Runtime.Operations {
 
     public static partial class Int32Ops {
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 Plus(Int32 x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Negate(Int32 x) {
             if (x == Int32.MinValue) return -(BigInteger)Int32.MinValue;
             else return (Int32)(-x);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Abs(Int32 x) {
             if (x < 0) {
                 if (x == Int32.MinValue) return -(BigInteger)Int32.MinValue;
@@ -1178,17 +1180,17 @@ namespace IronPython.Runtime.Operations {
                 return x;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 OnesComplement(Int32 x) {
             return (Int32)(~(x));
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(Int32 x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(Int32 x, Int32 y) {
             long result = (long) x + y;
             if (Int32.MinValue <= result && result <= Int32.MaxValue) {
@@ -1197,7 +1199,7 @@ namespace IronPython.Runtime.Operations {
             return BigIntegerOps.Add((BigInteger)x, (BigInteger)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(Int32 x, Int32 y) {
             long result = (long) x - y;
             if (Int32.MinValue <= result && result <= Int32.MaxValue) {
@@ -1206,7 +1208,7 @@ namespace IronPython.Runtime.Operations {
             return BigIntegerOps.Subtract((BigInteger)x, (BigInteger)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(Int32 x, Int32 y) {
             long result = (long) x * y;
             if (Int32.MinValue <= result && result <= Int32.MaxValue) {
@@ -1215,60 +1217,60 @@ namespace IronPython.Runtime.Operations {
             return BigIntegerOps.Multiply((BigInteger)x, (BigInteger)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(Int32 x, Int32 y) {
             return FloorDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(Int32 x, Int32 y) {
             return DoubleOps.TrueDivide((double)x, (double)y);
 
         }
 
         // Binary Operations - Bitwise
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(Int32 x, [NotNull]BigInteger y) {
             return BigIntegerOps.LeftShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 RightShift(Int32 x, [NotNull]BigInteger y) {
             return (Int32)BigIntegerOps.RightShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 BitwiseAnd(Int32 x, Int32 y) {
             return (Int32)(x & y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 BitwiseOr(Int32 x, Int32 y) {
             return (Int32)(x | y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int32 ExclusiveOr(Int32 x, Int32 y) {
             return (Int32)(x ^ y);
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Int32 x, Int32 y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Int32 x, Int32 y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Int32 x, Int32 y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Int32 x, Int32 y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Int32 x, Int32 y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Int32 x, Int32 y) {
             return x != y;
         }
@@ -1350,29 +1352,29 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("invalid value for UInt32.__new__");
         }
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static UInt32 Plus(UInt32 x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Negate(UInt32 x) {
             return Int64Ops.Negate((Int64)x);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt32 Abs(UInt32 x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object OnesComplement(UInt32 x) {
             return Int64Ops.OnesComplement((Int64)x);
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(UInt32 x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(UInt32 x, UInt32 y) {
             Int64 result = (Int64)(((Int64)x) + ((Int64)y));
             if (UInt32.MinValue <= result && result <= UInt32.MaxValue) {
@@ -1381,15 +1383,15 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(UInt32 x, Int32 y) {
             return Int64Ops.Add((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(Int32 x, UInt32 y) {
             return Int64Ops.Add((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(UInt32 x, UInt32 y) {
             Int64 result = (Int64)(((Int64)x) - ((Int64)y));
             if (UInt32.MinValue <= result && result <= UInt32.MaxValue) {
@@ -1398,15 +1400,15 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(UInt32 x, Int32 y) {
             return Int64Ops.Subtract((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(Int32 x, UInt32 y) {
             return Int64Ops.Subtract((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(UInt32 x, UInt32 y) {
             Int64 result = (Int64)(((Int64)x) * ((Int64)y));
             if (UInt32.MinValue <= result && result <= UInt32.MaxValue) {
@@ -1415,192 +1417,192 @@ namespace IronPython.Runtime.Operations {
                 return result;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(UInt32 x, Int32 y) {
             return Int64Ops.Multiply((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(Int32 x, UInt32 y) {
             return Int64Ops.Multiply((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(UInt32 x, UInt32 y) {
             return FloorDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(UInt32 x, Int32 y) {
             return Int64Ops.Divide((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(Int32 x, UInt32 y) {
             return Int64Ops.Divide((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(UInt32 x, UInt32 y) {
             return DoubleOps.TrueDivide((double)x, (double)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(UInt32 x, Int32 y) {
             return Int64Ops.TrueDivide((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(Int32 x, UInt32 y) {
             return Int64Ops.TrueDivide((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt32 FloorDivide(UInt32 x, UInt32 y) {
             return (UInt32)(x / y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(UInt32 x, Int32 y) {
             return Int64Ops.FloorDivide((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(Int32 x, UInt32 y) {
             return Int64Ops.FloorDivide((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt32 Mod(UInt32 x, UInt32 y) {
             return (UInt32)(x % y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 Mod(UInt32 x, Int32 y) {
             return Int64Ops.Mod((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 Mod(Int32 x, UInt32 y) {
             return Int64Ops.Mod((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(UInt32 x, UInt32 y) {
             return Int32Ops.Power((Int32)x, (Int32)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(UInt32 x, Int32 y) {
             return Int64Ops.Power((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(Int32 x, UInt32 y) {
             return Int64Ops.Power((Int64)x, (Int64)y);
         }
 
         // Binary Operations - Bitwise
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(UInt32 x, [NotNull]BigInteger y) {
             return BigIntegerOps.LeftShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt32 RightShift(UInt32 x, [NotNull]BigInteger y) {
             return (UInt32)BigIntegerOps.RightShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt32 BitwiseAnd(UInt32 x, UInt32 y) {
             return (UInt32)(x & y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 BitwiseAnd(UInt32 x, Int32 y) {
             return Int64Ops.BitwiseAnd((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 BitwiseAnd(Int32 x, UInt32 y) {
             return Int64Ops.BitwiseAnd((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt32 BitwiseOr(UInt32 x, UInt32 y) {
             return (UInt32)(x | y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 BitwiseOr(UInt32 x, Int32 y) {
             return Int64Ops.BitwiseOr((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 BitwiseOr(Int32 x, UInt32 y) {
             return Int64Ops.BitwiseOr((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt32 ExclusiveOr(UInt32 x, UInt32 y) {
             return (UInt32)(x ^ y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 ExclusiveOr(UInt32 x, Int32 y) {
             return Int64Ops.ExclusiveOr((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 ExclusiveOr(Int32 x, UInt32 y) {
             return Int64Ops.ExclusiveOr((Int64)x, (Int64)y);
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(UInt32 x, UInt32 y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(UInt32 x, Int32 y) {
             return Int64Ops.LessThan((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Int32 x, UInt32 y) {
             return Int64Ops.LessThan((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(UInt32 x, UInt32 y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(UInt32 x, Int32 y) {
             return Int64Ops.LessThanOrEqual((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Int32 x, UInt32 y) {
             return Int64Ops.LessThanOrEqual((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(UInt32 x, UInt32 y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(UInt32 x, Int32 y) {
             return Int64Ops.GreaterThan((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Int32 x, UInt32 y) {
             return Int64Ops.GreaterThan((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(UInt32 x, UInt32 y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(UInt32 x, Int32 y) {
             return Int64Ops.GreaterThanOrEqual((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Int32 x, UInt32 y) {
             return Int64Ops.GreaterThanOrEqual((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(UInt32 x, UInt32 y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(UInt32 x, Int32 y) {
             return Int64Ops.Equal((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Int32 x, UInt32 y) {
             return Int64Ops.Equal((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(UInt32 x, UInt32 y) {
             return x != y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(UInt32 x, Int32 y) {
             return Int64Ops.NotEqual((Int64)x, (Int64)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Int32 x, UInt32 y) {
             return Int64Ops.NotEqual((Int64)x, (Int64)y);
         }
@@ -1682,16 +1684,16 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("invalid value for Int64.__new__");
         }
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 Plus(Int64 x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Negate(Int64 x) {
             if (x == Int64.MinValue) return -(BigInteger)Int64.MinValue;
             else return (Int64)(-x);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Abs(Int64 x) {
             if (x < 0) {
                 if (x == Int64.MinValue) return -(BigInteger)Int64.MinValue;
@@ -1700,17 +1702,17 @@ namespace IronPython.Runtime.Operations {
                 return x;
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 OnesComplement(Int64 x) {
             return (Int64)(~(x));
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(Int64 x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(Int64 x, Int64 y) {
             try {
                 return (Int64)(checked(x + y));
@@ -1718,7 +1720,7 @@ namespace IronPython.Runtime.Operations {
                 return BigIntegerOps.Add((BigInteger)x, (BigInteger)y);
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(Int64 x, Int64 y) {
             try {
                 return (Int64)(checked(x - y));
@@ -1726,7 +1728,7 @@ namespace IronPython.Runtime.Operations {
                 return BigIntegerOps.Subtract((BigInteger)x, (BigInteger)y);
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(Int64 x, Int64 y) {
             try {
                 return (Int64)(checked(x * y));
@@ -1734,16 +1736,16 @@ namespace IronPython.Runtime.Operations {
                 return BigIntegerOps.Multiply((BigInteger)x, (BigInteger)y);
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(Int64 x, Int64 y) {
             return FloorDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(Int64 x, Int64 y) {
             return DoubleOps.TrueDivide((double)x, (double)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(Int64 x, Int64 y) {
             if (y == -1 && x == Int64.MinValue) {
                 return -(BigInteger)Int64.MinValue;
@@ -1751,59 +1753,59 @@ namespace IronPython.Runtime.Operations {
                 return (Int64)BigIntegerOps.FloorDivideImpl((BigInteger)x, (BigInteger)y);
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 Mod(Int64 x, Int64 y) {
             return (Int64)BigIntegerOps.Mod((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(Int64 x, Int64 y) {
             return BigIntegerOps.Power((BigInteger)x, (BigInteger)y);
         }
 
         // Binary Operations - Bitwise
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(Int64 x, [NotNull]BigInteger y) {
             return BigIntegerOps.LeftShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 RightShift(Int64 x, [NotNull]BigInteger y) {
             return (Int64)BigIntegerOps.RightShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 BitwiseAnd(Int64 x, Int64 y) {
             return (Int64)(x & y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 BitwiseOr(Int64 x, Int64 y) {
             return (Int64)(x | y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Int64 ExclusiveOr(Int64 x, Int64 y) {
             return (Int64)(x ^ y);
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Int64 x, Int64 y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Int64 x, Int64 y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Int64 x, Int64 y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Int64 x, Int64 y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Int64 x, Int64 y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Int64 x, Int64 y) {
             return x != y;
         }
@@ -1885,29 +1887,29 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("invalid value for UInt64.__new__");
         }
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static UInt64 Plus(UInt64 x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Negate(UInt64 x) {
             return BigIntegerOps.Negate((BigInteger)x);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt64 Abs(UInt64 x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object OnesComplement(UInt64 x) {
             return BigIntegerOps.OnesComplement((BigInteger)x);
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(UInt64 x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(UInt64 x, UInt64 y) {
             try {
                 return (UInt64)(checked(x + y));
@@ -1915,15 +1917,15 @@ namespace IronPython.Runtime.Operations {
                 return BigIntegerOps.Add((BigInteger)x, (BigInteger)y);
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(UInt64 x, Int64 y) {
             return BigIntegerOps.Add((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Add(Int64 x, UInt64 y) {
             return BigIntegerOps.Add((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(UInt64 x, UInt64 y) {
             try {
                 return (UInt64)(checked(x - y));
@@ -1931,15 +1933,15 @@ namespace IronPython.Runtime.Operations {
                 return BigIntegerOps.Subtract((BigInteger)x, (BigInteger)y);
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(UInt64 x, Int64 y) {
             return BigIntegerOps.Subtract((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Subtract(Int64 x, UInt64 y) {
             return BigIntegerOps.Subtract((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(UInt64 x, UInt64 y) {
             try {
                 return (UInt64)(checked(x * y));
@@ -1947,192 +1949,192 @@ namespace IronPython.Runtime.Operations {
                 return BigIntegerOps.Multiply((BigInteger)x, (BigInteger)y);
             }
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(UInt64 x, Int64 y) {
             return BigIntegerOps.Multiply((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Multiply(Int64 x, UInt64 y) {
             return BigIntegerOps.Multiply((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(UInt64 x, UInt64 y) {
             return FloorDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(UInt64 x, Int64 y) {
             return BigIntegerOps.Divide((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Divide(Int64 x, UInt64 y) {
             return BigIntegerOps.Divide((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(UInt64 x, UInt64 y) {
             return DoubleOps.TrueDivide((double)x, (double)y);
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(UInt64 x, Int64 y) {
             return BigIntegerOps.TrueDivide((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static double TrueDivide(Int64 x, UInt64 y) {
             return BigIntegerOps.TrueDivide((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt64 FloorDivide(UInt64 x, UInt64 y) {
             return (UInt64)(x / y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(UInt64 x, Int64 y) {
             return BigIntegerOps.FloorDivide((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(Int64 x, UInt64 y) {
             return BigIntegerOps.FloorDivide((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt64 Mod(UInt64 x, UInt64 y) {
             return (UInt64)(x % y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger Mod(UInt64 x, Int64 y) {
             return BigIntegerOps.Mod((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger Mod(Int64 x, UInt64 y) {
             return BigIntegerOps.Mod((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(UInt64 x, UInt64 y) {
             return BigIntegerOps.Power((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(UInt64 x, Int64 y) {
             return BigIntegerOps.Power((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(Int64 x, UInt64 y) {
             return BigIntegerOps.Power((BigInteger)x, (BigInteger)y);
         }
 
         // Binary Operations - Bitwise
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(UInt64 x, [NotNull]BigInteger y) {
             return BigIntegerOps.LeftShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt64 RightShift(UInt64 x, [NotNull]BigInteger y) {
             return (UInt64)BigIntegerOps.RightShift((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt64 BitwiseAnd(UInt64 x, UInt64 y) {
             return (UInt64)(x & y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger BitwiseAnd(UInt64 x, Int64 y) {
             return BigIntegerOps.BitwiseAnd((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger BitwiseAnd(Int64 x, UInt64 y) {
             return BigIntegerOps.BitwiseAnd((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt64 BitwiseOr(UInt64 x, UInt64 y) {
             return (UInt64)(x | y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger BitwiseOr(UInt64 x, Int64 y) {
             return BigIntegerOps.BitwiseOr((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger BitwiseOr(Int64 x, UInt64 y) {
             return BigIntegerOps.BitwiseOr((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static UInt64 ExclusiveOr(UInt64 x, UInt64 y) {
             return (UInt64)(x ^ y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger ExclusiveOr(UInt64 x, Int64 y) {
             return BigIntegerOps.ExclusiveOr((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static BigInteger ExclusiveOr(Int64 x, UInt64 y) {
             return BigIntegerOps.ExclusiveOr((BigInteger)x, (BigInteger)y);
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(UInt64 x, UInt64 y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(UInt64 x, Int64 y) {
             return BigIntegerOps.LessThan((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Int64 x, UInt64 y) {
             return BigIntegerOps.LessThan((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(UInt64 x, UInt64 y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(UInt64 x, Int64 y) {
             return BigIntegerOps.LessThanOrEqual((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Int64 x, UInt64 y) {
             return BigIntegerOps.LessThanOrEqual((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(UInt64 x, UInt64 y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(UInt64 x, Int64 y) {
             return BigIntegerOps.GreaterThan((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Int64 x, UInt64 y) {
             return BigIntegerOps.GreaterThan((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(UInt64 x, UInt64 y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(UInt64 x, Int64 y) {
             return BigIntegerOps.GreaterThanOrEqual((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Int64 x, UInt64 y) {
             return BigIntegerOps.GreaterThanOrEqual((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(UInt64 x, UInt64 y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(UInt64 x, Int64 y) {
             return BigIntegerOps.Equal((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Int64 x, UInt64 y) {
             return BigIntegerOps.Equal((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(UInt64 x, UInt64 y) {
             return x != y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(UInt64 x, Int64 y) {
             return BigIntegerOps.NotEqual((BigInteger)x, (BigInteger)y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Int64 x, UInt64 y) {
             return BigIntegerOps.NotEqual((BigInteger)x, (BigInteger)y);
         }
@@ -2214,47 +2216,47 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.ValueError("invalid value for Single.__new__");
         }
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static Single Plus(Single x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Single Negate(Single x) {
             return (Single)(-(x));
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Single Abs(Single x) {
             return (Single)(Math.Abs(x));
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(Single x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static Single Add(Single x, Single y) {
             return x + y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Single Subtract(Single x, Single y) {
             return x - y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Single Multiply(Single x, Single y) {
             return x * y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Single Divide(Single x, Single y) {
             return TrueDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Single TrueDivide(Single x, Single y) {
             if (y == 0) throw PythonOps.ZeroDivisionError();
             return x / y;
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Single FloorDivide(Single x, Single y) {
             if (y == 0) throw PythonOps.ZeroDivisionError();
             return (Single)Math.Floor(x / y);
@@ -2262,27 +2264,27 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Single x, Single y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Single x, Single y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Single x, Single y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Single x, Single y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Single x, Single y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Single x, Single y) {
             return x != y;
         }
@@ -2328,47 +2330,47 @@ namespace IronPython.Runtime.Operations {
 
     public static partial class DoubleOps {
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static Double Plus(Double x) {
             return x;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Double Negate(Double x) {
             return (Double)(-(x));
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Double Abs(Double x) {
             return (Double)(Math.Abs(x));
         }
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool NonZero(Double x) {
             return (x != 0);
         }
 
         // Binary Operations - Arithmetic
-        [OperatorMethod]
+        [SpecialName]
         public static Double Add(Double x, Double y) {
             return x + y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Double Subtract(Double x, Double y) {
             return x - y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Double Multiply(Double x, Double y) {
             return x * y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Double Divide(Double x, Double y) {
             return TrueDivide(x, y);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Double TrueDivide(Double x, Double y) {
             if (y == 0) throw PythonOps.ZeroDivisionError();
             return x / y;
 
         }
-        [OperatorMethod]
+        [SpecialName]
         public static Double FloorDivide(Double x, Double y) {
             if (y == 0) throw PythonOps.ZeroDivisionError();
             return (Double)Math.Floor(x / y);
@@ -2376,27 +2378,27 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Double x, Double y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Double x, Double y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Double x, Double y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Double x, Double y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Double x, Double y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Double x, Double y) {
             return x != y;
         }

@@ -12,8 +12,9 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
+
 import module
-print module.flag
 
 import clr
 clr.AddReference("loadorder_7b")
@@ -21,8 +22,7 @@ clr.AddReference("loadorder_7b")
 # public class module<T> {
 # }
 
-print module.flag
+AreEqual(module.flag, "python")
 
 import module
-print module.flag
-print module[int]
+AreEqual(module.flag, "python")

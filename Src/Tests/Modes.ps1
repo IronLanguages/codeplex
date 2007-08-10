@@ -464,9 +464,9 @@ function test-dlrmodes($dlrexe)
 	exceptiondetail-helper $dlrexe
 	
 	#------------------------------------------------------------------------------
-	## -X:FastEval
-	echo "-X:FastEval needs more coverage"
-	hello-helper $dlrexe "-X:FastEval"
+	## -X:Interpret
+	echo "-X:Interpret needs more coverage"
+	hello-helper $dlrexe "-X:Interpret"
 	
 	#------------------------------------------------------------------------------
 	## -X:MaxRecursion
@@ -550,12 +550,12 @@ function test-relatedpy($pyexe)
 	notraceback-helper $pyexe "-X:ExceptionDetail" "-X:ShowClrExceptions"
 	showclrexceptions-helper $pyexe "-X:ExceptionDetail" "-X:NoTraceback"
 	
-	#-X:FastEval, -X:NoOptimize, -X:SlowOps, -O, -OO
-	echo "Testing -X:FastEval, -X:NoOptimize, -X:SlowOps, -O, -OO ..."
-	hello-helper $pyexe "-X:FastEval" "-X:NoOptimize" "-X:SlowOps" -O -OO
+	#-X:Interpret, -X:NoOptimize, -X:SlowOps, -O, -OO
+	echo "Testing -X:Interpret, -X:NoOptimize, -X:SlowOps, -O, -OO ..."
+	hello-helper $pyexe "-X:Interpret" "-X:NoOptimize" "-X:SlowOps" -O -OO
 	
 	echo "Testing compatible IronPython modes together ..."
-	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:FastEval" "-X:Frames" "-X:GenerateAsSnippets" "-X:ILDebug" "-X:MaxRecursion" 5 "-X:NoOptimize" "-X:NoTraceback" "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:SlowOps" "-X:StaticMethods" "-X:TabCompletion"
+	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:GenerateAsSnippets" "-X:ILDebug" "-X:MaxRecursion" 5 "-X:NoOptimize" "-X:NoTraceback" "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:SlowOps" "-X:StaticMethods" "-X:TabCompletion"
 }
 	
 ###############################################################################

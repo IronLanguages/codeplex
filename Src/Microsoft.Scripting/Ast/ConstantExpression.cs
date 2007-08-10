@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             CompilerConstant cc = _value as CompilerConstant;
             if (cc != null) return cc.Create(); // TODO: Only create once?
 
@@ -107,6 +107,7 @@ namespace Microsoft.Scripting.Ast {
         /// the value from the WeakReference.
         /// </summary>
         public static MemberExpression WeakConstant(object value) {
+            System.Diagnostics.Debug.Assert(!(value is Expression));
             return Ast.ReadProperty(
                 Ast.RuntimeConstant(new WeakReference(value)),
                 typeof(WeakReference).GetProperty("Target")

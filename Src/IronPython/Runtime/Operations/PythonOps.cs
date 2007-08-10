@@ -19,17 +19,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
-
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Exceptions;
-using IronPython.Compiler;
-using IronPython.Compiler.Generation;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
@@ -37,6 +29,14 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Types;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
+using IronPython.Compiler;
+using IronPython.Compiler.Generation;
 using IronPython.Hosting;
 
 namespace IronPython.Runtime.Operations {
@@ -66,6 +66,9 @@ namespace IronPython.Runtime.Operations {
 
         private static FastDynamicSite<object, object, int> CompareSite = FastDynamicSite<object, object, int>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
         private static DynamicSite<object, string, Tuple, IAttributesCollection, object> MetaclassSite;
+        private static FastDynamicSite<object, object> _flushSite = FastDynamicSite<object, object>.Create(DefaultContext.Default, CallAction.Simple);
+        private static FastDynamicSite<object, string, object> _writeSite = FastDynamicSite<object, string, object>.Create(DefaultContext.Default, CallAction.Simple);
+
 
         #endregion
 
@@ -1293,27 +1296,6 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static object GetNamespace(CodeContext context, Assembly asm, string nameSpace) {
-            object res;
-            if (!DynamicHelpers.GetDynamicTypeFromType(typeof(Assembly)).TryGetBoundMember(context, asm, SymbolTable.StringToId(nameSpace), out res)) {
-                throw new InvalidOperationException("bad assembly");
-            }
-            return res;
-        }
-
-        public static bool TryGetAttr(object o, SymbolId name, out object ret) {
-            return TryGetAttr(DefaultContext.Default, o, name, out ret);
-        }
-
-        public static bool TryGetAttr(CodeContext context, object o, SymbolId name, out object ret) {
-            ICustomMembers ids = o as ICustomMembers;
-            if (ids != null) {
-                return ids.TryGetCustomMember(context, name, out ret);
-            }
-            
-            return DynamicHelpers.GetDynamicType(o).TryGetMember(context, o, name, out ret);
-        }
-
         public static bool TryGetBoundAttr(object o, SymbolId name, out object ret) {
             return TryGetBoundAttr(DefaultContext.Default, o, name, out ret);
         }
@@ -1330,22 +1312,12 @@ namespace IronPython.Runtime.Operations {
         public static bool HasAttr(CodeContext context, object o, SymbolId name) {
             object dummy;
             try {
-                return TryGetAttr(context, o, name, out dummy);
+                return TryGetBoundAttr(context, o, name, out dummy);
             } catch {
                 return false;
             }
         }
-
-        public static object GetAttr(CodeContext context, object o, SymbolId name) {
-            ICustomMembers ifca = o as ICustomMembers;
-            if (ifca != null) {
-                return GetCustomMembers(context, ifca, name);
-            }
-
-            // fall through to normal case...
-            return DynamicHelpers.GetDynamicType(o).GetMember(context, o, name);
-        }
-
+        
         public static object GetBoundAttr(CodeContext context, object o, SymbolId name) {
             ICustomMembers icm = o as ICustomMembers;
             if (icm != null) {
@@ -1583,71 +1555,6 @@ namespace IronPython.Runtime.Operations {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public static bool TryInvokeOperator(CodeContext context, Operators name, object target, object value1, object value2, out object ret) {
             return DynamicHelpers.GetDynamicType(target).TryInvokeTernaryOperator(context, name, target, value1, value2, out ret);
-        }
-
-        private static FastDynamicSite<object, object> _flushSite = FastDynamicSite<object, object>.Create(DefaultContext.Default, CallAction.Simple);
-        private static FastDynamicSite<object, string, object> _writeSite = FastDynamicSite<object, string, object>.Create(DefaultContext.Default, CallAction.Simple);
-
-        public static void Write(object f, string text) {
-            SystemState state = SystemState.Instance;
-
-            if (f == null) f = state.stdout;
-            if (f == null || f == Uninitialized.Instance) throw PythonOps.RuntimeError("lost sys.std_out");
-
-            _writeSite.Invoke(PythonOps.GetAttr(DefaultContext.Default, f, Symbols.ConsoleWrite), text);
-            object flush;
-            if(PythonOps.TryGetAttr(DefaultContext.Default, f, SymbolTable.StringToId("flush"), out flush)) {
-                _flushSite.Invoke(flush);
-            }
-        }
-
-        private static object ReadLine(object f) {
-            if (f == null || f == Uninitialized.Instance) throw PythonOps.RuntimeError("lost sys.std_in");
-            return PythonOps.Invoke(f, Symbols.ConsoleReadLine);
-        }
-
-        public static void WriteSoftspace(object f) {
-            if (CheckSoftspace(f)) {
-                SetSoftspace(f, RuntimeHelpers.False);
-                Write(f, " ");
-            }
-        }
-
-        public static void SetSoftspace(object f, object value) {
-            PythonOps.SetAttr(DefaultContext.Default, f, Symbols.Softspace, value);
-        }
-
-        public static bool CheckSoftspace(object f) {
-            object result;
-            if (PythonOps.TryGetBoundAttr(f, Symbols.Softspace, out result)) return PythonOps.IsTrue(result);
-            return false;
-        }
-
-        // Must stay here for now because libs depend on it.
-        public static void Print(object o) {
-            SystemState state = SystemState.Instance;
-
-            PrintWithDest(state.stdout, o);
-        }
-
-        public static void PrintNoNewline(object o) {
-            SystemState state = SystemState.Instance;
-
-            PrintWithDestNoNewline(state.stdout, o);
-        }
-
-        public static void PrintWithDest(object dest, object o) {
-            PrintWithDestNoNewline(dest, o);
-            Write(dest, "\n");
-        }
-
-        public static void PrintWithDestNoNewline(object dest, object o) {
-            WriteSoftspace(dest);
-            Write(dest, o == null ? "None" : ToString(o));
-        }
-
-        public static object ReadLineFromSrc(object src) {
-            return ReadLine(src);
         }
 
         public static Delegate CreateDynamicDelegate(DynamicMethod meth, Type delegateType, object target) {
@@ -2166,7 +2073,69 @@ namespace IronPython.Runtime.Operations {
             return pc.MakeException(type, value, traceback);
         }
 
-        #region Print support        
+        #region Standard I/O support
+
+        public static void Write(object f, string text) {
+            SystemState state = SystemState.Instance;
+
+            if (f == null) f = state.stdout;
+            if (f == null || f == Uninitialized.Instance) throw PythonOps.RuntimeError("lost sys.std_out");
+
+            _writeSite.Invoke(PythonOps.GetBoundAttr(DefaultContext.Default, f, Symbols.ConsoleWrite), text);
+            object flush;
+            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, f, SymbolTable.StringToId("flush"), out flush)) {
+                _flushSite.Invoke(flush);
+            }
+        }
+
+        private static object ReadLine(object f) {
+            if (f == null || f == Uninitialized.Instance) throw PythonOps.RuntimeError("lost sys.std_in");
+            return PythonOps.Invoke(f, Symbols.ConsoleReadLine);
+        }
+
+        public static void WriteSoftspace(object f) {
+            if (CheckSoftspace(f)) {
+                SetSoftspace(f, RuntimeHelpers.False);
+                Write(f, " ");
+            }
+        }
+
+        public static void SetSoftspace(object f, object value) {
+            PythonOps.SetAttr(DefaultContext.Default, f, Symbols.Softspace, value);
+        }
+
+        public static bool CheckSoftspace(object f) {
+            object result;
+            if (PythonOps.TryGetBoundAttr(f, Symbols.Softspace, out result)) return PythonOps.IsTrue(result);
+            return false;
+        }
+
+        // Must stay here for now because libs depend on it.
+        public static void Print(object o) {
+            SystemState state = SystemState.Instance;
+
+            PrintWithDest(state.stdout, o);
+        }
+
+        public static void PrintNoNewline(object o) {
+            SystemState state = SystemState.Instance;
+
+            PrintWithDestNoNewline(state.stdout, o);
+        }
+
+        public static void PrintWithDest(object dest, object o) {
+            PrintWithDestNoNewline(dest, o);
+            Write(dest, "\n");
+        }
+
+        public static void PrintWithDestNoNewline(object dest, object o) {
+            WriteSoftspace(dest);
+            Write(dest, o == null ? "None" : ToString(o));
+        }
+
+        public static object ReadLineFromSrc(object src) {
+            return ReadLine(src);
+        }
 
         /// <summary>
         /// Prints newline into default standard output
@@ -2391,7 +2360,7 @@ namespace IronPython.Runtime.Operations {
 
                 ScriptCode sc = PythonModuleOps.CompileFlowTrueDivision(code_unit, context.LanguageContext);
                 code = new FunctionCode(sc);
-                tryEvaluate = true; // do FastEval only on strings -- not on files, streams, or code objects
+                tryEvaluate = true; // do interpretation only on strings -- not on files, streams, or code objects
             }
 
             FunctionCode fc = code as FunctionCode;

@@ -14,198 +14,340 @@
 #####################################################################################
 
 '''
-This is mainly a wrapper to run iprun.py and IronPython console with
-different extension switchs. Two set of switches are run by default.
-You can specify the extension mode as shown below:
+This is a thin wrapper designed to run all Python tests distributed with IronPython 
+which do not have external dependencies.
+
+The following options are available:
 
   -M option (Extension mode)
+    -M:0 : launch ip with ""
+           this is the default choice if -M: is not specified    
     -M:1 : launch ip with "-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 300"
     -M:2 : launch ip with "-O -D -X:SaveAssemblies"
-
-    -M:A : launch ip with different combinations (tbi)
-    -M:D : launch ip twice with -M:1 and -M:2 
-           this is default choice if -M: not specified
-
+    -M:D : launch ip with all supported modes (i.e., -M:0, -M:1, ...)
     -M:"-O -D -X:SaveAssemblies" (use DOUBLE QUOTE)
 
-The following arguments are passed to iprun.py directly:
-
   -O option (to specify output detail)
-    -O:min : try to keep the output in one screen; 
-             '.' for pass, 'x' for fail (followed by test name)
+    -O:min : try to keep the output in one screen
+             '.' for pass, 'X' for fail (followed by test name)
     -O:med : show 'PASS' and 'FAIL' for each test
-    -O:max : beside showing 'PASS' and 'FAIL' for each test, 
+    -O:max : besides showing 'PASS' and 'FAIL' for each test, 
              print the exception message at the end
-
+    
   -T option (to specify time related options)
     -T:min : 
     -T:med : this is default
     -T:max : 
-    
+      
   -h or -? : to show this help message
 
-Other arguments without leading '-' will be considered as categories, 
-Use categories.py to explore more category info.
-
-To leverage your dual-proc machine, you may open two IP windows, and type
-    run a1 (which run the set of iron, misc, lib, regress test)
-    run a2 (which run the set of compat test)
-  when you need run all tests, or
- 
-    run b1 (which run the set of lib, regress test)
-    run b2 (which run the set of iron, misc test)
-  when you need run all tests except the compat test
-        
+Assumptions:
+- we start out in the "Tests" directory
+- all tests we wish to run are in "Tests"
+- the tests are named using the pattern test_*.py
+- this is run under IronPython
 '''
 
-import nt
+from sys import argv
+from sys import exit
+from sys import executable
 import sys
-import re
 
-from lib.assert_util import * 
-from lib.file_util import *
-from lib.process_util import *
+from nt  import environ
+from nt  import listdir
+from nt  import getcwd
 
-class ModeInfo:
-    def __init__(self, ipArgs, testArgs):
-        self.ipArgs = ipArgs
-        self.testArgs = testArgs
-    def __str__(self):
-        return self.ipArgs
-        
-mode_mapping = { 
-    '1': ModeInfo('-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 300', ['Compat-', 'Library-', 'Regression-', 'Math-', 'Misc-']),
-    '2': ModeInfo('-O -D -X:SaveAssemblies -X:AssembliesDir %s' % testpath.temporary_dir, ['Compat-', 'Library-', 'Regression-', 'Math-', 'Misc-']),
-}
+import System
 
-def get_mode_list(modes):
-    default_modes = [ mode_mapping.get('1'), mode_mapping.get('2') ]
-    if modes:
-        if len(modes) <> 1 :
-            usage(1, 'found more than 1 -M options')
-        if 'D' in modes: return default_modes
-        if 'A' in modes: 
-            # all combinations
-            raise AssertionError("Not implemented")
-        if mode_mapping.__contains__(modes[0]):
-            return [ mode_mapping.get(modes[0]) ]
-        else:
-            return [ modes[0] ]
-    else:
-        return default_modes
+#--GLOBALS---------------------------------------------------------------------
 
-# used to run tests in dual-proc machine
-shortcuts = {
-    'a1': 'iron misc regress library',
-    'a2': 'compat',
-    'b1': 'iron ipcp',
-    'b2': 'regress library misc',
-}
+#Flags to be used to run tests
+MODES_TO_RUN = []
 
+#Supported test modes
+M0 = ""
+M1 = "-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 300"
+M2 = "-O -D -X:SaveAssemblies -X:AssembliesDir %s" % environ["TMP"]
+
+#Supported verbosity levels
+OUTPUT_MIN = 0
+OUTPUT_MED = 1
+OUTPUT_MAX = 2
+
+OUTPUT_LVL = OUTPUT_MED
+
+#Supported time levels
+TIME_MIN = 0
+TIME_MED = 1
+TIME_MAX = 2
+
+TIME_LVL = TIME_MED
+
+#list of slow tests that we disable unless -T:max is supplied
+SLOW_LIST = [
+            "test_numtypes.py",
+            ]
+
+#tests we do not wish to run. These should be in the "Tests" directory
+EXCLUDE_LIST = [
+                "test_traceback.py", #has a bug
+                "test_dllsite.py", #disabled for 2.0 branch
+                ]
+
+#List of extra tests in "Tests" which do not follow the "test_*.py" pattern.
+#These WILL be run.
+EXTRA_INCLUDE_LIST = []
+
+#Debugging...
+DEBUG = False
+def debug(*args):
+    if DEBUG:
+        print args[0], ":", args[1:]
+
+EXCLUDE_LIST = [x.lower() for x in EXCLUDE_LIST]
+SLOW_LIST = [x.lower() for x in SLOW_LIST]
+EXTRA_INCLUDE_LIST = [x.lower() for x in EXTRA_INCLUDE_LIST]
+
+OUTPUT_COUNT = 0
+
+#------------------------------------------------------------------------------
+#--Process sys.argv
+
+#--HELP -h/-?
+if '-h' in argv or '-H' in argv or '-?' in argv: 
+    print __doc__
+    exit(0)
+
+#--MODES
+for temp in argv[1:]:
+    #Check if it's user defined
+    if temp=="-M:0" or temp=="-M:1" or temp=="-M:2":
+        MODES_TO_RUN.append(eval("M" + temp[3:]))
+    #All standard modes
+    elif temp=="-M:D":
+        MODES_TO_RUN.append(M0)
+        MODES_TO_RUN.append(M1)
+        MODES_TO_RUN.append(M2)
+    #Custom modes
+    elif temp.startswith("-M:"):
+        MODES_TO_RUN += [temp[3:len(temp)]]
+#throw away all -M: flags             
+argv = [x for x in argv if not x.startswith("-M:")]
+
+#If nothing was specified, just use M0
+if len(MODES_TO_RUN)==0: MODES_TO_RUN.append(M0)
+debug("MODES_TO_RUN", MODES_TO_RUN)
+
+
+#--OUTPUT LEVEL
+for temp in argv[1:]:
+    if temp.startswith("-O:"):
+        OUTPUT_LVL = eval("OUTPUT_" + temp[3:].upper())
+        #take the first instance of -O: only
+        break
+#throw away all -O: flags
+argv = [x for x in argv if not x.startswith("-O:")]
+debug("OUTPUT_LVL", OUTPUT_LVL)
+
+
+#--TIME LEVEL
+for temp in argv[1:]:
+    if temp.startswith("-T:"):
+        TIME_LVL = eval("TIME_" + temp[3:].upper())
+        #take the first instance of -T: only
+        break
+#throw away all -T: flags
+argv = [x for x in argv if not x.startswith("-T:")]
+debug("TIME_LVL", TIME_LVL)
+
+
+#get a list of all test_*.py files in the CWD
+TEST_LIST = [ x.lower() for x in listdir(getcwd()) if x.startswith("test_") and x.endswith(".py") ]
+
+
+#add the extra tests
+EXTRA_INCLUDE_LIST = [ x for x in EXTRA_INCLUDE_LIST if not x in TEST_LIST ]
+TEST_LIST = EXTRA_INCLUDE_LIST + TEST_LIST
+
+#get rid of the skipped tests
+TEST_LIST = [ x for x in TEST_LIST if not x in EXCLUDE_LIST ]
+
+#get rid of the slow tests
+if TIME_LVL!=TIME_MAX:
+    TEST_LIST = [ x for x in TEST_LIST if not x in SLOW_LIST]
+
+TEST_LIST.sort()
+debug("TEST_LIST", TEST_LIST)
+
+#List of tests that failed
+FAILED_LIST = []
+
+
+#--FUNCTIONS-------------------------------------------------------------------
 def test_exit_code():
-    # first verify if we were to fail we'd get a good exit code back.
+    '''
+    Verify if we were to fail we would get a good exit code back.
+    '''
+    
     exitcode_py = 'exitcode.py'
-    write_to_file(exitcode_py, 'import sys\nsys.exit(99)\n')
-    exitRes = launch_ironpython(exitcode_py)
-    if exitRes != 99:
-        print '!!! sys.exit test failed, cannot run tests'
-        # apparently we won't propagate the exit code, but at least hopefully someone will notice tests aren't running!
-        sys.exit(1)    
+    f = open(exitcode_py, "w")
+    f.writelines(['import sys\n', 'sys.exit(99)\n'])
+    f.close()
+    
+    process = System.Diagnostics.Process()
+    process.StartInfo.FileName = executable
+    process.StartInfo.Arguments = exitcode_py
+    process.StartInfo.CreateNoWindow = True
+    process.StartInfo.UseShellExecute = False
+    process.Start()
+    process.WaitForExit()
+    
+    if process.ExitCode != 99:
+        print 'SEVERE FAILURE: sys.exit test failed, cannot run tests!'
+        System.Environment.Exit(1)
 
-def clean_log_files():
-    # clean log files if i am the only one running ipy.exe
+
+def runTestSlow(test_name, mode):
+    '''
+    Helper function runs a test as a separate process.
+    '''
+    #run the actual test
+    process = System.Diagnostics.Process()
+    process.StartInfo.FileName = executable
+    process.StartInfo.Arguments = mode + " " + test_name
+    process.StartInfo.CreateNoWindow = True
+    process.StartInfo.UseShellExecute = False
+    process.StartInfo.RedirectStandardError = True
+    process.Start()
+    errors = process.StandardError.ReadToEnd()
+    process.WaitForExit()
+    ec = process.ExitCode
+    
+    #if it failed and there's no output, try to get sys.stdout this time.
+    #it seems we cannot get sys.stdout/sys.stderr both at the same time due to 
+    #deadlock issues.
+    if ec!=0 and errors=="":
+        process = System.Diagnostics.Process()
+        process.StartInfo.FileName = executable
+        process.StartInfo.Arguments = mode + " " + test_name
+        process.StartInfo.CreateNoWindow = True
+        process.StartInfo.UseShellExecute = False
+        process.StartInfo.RedirectStandardOutput = True
+        process.Start()
+        errors = process.StandardOutput.ReadToEnd()
+        process.WaitForExit()
+        ec = process.ExitCode    
+    return (ec, errors)
+
+
+def runTestFast(test_name):
+    '''
+    Helper function simply imports a test as a module.
+    '''
+    #backup sys.stderr/sys.stdout
+    old_stderr = sys.stderr
+    old_stdout = sys.stdout
+    
+    #temporary sys.stdout/sys.stderr
+    f = open("temp.log", "w")
+    
+    #return values
+    ec = 0
+    errors = ""
+      
+    
     try:
-        ipys = [x for x in nt.popen('tasklist.exe').readlines() if x.lower().startswith('ipy.exe')]
-        if len(ipys) == 1:
-            class matcher:
-                def __init__(self):
-                    self.pattern = re.compile("result.*\.log")
-                def __call__(self, value):
-                    result = re.match(self.pattern, value)
-                    return result and result.endpos == len(value)
-            f = nt.listdir(".")
-            f = filter(matcher(), f)
-            delete_files(*f)
-    except: pass
+        #take over sys.stdout/sys.stderr and import the test module
+        sys.stdout = f
+        sys.stderr = f
+        __import__(test_name.split(".py")[0])
+    except SystemExit:
+        ec = int(str(sys.exc_value))
+    except:
+        ec = 1
+    finally:
+        sys.stderr = old_stderr
+        sys.stdout = old_stdout
+        f.close()
 
-def clean_pyc_files():
-    # cleaning .pyc files, as the workaround for external issue (ps#1149)
-    delete_files(*tuple([ path_combine(testpath.public_testdir, x) 
-                          for x in nt.listdir(testpath.public_testdir) 
-                          if x.endswith('.pyc')]))
+    if ec!=0:
+        f = open("temp.log", "r")
+        for line in f.readlines():
+            errors = errors + line
+        f.close()
 
-def main(args):
-    # run options check
-    if [x for x in args if x.lower() == '-h' or x == '-?']: 
-        usage(1)
-    
-    for x in args:
-        x2 = x.upper()
-        if x2.startswith('-'): 
-            if not x2.startswith('-M:') and not x2.startswith('-O:') and not x2.startswith('-T:'):
-                usage(1, 'unknown option: %s' % x)
-
-    test_exit_code()
-    
-    clean_log_files()
-    
-    clean_pyc_files()
-    
-    # shortcuts
-    tests = [x.lower() for x in args if not x.startswith('-')]
-    tests2 = None
-    for x in shortcuts.keys():
-        if x in tests: 
-            tests2 = shortcuts[x].split()
-            break
-    if tests2: tests = tests2
+    return (ec, errors)
         
-    # run compat test under cpython
-    if ('compat' in tests):
-        print "\nRUNNING CPYTHON ON COMPATABILITY TESTS"
-        launch_cpython(path_combine(testpath.compat_testdir, 'runsbs.py'))
-        
-    # find iprun.py
-    iprunfile = path_combine(get_directory_name(fullpath(sys.argv[0])), 'iprun.py')
-    
-    # run ironpython tests with cpython (we don't run the netinterop or hosting categories)
-    # command: cpy iprun.py -O:max builtinfuncs builtintypes standard modules stress
-    results = []
-    sumretval = 0
-    if ('ipcp' in tests):
-        print "\nRUNNING CPYTHON ON IRONPYTHON TESTS"
-        sumretval += launch_cpython(iprunfile, '-O:min', 'builtinfuncs', 'builtintypes', 'standard', 'modules', 'stress')
-    
-    # other switches will be carried on to iprun.py
-    carryon = [x for x in args if not x.startswith('-M:') and x.lower() not in shortcuts.keys() ]
-    for x in tests: 
-        if x not in carryon : carryon.append(x)
 
-    # launch iprun.py with different modes
-    rawModes = [ x[3:] for x in args if x.startswith('-M:') ]
-    for style in get_mode_list(rawModes):
-        sstyle = str(style)
-        print "\nRUNNING IRONPYTHON UNDER", sstyle
-        if style.testArgs: print 'With test options ', style.testArgs
-        retval = launch_ironpython_with_extensions(iprunfile, sstyle.split(), carryon + style.testArgs)
-        sumretval += retval
-        results.append((sstyle, retval))
-    
-    # clean generated .exe/.pdb in SaveAssemblies extension mode
-    clean_directory(testpath.temporary_dir)
-    
-    # print results
-    print formatter.SeparatorStar
-    for (x, y) in results:
-        print (y and "*FAIL*" or " PASS "), '[', x, ']'
-    print formatter.SeparatorStar
 
-    # peverify is used inside IronPython. It skips the peverify check on generated assemblies 
-    # if peverify.exe could not be found, but as testing, we need make sure it in path.
-    if not find_peverify(): sys.exit(1) 
- 
-    # exit
-    sys.exit(sumretval)    
+def runTest(test_name, mode):
+    '''
+    Runs an individual IronPython test.
+    '''
+    global OUTPUT_COUNT
+    OUTPUT_COUNT = OUTPUT_COUNT + 1
+    
+    if TIME_LVL==TIME_MIN:
+        (ec, errors) = runTestFast(test_name)
+    else:
+        (ec, errors) = runTestSlow(test_name, mode)
+    
+    #Error handling
+    if ec != 0:
+        if OUTPUT_LVL==OUTPUT_MIN:
+            print "X" + test_name,
+        else:
+            print "\t", test_name, "FAIL"
+            if OUTPUT_LVL==OUTPUT_MAX:
+                print >> sys.stderr, errors
+                print
+        FAILED_LIST.append(test_name + "; Exit Code=" + str(ec))
+    else:
+        if OUTPUT_LVL==OUTPUT_MIN:
+            print ".",
+        else:
+            print "\t", test_name, "PASS"
+    
+    if OUTPUT_LVL==OUTPUT_MIN and OUTPUT_COUNT%25==0:
+        print
 
-if __name__ == '__main__':
-    main(sys.argv[1:])
+
+#--MAIN------------------------------------------------------------------------
+
+#Sanity check.  If sys.exit fails to work properly, there's little point in
+#running all the tests
+test_exit_code()
+
+#Using each set of flags supplied to ipy.exe...
+for mode in MODES_TO_RUN:
+    print "-------------------------------------------------------------------"
+    print "RUNNING IRONPYTHON TESTS USING THESE FLAGS:", mode
+
+    #...run all tests.
+    for test_name in TEST_LIST:
+        runTest(test_name, mode)
+    print
+
+
+print "-------------------------------------------------------------------"
+print "SUMMARY"
+print
+
+if len(EXCLUDE_LIST)!=0:
+    print "The following tests were excluded due to bugs:"
+    for test_name in EXCLUDE_LIST: print "\t" + test_name
+    print
+
+if len(SLOW_LIST)!=0 and TIME_LVL!=TIME_MAX:
+    print "The following tests were excluded due to slow execution time:"
+    for test_name in SLOW_LIST: print "\t" + test_name
+    print
+
+if  len(FAILED_LIST)==0:
+    print "Everything passed!"
+    exit(0)
+else:
+    print "The following tests failed:"
+    for test_name in FAILED_LIST: print "\t" + test_name    
+    exit(1)
+    

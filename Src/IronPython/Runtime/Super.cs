@@ -14,9 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting;
 using System.Diagnostics;
 using System.Collections.Generic;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;

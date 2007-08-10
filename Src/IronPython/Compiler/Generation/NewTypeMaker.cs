@@ -39,6 +39,7 @@ using Microsoft.Scripting.Hosting;
 using IronPython.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler.Generation {
     /// <summary>
@@ -202,7 +203,7 @@ namespace IronPython.Compiler.Generation {
                     throw PythonOps.TypeError(typeName + ": unsupported base type for new-style class: " + baseCLIType);
                 }
 
-                IList<Type> baseInterfaces = Utils.Reflection.EmptyTypes;
+                IList<Type> baseInterfaces = ReflectionUtils.EmptyTypes;
                 Type curTypeToExtend = curBasePythonType.ExtensionType;
                 if (curBasePythonType.ExtensionType.IsInterface) {
                     baseInterfaces = new Type[] { curTypeToExtend };
@@ -500,10 +501,10 @@ namespace IronPython.Compiler.Generation {
                 if (origIndex >= 0) {
                     if (pis[origIndex].IsDefined(typeof(ParamArrayAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
-                            typeof(ParamArrayAttribute).GetConstructor(Utils.Reflection.EmptyTypes), RuntimeHelpers.EmptyObjectArray));
+                            typeof(ParamArrayAttribute).GetConstructor(ReflectionUtils.EmptyTypes), RuntimeHelpers.EmptyObjectArray));
                     } else if (pis[origIndex].IsDefined(typeof(ParamDictionaryAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
-                            typeof(ParamDictionaryAttribute).GetConstructor(Utils.Reflection.EmptyTypes), RuntimeHelpers.EmptyObjectArray));
+                            typeof(ParamDictionaryAttribute).GetConstructor(ReflectionUtils.EmptyTypes), RuntimeHelpers.EmptyObjectArray));
                     }
                 }
             }
@@ -842,8 +843,8 @@ namespace IronPython.Compiler.Generation {
                 CodeGen getter = _tg.DefineMethod(MethodAttributes.Public,
                         "get_$SlotValues",
                         tbp[0],
-                        Utils.Reflection.EmptyTypes,
-                        Utils.Array.EmptyStrings);
+                        ReflectionUtils.EmptyTypes,
+                        ArrayUtils.EmptyStrings);
 
                 _slotsField.EmitGet(getter);
                 getter.EmitReturn();
@@ -912,6 +913,8 @@ namespace IronPython.Compiler.Generation {
                     return;
                 }
             }
+
+            OverrideBaseMethod(mi, specialNames);
         }
 
         /// <summary>
@@ -1061,7 +1064,7 @@ namespace IronPython.Compiler.Generation {
                 mi.IsVirtual ? (mi.Attributes | MethodAttributes.NewSlot) : mi.Attributes,
                     mi.Name,
                     mi.ReturnType,
-                    Utils.Reflection.GetParameterTypes(parameters),
+                    ReflectionUtils.GetParameterTypes(parameters),
                     CompilerHelpers.GetArgumentNames(parameters));
 
             Label instanceCall = cg.DefineLabel();
@@ -1106,7 +1109,7 @@ namespace IronPython.Compiler.Generation {
 
         public static CodeGen CreateVirtualMethodHelper(TypeGen tg, MethodInfo mi) {
             ParameterInfo[] parms = mi.GetParameters();
-            Type[] types = Utils.Reflection.GetParameterTypes(parms);
+            Type[] types = ReflectionUtils.GetParameterTypes(parms);
             string[] paramNames = new string[parms.Length];
             Type miType = mi.DeclaringType;
             for (int i = 0; i < types.Length; i++) {

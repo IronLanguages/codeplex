@@ -17,6 +17,7 @@ using System;
 using System.Text;
 using System.Collections;
 using System.Threading;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -41,78 +42,78 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.IsTrue(o);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool BitwiseAnd(bool x, bool y) {
             return (bool)(x & y);
         }
         
-        [OperatorMethod]
+        [SpecialName]
         public static bool BitwiseOr(bool x, bool y) {
             return (bool)(x | y);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool ExclusiveOr(bool x, bool y) {
             return (bool)(x ^ y);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int BitwiseAnd(int x, bool y) {
             return Int32Ops.BitwiseAnd(y ? 1 : 0, x);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int BitwiseAnd(bool x, int y) {
             return Int32Ops.BitwiseAnd(x ? 1 : 0, y);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int BitwiseOr(int x, bool y) {
             return Int32Ops.BitwiseOr(y ? 1 : 0, x);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int BitwiseOr(bool x, int y) {
             return Int32Ops.BitwiseOr(x ? 1 : 0, y);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int ExclusiveOr(int x, bool y) {
             return Int32Ops.ExclusiveOr(y ? 1 : 0, x);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int ExclusiveOr(bool x, int y) {
             return Int32Ops.ExclusiveOr(x ? 1 : 0, y);
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string CodeRepresentation(bool self) {
             return self ? "True" : "False";
         }
 
         // Binary Operations - Comparisons
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(bool x, bool y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(bool x, bool y) {
             return x != y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(bool x, int y) {
             return (x ? 1 : 0) == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(bool x, int y) {
             return (x ? 1 : 0) != y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(int x, bool y) {
             return Equal(y, x);
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(int x, bool y) {
             return NotEqual(y, x);
         }
@@ -135,7 +136,7 @@ namespace IronPython.Runtime.Operations {
             return (UInt16)(x ? 1 : 0);
         }
 
-        [OperatorMethod, PythonName("__int__")]
+        [SpecialName, PythonName("__int__")]
         public static Int32 ConvertToInt(Boolean x) {
             return (Int32)(x ? 1 : 0);
         }

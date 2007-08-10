@@ -20,13 +20,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
-using IronPython.Compiler.Generation;
-
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
+using IronPython.Compiler.Generation;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -44,6 +46,7 @@ namespace IronPython.Runtime.Types {
         private IAttributesCollection _vars;
         private Type _type;
         private bool _hasDict, _hasWeakRef, _hasSlots, _hasFinalizer;
+        private static Dictionary<Type, TypePrepender.PrependerState> _prependerState = new Dictionary<Type, TypePrepender.PrependerState>();
 
         private UserTypeBuilder(string name, Tuple bases, IAttributesCollection vars) {
             _name = name;
@@ -75,16 +78,24 @@ namespace IronPython.Runtime.Types {
         }
 
         class TypePrepender : ICallableWithCodeContext, IFancyCallable {
-            private BuiltinFunction _ctor;
             private DynamicType _type;
-            private FastDynamicSite<BuiltinFunction, DynamicType, object> _site;
-            private FastDynamicSite<BuiltinFunction, DynamicType, object, object> _site1;
-            private FastDynamicSite<BuiltinFunction, DynamicType, object, object, object> _site2;
-            private FastDynamicSite<BuiltinFunction, DynamicType, object, object, object, object> _site3;
+            private PrependerState _state;
 
-            public TypePrepender(DynamicType dt, BuiltinFunction realCtor) {
+            public class PrependerState {
+                public PrependerState(BuiltinFunction ctor) {
+                    Ctor = ctor;
+                }
+
+                public BuiltinFunction Ctor;
+                public FastDynamicSite<BuiltinFunction, DynamicType, object> Site;
+                public FastDynamicSite<BuiltinFunction, DynamicType, object, object> Site1;
+                public FastDynamicSite<BuiltinFunction, DynamicType, object, object, object> Site2;
+                public FastDynamicSite<BuiltinFunction, DynamicType, object, object, object, object> Site3;
+            }
+
+            public TypePrepender(DynamicType dt, PrependerState state) {
                 _type = dt;
-                _ctor = realCtor;
+                _state = state;
             }
 
             #region ICallableWithCodeContext Members
@@ -93,36 +104,36 @@ namespace IronPython.Runtime.Types {
                 // most common uses of this are object.__new__ and int.__new__, make those go fast.
                 switch(args.Length) {
                     case 0: 
-                        if(_site == null) {
-                            Interlocked.CompareExchange(ref _site,
+                        if(_state.Site == null) {
+                            Interlocked.CompareExchange(ref _state.Site,
                                 FastDynamicSite<BuiltinFunction, DynamicType, object>.Create(DefaultContext.Default, CallAction.Simple),
                                 null);
                         }
-                        return _site.Invoke(_ctor, _type);
+                        return _state.Site.Invoke(_state.Ctor, _type);
                     case 1: 
-                        if(_site1 == null) {
-                            Interlocked.CompareExchange(ref _site1,
+                        if(_state.Site1 == null) {
+                            Interlocked.CompareExchange(ref _state.Site1,
                                 FastDynamicSite<BuiltinFunction, DynamicType, object, object>.Create(DefaultContext.Default, CallAction.Simple),
                                 null);
                         }
-                        return _site1.Invoke(_ctor, _type, args[0]);
+                        return _state.Site1.Invoke(_state.Ctor, _type, args[0]);
                     case 2: 
-                        if(_site2 == null) {
-                            Interlocked.CompareExchange(ref _site2,
+                        if(_state.Site2 == null) {
+                            Interlocked.CompareExchange(ref _state.Site2,
                                 FastDynamicSite<BuiltinFunction, DynamicType, object, object, object>.Create(DefaultContext.Default, CallAction.Simple),
                                 null);
                         }
-                        return _site2.Invoke(_ctor, _type, args[0], args[1]);
+                        return _state.Site2.Invoke(_state.Ctor, _type, args[0], args[1]);
                     case 3:
-                        if (_site3 == null) {
-                            Interlocked.CompareExchange(ref _site3,
+                        if (_state.Site3 == null) {
+                            Interlocked.CompareExchange(ref _state.Site3,
                                 FastDynamicSite<BuiltinFunction, DynamicType, object, object, object, object>.Create(DefaultContext.Default, CallAction.Simple),
                                 null);
                         }
-                        return _site3.Invoke(_ctor, _type, args[0], args[1], args[2]);
+                        return _state.Site3.Invoke(_state.Ctor, _type, args[0], args[1], args[2]);
                 }
 
-                return _ctor.Call(context, Utils.Array.Insert<object>(_type, args));
+                return _state.Ctor.Call(context, ArrayUtils.Insert<object>(_type, args));
             }
 
             #endregion
@@ -130,7 +141,7 @@ namespace IronPython.Runtime.Types {
             #region IFancyCallable Members
 
             public object Call(CodeContext context, object[] args, string[] names) {
-                return _ctor.Call(context, Utils.Array.Insert<object>(_type, args), names);
+                return _state.Ctor.Call(context, ArrayUtils.Insert<object>(_type, args), names);
             }
 
             #endregion
@@ -141,8 +152,14 @@ namespace IronPython.Runtime.Types {
 
             Builder.SetTypeContext(context.LanguageContext.ContextId);
 
-            Builder.SetConstructor(
-                new TypePrepender(Builder.UnfinishedType, BuiltinFunction.MakeMethod(_name, _type.GetConstructors(), FunctionType.Function)));
+            TypePrepender.PrependerState prependerState;
+            lock (_prependerState) {
+                if (!_prependerState.TryGetValue(_type, out prependerState)) {
+                    _prependerState[_type] = prependerState = 
+                        new TypePrepender.PrependerState(BuiltinFunction.MakeMethod(_type.Name, _type.GetConstructors(), FunctionType.Function));
+                }
+            }
+            Builder.SetConstructor(new TypePrepender(Builder.UnfinishedType, prependerState));
 
             Builder.SetDefaultSlotType(delegate(object value) {
                 return new DynamicTypeUserDescriptorSlot(value);
@@ -390,6 +407,7 @@ namespace IronPython.Runtime.Types {
                     CustomAttributeInfo info = new CustomAttributeInfo(args.NewValue);
                     dtb.SetCustomBoundGetter(info.HookedGetAttribute);
                     dtb.AddSlot(Symbols.GetAttribute, new DynamicTypeGetAttributeSlot(dtb.UnfinishedType, info, Symbols.GetAttribute));
+                    dtb.SetHasGetAttribute(true);
 
                     dtb.ReleaseBuilder();
                     return;
@@ -629,6 +647,7 @@ namespace IronPython.Runtime.Types {
                 CustomAttributeInfo info = new CustomAttributeInfo(value);
                 Builder.SetCustomBoundGetter(info.HookedGetAttribute);
                 newDict[Symbols.GetAttribute] = new DynamicTypeGetAttributeSlot(Builder.UnfinishedType, info, Symbols.GetAttribute);
+                Builder.SetHasGetAttribute(true);
             } else if (baseCustomizer != null) {
                 Builder.SetCustomBoundGetter(baseCustomizer);
             }

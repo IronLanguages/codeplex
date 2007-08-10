@@ -39,10 +39,7 @@ namespace Microsoft.Scripting.Actions {
 
         public StandardRule<T> GetRule(object[] args) {
             // Create fake context for evaluating the rule tests
-            CodeContext context = new CodeContext(new Scope(), _context);
-            if (DynamicSiteHelpers.IsBigTarget(typeof(T))) {
-                args = new object[] { NewTuple.MakeTuple(typeof(T).GetGenericArguments()[0], args) };
-            }
+            CodeContext context = DynamicSiteHelpers.GetEvaluationContext<T>(_context, ref args);
             
             //TODO insert some instrumentation to catch large sets of rules (but what is large?)
 

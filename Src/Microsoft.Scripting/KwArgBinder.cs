@@ -21,6 +21,7 @@ using System.Text;
 using System.Diagnostics;
 
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -68,7 +69,7 @@ namespace Microsoft.Scripting {
             if (pis.Length > 0 && (pis[0].ParameterType == typeof(CodeContext))) {
                 // calling a context aware method, remove context from the parameters
                 // for the purpose of the bind.
-                pis = Utils.Array.RemoveFirst(pis);
+                pis = ArrayUtils.RemoveFirst(pis);
             }
 
             string[] argNames = new string[pis.Length];
@@ -98,7 +99,7 @@ namespace Microsoft.Scripting {
             object[] oldArgs = _arguments;
             if (_instance != null && CompilerHelpers.IsStatic(target)) {
                 // instance provided for non-instance method, combine.
-                _arguments = Utils.Array.Insert(_instance, _arguments);
+                _arguments = ArrayUtils.Insert(_instance, _arguments);
             }
 
             try {

@@ -16,8 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
@@ -25,7 +27,7 @@ using IronPython.Runtime.Types;
 [assembly: PythonExtensionType(typeof(TypeCollision), typeof(TypeCollisionOps))]
 namespace IronPython.Runtime.Operations {
     public static class TypeCollisionOps {
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string ToCodeRepresentation(TypeCollision self) {
             StringBuilder sb = new StringBuilder("<types ");
             bool pastFirstType = false;

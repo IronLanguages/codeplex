@@ -18,8 +18,10 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Threading;
-using Microsoft.Scripting.Shell;
 using System.Reflection;
+
+using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -270,7 +272,7 @@ namespace Microsoft.Scripting {
 
         public static List<DynamicStackFrame> AssociateDynamicStackFrames(Exception clrException) {
             if (_stackFrames != null) {
-                Utils.GetDataDictionary(clrException)[typeof(DynamicStackFrame)] = _stackFrames;
+                Utils.ExceptionUtils.GetDataDictionary(clrException)[typeof(DynamicStackFrame)] = _stackFrames;
             }
             return _stackFrames;
         }

@@ -15,8 +15,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -46,12 +48,12 @@ namespace IronPython.Runtime.Operations {
             return PythonBuiltinFunctionOps.GetDocumentation(self.Target);
         }
 
-        [OperatorMethod, PythonName("__str__")]
+        [SpecialName, PythonName("__str__")]
         public static string ToString(BoundBuiltinFunction self) {
             return ToCodeRepresentation(self);
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string ToCodeRepresentation(BoundBuiltinFunction self) {
             return string.Format("<built-in method {0} of {1} object at {2}>",
                     self.Name,
@@ -59,7 +61,7 @@ namespace IronPython.Runtime.Operations {
                     PythonOps.HexId(self.Self));
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object GetItem(BoundBuiltinFunction self, object key) {
             return new BoundBuiltinFunction(PythonBuiltinFunctionOps.GetItem(self.Target, key), self.Self);
         }

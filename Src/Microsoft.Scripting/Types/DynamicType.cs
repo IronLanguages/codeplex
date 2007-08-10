@@ -20,7 +20,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Types {
     /// <summary>
     /// Represents a DynamicType.  Instances of DynamicType are created via DynamicTypeBuilder.  
     /// </summary>

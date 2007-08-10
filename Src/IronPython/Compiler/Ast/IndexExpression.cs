@@ -19,6 +19,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     public class IndexExpression : Expression {
         private readonly Expression _target;
@@ -50,7 +51,7 @@ namespace IronPython.Compiler.Ast {
         private MSAst.Expression[] GetActionArgumentsForGetOrDelete(AstGenerator ag) {
             TupleExpression te = _index as TupleExpression;
             if (te != null && te.IsExpandable) {
-                return Utils.Array.Insert(ag.Transform(_target), ag.Transform(te.Items));
+                return ArrayUtils.Insert(ag.Transform(_target), ag.Transform(te.Items));
             }
 
             return new MSAst.Expression[] { ag.Transform(_target), ag.Transform(_index) };

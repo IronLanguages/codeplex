@@ -105,7 +105,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object left = _left.Evaluate(context);
             if (!((bool)_testOp.Invoke(null, new object[] { left }))) {
                 object right = _right.Evaluate(context);

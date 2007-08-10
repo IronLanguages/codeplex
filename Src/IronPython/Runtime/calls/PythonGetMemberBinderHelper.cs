@@ -22,10 +22,12 @@ using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime.Calls {
     class PythonGetMemberBinderHelper<T> : 
@@ -87,9 +89,9 @@ namespace IronPython.Runtime.Calls {
             } else if ((ev = slot as ReflectedEvent) != null) {
                 body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, ev.Info);
             } else if ((bf = slot as BuiltinFunction) != null) {
-                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, Utils.Reflection.GetMethodInfos(bf.Targets));
+                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, ReflectionUtils.GetMethodInfos(bf.Targets));
             } else if ((bmd = slot as BuiltinMethodDescriptor) != null) {
-                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, Utils.Reflection.GetMethodInfos(bmd.Template.Targets));
+                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, ReflectionUtils.GetMethodInfos(bmd.Template.Targets));
             } else if ((vs = slot as DynamicTypeValueSlot) != null &&
                 vs.TryGetValue(Context, null, null, out value) &&
                     ((dtValue = value as DynamicType) != null)) {

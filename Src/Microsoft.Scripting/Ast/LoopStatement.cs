@@ -59,7 +59,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _else; }
         }
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             object ret = NextStatement;
             while (_test == null || context.LanguageContext.IsTrue(_test.Evaluate(context))) {
                 ret = _body.Execute(context);

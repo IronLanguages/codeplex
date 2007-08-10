@@ -16,10 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
+
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
@@ -94,6 +95,17 @@ namespace IronPython.Runtime.Types {
 
             dtb.SetResolutionOrder(mro);
 
+            DynamicTypeSlot dummy;
+            if (!dt.TryLookupSlot(context, Symbols.GetAttribute, out dummy)) {
+                dtb.SetHasGetAttribute(false);
+                foreach (DynamicMixin dm in mro) {
+                    if (dm.HasGetAttribute) {
+                        dtb.SetHasGetAttribute(true);
+                        break;
+                    }
+                }
+            }
+
             dtb.ReleaseBuilder();
 
             return true;
@@ -152,6 +164,7 @@ namespace IronPython.Runtime.Types {
                     DynamicTypeGetAttributeSlot dts = new DynamicTypeGetAttributeSlot(dtb.UnfinishedType, null, Symbols.GetAttribute);
                     dts.Inherited = true;
                     dtb.AddSlot(Symbols.GetAttribute, dts);
+                    dtb.SetHasGetAttribute(true);
                     break;
                 }
 

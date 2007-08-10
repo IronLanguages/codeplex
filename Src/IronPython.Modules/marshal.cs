@@ -24,6 +24,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("marshal", typeof(IronPython.Modules.PythonMarshal))]
 namespace IronPython.Modules {
@@ -238,7 +239,7 @@ namespace IronPython.Modules {
                         if (utfBytes.Length != str.Length) {
                             newBytes.AddRange(utfBytes);
                         } else {
-                            byte[] strBytes = Utils.AsciiEncoding.GetBytes(str);
+                            byte[] strBytes = StringUtils.AsciiEncoding.GetBytes(str);
                             newBytes.AddRange(strBytes);
                         }
                     } else {
@@ -297,7 +298,7 @@ namespace IronPython.Modules {
                         bytes.Add(utfBytes[i]);
                     }
                 } else {
-                    byte[] strBytes = Utils.AsciiEncoding.GetBytes(s);
+                    byte[] strBytes = StringUtils.AsciiEncoding.GetBytes(s);
                     bytes.Add((byte)'t');
                     WriteInt32(strBytes.Length);
                     for (int i = 0; i < strBytes.Length; i++) {
@@ -597,7 +598,7 @@ namespace IronPython.Modules {
                 curIndex++;
                 if ((curIndex + len) > myBytes.Length) throw PythonOps.EofError("EOF read where object expected");
 
-                string str = Utils.AsciiEncoding.GetString(myBytes, curIndex, len);
+                string str = StringUtils.AsciiEncoding.GetString(myBytes, curIndex, len);
 
                 curIndex += len;
                 double res = 0;
@@ -640,11 +641,7 @@ namespace IronPython.Modules {
                 int len = ReadInt32();
                 if (len + curIndex > myBytes.Length) throw PythonOps.EofError("EOF read where object expected");
 
-#if !SILVERLIGHT
-                string res = Encoding.ASCII.GetString(myBytes, curIndex, len);
-#else
-                string res = Utils.AsciiEncoding.GetString(myBytes, curIndex, len);
-#endif
+                string res = StringUtils.AsciiEncoding.GetString(myBytes, curIndex, len);
 
                 curIndex += len;
                 return res;

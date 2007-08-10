@@ -51,7 +51,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             return context.LanguageContext.Binder.Execute(context, _action, Evaluate(_arguments, context));
         }
 

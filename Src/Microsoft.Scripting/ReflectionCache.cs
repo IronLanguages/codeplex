@@ -18,6 +18,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.Scripting.Utils;
+
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -53,7 +56,7 @@ namespace Microsoft.Scripting {
         public static BuiltinFunction GetMethodGroup(Type type, string name, MemberInfo[] mems) {
             BuiltinFunction res = null;
 
-            MethodBase[] bases = Utils.Reflection.GetMethodInfos(mems);
+            MethodBase[] bases = ReflectionUtils.GetMethodInfos(mems);
 
             if (mems.Length != 0) {
                 MethodBaseCache cache = new MethodBaseCache(name, bases);
@@ -97,8 +100,7 @@ namespace Microsoft.Scripting {
         private static FunctionType GetMethodFunctionType(Type type, MethodBase[] methods) {
             FunctionType ft = FunctionType.None;
             foreach (MethodInfo mi in methods) {
-                if (mi.IsStatic &&
-                    (mi.IsDefined(typeof(OperatorMethodAttribute), false) || mi.IsSpecialName)) {
+                if (mi.IsStatic && mi.IsSpecialName) {
 
                     ParameterInfo[] pis = mi.GetParameters();
                     if (pis.Length == 2 || (pis.Length == 3 && pis[0].ParameterType == typeof(CodeContext))) {

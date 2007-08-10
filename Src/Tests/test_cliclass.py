@@ -200,12 +200,16 @@ def test_generic_type_collision():
     AreEqual(System.IComparable[int].CompareTo(1,2), -1)
     Assert(dir(System.IComparable).__contains__("CompareTo"))
     Assert(vars(System.IComparable).keys().__contains__("CompareTo"))
-    
-    # converstion to Type
-    Assert(System.Type.IsAssignableFrom(System.IComparable, int))
+
     import IronPythonTest
     genericTypes = IronPythonTest.NestedClass.InnerGenericClass
-    AssertError(TypeError, System.Type.IsAssignableFrom, object, genericTypes)
+    
+    # IsAssignableFrom is SecurityCritical and thus cannot be called via reflection in silverlight,
+    # so disable this in interpreted mode.
+    if not (is_silverlight and is_interpreted()):
+        # converstion to Type
+        Assert(System.Type.IsAssignableFrom(System.IComparable, int))
+        AssertError(TypeError, System.Type.IsAssignableFrom, object, genericTypes)
 
     # Test illegal type instantiation
     try:
@@ -230,8 +234,11 @@ def test_generic_type_collision():
         pass
 
     # Test constructor
-    AreEqual(System.EventHandler(handler).GetType(), System.Type.GetType("System.EventHandler"))
     if not is_silverlight:
+        # GetType is SecurityCritical; can't call via reflection on silverlight
+        if not is_interpreted():
+            AreEqual(System.EventHandler(handler).GetType(), System.Type.GetType("System.EventHandler"))
+        
         # GetGenericTypeDefinition is SecuritySafe, can't call on Silverlight.
         AreEqual(System.EventHandler[System.EventArgs](handler).GetType().GetGenericTypeDefinition(), System.Type.GetType("System.EventHandler`1"))
     

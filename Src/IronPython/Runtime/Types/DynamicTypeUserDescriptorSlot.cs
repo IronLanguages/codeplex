@@ -17,6 +17,8 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
+
 using IronPython.Runtime.Operations;    
 
 namespace IronPython.Runtime.Types {

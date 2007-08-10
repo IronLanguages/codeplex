@@ -17,8 +17,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
@@ -147,12 +149,12 @@ namespace IronPython.Runtime {
         }
 
         #region ISequence Members
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int GetLength() {
             return data.Length;
         }
 
-        [OperatorMethod, PythonName("__contains__")]
+        [SpecialName, PythonName("__contains__")]
         public bool ContainsValueWrapper(object item) {
             return ContainsValue(item);
         }
@@ -502,7 +504,7 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public string ToCodeString(CodeContext context) {
             return ToString();
         }

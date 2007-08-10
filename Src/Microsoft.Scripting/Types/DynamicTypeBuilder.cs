@@ -16,7 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Types {
     public class DynamicTypeBuilder : DynamicMixinBuilder {
         private new DynamicType _building;
 

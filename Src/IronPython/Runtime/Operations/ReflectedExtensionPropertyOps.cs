@@ -17,10 +17,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
+
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-
-using Microsoft.Scripting;
 
 [assembly: PythonExtensionType(typeof(ReflectedExtensionProperty), typeof(ReflectedExtensionPropertyOps))]
 namespace IronPython.Runtime.Operations {

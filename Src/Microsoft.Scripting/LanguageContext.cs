@@ -35,6 +35,12 @@ namespace Microsoft.Scripting {
         private static ModuleGlobalCache _noCache;
         [ThreadStatic]
         internal static List<Exception> _currentExceptions;
+
+        /// <summary>
+        /// Keeps track of exceptions being handled in interpreted mode (so we can support rethrow statements).
+        /// </summary>
+        [ThreadStatic]
+        internal static List<Exception> _caughtExceptions;
         
         public virtual ActionBinder Binder {
             get { return Engine.DefaultBinder; }

@@ -106,5 +106,13 @@ def test_sequence_assign():
     except TypeError, e:
         Assert(str(e).find('unpack non-sequence') != -1)
 
+def test_sort():
+    # very simple test for sorting lists of tuples
+    s=[(3,0),(1,2),(1,1)]
+    t=s[:]
+    t.sort()
+    AreEqual(sorted(s),t)
+    AreEqual(t,[(1,1),(1,2),(3,0)])
+
 run_test(__name__)
 

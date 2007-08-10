@@ -17,8 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Types {
     /// <summary>
     /// DynamicMixinBuilder is the class that languages can use to create instances of DynamicMixin's
     /// that are customized to their language needs.
@@ -40,7 +41,7 @@ namespace Microsoft.Scripting {
         /// underlying system type of Object.
         /// </summary>
         public DynamicMixinBuilder(string name) {
-            Utils.Assert.NotNull(name);
+            Assert.NotNull(name);
 
             _building = new DynamicMixin();
             _building.Name = name;
@@ -111,7 +112,11 @@ namespace Microsoft.Scripting {
         public bool RemoveSlot(ContextId context, SymbolId name) {
             return _building.RemoveSlot(context, name);
         }
-        
+
+        public void SetHasGetAttribute(bool value) {
+            _building.HasGetAttribute = value;
+        }
+
         /// <summary>
         /// Sets a delegate this is used to intercept all member lookups.
         /// </summary>

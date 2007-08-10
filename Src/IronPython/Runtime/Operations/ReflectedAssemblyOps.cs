@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 
@@ -25,7 +26,7 @@ using IronPython.Runtime.Operations;
 [assembly: PythonExtensionType(typeof(Assembly), typeof(ReflectedAssemblyOps))]
 namespace IronPython.Runtime.Operations {
     public static class ReflectedAssemblyOps {
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static object Repr(Assembly self) {
             Assembly asmSelf = self as Assembly;
 

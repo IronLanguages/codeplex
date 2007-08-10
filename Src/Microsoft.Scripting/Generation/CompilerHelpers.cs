@@ -21,6 +21,7 @@ using System.Reflection.Emit;
 
 using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     public static class CompilerHelpers {
@@ -33,12 +34,12 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static Type[] GetTypesWithThis(MethodBase mi) {
-            Type[] types = Utils.Reflection.GetParameterTypes(mi.GetParameters());
+            Type[] types = ReflectionUtils.GetParameterTypes(mi.GetParameters());
             if(IsStatic(mi)) {
                 return types;
             }
 
-            return Utils.Array.Insert(mi.DeclaringType, types);
+            return ArrayUtils.Insert(mi.DeclaringType, types);
         }
 
 
@@ -155,7 +156,7 @@ namespace Microsoft.Scripting.Generation {
         /// <returns>New ScopeAllocator</returns>
         public static ScopeAllocator CreateLocalStorageAllocator(CodeGen outer, CodeGen codeGen) {
             LocalStorageAllocator allocator = new LocalStorageAllocator(new LocalSlotFactory(codeGen));
-            return new ScopeAllocator(outer.HasAllocator ? outer.Allocator : null, allocator);
+            return new ScopeAllocator((outer != null && outer.HasAllocator) ? outer.Allocator : null, allocator);
         }
 
         /// <summary>
@@ -177,8 +178,7 @@ namespace Microsoft.Scripting.Generation {
             );
             return ns;
         }
-
-
+        
         public static Type[] MakeParamTypeArray(IList<Type> baseParamTypes, ConstantPool constantPool) {
             if (constantPool == null) return new List<Type>(baseParamTypes).ToArray();
 

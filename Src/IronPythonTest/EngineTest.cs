@@ -21,6 +21,7 @@ using System.IO;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Types;
 
 using IronPython;
 using IronPython.Compiler;
@@ -29,6 +30,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Utils;
 
 namespace IronPythonTest {
 #if !SILVERLIGHT
@@ -677,6 +679,12 @@ global_variable = 300", DefaultModule, locals);
 #if !SILVERLIGHT
         public void ScenarioClrDebuggingEnabled() {
             const string lineNumber = "raise.py:line";
+
+            if (PythonEngine.CurrentEngine.Options.InterpretedMode) {
+                // Disable this test in interpreted mode, since in this case
+                // the CLR stack traces do not include the python source file and line number.
+                return;
+            }
 
             try {
                 PythonEngine.CurrentEngine.Options.ClrDebuggingEnabled = true;

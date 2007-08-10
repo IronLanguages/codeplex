@@ -25,6 +25,7 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     public class BinderHelper<T, ActionType> where ActionType : Action {
         private CodeContext _context;
@@ -198,14 +199,14 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        public static DynamicType[] GetArgumentTypes(CallAction action, object[] args) {
-            List<DynamicType> res = new List<DynamicType>();
+        public static Type[] GetArgumentTypes(CallAction action, object[] args) {
+            List<Type> res = new List<Type>();
             for (int i = 1; i < args.Length; i++) {
                 switch (action.GetArgumentKind(i - 1)) {
                     case ArgumentKind.Simple:
                     case ArgumentKind.Instance:
                     case ArgumentKind.Named:
-                        res.Add(DynamicHelpers.GetDynamicType(args[i]));
+                        res.Add(CompilerHelpers.GetType(args[i]));
                         continue;
 
                     case ArgumentKind.List:
@@ -215,7 +216,7 @@ namespace Microsoft.Scripting.Actions {
                         if (list == null) return null;
 
                         for (int j = 0; j < list.Count; j++) {
-                            res.Add(DynamicHelpers.GetDynamicType(list[j]));
+                            res.Add(CompilerHelpers.GetType(list[j]));
                         }
                         break;
                     default:
@@ -296,6 +297,38 @@ namespace Microsoft.Scripting.Actions {
                 return Ast.Return(call);
             }
             return null;
+        }
+
+        public static Expression MakeNecessaryTests(StandardRule<T> rule, IList<Type[]> necessaryTests) {
+            return MakeNecessaryTests(rule, necessaryTests, rule.Parameters);
+        }
+
+        public static Expression MakeNecessaryTests(StandardRule<T> rule, IList<Type[]> necessaryTests, Expression [] arguments) {            
+            Expression typeTest = Ast.Constant(true);
+            if (necessaryTests.Count > 0) {
+                Type[] testTypes = null;
+
+                for (int i = 0; i < necessaryTests.Count; i++) {
+                    if (necessaryTests[i] == null) continue;
+                    if (testTypes == null) testTypes = new Type[necessaryTests[i].Length];
+
+                    for (int j = 0; j < necessaryTests[i].Length; j++) {
+                        if (testTypes[j] == null || testTypes[j].IsAssignableFrom(necessaryTests[i][j])) {
+                            // no test yet or more specific test
+                            testTypes[j] = necessaryTests[i][j];
+                        }
+                    }
+                }
+
+                if (testTypes != null) {
+                    for (int i = 0; i < testTypes.Length; i++) {
+                        if (testTypes[i] != null) {
+                            typeTest = Ast.AndAlso(typeTest, rule.MakeTypeTest(testTypes[i], arguments[i]));
+                        }
+                    }
+                }
+            }
+            return typeTest;
         }
     }
 }

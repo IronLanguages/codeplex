@@ -19,6 +19,9 @@ using System.Text;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using Microsoft.Scripting.Utils;
+
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting {
     public static class DynamicHelpers {
@@ -46,7 +49,7 @@ namespace Microsoft.Scripting {
         }
 
         public static DynamicStackFrame[] GetDynamicStackFrames(Exception e) {
-            List<DynamicStackFrame> frames = Utils.GetDataDictionary(e)[typeof(DynamicStackFrame)] as List<DynamicStackFrame>;
+            List<DynamicStackFrame> frames = Utils.ExceptionUtils.GetDataDictionary(e)[typeof(DynamicStackFrame)] as List<DynamicStackFrame>;
 
             if (frames == null) {
                 // we may have missed a dynamic catch, and our host is looking
@@ -242,7 +245,7 @@ namespace Microsoft.Scripting {
                 }
             }
 
-            return Utils.Reflection.EmptyTypes;
+            return ReflectionUtils.EmptyTypes;
         }
     }
 }

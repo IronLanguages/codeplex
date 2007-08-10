@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Ast {
             _value = value;
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object target = _expression != null ? _expression.Evaluate(context) : null;
             object value = _value.Evaluate(context);
             

@@ -159,6 +159,17 @@ def perserve_syspath():
 def restore_syspath():  
     sys.path = _saved_syspath[:]
 
+
+# This has to be a function since the InterpretedMode option can change at runtime
+def is_interpreted():
+    if is_cli or is_silverlight:
+        import clr
+        clr.AddReference("IronPython")
+        import IronPython
+        return IronPython.Hosting.PythonEngine.CurrentEngine.Options.InterpretedMode
+    else:
+        return False    
+
 # test support 
 def Fail(m):  raise AssertionError(m)
 
@@ -237,10 +248,11 @@ if is_silverlight:
         clr.AddReference("Microsoft.Scripting")
         clr.AddReference("IronPython")
 
+        ipt_fullname = "IronPythonTest, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a"
         if args: 
-            return clr.LoadAssembly("IronPythonTest")
+            return clr.LoadAssembly(ipt_fullname)
         else: 
-            clr.AddReference("IronPythonTest")
+            clr.AddReference(ipt_fullname)
 else:
     def AssertErrorWithMatch(exc, expectedMessage, func, *args, **kwargs):
         import re
@@ -298,12 +310,8 @@ class skip:
         return is_cli64
     def orcas_test(self):
         return is_orcas
-    def fasteval_test(self):
-        if is_cli:
-            import IronPython
-            return IronPython.Hosting.PythonEngine.CurrentEngine.Options.FastEvaluation
-        else:
-            return False
+    def interpreted_test(self):
+        return is_interpreted()
     
     def __call__(self, f):
         #skip questionable tests
@@ -315,7 +323,7 @@ class skip:
                 self.platforms, f.func_name)
             return _do_nothing(msg)
 
-        platforms = 'silverlight', 'cli64', 'orcas', 'fasteval'
+        platforms = 'silverlight', 'cli64', 'orcas', 'interpreted'
         for to_skip in platforms:
             platform_test = getattr(self, to_skip + '_test')
             if to_skip in self.platforms and platform_test():

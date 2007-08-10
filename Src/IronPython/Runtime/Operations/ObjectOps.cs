@@ -17,17 +17,20 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Operations;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
+
 
 [assembly: PythonExtensionType(typeof(object), typeof(ObjectOps))]
 namespace IronPython.Runtime.Operations {
@@ -40,7 +43,7 @@ namespace IronPython.Runtime.Operations {
         public static readonly DynamicTypeSlot __class__ = new DynamicTypeTypeSlot();
         public static readonly DynamicTypeSlot __module__ = new DynamicTypeValueSlot("__builtin__");
 
-        [OperatorMethod]
+        [SpecialName]
         public static string __repr__(object self) {
             return String.Format("<{0} object at {1}>",
                 DynamicTypeOps.GetName(DynamicHelpers.GetDynamicType(self)),
@@ -60,12 +63,12 @@ namespace IronPython.Runtime.Operations {
             PythonOps.ObjectSetAttribute(context, self, SymbolTable.StringToId(name), value);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static string __str__(object o) {
             return __repr__(o);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int __hash__(object self) {
             if (self == null) return NoneTypeOps.HashCode;
             return self.GetHashCode();

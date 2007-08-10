@@ -19,9 +19,11 @@ using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
@@ -72,7 +74,7 @@ namespace IronPython.Runtime.Operations {
 
         #region Binary operators
 
-        [OperatorMethod]
+        [SpecialName]
         public static double Mod(double x, double y) {
             if (y == 0) throw PythonOps.ZeroDivisionError();
 
@@ -85,7 +87,7 @@ namespace IronPython.Runtime.Operations {
             return r;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static double Power(double x, double y) {
             if (x == 0.0 && y < 0.0)
                 throw PythonOps.ZeroDivisionError("0.0 cannot be raised to a negative power");
@@ -100,7 +102,7 @@ namespace IronPython.Runtime.Operations {
         }
         #endregion
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), OperatorMethod, PythonName("__coerce__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), SpecialName, PythonName("__coerce__")]
         public static double Coerce(CodeContext context, double x, object o) {
             // REVIEW: How is this used?
             double d = (double)Make(context, TypeCache.Double, o);
@@ -119,7 +121,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         #region Unary operators
-        [OperatorMethod, PythonName("__int__")]
+        [SpecialName, PythonName("__int__")]
         public static object ToInteger(double d) {
             if (Int32.MinValue <= d && d <= Int32.MaxValue) {
                 return (int)d;
@@ -138,27 +140,27 @@ namespace IronPython.Runtime.Operations {
 
         #region ToString
 
-       [OperatorMethod, PythonName("__str__")]
+       [SpecialName, PythonName("__str__")]
         public static string ToString(double x) {
             StringFormatter sf = new StringFormatter("%.12g", x);
             sf._TrailingZeroAfterWholeFloat = true;
             return sf.Format();
         }
 
-        [OperatorMethod, PythonName("__str__")]
+        [SpecialName, PythonName("__str__")]
         public static string ToString(double x, IFormatProvider provider) {
             return x.ToString(provider);
         }
-        [OperatorMethod, PythonName("__str__")]
+        [SpecialName, PythonName("__str__")]
         public static string ToString(double x, string format) {
             return x.ToString(format);
         }
-        [OperatorMethod, PythonName("__str__")]
+        [SpecialName, PythonName("__str__")]
         public static string ToString(double x, string format, IFormatProvider provider) {
             return x.ToString(format, provider);
         }
 
-        [OperatorMethod, PythonName("__hash__")]
+        [SpecialName, PythonName("__hash__")]
         public static int GetHashCode(double x) {
             return (int)x;
         }
@@ -173,27 +175,27 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(double x, BigInteger y) {
             return Compare(x, y) < 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(double x, BigInteger y) {
             return Compare(x, y) <= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(double x, BigInteger y) {
             return Compare(x, y) > 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(double x, BigInteger y) {
             return Compare(x, y) >= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(double x, BigInteger y) {
             return Compare(x, y) == 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(double x, BigInteger y) {
             return Compare(x, y) != 0;
         }
@@ -218,27 +220,27 @@ namespace IronPython.Runtime.Operations {
             return +1;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(double x, decimal y) {
             return Compare(x, y) < 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(double x, decimal y) {
             return Compare(x, y) <= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(double x, decimal y) {
             return Compare(x, y) > 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(double x, decimal y) {
             return Compare(x, y) >= 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(double x, decimal y) {
             return Compare(x, y) == 0;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(double x, decimal y) {
             return Compare(x, y) != 0;
         }
@@ -250,27 +252,27 @@ namespace IronPython.Runtime.Operations {
             return ((decimal)x).CompareTo(y);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(Double x, int y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(Double x, int y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(Double x, int y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(Double x, int y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(Double x, int y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(Double x, int y) {
             return x != y;
         }
@@ -311,12 +313,12 @@ namespace IronPython.Runtime.Operations {
     }
 
     public partial class SingleOps {
-        [OperatorMethod]
+        [SpecialName]
         public static float Mod(float x, float y) {
             return (float)DoubleOps.Mod(x, y);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static float Power(float x, float y) {
             return (float)DoubleOps.Power(x, y);
         }

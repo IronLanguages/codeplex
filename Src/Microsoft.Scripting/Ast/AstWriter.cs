@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
@@ -206,6 +207,23 @@ namespace Microsoft.Scripting.Ast {
             Pop();
         }
 
+        // UnboundAssignment
+        public override bool Walk(UnboundAssignment node) {
+            Push("<unboundassignment>");
+            Write(String.Format("{0} {1} ...", SymbolTable.IdToString(node.Name), AssignmentOp(node.Operator)));
+            return true;
+        }
+        public override void PostWalk(UnboundAssignment node) {
+            Pop();
+        }
+
+        // UnboundExpression
+        public override bool Walk(UnboundExpression node) {
+            return DefaultWalk(node, "UnboundExpression: " + node.Name.ToString());
+        }
+        public override void PostWalk(UnboundExpression node) {
+            Pop();
+        }
         // CallExpression
         public override bool Walk(CallExpression node) {
             Push("<call>");
@@ -265,12 +283,17 @@ namespace Microsoft.Scripting.Ast {
             CompilerConstant cc = node.Value as CompilerConstant;
 
             if (cc != null) {
-                return cc.Name + " " + cc.Type + " " + cc.Create().ToString();
+                object value = cc.Create();
+                if (value is ITemplatedValue) {
+                    return "TemplateVal: " + ((ITemplatedValue)value).ObjectValue.ToString();
+                }
+
+                return cc.Name + " " + cc.Type + " " + value.ToString();
             } else if (node.Value is Type) {
                 return "Type: " + ((Type)node.Value).FullName;
-            }
+            } 
 
-            return node.ToString();
+            return "Constant " + node.Value.GetType().FullName + ": " + node.Value.ToString();
         }
 
         public override void PostWalk(ConstantExpression node) {

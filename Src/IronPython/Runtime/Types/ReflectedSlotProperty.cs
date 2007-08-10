@@ -19,8 +19,10 @@ using System.Text;
 using System.Reflection;
 
 using Microsoft.Scripting;
-using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Generation;
+
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     /// <summary>

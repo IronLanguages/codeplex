@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting.Ast;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     public class CallAction : Action, IEquatable<CallAction> {
@@ -103,7 +104,7 @@ namespace Microsoft.Scripting.Actions {
 
         public int ArgumentCount {
             get {
-                Utils.Assert.NotNull(_argumentInfos);
+                Assert.NotNull(_argumentInfos);
                 return _argumentInfos.Length;
             }
         }

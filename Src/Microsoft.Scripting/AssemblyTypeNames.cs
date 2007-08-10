@@ -17,6 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
+
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting {
 
@@ -25,7 +28,7 @@ namespace Microsoft.Scripting {
         string _typeName;
 
         internal TypeName(Type type) {
-            Debug.Assert(!Utils.Reflection.IsNested(type));
+            Debug.Assert(!ReflectionUtils.IsNested(type));
             _namespace = type.Namespace;
             _typeName = type.Name;
         }
@@ -62,7 +65,7 @@ namespace Microsoft.Scripting {
 
         static IEnumerable<TypeName> GetTypeNames(Type[] types) {
             foreach (Type t in types) {
-                if (Utils.Reflection.IsNested(t)) continue;
+                if (ReflectionUtils.IsNested(t)) continue;
                 TypeName typeName = new TypeName(t);
                 yield return typeName;
             }
@@ -73,7 +76,7 @@ namespace Microsoft.Scripting {
             try {
                 return asm.GetTypes();
             } catch (Exception) {
-                return Utils.Reflection.EmptyTypes;
+                return ReflectionUtils.EmptyTypes;
             }
 #else
             try {
@@ -101,7 +104,7 @@ namespace Microsoft.Scripting {
             Type[] allTypes = GetAllTypesFromAssembly(asm);
 
             Predicate<Type> isPublicTypeDelegate = delegate(Type t) { return t != null && t.IsPublic; };
-            return Utils.Array.FindAll(allTypes, isPublicTypeDelegate);
+            return ArrayUtils.FindAll(allTypes, isPublicTypeDelegate);
         }
 
         static IEnumerable<TypeName> GetTypeNames(string [] namespaces, string [][] types, TypeName [] orcasTypes) {
@@ -115,7 +118,7 @@ namespace Microsoft.Scripting {
             }
 
 #if !SILVERLIGHT
-            if (Utils.Environment.IsOrcas) {
+            if (EnvironmentUtils.IsOrcas) {
                 foreach(TypeName orcasType in orcasTypes) {
                     yield return orcasType;
                 }

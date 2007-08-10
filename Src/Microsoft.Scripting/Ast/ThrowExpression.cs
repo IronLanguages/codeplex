@@ -39,9 +39,9 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             if (_val == null) {
-                throw new NotImplementedException();
+                throw LanguageContext._caughtExceptions[LanguageContext._caughtExceptions.Count - 1];
             } else {
                 throw (Exception)context.LanguageContext.Binder.Convert(_val.Evaluate(context), typeof(Exception));
             }

@@ -14,12 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using IronPython.Runtime;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 
+using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
@@ -40,7 +41,7 @@ namespace IronPython.Modules {
                 return String.Format("<operator.attrgetter: {0}>", name == null ? "None" : name);
             }
 
-            [OperatorMethod]
+            [SpecialName]
             public object Call(CodeContext context, object param) {
                 string s = name as string;
                 if (s == null) {
@@ -61,7 +62,7 @@ namespace IronPython.Modules {
                 return String.Format("<operator.itemgetter: {0}>", item == null ? "None" : item);
             }
 
-            [OperatorMethod]
+            [SpecialName]
             public object Call(object param) {
                 try {
                     return PythonOps.GetIndex(param, item);

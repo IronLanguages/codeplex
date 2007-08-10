@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     public sealed class TokenizerBuffer {
@@ -197,7 +198,7 @@ namespace Microsoft.Scripting {
         private void RefillBuffer() {
             if (_end == _buffer.Length) {
                 int new_size = System.Math.Max(System.Math.Max((_end - _start) * 2, _buffer.Length), _position);
-                Utils.Array.ResizeInternal(ref _buffer, new_size, _start, _end - _start);
+                ArrayUtils.ResizeInternal(ref _buffer, new_size, _start, _end - _start);
                 _end -= _start;
                 _position -= _start;
                 _start = 0;

@@ -24,6 +24,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     public class ClassDefinition : ScopeStatement {
         private SourceLocation _header;
@@ -214,7 +215,7 @@ namespace IronPython.Compiler.Ast {
                     return SymbolTable.IdsToStrings(new List<SymbolId>(finder._names.Keys));
                 } else {
                     // no point analyzing function with no parameters
-                    return Utils.Array.EmptyStrings;
+                    return ArrayUtils.EmptyStrings;
                 }
             }
 

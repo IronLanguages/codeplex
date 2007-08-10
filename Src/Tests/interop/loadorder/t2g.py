@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_2")
@@ -34,18 +35,13 @@ clr.AddReference("loadorder_2g")
 #     }
 # }
 
+AreEqual(First.Nongeneric1.Flag, "First.Nongeneric1")
+AreEqual(First.Nongeneric1[int].Flag, "First.Nongeneric1`1")  # no need to import First again
 
-print First.Nongeneric1.Flag
-print First.Nongeneric1[int].Flag  # no need to import First again
-
-print First.Nongeneric1.Flag
-print Nongeneric1.Flag
-
-print First.Nongeneric1[str].Flag
-
-# SystemError: Nongeneric1 is not generic type yet
-# Nongeneric1[float]
+AreEqual(Nongeneric1.Flag, "First.Nongeneric1")
+AssertError(SystemError, lambda: Nongeneric1[str])  # MakeGenericType on non-generic type
 
 from First import *
-print Nongeneric1[float].Flag
 
+AreEqual(Nongeneric1.Flag, "First.Nongeneric1")
+AreEqual(Nongeneric1[float].Flag, "First.Nongeneric1`1")
