@@ -12,17 +12,7 @@
 #
 #
 #####################################################################################
-import clr
-clr.AddReference("loadorder_7a")
-
-# public class module {
-# }
-
-from module import *
-
-print dir()
-import module
-print module.flag
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_7a")
@@ -30,7 +20,18 @@ clr.AddReference("loadorder_7a")
 # public class module {
 # }
 
-print module.flag
+import module
+
+AreEqual(module.flag, "python")
+
+clr.AddReference("loadorder_7a")
+
+# public class module {
+# }
+
+AreEqual(module.flag, "python")
 
 import module
-print module.flag
+
+AreEqual(module.flag, "python")
+

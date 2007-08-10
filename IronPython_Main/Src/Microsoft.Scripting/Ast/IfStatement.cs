@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _else; }
         }
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             foreach (IfStatementTest t in _tests) {
                 object val = t.Test.Evaluate(context);
                 if (context.LanguageContext.IsTrue(val)) {

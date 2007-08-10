@@ -19,6 +19,7 @@ using System.Text;
 using System.Configuration;
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -116,7 +117,7 @@ namespace Microsoft.Scripting.Hosting {
 
         /// <exception cref="InvalidImplementationException">The local host type has no constructor compatible with specified args.</exception>
         private LocalScriptHost CreateLocalHost(RemoteScriptHost remoteHost) {
-            LocalScriptHost result = Utils.Reflection.CreateInstance<LocalScriptHost>(_localHostType);
+            LocalScriptHost result = ReflectionUtils.CreateInstance<LocalScriptHost>(_localHostType);
             result.SetRemoteHost(remoteHost);
             return result;
 
@@ -164,7 +165,7 @@ namespace Microsoft.Scripting.Hosting {
 
         /// <exception cref="InvalidImplementationException">The PAL type has no compatible constructor.</exception>
         internal PlatformAdaptationLayer CreatePAL() {
-            return Utils.Reflection.CreateInstance<PlatformAdaptationLayer>(_palType);
+            return ReflectionUtils.CreateInstance<PlatformAdaptationLayer>(_palType);
         }
 
         internal IScriptHost CreateScriptHost(IScriptEnvironment environment) {
@@ -180,7 +181,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="InvalidImplementationException">The host type failed to instantiate.</exception>
         internal ScriptHost CreateHostLocally(IScriptEnvironment environment) {
             Debug.Assert(environment != null);
-            return Utils.Reflection.CreateInstance<ScriptHost>(_hostType, environment);
+            return ReflectionUtils.CreateInstance<ScriptHost>(_hostType, environment);
         }
     }
 }

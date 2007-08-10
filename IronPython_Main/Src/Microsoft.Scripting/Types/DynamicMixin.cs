@@ -22,7 +22,7 @@ using System.Threading;
 using System.Reflection;
 using System.Globalization;
 
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Types {
     public delegate bool TryGetMemberCustomizer(CodeContext context, object instance, SymbolId name, out object value);
     public delegate void SetMemberCustomizer(CodeContext context, object instance, SymbolId name, object value);
     public delegate void DeleteMemberCustomizer(CodeContext context, object instance, SymbolId name);
@@ -50,7 +50,8 @@ namespace Microsoft.Scripting {
         private CreateTypeSlot _slotCreator;                // used for creating default value slot (used for Python user types so we can implement user-defined descriptor protocol).
         private List<object> _contextTags;                  // tag info specific to the context
         private int _version = GetNextVersion();            // version of the type
-        private int _altVersion;
+        private int _altVersion;                            // the alternate version of  the type, when the version is DynamicVersion
+        private bool _hasGetAttribute;                      // true if the type has __getattribute__, false otherwise.
         private static DynamicType _nullType = DynamicHelpers.GetDynamicTypeFromType(typeof(None));
 
 
@@ -1004,6 +1005,15 @@ namespace Microsoft.Scripting {
             }
         }
 
+        public bool HasGetAttribute {
+            get {
+                return _hasGetAttribute;
+            }
+            internal set {
+                _hasGetAttribute = value;
+            }
+        }
+
         #region Internal API Surface
 
         /// <summary>
@@ -1490,7 +1500,9 @@ namespace Microsoft.Scripting {
                     return;            
             }
 
-            if (IsImmutable) throw new InvalidOperationException(Resources.ImmutableType);
+            if (IsImmutable) {
+                throw new MissingMemberException(String.Format("'{0}' object has no attribute '{1}'", Name, SymbolTable.IdToString(name)));
+            }
 
             EventHandler<DynamicTypeChangedEventArgs> dtc = OnChange;            
             object previous = null;

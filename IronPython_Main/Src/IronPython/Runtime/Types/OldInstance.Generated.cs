@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
@@ -55,7 +56,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__iadd__")]
+        [SpecialName, PythonName("__iadd__")]
         public object InPlaceAdd(object other) {
             object value;
 
@@ -94,7 +95,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__isub__")]
+        [SpecialName, PythonName("__isub__")]
         public object InPlaceSubtract(object other) {
             object value;
 
@@ -106,7 +107,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object Power([NotNull]OldInstance self, object other) {
             object value;
 
@@ -123,7 +124,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(object other, [NotNull]OldInstance self) {
             object value;
 
@@ -135,7 +136,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__ipow__")]
+        [SpecialName, PythonName("__ipow__")]
         public object InPlacePower(object other) {
             object value;
 
@@ -174,7 +175,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__imul__")]
+        [SpecialName, PythonName("__imul__")]
         public object InPlaceMultiply(object other) {
             object value;
 
@@ -186,7 +187,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide([NotNull]OldInstance self, object other) {
             object value;
 
@@ -203,7 +204,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(object other, [NotNull]OldInstance self) {
             object value;
 
@@ -215,7 +216,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__ifloordiv__")]
+        [SpecialName, PythonName("__ifloordiv__")]
         public object InPlaceFloorDivide(object other) {
             object value;
 
@@ -254,7 +255,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__idiv__")]
+        [SpecialName, PythonName("__idiv__")]
         public object InPlaceDivide(object other) {
             object value;
 
@@ -266,7 +267,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object TrueDivide([NotNull]OldInstance self, object other) {
             object value;
 
@@ -283,7 +284,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object TrueDivide(object other, [NotNull]OldInstance self) {
             object value;
 
@@ -295,7 +296,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__itruediv__")]
+        [SpecialName, PythonName("__itruediv__")]
         public object InPlaceTrueDivide(object other) {
             object value;
 
@@ -334,7 +335,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__imod__")]
+        [SpecialName, PythonName("__imod__")]
         public object InPlaceMod(object other) {
             object value;
 
@@ -346,7 +347,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift([NotNull]OldInstance self, object other) {
             object value;
 
@@ -363,7 +364,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(object other, [NotNull]OldInstance self) {
             object value;
 
@@ -375,7 +376,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__ilshift__")]
+        [SpecialName, PythonName("__ilshift__")]
         public object InPlaceLeftShift(object other) {
             object value;
 
@@ -387,7 +388,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object RightShift([NotNull]OldInstance self, object other) {
             object value;
 
@@ -404,7 +405,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object RightShift(object other, [NotNull]OldInstance self) {
             object value;
 
@@ -416,7 +417,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__irshift__")]
+        [SpecialName, PythonName("__irshift__")]
         public object InPlaceRightShift(object other) {
             object value;
 
@@ -455,7 +456,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__iand__")]
+        [SpecialName, PythonName("__iand__")]
         public object InPlaceBitwiseAnd(object other) {
             object value;
 
@@ -494,7 +495,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__ior__")]
+        [SpecialName, PythonName("__ior__")]
         public object InPlaceBitwiseOr(object other) {
             object value;
 
@@ -533,7 +534,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod, PythonName("__ixor__")]
+        [SpecialName, PythonName("__ixor__")]
         public object InPlaceXor(object other) {
             object value;
 

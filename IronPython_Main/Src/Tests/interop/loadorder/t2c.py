@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_2")
@@ -26,8 +27,8 @@ clr.AddReference("loadorder_2")
 import First
 from First import *
 
-print First.Nongeneric1.Flag
-print Nongeneric1.Flag
+AreEqual(First.Nongeneric1.Flag, "First.Nongeneric1")
+AreEqual(Nongeneric1.Flag, "First.Nongeneric1")
 
 clr.AddReference("loadorder_2c")
 
@@ -38,14 +39,10 @@ clr.AddReference("loadorder_2c")
 #     }
 # }
 
+AreEqual(First.Nongeneric1.Flag, "First.Nongeneric1_Same")  # !!!
+AreEqual(Nongeneric1.Flag, "First.Nongeneric1")             # !!!
 
-print First.Nongeneric1.Flag
-print Nongeneric1.Flag      # !!
-
-import First
 from First import *
 
-print First.Nongeneric1.Flag
-print Nongeneric1.Flag
-
-
+AreEqual(First.Nongeneric1.Flag, "First.Nongeneric1_Same")  
+AreEqual(Nongeneric1.Flag, "First.Nongeneric1_Same")        # !!!

@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             return RuntimeHelpers.LookupName(context, _name);
         }
 

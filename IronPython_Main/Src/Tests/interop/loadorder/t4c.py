@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_4")
@@ -27,17 +28,10 @@ clr.AddReference("loadorder_4")
 
 
 import NS
-print dir()
-print dir(NS)
-print getattr(NS, "Target")
-print NS.__dict__
-print dir(NS)
-print dir(NS)
 
-#print NS.Target.Flag
-#print NS.Target[int].Flag
+AreEqual(dir(NS), ['Target'])
 
-#clr.AddReference("loadorder_4c")
+clr.AddReference("loadorder_4c")
 
 # namespace NS {
 #     public class Target<K, V> {
@@ -45,16 +39,17 @@ print dir(NS)
 #     }
 # }
 
-#print dir(NS)
-#
-#print NS.Target.Flag
-#
-#print dir(NS)
-#print NS.__dict__
-#print NS.Target[int].Flag
-#print NS.Target[int, int].Flag
-#
-#from NS import *
-#
-#print Target.Flag
-#
+AreEqual(dir(NS), ['Target'])
+
+AreEqual(NS.Target.Flag, "NS.Target")
+AreEqual(NS.Target[int].Flag, "NS.Target`1")
+AreEqual(NS.Target[int, str].Flag, "NS.Target`2")
+
+AreEqual(dir(NS), ['Target'])
+
+from NS import *
+
+AreEqual(Target.Flag, "NS.Target")
+AreEqual(Target[int].Flag, "NS.Target`1")
+AreEqual(Target[int, str].Flag, "NS.Target`2")
+

@@ -21,19 +21,21 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+
 using IronPython.Compiler.Generation;
 using IronPython.Compiler;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
-
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     public class DoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
         public DoOperationBinderHelper(ActionBinder binder, CodeContext context, DoOperationAction action)
@@ -403,7 +405,7 @@ namespace IronPython.Runtime.Calls {
                 StandardRule<T> ret = new StandardRule<T>();
                 ret.MakeTest(types);
 
-                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, types);
+                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, CompilerHelpers.ConvertToTypes(types));
                 if (cand != null) {
                     Expression call;
 
@@ -469,11 +471,11 @@ namespace IronPython.Runtime.Calls {
         }
 
         private static Expression[] GetSetIndexParameters(StandardRule<T> ret) {
-            return Utils.Array.RemoveLast(Utils.Array.RemoveFirst(ret.Parameters));
+            return ArrayUtils.RemoveLast(ArrayUtils.RemoveFirst(ret.Parameters));
         }
 
         private static Expression[] GetGetIndexParameters(StandardRule<T> ret) {
-            return Utils.Array.RemoveFirst(ret.Parameters);
+            return ArrayUtils.RemoveFirst(ret.Parameters);
         }        
 
         private Expression MakeCall(MethodTarget target, StandardRule<T> block, bool reverse) {
@@ -663,7 +665,7 @@ namespace IronPython.Runtime.Calls {
 
         private MethodCandidate ComparisonTargetFromBinder(MethodBinder binder, DynamicType[] types) {
             if (binder == null) return null;
-            return binder.MakeBindingTarget(CallType.None, types);
+            return binder.MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(types));
         }
 
         private MethodInfo GetComparisonFallbackMethod(Operators op) {
@@ -926,7 +928,7 @@ namespace IronPython.Runtime.Calls {
 
             Debug.Assert(binder != null);
 
-            MethodCandidate cand = binder.MakeBindingTarget(CallType.None, types);
+            MethodCandidate cand = binder.MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(types));
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(types);
             rule.SetTarget(rule.MakeReturn(Binder, MakeCall(cand.Target, rule, false)));
@@ -958,7 +960,7 @@ namespace IronPython.Runtime.Calls {
                     MethodBinderType);
 
                 Debug.Assert(binder != null);
-                MethodCandidate cand = binder.MakeBindingTarget(CallType.None, types);
+                MethodCandidate cand = binder.MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(types));
                 notExpr = MakeCall(cand.Target, rule, false);
 
                 if (nonzero != null) {

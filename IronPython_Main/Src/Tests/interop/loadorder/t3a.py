@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_3")
@@ -34,7 +35,15 @@ clr.AddReference("loadorder_3a")
 
 import Second
 
-print First.Generic1[int, int].Flag
-print Second.Generic1.Flag
+AreEqual(First.Generic1[int, int].Flag, "First.Generic1`2")
+AreEqual(Second.Generic1.Flag, "Second.Generic1")
 
 from Second import Generic1
+
+AreEqual(Generic1.Flag, "Second.Generic1")
+AssertError(SystemError, lambda: Generic1[int, int])
+
+from First import Generic1
+
+AreEqual(Generic1[int, int].Flag, "First.Generic1`2")
+AssertError(SystemError, lambda: Generic1.Flag)

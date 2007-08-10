@@ -15,6 +15,7 @@
 
 using System;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     public sealed class ReturnFixer {

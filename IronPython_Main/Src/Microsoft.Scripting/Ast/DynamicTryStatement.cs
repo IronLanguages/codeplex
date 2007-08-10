@@ -136,7 +136,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             object ret = Statement.NextStatement;
             Exception savedExc = null;
             bool rethrow = false;
@@ -144,11 +144,20 @@ namespace Microsoft.Scripting.Ast {
             try {
                 try {
                     ret = _body.Execute(context);
+                    if (ret != Statement.NextStatement) {
+                        doElse = false;
+                    }
                 } catch (Exception exc) {
                     rethrow = true;
+                    doElse = false;
                     savedExc = exc;
                     try {
                         object extracted = RuntimeHelpers.PushExceptionHandler(context, exc);
+                        // Make the exception available to throw expressions in our body
+                        if (LanguageContext._caughtExceptions == null) {
+                            LanguageContext._caughtExceptions = new List<Exception>();
+                        }
+                        LanguageContext._caughtExceptions.Add(exc);
                         if (_handlers != null) {
                             foreach (DynamicTryStatementHandler handler in _handlers) {
                                 object target = extracted;
@@ -157,7 +166,6 @@ namespace Microsoft.Scripting.Ast {
                                 }
                                 if (target != null) {
                                     rethrow = false;
-                                    doElse = false;
                                     if (handler.Variable != null) {
                                         BoundAssignment.EvaluateAssign(context, handler.Variable, target);
                                     }
@@ -168,6 +176,7 @@ namespace Microsoft.Scripting.Ast {
                         }
                     } finally {
                         RuntimeHelpers.PopExceptionHandler(context);
+                        LanguageContext._caughtExceptions.RemoveAt(LanguageContext._caughtExceptions.Count - 1);
                     }
                 }
                 if (_else != null && doElse) {

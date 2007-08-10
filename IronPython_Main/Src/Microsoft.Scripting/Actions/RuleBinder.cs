@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     class RuleBinder : Walker {
@@ -27,7 +28,7 @@ namespace Microsoft.Scripting.Actions {
         private Dictionary<Variable, VariableReference> _refs;
 
         public static VariableReference[] Bind(Expression test, Statement target) {
-            Utils.Assert.NotNull(test, target);
+            Assert.NotNull(test, target);
 
             RuleBinder rb = new RuleBinder(test, target);
             test.Walk(rb);
@@ -36,7 +37,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private RuleBinder(Expression test, Statement target) {
-            Utils.Assert.NotNull(test, target);
+            Assert.NotNull(test, target);
             _test = test;
             _target = target;
         }

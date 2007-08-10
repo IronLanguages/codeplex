@@ -19,8 +19,10 @@ using System;
 using System.Xml;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -39,7 +41,7 @@ namespace IronPythonTest {
         }
 
         public static class SimpleXmlAttrInjector {
-            [OperatorMethod]
+            [SpecialName]
             public static IList<SymbolId> GetMemberNames(object obj) {
                 List<SymbolId> list = new List<SymbolId>();
                 XmlElement xml = obj as XmlElement;
@@ -55,7 +57,7 @@ namespace IronPythonTest {
                 return list;
             }
 
-            [OperatorMethod]
+            [SpecialName]
             public static object GetBoundMember(object obj, string name) {
                 XmlElement xml = obj as XmlElement;
 

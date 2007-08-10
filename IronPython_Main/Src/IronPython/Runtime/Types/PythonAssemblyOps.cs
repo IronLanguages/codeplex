@@ -17,8 +17,10 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
@@ -29,7 +31,7 @@ namespace IronPython.Runtime.Types {
     public static class PythonAssemblyOps {
         private static Dictionary<Assembly, TopReflectedPackage> assemblyMap = new Dictionary<Assembly, TopReflectedPackage>();
 
-        [OperatorMethod]
+        [SpecialName]
         public static object GetBoundMember(Assembly self, string name) {
             TopReflectedPackage reflectedAssembly = GetReflectedAssembly(self);
 
@@ -43,7 +45,7 @@ namespace IronPython.Runtime.Types {
             return DBNull.Value;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static IList<SymbolId> GetMemberNames(Assembly self) {
             TopReflectedPackage reflectedAssembly = GetReflectedAssembly(self);
 

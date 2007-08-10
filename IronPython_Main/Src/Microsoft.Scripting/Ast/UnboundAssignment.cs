@@ -37,8 +37,26 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
-            object value = _value.Evaluate(context);
+        public SymbolId Name {
+            get { return _name; }
+        }
+
+        public Operators Operator {
+            get { return _op; }
+        }
+
+        protected override object DoEvaluate(CodeContext context) {
+            object value;
+            if (_op == Operators.None) { // Just an assignment
+                value = _value.Evaluate(context);
+            } else {
+                //TODO: cache this action?
+                ActionExpression action = Ast.Action.Operator(
+                    _op, typeof(object),
+                    Ast.Read(_name), _value);
+                value = action.Evaluate(context);
+            }
+
             RuntimeHelpers.SetName(context, _name, value);
             return value;
         }

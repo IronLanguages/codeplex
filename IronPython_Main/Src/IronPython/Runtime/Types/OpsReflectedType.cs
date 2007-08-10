@@ -19,12 +19,13 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Types;
+
 using IronPython.Compiler;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
 
 namespace IronPython.Runtime.Types {
     public class OpsReflectedTypeBuilder : ReflectedTypeBuilder {
@@ -85,7 +86,7 @@ namespace IronPython.Runtime.Types {
         private void AddReflectedUnboundMethod(MethodInfo mi) {
             if (!mi.IsStatic) return;
 
-            if (mi.IsDefined(typeof(OperatorMethodAttribute), false)) {
+            if (mi.IsSpecialName) {
                 AddOperator(mi, FunctionType.Method | FunctionType.OpsFunction);
             }
 

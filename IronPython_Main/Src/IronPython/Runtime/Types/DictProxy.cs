@@ -19,11 +19,13 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
-using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Types {
     [PythonType("dictproxy")]

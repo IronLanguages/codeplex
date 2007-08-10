@@ -23,6 +23,9 @@ skiptest("win32")
 load_iron_python_test()
 from IronPythonTest import *
 
+# ensure the ctor has run as it registers injectors in IronPythonTest.
+AttrInjectorTest()
+
 def test_attributes_injector():
     # load XML Dom
     x = AttrInjectorTest.LoadXml('<root><foo>foo text</foo><bar><baz>baz text</baz></bar></root>')
@@ -37,5 +40,20 @@ def test_attributes_injector():
     AreEqual(x.bar.GetType().Name, 'XmlElement')
     AreEqual(x.bar.baz.GetType().Name, 'String')
     AreEqual(x.bar.baz, 'baz text')
+
+def operator_test(a):
+    AreEqual(a.doesnotexist, 42)
+    
+    # GetBoundMember shouldn't be called for pre-existing attributes, and we verify the name we got before.
+    AreEqual(a.Name, 'doesnotexist')
+    
+    # SetMember should be called for sets
+    a.somethingelse = 123
+    AreEqual(a.Name, 'somethingelse')
+    AreEqual(a.Value, 123)
+
+def test_get_set_extended(): operator_test(ExtendedClass())
+
+def test_get_set_instance(): operator_test(OperatorTest())
 
 run_test(__name__)

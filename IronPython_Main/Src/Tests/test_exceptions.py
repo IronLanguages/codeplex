@@ -664,10 +664,10 @@ def test_break_and_continue():
     AreEqual(test_outer_for_with_finally(state, True), 42)
     AreEqual(state.finallyCalled, True)
 
-# Temporarily disabled in FastEval mode:
+# Temporarily disabled in interpreted mode:
 # the traceback displayed on the console is correct, but the traceback
 # associated with clsException does not contain the expected string
-@skip('fasteval')
+@skip('interpreted')
 def test_throw_from_compiled_clionly():
     def bar(): return 1 + 'abc'
     unique_string = "<this is unique string>"

@@ -19,6 +19,7 @@ using System.Text;
 using System.IO;
 using Microsoft.Scripting.Hosting;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
 
@@ -49,7 +50,7 @@ namespace Microsoft.Scripting {
 
         public override string ReadLine() {
             if (_sourceUnit.DisableLineFeedLineSeparator) {
-                return Utils.ReadTo(_textReader, '\n');
+                return IOUtils.ReadTo(_textReader, '\n');
             } else {
                 return _textReader.ReadLine();
             }
@@ -60,12 +61,12 @@ namespace Microsoft.Scripting {
                 int current_line = 1;
 
                 for (; ; ) {
-                    if (!Utils.SeekTo(_textReader, '\n')) return false;
+                    if (!IOUtils.SeekTo(_textReader, '\n')) return false;
                     current_line++;
                     if (current_line == line) return true;
                 }
             } else {
-                return Utils.SeekLine(_textReader, line);
+                return IOUtils.SeekLine(_textReader, line);
             }
         }
 

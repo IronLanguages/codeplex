@@ -15,11 +15,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
-using System.Diagnostics;
-using System.Reflection;
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -60,6 +61,7 @@ namespace Microsoft.Scripting.Actions {
         /// <returns>The new rule.</returns>
         public StandardRule<T> GetRule<T>(CodeContext callerContext, Action action, object[] args) {
             if (action == null) throw new ArgumentNullException("action");
+            //Debug.Assert(action.Kind != ActionKind.GetMember || ((GetMemberAction)action).Name != SymbolTable.StringToId("x"));
 
             BigRuleSet ruleSet;
             lock (_rules) {
@@ -74,6 +76,14 @@ namespace Microsoft.Scripting.Actions {
                 return rule;
             }
 
+#if DEBUG
+            string name = "";
+            if (args[0] is DynamicType) {
+                name = ((DynamicType)args[0]).Name;
+            }
+            PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "MakeRule " + action.ToString() + " " + name);
+#endif
+             
             IDynamicObject ndo = args[0] as IDynamicObject;
             if (ndo != null) {
                 rule = ndo.GetRule<T>(action, callerContext, args);
@@ -119,7 +129,7 @@ namespace Microsoft.Scripting.Actions {
                 case ActionKind.GetMember:
                     return new GetMemberBinderHelper<T>(callerContext, (GetMemberAction)action, args).MakeNewRule();
                 case ActionKind.SetMember:
-                    return new SetMemberBinderHelper<T>(callerContext, (SetMemberAction)action).MakeNewRule(args);
+                    return new SetMemberBinderHelper<T>(callerContext, (SetMemberAction)action, args).MakeNewRule();
                 case ActionKind.CreateInstance:
                     return new CreateInstanceBinderHelper<T>(callerContext, (CreateInstanceAction)action).MakeRule(args);
                 case ActionKind.DoOperation:
@@ -191,6 +201,17 @@ namespace Microsoft.Scripting.Actions {
                 typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
                 Ast.Ast.Constant(name)
             );           
+        }
+
+        /// <summary>
+        /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
+        /// doing this for the time being until we get a more robust error return mechanism.
+        /// </summary>
+        public virtual Expression MakeReadOnlyMemberError(Type type, string name) {
+            return Ast.Ast.New(
+                typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                Ast.Ast.Constant(name)
+            );
         }
 
         private static MemberInfo[] GetExtensionMembers(string name, Type type) {

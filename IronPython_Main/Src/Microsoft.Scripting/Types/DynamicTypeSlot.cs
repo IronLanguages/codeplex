@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Types {
     /// <summary>
     /// A TypeSlot is an item that gets stored in a type's dictionary.  Slots provide an 
     /// opportunity to customize access at runtime when a value is get or set from a dictionary.

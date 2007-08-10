@@ -67,7 +67,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object x = _operand.Evaluate(context);
             switch (_op) {
                 case UnaryOperators.Cast:

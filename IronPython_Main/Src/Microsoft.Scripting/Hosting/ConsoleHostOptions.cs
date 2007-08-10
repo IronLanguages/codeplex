@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Scripting.Shell;
 using System.Threading;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -34,7 +35,7 @@ namespace Microsoft.Scripting.Hosting {
 
         private readonly List<string> _ignoredArgs = new List<string>();
         private readonly List<string> _files = new List<string>();
-        private string[] _sourceUnitSearchPaths = Utils.Array.EmptyStrings;
+        private string[] _sourceUnitSearchPaths = ArrayUtils.EmptyStrings;
         private Action _action = Action.None;
         private ILanguageProvider _languageProvider = null;
         private bool _displayLogo = true;
@@ -171,7 +172,7 @@ namespace Microsoft.Scripting.Hosting {
                         throw new Exception("No file to run.");
 
                     if (_options.LanguageProvider == null)
-                        _options.LanguageProvider = GetLanguageProvider(Utils.String.GetSuffix(_options.Files[0], '.', false));
+                        _options.LanguageProvider = GetLanguageProvider(StringUtils.GetSuffix(_options.Files[0], '.', false));
 
                     break;
 

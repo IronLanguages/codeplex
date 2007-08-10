@@ -105,7 +105,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object value;
             if (_op == Operators.None) { // Just an assignment
                 value = _value.Evaluate(context);

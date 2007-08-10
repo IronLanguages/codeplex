@@ -22,9 +22,11 @@ using System.Reflection;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     /// <summary>
     /// Creates rules for performing method calls.  Currently supports calling built-in functions, built-in method descriptors (w/o 
@@ -107,15 +109,16 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private StandardRule<T> MakeBuiltinFunctionRule(BuiltinFunction bf, object []args) {
-            DynamicType[] argTypes = GetArgumentTypes(args);
+            Type[] argTypes = GetArgumentTypes(args);
             if (argTypes == null) return null;
 
             SymbolId[] argNames = Action.GetArgumentNames();
 
-            MethodCandidate cand = GetMethodCandidate(args[0], bf, argTypes, argNames);
+            Type[] testTypes;
+            MethodCandidate cand = GetMethodCandidate(args[0], bf, argTypes, argNames, out testTypes);
 
-            // currently we fall back to the fully dynamic case for all error messages
-            if (cand != null &&
+            if (cand == null) {
+            } else if (cand != null &&
                 cand.Target.Method.IsPublic &&
                 CompilerHelpers.GetOutAndByRefParameterCount(cand.Target.Method) == 0 &&
                 (!bf.IsBinaryOperator || cand.NarrowingLevel == NarrowingLevel.None)) {  // narrowing level on binary operator may fail during call...
@@ -135,13 +138,14 @@ namespace Microsoft.Scripting.Actions {
                 if (Action.IsParamsCall()) {
                     test = Ast.AndAlso(test, MakeParamsTest(rule, args));
                 }
-                if (argTypes.Length > 0) {
-                    test = Ast.AndAlso(test, MakeTestForTypes(rule, exprargs, argTypes, 0, args[0] is BoundBuiltinFunction, bf));
+                if (argTypes.Length > 0) {                    
+                    // MakeTestForTypes(rule, exprargs, argTypes, 0, args[0] is BoundBuiltinFunction, bf)
+                    test = Ast.AndAlso(test, MakeNecessaryTests(rule, new Type[][]{ testTypes }, exprargs));
                 } 
 
                 rule.SetTest(test);
                 
-                if (bf.IsReversedOperator) Utils.Array.SwapLastTwo(exprargs);
+                if (bf.IsReversedOperator) ArrayUtils.SwapLastTwo(exprargs);
 
                 rule.SetTarget(rule.MakeReturn(
                     Binder,
@@ -153,22 +157,27 @@ namespace Microsoft.Scripting.Actions {
         }
 
 
-        private MethodCandidate GetMethodCandidate(object target, BuiltinFunction bf, DynamicType[] argTypes, SymbolId []argNames) {
+        private MethodCandidate GetMethodCandidate(object target, BuiltinFunction bf, Type[] argTypes, SymbolId []argNames, out Type[] testTypes) {
             MethodBinder binder = MethodBinder.MakeBinder(Binder, "__call__", bf.Targets, bf.IsBinaryOperator ? BinderType.BinaryOperator : BinderType.Normal);
             BoundBuiltinFunction boundbf = target as BoundBuiltinFunction;
-            if (boundbf == null) {
-                return binder.MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(argTypes), argNames);
+            if (boundbf == null) {                
+                return binder.MakeBindingTarget(CallType.None, argTypes, argNames, out testTypes);
             }
 
-            DynamicType[] types = Utils.Array.Insert(DynamicHelpers.GetDynamicType(boundbf.Self), argTypes);
+            Type[] types = ArrayUtils.Insert(CompilerHelpers.GetType(boundbf.Self), argTypes);
             if (bf.IsReversedOperator) {
-                Utils.Array.SwapLastTwo(types);
+                ArrayUtils.SwapLastTwo(types);
                 if (argNames.Length >= 2) {
-                    Utils.Array.SwapLastTwo(argNames);
+                    ArrayUtils.SwapLastTwo(argNames);
                 }
             }
 
-            return binder.MakeBindingTarget(CallType.ImplicitInstance, CompilerHelpers.ConvertToTypes(types), argNames);
+
+            MethodCandidate res = binder.MakeBindingTarget(CallType.ImplicitInstance, types, argNames, out testTypes);
+            if (bf.IsReversedOperator && testTypes != null) {
+                ArrayUtils.SwapLastTwo(testTypes);
+            }
+            return res;
         }
 
         /// <summary>
@@ -229,86 +238,15 @@ namespace Microsoft.Scripting.Actions {
                 typeof(BuiltinMethodDescriptor).GetProperty("Template"));
         }
 
-        /// <summary>
-        /// Makes the set of tests for the types w/ the parameter adjected by 1 to remove the target
-        /// </summary>
-        private Expression MakeTestForTypes(StandardRule<T> rule, Expression[] exprArgs, DynamicType[] types, int index, bool boundFunc, BuiltinFunction bf) {
-            try {
-                bool needTest = AreArgumentTypesOverloaded(types, index, boundFunc, bf);
-                Expression test = needTest ? rule.MakeTypeTest(types[index], exprArgs[index + (boundFunc ? 1 : 0)]) : Ast.True();
-
-                if (index + 1 < types.Length) {
-                    Expression nextTests = MakeTestForTypes(rule, exprArgs, types, index + 1, boundFunc, bf);
-                    if (test.IsConstant(true)) {
-                        return nextTests;
-                    } else if (nextTests.IsConstant(true)) {
-                        return test;
-                    } else {
-                        return Ast.AndAlso(test, nextTests);
-                    }
-                }
-
-                return test;
-            } catch {
-                Debug.Assert(false);
-                throw;
-            }
-        }
-
-        private static bool AreArgumentTypesOverloaded(DynamicType[] types, int index, bool boundFunc, BuiltinFunction bf) {
-            // always need to check for binary operators due to not supporting NotImplemented on calls.  If we don't
-            // check here we can skip a type check which is needed to avoid a cast failure on a call.
-            if (bf.IsBinaryOperator) return true;
-
-            Type argType = null;
-            for (int i = 0; i < bf.Targets.Length; i++) {                
-                ParameterInfo[] pis = bf.Targets[i].GetParameters();
-
-                if (pis.Length == 0) continue;
-
-                int readIndex = index + 
-                    ((boundFunc && CompilerHelpers.IsStatic(bf.Targets[i])) ? 1 : 0) + 
-                    ((!boundFunc && !CompilerHelpers.IsStatic(bf.Targets[i])) ? -1 : 0);
-                if (pis[0].ParameterType == typeof(CodeContext)) {
-                    readIndex++;
-                }
-                
-                Type curType;
-                if (readIndex < pis.Length) {
-                    if (readIndex == -1) {
-                        curType = bf.Targets[i].DeclaringType;
-                    } else if (CompilerHelpers.IsParamArray(pis[readIndex])) {
-                        if (index == types.Length - 1) {
-                            return true;    // TODO: Optimize this case
-                        }
-                        curType = pis[pis.Length - 1].ParameterType.GetElementType();
-                    } else {
-                        curType = pis[readIndex].ParameterType;
-                    }
-                } else if (CompilerHelpers.IsParamArray(pis[pis.Length - 1])) {
-                    curType = pis[pis.Length - 1].ParameterType.GetElementType();
-                } else {
-                    continue;
-                }
-                
-                if (argType == null) {
-                    argType = curType;
-                } else if (argType != curType) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private DynamicType[] GetArgumentTypes(object[] args) {
+        private Type[] GetArgumentTypes(object[] args) {
             return GetArgumentTypes(Action, args);
         }
 
         private static DynamicType[] GetReversedArgumentTypes(DynamicType[] types) {
             if (types.Length < 3) throw new InvalidOperationException("need 3 types or more for reversed operator");
 
-            DynamicType[] argTypes = Utils.Array.RemoveFirst(types);
-            Utils.Array.SwapLastTwo(argTypes);
+            DynamicType[] argTypes = ArrayUtils.RemoveFirst(types);
+            ArrayUtils.SwapLastTwo(argTypes);
             return argTypes;
         }
 

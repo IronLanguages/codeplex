@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Ast {
             _statement.Emit(cg);
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             _statement.Execute(context);
             return null;
         }

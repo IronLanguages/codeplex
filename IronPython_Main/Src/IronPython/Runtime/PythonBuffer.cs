@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
@@ -106,11 +107,11 @@ namespace IronPython.Runtime {
         }
 
         public object this[object s] {
-            [OperatorMethod]
+            [SpecialName]
             get {
                 return PythonOps.GetIndex(PythonOps.GetIndex(_object, GetSlice()), s);
             }
-            [OperatorMethod]
+            [SpecialName]
             set {
                 throw PythonOps.TypeError("buffer is read-only");
             }
@@ -152,7 +153,7 @@ namespace IronPython.Runtime {
             return _object.GetHashCode() ^ _offset ^ (_size<<16 | (_size>>16));
         }
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int GetLength() {
             return _size;
         }
@@ -165,7 +166,7 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public string ToCodeString(CodeContext context) {
             return string.Format("<read-only buffer for 0x{0:X16}, size {1}, offset {2} at 0x{3:X16}>",
                 PythonOps.Id(_object), _size, _offset, PythonOps.Id(this));

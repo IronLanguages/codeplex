@@ -21,6 +21,7 @@ using System.Reflection;
 using Microsoft.Scripting.Shell;
 using System.Threading;
 using System.IO;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -105,7 +106,7 @@ namespace Microsoft.Scripting.Hosting {
             if (options_help != null) {
                 Console.WriteLine("Host options:");
 
-                Utils.Array.PrintTable(Console.Out, options_help);
+                ArrayUtils.PrintTable(Console.Out, options_help);
                 Console.WriteLine();
             }
 

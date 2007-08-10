@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -224,7 +225,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [OperatorMethod, PythonName("__delitem__")]
+            [SpecialName, PythonName("__delitem__")]
             public void RemoveAt(object index) {
                 lock (lockObj) {
                     int realIndex = IndexToSlot(index);
@@ -257,7 +258,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [OperatorMethod, PythonName("__contains__")]
+            [SpecialName, PythonName("__contains__")]
             public object Contains(object o) {
                 lock (lockObj) {
                     object res = RuntimeHelpers.False;
@@ -291,7 +292,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [OperatorMethod, PythonName("__len__")]
+            [SpecialName, PythonName("__len__")]
             public int GetLength() {
                 return itemCnt;
             }
@@ -496,7 +497,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            [OperatorMethod, PythonName("__repr__")]
+            [SpecialName, PythonName("__repr__")]
             public string ToCodeString(CodeContext context) {
                 StringBuilder sb = new StringBuilder();
                 sb.Append("deque([");
@@ -541,7 +542,7 @@ namespace IronPython.Modules {
 
             #region Rich Comparison Members
 
-            [OperatorMethod]
+            [SpecialName]
             [return: MaybeNotImplemented]
             public object GreaterThan(CodeContext context, object other) {
                 PythonDequeCollection otherDeque = other as PythonDequeCollection;
@@ -550,7 +551,7 @@ namespace IronPython.Modules {
                 return RuntimeHelpers.BooleanToObject(CompareToWorker(otherDeque) > 0);
             }
 
-            [OperatorMethod]
+            [SpecialName]
             [return: MaybeNotImplemented]
             public object LessThan(CodeContext context, object other) {
                 PythonDequeCollection otherDeque = other as PythonDequeCollection;
@@ -559,7 +560,7 @@ namespace IronPython.Modules {
                 return RuntimeHelpers.BooleanToObject(CompareToWorker(otherDeque) < 0);
             }
 
-            [OperatorMethod]
+            [SpecialName]
             [return: MaybeNotImplemented]
             public object GreaterThanOrEqual(CodeContext context, object other) {
                 PythonDequeCollection otherDeque = other as PythonDequeCollection;
@@ -568,7 +569,7 @@ namespace IronPython.Modules {
                 return RuntimeHelpers.BooleanToObject(CompareToWorker(otherDeque) >= 0);
             }
 
-            [OperatorMethod]
+            [SpecialName]
             [return: MaybeNotImplemented]
             public object LessThanOrEqual(CodeContext context, object other) {
                 PythonDequeCollection otherDeque = other as PythonDequeCollection;

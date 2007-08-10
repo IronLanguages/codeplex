@@ -20,6 +20,7 @@ using IronPython.Runtime;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     public abstract class ListComprehensionIterator : Node {
         internal abstract MSAst.Statement Transform(AstGenerator ag, MSAst.Statement body);
@@ -53,7 +54,7 @@ namespace IronPython.Compiler.Ast {
                     Ast.Call(
                         _item.Span,
                         null,                                                                  // instance
-                        AstGenerator.GetHelperMethod("MakeList", Utils.Reflection.EmptyTypes), // method
+                        AstGenerator.GetHelperMethod("MakeList", ReflectionUtils.EmptyTypes), // method
                         new MSAst.Expression[0]                                                // arguments
                     )                    
                 );

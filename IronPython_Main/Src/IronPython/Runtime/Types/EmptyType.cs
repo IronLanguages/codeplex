@@ -15,7 +15,10 @@
 
 using System;
 using System.Threading;
+using System.Runtime.CompilerServices;
+
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
@@ -55,7 +58,7 @@ namespace IronPython.Runtime.Types {
                 "None");
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string ToCodeString(None self) {
             return "None";
         }

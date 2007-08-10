@@ -18,14 +18,18 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using System.Diagnostics;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Compiler;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
 
 [assembly:PythonExtensionType(typeof(DynamicType), typeof(DynamicTypeOps), DerivationType=typeof(ExtensibleType))]
 namespace IronPython.Runtime.Operations {
@@ -103,7 +107,7 @@ namespace IronPython.Runtime.Operations {
             return DynamicHelpers.GetDynamicType(o);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(DynamicType self, DynamicType other) {
             if (self == null) {
                 return other == null;
@@ -131,7 +135,7 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string Repr(CodeContext context, DynamicType self) {
             string name = GetName(self);
 
@@ -149,7 +153,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [OperatorMethod, PythonName("__str__")]
+        [SpecialName, PythonName("__str__")]
         public static string PythonToString(CodeContext context, DynamicType self) {
             return Repr(context, self);
         }
@@ -205,7 +209,7 @@ namespace IronPython.Runtime.Operations {
                         PythonOps.StringRepr(DynamicHelpers.GetDynamicType(args[0])));
                 }
 
-                return DynamicTypeOps.CallWorker(context, dt, Utils.Array.RemoveFirst(args));
+                return DynamicTypeOps.CallWorker(context, dt, ArrayUtils.RemoveFirst(args));
             }
 
             #endregion
@@ -231,7 +235,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object CallWorker(CodeContext context, DynamicType dt, object[] args) {
-            object newObject = PythonOps.CallWithContext(context, GetTypeNew(context, dt), Utils.Array.Insert<object>(dt, args));
+            object newObject = PythonOps.CallWithContext(context, GetTypeNew(context, dt), ArrayUtils.Insert<object>(dt, args));
 
             if (ShouldInvokeInit(dt, DynamicHelpers.GetDynamicType(newObject), args.Length)) {
                 PythonOps.CallWithContext(context, GetInitMethod(context, dt, newObject), args);
@@ -243,7 +247,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static object CallWorker(CodeContext context, DynamicType dt, KwCallInfo args) {
-            object[] clsArgs = Utils.Array.Insert<object>(dt, args.Arguments);
+            object[] clsArgs = ArrayUtils.Insert<object>(dt, args.Arguments);
             object newObject = PythonOps.CallWithKeywordArgs(context,
                 GetTypeNew(context, dt),
                 clsArgs,

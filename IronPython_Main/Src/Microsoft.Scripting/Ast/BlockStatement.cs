@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class BlockStatement : Statement {
@@ -26,11 +27,11 @@ namespace Microsoft.Scripting.Ast {
 
         internal BlockStatement(SourceSpan span, Statement[] statements)
             : base(span) {
-            Utils.Assert.NotNullItems(statements); 
+            Assert.NotNullItems(statements); 
             _statements = statements;
         }
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             object ret = Statement.NextStatement;
             foreach (Statement stmt in _statements) {
                 //AstWriter.ForceDump(stmt, "executing", System.Console.Out);

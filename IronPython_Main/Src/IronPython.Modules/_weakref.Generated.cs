@@ -17,11 +17,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
-
-using Microsoft.Scripting;
 
 namespace IronPython.Modules {
     partial class ProxyDynamicTypeBuilder : OpsReflectedTypeBuilder {

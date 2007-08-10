@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Ast {
             _args = args;
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object target = _target.Evaluate(context);
             object instance = _instance != null ? _instance.Evaluate(context) : null;
             object[] args = null;

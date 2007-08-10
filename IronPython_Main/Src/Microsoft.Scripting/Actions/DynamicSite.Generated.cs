@@ -52,14 +52,20 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0) {
-            StandardRule<DynamicSiteTarget<T0, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, Tret>>(context, Action, new object[] { arg0 });
+            StandardRule<DynamicSiteTarget<T0, Tret>> rule = _rules.GetRule(context, arg0);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(context);
+                return _target(this, context, arg0);
+            }
+
+            rule = context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, Tret>>(context, Action, new object[] { arg0 });
 
     #if DEBUG
             // This is much slower than building the ruleset, since we have to look up the rule every time;
             // we do it in debug mode to make sure we can still get through this code path
             // without generating IL.
-            if (context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0 };
                 using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(context);
@@ -68,17 +74,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<DynamicSiteTarget<T0, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                DynamicSiteTarget<T0, Tret> newTarget = newRules.GetOrMakeTarget(context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            DynamicSiteTarget<T0, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<DynamicSiteTarget<T0, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(context);
                 }
-                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, Tret>>.FixedInstance) return newTarget(this, context, arg0);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0);
+            return target(this, context, arg0);
         }
     }
 
@@ -109,11 +117,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(T0 arg0) {
-            StandardRule<FastDynamicSiteTarget<T0, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, Tret>>(Context, Action, new object[] { arg0 });
+            StandardRule<FastDynamicSiteTarget<T0, Tret>> rule = _rules.GetRule(Context, arg0);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(Context);
+                return _target(this, arg0);
+            }
+
+            rule = Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, Tret>>(Context, Action, new object[] { arg0 });
 
     #if DEBUG
-            if (Context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (Context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0 };
                 using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(Context);
@@ -122,17 +136,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<FastDynamicSiteTarget<T0, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                FastDynamicSiteTarget<T0, Tret> newTarget = newRules.GetOrMakeTarget(Context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            FastDynamicSiteTarget<T0, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<FastDynamicSiteTarget<T0, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(Context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(Context);
                 }
-                return newTarget(this, arg0);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0);
+            return target(this, arg0);
         }
     }
 
@@ -164,14 +180,20 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1) {
-            StandardRule<DynamicSiteTarget<T0, T1, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, Tret>>(context, Action, new object[] { arg0, arg1 });
+            StandardRule<DynamicSiteTarget<T0, T1, Tret>> rule = _rules.GetRule(context, arg0, arg1);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(context);
+                return _target(this, context, arg0, arg1);
+            }
+
+            rule = context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, Tret>>(context, Action, new object[] { arg0, arg1 });
 
     #if DEBUG
             // This is much slower than building the ruleset, since we have to look up the rule every time;
             // we do it in debug mode to make sure we can still get through this code path
             // without generating IL.
-            if (context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1 };
                 using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(context);
@@ -180,17 +202,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<DynamicSiteTarget<T0, T1, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                DynamicSiteTarget<T0, T1, Tret> newTarget = newRules.GetOrMakeTarget(context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            DynamicSiteTarget<T0, T1, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<DynamicSiteTarget<T0, T1, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(context);
                 }
-                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1);
+            return target(this, context, arg0, arg1);
         }
     }
 
@@ -221,11 +245,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1) {
-            StandardRule<FastDynamicSiteTarget<T0, T1, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, Tret>>(Context, Action, new object[] { arg0, arg1 });
+            StandardRule<FastDynamicSiteTarget<T0, T1, Tret>> rule = _rules.GetRule(Context, arg0, arg1);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(Context);
+                return _target(this, arg0, arg1);
+            }
+
+            rule = Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, Tret>>(Context, Action, new object[] { arg0, arg1 });
 
     #if DEBUG
-            if (Context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (Context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1 };
                 using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(Context);
@@ -234,17 +264,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<FastDynamicSiteTarget<T0, T1, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                FastDynamicSiteTarget<T0, T1, Tret> newTarget = newRules.GetOrMakeTarget(Context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            FastDynamicSiteTarget<T0, T1, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<FastDynamicSiteTarget<T0, T1, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(Context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(Context);
                 }
-                return newTarget(this, arg0, arg1);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1);
+            return target(this, arg0, arg1);
         }
     }
 
@@ -276,14 +308,20 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2) {
-            StandardRule<DynamicSiteTarget<T0, T1, T2, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, Tret>>(context, Action, new object[] { arg0, arg1, arg2 });
+            StandardRule<DynamicSiteTarget<T0, T1, T2, Tret>> rule = _rules.GetRule(context, arg0, arg1, arg2);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(context);
+                return _target(this, context, arg0, arg1, arg2);
+            }
+
+            rule = context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, Tret>>(context, Action, new object[] { arg0, arg1, arg2 });
 
     #if DEBUG
             // This is much slower than building the ruleset, since we have to look up the rule every time;
             // we do it in debug mode to make sure we can still get through this code path
             // without generating IL.
-            if (context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1, arg2 };
                 using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(context);
@@ -292,17 +330,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<DynamicSiteTarget<T0, T1, T2, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                DynamicSiteTarget<T0, T1, T2, Tret> newTarget = newRules.GetOrMakeTarget(context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            DynamicSiteTarget<T0, T1, T2, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(context);
                 }
-                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1, arg2);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1, arg2);
+            return target(this, context, arg0, arg1, arg2);
         }
     }
 
@@ -333,11 +373,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1, T2 arg2) {
-            StandardRule<FastDynamicSiteTarget<T0, T1, T2, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, Tret>>(Context, Action, new object[] { arg0, arg1, arg2 });
+            StandardRule<FastDynamicSiteTarget<T0, T1, T2, Tret>> rule = _rules.GetRule(Context, arg0, arg1, arg2);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(Context);
+                return _target(this, arg0, arg1, arg2);
+            }
+
+            rule = Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, Tret>>(Context, Action, new object[] { arg0, arg1, arg2 });
 
     #if DEBUG
-            if (Context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (Context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1, arg2 };
                 using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(Context);
@@ -346,17 +392,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<FastDynamicSiteTarget<T0, T1, T2, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                FastDynamicSiteTarget<T0, T1, T2, Tret> newTarget = newRules.GetOrMakeTarget(Context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            FastDynamicSiteTarget<T0, T1, T2, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<FastDynamicSiteTarget<T0, T1, T2, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(Context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(Context);
                 }
-                return newTarget(this, arg0, arg1, arg2);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1, arg2);
+            return target(this, arg0, arg1, arg2);
         }
     }
 
@@ -388,14 +436,20 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
-            StandardRule<DynamicSiteTarget<T0, T1, T2, T3, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, Tret>>(context, Action, new object[] { arg0, arg1, arg2, arg3 });
+            StandardRule<DynamicSiteTarget<T0, T1, T2, T3, Tret>> rule = _rules.GetRule(context, arg0, arg1, arg2, arg3);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(context);
+                return _target(this, context, arg0, arg1, arg2, arg3);
+            }
+
+            rule = context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, Tret>>(context, Action, new object[] { arg0, arg1, arg2, arg3 });
 
     #if DEBUG
             // This is much slower than building the ruleset, since we have to look up the rule every time;
             // we do it in debug mode to make sure we can still get through this code path
             // without generating IL.
-            if (context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1, arg2, arg3 };
                 using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(context);
@@ -404,17 +458,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                DynamicSiteTarget<T0, T1, T2, T3, Tret> newTarget = newRules.GetOrMakeTarget(context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            DynamicSiteTarget<T0, T1, T2, T3, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(context);
                 }
-                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1, arg2, arg3);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1, arg2, arg3);
+            return target(this, context, arg0, arg1, arg2, arg3);
         }
     }
 
@@ -445,11 +501,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
-            StandardRule<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>>(Context, Action, new object[] { arg0, arg1, arg2, arg3 });
+            StandardRule<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>> rule = _rules.GetRule(Context, arg0, arg1, arg2, arg3);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(Context);
+                return _target(this, arg0, arg1, arg2, arg3);
+            }
+
+            rule = Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>>(Context, Action, new object[] { arg0, arg1, arg2, arg3 });
 
     #if DEBUG
-            if (Context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (Context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1, arg2, arg3 };
                 using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(Context);
@@ -458,17 +520,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                FastDynamicSiteTarget<T0, T1, T2, T3, Tret> newTarget = newRules.GetOrMakeTarget(Context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            FastDynamicSiteTarget<T0, T1, T2, T3, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(Context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(Context);
                 }
-                return newTarget(this, arg0, arg1, arg2, arg3);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1, arg2, arg3);
+            return target(this, arg0, arg1, arg2, arg3);
         }
     }
 
@@ -500,14 +564,20 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
-            StandardRule<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>(context, Action, new object[] { arg0, arg1, arg2, arg3, arg4 });
+            StandardRule<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> rule = _rules.GetRule(context, arg0, arg1, arg2, arg3, arg4);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(context);
+                return _target(this, context, arg0, arg1, arg2, arg3, arg4);
+            }
+
+            rule = context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>(context, Action, new object[] { arg0, arg1, arg2, arg3, arg4 });
 
     #if DEBUG
             // This is much slower than building the ruleset, since we have to look up the rule every time;
             // we do it in debug mode to make sure we can still get through this code path
             // without generating IL.
-            if (context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1, arg2, arg3, arg4 };
                 using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(context);
@@ -516,17 +586,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                DynamicSiteTarget<T0, T1, T2, T3, T4, Tret> newTarget = newRules.GetOrMakeTarget(context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            DynamicSiteTarget<T0, T1, T2, T3, T4, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(context);
                 }
-                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1, arg2, arg3, arg4);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1, arg2, arg3, arg4);
+            return target(this, context, arg0, arg1, arg2, arg3, arg4);
         }
     }
 
@@ -557,11 +629,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) {
-            StandardRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>(Context, Action, new object[] { arg0, arg1, arg2, arg3, arg4 });
+            StandardRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> rule = _rules.GetRule(Context, arg0, arg1, arg2, arg3, arg4);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(Context);
+                return _target(this, arg0, arg1, arg2, arg3, arg4);
+            }
+
+            rule = Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>(Context, Action, new object[] { arg0, arg1, arg2, arg3, arg4 });
 
     #if DEBUG
-            if (Context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (Context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1, arg2, arg3, arg4 };
                 using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(Context);
@@ -570,17 +648,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret> newTarget = newRules.GetOrMakeTarget(Context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(Context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(Context);
                 }
-                return newTarget(this, arg0, arg1, arg2, arg3, arg4);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1, arg2, arg3, arg4);
+            return target(this, arg0, arg1, arg2, arg3, arg4);
         }
     }
 
@@ -612,14 +692,20 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
-            StandardRule<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>(context, Action, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+            StandardRule<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> rule = _rules.GetRule(context, arg0, arg1, arg2, arg3, arg4, arg5);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(context);
+                return _target(this, context, arg0, arg1, arg2, arg3, arg4, arg5);
+            }
+
+            rule = context.LanguageContext.Binder.GetRule<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>(context, Action, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
 
     #if DEBUG
             // This is much slower than building the ruleset, since we have to look up the rule every time;
             // we do it in debug mode to make sure we can still get through this code path
             // without generating IL.
-            if (context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
                 using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(context);
@@ -628,17 +714,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> newTarget = newRules.GetOrMakeTarget(context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(context);
                 }
-                if (newRules != EmptyRuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>.FixedInstance) return newTarget(this, context, arg0, arg1, arg2, arg3, arg4, arg5);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0, arg1, arg2, arg3, arg4, arg5);
+            return target(this, context, arg0, arg1, arg2, arg3, arg4, arg5);
         }
     }
 
@@ -669,11 +757,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) {
-            StandardRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>(Context, Action, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+            StandardRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> rule = _rules.GetRule(Context, arg0, arg1, arg2, arg3, arg4, arg5);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(Context);
+                return _target(this, arg0, arg1, arg2, arg3, arg4, arg5);
+            }
+
+            rule = Context.LanguageContext.Binder.GetRule<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>(Context, Action, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
 
     #if DEBUG
-            if (Context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (Context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0, arg1, arg2, arg3, arg4, arg5 };
                 using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(Context);
@@ -682,17 +776,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> newTarget = newRules.GetOrMakeTarget(Context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(Context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(Context);
                 }
-                return newTarget(this, arg0, arg1, arg2, arg3, arg4, arg5);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0, arg1, arg2, arg3, arg4, arg5);
+            return target(this, arg0, arg1, arg2, arg3, arg4, arg5);
         }
     }
 
@@ -724,14 +820,20 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(CodeContext context, T0 arg0) {
-            StandardRule<BigDynamicSiteTarget<T0, Tret>> rule = 
-              context.LanguageContext.Binder.GetRule<BigDynamicSiteTarget<T0, Tret>>(context, Action, NewTuple.GetTupleValues(arg0));
+            StandardRule<BigDynamicSiteTarget<T0, Tret>> rule = _rules.GetRule(context, arg0);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(context);
+                return _target(this, context, arg0);
+            }
+
+            rule = context.LanguageContext.Binder.GetRule<BigDynamicSiteTarget<T0, Tret>>(context, Action, NewTuple.GetTupleValues(arg0));
 
     #if DEBUG
             // This is much slower than building the ruleset, since we have to look up the rule every time;
             // we do it in debug mode to make sure we can still get through this code path
             // without generating IL.
-            if (context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0 };
                 using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(context);
@@ -740,17 +842,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<BigDynamicSiteTarget<T0, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                BigDynamicSiteTarget<T0, Tret> newTarget = newRules.GetOrMakeTarget(context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            BigDynamicSiteTarget<T0, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<BigDynamicSiteTarget<T0, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(context);
                 }
-                if (newRules != EmptyRuleSet<BigDynamicSiteTarget<T0, Tret>>.FixedInstance) return newTarget(this, context, arg0);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(context)(this, context, arg0);
+            return target(this, context, arg0);
         }
     }
 
@@ -781,11 +885,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Tret UpdateBindingAndInvoke(T0 arg0) {
-            StandardRule<BigFastDynamicSiteTarget<T0, Tret>> rule = 
-              Context.LanguageContext.Binder.GetRule<BigFastDynamicSiteTarget<T0, Tret>>(Context, Action, NewTuple.GetTupleValues(arg0));
+            StandardRule<BigFastDynamicSiteTarget<T0, Tret>> rule = _rules.GetRule(Context, arg0);
+            if (rule != null) {
+                // site is truly polymorphic, build the polymorphic method
+                _target = _rules.GetOrMakeTarget(Context);
+                return _target(this, arg0);
+            }
+
+            rule = Context.LanguageContext.Binder.GetRule<BigFastDynamicSiteTarget<T0, Tret>>(Context, Action, NewTuple.GetTupleValues(arg0));
 
     #if DEBUG
-            if (Context.LanguageContext.Engine.Options.FastEvaluation) {
+            if (Context.LanguageContext.Engine.Options.InterpretedMode) {
                 object[] args = new object[] { arg0 };
                 using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                     bool result = (bool)rule.Test.Evaluate(Context);
@@ -794,17 +904,19 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
     #endif
-            RuleSet<BigFastDynamicSiteTarget<T0, Tret>> newRules = _rules.AddRule(rule);
-            if (newRules != _rules) {
-                BigFastDynamicSiteTarget<T0, Tret> newTarget = newRules.GetOrMakeTarget(Context);
-                lock (this) {
-                    _rules = newRules;
-                    _target = newTarget;
+            BigFastDynamicSiteTarget<T0, Tret> target;
+            lock (this) {
+                bool monomorphic = _rules.HasMonomorphicTarget(_target);
+
+                _rules = _rules.AddRule(rule);
+                if (monomorphic || _rules == EmptyRuleSet<BigFastDynamicSiteTarget<T0, Tret>>.FixedInstance) {
+                    _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(Context);
+                } else {
+                    _target = target = _rules.GetOrMakeTarget(Context);
                 }
-                return newTarget(this, arg0);
             }
 
-            return rule.MonomorphicRuleSet.GetOrMakeTarget(Context)(this, arg0);
+            return target(this, arg0);
         }
     }
 

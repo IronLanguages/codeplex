@@ -47,11 +47,11 @@ namespace Microsoft.Scripting {
         }
 
         private static void AssociateStackTraces(Exception e, List<StackTrace> traces) {
-            Utils.GetDataDictionary(e)[prevStackTraces] = traces;
+            Utils.ExceptionUtils.GetDataDictionary(e)[prevStackTraces] = traces;
         }
 
         private static bool TryGetAssociatedStackTraces(Exception e, out List<StackTrace> traces) {
-            traces = Utils.GetDataDictionary(e)[prevStackTraces] as List<StackTrace>;
+            traces = Utils.ExceptionUtils.GetDataDictionary(e)[prevStackTraces] as List<StackTrace>;
             return traces != null;
         }
 

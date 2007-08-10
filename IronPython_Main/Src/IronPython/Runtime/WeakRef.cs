@@ -23,6 +23,7 @@ using Microsoft.Scripting;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -35,7 +36,7 @@ namespace IronPython.Runtime {
         struct CallbackInfo {
             object callback;
             
-            Utils.WeakHandle _longRef, _shortRef;
+            WeakHandle _longRef, _shortRef;
             
             public CallbackInfo(object callback, object weakRef) {
                 this.callback = callback;
@@ -45,8 +46,8 @@ namespace IronPython.Runtime {
                 // long ref still lives then it means we'the weakref is in the
                 // finalization queue and we shouldn't run it's callback - we're
                 // just unlucky and are getting ran first.
-                this._longRef = new Utils.WeakHandle(weakRef, true);
-                this._shortRef = new Utils.WeakHandle(weakRef, false);
+                this._longRef = new WeakHandle(weakRef, true);
+                this._shortRef = new WeakHandle(weakRef, false);
             }
 
             public object Callback {
@@ -55,7 +56,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            public Utils.WeakHandle LongRef { 
+            public WeakHandle LongRef { 
                 get { 
                     return _longRef; 
                 } 

@@ -21,18 +21,20 @@ using System.IO;
 using System.Text;
 using System.Diagnostics;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Compiler;
 using IronPython.Compiler.Generation;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
 using IronPython.Hosting;
-using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime {
     
@@ -64,12 +66,7 @@ namespace IronPython.Runtime {
         /// a module and returns the module.
         /// </summary>
         public object Import(CodeContext context, string fullName, List from) {
-            /*if (context.LanguageContext.Engine.Options.FastEvaluation) {
-                return ((ICallableWithCodeContext)FindImportFunction(context)).Call(context, new object[] {
-                    fullName, Builtin.Globals(context), Builtin.Locals(context), from });
-            } else {*/
-                return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.Globals(context), Builtin.Locals(context), from);
-            //}
+            return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.Globals(context), Builtin.Locals(context), from);
         }
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object> MakeImportSite() {
@@ -145,7 +142,13 @@ namespace IronPython.Runtime {
                     // to make the assembly available now.
 
                     ScriptModule sm = newmod as ScriptModule;
-                    if (sm != null && sm.InnerModule != null) sm.PackageImported = true;
+                    if (sm != null && sm.InnerModule != null) {
+                        sm.PackageImported = true;
+                        ReflectedPackage rp = sm.InnerModule as ReflectedPackage;
+                        if (rp != null) {
+                            context.ModuleContext.ShowCls = true;
+                        }
+                    }
                 }
             }
 
@@ -264,7 +267,7 @@ namespace IronPython.Runtime {
 
             if (SystemState.Builtins.TryGetValue(module.ModuleName, out ty)) {
                 if (typeof(CustomSymbolDictionary).IsAssignableFrom(ty)) {
-                    CustomSymbolDictionary dict = (CustomSymbolDictionary)ty.GetConstructor(Utils.Reflection.EmptyTypes).Invoke(RuntimeHelpers.EmptyObjectArray);
+                    CustomSymbolDictionary dict = (CustomSymbolDictionary)ty.GetConstructor(ReflectionUtils.EmptyTypes).Invoke(RuntimeHelpers.EmptyObjectArray);
                     //@todo share logic to copy old values in when not already there from reload
                     module.Execute();
                 } else {
@@ -301,6 +304,11 @@ namespace IronPython.Runtime {
                     // loaded and then loaded the assembly we want
                     // to make the assembly available now.
                     sm.PackageImported = true;
+
+                    ReflectedPackage rp = sm.InnerModule as ReflectedPackage;
+                    if (rp != null) {
+                        context.ModuleContext.ShowCls = true;
+                    }
                 }
 
                 return ret;
@@ -398,6 +406,7 @@ namespace IronPython.Runtime {
             object res = DynamicHelpers.TopPackage.TryGetPackageAny(name);
             if (res != null) {
                 context.ModuleContext.ShowCls = true;
+                SystemState.modules[name] = res;
             }
             return res;
         }
@@ -480,29 +489,23 @@ namespace IronPython.Runtime {
                 if (Converter.TryConvertToString(dirname, out str) && str != null) {  // ignore non-string
                     string pathname = Path.Combine(str, name);
 
-                    if (ScriptDomainManager.CurrentManager.Host.SourceFileExists(Path.Combine(pathname, "__init__.py"))) {
-                        ret = LoadPackageFromSource(context, fullName, pathname);
-                        break;
+                    ret = LoadPackageFromSource(context, fullName, pathname);
+                    if (ret != null) {
+                        return ret;
                     }
 
                     string filename = pathname + ".py";
-                    if (ScriptDomainManager.CurrentManager.Host.SourceFileExists(filename)) {
-                        ret = LoadModuleFromSource(context, fullName, filename);
-                        break;
+                    ret = LoadModuleFromSource(context, fullName, filename);
+                    if (ret != null) {
+                        return ret;
                     }
                 }
             }
-#if SILVERLIGHT
-            // Try to load the module through the host
-            if (null == ret) {
-                ret = LoadModuleFromSource(context, fullName, name + ".py");
-            }
-#endif
             return ret;
         }
 
         private ScriptModule LoadModuleFromSource(CodeContext context, string name, string path) {
-            SourceFileUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.GetSourceFileUnit(_engine, path, name);
+            SourceFileUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(_engine, path, name);
             if (null == sourceUnit) {
                 return null;
             }

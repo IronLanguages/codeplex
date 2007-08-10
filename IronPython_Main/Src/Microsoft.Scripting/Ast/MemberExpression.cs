@@ -96,7 +96,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object self = _expression != null ? _expression.Evaluate(context) : null;
             switch (_member.MemberType) {
                 case MemberTypes.Field:

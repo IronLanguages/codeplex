@@ -44,7 +44,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _target; }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object callee = _target.Evaluate(context);
             object[] cargs = new object[_args.Length - _extraArgs];
             object argsTuple = null, keywordDict = null;

@@ -26,6 +26,7 @@ using System.Runtime.Serialization;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
 
@@ -118,7 +119,7 @@ namespace Microsoft.Scripting {
                 lock (_singletonLock) {
                     if (_singleton == null) {
                         ScriptDomainManager singleton = new ScriptDomainManager(setup);
-                        Utils.MemoryBarrier();
+                        Utilities.MemoryBarrier();
                         _singleton = singleton;
                         new_created = true;
                     }
@@ -241,8 +242,8 @@ namespace Microsoft.Scripting {
                     }
 
                     // needn't to be locked, we can create multiple LPs:
-                    LanguageProvider provider = Utils.Reflection.CreateInstance<LanguageProvider>(_type, manager);
-                    Utils.MemoryBarrier();
+                    LanguageProvider provider = ReflectionUtils.CreateInstance<LanguageProvider>(_type, manager);
+                    Utilities.MemoryBarrier();
                     _provider = provider;
                 }
                 return _provider;
@@ -339,7 +340,7 @@ namespace Microsoft.Scripting {
             lock (_languageTypes) {
                 LanguageProviderDesc singleton_desc = null;
                 if (!get_all && !_languageTypes.TryGetValue(type.AssemblyQualifiedName, out singleton_desc)) {
-                    return Utils.Array.EmptyStrings;
+                    return ArrayUtils.EmptyStrings;
                 }
 
                 foreach (KeyValuePair<string, LanguageProviderDesc> entry in _languageIds) {
@@ -534,7 +535,10 @@ namespace Microsoft.Scripting {
             if (path == null) throw new ArgumentNullException("path");
             ScriptEngine engine = GetLanguageProvider(languageId).GetEngine();
 
-            SourceFileUnit su = _host.GetSourceFileUnit(engine, path, Path.GetFileNameWithoutExtension(path));
+            SourceFileUnit su = _host.TryGetSourceFileUnit(engine, path, Path.GetFileNameWithoutExtension(path));
+            if (su == null) {
+                return null;
+            }
 
             return CompileAndPublishModule(su);
         }
@@ -725,8 +729,8 @@ namespace Microsoft.Scripting {
         public ScriptModule CompileModule(string name, ScriptModuleKind kind, Scope scope, CompilerOptions options, ErrorSink errorSink, 
             params SourceUnit[] sourceUnits) {
 
-            if (name == null) throw new ArgumentNullException("name");
-            Utils.Array.CheckNonNullElements(sourceUnits, "sourceUnits");
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNonNullItems(sourceUnits, "sourceUnits");
 
             // TODO: Two phases: parse/compile?
             
@@ -774,14 +778,14 @@ namespace Microsoft.Scripting {
         /// Ensures creation of module contexts for all languages whose code is assembled into the module.
         /// </summary>
         public ScriptModule CreateModule(string name, ScriptModuleKind kind, Scope scope, params ScriptCode[] scriptCodes) {
-            if (name == null) throw new ArgumentNullException("name");
-            Utils.Array.CheckNonNullElements(scriptCodes, "scriptCodes");
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNonNullItems(scriptCodes, "scriptCodes");
 
             OptimizedModuleGenerator generator = null;
 
             if (scope == null) {
                 if (scriptCodes.Length == 1) {
-                    if (scriptCodes[0].LanguageContext.Engine.Options.FastEvaluation) {
+                    if (scriptCodes[0].LanguageContext.Engine.Options.InterpretedMode) {
                         scope = new Scope();
                     } else {
                         generator = OptimizedModuleGenerator.Create(scriptCodes);

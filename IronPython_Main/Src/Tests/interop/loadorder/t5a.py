@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_5")
@@ -27,9 +28,7 @@ clr.AddReference("loadorder_5")
 
 
 import NS
-print dir(NS)
-#print NS.Target.Flag
-#print NS.Target[int].Flag
+from NS import *
 
 clr.AddReference("loadorder_5a")
 
@@ -39,12 +38,14 @@ clr.AddReference("loadorder_5a")
 #     }
 # }
 
-print dir(NS)
+AssertError(SystemError, lambda: Target.Flag)           # THE DIFF!!!
+AreEqual(Target[int].Flag, "NS.Target`1")
+AreEqual(Target[int, str].Flag, "NS.Target`2")
 
-print NS.Target.Flag
+AreEqual(NS.Target.Flag, "NS.Target")
+AreEqual(NS.Target[int].Flag, "NS.Target`1")
+AreEqual(NS.Target[int, str].Flag, "NS.Target`2")
 
-print dir(NS)
-#print NS.__dict__
-#print NS.Target[int].Flag
-#print NS.Target[int, int].Flag
-#
+AreEqual(Target.Flag, "NS.Target")                      # THE DIFF!!!
+AreEqual(Target[int].Flag, "NS.Target`1")
+AreEqual(Target[int, str].Flag, "NS.Target`2")

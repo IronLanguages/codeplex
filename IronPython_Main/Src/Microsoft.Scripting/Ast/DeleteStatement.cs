@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             switch (_var.Kind) {
                 case Variable.VariableKind.Temporary:
                 case Variable.VariableKind.GeneratorTemporary:

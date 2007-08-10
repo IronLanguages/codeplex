@@ -51,7 +51,7 @@ namespace Microsoft.Scripting.Ast {
         private static int _Counter = 0;
         private static string[] _GeneratorSigNames = new string[] { "$gen", "$ret" };
 
-        // FastEval: Cache for emitted delegate so that we only generate code once.
+        // Interpreted mode: Cache for emitted delegate so that we only generate code once.
         private Delegate _delegate;
 
         public GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next)
@@ -64,66 +64,23 @@ namespace Microsoft.Scripting.Ast {
             _next = next;
         }
 
-        // Return a delegate to an emitted codeblock, since we lack the ability to execute generator code blocks in interpreted mode.
         public override Delegate GetDelegateForInterpreter(CodeContext context, bool forceWrapperMethod) {
-             lock (this) {
+            // For now, always return a compiled delegate (since yield is not implemented)
+            lock (this) {
                 if (_delegate == null) {
                     FlowChecker.Check(this);
-
-                    bool createWrapperMethod = ParameterArray ? false : forceWrapperMethod || NeedsWrapperMethod(false);
-                    
-                    List<Type> paramTypes = new List<Type>();
-                    if (createWrapperMethod) {
-                        paramTypes.Add(typeof(object[]));
-                    } else {
-                        int paramIndex = 0;
-                        foreach (Variable v in Parameters) {
-                            paramTypes.Add(v.Type);
-                            v.ParameterIndex = paramIndex++;
-                        }
-                    }
-                    
-                    CodeGen cg = CompilerHelpers.CreateDynamicCodeGenerator(
-                        "$generator" + Interlocked.Increment(ref _Counter),
-                        typeof(object),
-                        paramTypes.ToArray(),
-                        new ConstantPool());
-                    cg.FastEval = true;
-                    // Use the constant pool to propagate our context into the CodeGen we are creating
-                    cg.ContextSlot = cg.ConstantPool.AddData(context);
-                    cg.Allocator = CompilerHelpers.CreateFrameAllocator(cg.ContextSlot);
-                    cg.Context = context.ModuleContext.CompilerContext;
-                    cg.EnvironmentSlot = new EnvironmentSlot(
-                        new PropertySlot(
-                            new PropertySlot(cg.ContextSlot,
-                                typeof(CodeContext).GetProperty("Scope")),
-                            typeof(Scope).GetProperty("Dict"))
-                        );
-                    
-                    EmitFunctionImplementation(cg);
-                    cg.Finish();
-
-                    Delegate d;
-                    if (createWrapperMethod) {
-                        throw new NotImplementedException("Wrapper methods not implemented for generators in FastEval mode");
-                        /*
-                        CallTargetN impl = (CallTargetN)cg.CreateDelegate(typeof(CallTargetN));
-                        d = new CallTargetWithContextN(delegate(CodeContext targetContext, object[] args) {
-                            // TODO: flow context?
-                            return impl.Invoke(args);
-                        });*/
-                    } else if (ParameterArray) {
-                        throw new NotImplementedException("ParameterArray not implemented for generators in FastEval mode");
-                    } else {
-                        d = cg.CreateDelegate(CallTargets.GetTargetType(false, Parameters.Count));
-                    }
-                    _delegate = d;
+                    _delegate = GetCompiledDelegate(context.ModuleContext.CompilerContext, forceWrapperMethod);
                 }
+                return _delegate;
             }
-            return _delegate;
         }
-        
+
         public override void EmitBody(CodeGen cg) {
+            if (!cg.HasAllocator) {
+                // In the interpreted case, we do not have an allocator yet
+                Debug.Assert(cg.InterpretedMode);
+                cg.Allocator = CompilerHelpers.CreateFrameAllocator(cg.ContextSlot);
+            }
             cg.Allocator.ActiveScope = this;
             CreateEnvironmentFactory(true);
             EmitGeneratorBody(cg);

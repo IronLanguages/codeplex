@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 
@@ -89,7 +90,7 @@ namespace IronPython.Runtime {
             this._getItemMethod = getitem;
         }
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int Length() { return _index; }
 
         #region IEnumerator implementation

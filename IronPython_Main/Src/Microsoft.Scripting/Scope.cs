@@ -116,7 +116,7 @@ namespace Microsoft.Scripting {
                 return _sourceLocation;
             }
             set {
-                if (value != SourceLocation.None && value != SourceLocation.Invalid) {
+                if (value != SourceLocation.Invalid && value != SourceLocation.None) {
                     _sourceLocation = value;
                 }
             }

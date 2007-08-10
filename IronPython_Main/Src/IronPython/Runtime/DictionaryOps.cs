@@ -18,13 +18,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
-
-using Microsoft.Scripting;
 
 [assembly: PythonExtensionTypeAttribute(typeof(BaseSymbolDictionary), typeof(DictionaryOps))]
 namespace IronPython.Runtime {
@@ -40,12 +42,12 @@ namespace IronPython.Runtime {
 
         #region Dictionary Public API Surface
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool __contains__([StaticThis]IDictionary<object, object> self, object value) {
             return self.ContainsKey(value);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         [return: MaybeNotImplemented]
         public static object __cmp__(IDictionary<object, object> self, object other) {
             IDictionary<object, object> oth = other as IDictionary<object, object>;
@@ -78,7 +80,7 @@ namespace IronPython.Runtime {
         // needs a custom __eq__ / __ne__ implementation.
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object Equal(IDictionary<object, object> self, object other) {
             if (!(other is PythonDictionary || other is CustomSymbolDictionary || other is SymbolDictionary))
                 return PythonOps.NotImplemented;
@@ -87,7 +89,7 @@ namespace IronPython.Runtime {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object GreaterThanOrEqual(IDictionary<object, object> self, object other) {
             object res = __cmp__(self, other);
             if (res == PythonOps.NotImplemented) return res;
@@ -96,7 +98,7 @@ namespace IronPython.Runtime {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object GreaterThan(IDictionary<object, object> self, object other) {
             object res = __cmp__(self, other);
             if (res == PythonOps.NotImplemented) return res;
@@ -104,7 +106,7 @@ namespace IronPython.Runtime {
             return ((int)res) > 0;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static void __delitem__(IDictionary<object, object> self, object key) {
             if (!self.Remove(key)) {
                 throw PythonOps.KeyError(key);
@@ -116,7 +118,7 @@ namespace IronPython.Runtime {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object LessThanOrEqual(IDictionary<object, object> self, object other) {
             object res = __cmp__(self, other);
             if (res == PythonOps.NotImplemented) return res;
@@ -124,13 +126,13 @@ namespace IronPython.Runtime {
             return ((int)res) <= 0;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int __len__(IDictionary<object, object> self) {
             return self.Count;
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object LessThan(IDictionary<object, object> self, object other) {
             object res = __cmp__(self, other);
             if (res == PythonOps.NotImplemented) return res;
@@ -139,7 +141,7 @@ namespace IronPython.Runtime {
         }
 
         [return: MaybeNotImplemented]
-        [OperatorMethod]
+        [SpecialName]
         public static object NotEqual(IDictionary<object, object> self, object other) {
             object res = Equal(self, other);
             if (res != PythonOps.NotImplemented) return PythonOps.Not(res);
@@ -147,12 +149,12 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static string __repr__(IDictionary<object, object> self) {
             return __str__(self);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static string __str__(IDictionary<object, object> self) {
             StringBuilder buf = new StringBuilder();
             buf.Append("{");

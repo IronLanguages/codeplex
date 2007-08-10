@@ -218,9 +218,9 @@ def test_W():
 TestCommandLine(("-X:NoOptimize", "-c", "from System import Console; Console.WriteLine('System')"), "System\n")
 
 # Test -X:FastEval
-TestCommandLine(("-X:FastEval", "-c", "2+2"), "4\n")
-TestCommandLine(("-X:FastEval", "-c", "eval('2+2')"), "4\n")
-#TestCommandLine(("-X:FastEval", "-c", "x = 3; eval('x+2')"), "5\n")
+TestCommandLine(("-X:Interpret", "-c", "2+2"), "4\n")
+TestCommandLine(("-X:Interpret", "-c", "eval('2+2')"), "4\n")
+TestCommandLine(("-X:Interpret", "-c", "x = 3; eval('x+2')"), "5\n")
 
 # Test -X:TrackPerformance
 TestCommandLine(("-X:TrackPerformance", "-c", "2+2"), "4\n")

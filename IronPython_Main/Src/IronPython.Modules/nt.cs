@@ -31,6 +31,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
@@ -346,7 +347,7 @@ namespace IronPython.Modules {
             }
 
             object env = args[args.Length - 1];
-            object[] slicedArgs = Utils.Array.RemoveFirst(args);
+            object[] slicedArgs = ArrayUtils.RemoveFirst(args);
 
             Process process = MakeProcess();
             SetEnvironment(process.StartInfo.EnvironmentVariables, env);

@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class NewArrayExpression : Expression {
@@ -27,10 +28,10 @@ namespace Microsoft.Scripting.Ast {
 
         internal NewArrayExpression(SourceSpan span, Type type, IList<Expression> expressions)
             : base(span) {
-            if (expressions == null) throw new ArgumentNullException("expressions");
-            if (type == null) throw new ArgumentNullException("type");
-            if (!type.IsArray) throw new ArgumentException("Not an array type", "type");
-            Utils.Array.CheckNonNullElements(expressions, "expressions");
+            Contract.RequiresNotNull(expressions, "expressions");
+            Contract.RequiresNotNull(type, "type");
+            Contract.Requires(type.IsArray, "type", "Not an array type");
+            Contract.RequiresNonNullItems(expressions, "expressions");
 
             _type = type;
             _expressions = expressions;
@@ -51,7 +52,7 @@ namespace Microsoft.Scripting.Ast {
             cg.EmitArrayFromExpressions(_type.GetElementType(), _expressions);
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             if (_type.GetElementType().IsValueType) {
                 // value arrays cannot be cast to object arrays
                 object contents = (object)_constructor.Invoke(new object[] { _expressions.Count });

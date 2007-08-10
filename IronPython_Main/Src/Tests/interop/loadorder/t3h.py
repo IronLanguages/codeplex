@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_3")
@@ -23,6 +24,9 @@ clr.AddReference("loadorder_3")
 # }
 
 import First
+from First import *
+
+AreEqual(First.Generic1[str, str].Flag, "First.Generic1`2")      
 
 clr.AddReference("loadorder_3h")
 
@@ -31,3 +35,14 @@ clr.AddReference("loadorder_3h")
 #         public static string Flag = typeof(Generic1<>).FullName;
 #     }
 # }
+
+AreEqual(First.Generic1[str, str].Flag, "First.Generic1`2")      
+AreEqual(First.Generic1[int].Flag, "First.Generic1`1")      
+
+AssertError(ValueError, lambda: Generic1[int])                  # !!!
+AreEqual(Generic1[str, str].Flag, "First.Generic1`2")      
+
+from First import *
+
+AreEqual(Generic1[str, str].Flag, "First.Generic1`2")      
+AreEqual(Generic1[int].Flag, "First.Generic1`1")      

@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     public sealed class SingletonEngineFactory<EngineType, EngineOptionsType, LanguageProviderType>
@@ -69,7 +70,7 @@ namespace Microsoft.Scripting.Hosting {
                         // notifies the host:
                         provider.Manager.Host.EngineCreated(singleton);
 
-                        Utils.MemoryBarrier();
+                        Utilities.MemoryBarrier();
 
                         _singleton = singleton;
                         _getSetupInformation = null;

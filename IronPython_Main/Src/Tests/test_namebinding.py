@@ -117,6 +117,26 @@ def localsAfterExpr():
     10
     exec "pass"
 
+def nested_locals():
+    # Test locals in nested functions
+    x = 5
+    def f():
+        a = 10
+        AreEqual(locals(),{'a':10})
+    f()
+nested_locals()
+
+#Skipped: Rowan #288893
+def nested_locals2():
+    # Test locals in nested functions with locals also used in outer function
+    x = 5
+    def f():
+        a = 10
+        AreEqual(locals(),{'a':10})
+    AreEqual(sorted(locals().keys()), ['f','x'])
+    f()
+#nested_locals2()
+
 # Test that namebinding uses name lookup when locals() is accessed inside a class
 xyz = False
 class C:

@@ -18,14 +18,16 @@ using System.Text;
 using System.Collections;
 using System.Reflection;
 using System.Threading;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 using IronPython.Compiler;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
 
 namespace IronPython.Runtime.Operations {
 
@@ -154,7 +156,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         #region Binary Operators
-        [OperatorMethod]
+        [SpecialName]
         public static object FloorDivide(int x, int y) {
             if (y == -1 && x == Int32.MinValue) {
                 return -BigInteger.Create(Int32.MinValue);
@@ -177,7 +179,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int Mod(int x, int y) {
             if (y == -1) return 0;
             int r = x % y;
@@ -194,12 +196,12 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(int x, BigInteger power, BigInteger qmod) {
             return BigIntegerOps.Power((BigInteger)x, power, qmod);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(int x, int power, int? qmod) {
             if (qmod == null) return Power(x, power);
             int mod = (int)qmod;
@@ -226,7 +228,7 @@ namespace IronPython.Runtime.Operations {
             return (int)result;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object Power(int x, int power) {
             if (power == 0) return 1;
             if (power < 0) {
@@ -253,7 +255,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        [OperatorMethod]
+        [SpecialName]
         public static object LeftShift(int x, int y) {
             if (y < 0) {
                 throw PythonOps.ValueError("negative shift count");
@@ -266,7 +268,7 @@ namespace IronPython.Runtime.Operations {
             return RuntimeHelpers.Int32ToObject(x << y);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static int RightShift(int x, int y) {
             if (y < 0) {
                 throw PythonOps.ValueError("negative shift count");

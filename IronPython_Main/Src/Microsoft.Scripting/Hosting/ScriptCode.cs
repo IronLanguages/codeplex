@@ -23,6 +23,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 
 
@@ -97,11 +98,14 @@ namespace Microsoft.Scripting {
             codeContext.ModuleContext.CompilerContext =_compilerContext;
             _languageContext.ModuleContextEntering(codeContext.ModuleContext);
 
-            if (_languageContext.Engine.Options.FastEvaluation ||
-                (tryEvaluate && Ast.FastEvalWalker.CanEvaluate(CodeBlock))) {
+            
+            bool doEvaluation = tryEvaluate || _languageContext.Engine.Options.InterpretedMode;
+            if (_simpleTarget == null && _optimizedTarget == null
+                && doEvaluation
+                && Ast.FastEvalWalker.CanEvaluate(CodeBlock, _languageContext.Engine.Options.ProfileDrivenCompilation)) {
                 return CodeBlock.TopLevelExecute(codeContext);
             }
-            
+
             if (codeContext.Scope == _optimizedScope) { // flag on scope - "IsOptimized"?
                 // TODO: why do we create a code context here?
                 return _optimizedTarget(new CodeContext(_optimizedScope, _languageContext, codeContext.ModuleContext));
@@ -112,20 +116,20 @@ namespace Microsoft.Scripting {
         }
 
         public object Run(ScriptModule module) {
-            Utils.Assert.NotNull(module);
+            Assert.NotNull(module);
             
             ModuleContext moduleContext = _languageContext.EnsureModuleContext(module);
             return Run(new CodeContext(module.Scope, _languageContext, moduleContext), false);
         }
 
         public object Run(Scope scope, ModuleContext moduleContext) {
-            Utils.Assert.NotNull(scope, moduleContext);
+            Assert.NotNull(scope, moduleContext);
 
             return Run(new CodeContext(scope, _languageContext, moduleContext), false);
         }
 
         public object Run(Scope scope, ModuleContext moduleContext, bool tryEvaluate) {
-            Utils.Assert.NotNull(scope, moduleContext);
+            Assert.NotNull(scope, moduleContext);
 
             return Run(new CodeContext(scope, _languageContext, moduleContext), tryEvaluate);
         }

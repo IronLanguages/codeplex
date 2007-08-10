@@ -22,7 +22,7 @@ namespace Microsoft.Scripting.Ast {
             : base(span, constructor, args, hasArgsTuple, hasKeywordDictionary, keywordCount, extraArgs) {
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object callee = Target.Evaluate(context);
 
             object[] cargs = new object[Args.Count];

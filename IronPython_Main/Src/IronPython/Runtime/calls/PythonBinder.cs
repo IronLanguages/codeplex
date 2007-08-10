@@ -26,6 +26,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
 
 using TypeCache = IronPython.Runtime.Types.TypeCache;
 
@@ -34,6 +35,7 @@ namespace IronPython.Runtime.Calls {
     using System.Threading;
 using IronPython.Runtime.Operations;
     using IronPython.Runtime.Types;
+    using Microsoft.Scripting.Utils;
 
     public class PythonBinder : ActionBinder {
         private static Dictionary<string, string[]> _memberMapping;
@@ -51,7 +53,7 @@ using IronPython.Runtime.Operations;
                 case ActionKind.SetMember:
                     return null;    // default implementation is good enough.
                 case ActionKind.Call:
-                    return new PythonCallBinderHelper<T>(context, (CallAction)action).MakeRule(args);
+                    return new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
                 default:
                     throw new NotImplementedException(action.ToString());
             }
@@ -237,7 +239,7 @@ using IronPython.Runtime.Operations;
             // Python type customization:
             switch (name) {
                 case "__str__":
-                    MethodInfo tostr = type.GetMethod("ToString", Utils.Reflection.EmptyTypes);
+                    MethodInfo tostr = type.GetMethod("ToString", ReflectionUtils.EmptyTypes);
                     if (tostr != null && tostr.DeclaringType != typeof(object)) {
                         return new MemberInfo[] { typeof(InstanceOps).GetMethod("ToStringMethod") };
                     }
@@ -289,7 +291,7 @@ using IronPython.Runtime.Operations;
             }
 
             // Python exposes protected members as public            
-            res = Utils.Array.FindAll(type.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly);
+            res = ArrayUtils.FindAll(type.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly);
             if (res.Length > 0) {
                 return res;
             }
@@ -312,6 +314,18 @@ using IronPython.Runtime.Operations;
             return Ast.New(
                 typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
                 Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type)), name))
+            );
+        }
+
+        public override Expression MakeReadOnlyMemberError(Type type, string name) {
+            return Ast.New(
+                typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                Ast.Constant(
+                    String.Format("attribute '{0}' of '{1}' object is read-only", 
+                        name,
+                        DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type))
+                    )
+                )
             );
         }
 

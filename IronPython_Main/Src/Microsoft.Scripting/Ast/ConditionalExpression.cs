@@ -63,7 +63,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object ret = _test.Evaluate(context);
             if (context.LanguageContext.IsTrue(ret)) {
                 return _true.Evaluate(context);

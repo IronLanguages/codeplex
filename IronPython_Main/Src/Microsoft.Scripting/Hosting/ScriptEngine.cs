@@ -28,6 +28,7 @@ using Microsoft.Scripting.Generation;
 using System.IO;
 using System.Text;
 using System.Runtime.Remoting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     public delegate T ModuleBinder<T>(ScriptModule scope);
@@ -613,7 +614,7 @@ namespace Microsoft.Scripting.Hosting {
         public bool TryGetObjectMemberValue(IObjectHandle obj, string name, IScriptModule module, out IObjectHandle value) {
             if (obj == null) throw new ArgumentNullException("obj");
             object v;
-            return Utils.MakeHandle(TryGetObjectMemberValue(obj.Unwrap(), name, module, out v), v, out value);
+            return Utilities.MakeHandle(TryGetObjectMemberValue(obj.Unwrap(), name, module, out v), v, out value);
         }
 
         /// <summary>

@@ -20,15 +20,16 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Reflection.Emit;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Compiler.Generation;
 using IronPython.Compiler;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
 
 [assembly: PythonExtensionType(typeof(Delegate), typeof(DelegateOps))]
 namespace IronPython.Runtime.Types {

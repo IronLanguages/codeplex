@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class IfStatementBuilder {
@@ -25,7 +26,7 @@ namespace Microsoft.Scripting.Ast {
             if (condition == null) throw new ArgumentNullException("condition");
             if (body == null) throw new ArgumentNullException("body");
 
-            _clauses = Utils.Collections.MakeList(new IfStatementTest(conditionSpan, header, condition, body));
+            _clauses = CollectionUtils.MakeList(new IfStatementTest(conditionSpan, header, condition, body));
             _statementSpan = statementSpan;
         }
 
@@ -55,7 +56,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static implicit operator IfStatement(IfStatementBuilder builder) {
-            Utils.Assert.NotNull(builder);
+            Assert.NotNull(builder);
             return new IfStatement(builder._statementSpan, builder._clauses.ToArray(), null);
         }
     }

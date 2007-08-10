@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     public class ReferenceArgBuilder : SimpleArgBuilder {

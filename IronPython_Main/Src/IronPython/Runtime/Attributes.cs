@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;

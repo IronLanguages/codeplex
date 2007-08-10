@@ -24,7 +24,8 @@ namespace Microsoft.Scripting {
         private bool _clrDebuggingEnabled;
         private bool _exceptionDetail;
         private bool _showClrExceptions;
-        private bool _fastEval;
+        private bool _interpret;
+        private bool _pdc;
         
         #region Public accessors
 
@@ -48,13 +49,27 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Should we interpret the eval expression instead of compiling it?
-        /// This yields a HUGE (>100x) performance boost to simple evals.
-        /// Its disabled for compatibility
+        /// Interpret code instead of emitting it.
         /// </summary>
-        public bool FastEvaluation {
-            get { return _fastEval; }
-            set { _fastEval = value; }
+        public bool InterpretedMode {
+            get { return _interpret; }
+            set { _interpret = value; }
+        }
+
+        /// <summary>
+        /// Try to selectively emit code to improve performance.
+        /// ProfileDrivenCompilation == true implies InterpretedMode == true.
+        /// </summary>
+        public bool ProfileDrivenCompilation {
+            get {
+                return _pdc;
+            }
+            set {
+                _pdc = value;
+                if (_pdc) {
+                    _interpret = true;
+                }
+            }
         }
 
         /// <summary>

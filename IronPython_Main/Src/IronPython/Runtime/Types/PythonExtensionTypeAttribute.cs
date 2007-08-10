@@ -155,7 +155,7 @@ namespace IronPython.Runtime.Types {
         private IEnumerable<TransformedName> MethodEnumerator(MethodInfo mi) {
             switch (mi.MemberType) {
                 case MemberTypes.Method:
-                    if (mi.IsDefined(typeof(OperatorMethodAttribute), false)) {
+                    if (mi.IsSpecialName) {
                         bool regular, reverse;
                         OperatorMapping om = GetRegularReverse(_type.UnderlyingSystemType, mi, out regular, out reverse);
    

@@ -63,14 +63,6 @@ namespace Microsoft.Scripting.Hosting {
             return _host.NormalizePath(path);
         }
 
-        public bool SourceFileExists(string path) {
-            return _host.SourceFileExists(path);
-        }
-
-        public bool SourceDirectoryExists(string path) {
-            return _host.SourceDirectoryExists(path);
-        }
-
         public string[] GetSourceFileNames(string mask, string searchPattern) {
             return _host.GetSourceFileNames(mask, searchPattern);
         }
@@ -79,8 +71,8 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Source Units
 
-        public SourceFileUnit GetSourceFileUnit(IScriptEngine engine, string path, string name) {
-            return _host.GetSourceFileUnit(engine, path, name);
+        public SourceFileUnit TryGetSourceFileUnit(IScriptEngine engine, string path, string name) {
+            return _host.TryGetSourceFileUnit(engine, path, name);
         }
 
         public SourceFileUnit ResolveSourceFileUnit(string name) {

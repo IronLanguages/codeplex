@@ -20,10 +20,12 @@ using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting;
-
 
 [assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
 namespace IronPython.Modules {
@@ -191,7 +193,7 @@ namespace IronPython.Modules {
                 }
 
                 try {
-                    if (!Microsoft.Scripting.Utils.TryParseDateTimeExact(@string,
+                    if (!StringUtils.TryParseDateTimeExact(@string,
                         String.Join("", formats),
                         PythonLocale.currentLocale.Time.DateTimeFormat,
                         DateTimeStyles.AllowWhiteSpaces,

@@ -125,7 +125,7 @@ class Operator(Symbol):
         if self.dotnetOp:
             cw.enter_block("public static object operator %s([NotNull]OldInstance self, object other)" % self.symbol)            
         else:
-            cw.writeline('[OperatorMethod]')
+            cw.writeline('[SpecialName]')
             cw.enter_block("public static object %s([NotNull]OldInstance self, object other)" % self.title_name())
         cw.writeline("object value;")
         cw.writeline()
@@ -148,7 +148,7 @@ class Operator(Symbol):
         if self.dotnetOp:
             cw.enter_block("public static object operator %s(object other, [NotNull]OldInstance self)" % self.symbol)            
         else:
-            cw.writeline('[OperatorMethod]')
+            cw.writeline('[SpecialName]')
             cw.enter_block("public static object %s(object other, [NotNull]OldInstance self)" % self.title_name())
         cw.writeline("object value;")
         cw.writeline()
@@ -161,7 +161,7 @@ class Operator(Symbol):
         cw.writeline()
         
         cw.writeline('[return: MaybeNotImplemented]')
-        cw.writeline('[OperatorMethod, PythonName("__i%s__")]' % self.name)
+        cw.writeline('[SpecialName, PythonName("__i%s__")]' % self.name)
         cw.enter_block("public object InPlace%s(object other)" % self.title_name())
         cw.writeline("object value;")
         cw.writeline()

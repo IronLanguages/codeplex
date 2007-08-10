@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_1a")
@@ -30,6 +31,9 @@ clr.AddReference("loadorder_1c")
 #     public static string Flag = typeof(NamespaceOrType<>).FullName;
 # }
 
-# check
+AreEqual(NamespaceOrType.C.Flag, "NamespaceOrType.C")
+
 import NamespaceOrType
-# check
+
+AssertError(AttributeError, lambda: NamespaceOrType.C)
+AreEqual(NamespaceOrType[int].Flag, "NamespaceOrType`1")

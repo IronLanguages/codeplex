@@ -2078,4 +2078,11 @@ def test_descriptor_meta_magic():
     o2.cls2 = 5
     test(5)
 
+def test_missing_attr():
+    class foo(object): pass
+    
+    a = foo()
+    def f(): a.dne
+    AssertErrorWithMessage(AttributeError, "'foo' object has no attribute 'dne'", f)
+
 run_test(__name__)

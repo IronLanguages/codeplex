@@ -46,24 +46,14 @@ namespace Microsoft.Scripting.Hosting {
             return _remoteHost.NormalizePath(path);
         }
 
-        public virtual bool SourceFileExists(string path) {
-            Debug.Assert(_remoteHost != null);
-            return _remoteHost.SourceFileExists(path);
-        }
-
-        public virtual bool SourceDirectoryExists(string path) {
-            Debug.Assert(_remoteHost != null);
-            return _remoteHost.SourceDirectoryExists(path);
-        }
-
         public virtual string[] GetSourceFileNames(string mask, string searchPattern) {
             Debug.Assert(_remoteHost != null);
             return _remoteHost.GetSourceFileNames(mask, searchPattern);
         }
 
-        public virtual SourceFileUnit GetSourceFileUnit(IScriptEngine engine, string path, string name) {
+        public virtual SourceFileUnit TryGetSourceFileUnit(IScriptEngine engine, string path, string name) {
             Debug.Assert(_remoteHost != null);
-            return _remoteHost.GetSourceFileUnit(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), path, name);
+            return _remoteHost.TryGetSourceFileUnit(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), path, name);
         }
 
         public virtual SourceFileUnit ResolveSourceFileUnit(string name) {

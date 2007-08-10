@@ -24,6 +24,8 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting {
     public class MethodBinder {
@@ -60,20 +62,25 @@ namespace Microsoft.Scripting {
             }
         }
 
-        //TODO Move all consumers of this method to the Type version below
-        public MethodCandidate MakeBindingTarget(CallType callType, DynamicType[] types) {
-            return MakeBindingTarget(callType, CompilerHelpers.ConvertToTypes(types));
-        }
-
         public MethodCandidate MakeBindingTarget(CallType callType, Type[] types) {
             return MakeBindingTarget(callType, types, SymbolId.EmptySymbols);
         }
 
+        public MethodCandidate MakeBindingTarget(CallType callType, Type[] types, out Type[] argumentTests) {
+            return MakeBindingTarget(callType, types, SymbolId.EmptySymbols, out argumentTests);
+        }
+
         public MethodCandidate MakeBindingTarget(CallType callType, Type[] types, SymbolId[] names) {
+            Type[] argumentTests;
+            return MakeBindingTarget(callType, types, names, out argumentTests);
+        }
+
+        public MethodCandidate MakeBindingTarget(CallType callType, Type[] types, SymbolId[] names, out Type[] argumentTests) {
             TargetSet ts = this.GetTargetSet(types.Length);
             if (ts != null) {
-                return ts.MakeBindingTarget(callType, types, names);
+                return ts.MakeBindingTarget(callType, types, names, out argumentTests);
             }
+            argumentTests = null;
             return null;
         }
 
@@ -162,7 +169,7 @@ namespace Microsoft.Scripting {
         }
 
         public object CallInstanceReflected(CodeContext context, object instance, params object[] args) {
-            return CallReflected(context, CallType.ImplicitInstance, Utils.Array.Insert(instance, args));
+            return CallReflected(context, CallType.ImplicitInstance, ArrayUtils.Insert(instance, args));
         }
 
         public object CallReflected(CodeContext context, CallType callType, params object[] args) {
@@ -314,24 +321,21 @@ namespace Microsoft.Scripting {
         private MethodBinder _binder;
         internal int _count;
         internal List<MethodCandidate> _targets;
-        private bool _hasConflict = false;
 
         public TargetSet(MethodBinder binder, int count) {
             this._binder = binder;
             this._count = count;
             _targets = new List<MethodCandidate>();
         }
-
-
-        public bool HasConflict {
-            get { return _hasConflict || _binder.IsBinaryOperator; }
-        }
-
-        public MethodCandidate MakeBindingTarget(CallType callType, Type[] types, SymbolId[] names) {
+       
+        public MethodCandidate MakeBindingTarget(CallType callType, Type[] types, SymbolId[] names, out Type[] argTests) {
             List<MethodCandidate> targets = SelectTargets(callType, types, names);
 
-            if (targets.Count == 1) return targets[0];
-
+            if (targets.Count == 1) {                
+                argTests = GetTypesForTest(targets[0], types, callType, _targets);
+                return targets[0];
+            }
+            argTests = null;
             return null;
         }
 
@@ -342,14 +346,10 @@ namespace Microsoft.Scripting {
             if (targets.Count == 1) {
                 return targets[0].Target.AbstractCall(new AbstractContext(_binder._binder, null), args);
             } else {
-                DynamicType[] dynamicTypes = new DynamicType[types.Length];
-                for (int i = 0; i < types.Length; i++) {
-                    dynamicTypes[i] = DynamicHelpers.GetDynamicTypeFromType(types[i]);
-                }
                 if (targets.Count == 0) {
-                    return AbstractValue.TypeError(NoApplicableTargetMessage(callType, dynamicTypes));
+                    return AbstractValue.TypeError(NoApplicableTargetMessage(callType, types));
                 } else {
-                    return AbstractValue.TypeError(MultipleTargetsMessage(targets, callType, dynamicTypes));
+                    return AbstractValue.TypeError(MultipleTargetsMessage(targets, callType, types));
                 }
             }
         }
@@ -379,9 +379,9 @@ namespace Microsoft.Scripting {
             }
 
             if (targets.Count == 0) {
-                throw NoApplicableTarget(callType, CompilerHelpers.ObjectTypes(args));
+                throw NoApplicableTarget(callType, CompilerHelpers.GetTypes(args));
             } else {
-                throw MultipleTargets(targets, callType, CompilerHelpers.ObjectTypes(args));
+                throw MultipleTargets(targets, callType, CompilerHelpers.GetTypes(args));
             }
         }
 
@@ -389,11 +389,11 @@ namespace Microsoft.Scripting {
             return SelectTargets(callType, CompilerHelpers.GetTypes(args));
         }
 
-        public List<MethodCandidate> SelectTargets(CallType callType, Type[] types) {
+        private List<MethodCandidate> SelectTargets(CallType callType, Type[] types) {
             return SelectTargets(callType, types, SymbolId.EmptySymbols);
         }
 
-        public List<MethodCandidate> SelectTargets(CallType callType, Type[] types, SymbolId[] names) {
+        private List<MethodCandidate> SelectTargets(CallType callType, Type[] types, SymbolId[] names) {
             if (_targets.Count == 1 && !_binder.IsBinaryOperator && names.Length == 0) return _targets;
 
             List<MethodCandidate> applicableTargets = new List<MethodCandidate>();
@@ -416,7 +416,7 @@ namespace Microsoft.Scripting {
             }
 
             //no targets are applicable without narrowing conversions, so try those
-            
+
             foreach (MethodCandidate target in _targets) {
                 if (target.IsApplicable(types, names, NarrowingLevel.Preferred)) {
                     applicableTargets.Add(new MethodCandidate(target, NarrowingLevel.Preferred));
@@ -434,6 +434,59 @@ namespace Microsoft.Scripting {
 
             return applicableTargets;
         }
+       
+        private Type[] GetTypesForTest(MethodCandidate target, Type[] types, CallType callType, IList<MethodCandidate> candidates) {
+            // if we have a single target we need no tests.
+            // if we have a binary operator we have to test to return NotImplemented
+            if (_targets.Count == 1 && !_binder.IsBinaryOperator) return null;
+
+            Type[] tests = new Type[types.Length];
+            for (int i = 0; i < types.Length; i++) {
+                if (_binder.IsBinaryOperator || AreArgumentTypesOverloaded(types, i, candidates)) {
+                    tests[i] = types[i];
+                }                
+            }
+                                  
+            return tests;
+        }
+
+        private static bool AreArgumentTypesOverloaded(Type[] types, int index, IList<MethodCandidate> methods) {
+            Type argType = null;
+            for (int i = 0; i < methods.Count; i++) {
+                IList<ParameterWrapper> pis = methods[i].Parameters;
+                if (pis.Count == 0) continue;
+
+                int readIndex = index;
+                if (pis[0].Type == typeof(CodeContext)) {
+                    readIndex++;
+                }
+
+                Type curType;
+                if (readIndex < pis.Count) {
+                    if (readIndex == -1) {
+                        curType = methods[i].Target.Method.DeclaringType;
+                    } else if (pis[readIndex].IsParameterArray) {
+                        if (index == types.Length - 1) {
+                            return true;    // TODO: Optimize this case
+                        }
+                        curType = pis[pis.Count - 1].Type.GetElementType();
+                    } else {
+                        curType = pis[readIndex].Type;
+                    }
+                } else if (pis[pis.Count - 1].IsParameterArray) {
+                    curType = pis[pis.Count - 1].Type.GetElementType();
+                } else {
+                    continue;
+                }
+
+                if (argType == null) {
+                    argType = curType;
+                } else if (argType != curType) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         private static bool IsBest(MethodCandidate candidate, List<MethodCandidate> applicableTargets, CallType callType) {
             foreach (MethodCandidate target in applicableTargets) {
@@ -450,23 +503,23 @@ namespace Microsoft.Scripting {
             return null;
         }
 
-        private Exception NoApplicableTarget(CallType callType, DynamicType[] types) {
+        private Exception NoApplicableTarget(CallType callType, Type[] types) {
             return new ArgumentTypeException(NoApplicableTargetMessage(callType, types));
         }
 
-        private Exception MultipleTargets(List<MethodCandidate> applicableTargets, CallType callType, DynamicType[] types) {
+        private Exception MultipleTargets(List<MethodCandidate> applicableTargets, CallType callType, Type[] types) {
             return new ArgumentTypeException(MultipleTargetsMessage(applicableTargets, callType, types));
         }
 
-        private string NoApplicableTargetMessage(CallType callType, DynamicType[] types) {
+        private string NoApplicableTargetMessage(CallType callType, Type[] types) {
             return TypeErrorForOverloads("no overloads of {0} could match {1}", _targets, callType, types);
         }
 
-        private string MultipleTargetsMessage(List<MethodCandidate> applicableTargets, CallType callType, DynamicType[] types) {
+        private string MultipleTargetsMessage(List<MethodCandidate> applicableTargets, CallType callType, Type[] types) {
             return TypeErrorForOverloads("multiple overloads of {0} could match {1}", applicableTargets, callType, types);
         }
 
-        private static string GetArgTypeNames(DynamicType[] types, CallType callType) {
+        private static string GetArgTypeNames(Type[] types, CallType callType) {
             StringBuilder buf = new StringBuilder();
             buf.Append("(");
             bool isFirstArg = true;
@@ -481,7 +534,7 @@ namespace Microsoft.Scripting {
             return buf.ToString();
         }
 
-        private string TypeErrorForOverloads(string message, List<MethodCandidate> targets, CallType callType, DynamicType[] types) {
+        private string TypeErrorForOverloads(string message, List<MethodCandidate> targets, CallType callType, Type[] types) {
             StringBuilder buf = new StringBuilder();
             buf.AppendFormat(message, _binder._name, GetArgTypeNames(types, callType));
             buf.AppendLine();

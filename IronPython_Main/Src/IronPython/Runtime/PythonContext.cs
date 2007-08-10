@@ -21,6 +21,13 @@ using System.Reflection;
 using System.Threading;
 using System.IO;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
@@ -28,10 +35,6 @@ using IronPython.Compiler;
 using IronPython.Runtime.Exceptions;
 using IronPython.Hosting;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime {
     public sealed class PythonContext : LanguageContext {
@@ -227,24 +230,33 @@ namespace IronPython.Runtime {
                 traceback = t[2];
             }
 
-            if (type is Exception) throwable = type as Exception;
-            else if (PythonOps.IsInstance(type, PythonEngine.CurrentEngine._exceptionType)) throwable = ExceptionConverter.ToClr(type);
-            else if (type is string) throwable = new StringException(type.ToString(), value);
-            else if (type is OldClass) {
-                if (value == null)
+            if (type is Exception) { 
+                throwable = type as Exception;
+            } else if (PythonOps.IsInstance(type, PythonEngine.CurrentEngine._exceptionType)) {
+                throwable = ExceptionConverter.ToClr(type);
+            } else if (type is string) {
+                throwable = new StringException(type.ToString(), value);
+            } else if (type is OldClass) {
+                if (value == null) {
                     throwable = ExceptionConverter.CreateThrowable(type);
-                else
+                } else {
                     throwable = ExceptionConverter.CreateThrowable(type, value);
-            } else if (type is OldInstance) throwable = ExceptionConverter.ToClr(type);
-            else throwable = PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetDynamicType(type)); 
+                }
+            } else if (type is OldInstance) {
+                throwable = ExceptionConverter.ToClr(type);
+            } else {
+                throwable = PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetDynamicType(type));
+            }
+
+            IDictionary dict = ExceptionUtils.GetDataDictionary(throwable);
 
             if (traceback != null) {
                 TraceBack tb = traceback as TraceBack;
                 if (tb == null) throw PythonOps.TypeError("traceback argument must be a traceback object");
 
-                Utils.GetDataDictionary(throwable)[typeof(TraceBack)] = tb;
-            } else if (Utils.GetDataDictionary(throwable).Contains(typeof(TraceBack))) {
-                Utils.GetDataDictionary(throwable).Remove(typeof(TraceBack));
+                dict[typeof(TraceBack)] = tb;
+            } else if (dict.Contains(typeof(TraceBack))) {
+                dict.Remove(typeof(TraceBack));
             }
 
             PerfTrack.NoteEvent(PerfTrack.Categories.Exceptions, throwable);
@@ -296,17 +308,18 @@ namespace IronPython.Runtime {
         }
 
         private TraceBack CreateTraceBack(Exception e) {
-            if (Utils.GetDataDictionary(e).Contains(typeof(TraceBack))) {
-                // user provided trace back
-                return (TraceBack)Utils.GetDataDictionary(e)[typeof(TraceBack)];
+            // user provided trace back
+            object result;
+            if (ExceptionUtils.TryGetData(e, typeof(TraceBack), out result)) {
+                return (TraceBack)result;
             }
 
-            DynamicStackFrame [] frames = DynamicHelpers.GetDynamicStackFrames(e);
+            DynamicStackFrame[] frames = DynamicHelpers.GetDynamicStackFrames(e);
             TraceBack tb = null;
             for (int i = frames.Length - 1; i >= 0; i--) {
                 DynamicStackFrame frame = frames[i];
 
-                PythonFunction fx = new Function0(frame.CodeContext, frame.GetMethodName(), null, Utils.Array.EmptyStrings, RuntimeHelpers.EmptyObjectArray);
+                PythonFunction fx = new Function0(frame.CodeContext, frame.GetMethodName(), null, ArrayUtils.EmptyStrings, RuntimeHelpers.EmptyObjectArray);
 
                 TraceBackFrame tbf = new TraceBackFrame(
                     new GlobalsDictionary(frame.CodeContext.Scope),
@@ -381,7 +394,7 @@ namespace IronPython.Runtime {
         }
 
         public override object GetMember(CodeContext context, object target, SymbolId name) {
-            return PythonOps.GetAttr(context, target, name);
+            return PythonOps.GetBoundAttr(context, target, name);
         }
 
         public override object GetBoundMember(CodeContext context, object target, SymbolId name) {

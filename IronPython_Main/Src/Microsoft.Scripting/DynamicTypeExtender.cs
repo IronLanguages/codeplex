@@ -116,7 +116,7 @@ namespace Microsoft.Scripting {
             foreach (MethodInfo mi in curType.GetMethods()) {
                 if (!mi.IsStatic) continue;
 
-                if (mi.IsDefined(typeof(OperatorMethodAttribute), false)) {
+                if (mi.IsSpecialName) {
                     StoreOperator(mi);
                 } else if (mi.IsDefined(typeof(PropertyMethodAttribute), false)) {
                     StoreProperty(mi);

@@ -88,6 +88,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition="'$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release'">
+      <Link>Properties\SilverlightVersion.cs</Link>
+    </Compile>
     <Compile Include="ActionOnCallAttribute.cs" />
     <Compile Include="Actions\AbstractObject.cs" />
     <Compile Include="Actions\Action.cs" />
@@ -105,6 +108,7 @@
     <Compile Include="Actions\GetMemberBinderHelper.cs" />
     <Compile Include="Actions\InvokeMemberAction.cs" />
     <Compile Include="Actions\MemberAction.cs" />
+    <Compile Include="Actions\MemberBinderHelper.cs" />
     <Compile Include="Actions\RuleSet.cs" />
     <Compile Include="Actions\RuleTree.cs" />
     <Compile Include="Actions\SetMemberAction.cs" />
@@ -112,6 +116,7 @@
     <Compile Include="Actions\SmallRuleSet.cs" />
     <Compile Include="Actions\StandardRule.cs" />
     <Compile Include="Actions\RuleBinder.cs" />
+    <Compile Include="Actions\TemplatedRuleBuilder.cs" />
     <Compile Include="AssemblyTypeNames.cs" />
     <Compile Include="Ast\AstWriter.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
@@ -196,15 +201,14 @@
     <Compile Include="Ast\YieldTarget.cs" />
     <Compile Include="BinderHelper.cs" />
     <Compile Include="BinderType.cs" />
-    <Compile Include="BuiltinFunction.cs" />
-    <Compile Include="BuiltinFunction.Generated.cs" />
+    <Compile Include="Types\BuiltinFunction.cs" />
+    <Compile Include="Types\BuiltinFunction.Generated.cs" />
     <Compile Include="Generation\ByRefReturnBuilder.cs" />
     <Compile Include="Actions\CallBinderHelper.cs" />
     <Compile Include="CallTargets.cs" />
     <Compile Include="ArgumentTypeException.cs" />
-    <Compile Include="CheckedDictionaryEnumerator.cs" />
     <Compile Include="ClrModule.cs" />
-    <Compile Include="CoreReflectedTypeBuilder.cs" />
+    <Compile Include="Types\CoreReflectedTypeBuilder.cs" />
     <Compile Include="DelegateSignatureInfo.cs" />
     <Compile Include="DynamicTypeExtender.cs" />
     <Compile Include="FunctionType.cs" />
@@ -243,11 +247,10 @@
     <Compile Include="PositionTrackingWriter.cs" />
     <Compile Include="Generation\CompilerConstant.cs" />
     <Compile Include="CustomSymbolDictionary.cs" />
-    <Compile Include="DictionaryUnionEnumerator.cs" />
     <Compile Include="ExplicitConversionMethodAttribute.cs" />
     <Compile Include="DynamicHelpers.cs" />
     <Compile Include="Extensible.cs" />
-    <Compile Include="ExtensionTypeAttribute.cs" />
+    <Compile Include="Types\ExtensionTypeAttribute.cs" />
     <Compile Include="ExtraKeyEnumerator.cs" />
     <Compile Include="FunctionEnvironment.cs" />
     <Compile Include="Generation\ArgBuilder.cs" />
@@ -272,7 +275,6 @@
     <Compile Include="Hosting\CompiledCode.cs" />
     <Compile Include="Hosting\ScriptCode.cs" />
     <Compile Include="Compilers\CompilerContext.cs" />
-    <Compile Include="CopyOnWriteList.cs" />
     <Compile Include="ExceptionHelpers.cs" />
     <Compile Include="Generation\MethodTarget.cs" />
     <Compile Include="Generation\ParameterInfoWrapper.cs" />
@@ -298,15 +300,14 @@
     <Compile Include="LanguageContext.cs" />
     <Compile Include="MutableTypeAttribute.cs" />
     <Compile Include="OperatorMapping.cs" />
-    <Compile Include="Publisher.cs" />
-    <Compile Include="ReflectedEvent.cs" />
-    <Compile Include="ReflectedExtensionProperty.cs" />
-    <Compile Include="ReflectedField.cs" />
-    <Compile Include="ReflectedGetterSetter.cs" />
-    <Compile Include="ReflectedIndexer.cs" />
-    <Compile Include="ReflectedPackage.cs" />
-    <Compile Include="ReflectedProperty.cs" />
-    <Compile Include="ReflectedTypeBuilder.cs" />
+    <Compile Include="Types\ReflectedEvent.cs" />
+    <Compile Include="Types\ReflectedExtensionProperty.cs" />
+    <Compile Include="Types\ReflectedField.cs" />
+    <Compile Include="Types\ReflectedGetterSetter.cs" />
+    <Compile Include="Types\ReflectedIndexer.cs" />
+    <Compile Include="Types\ReflectedPackage.cs" />
+    <Compile Include="Types\ReflectedProperty.cs" />
+    <Compile Include="Types\ReflectedTypeBuilder.cs" />
     <Compile Include="ReflectionCache.cs" />
     <Compile Include="RuntimeHelpers.Generated.cs" />
     <Compile Include="ScopeMemberAttributes.cs" />
@@ -318,7 +319,6 @@
     <Compile Include="OptimizedModuleGenerator.cs" />
     <Compile Include="Scope.cs" />
     <Compile Include="PerfTrack.cs" />
-    <Compile Include="Reference.cs" />
     <Compile Include="NotNullAttribute.cs" />
     <Compile Include="ParamDictionaryAttribute.cs" />
     <Compile Include="FastCallable.cs" />
@@ -332,7 +332,7 @@
     <Compile Include="Hosting\ScriptEngine.Remote.cs" />
     <Compile Include="Hosting\SingletonEngineFactory.cs" />
     <Compile Include="ICallableWithCodeContext.cs" />
-    <Compile Include="IContextAwareMember.cs" />
+    <Compile Include="Types\IContextAwareMember.cs" />
     <Compile Include="ICallableWithThis.cs" />
     <Compile Include="Script.cs" />
     <Compile Include="ScriptDomainManager.cs" />
@@ -341,21 +341,20 @@
     <Compile Include="Generation\GlobalAllocator.cs" />
     <Compile Include="ScriptModuleKind.cs" />
     <Compile Include="ScriptNameAttribute.cs" />
-    <Compile Include="ScriptTypeAttribute.cs" />
+    <Compile Include="Types\ScriptTypeAttribute.cs" />
     <Compile Include="SourceUnitReader.cs" />
     <Compile Include="DynamicStackFrame.cs" />
     <Compile Include="StaticExtensionMethodAttribute.cs" />
     <Compile Include="StaticThisAttribute.cs" />
-    <Compile Include="StrongBox.cs" />
     <Compile Include="SymbolDictionary.cs" />
     <Compile Include="BaseSymbolDictionary.cs" />
     <Compile Include="SyntaxErrorException.cs" />
     <Compile Include="TransformDictEnumerator.cs" />
-    <Compile Include="TransformedName.cs" />
+    <Compile Include="Types\TransformedName.cs" />
     <Compile Include="Ast\TryFinallyStatement.cs" />
     <Compile Include="TupleDictionary.cs" />
-    <Compile Include="TypeCollision.cs" />
-    <Compile Include="TypeCreatedEventArgs.cs" />
+    <Compile Include="Types\TypeCollision.cs" />
+    <Compile Include="Types\TypeCreatedEventArgs.cs" />
     <Compile Include="Types\DynamicType.cs" />
     <Compile Include="Types\DynamicTypeBuilder.cs" />
     <Compile Include="Types\ExtensionPropertyInfo.cs" />
@@ -387,7 +386,6 @@
     <Compile Include="Generation\CodeGen.cs" />
     <Compile Include="Generation\CodeGenOptions.cs" />
     <Compile Include="Generation\CompilerHelpers.cs" />
-    <Compile Include="Generation\ListStack.cs" />
     <Compile Include="Generation\SlotFactory.cs" />
     <Compile Include="Generation\ScopeAllocator.cs" />
     <Compile Include="Generation\Targets.cs" />
@@ -397,9 +395,8 @@
     <Compile Include="IDynamicObject.cs" />
     <Compile Include="IFancyCallable.cs" />
     <Compile Include="ISlice.cs" />
-    <Compile Include="ISuperDynamicObject.cs" />
+    <Compile Include="Types\ISuperDynamicObject.cs" />
     <Compile Include="ContextId.cs" />
-    <Compile Include="OperatorMethodAttribute.cs" />
     <Compile Include="PropertyMethodAttribute.cs" />
     <Compile Include="ScriptModule.cs" />
     <Compile Include="CodeContext.cs" />
@@ -413,6 +410,29 @@
     <Compile Include="Types\DynamicMixin.cs" />
     <Compile Include="Types\DynamicMixinBuilder.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Utils\Action.cs" />
+    <Compile Include="Utils\ArrayUtils.cs" />
+    <Compile Include="Utils\Assert.cs" />
+    <Compile Include="Utils\CheckedDictionaryEnumerator.cs" />
+    <Compile Include="Utils\CollectionUtils.cs" />
+    <Compile Include="Utils\ConsoleStream.cs" />
+    <Compile Include="Utils\Contract.cs" />
+    <Compile Include="Utils\CopyOnWriteList.cs" />
+    <Compile Include="Utils\DictionaryUnionEnumerator.cs" />
+    <Compile Include="Utils\EnvironmentUtils.cs" />
+    <Compile Include="Utils\ExceptionUtils.cs" />
+    <Compile Include="Utils\Function.cs" />
+    <Compile Include="Utils\IOUtils.cs" />
+    <Compile Include="Utils\ListStack.cs" />
+    <Compile Include="Utils\Publisher.cs" />
+    <Compile Include="Utils\Reference.cs" />
+    <Compile Include="Utils\ReflectionUtils.cs" />
+    <Compile Include="Utils\StringUtils.cs" />
+    <Compile Include="Utils\StrongBox.cs" />
+    <Compile Include="Utils\TextStream.cs" />
+    <Compile Include="Utils\Utilities.cs" />
+    <Compile Include="Utils\WeakHandle.cs" />
+    <Compile Include="Utils\WeakHash.cs" />
     <Compile Include="Math\MathResources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -433,8 +453,6 @@
     <Compile Include="Types\DynamicTypeValueSlot.cs" />
     <Compile Include="Uninitialized.cs" />
     <Compile Include="SilverlightProxies.cs" />
-    <Compile Include="Utils.cs" />
-    <Compile Include="WeakHash.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Math\MathResources.resx">
@@ -449,6 +467,8 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+      <Link>Properties\25StrongName.snk</Link>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -458,4 +478,8 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
 </Project>

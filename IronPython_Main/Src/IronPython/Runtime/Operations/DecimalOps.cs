@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
@@ -34,27 +35,27 @@ namespace IronPython.Runtime.Operations {
             return DoubleOps.Compare(context, (double)x, other);
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThan(decimal x, decimal y) {
             return x < y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool LessThanOrEqual(decimal x, decimal y) {
             return x <= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThan(decimal x, decimal y) {
             return x > y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool GreaterThanOrEqual(decimal x, decimal y) {
             return x >= y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool Equal(decimal x, decimal y) {
             return x == y;
         }
-        [OperatorMethod]
+        [SpecialName]
         public static bool NotEqual(decimal x, decimal y) {
             return x != y;
         }

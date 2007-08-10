@@ -36,7 +36,12 @@ namespace Microsoft.Scripting.Ast {
             : base(span) {
         }
 
-        public virtual object Evaluate(CodeContext context) {
+        public object Evaluate(CodeContext context) {
+            context.Scope.SourceLocation = Start;
+            return DoEvaluate(context);
+        }
+
+        protected virtual object DoEvaluate(CodeContext context) {
             throw new NotImplementedException(String.Format(CultureInfo.CurrentCulture, Resources.NotImplemented_Evaluate, this));
         }
 

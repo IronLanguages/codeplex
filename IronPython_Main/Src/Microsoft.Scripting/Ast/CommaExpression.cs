@@ -104,17 +104,15 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             object result = null;
             for (int index = 0; index < _expressions.Count; index++) {
                 Expression current = _expressions[index];
 
-                // Evaluate the expression
                 if (current != null) {
                     object val = current.Evaluate(context);
-
-                    // And remember the value of the expression should be returned.
                     if (index == _valueIndex) {
+                        // Save the value at the designated index
                         result = val;
                     }
                 }

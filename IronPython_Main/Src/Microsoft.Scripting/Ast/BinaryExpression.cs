@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
 using System.Reflection;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public enum BinaryOperators {
@@ -131,7 +132,7 @@ namespace Microsoft.Scripting.Ast {
                     return false;
                    
                 default:
-                    throw Utils.Assert.Unreachable;
+                    throw Assert.Unreachable;
             }
         }
 
@@ -196,7 +197,7 @@ namespace Microsoft.Scripting.Ast {
                     return;
 
                 default:
-                    throw Utils.Assert.Unreachable;
+                    throw Assert.Unreachable;
             }
         }
 
@@ -237,7 +238,7 @@ namespace Microsoft.Scripting.Ast {
                     break;
 
                 default:
-                    throw Utils.Assert.Unreachable;
+                    throw Assert.Unreachable;
             }
         }
 
@@ -270,7 +271,7 @@ namespace Microsoft.Scripting.Ast {
             return;
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             if (_op == BinaryOperators.AndAlso) {
                 object ret = _left.Evaluate(context);
                 return ((bool)ret) ? _right.Evaluate(context) : ret;
@@ -302,14 +303,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private bool TestEquals(object l, object r) {
-            // This code needs to mimic the code we generate above in Emit()
-
-            // TODO: The null checks _should_ be unnecessary!
-            // TODO: enums are not IsPrimitive
-            if (GetEmitType().IsPrimitive && l != null && r != null) {
-                return l.Equals(r);
-            }
-            return l == r;
+            // We don't need to go through the same type checks as the emit case,
+            // since we know we're always dealing with boxed objects.
+            return Object.Equals(l, r);
         }
 
         public override void Walk(Walker walker) {
@@ -439,7 +435,7 @@ namespace Microsoft.Scripting.Ast {
 
         private static void RequiresPredicate(MethodInfo method) {
             if (method == null) throw new ArgumentNullException("method");
-            Utils.Assert.SignatureEquals(method, typeof(object), typeof(bool));
+            Debug.Assert(ReflectionUtils.SignatureEquals(method, typeof(object), typeof(bool)));
             Debug.Assert(method.IsStatic && method.IsPublic);
         }
 

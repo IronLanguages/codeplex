@@ -48,8 +48,8 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override void EmitSetUninitialized(CodeGen cg) {
-            // In FastEval mode, we depend on setting values to Uninitialized to implement scope rules correctly.
-            if (cg.FastEval) {
+            // In interpreted mode, we depend on setting values to Uninitialized to implement scope rules correctly.
+            if (cg.InterpretedMode) {
                 base.EmitSetUninitialized(cg);
             }
         }

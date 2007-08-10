@@ -16,8 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
+
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
@@ -117,7 +120,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICallableWithCodeContext Members
 
-        [OperatorMethod, PythonName("__call__")]    // still need PythonName for the virtual override to work
+        [SpecialName, PythonName("__call__")]    // still need PythonName for the virtual override to work
         public virtual object Call(CodeContext context, params object[] args) {
             return DynamicTypeOps.CallParams(context, this, args);
         }

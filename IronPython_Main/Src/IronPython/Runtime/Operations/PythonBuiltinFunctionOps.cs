@@ -17,13 +17,15 @@ using System;
 using System.Text;
 using System.Reflection;
 using System.Collections.Generic;
-    
+using System.Runtime.CompilerServices;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
+
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime;
-
-using Microsoft.Scripting;
 
 [assembly: PythonExtensionType(typeof(BuiltinFunction), typeof(PythonBuiltinFunctionOps))]
 namespace IronPython.Runtime.Operations {
@@ -72,12 +74,12 @@ namespace IronPython.Runtime.Operations {
             return self.Name;
         }
 
-        [OperatorMethod, PythonName("__str__")]
+        [SpecialName, PythonName("__str__")]
         public static string ToString(BuiltinFunction self) {
             return string.Format("<built-in function {0}>", self.Name);
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string ToCodeRepresentation(BuiltinFunction self) {
             return ToString(self);
         }
@@ -110,7 +112,7 @@ namespace IronPython.Runtime.Operations {
         /// Use indexing on generic methods to provide a new reflected method with targets bound with
         /// the supplied type arguments.
         /// </summary>
-        [OperatorMethod]
+        [SpecialName]
         public static BuiltinFunction GetItem(BuiltinFunction self, object key) {
             // Retrieve the list of type arguments from the index.
             Type[] types;

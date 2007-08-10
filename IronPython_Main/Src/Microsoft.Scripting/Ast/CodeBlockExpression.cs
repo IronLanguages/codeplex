@@ -25,6 +25,7 @@ using System.Threading;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -50,7 +51,7 @@ namespace Microsoft.Scripting.Ast {
 
         internal CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapperMethod, bool stronglyTyped, bool isDeclarative, Type delegateType)
             : base(span) {
-            Utils.Assert.NotNull(block);
+            Assert.NotNull(block);
 
             if (isDeclarative) {
                 block.DeclarativeReferenceAdded();
@@ -81,7 +82,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             return _block.GetDelegateForInterpreter(context, _forceWrapperMethod);
         }
 

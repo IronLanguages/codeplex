@@ -19,8 +19,9 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 using System.Collections;
-using Microsoft.Scripting.Shell;
 using System.IO;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Shell;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -33,26 +34,32 @@ namespace Microsoft.Scripting.Hosting {
             LoadSilverlightAssemblyNameMapping();
         }
 
-        // TODO
+        // TODO: remove the need for this
         private void LoadSilverlightAssemblyNameMapping() {
-            _assemblyFullNames.Add("mscorlib", "mscorlib, Version=2.1.0.0, PublicKeyToken=b77a5c561934e089");
-            _assemblyFullNames.Add("system", "System, Version=2.1.0.0, PublicKeyToken=b77a5c561934e089");
-            _assemblyFullNames.Add("system.core", "System.Core, Version=2.1.0.0, PublicKeyToken=b77a5c561934e089");
-            _assemblyFullNames.Add("system.xml.core", "System.Xml.Core, Version=2.1.0.0, PublicKeyToken=b77a5c561934e089");
+            AssemblyName clrAssembly = new AssemblyName(typeof(object).Assembly.FullName);
+            foreach (string asm in new string[] { "mscorlib", "System", "System.Core", "System.Xml.Core" }) {
+                clrAssembly.Name = asm;
+                _assemblyFullNames.Add(asm.ToLower(), clrAssembly.FullName);
+            }
+
             _assemblyFullNames.Add("system.silverlight", "System.SilverLight, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
             _assemblyFullNames.Add("agclr", "agclr, Version=0.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("microsoft.scripting", "Microsoft.Scripting, Version=1.0.0.300, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("microsoft.scripting.silverlight", "Microsoft.Scripting.SilverLight, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("ironpython", "IronPython, Version=2.0.0.300, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("ironpython.modules", "IronPython.Modules, Version=2.0.0.300, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("ironpythontest", "IronPythonTest, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("microsoft.jscript.compiler", "Microsoft.JScript.Compiler, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("microsoft.jscript.runtime", "Microsoft.JScript.Runtime, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("microsoft.visualbasic.compiler", "Microsoft.VisualBasic.Compiler, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("microsoft.visualbasic.scripting", "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
             _assemblyFullNames.Add("microsoft.visualbasic", "Microsoft.VisualBasic, Version=8.1.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("ruby", "Ruby, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
 
+            AssemblyName dlrAssembly = new AssemblyName(GetType().Assembly.FullName);            
+            foreach (string asm in new string[] {
+                "Microsoft.Scripting",
+                "Microsoft.Scripting.SilverLight",
+                "IronPython",
+                "IronPython.Modules",
+                "Microsoft.JScript.Compiler",
+                "Microsoft.JScript.Runtime",
+                "Microsoft.VisualBasic.Compiler",
+                "Microsoft.VisualBasic.Scripting",
+                "Ruby"}) {
+                dlrAssembly.Name = asm;
+                _assemblyFullNames.Add(asm.ToLower(), dlrAssembly.FullName);
+            }
         }
 
         protected string LookupFullName(string name) {

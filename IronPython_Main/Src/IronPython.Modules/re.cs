@@ -25,6 +25,7 @@ using IronPython.Runtime.Exceptions;
 
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("re", typeof(IronPython.Modules.PythonRegex))]
 namespace IronPython.Modules {
@@ -1008,7 +1009,7 @@ namespace IronPython.Modules {
                                             int num;
                                             Group g;
 
-                                            if (Microsoft.Scripting.Utils.TryParseInt32(grp, out num)) {
+                                            if (StringUtils.TryParseInt32(grp, out num)) {
                                                 g = m.Groups[num];
                                                 if (String.IsNullOrEmpty(g.Value)) {
                                                     throw PythonOps.IndexError("unknown group reference");

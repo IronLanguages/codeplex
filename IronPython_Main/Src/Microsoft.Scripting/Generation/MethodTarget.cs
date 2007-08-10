@@ -24,6 +24,7 @@ using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     public class MethodTarget  {
         private ActionBinder _binder;
@@ -98,7 +99,7 @@ namespace Microsoft.Scripting.Generation {
 #if SILVERLIGHT && DEBUG // TODO: drop when Silverlight gets fixed
             } catch (System.Security.SecurityException) {
                 throw new System.Security.SecurityException(String.Format("Access to method '{0}' denied.", 
-                    Utils.Reflection.FormatSignature(new System.Text.StringBuilder(), Method)));
+                    ReflectionUtils.FormatSignature(new System.Text.StringBuilder(), Method)));
 #endif
             } catch (TargetInvocationException tie) {
                 throw ExceptionHelpers.UpdateForRethrow(tie.InnerException);

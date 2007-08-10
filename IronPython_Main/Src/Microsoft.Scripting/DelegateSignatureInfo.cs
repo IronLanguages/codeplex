@@ -21,6 +21,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     class DelegateSignatureInfo {
@@ -146,7 +147,7 @@ namespace Microsoft.Scripting {
         private readonly int _target;
 
         internal DelegateInfo(MethodInfo method, object[] constants, int target) {
-            Utils.Assert.NotNull(method, constants);
+            Assert.NotNull(method, constants);
 
             _method = method;
             _constants = constants;
@@ -154,14 +155,14 @@ namespace Microsoft.Scripting {
         }
 
         public Delegate CreateDelegate(Type delegateType, object target) {
-            Utils.Assert.NotNull(delegateType, target);
+            Assert.NotNull(delegateType, target);
 
             object[] clone = (object[])_constants.Clone();
 #if DEBUG
             Debug.Assert(clone[_target] == DelegateSignatureInfo.TargetPlaceHolder);
 #endif
             clone[_target] = target;
-            return Utils.Reflection.CreateDelegate(_method, delegateType, clone);
+            return ReflectionUtils.CreateDelegate(_method, delegateType, clone);
         }
     }
 }

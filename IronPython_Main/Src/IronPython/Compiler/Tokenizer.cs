@@ -42,6 +42,7 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler {
 
@@ -403,7 +404,7 @@ namespace IronPython.Compiler {
         }
 
         private ErrorToken BadChar(int ch) {
-            return new ErrorToken(Utils.String.AddSlashes(((char)ch).ToString()));
+            return new ErrorToken(StringUtils.AddSlashes(((char)ch).ToString()));
         }
 
         private static bool IsNameStart(int ch) {

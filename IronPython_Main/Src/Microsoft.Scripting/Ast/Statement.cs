@@ -35,7 +35,12 @@ namespace Microsoft.Scripting.Ast {
             : base(span) {
         }
 
-        public virtual object Execute(CodeContext context) {
+        public object Execute(CodeContext context) {
+            context.Scope.SourceLocation = Start;
+            return DoExecute(context);
+        }
+
+        protected virtual object DoExecute(CodeContext context) {
             throw new NotImplementedException(String.Format(CultureInfo.CurrentCulture, Resources.NotImplemented_Execute, this));
         }
 

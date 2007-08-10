@@ -75,6 +75,9 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\..\Hosts\SilverLight\SilverlightVersion.cs" Condition="'$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release'">
+      <Link>Properties\SilverlightVersion.cs</Link>
+    </Compile>
     <Compile Include="Compiler\Ast\AndExpression.cs" />
     <Compile Include="Compiler\Ast\Arg.cs" />
     <Compile Include="Compiler\Ast\AssertStatement.cs" />
@@ -259,6 +262,11 @@
     <Compile Include="Runtime\Symbols.Generated.cs" />
     <Compile Include="Runtime\SystemState.cs" />
     <Compile Include="Runtime\Tuple.cs" />
+    <Compile Include="Runtime\Types\ComDispatch\ComMethodDesc.cs" />
+    <Compile Include="Runtime\Types\ComDispatch\ComParamDesc.cs" />
+    <Compile Include="Runtime\Types\ComDispatch\DispCallable.cs" />
+    <Compile Include="Runtime\Types\ComDispatch\DispIndexer.cs" />
+    <Compile Include="Runtime\Types\ComDispatch\DispMethod.cs" />
     <Compile Include="Runtime\Types\ComObject.cs" />
     <Compile Include="Runtime\Types\DelegateType.cs" />
     <Compile Include="Runtime\Types\DictProxy.cs" />
@@ -289,7 +297,9 @@
     <Compile Include="Runtime\WeakRef.cs" />
     <Compile Include="Runtime\WrapperDictionary.cs" />
     <Compile Include="Runtime\XRange.cs" />
-    <Compile Include="..\AssemblyVersion.cs" />
+    <Compile Include="..\AssemblyVersion.cs">
+      <Link>Properties\AssemblyVersion.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">

@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_1c")
@@ -30,6 +31,9 @@ clr.AddReference("loadorder_1a")
 #     }
 # }
 
-# check
+AreEqual(NamespaceOrType[int].Flag, "NamespaceOrType`1")
+
 import NamespaceOrType
-# check
+
+AssertError(AttributeError, lambda: NamespaceOrType[int])
+AreEqual(NamespaceOrType.C.Flag, "NamespaceOrType.C")

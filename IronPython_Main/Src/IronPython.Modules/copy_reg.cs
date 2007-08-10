@@ -19,12 +19,14 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Types;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting;
 
 [assembly: PythonModule("copy_reg", typeof(IronPython.Modules.PythonCopyReg))]
 namespace IronPython.Modules {

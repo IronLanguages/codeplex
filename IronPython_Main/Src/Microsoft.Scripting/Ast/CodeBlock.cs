@@ -27,6 +27,7 @@ using System.IO;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
 
@@ -62,9 +63,15 @@ namespace Microsoft.Scripting.Ast {
         private bool _visibleScope = true;
         private bool _parameterArray;
         
-        // FastEval: Cache for emitted delegate so that we only generate code once.
+        // Interpreted mode: Cache for emitted delegate so that we only generate code once.
         private Delegate _delegate;
 
+        // Profile-driven compilation support
+        private int _callCount = 0;
+        private CompilerContext _declaringContext;
+        private bool _forceWrapperMethod;
+        private const int _maxInterpretedCalls = 2;
+        
         /// <summary>
         /// True, if the block is referenced by a declarative reference (CodeBlockExpression).
         /// </summary>
@@ -74,7 +81,7 @@ namespace Microsoft.Scripting.Ast {
 
         internal CodeBlock(SourceSpan span, string name, Type returnType)
             : base(span) {
-            Utils.Assert.NotNull(returnType);
+            Assert.NotNull(returnType);
 
             _name = name;
             _returnType = returnType;
@@ -366,11 +373,6 @@ namespace Microsoft.Scripting.Ast {
                 // its Locals pointing at our Environment.
                 cg.EnvironmentSlot = EmitEnvironmentAllocation(cg);
                 cg.ContextSlot = CreateEnvironmentContext(cg);
-                if (!cg.HasAllocator) {
-                    // In FastEval mode, we delay creating an allocator
-                    // until we have the correct nested CodeContext to attach it to.
-                    cg.Allocator = CompilerHelpers.CreateFrameAllocator(cg.ContextSlot);
-                }
             }
             cg.Allocator.ActiveScope = this;
             
@@ -497,7 +499,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         protected bool NeedsWrapperMethod(bool stronglyTyped) {
-            return _parameters.Count > (stronglyTyped ? Utils.Reflection.MaxSignatureSize - 1 : CallTargets.MaximumCallArgs);
+            return _parameters.Count > (stronglyTyped ? ReflectionUtils.MaxSignatureSize - 1 : CallTargets.MaximumCallArgs);
         }
 
         private bool HasThis() {
@@ -524,7 +526,28 @@ namespace Microsoft.Scripting.Ast {
             FlowChecker.Check(this);
         }
 
+        private bool ShouldCompile() {
+            return _callCount++ > _maxInterpretedCalls;
+        }
+
         public object ExecuteWithChildContext(CodeContext parent, params object[] args) {
+            // Fast path for if we have emitted this code block as a delegate
+            if (_delegate != null) {
+                return RuntimeHelpers.CallWithContext(parent, _delegate, args);
+            }
+
+            if (parent.LanguageContext.Engine.Options.ProfileDrivenCompilation) {
+                lock (this) {
+                    // Check _delegate again -- maybe it appeared between our first check and taking the lock
+                    if (_delegate == null && ShouldCompile()) {
+                        _delegate = GetCompiledDelegate(_declaringContext, _forceWrapperMethod);
+                    }
+                }
+                if (_delegate != null) {
+                    return RuntimeHelpers.CallWithContext(parent, _delegate, args);
+                }
+            }
+            
             CodeContext child = RuntimeHelpers.CreateNestedCodeContext(parent, new SymbolDictionary(), IsVisible);
             for (int i = 0; i < _parameters.Count; i++) {
                 RuntimeHelpers.SetName(child, _parameters[i].Name, args[i]);
@@ -533,6 +556,21 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public object ExecuteWithChildContextAndThis(CodeContext parent, object @this, params object[] args) {
+            if (_delegate != null) {
+                return RuntimeHelpers.CallWithThis(parent, _delegate, @this, args);
+            }
+
+            if (parent.LanguageContext.Engine.Options.ProfileDrivenCompilation) {
+                lock (this) {
+                    if (_delegate == null && ShouldCompile()) {
+                        _delegate = GetCompiledDelegate(_declaringContext, _forceWrapperMethod);
+                    }
+                }
+                if (_delegate != null) {
+                    return RuntimeHelpers.CallWithThis(parent, _delegate, @this, args);
+                }
+            }
+
             CodeContext child = RuntimeHelpers.CreateNestedCodeContext(parent, new SymbolDictionary(), IsVisible);
             RuntimeHelpers.SetName(child, _parameters[0].Name, @this);
             for (int i = 1; i < _parameters.Count; i++) {
@@ -545,24 +583,24 @@ namespace Microsoft.Scripting.Ast {
         public virtual Delegate GetDelegateForInterpreter(CodeContext context, bool forceWrapperMethod) {
             FlowChecker.Check(this);
 
-            // Determine whether to emit this CodeBlock or interpret it
-            // In debug mode, if FastEval is on, we always evaluate; otherwise, walk the tree and decide what to do
-#if DEBUG
-            if (context.LanguageContext.Engine.Options.FastEvaluation || FastEvalWalker.CanEvaluate(this)) {
-#else
-            if (FastEvalWalker.CanEvaluate(this)) {
-#endif
+            bool delayedEmit = context.LanguageContext.Engine.Options.ProfileDrivenCompilation;
+            // Walk the tree to determine whether to emit this CodeBlock or interpret it
+            if (FastEvalWalker.CanEvaluate(this, delayedEmit)) {
+                // Hold onto our declaring context in case we decide to emit ourselves later
+                if (delayedEmit) {
+                    _declaringContext = context.ModuleContext.CompilerContext;
+                    _forceWrapperMethod = forceWrapperMethod;
+                }
+
                 if (HasThis()) {
                     return new CallTargetWithContextAndThisN(ExecuteWithChildContextAndThis);
                 } else {
                     return new CallTargetWithContextN(ExecuteWithChildContext);
                 }
             } else {
-                // TODO: maybe emit a delegate that keeps track of how many times it has been called
-                // and eventually emits code
                 lock (this) {
                     if (_delegate == null) {
-                        _delegate = GetCompiledDelegate(context, forceWrapperMethod);
+                        _delegate = GetCompiledDelegate(context.ModuleContext.CompilerContext, forceWrapperMethod);
                     }
                     return _delegate;
                 }
@@ -570,12 +608,9 @@ namespace Microsoft.Scripting.Ast {
 
         }
 
-        private Delegate GetCompiledDelegate(CodeContext context, bool forceWrapperMethod) {
-            EmitLocalDictionary = true;
-            HasEnvironment = true;
+        protected Delegate GetCompiledDelegate(CompilerContext context, bool forceWrapperMethod) {
 
             bool createWrapperMethod = _parameterArray ? false : forceWrapperMethod || NeedsWrapperMethod(false);
-
             bool hasThis = HasThis();
 
             CodeGen cg = CreateMethod(context, hasThis);
@@ -638,7 +673,7 @@ namespace Microsoft.Scripting.Ast {
             } else {
                 if (delegateType == null) {
                     if (stronglyTyped) {
-                        delegateType = Utils.Reflection.GetDelegateType(GetParameterTypes(hasContextParameter), _returnType);
+                        delegateType = ReflectionUtils.GetDelegateType(GetParameterTypes(hasContextParameter), _returnType);
                     } else {
                         delegateType = CallTargets.GetTargetType(hasContextParameter, _parameters.Count);
                     }
@@ -740,7 +775,7 @@ namespace Microsoft.Scripting.Ast {
             return impl;
         }
 
-        private CodeGen CreateMethod(CodeContext context, bool hasThis) {
+        private CodeGen CreateMethod(CompilerContext context, bool hasThis) {
             List<Type> paramTypes;
             List<SymbolId> paramNames;
             CodeGen impl;
@@ -753,9 +788,9 @@ namespace Microsoft.Scripting.Ast {
                     typeof(object),
                     paramTypes.ToArray(),
                     new ConstantPool());
-            impl.FastEval = true;
+            impl.InterpretedMode = true;
             impl.ContextSlot = impl.ArgumentSlots[0];
-            impl.Context = context.ModuleContext.CompilerContext;
+            impl.Context = context;
             impl.EnvironmentSlot = new EnvironmentSlot(
                 new PropertySlot(
                     new PropertySlot(impl.ContextSlot,
@@ -766,10 +801,8 @@ namespace Microsoft.Scripting.Ast {
                 impl.ParamsSlot = impl.GetArgumentSlot(lastParamIndex);
             }
 
-            // Note that we do not attach an allocator just yet:
-            // LocalStorageAllocator won't work because we lack an outer CodeGen object,
-            // and we can't use a NamedFrameAllocator because do not create the nested CodeContext until later.
-            
+            impl.Allocator = CompilerHelpers.CreateLocalStorageAllocator(null, impl);
+
             return impl;
         }
 
@@ -870,7 +903,7 @@ namespace Microsoft.Scripting.Ast {
         public virtual void EmitBody(CodeGen cg) {
             CreateEnvironmentFactory(false);
             CreateSlots(cg);
-            if (cg.FastEval) {
+            if (cg.InterpretedMode) {
                 foreach (VariableReference vr in _references) {
                     if (vr.Variable.Kind == Variable.VariableKind.Local && vr.Variable.Block == this) {
                         vr.Slot.EmitSetUninitialized(cg);
@@ -969,7 +1002,7 @@ namespace Microsoft.Scripting.Ast {
             ParameterInfo returnInfo;
             ParameterInfo[] parameterInfos;
 
-            Utils.Reflection.GetDelegateSignature(eventInfo.EventHandlerType, out parameterInfos, out returnInfo);
+            ReflectionUtils.GetDelegateSignature(eventInfo.EventHandlerType, out parameterInfos, out returnInfo);
 
             CodeBlock result = Ast.CodeBlock(name, returnInfo.ParameterType);
             for (int i = 0; i < parameterInfos.Length; i++) {

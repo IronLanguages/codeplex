@@ -94,9 +94,7 @@ namespace IronPython.Hosting {
 
         
         private void InitializePath() {
-#if SILVERLIGHT // paths, environment vars
-            Engine.AddToPath(".");
-#else
+#if !SILVERLIGHT // paths, environment vars
             Engine.AddToPath(Environment.CurrentDirectory);
 
             if (!Options.IgnoreEnvironmentVariables) {

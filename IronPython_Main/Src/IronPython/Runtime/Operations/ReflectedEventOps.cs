@@ -16,8 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
@@ -26,7 +28,7 @@ using IronPython.Runtime.Calls;
 [assembly: PythonExtensionType(typeof(ReflectedEvent), typeof(ReflectedEventOps))]
 namespace IronPython.Runtime.Operations {
     public static class ReflectedEventOps {
-        [OperatorMethod, PythonName("__str__")]
+        [SpecialName, PythonName("__str__")]
         public static string ToString(ReflectedEvent self) {
             return string.Format("<event# {0} on {1}>", self.Info.Name, self.Info.DeclaringType.Name);
         }

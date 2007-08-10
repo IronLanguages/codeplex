@@ -19,17 +19,21 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
-
-using IronPython.Runtime.Operations;
-using IronPython.Compiler;
-using IronPython.Runtime.Types;
-using IronPython.Hosting;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Operations;
+using IronPython.Compiler;
+using IronPython.Runtime.Types;
+using IronPython.Hosting;
+
 
 namespace IronPython.Runtime.Calls {
     [PythonType("instancemethod")]
@@ -117,7 +121,7 @@ namespace IronPython.Runtime.Calls {
             return nargs;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public override object Call(CodeContext context, params object[] args) {
             FastCallable fc = _func as FastCallable;
             if (fc != null) {
@@ -140,7 +144,7 @@ namespace IronPython.Runtime.Calls {
             return PythonOps.CallWithContext(context, _func, PrependInstance(instance, AddInstToArgs(args)));
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public object Call(CodeContext context, object[] args, string[] names) {
             return PythonOps.CallWithKeywordArgs(context, _func, AddInstToArgs(args), names);
         }
@@ -230,7 +234,7 @@ namespace IronPython.Runtime.Calls {
             if (TypeCache.Method.TryGetBoundMember(context, this, name, out value)) return true;
 
             // Forward to the func
-            return PythonOps.TryGetAttr(context, _func, name, out value);
+            return PythonOps.TryGetBoundAttr(context, _func, name, out value);
         }
 
         public void SetCustomMember(CodeContext context, SymbolId name, object value) {
@@ -283,7 +287,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         StandardRule<T> IDynamicObject.GetRule<T>(Action action, CodeContext context, object[] args) {
-            Utils.Assert.NotNull(action, context, args);
+            Assert.NotNull(action, context, args);
             
             // get default rule:
             return null;

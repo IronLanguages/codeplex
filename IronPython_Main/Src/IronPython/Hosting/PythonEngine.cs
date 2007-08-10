@@ -35,6 +35,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Hosting {
 
@@ -137,6 +138,9 @@ namespace IronPython.Hosting {
 
             _exceptionType = ExceptionConverter.GetPythonException("Exception");
             _systemState.Initialize();
+#if SILVERLIGHT
+            AddToPath(".");
+#endif
 
             // TODO: this should be in SystemState.Initialize but dependencies...
             if (Options.WarningFilters != null)
@@ -466,6 +470,7 @@ namespace IronPython.Hosting {
                     if (typeName == "Microsoft.Scripting.Ast.CodeBlock" && method.Name == "DoExecute") {
                         // Evaluated frame -- Replace with dynamic frame
                         Debug.Assert(dynamicFrames.Count > 0);
+                        //if (dynamicFrames.Count == 0) continue;
                         result += FrameToString(dynamicFrames[dynamicFrames.Count-1]) + Environment.NewLine;
                         dynamicFrames.RemoveAt(dynamicFrames.Count - 1);
                         continue;
@@ -483,7 +488,7 @@ namespace IronPython.Hosting {
 
                 if (fsf != null && !fsf(frame)) continue;
 
-                // TODO: also try to use dynamic frames for non-FastEval dynamic methods
+                // TODO: also try to use dynamic frames for non-interpreted dynamic methods
                 result += FrameToString(frame) + Environment.NewLine;
             }
 
@@ -665,11 +670,11 @@ namespace IronPython.Hosting {
             // we choose ASCII by default, if the file has a Unicode pheader though
             // we'll automatically get it as unicode.
             Encoding default_encoding = encoding;
-            encoding = Utils.AsciiEncoding;
+            encoding = StringUtils.AsciiEncoding;
 
             long start_position = stream.Position;
 
-            StreamReader sr = new StreamReader(stream, Utils.AsciiEncoding);
+            StreamReader sr = new StreamReader(stream, StringUtils.AsciiEncoding);
             string line = sr.ReadLine();
             bool gotEncoding = false;
 
@@ -682,7 +687,7 @@ namespace IronPython.Hosting {
                 }
             }
 
-            if (gotEncoding && sr.CurrentEncoding != Utils.AsciiEncoding && encoding != sr.CurrentEncoding)
+            if (gotEncoding && sr.CurrentEncoding != StringUtils.AsciiEncoding && encoding != sr.CurrentEncoding)
             {
                 // we have both a BOM & an encoding type, throw an error
                 throw new IOException("file has both Unicode marker and PEP-263 file encoding");
@@ -724,7 +729,7 @@ namespace IronPython.Hosting {
         }
 
         public override CompilerOptions GetModuleCompilerOptions(ScriptModule module) {
-            Utils.Assert.NotNull(module);
+            Assert.NotNull(module);
 
             PythonCompilerOptions result = new PythonCompilerOptions(Options.DivisionOptions == PythonDivisionOptions.New);
             PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.GetModuleContext(module);
@@ -774,7 +779,7 @@ namespace IronPython.Hosting {
 
         public override string GetObjectDocumentation(object obj) {
             // TODO:
-            return PythonOps.ToString(PythonOps.GetAttr(DefaultContext.Default, obj, Symbols.Doc));
+            return PythonOps.ToString(PythonOps.GetBoundAttr(DefaultContext.Default, obj, Symbols.Doc));
         }
 
         #endregion
@@ -786,7 +791,7 @@ namespace IronPython.Hosting {
         }
 
         protected override bool Ops_TryGetAttr(CodeContext context, object obj, SymbolId id, out object value) {
-            return PythonOps.TryGetAttr(context, obj, id, out value);
+            return PythonOps.TryGetBoundAttr(context, obj, id, out value);
         }
 
         protected override bool Ops_IsCallable(CodeContext context, object obj) {

@@ -26,6 +26,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -183,7 +184,7 @@ namespace IronPython.Runtime.Operations {
 
             public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) {
                 // we need an instance...
-                ConstructorInfo ci = sourceType.GetConstructor(Utils.Reflection.EmptyTypes);
+                ConstructorInfo ci = sourceType.GetConstructor(ReflectionUtils.EmptyTypes);
                 if (ci != null) {
                     object value = ci.Invoke(RuntimeHelpers.EmptyObjectArray);
                     object result;

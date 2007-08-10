@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
 using System.Collections.Generic;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -64,7 +65,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override void EmitStorage(CodeGen cg) {
-            cg.EmitNew(StorageType.GetConstructor(Utils.Reflection.EmptyTypes));
+            cg.EmitNew(StorageType.GetConstructor(ReflectionUtils.EmptyTypes));
             cg.Emit(OpCodes.Dup);
             cg.EmitCall(typeof(RuntimeHelpers), "UninitializeEnvironmentTuple");
         }

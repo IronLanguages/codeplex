@@ -144,6 +144,7 @@ def test_sanity():
 
 
 if not is_silverlight:
+    @skip('interpreted', 'Rowan bug #389038')
     def test_system_drawing():
         clr.AddReferenceByPartialName("System.Drawing")
         from System.Drawing import Rectangle
@@ -237,23 +238,26 @@ def test_types():
         if not binding is CharType:
             AreEqual(expect | BindResult.Ref, result)
     
-        # Select using Array type
-        arrtype = System.Type.MakeArrayType(type)
-        select = BindTest.Bind.Overloads[arrtype]
-        array  = System.Array.CreateInstance(type, 1)
-        array[0] = value
-        result = select(array)
-        AreEqual(expect | BindResult.Array, result)
+        # MakeArrayType and MakeByRefType are SecurityCritical and thus cannot be called via reflection in silverlight,
+        # so disable these in interpreted mode.
+        if not (is_silverlight and is_interpreted()):
+            # Select using Array type
+            arrtype = System.Type.MakeArrayType(type)
+            select = BindTest.Bind.Overloads[arrtype]
+            array  = System.Array.CreateInstance(type, 1)
+            array[0] = value
+            result = select(array)
+            AreEqual(expect | BindResult.Array, result)
     
-        # Select using ByRef type
-        reftype = System.Type.MakeByRefType(type)
-        select = BindTest.Bind.Overloads[reftype]
-        result, output = select()
-        AreEqual(expect | BindResult.Out, result)
+            # Select using ByRef type
+            reftype = System.Type.MakeByRefType(type)
+            select = BindTest.Bind.Overloads[reftype]
+            result, output = select()
+            AreEqual(expect | BindResult.Out, result)
     
-        select = BindTest.BindRef.Overloads[reftype]
-        result, output = select(value)
-        AreEqual(expect | BindResult.Ref, result)
+            select = BindTest.BindRef.Overloads[reftype]
+            result, output = select(value)
+            AreEqual(expect | BindResult.Ref, result)
 
     type = saveType
 

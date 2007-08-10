@@ -20,8 +20,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Runtime.InteropServices;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -32,7 +34,6 @@ using IronPython.Hosting;
 
 [assembly: PythonModule("cPickle", typeof(IronPython.Modules.PythonPickle))]
 namespace IronPython.Modules {
-    [PythonType("cPickle")]
     [Documentation("Fast object serialization/unserialization.\n\n"
         + "Differences from CPython:\n"
         + " - no persistent id support\n"
@@ -40,8 +41,7 @@ namespace IronPython.Modules {
         )]
     public static class PythonPickle {
         private static int highestProtocol = 2;
-        public static int HighestProtocol {
-            [PythonName("HIGHEST_PROTOCOL")]
+        public static int HIGHEST_PROTOCOL {
             get { return highestProtocol; }
         }
 
@@ -60,10 +60,9 @@ namespace IronPython.Modules {
             + "See documentation for Pickler() for a description the file, protocol, and\n"
             + "(deprecated) bin parameters."
             )]
-        [PythonName("dump")]
-        public static void DumpToFile(CodeContext context, object obj, object file, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
+        public static void dump(CodeContext context, object obj, object file, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
             Pickler pickler = new Pickler(file, protocol, bin);
-            pickler.Dump(context, obj);
+            pickler.dump(context, obj);
         }
 
         [Documentation("dumps(obj, protocol=0) -> pickle string\n\n"
@@ -72,13 +71,12 @@ namespace IronPython.Modules {
             + "See the documentation for Pickler() for a description of the protocol and\n"
             + "(deprecated) bin parameters."
             )]
-        [PythonName("dumps")]
-        public static string DumpToString(CodeContext context, object obj, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
+        public static string dumps(CodeContext context, object obj, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
             //??? possible perf enhancement: use a C# TextWriter-backed IFileOutput and
             // thus avoid Python call overhead. Also do similar thing for LoadFromString.
             object stringIO = PythonOps.InvokeWithContext(context, DynamicHelpers.GetDynamicTypeFromType(typeof(PythonStringIO)), SymbolTable.StringToId("StringIO"));
             Pickler pickler = new Pickler(stringIO, protocol, bin);
-            pickler.Dump(context, obj);
+            pickler.dump(context, obj);
             return Converter.ConvertToString(PythonOps.Invoke(stringIO, SymbolTable.StringToId("getvalue")));
         }
 
@@ -94,9 +92,8 @@ namespace IronPython.Modules {
             + "load() automatically determines if the pickle data was written in binary or\n"
             + "text mode."
             )]
-        [PythonName("load")]
-        public static object LoadFromFile(CodeContext context, object file) {
-            return new Unpickler(file).Load(context);
+        public static object load(CodeContext context, object file) {
+            return new Unpickler(file).load(context);
         }
 
         [Documentation("loads(string) -> unpickled object\n\n"
@@ -104,14 +101,13 @@ namespace IronPython.Modules {
             + "reconstructed object. Characters in the string beyond the end of the first\n"
             + "pickle are ignored."
             )]
-        [PythonName("loads")]
-        public static object LoadFromString(CodeContext context, object @string) {
+        public static object loads(CodeContext context, object @string) {
             object stringIO = PythonOps.Invoke(
                 DynamicHelpers.GetDynamicTypeFromType(typeof(PythonStringIO)),
                 SymbolTable.StringToId("StringIO"),
                 @string
             );
-            return new Unpickler(stringIO).Load(context);
+            return new Unpickler(stringIO).load(context);
         }
 
         #endregion
@@ -266,7 +262,6 @@ namespace IronPython.Modules {
             + "    If protocol is not specified, then protocol 0 is used if bin is false, and\n"
             + "    protocol 1 is used if bin is true."
             )]
-        [PythonType("Pickler")]
         public class Pickler {
 
             private const char LowestPrintableChar = (char)32;
@@ -283,43 +278,33 @@ namespace IronPython.Modules {
 
             #region Public API
 
-            public IDictionary Memo {
-                [PythonName("memo")]
+            public IDictionary memo {
                 get { return _memo; }
-                [PythonName("memo")]
                 set { _memo = value; }
             }
 
-            public int Protocol {
-                [PythonName("proto")]
+            public int proto {
                 get { return _protocol; }
-                [PythonName("proto")]
                 set { _protocol = value; }
             }
 
-            public int BatchSize {
-                [PythonName("_BATCHSIZE")]
+            public int _BATCHSIZE {
                 get { return _batchSize; }
-                [PythonName("_BATCHSIZE")]
                 set { _batchSize = value; }
             }
 
-            public int Binary {
-                [PythonName("binary")]
+            public int binary {
                 get { return _protocol == 0 ? 1 : 0; }
             }
 
-            public int Fast {
+            public int fast {
                 // We don't implement fast, but we silently ignore it when it's set so that test_cpickle works.
                 // For a description of fast, see http://mail.python.org/pipermail/python-bugs-list/2001-October/007695.html
-                [PythonName("fast")]
                 get { return 0; }
-                [PythonName("fast")]
                 set { /* ignore */ }
             }
 
-            [PythonName("__new__")]
-            public static Pickler Make(CodeContext context, 
+            public static Pickler __new__(CodeContext context, 
                 DynamicType cls,
                 [DefaultParameterValue(null)] object file,
                 [DefaultParameterValue(null)] object protocol,
@@ -393,8 +378,7 @@ namespace IronPython.Modules {
                 + "reference to the previously generated value will be pickled. Unpickling will\n"
                 + "then create multiple references to a single object."
                 )]
-            [PythonName("dump")]
-            public void Dump(CodeContext context, object obj) {
+            public void dump(CodeContext context, object obj) {
                 if (_protocol >= 2) WriteProto();
                 Save(context, obj);
                 Write(Opcode.Stop);
@@ -405,8 +389,7 @@ namespace IronPython.Modules {
                 + "objects have already been pickled (so that shared or recursive objects are\n"
                 + "pickled only once)."
                 )]
-            [PythonName("clear_memo")]
-            public void ClearMemo() {
+            public void clear_memo() {
                 _memo.Clear();
             }
 
@@ -414,8 +397,7 @@ namespace IronPython.Modules {
                 + "Return the value of the internal string. Raises PicklingError if a file object\n"
                 + "was passed to this pickler's constructor."
                 )]
-            [PythonName("getvalue")]
-            public object GetValue() {
+            public object getvalue() {
                 if (_file is PythonReadableFileOutput) {
                     return ((PythonReadableFileOutput)_file).GetValue();
                 }
@@ -1044,7 +1026,7 @@ namespace IronPython.Modules {
                         current = next;
                         next = enumerator.Current;
 
-                        if (batchCompleted == BatchSize) {
+                        if (batchCompleted == _BATCHSIZE) {
                             Write(Opcode.Appends);
                             batchCompleted = 0;
                         }
@@ -1057,7 +1039,7 @@ namespace IronPython.Modules {
                         batchCompleted++;
                     }
 
-                    if (batchCompleted == BatchSize) {
+                    if (batchCompleted == _BATCHSIZE) {
                         Write(Opcode.Appends);
                         batchCompleted = 0;
                     }
@@ -1108,7 +1090,7 @@ namespace IronPython.Modules {
                         nextKey = kvTuple[0];
                         nextValue = kvTuple[1];
 
-                        if (batchCompleted == BatchSize) {
+                        if (batchCompleted == _BATCHSIZE) {
                             Write(Opcode.SetItems);
                             batchCompleted = 0;
                         }
@@ -1122,7 +1104,7 @@ namespace IronPython.Modules {
                         batchCompleted++;
                     }
 
-                    if (batchCompleted == BatchSize) {
+                    if (batchCompleted == _BATCHSIZE) {
                         Write(Opcode.SetItems);
                         batchCompleted = 0;
                     }
@@ -1226,7 +1208,6 @@ namespace IronPython.Modules {
             + "file: an object (such as an open file or a StringIO) with read(num_chars) and\n"
             + "    readline() methods that return strings"
             )]
-        [PythonType("Unpickler")]
         public class Unpickler {
 
             private readonly object _mark = new object();
@@ -1305,8 +1286,7 @@ namespace IronPython.Modules {
                 + "Read pickle data from the file object that was passed to the constructor and\n"
                 + "return the corresponding unpickled objects."
                )]
-            [PythonName("load")]
-            public object Load(CodeContext context) {
+            public object load(CodeContext context) {
                 _stack = new List();
 
                 string opcode = Read(1);
@@ -1332,8 +1312,7 @@ namespace IronPython.Modules {
                 + "incurring the overhead of completely unpickling an object. See the pickle\n"
                 + "module documentation for more information about persistent ids."
                )]
-            [PythonName("noload")]
-            public void NoLoad(CodeContext context) {
+            public void noload(CodeContext context) {
                 throw PythonOps.NotImplementedError("noload() is not implemented");
             }
 
@@ -1341,10 +1320,8 @@ namespace IronPython.Modules {
                 return ExceptionConverter.CreateThrowable(PicklingError, String.Format(format, args));
             }
 
-            public IDictionary<object, object> Memo {
-                [PythonName("memo")]
+            public IDictionary<object, object> memo {
                 get { return _memo; }
-                [PythonName("memo")]
                 set { _memo = value; }
             }
 
@@ -1419,8 +1396,7 @@ namespace IronPython.Modules {
                 return PythonStruct.CreateUShortValue(ref index, true, Read(2));
             }
 
-            [PythonName("find_global")]
-            public object FindGlobal(CodeContext context, object module, object attr) {
+            public object find_global(CodeContext context, object module, object attr) {
                 object moduleObject;
                 if (!PythonEngine.CurrentEngine.Importer.TryGetExistingModule(Converter.ConvertToString(module), out moduleObject)) {
                     moduleObject = Builtin.Import(context, Converter.ConvertToString(module));
@@ -1599,17 +1575,17 @@ namespace IronPython.Modules {
 
             private void LoadExt1(CodeContext context) {
                 Tuple global = (Tuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt8()];
-                _stack.Append(FindGlobal(context, global[0], global[1]));
+                _stack.Append(find_global(context, global[0], global[1]));
             }
 
             private void LoadExt2(CodeContext context) {
                 Tuple global = (Tuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt16()];
-                _stack.Append(FindGlobal(context, global[0], global[1]));
+                _stack.Append(find_global(context, global[0], global[1]));
             }
 
             private void LoadExt4(CodeContext context) {
                 Tuple global = (Tuple)PythonCopyReg.InvertedRegistry[ReadInt32()];
-                _stack.Append(FindGlobal(context, global[0], global[1]));
+                _stack.Append(find_global(context, global[0], global[1]));
             }
 
             private void LoadFloat(CodeContext context) {
@@ -1627,7 +1603,7 @@ namespace IronPython.Modules {
             private void LoadGlobal(CodeContext context) {
                 string module = ReadLineNoNewline();
                 string attr = ReadLineNoNewline();
-                _stack.Append(FindGlobal(context, module, attr));
+                _stack.Append(find_global(context, module, attr));
             }
 
             private void LoadInst(CodeContext context) {

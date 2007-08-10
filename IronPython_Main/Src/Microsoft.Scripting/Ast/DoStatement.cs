@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _body; }
         }                
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             object ret = NextStatement;
             
             do {

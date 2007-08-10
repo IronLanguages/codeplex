@@ -21,7 +21,7 @@ namespace Microsoft.Scripting.Ast {
             : base(span) {
         }
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             return NextStatement;
         }
 

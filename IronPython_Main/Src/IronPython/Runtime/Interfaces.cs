@@ -16,6 +16,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+
 using Microsoft.Scripting;
 
 using IronPython.Runtime.Types;
@@ -28,7 +30,7 @@ namespace IronPython.Runtime {
     }
 
     public interface IPythonContainer {
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         int GetLength();
         [PythonName("__contains__")]
         bool ContainsValue(object value);

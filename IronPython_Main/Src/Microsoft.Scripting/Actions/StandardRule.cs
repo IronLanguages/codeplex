@@ -17,13 +17,15 @@ using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Reflection;
+using System.Diagnostics;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
-using System.Diagnostics;
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     /// <summary>
     /// A dynamic test that can invalidate a rule at runtime.  The definition of an
@@ -49,8 +51,9 @@ namespace Microsoft.Scripting.Actions {
         private List<Validator> _validators;
         private Expression _test;
         private Statement _target;
+        private int _templateCount;
 
-        private RuleSet<T> _ruleSet;
+        private SmallRuleSet<T> _ruleSet;
 
         // TODO revisit these fields and their uses when CodeBlock moves down
         private Expression[] _parameters;
@@ -169,7 +172,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public void AddTest(Expression expression) {
-            Utils.Assert.NotNull(expression);
+            Assert.NotNull(expression);
             if (_test == null) {
                 _test = expression;
             } else {
@@ -191,7 +194,7 @@ namespace Microsoft.Scripting.Actions {
         /// Each rule holds onto an immutable RuleSet that contains this rule only.
         /// This should heavily optimize monomorphic call sites.
         /// </summary>
-        internal RuleSet<T> MonomorphicRuleSet {
+        internal SmallRuleSet<T> MonomorphicRuleSet {
             get {
                 if (_ruleSet == null) {
                     _ruleSet = new SmallRuleSet<T>(new StandardRule<T>[] { this });
@@ -217,7 +220,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public void Emit(CodeGen cg, Label ifFalse) {
-            Utils.Assert.NotNull(_test, _target);
+            Assert.NotNull(_test, _target);
 
             // Need to make sure we aren't generating into two different CodeGens at the same time
             lock (this) {
@@ -305,6 +308,18 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        public Expression MakeTypeTest(Type type, int index) {
+            return MakeTypeTest(type, Parameters[index]);
+        }
+
+        public Expression MakeTypeTest(Type type, Expression tested) {
+            if (type == null || type == typeof(None)) {
+                return Ast.Equal(tested, Ast.Null());
+            }
+
+            return MakeTypeTestExpression(type, tested);
+        }
+
         public Expression MakeTypeTest(DynamicType type, int index) {
             return MakeTypeTest(type, Parameters[index]);
         }
@@ -315,15 +330,7 @@ namespace Microsoft.Scripting.Actions {
             } else {
                 Type clrType = type.UnderlyingSystemType;
                 bool isStaticType = !typeof(ISuperDynamicObject).IsAssignableFrom(clrType);
-                
-                // we must always check for non-sealed types explicitly - otherwise we end up
-                // doing fast-path behavior on a subtype which overrides behavior that wasn't
-                // present for the base type.
-                //TODO there's a question about nulls here
-                if (CompilerHelpers.IsSealed(clrType) && clrType == tested.ExpressionType) {
-                    return Ast.True();
-                }
-
+                               
                 Expression test = MakeTypeTestExpression(type.UnderlyingSystemType, tested);
 
                 if (!isStaticType) {
@@ -350,6 +357,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public Expression MakeTypeTestExpression(Type t, Expression expr) {
+            // we must always check for non-sealed types explicitly - otherwise we end up
+            // doing fast-path behavior on a subtype which overrides behavior that wasn't
+            // present for the base type.
+            //TODO there's a question about nulls here
+            if (CompilerHelpers.IsSealed(t) && t == expr.ExpressionType) {
+                if(t.IsValueType) {
+                    return Ast.True();
+                }
+                return Ast.NotEqual(expr, Ast.Null());
+            }
+
             return Ast.AndAlso(
                 Ast.NotEqual(
                     expr,
@@ -416,6 +434,44 @@ namespace Microsoft.Scripting.Actions {
         }
 
         #endregion
+
+        /// <summary>
+        /// Adds a templated constant that can enable code sharing across rules.
+        /// </summary>
+        public Expression AddTemplatedConstant(Type type, object value) {
+            if (type == null) throw new ArgumentNullException("type");
+            if (value != null) {
+                if (!type.IsAssignableFrom(value.GetType())) {
+                    throw new ArgumentException("type must be assignable from value");
+                }
+            } else {
+                if (!type.IsValueType) {
+                    throw new ArgumentException("value must not be null for value types");
+                }
+            }
+
+            Type genType = typeof(TemplatedValue<>).MakeGenericType(type);
+            object template = Activator.CreateInstance(genType, value, _templateCount++);
+            return Ast.ReadProperty(Ast.RuntimeConstant(template), genType.GetProperty("Value"));
+        }
+
+        /// <summary>
+        /// Returns a TemplatedRuleBuilder which can be used to replace data.  See TemplatedRuleBuilder
+        /// for more information.
+        /// </summary>
+        /// <returns></returns>
+        public TemplatedRuleBuilder<T> GetTemplateBuilder() {
+            if (_test == null || _target == null) throw new InvalidOperationException();
+            if (_templateCount == 0) throw new InvalidOperationException("no template arguments created");
+
+            return new TemplatedRuleBuilder<T>(this);
+        }
+
+        internal int TemplateParameterCount {
+            get {
+                return _templateCount;
+            }
+        }
 
 #if DEBUG
         public string Dump {

@@ -17,7 +17,6 @@ using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
-
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
@@ -26,6 +25,7 @@ using System.Threading;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Types;
 
 using IronPython.Hosting;
 using IronPython.Compiler;
@@ -33,6 +33,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Utils;
 
 
 namespace IronPython.Runtime {
@@ -156,7 +157,7 @@ namespace IronPython.Runtime {
 
             _dict[Symbols.SetDefaultEncoding] = descr.UncheckedGetAttribute(this);
 
-            _defaultEncoding = Utils.AsciiEncoding;
+            _defaultEncoding = StringUtils.AsciiEncoding;
             byteorder = BitConverter.IsLittleEndian ? "little" : "big";
             copyright = "Copyright (c) Microsoft Corporation. All rights reserved.";
             maxint = Int32.MaxValue;
@@ -423,16 +424,16 @@ namespace IronPython.Runtime {
         public object __stderr__;
 
         private void SetStandardIO() {
-            Utils.ConsoleStream s;
+            ConsoleStream s;
             bool buffered = ScriptDomainManager.Options.BufferedStandardOutAndError;
 
-            s = new Utils.ConsoleStream(Utils.ConsoleStreamType.Input);
+            s = new ConsoleStream(ConsoleStreamType.Input);
             __stdin__ = stdin = new PythonFile(s, s.Encoding, "<stdin>", "w");
             
-            s = new Utils.ConsoleStream(Utils.ConsoleStreamType.Output, buffered);
+            s = new ConsoleStream(ConsoleStreamType.Output, buffered);
              __stdout__ = stdout = new PythonFile(s, s.Encoding, "<stdout>", "w");
            
-            s = new Utils.ConsoleStream(Utils.ConsoleStreamType.ErrorOutput, buffered);
+            s = new ConsoleStream(ConsoleStreamType.ErrorOutput, buffered);
             __stderr__ = stderr = new PythonFile(s, s.Encoding, "<stderr>", "w");
         }
 

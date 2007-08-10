@@ -19,12 +19,14 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Collections;
 using System.Text;
+using System.Runtime.CompilerServices;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
-
-using Microsoft.Scripting;
 
 namespace IronPython.Runtime {
 
@@ -238,12 +240,12 @@ namespace IronPython.Runtime {
         #endregion
 
         #region ISet
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int GetLength() {
             return items.Count;
         }
 
-        [OperatorMethod, PythonName("__contains__")]
+        [SpecialName, PythonName("__contains__")]
         public bool Contains(object value) {
             // promote sets to FrozenSet's for contains checks (so we get a hash code)
             value = SetHelpers.GetHashableSetIfSet(value);
@@ -423,7 +425,7 @@ namespace IronPython.Runtime {
 
         #region Operators
 
-        [OperatorMethod, PythonName("__iand__")]
+        [SpecialName, PythonName("__iand__")]
         public SetCollection InPlaceAnd(object s) {
             ISet set = s as ISet;
             if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for &=: {0} and {1}", PythonOps.StringRepr(DynamicTypeOps.GetName(s)), PythonOps.StringRepr(DynamicTypeOps.GetName(this)));
@@ -432,7 +434,7 @@ namespace IronPython.Runtime {
             return this;
         }
 
-        [OperatorMethod, PythonName("__ior__")]
+        [SpecialName, PythonName("__ior__")]
         public SetCollection InPlaceOr(object s) {
             ISet set = s as ISet;
             if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for |=: {0} and {1}", PythonOps.StringRepr(DynamicTypeOps.GetName(s)), PythonOps.StringRepr(DynamicTypeOps.GetName(this)));
@@ -441,7 +443,7 @@ namespace IronPython.Runtime {
             return this;
         }
 
-        [OperatorMethod, PythonName("__isub__")]
+        [SpecialName, PythonName("__isub__")]
         public SetCollection InPlaceSubtract(object s) {
             ISet set = s as ISet;
             if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for -=: {0} and {1}", PythonOps.StringRepr(DynamicTypeOps.GetName(s)), PythonOps.StringRepr(DynamicTypeOps.GetName(this)));
@@ -450,7 +452,7 @@ namespace IronPython.Runtime {
             return this;
         }
 
-        [OperatorMethod, PythonName("__ixor__")]
+        [SpecialName, PythonName("__ixor__")]
         public SetCollection InPlaceXor(object s) {
             ISet set = s as ISet;
             if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for ^=: {0} and {1}", PythonOps.StringRepr(DynamicTypeOps.GetName(s)), PythonOps.StringRepr(DynamicTypeOps.GetName(this)));
@@ -459,7 +461,7 @@ namespace IronPython.Runtime {
             return this;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o"), OperatorMethod, PythonName("__cmp__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o"), SpecialName, PythonName("__cmp__")]
         public int Compare(object o) {
             throw PythonOps.TypeError("cannot compare sets using cmp()");
         }
@@ -584,12 +586,12 @@ namespace IronPython.Runtime {
         // default conversion of protocol methods only allow's our specific type for equality,
         // sets can do __eq__ / __ne__ against any type though
 
-        [OperatorMethod, PythonName("__eq__")]
+        [SpecialName, PythonName("__eq__")]
         public virtual bool RichEquals(object other) {
             return ValueEquals(other);
         }
 
-        [OperatorMethod, PythonName("__ne__")]
+        [SpecialName, PythonName("__ne__")]
         public virtual bool RichNotEquals(object other) {
             return !ValueEquals(other);
         }
@@ -734,12 +736,12 @@ namespace IronPython.Runtime {
         #endregion
 
         #region ISet
-        [OperatorMethod, PythonName("len")]
+        [SpecialName, PythonName("len")]
         public int GetLength() {
             return items.Count;
         }
 
-        [OperatorMethod, PythonName("__contains__")]
+        [SpecialName, PythonName("__contains__")]
         public bool Contains(object value) {
             // promote sets to FrozenSet's for contains checks (so we get a hash code)
             value = SetHelpers.GetHashableSetIfSet(value);
@@ -837,12 +839,12 @@ namespace IronPython.Runtime {
             // nop
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o"), OperatorMethod, PythonName("__cmp__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o"), SpecialName, PythonName("__cmp__")]
         public int Compare(object o) {
             throw PythonOps.TypeError("cannot compare sets using cmp()");
         }
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int OperatorLength() {
             return GetLength();
         }
@@ -1018,7 +1020,7 @@ namespace IronPython.Runtime {
         // sets can do __eq__ / __ne__ against any type though.  Decorating w/ the PythonName
         // is enough to supress the generation in ReflectedTypeBuilder.
 
-        [OperatorMethod, PythonName("__eq__")]
+        [SpecialName, PythonName("__eq__")]
         public bool ValueEquals(object other) {
             ISet set = other as ISet;
             if (set != null) {
@@ -1028,7 +1030,7 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        [OperatorMethod, PythonName("__ne__")]
+        [SpecialName, PythonName("__ne__")]
         public bool ValueNotEquals(object other) {
             return !ValueEquals(other);
         }

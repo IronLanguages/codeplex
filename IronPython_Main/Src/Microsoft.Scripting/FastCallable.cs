@@ -19,6 +19,8 @@ using System.Diagnostics;
 using System.Reflection;
 
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting {
     [Flags]
@@ -51,7 +53,7 @@ namespace Microsoft.Scripting {
                 if (pis[argIndex++].ParameterType != typeof(object)) return null;
             }
 
-            return Utils.Reflection.CreateDelegate(mi, CallTargets.GetTargetType(needsContext, nargs));
+            return ReflectionUtils.CreateDelegate(mi, CallTargets.GetTargetType(needsContext, nargs));
         }
 
         protected FastCallable() { }

@@ -21,6 +21,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Diagnostics;
 using System.Threading;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Types;
@@ -220,12 +221,12 @@ namespace IronPython.Runtime {
 
         #region IPythonContainer Members
 
-        [OperatorMethod, PythonName("__len__")]
+        [SpecialName, PythonName("__len__")]
         public int GetLength() {
             return _size;
         }
 
-        [OperatorMethod, PythonName("__contains__")]
+        [SpecialName, PythonName("__contains__")]
         public bool ContainsValueWrapper(object value) {
             return ContainsValue(value);
         }
@@ -256,7 +257,7 @@ namespace IronPython.Runtime {
             foreach (object o in otherList) Add(o);
         }
 
-        [OperatorMethod, PythonName("__iadd__")]
+        [SpecialName, PythonName("__iadd__")]
         public virtual object InPlaceAdd(object other) {
             IEnumerator e = PythonOps.GetEnumerator(other);
             while (e.MoveNext()) {
@@ -266,14 +267,14 @@ namespace IronPython.Runtime {
             return this;
         }
 
-        [OperatorMethod, PythonName("__delitem__")]
+        [SpecialName, PythonName("__delitem__")]
         public virtual void DeleteItem(int index) {
             lock (this) RawDelete(PythonOps.FixIndex(index, _size));
         }
 
 
 
-        [OperatorMethod, PythonName("__imul__")]
+        [SpecialName, PythonName("__imul__")]
         public object InPlaceMultiply(int count) {
             lock (this) {
                 int n = this._size;

@@ -17,13 +17,15 @@ using System;
 using System.Text;
 using System.Collections;
 using System.Diagnostics;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
 
 [assembly: PythonExtensionType(typeof(Array), typeof(ArrayOps))]
 namespace IronPython.Runtime.Operations {
@@ -156,28 +158,28 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
-        [OperatorMethod, PythonName("__getitem__")]
+        [SpecialName, PythonName("__getitem__")]
         public static object GetItem(Array data, int index) {
             if (data == null) throw PythonOps.TypeError("expected Array, got None");
 
             return GetIndex(data, index); // data[Ops.FixIndex(index, data.Length)];
         }
 
-        [OperatorMethod, PythonName("__getitem__")]
+        [SpecialName, PythonName("__getitem__")]
         public static object GetItem(Array data, Slice slice) {
             if (data == null) throw PythonOps.TypeError("expected Array, got None");
 
             return GetSlice(data, data.Length, slice);
         }
 
-        [OperatorMethod, PythonName("__setitem__")]
+        [SpecialName, PythonName("__setitem__")]
         public static void SetItem(Array data, int index, object value) {
             if (data == null) throw PythonOps.TypeError("expected Array, got None");
 
             data.SetValue(Converter.Convert(value, data.GetType().GetElementType()), PythonOps.FixIndex(index, data.Length) + data.GetLowerBound(0));
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string CodeRepresentation(Array a) {
             if (a == null) throw PythonOps.TypeError("expected array, got None");
 
@@ -342,7 +344,7 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.TypeErrorForBadInstance("bad array index: {0}", index);
         }
 
-        [OperatorMethod, PythonName("__setitem__")]
+        [SpecialName, PythonName("__setitem__")]
         public static void SetItem(Array a, object index, object value) {
             Type t = a.GetType();
             Debug.Assert(t.HasElementType);

@@ -17,12 +17,13 @@ using System;
 using System.Text;
 using System.Reflection;
 using System.Collections.Generic;
-
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 
@@ -118,7 +119,7 @@ namespace IronPython.Runtime.Operations {
             return overloadList.ToString();
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public string ToCodeRepresentation() {
             return ToString();
         }

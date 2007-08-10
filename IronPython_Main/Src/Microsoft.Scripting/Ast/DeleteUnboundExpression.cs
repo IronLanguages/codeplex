@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Ast {
             cg.EmitCall(typeof(RuntimeHelpers), "RemoveName");
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             return RuntimeHelpers.RemoveName(context, _name);
         }
 

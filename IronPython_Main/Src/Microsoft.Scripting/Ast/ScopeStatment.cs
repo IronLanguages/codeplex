@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Ast {
             _body = body;
         }
 
-        public override object Execute(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             IAttributesCollection scopeObject = _scope.Evaluate(context) as IAttributesCollection;
             CodeContext scopeContext = RuntimeHelpers.CreateNestedCodeContext(context, scopeObject, true);
             _body.Execute(scopeContext);

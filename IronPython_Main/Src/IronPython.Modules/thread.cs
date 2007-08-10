@@ -27,6 +27,7 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Hosting;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {
@@ -177,7 +178,7 @@ namespace IronPython.Modules {
             public void Start() {
                 try {
                     if (kwargs != null) {
-                        PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, Utils.Array.EmptyStrings, args, kwargs);
+                        PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, ArrayUtils.EmptyStrings, args, kwargs);
                     } else {
                         PythonOps.CallWithArgsTuple(func, RuntimeHelpers.EmptyObjectArray, args);
                     }

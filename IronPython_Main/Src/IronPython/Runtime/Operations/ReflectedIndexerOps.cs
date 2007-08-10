@@ -16,8 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
@@ -33,7 +35,7 @@ namespace IronPython.Runtime.Operations {
             return val;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static object GetItem(ReflectedIndexer self, object key) {
             IParameterSequence tupleKey = key as IParameterSequence;
             if (tupleKey != null && tupleKey.IsExpandable) {
@@ -43,7 +45,7 @@ namespace IronPython.Runtime.Operations {
             return self.GetValue(DefaultContext.Default, new object[] { key });
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static void SetItem(ReflectedIndexer self, object key, object value) {
             IParameterSequence tupleKey = key as IParameterSequence;
             if (tupleKey != null && tupleKey.IsExpandable) {
@@ -58,7 +60,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static void DeleteItem(ReflectedIndexer self, object key) {
             if (self.Setter != null)
                 throw PythonOps.AttributeErrorForReadonlyAttribute(

@@ -46,14 +46,28 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        public override bool IsConstant(object value) {
+            // allow constant TypeIs expressions to be optimized away
+            if (value is bool && ((bool)value) == true) {
+                return _typeOperand.IsAssignableFrom(_expression.ExpressionType);
+            }
+            return false;
+        }
+
         public override void Emit(CodeGen cg) {
+            if (_typeOperand.IsAssignableFrom(_expression.ExpressionType)) {
+                // if its always true just emit the bool
+                cg.EmitConstant(true);
+                return;
+            }
+
             _expression.EmitAsObject(cg);
             cg.Emit(OpCodes.Isinst, _typeOperand);
             cg.Emit(OpCodes.Ldnull);
             cg.Emit(OpCodes.Cgt_Un);
         }
 
-        public override object Evaluate(CodeContext context) {
+        protected override object DoEvaluate(CodeContext context) {
             return RuntimeHelpers.BooleanToObject(
                 _typeOperand.IsInstanceOfType(_expression.Evaluate(context)));
         }
@@ -75,6 +89,7 @@ namespace Microsoft.Scripting.Ast {
 
             return TypeIs(SourceSpan.None, expression, type);
         }
+
         public static TypeBinaryExpression TypeIs(SourceSpan span, Expression expression, Type type) {
             if (expression == null) {
                 throw new ArgumentNullException("expression");

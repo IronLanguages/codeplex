@@ -15,6 +15,7 @@
 
 using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -23,7 +24,7 @@ namespace IronPython.Compiler.Ast {
         private readonly Statement[] _statements;
 
         public SuiteStatement(Statement[] statements) {
-            Utils.Assert.NotNull(statements);
+            Assert.NotNull(statements);
             _statements = statements;
         }
 

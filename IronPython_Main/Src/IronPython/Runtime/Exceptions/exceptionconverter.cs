@@ -28,6 +28,7 @@ using IronPython.Runtime.Operations;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Utils;
 
 [module: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", Scope = "member", Target = "IronPython.Runtime.Exceptions.ExceptionConverter.CreateThrowable(System.Object):System.Exception", MessageId = "Throwable")]
 [module: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", Scope = "member", Target = "IronPython.Runtime.Exceptions.ExceptionConverter.CreateThrowable(System.Object,System.Object):System.Exception", MessageId = "Throwable")]
@@ -633,12 +634,12 @@ namespace IronPython.Runtime.Exceptions {
         #region Private implementation details
 
         private static void AssociateException(Exception e, object data) {
-            Utils.GetDataDictionary(e)[pythonExceptionKey] = data;
+            ExceptionUtils.GetDataDictionary(e)[pythonExceptionKey] = data;
         }
 
         private static bool TryGetAssociatedException(Exception e, out object data) {
-            if (Utils.GetDataDictionary(e).Contains(pythonExceptionKey)) {
-                data = Utils.GetDataDictionary(e)[pythonExceptionKey];
+            if (ExceptionUtils.GetDataDictionary(e).Contains(pythonExceptionKey)) {
+                data = ExceptionUtils.GetDataDictionary(e)[pythonExceptionKey];
                 return true;
             } else {
                 data = null;

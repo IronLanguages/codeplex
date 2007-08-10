@@ -25,6 +25,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Shell {
 
@@ -209,7 +210,7 @@ namespace Microsoft.Scripting.Shell {
                     try {
                         res = TryInteractiveAction();
 #if SILVERLIGHT 
-                    } catch (Utils.Environment.ExitProcessException e) {
+                    } catch (EnvironmentUtils.ExitProcessException e) {
                         res = e.ExitCode;
 #endif
                     } catch (Exception e) {

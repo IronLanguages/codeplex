@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 namespace IronPython.Runtime.Types {
     class DynamicTypeGetAttributeSlot : DynamicTypeSlot {
@@ -37,6 +38,7 @@ namespace IronPython.Runtime.Types {
                 DynamicTypeBuilder dtb = DynamicTypeBuilder.GetBuilder(_dt);
 
                 if (_attrHook == Symbols.GetAttribute) {
+                    dtb.SetHasGetAttribute(false);
                     dtb.SetCustomBoundGetter(null);
                 } else if (_attrHook == Symbols.SetAttr) {
                     dtb.SetCustomSetter(null);
@@ -61,6 +63,18 @@ namespace IronPython.Runtime.Types {
                 value = _info.Function;
                 return true;
             }
+
+            bool foundSelf = false;
+            foreach (DynamicMixin mroMember in owner.ResolutionOrder) {
+                if (mroMember == _dt) {
+                    foundSelf = true;
+                } else if (foundSelf) {
+                    DynamicTypeSlot dts;
+                    if (mroMember.TryLookupSlot(context, Symbols.GetAttribute, out dts) && dts.TryGetValue(context, instance, owner, out value)) {
+                        return true;
+                    }
+                }
+            }
             return base.TryGetValue(context, instance, owner, out value);
         }
 
@@ -82,6 +96,7 @@ namespace IronPython.Runtime.Types {
                 _info = new UserTypeBuilder.CustomAttributeInfo(value);
 
                 if (_attrHook == Symbols.GetAttribute) {
+                    dtb.SetHasGetAttribute(true);
                     dtb.SetCustomBoundGetter(_info.HookedGetAttribute);
                 } else if (_attrHook == Symbols.SetAttr) {
                     dtb.SetCustomSetter(_info.HookedSetAttribute);

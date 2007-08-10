@@ -18,14 +18,17 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("_weakref", typeof(IronPython.Modules.PythonWeakRef))]
 namespace IronPython.Modules {
@@ -94,7 +97,7 @@ namespace IronPython.Modules {
 
         [PythonType("ref")]
         public class PythonWeakReference : ICallableWithCodeContext, IValueEquality {
-            Utils.WeakHandle target;
+            WeakHandle target;
             int hashVal;
             bool fHasHash;
 
@@ -137,7 +140,7 @@ namespace IronPython.Modules {
 
             public PythonWeakReference(object @object, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, @object, callback);
-                this.target = new Utils.WeakHandle(@object, false);
+                this.target = new WeakHandle(@object, false);
             }
             #endregion
 
@@ -272,7 +275,7 @@ namespace IronPython.Modules {
 
         [PythonType("weakproxy")]
         public sealed class PythonWeakRefProxy : ISuperDynamicObject, ICodeFormattable, IProxyObject, IValueEquality, ICustomMembers {
-            Utils.WeakHandle target;
+            WeakHandle target;
 
             #region Python Constructors
             internal static object MakeNew(object @object, object callback) {
@@ -297,7 +300,7 @@ namespace IronPython.Modules {
 
             private PythonWeakRefProxy(object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
-                this.target = new Utils.WeakHandle(target, false);
+                this.target = new WeakHandle(target, false);
             }
             #endregion
 
@@ -411,7 +414,7 @@ namespace IronPython.Modules {
 
             public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
                 object o = GetObject();
-                return PythonOps.TryGetAttr(context, o, name, out value);
+                return PythonOps.TryGetBoundAttr(context, o, name, out value);
             }
 
             public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
@@ -492,7 +495,7 @@ namespace IronPython.Modules {
             IValueEquality,
             ICustomMembers {
 
-            Utils.WeakHandle target;
+            WeakHandle target;
 
             #region Python Constructors
             internal static object MakeNew(object @object, object callback) {
@@ -519,7 +522,7 @@ namespace IronPython.Modules {
 
             private PythonCallableWeakRefProxy(object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
-                this.target = new Utils.WeakHandle(target, false);
+                this.target = new WeakHandle(target, false);
             }
             #endregion
 
@@ -641,7 +644,7 @@ namespace IronPython.Modules {
 
             public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
                 object o = GetObject();
-                return PythonOps.TryGetAttr(context, o, name, out value);
+                return PythonOps.TryGetBoundAttr(context, o, name, out value);
             }
 
             public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
@@ -801,7 +804,7 @@ namespace IronPython.Modules {
 
         #region ICallableWithCodeContext Members
 
-        [OperatorMethod]
+        [SpecialName]
         public object Call(CodeContext context, params object[] args) {
             return PythonOps.InvokeWithContext(context, target.Target, name, args);
         }
@@ -810,7 +813,7 @@ namespace IronPython.Modules {
 
         #region IFancyCallable Members
 
-        [OperatorMethod]
+        [SpecialName]
         public object Call(CodeContext context, object[] args, string[] names) {
             object targetMethod;
             if (!DynamicHelpers.GetDynamicType(target.Target).TryGetBoundMember(context, target.Target, name, out targetMethod))

@@ -228,7 +228,7 @@ namespace Microsoft.Scripting.Ast {
                 case VariableKind.Local:
                     if (_storage == null) {
                         // Fall back on a runtime lookup if this variable does not have storage associated with it
-                        // (e.g. if the variable belongs to a block in FastEval mode).
+                        // (e.g. if the variable belongs to a block in interpreted mode).
                         return new LocalNamedFrameSlot(cg.ContextSlot, _name);
                     } else {
                         return CreateSlotForVariable(cg);

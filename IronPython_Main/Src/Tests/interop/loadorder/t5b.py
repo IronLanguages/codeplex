@@ -12,6 +12,7 @@
 #
 #
 #####################################################################################
+from lib.assert_util import *
 
 import clr
 clr.AddReference("loadorder_5")
@@ -25,11 +26,8 @@ clr.AddReference("loadorder_5")
 #     }
 # }
 
-
 import NS
-print dir(NS)
-#print NS.Target.Flag
-#print NS.Target[int].Flag
+from NS import *
 
 clr.AddReference("loadorder_5b")
 
@@ -39,12 +37,17 @@ clr.AddReference("loadorder_5b")
 #     }
 # }
 
-print dir(NS)
+AreEqual(Target[int].Flag, "NS.Target`1")
+AreEqual(Target[int, str].Flag, "NS.Target`2")
+AssertError(ValueError, lambda: Target[str, int, str].Flag)
 
-#print NS.Target.Flag
+from NS import *
 
-print dir(NS)
-print NS.__dict__
-print NS.Target[int].Flag
-print NS.Target[int, int].Flag
-print NS.Target[int, int, int].Flag
+AreEqual(Target[int].Flag, "NS.Target`1")
+AreEqual(Target[int, str].Flag, "NS.Target`2")
+AreEqual(Target[str, int, str].Flag, "NS.Target`3")
+
+AreEqual(NS.Target[int].Flag, "NS.Target`1")
+AreEqual(NS.Target[int, str].Flag, "NS.Target`2")
+AreEqual(NS.Target[str, int, str].Flag, "NS.Target`3")
+

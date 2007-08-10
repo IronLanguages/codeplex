@@ -18,9 +18,11 @@ using System.Text;
 using System.Collections;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -90,12 +92,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         #region Binary operators
-        [OperatorMethod]
+        [SpecialName]
         public static Complex64 TrueDivide(Complex64 x, Complex64 y) {
             return x / y;
         }
 
-        [OperatorMethod]
+        [SpecialName]
         public static Complex64 Power(Complex64 x, Complex64 y) {
             if (x.IsZero && (y.Real < 0.0 || y.Imag != 0.0))
                 throw PythonOps.ZeroDivisionError("0.0 to a negative or complex power");
@@ -108,7 +110,7 @@ namespace IronPython.Runtime.Operations {
         //   Let x, y be complex.
         //   Re(x//y) := floor(Re(x/y))
         //   Im(x//y) := 0
-        [OperatorMethod]
+        [SpecialName]
         public static Complex64 FloorDivide(Complex64 x, Complex64 y) {
             Complex64 quotient = x / y;
             return Complex64.MakeReal(PythonOps.CheckMath(Math.Floor(quotient.Real)));
@@ -117,7 +119,7 @@ namespace IronPython.Runtime.Operations {
         // mod for complex numbers is also deprecated. IronPython
         // implements the CPython semantics, that is:
         // x % y = x - (y * (x//y)).
-        [OperatorMethod]
+        [SpecialName]
         public static Complex64 Mod(Complex64 x, Complex64 y) {
             Complex64 quotient = FloorDivide(x, y);
             return x - (quotient * y);
@@ -132,12 +134,12 @@ namespace IronPython.Runtime.Operations {
 
         #region Unary operators
 
-        [OperatorMethod, PythonName("__hash__")]
+        [SpecialName, PythonName("__hash__")]
         public static int GetHashCode(Complex64 x) {
             return x.GetHashCode();
         }
 
-        [OperatorMethod, PythonName("__nonzero__")]
+        [SpecialName, PythonName("__nonzero__")]
         public static bool ConvertToBoolean(Complex64 x) {
             return !x.IsZero;
         }
@@ -163,7 +165,7 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
-        [OperatorMethod, PythonName("__coerce__")]
+        [SpecialName, PythonName("__coerce__")]
         public static object Coerce(object x, object y) {
             if (!(x is Complex64)) throw PythonOps.TypeError("__coerce__ requires a complex object, but got {0}", PythonOps.StringRepr(DynamicHelpers.GetDynamicType(x)));
             Complex64 right;
@@ -174,7 +176,7 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.NotImplemented;
         }
 
-        [OperatorMethod, PythonName("__repr__")]
+        [SpecialName, PythonName("__repr__")]
         public static string ToCodeRepresentation(Complex64 x) {
             if (x.Real != 0) {
                 return "(" + x.Real.ToString("G") + "+" + x.Imag.ToString("G") + "j)";
@@ -242,26 +244,26 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Unary Operations
-        [OperatorMethod]
+        [SpecialName]
         public static double Abs(Complex64 x) {
             return x.Abs();
         }
 
         // Binary Operations - Comparisons (eq & ne defined on Complex64 type as operators)
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "y"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), OperatorMethod]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "y"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), SpecialName]
         public static bool LessThan(Complex64 x, Complex64 y) {
             throw PythonOps.TypeError("complex is not an ordered type");
         }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "y"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), OperatorMethod]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "y"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), SpecialName]
         public static bool LessThanOrEqual(Complex64 x, Complex64 y) {
             throw PythonOps.TypeError("complex is not an ordered type");
         }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "y"), OperatorMethod]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "y"), SpecialName]
         public static bool GreaterThan(Complex64 x, Complex64 y) {
             throw PythonOps.TypeError("complex is not an ordered type");
         }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "y"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), OperatorMethod]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "y"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), SpecialName]
         public static bool GreaterThanOrEqual(Complex64 x, Complex64 y) {
             throw PythonOps.TypeError("complex is not an ordered type");
         }
