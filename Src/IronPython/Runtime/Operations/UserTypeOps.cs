@@ -31,6 +31,7 @@ using IronPython.Hosting;
 namespace IronPython.Runtime.Operations {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using Microsoft.Scripting.Generation;
+    using Microsoft.Scripting.Utils;
 
     public static class UserTypeOps {
         public static string ToStringReturnHelper(object o) {
@@ -88,8 +89,58 @@ namespace IronPython.Runtime.Operations {
                 case ActionKind.GetMember: return MakeGetMemberRule<T>(context, (GetMemberAction)action, args);
                 case ActionKind.SetMember: return MakeSetMemberRule<T>(context, (SetMemberAction)action, args);
                 case ActionKind.DoOperation: return MakeOperationRule<T>(context, (DoOperationAction)action, args);
+                case ActionKind.Call: return MakeCallRule<T>(context, (CallAction)action, args);
+                    
                 default: return null;
             }
+        }
+
+        private static StandardRule<T> MakeCallRule<T>(CodeContext context, CallAction callAction, object[] args) {
+            StandardRule<T> rule = new StandardRule<T>();            
+
+            ISuperDynamicObject sdo = (ISuperDynamicObject)args[0];
+
+            rule.MakeTest(sdo.DynamicType);
+
+            DynamicTypeSlot callSlot;
+            Statement body = rule.MakeError(context.LanguageContext.Binder,
+                Ast.Call(null,
+                typeof(PythonOps).GetMethod("UncallableError"),
+                rule.Parameters[0])
+            );
+
+            if (sdo.DynamicType.TryResolveSlot(context, Symbols.Call, out callSlot)) {
+                Variable tmp = rule.GetTemporary(typeof(object), "callSlot");
+                Expression[] callArgs = (Expression[])rule.Parameters.Clone();
+                callArgs[0] = Ast.Read(tmp);
+
+                body = Ast.Block(
+                    Ast.If(
+                        Ast.Call(
+                            Ast.Cast(Ast.WeakConstant(callSlot), typeof(DynamicTypeSlot)),
+                            typeof(DynamicTypeSlot).GetMethod("TryGetValue"),
+                            Ast.CodeContext(),
+                            rule.Parameters[0],
+                            Ast.ReadProperty(
+                                Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                                typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                            ),
+                            Ast.ReadDefined(tmp)
+                        ),
+                        rule.MakeReturn(context.LanguageContext.Binder,
+                            Ast.Action.Call(
+                                callAction,
+                                typeof(object),
+                                callArgs
+                            )
+                        )
+                    ),
+                    body
+                );
+            }
+
+            rule.SetTarget(body);
+            return rule;
         }
 
         private static StandardRule<T> MakeGetMemberRule<T>(CodeContext context, GetMemberAction action, object[] args) {
@@ -564,7 +615,7 @@ namespace IronPython.Runtime.Operations {
                             MethodBinder mb = MethodBinder.MakeBinder(context.LanguageContext.Binder, SymbolTable.IdToString(item), bmd.Template.Targets, BinderType.Normal);
                             MethodCandidate mc = mb.MakeBindingTarget(CallType.ImplicitInstance, CompilerHelpers.GetTypes(args));
                             if (mc != null) {
-                                Expression callExpr = mc.Target.MakeExpression(context.LanguageContext.Binder, rule.Parameters);
+                                Expression callExpr = mc.Target.MakeExpression(context.LanguageContext.Binder, rule, rule.Parameters);
 
                                 rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, callExpr));
                             } else {

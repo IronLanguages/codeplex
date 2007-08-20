@@ -105,8 +105,24 @@ function hello-helper
 	set-alias exe $args[0]
 
 	$stuff = exe $args[1..$args.Length] $global:HELLO
-	if ($stuff[0] -ne "Hello World 1st Line") {write-error "Failed."; $global:ERRORS++}
-	elseif($stuff[1] -ne 6) {write-error "Failed."; $global:ERRORS++}
+	if (! $?) 
+	{
+		write-error "Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)"
+		write-error "$args[0] terminated with a non-zero exit code."
+		$global:ERRORS++
+	}
+	elseif ($stuff[0] -ne "Hello World 1st Line") 
+	{
+		write-error "Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)"
+		write-error "Missing output: Hello World 1st Line"
+		$global:ERRORS++
+	}
+	elseif($stuff[1] -ne 6) 
+	{
+		write-error "Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)"
+		write-error "Missing output: 6"
+		$global:ERRORS++
+	}
 }
 
 ###################################################################################
@@ -175,7 +191,14 @@ function test-pymodes($pyexe)
 	## -v
 	echo "Testing -v ..."
 
-	hello-helper $pyexe -v 2> $null  #Send stderr to $null for CPython
+	if(! $pyexe.Endswith("python.exe"))
+	{
+		hello-helper $pyexe -v 2> $null  #Send stderr to $null for CPython
+	}
+	else
+	{
+		echo "Skipping hello-helper test for CPython -v flag (python.exe emits a non-zero exit code)"
+	}
 
 	echo "CodePlex Work Item 10819"
 	$stuff = pyexe -v -c "print 'HelloWorld'" 2>&1
@@ -186,6 +209,7 @@ function test-pymodes($pyexe)
 		write-error "Failed: $stuff"
 		$global:ERRORS++
 	}
+	
 	
 	#------------------------------------------------------------------------------
 	## -u
@@ -268,20 +292,41 @@ function saveassemblies-helper
 	#Test w/o the use of X:AssembliesDir
 	hello-helper $dlrexe "-X:SaveAssemblies" $args[1..$args.Length]
 	$stuff = dir $global:TEST_DIR -Name
-	if (($stuff | select-string "hello_test.exe") -eq $null) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if (($stuff | select-string "hello_test.pdb") -eq $null) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if (($stuff | select-string "site.exe") -ne $null) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if (($stuff | select-string "site.pdb") -ne $null) {write-error "Failed: $stuff"; $global:ERRORS++}
+	
+	foreach($expected in @("hello_test.exe", "hello_test.pdb"))
+	{
+		if (($stuff | select-string $expected) -eq $null) 
+		{
+			write-error "Failed saveassemblies-helper!"
+			write-error "Expected '$expected', but found '$stuff'" 
+			$global:ERRORS++
+		}
+	}
+	
+	foreach($expected in @("site.exe", "site.pdb"))
+	{
+		if (($stuff | select-string $expected) -ne $null) 
+		{
+			write-error "Failed saveassemblies-helper!"
+			write-error "Found '$expected' in '$stuff'" 
+			$global:ERRORS++
+		}
+	}
 	
 	if (test-path $env:TMP\assemblies_dir) { rm -recurse -force $env:TMP\assemblies_dir }
 	mkdir $env:TMP\assemblies_dir > $null
 	hello-helper $dlrexe "-X:AssembliesDir" $env:TMP\assemblies_dir "-X:SaveAssemblies" $args[1..$args.Length]
 	
 	$stuff = dir $env:TMP\assemblies_dir -Name
-	if (($stuff | select-string "hello_test.exe") -eq $null) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if (($stuff | select-string "hello_test.pdb") -eq $null) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if (($stuff | select-string "site.exe") -eq $null) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if (($stuff | select-string "site.pdb") -eq $null) {write-error "Failed: $stuff"; $global:ERRORS++}
+	foreach($expected in @("hello_test.exe", "hello_test.pdb", "site.exe", "site.pdb"))
+	{
+		if (($stuff | select-string $expected) -eq $null) 
+		{
+			write-error "Failed saveassemblies-helper (with usage of -X:SaveAssemblies)!"
+			write-error "Expected '$expected', but found '$stuff'" 
+			$global:ERRORS++
+		}
+	}
 	#Should anything be done with the *.exe's?
 }
 
@@ -439,7 +484,6 @@ function test-dlrmodes($dlrexe)
 	echo "    -X:ColorfulConsole (likely to be merged)"
 	echo "    -X:Frames (probably gone)"
 	echo "    -X:NoOptimize"
-	echo "    -X:SlowOps"
 	echo ""
 
 	#------------------------------------------------------------------------------
@@ -550,12 +594,12 @@ function test-relatedpy($pyexe)
 	notraceback-helper $pyexe "-X:ExceptionDetail" "-X:ShowClrExceptions"
 	showclrexceptions-helper $pyexe "-X:ExceptionDetail" "-X:NoTraceback"
 	
-	#-X:Interpret, -X:NoOptimize, -X:SlowOps, -O, -OO
-	echo "Testing -X:Interpret, -X:NoOptimize, -X:SlowOps, -O, -OO ..."
-	hello-helper $pyexe "-X:Interpret" "-X:NoOptimize" "-X:SlowOps" -O -OO
+	#-X:Interpret, -X:NoOptimize, -O, -OO
+	echo "Testing -X:Interpret, -X:NoOptimize, -O, -OO ..."
+	hello-helper $pyexe "-X:Interpret" "-X:NoOptimize" -O -OO
 	
 	echo "Testing compatible IronPython modes together ..."
-	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:GenerateAsSnippets" "-X:ILDebug" "-X:MaxRecursion" 5 "-X:NoOptimize" "-X:NoTraceback" "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:SlowOps" "-X:StaticMethods" "-X:TabCompletion"
+	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:GenerateAsSnippets" "-X:ILDebug" "-X:MaxRecursion" 5 "-X:NoOptimize" "-X:NoTraceback" "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:StaticMethods" "-X:TabCompletion"
 }
 	
 ###############################################################################
@@ -584,6 +628,14 @@ function test-negmodes($pyexe)
 	
 ###############################################################################
 
+
+#sanity checks
+if (!(test-path $env:ROWAN_BIN\ipy.exe)) 
+{
+	write-error "ROWAN_BIN environment variable is not set or ipy.exe not built!"
+	exit 1
+}
+
 echo "---------------------------------------------------------------------"
 test-setup
 
@@ -605,7 +657,7 @@ test-pymodes $env:MERLIN_ROOT\..\External\Languages\CPython\25\python.exe
 if ($global:ERRORS -gt 0)
 {
 	write-error "$global:ERRORS test(s) failed!"
-	exit $global:ERRORS
+	exit 1
 }
 
 echo "All tests passed."

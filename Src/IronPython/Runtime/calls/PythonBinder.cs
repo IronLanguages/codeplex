@@ -78,19 +78,15 @@ using IronPython.Runtime.Operations;
                 return expr;
             }
 
-            BoundExpression be = expr as BoundExpression;
-            if (be != null && be.Variable.KnownType != null) {
-                if (toType.IsAssignableFrom(be.Variable.KnownType)) {
-                    return Ast.Cast(expr, toType);
-                }
+            Type extensibleType = typeof(Extensible<>).MakeGenericType(toType);
+            if (extensibleType.IsAssignableFrom(exprType)) {
+                return Ast.ReadProperty(expr, extensibleType.GetProperty("Value"));
             }
 
             // We used to have a special case for int -> double...
-            if (exprType != typeof(object)) {
+            if (exprType != typeof(object) && exprType.IsValueType) {
                 expr = Ast.Cast(expr, typeof(object));
             }
-
-            if (toType == typeof(object)) return expr;
 
             MethodInfo fastConvertMethod = GetFastConvertMethod(toType);
             if (fastConvertMethod != null) {
@@ -108,25 +104,37 @@ using IronPython.Runtime.Operations;
                     toType
                 );
             }
-            
+
+            Expression typeIs;
+            Type visType = CompilerHelpers.GetVisibleType(toType);
+            if (toType.IsVisible) {
+                typeIs = Ast.TypeIs(expr, toType);
+            } else {
+                typeIs = Ast.Call(Ast.RuntimeConstant(toType), typeof(Type).GetMethod("IsInstanceOfType"), expr);
+            }
+
             return Ast.Condition(
-                Ast.TypeIs(
-                    expr,
-                    toType),
+                typeIs,
                 Ast.Cast(
                     expr,
-                    toType),
+                    visType),
                 Ast.Cast(
                     Ast.Call(
-                        null, GetGenericConvertMethod(toType),
-                        expr, Ast.Constant(toType.TypeHandle)
+                        null, GetGenericConvertMethod(visType),
+                        expr, Ast.Constant(visType.TypeHandle)
                     ),
-                    toType
+                    visType
                 )
-            );
+            );                       
         }
 
+        public override Expression CheckExpression(Expression expr, Type toType) {
+            if (toType == typeof(object) || toType.IsAssignableFrom(toType)) {
+                return Ast.Constant(true);
+            }
 
+            return Ast.Call(null, typeof(Converter).GetMethod("CanConvert"), expr, Ast.Constant(toType));
+        }
 
         private static MethodInfo GetGenericConvertMethod(Type toType) {
             if (toType.IsValueType) {
@@ -233,13 +241,37 @@ using IronPython.Runtime.Operations;
         }
 
 
+        public override Statement MakeInvalidParametersError(MethodBinder binder, CallAction action, CallType callType, MethodBase[] targets, StandardRule rule, object[] args) {
+            if (binder.IsBinaryOperator) {
+                int argsReceived = args.Length - 1 + GetParamsArgumentCountAdjust(action, args);
+                if (action.HasDictionaryArgument()) {
+                    argsReceived--;
+                }
+
+                foreach(MethodBase mb in targets) {
+                    ParameterInfo [] pis = mb.GetParameters();
+                    int argsNeeded = pis.Length;
+                    if (mb.IsStatic && callType == CallType.ImplicitInstance) {
+                        argsNeeded--;
+                    }
+
+                    // only return NotImplemented if we match on # of args
+                    if (argsNeeded == argsReceived || (CompilerHelpers.IsParamsMethod(mb) && argsNeeded <= argsReceived)) {
+                        return rule.MakeReturn(this, Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented")));
+                    }
+                }
+            }
+
+            return base.MakeInvalidParametersError(binder, action, callType, targets, rule, args);
+        }
+
         #region .NET member binding
 
         public override MemberInfo[] GetMember(Type type, string name) {
             // Python type customization:
             switch (name) {
                 case "__str__":
-                    MethodInfo tostr = type.GetMethod("ToString", ReflectionUtils.EmptyTypes);
+                    MethodInfo tostr = type.GetMethod("ToString", ArrayUtils.EmptyTypes);
                     if (tostr != null && tostr.DeclaringType != typeof(object)) {
                         return new MemberInfo[] { typeof(InstanceOps).GetMethod("ToStringMethod") };
                     }
@@ -310,20 +342,24 @@ using IronPython.Runtime.Operations;
             return res;
         }
 
-        public override Expression MakeMissingMemberError(Type type, string name) {
-            return Ast.New(
-                typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type)), name))
+        public override Statement MakeMissingMemberError<T>(StandardRule<T> rule, Type type, string name) {
+            return rule.MakeError(this,
+                Ast.New(
+                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                    Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type)), name))
+                )
             );
         }
 
-        public override Expression MakeReadOnlyMemberError(Type type, string name) {
-            return Ast.New(
-                typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                Ast.Constant(
-                    String.Format("attribute '{0}' of '{1}' object is read-only", 
-                        name,
-                        DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type))
+        public override Statement MakeReadOnlyMemberError<T>(StandardRule<T> rule, Type type, string name) {
+            return rule.MakeError(this,
+                Ast.New(
+                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                    Ast.Constant(
+                        String.Format("attribute '{0}' of '{1}' object is read-only", 
+                            name,
+                            DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type))
+                        )
                     )
                 )
             );

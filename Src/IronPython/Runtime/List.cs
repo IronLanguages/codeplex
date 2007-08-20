@@ -30,6 +30,7 @@ using IronPython.Runtime.Operations;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
 
@@ -740,7 +741,7 @@ namespace IronPython.Runtime {
 
                 try {
                     // make the list appear empty for the duration of the sort...
-                    _data = RuntimeHelpers.EmptyObjectArray;
+                    _data = ArrayUtils.EmptyObjects;
                     _size = 0;
 
                     if (key != null) {
@@ -921,14 +922,23 @@ namespace IronPython.Runtime {
             get {
                 // no locks works here, we either return an
                 // old item (as if we were called first) or return
-                // a current item...                
-                return _data[PythonOps.FixIndex(index, _size)];
+                // a current item...        
+
+                // force reading the array first, _size can change after
+                object[] data = GetData();  
+
+                return data[PythonOps.FixIndex(index, _size)];
             }
             set {
                 // but we need a lock here incase we're assigning
                 // while re-sizing.
                 lock (this) _data[PythonOps.FixIndex(index, _size)] = value;
             }
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private object[] GetData() {
+            return _data;
         }
 
         public void RemoveAt(int index) {

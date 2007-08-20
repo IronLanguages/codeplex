@@ -587,11 +587,9 @@ namespace Microsoft.Scripting.Ast {
             // Walk the tree to determine whether to emit this CodeBlock or interpret it
             if (FastEvalWalker.CanEvaluate(this, delayedEmit)) {
                 // Hold onto our declaring context in case we decide to emit ourselves later
-                if (delayedEmit) {
-                    _declaringContext = context.ModuleContext.CompilerContext;
-                    _forceWrapperMethod = forceWrapperMethod;
-                }
-
+                _declaringContext = context.ModuleContext.CompilerContext;
+                _forceWrapperMethod = forceWrapperMethod;
+                
                 if (HasThis()) {
                     return new CallTargetWithContextAndThisN(ExecuteWithChildContextAndThis);
                 } else {

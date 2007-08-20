@@ -47,6 +47,7 @@ namespace Microsoft.Scripting {
             OperatorInvoke, // Invoking an operator against a DynamicType
             OverAllocate,   // a spot where we have an un-ideal algorithm that needs to allocate more than necessary
             Rules,          // related to rules / actions.
+            RuleEvaluation, // a rule was evaluated
             Count
 
         }

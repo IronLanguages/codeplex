@@ -319,7 +319,7 @@ namespace IronPython.Runtime {
             for (int i = frames.Length - 1; i >= 0; i--) {
                 DynamicStackFrame frame = frames[i];
 
-                PythonFunction fx = new Function0(frame.CodeContext, frame.GetMethodName(), null, ArrayUtils.EmptyStrings, RuntimeHelpers.EmptyObjectArray);
+                PythonFunction fx = new Function0(frame.CodeContext, frame.GetMethodName(), null, ArrayUtils.EmptyStrings, ArrayUtils.EmptyObjects);
 
                 TraceBackFrame tbf = new TraceBackFrame(
                     new GlobalsDictionary(frame.CodeContext.Scope),

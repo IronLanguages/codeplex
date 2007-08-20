@@ -160,6 +160,9 @@ namespace Microsoft.Scripting.Actions {
             get {
                 Walker w = new Walker();
                 _rules[0].Target.Walk(w);
+                if (w.Name.Length > 1000) {
+                    return w.Name.Substring(0, 1000);
+                }
                 return w.Name;
             }
 
@@ -173,6 +176,40 @@ namespace Microsoft.Scripting.Actions {
                     Name = node.Method.ReflectedType + "." + node.Method.Name;
                 }
                 return false;
+            }
+
+            public override bool Walk(NewExpression node) {
+                if (Name == "_stub_") {
+                    Name = node.Constructor.DeclaringType + "..ctor";
+                }
+                return false;
+            }
+
+            public override bool Walk(ThrowExpression node) {
+                if (Name == "_stub_") {
+                    NewExpression ne = node.Exception as NewExpression;
+                    MethodCallExpression callExpr;
+
+                    if (ne != null) {
+                        Name = "Error##" + ne.Constructor.DeclaringType.Name;
+                        foreach (Expression arg in ne.Arguments) {
+                            AddArgument(arg);
+                        }
+                    } else if ((callExpr = (node.Exception as MethodCallExpression)) != null) {
+                        Name = "Error##" + callExpr.Method.ReflectedType + "." + callExpr.Method.Name;
+                        foreach (Expression arg in callExpr.Arguments) {
+                            AddArgument(arg);
+                        }
+                    }
+                }
+                return base.Walk(node);
+            }
+
+            private void AddArgument(Expression arg) {
+                ConstantExpression ce = arg as ConstantExpression;
+                if (ce != null) {
+                    Name += ce.Value == null ? "(null)" : ce.Value.ToString().Replace('.', '_').Replace('+', '_');
+                }
             }
         }
 #else

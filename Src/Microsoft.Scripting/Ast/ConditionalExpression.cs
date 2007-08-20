@@ -72,6 +72,15 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        internal override object EvaluateAssign(CodeContext context, object value) {
+            object ret = _test.Evaluate(context);
+            if (context.LanguageContext.IsTrue(ret)) {
+                return _true.EvaluateAssign(context, value);
+            } else {
+                return _false.EvaluateAssign(context, value);
+            }
+        }
+
         public override void Emit(CodeGen cg) {
             Label eoi = cg.DefineLabel();
             Label next = cg.DefineLabel();
@@ -81,6 +90,18 @@ namespace Microsoft.Scripting.Ast {
             cg.Emit(OpCodes.Br, eoi);
             cg.MarkLabel(next);
             _false.EmitCast(cg, _expressionType);
+            cg.MarkLabel(eoi);
+        }
+
+        internal override void EmitAddress(CodeGen cg, Type asType) {
+            Label eoi = cg.DefineLabel();
+            Label next = cg.DefineLabel();
+            _test.EmitAs(cg, typeof(bool));
+            cg.Emit(OpCodes.Brfalse, next);
+            _true.EmitAddress(cg, asType);
+            cg.Emit(OpCodes.Br, eoi);
+            cg.MarkLabel(next);
+            _false.EmitAddress(cg, asType);
             cg.MarkLabel(eoi);
         }
 

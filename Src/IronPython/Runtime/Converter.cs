@@ -235,7 +235,7 @@ namespace IronPython.Runtime {
             if (value is ICollection) return ((ICollection)value).Count != 0;
 
             // Explictly block conversion of References to bool
-            if (value is IReference) {
+            if (value is IStrongBox) {
                 throw RuntimeHelpers.SimpleTypeError("Can't convert a Reference<> instance to a bool");
             }
 
@@ -305,6 +305,11 @@ namespace IronPython.Runtime {
 
         public static T Convert<T>(object value) {
             return (T)Convert(value, typeof(T));
+        }
+
+        internal static bool CanConvert(object value, Type to) {
+            object dummy;
+            return TryConvert(value, to, out dummy);
         }
 
         /// <summary>
@@ -833,7 +838,7 @@ namespace IronPython.Runtime {
         private static TypeConverter GetTypeConverter(TypeConverterAttribute tca) {
             try {
                 ConstructorInfo ci = Type.GetType(tca.ConverterTypeName).GetConstructor(Type.EmptyTypes);
-                if (ci != null) return ci.Invoke(RuntimeHelpers.EmptyObjectArray) as TypeConverter;
+                if (ci != null) return ci.Invoke(ArrayUtils.EmptyObjects) as TypeConverter;
             } catch (TargetInvocationException) {
             }
             return null;

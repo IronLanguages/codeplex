@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
@@ -86,7 +87,7 @@ namespace IronPython.Runtime.Operations {
 
             CheckInitArgs(context, null, args\u00F8, type\u00F8);
 
-            return type\u00F8.CreateInstance(context, RuntimeHelpers.EmptyObjectArray);
+            return type\u00F8.CreateInstance(context, ArrayUtils.EmptyObjects);
         }
 
         public static object DefaultNewKW(CodeContext context, DynamicType type\u00F8, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
@@ -94,7 +95,7 @@ namespace IronPython.Runtime.Operations {
 
             CheckInitArgs(context, kwargs\u00F8, args\u00F8, type\u00F8);
 
-            return type\u00F8.CreateInstance(context, RuntimeHelpers.EmptyObjectArray);
+            return type\u00F8.CreateInstance(context, ArrayUtils.EmptyObjects);
         }
 
         public static object DefaultNewClsKW(CodeContext context, DynamicType type\u00F8, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
@@ -122,7 +123,7 @@ namespace IronPython.Runtime.Operations {
 
             object[] finalArgs;
             string[] names;
-            TypeHelpers.GetKeywordArgs(kwargs\u00F8, RuntimeHelpers.EmptyObjectArray, out finalArgs, out names);
+            TypeHelpers.GetKeywordArgs(kwargs\u00F8, ArrayUtils.EmptyObjects, out finalArgs, out names);
 
             return overloads\u00F8.CallHelper(context, finalArgs, names, null);
         }
@@ -169,7 +170,7 @@ namespace IronPython.Runtime.Operations {
 
             string[] names;
             object[] args;
-            TypeHelpers.GetKeywordArgs(kwargs\u00F8, RuntimeHelpers.EmptyObjectArray, out args, out names);
+            TypeHelpers.GetKeywordArgs(kwargs\u00F8, ArrayUtils.EmptyObjects, out args, out names);
             return type\u00F8.CreateInstance(context, args, names);
         }
 

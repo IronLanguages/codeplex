@@ -133,6 +133,12 @@
     <Compile Include="Ast\FastEvalWalker.cs" />
     <Compile Include="Ast\IfStatementBuilder.cs" />
     <Compile Include="Ast\MemberAssignment.cs" />
+    <Compile Include="Generation\KeywordArgBuilder.cs" />
+    <Compile Include="Generation\KeywordConstructorReturnBuilder.cs" />
+    <Compile Include="Generation\MethodBinderContext.cs" />
+    <Compile Include="Generation\OutArgBuilder.cs" />
+    <Compile Include="Generation\ParamsDictArgBuilder.cs" />
+    <Compile Include="Generation\ReturnReferenceArgBuilder.cs" />
     <Compile Include="Generation\RuntimeConstant.cs" />
     <Compile Include="Ast\TryFlowAnalyzer.cs" />
     <Compile Include="Ast\TryStatementBuilder.cs" />
@@ -241,9 +247,9 @@
     <Compile Include="NameType.cs" />
     <Compile Include="NarrowingLevel.cs" />
     <Compile Include="None.cs" />
+    <Compile Include="OperationFailed.cs" />
     <Compile Include="OperatorSlotAttribute.cs" />
     <Compile Include="ParameterWrapper.cs" />
-    <Compile Include="ParamsMethodMaker.cs" />
     <Compile Include="PositionTrackingWriter.cs" />
     <Compile Include="Generation\CompilerConstant.cs" />
     <Compile Include="CustomSymbolDictionary.cs" />
@@ -351,7 +357,6 @@
     <Compile Include="SyntaxErrorException.cs" />
     <Compile Include="TransformDictEnumerator.cs" />
     <Compile Include="Types\TransformedName.cs" />
-    <Compile Include="Ast\TryFinallyStatement.cs" />
     <Compile Include="TupleDictionary.cs" />
     <Compile Include="Types\TypeCollision.cs" />
     <Compile Include="Types\TypeCreatedEventArgs.cs" />
@@ -425,7 +430,6 @@
     <Compile Include="Utils\IOUtils.cs" />
     <Compile Include="Utils\ListStack.cs" />
     <Compile Include="Utils\Publisher.cs" />
-    <Compile Include="Utils\Reference.cs" />
     <Compile Include="Utils\ReflectionUtils.cs" />
     <Compile Include="Utils\StringUtils.cs" />
     <Compile Include="Utils\StrongBox.cs" />
@@ -465,10 +469,6 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-      <Link>Properties\25StrongName.snk</Link>
-    </None>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

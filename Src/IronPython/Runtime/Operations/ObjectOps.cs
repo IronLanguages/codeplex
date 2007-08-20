@@ -25,6 +25,7 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -263,7 +264,7 @@ namespace IronPython.Runtime.Operations {
 
             dictIterator = null;
             if (self is PythonDictionary || self is IAttributesCollection) {
-                dictIterator = PythonOps.InvokeWithContext(context, self, Symbols.IterItems, RuntimeHelpers.EmptyObjectArray);
+                dictIterator = PythonOps.InvokeWithContext(context, self, Symbols.IterItems, ArrayUtils.EmptyObjects);
             }
 
             return Tuple.MakeTuple(func, Tuple.MakeTuple(funcArgs), state, listIterator, dictIterator);

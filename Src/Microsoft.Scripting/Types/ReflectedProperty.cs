@@ -50,13 +50,13 @@ namespace Microsoft.Scripting.Types {
                     return false;
             }
 
-            return CallSetter(context, instance, RuntimeHelpers.EmptyObjectArray, value);
+            return CallSetter(context, instance, Utils.ArrayUtils.EmptyObjects, value);
         }
 
         public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Properties, this);
 
-            value = CallGetter(context, instance, RuntimeHelpers.EmptyObjectArray);
+            value = CallGetter(context, instance, Utils.ArrayUtils.EmptyObjects);
             return true;
         }
 

@@ -63,6 +63,8 @@ namespace IronPython.Runtime.Calls {
                         return MakePythonTypeCallRule(dt, types, ArrayUtils.RemoveFirst(types));
                     }
                 }
+
+                return MakeDynamicTypeRule(dt);
             }
 
             return null;    // fall back to default implementation
@@ -118,11 +120,12 @@ namespace IronPython.Runtime.Calls {
             if (newInst == InstanceOps.New) {
                 // parameterless ctor, call w/ no args
                 MethodCandidate cand = creating.IsSystemType ?
-                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, creating, new Type[0]) :
+                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, creating, ArrayUtils.EmptyTypes) :
                     CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, creating, new Type[] { typeof(DynamicType) });
 
                 Debug.Assert(cand != null);
-                createExpr = cand.Target.MakeExpression(Binder, 
+                createExpr = cand.Target.MakeExpression(Binder,
+                    rule,
                     creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] },
                     creating.IsSystemType ? Type.EmptyTypes : new Type[] { typeof(DynamicType) });
             } else if (newInst is ConstructorFunction) {
@@ -137,6 +140,7 @@ namespace IronPython.Runtime.Calls {
 
                 if (cand != null) {
                     createExpr = cand.Target.MakeExpression(Binder,
+                        rule,
                         creating.IsSystemType ?
                             CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, _args) :
                             ArrayUtils.Insert(rule.Parameters[0], CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, _args)));
@@ -271,6 +275,7 @@ namespace IronPython.Runtime.Calls {
                 if (mc != null) {
                     _testTypes.Add(testTypes);
                     initCall = mc.Target.MakeExpression(Binder,
+                        rule,
                         ArrayUtils.Insert<Expression>(Ast.Read(variable), CallBinderHelper<T>.GetArgumentExpressions(mc, Action, rule, _args)));
                 }
             }
@@ -360,7 +365,7 @@ namespace IronPython.Runtime.Calls {
             Expression createExpr = null;
             if (mc != null) {
                 _testTypes.Add(testTypes);
-                createExpr = mc.Target.MakeExpression(Binder, parameters);
+                createExpr = mc.Target.MakeExpression(Binder, rule, parameters);
             }
             return createExpr;
         }

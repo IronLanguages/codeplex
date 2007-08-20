@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -57,7 +58,7 @@ namespace Microsoft.Scripting.Ast {
             _expression = expression;
         }
 
-        public override void EmitAddress(CodeGen cg, Type asType) {
+        internal override void EmitAddress(CodeGen cg, Type asType) {
             EmitInstance(cg);
 
             if (asType != ExpressionType || _member.MemberType != MemberTypes.Field) {
@@ -104,7 +105,26 @@ namespace Microsoft.Scripting.Ast {
                     return field.GetValue(self);
                 case MemberTypes.Property:                    
                     PropertyInfo property = (PropertyInfo)_member;
-                    return property.GetValue(self, RuntimeHelpers.EmptyObjectArray);
+                    return property.GetValue(self, Utils.ArrayUtils.EmptyObjects);
+                default:
+                    Debug.Assert(false, "Invalid member type");
+                    break;
+            }
+
+            throw new InvalidOperationException();
+        }
+
+        internal override object EvaluateAssign(CodeContext context, object value) {
+            object self = _expression != null ? _expression.Evaluate(context) : null;
+            switch (_member.MemberType) {
+                case MemberTypes.Field:
+                    FieldInfo field = (FieldInfo)_member;
+                    field.SetValue(self, value);
+                    return value;
+                case MemberTypes.Property:
+                    PropertyInfo property = (PropertyInfo)_member;
+                    property.SetValue(self, value, ArrayUtils.EmptyObjects);
+                    return value;
                 default:
                     Debug.Assert(false, "Invalid member type");
                     break;

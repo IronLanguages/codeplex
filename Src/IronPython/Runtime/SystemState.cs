@@ -537,17 +537,6 @@ namespace IronPython.Runtime {
             // We should register builtins, if any, from IronPython.dll
             _autoLoadBuiltins.Add(typeof(SystemState).Assembly);
 
-            if (Environment.OSVersion.Platform == PlatformID.Unix) {
-                // we make our nt package show up as a posix package
-                // on unix platforms.  Because we build on top of the 
-                // CLI for all file operations we should be good from
-                // there, but modules that check for the presence of
-                // names (e.g. os) will do the right thing.
-                Debug.Assert(_builtinsDict.ContainsKey("nt"));
-                _builtinsDict["posix"] = _builtinsDict["nt"];
-                _builtinsDict.Remove("nt");
-            }            
-
             DynamicHelpers.TopPackage.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(TopPackage_AssemblyLoaded);
 
             PythonExtensionTypeAttribute._sysState = this;
@@ -559,6 +548,17 @@ namespace IronPython.Runtime {
             foreach(Assembly builtinsAssembly in _autoLoadBuiltins) {
                 LoadBuiltins(builtinsAssembly);
             }
+
+            if (Environment.OSVersion.Platform == PlatformID.Unix) {
+                // we make our nt package show up as a posix package
+                // on unix platforms.  Because we build on top of the 
+                // CLI for all file operations we should be good from
+                // there, but modules that check for the presence of
+                // names (e.g. os) will do the right thing.
+                Debug.Assert(_builtinsDict.ContainsKey("nt"));
+                _builtinsDict["posix"] = _builtinsDict["nt"];
+                _builtinsDict.Remove("nt");
+            }            
         }
 
         private void TopPackage_AssemblyLoaded(object sender, AssemblyLoadedEventArgs e) {

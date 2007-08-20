@@ -29,12 +29,6 @@ namespace Microsoft.Scripting.Utils {
         public const char GenericArityDelimiter = '`';
 
 #if SILVERLIGHT
-        public static readonly Type[] EmptyTypes = new Type[0];
-#else
-        public static readonly Type[] EmptyTypes = Type.EmptyTypes;
-#endif
-
-#if SILVERLIGHT
         public static bool IsNested(Type t) {
             return t.DeclaringType != null;
         }

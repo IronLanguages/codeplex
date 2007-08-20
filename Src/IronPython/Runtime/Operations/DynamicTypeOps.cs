@@ -196,7 +196,7 @@ namespace IronPython.Runtime.Operations {
                 if (_type == null) {
                     return CallWithoutType(context, args);
                 }
-                return DynamicTypeOps.CallWorker(context, _type, args ?? RuntimeHelpers.EmptyObjectArray);
+                return DynamicTypeOps.CallWorker(context, _type, args ?? ArrayUtils.EmptyObjects);
             }
 
             private static object CallWithoutType(CodeContext context, object[] args) {
@@ -229,7 +229,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static object CallParams(CodeContext context, DynamicType cls, params object[] args\u03c4) {
-            if (args\u03c4 == null) args\u03c4 = RuntimeHelpers.EmptyObjectArray;
+            if (args\u03c4 == null) args\u03c4 = ArrayUtils.EmptyObjects;
 
             return CallWorker(context, cls, args\u03c4);
         }

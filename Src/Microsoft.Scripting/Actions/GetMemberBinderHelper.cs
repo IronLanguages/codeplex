@@ -83,8 +83,8 @@ namespace Microsoft.Scripting.Actions {
 
             // if lookup failed try the strong-box type if available.
             if (members.Length == 0 && StrongBoxType != null) {
+                type = StrongBoxType;
                 StrongBoxType = null;
-                type = typeof(StrongBox<>).MakeGenericType(type);
 
                 members = Binder.GetMember(type, StringName);
             }
@@ -93,6 +93,8 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private Statement MakeBodyHelper(Type type, params MemberInfo[] members) {
+            MakeOperatorGetMemberBody(type, "GetCustomMember");
+
             Expression error;
             MemberTypes memberType = GetMemberType(members, out error);
             if (error != null) {
@@ -108,7 +110,9 @@ namespace Microsoft.Scripting.Actions {
                 case MemberTypes.Property:   MakePropertyBody(type, members); break;
                 case MemberTypes.All:     
                     // no members were found
-                    MakeOperatorGetMemberBodyOrError(type);                       
+                    MakeOperatorGetMemberBody(type, "GetBoundMember");
+
+                    MakeMissingMemberError(type);
                     break;
                 case MemberTypes.Constructor:
                 case MemberTypes.TypeInfo:
@@ -138,7 +142,18 @@ namespace Microsoft.Scripting.Actions {
         private void MakeFieldBody(Type type, MemberInfo[] members) {
             FieldInfo fi = (FieldInfo)members[0];
 
-            if (fi.IsPublic && fi.DeclaringType.IsPublic) {
+            if (fi.DeclaringType.IsGenericType && fi.DeclaringType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
+                // work around a CLR bug where we can't access generic fields from dynamic methods.
+                _body = Ast.Block(_body,
+                    Rule.MakeReturn(Binder,
+                        Ast.Call(
+                            null,
+                            typeof(RuntimeHelpers).GetMethod("GetBox").MakeGenericMethod(fi.DeclaringType.GetGenericArguments()),
+                            Instance
+                        )
+                    )
+                );
+            } else if (fi.IsPublic && fi.DeclaringType.IsPublic) {
                 _body = Ast.Block(_body,
                     Rule.MakeReturn(
                         Binder,
@@ -156,13 +171,14 @@ namespace Microsoft.Scripting.Actions {
                         )
                     )
                 );
-            } 
+            }
         }
 
         private void MakeMethodBody(Type type, MemberInfo[] members) {
             BuiltinFunction target = ReflectionCache.GetMethodGroup(type, StringName, GetCallableMethods(members));
 
-            if ((target.FunctionType & FunctionType.FunctionMethodMask) != FunctionType.Function || _bound) {
+            // _bound needs to go when we get better composition of rules
+            if (((target.FunctionType & FunctionType.FunctionMethodMask) != FunctionType.Function || _bound)) {
                 // for strong box we need to bind the strong box, so we don't use Instance here.
                 _body = Ast.Block(_body,
                     Rule.MakeReturn(
@@ -243,8 +259,8 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary> if a member-injector is defined-on or registered-for this type call it </summary>
-        private void MakeOperatorGetMemberBodyOrError(Type type) {
-            MethodInfo getMem = GetMethod(type, "GetBoundMember");
+        private void MakeOperatorGetMemberBody(Type type, string name) {
+            MethodInfo getMem = GetMethod(type, name);
             if (getMem != null && getMem.IsSpecialName) {
                 Variable tmp = Rule.GetTemporary(typeof(object), "getVal");
                 _body = Ast.Block(_body,
@@ -254,14 +270,12 @@ namespace Microsoft.Scripting.Actions {
                                 tmp,
                                 MakeCallExpression(getMem, Instance, Ast.Constant(StringName))
                             ),
-                            Ast.ReadField(null, typeof(DBNull).GetField("Value"))
+                            Ast.ReadField(null, typeof(OperationFailed).GetField("Value"))
                         ),
                         Rule.MakeReturn(Binder, Ast.Read(tmp))
                     )
                 );
             }
-            MakeMissingMemberError(type);
-
         }
 
         private void MakeCustomMembersBody(Type type) {
@@ -270,7 +284,7 @@ namespace Microsoft.Scripting.Actions {
                         Ast.If(
                             Ast.Call(
                                 Ast.Cast(Instance, typeof(ICustomMembers)),
-                                typeof(ICustomMembers).GetMethod("TryGetBoundCustomMember"),
+                                GetCustomGetMembersMethod(),
                                 Ast.CodeContext(),
                                 Ast.Constant(Action.Name),
                                 Ast.Read(tmp)
@@ -280,6 +294,14 @@ namespace Microsoft.Scripting.Actions {
                     );
             // if the lookup fails throw an exception
             MakeMissingMemberError(type);
+        }
+
+        private MethodInfo GetCustomGetMembersMethod() {
+            if (Action.IsBound) {
+                return typeof(ICustomMembers).GetMethod("TryGetBoundCustomMember");
+            }
+
+            return typeof(ICustomMembers).GetMethod("TryGetCustomMember");
         }
 
         /// <summary> Gets the Expression that represents the instance we're looking up </summary>
@@ -318,12 +340,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void MakeMissingMemberError(Type type) {                
-            _body = Ast.Block(_body,
-                Rule.MakeError(
-                    Binder,
-                    Binder.MakeMissingMemberError(type, StringName)
-                )
-            );
+            _body = Ast.Block(_body, Binder.MakeMissingMemberError(Rule, type, StringName));
         }
         
         #endregion

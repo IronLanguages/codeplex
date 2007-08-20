@@ -72,7 +72,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override void EmitAddress(CodeGen cg, Type asType) {
+        internal override void EmitAddress(CodeGen cg, Type asType) {
             EmitValue(cg);
 
             _vr.Slot.EmitSet(cg);
@@ -123,7 +123,11 @@ namespace Microsoft.Scripting.Ast {
             return value;
         }
 
-        internal static void EvaluateAssign(CodeContext context, Variable var, object value) {
+        internal override object EvaluateAssign(CodeContext context, object value) {
+            return EvaluateAssign(context, Variable, value);
+        }
+
+        internal static object EvaluateAssign(CodeContext context, Variable var, object value) {
             switch (var.Kind) {
                 case Variable.VariableKind.Temporary:
                 case Variable.VariableKind.GeneratorTemporary:
@@ -136,6 +140,7 @@ namespace Microsoft.Scripting.Ast {
                     RuntimeHelpers.SetName(context, var.Name, value);
                     break;
             }
+            return value;
         }
 
         public override void Walk(Walker walker) {

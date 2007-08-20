@@ -94,9 +94,7 @@ namespace Microsoft.Scripting.Ast {
             if (_pi.Length > 0) {
                 int last = parameters.Length - 1;
                 for (int i = 0; i < last; i++) {
-                    if (!_pi[i].IsOut) {
-                        parameters[i] = EvaluateArgument(context, _arguments[i], _pi[i].ParameterType);
-                    }
+                    EvaluateOneArgument(context, parameters, i);
                 }
                 
                 // If the last parameter is a parameter array, throw the extra arguments into an array
@@ -115,9 +113,7 @@ namespace Microsoft.Scripting.Ast {
                         parameters[last] = varargs;
                     }
                 } else {
-                    if (!_pi[last].IsOut) {
-                        parameters[last] = EvaluateArgument(context, _arguments[last], _pi[last].ParameterType);
-                    }
+                    EvaluateOneArgument(context, parameters, last);
                 }
             }
 
@@ -133,16 +129,23 @@ namespace Microsoft.Scripting.Ast {
                     // expose by-ref args
                     for (int i = 0; i < _pi.Length; i++) {
                         if (_pi[i].ParameterType.IsByRef) {
-                            BoundExpression be = _arguments[i] as BoundExpression;
-                            if (be == null) throw new InvalidOperationException("byref call w/ no address");
-
-                            BoundAssignment.EvaluateAssign(context, be.Variable, parameters[i]);
+                            _arguments[i].EvaluateAssign(context, parameters[i]);
                         }
                     }
                 }
             } catch (TargetInvocationException e) {
                 // Unwrap the real (inner) exception and raise it
                 throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+            }
+        }
+
+        private void EvaluateOneArgument(CodeContext context, object[] parameters, int i) {
+            if (!_pi[i].IsOut || (_pi[i].Attributes & ParameterAttributes.In) != 0) {
+                if (!_pi[i].ParameterType.IsByRef) {
+                    parameters[i] = EvaluateArgument(context, _arguments[i], _pi[i].ParameterType);
+                } else {
+                    parameters[i] = EvaluateArgument(context, _arguments[i], _pi[i].ParameterType.GetElementType());
+                }
             }
         }
 
@@ -212,7 +215,7 @@ namespace Microsoft.Scripting.Ast {
 
         private void EmitArgument(CodeGen cg, ParameterInfo param, int index) {
             if (index < _arguments.Count) {
-                if (param.IsOut || param.ParameterType.IsByRef) {
+                if (param.ParameterType.IsByRef) {
                     _arguments[index].EmitAddress(cg, param.ParameterType.GetElementType());
                 } else {
                     _arguments[index].EmitAs(cg, param.ParameterType);

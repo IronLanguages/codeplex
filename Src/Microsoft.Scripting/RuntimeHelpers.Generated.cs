@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting {
     public static partial class RuntimeHelpers {
         #region Generated Call Runtime Helpers
@@ -23,7 +24,7 @@ namespace Microsoft.Scripting {
             FastCallable fc = func as FastCallable;
             if (fc != null) return fc.Call(context);
 
-            return RuntimeHelpers.CallWithContext(context, func, RuntimeHelpers.EmptyObjectArray);
+            return RuntimeHelpers.CallWithContext(context, func, ArrayUtils.EmptyObjects);
         }
 
         public static object CallWithContext(CodeContext context, object func, object arg0) {

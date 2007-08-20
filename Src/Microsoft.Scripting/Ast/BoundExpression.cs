@@ -92,11 +92,15 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        internal override object EvaluateAssign(CodeContext context, object value) {
+            return BoundAssignment.EvaluateAssign(context, Variable, value);
+        }
+
         public override AbstractValue AbstractEvaluate(AbstractContext context) {
             return context.Lookup(_variable);
         }
 
-        public override void EmitAddress(CodeGen cg, Type asType) {
+        internal override void EmitAddress(CodeGen cg, Type asType) {
             if (asType == ExpressionType) {
                 _vr.Slot.EmitGetAddr(cg);
             } else {

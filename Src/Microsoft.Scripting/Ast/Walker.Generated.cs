@@ -212,10 +212,6 @@ namespace Microsoft.Scripting.Ast {
         public virtual bool Walk(SwitchStatement node) { return true; }
         public virtual void PostWalk(SwitchStatement node) { }
 
-        // TryFinallyStatement
-        public virtual bool Walk(TryFinallyStatement node) { return true; }
-        public virtual void PostWalk(TryFinallyStatement node) { }
-
         // TryStatement
         public virtual bool Walk(TryStatement node) { return true; }
         public virtual void PostWalk(TryStatement node) { }

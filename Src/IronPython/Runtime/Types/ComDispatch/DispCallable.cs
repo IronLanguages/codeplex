@@ -64,8 +64,8 @@ namespace IronPython.Runtime.Types.ComDispatch {
                         // REVIEW: is it possible that ComDispatch args
                         // REVIEW: are IReference? DLR seems to not have 
                         // REVIEW: enough information to imply this.
-                        if (arg is IReference) {
-                            argsForCall[i] = (arg as IReference).Value;
+                        if (arg is IStrongBox) {
+                            argsForCall[i] = (arg as IStrongBox).Value;
                             parameterModifiers[i] = true;
                         } 
                         else {
@@ -97,7 +97,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
                 // REVIEW: to IDispatch calls.
                 for (int i = 0; i < originalArgs.Length; i++) {
                     if (parameterModifiers[i]) {
-                        (originalArgs[i] as IReference).Value = argsForCall[i];
+                        (originalArgs[i] as IStrongBox).Value = argsForCall[i];
                     }
                 }
             }

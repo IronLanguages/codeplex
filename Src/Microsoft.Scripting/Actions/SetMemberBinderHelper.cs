@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Actions {
         public StandardRule<T> MakeNewRule() {
             Type targetType = CompilerHelpers.GetType(Target);
 
-            Rule.MakeTest(targetType);
+            Rule.MakeTest(StrongBoxType ?? targetType);
 
             if (Target is ICustomMembers) {
                 return MakeSetCustomMemberRule(targetType);
@@ -54,8 +54,8 @@ namespace Microsoft.Scripting.Actions {
 
             // if lookup failed try the strong-box type if available.
             if (members.Length == 0 && StrongBoxType != null) {
+                type = StrongBoxType;
                 StrongBoxType = null;
-                type = typeof(StrongBox<>).MakeGenericType(type);
 
                 members = Binder.GetMember(type, StringName);
             }
@@ -118,27 +118,29 @@ namespace Microsoft.Scripting.Actions {
             if (setter != null) {
                 if (setter.IsStatic) {
                     // TODO: Too python specific
-                    Rule.SetTarget(Rule.MakeError(Binder, Binder.MakeReadOnlyMemberError(targetType, StringName)));
+                    Rule.SetTarget(Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
                 } else if (setter.ContainsGenericParameters) {
                     Rule.SetTarget(Rule.MakeError(Binder, MakeGenericPropertyExpression()));
                 } else if (setter.IsPublic && !setter.DeclaringType.IsValueType) {
-                    Rule.SetTarget(MakeCallStatement(setter, Rule.Parameters));
+                    Rule.SetTarget(Rule.MakeReturn(Binder, MakeReturnValue(MakeCallExpression(setter, Rule.Parameters))));
                 } else {
                     // TODO: Should be able to do better w/ value types.
                     Rule.SetTarget(Rule.MakeReturn(
                             Binder,
-                            Ast.Call(
-                                Ast.RuntimeConstant(info),
-                                typeof(PropertyInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object), typeof(object[]) }),
-                                Instance,
-                                Rule.Parameters[1],
-                                Ast.NewArray(typeof(object[]))
+                            MakeReturnValue(
+                                Ast.Call(
+                                    Ast.RuntimeConstant(info),
+                                    typeof(PropertyInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object), typeof(object[]) }),
+                                    Instance,
+                                    Rule.Parameters[1],
+                                    Ast.NewArray(typeof(object[]))
+                                )
                             )
                         )
                     );
                 }
             } else {
-                Rule.SetTarget(Rule.MakeError(Binder, Binder.MakeMissingMemberError(targetType, StringName)));
+                Rule.SetTarget(Binder.MakeMissingMemberError(Rule, targetType, StringName));
             }
             return Rule;
         }
@@ -146,20 +148,36 @@ namespace Microsoft.Scripting.Actions {
         private StandardRule<T> MakeFieldRule(Type targetType, MemberInfo[] fields) {
             FieldInfo field = (FieldInfo)fields[0];
 
-            if (field.DeclaringType.IsValueType) {
-                Rule.SetTarget(Rule.MakeError(Binder, Ast.New(typeof(ArgumentException).GetConstructor(ReflectionUtils.EmptyTypes))));
+            if (field.DeclaringType.IsGenericType && field.DeclaringType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
+                // work around a CLR bug where we can't access generic fields from dynamic methods.
+                Rule.SetTarget(
+                    Rule.MakeReturn(Binder,
+                        MakeReturnValue(
+                            Ast.Call(
+                                null,
+                                typeof(RuntimeHelpers).GetMethod("UpdateBox").MakeGenericMethod(field.DeclaringType.GetGenericArguments()),
+                                Instance,
+                                Rule.Parameters[1]
+                            )
+                        )
+                    )
+                );
+            } else if (field.DeclaringType.IsValueType) {
+                Rule.SetTarget(Rule.MakeError(Binder, Ast.New(typeof(ArgumentException).GetConstructor(ArrayUtils.EmptyTypes))));
             } else if (field.IsInitOnly || (field.IsStatic && targetType != field.DeclaringType)) {     // TODO: Field static check too python specific
-                Rule.SetTarget(Rule.MakeError(Binder, Binder.MakeReadOnlyMemberError(targetType, StringName)));
+                Rule.SetTarget(Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
             } else if (field.IsPublic && field.DeclaringType.IsVisible) {
                 Rule.SetTarget(
                     Rule.MakeReturn(
                         Binder,
-                        Ast.AssignField(
-                            field.IsStatic ?
-                                null :
-                                Ast.Cast(Rule.Parameters[0], field.DeclaringType),
-                            field,
-                            Binder.ConvertExpression(Rule.Parameters[1], field.FieldType)
+                        MakeReturnValue(
+                            Ast.AssignField(
+                                field.IsStatic ?
+                                    null :
+                                    Ast.Cast(Rule.Parameters[0], field.DeclaringType),
+                                field,
+                                Binder.ConvertExpression(Rule.Parameters[1], field.FieldType)
+                            )
                         )
                     )
                 );
@@ -167,11 +185,13 @@ namespace Microsoft.Scripting.Actions {
                 Rule.SetTarget(
                     Rule.MakeReturn(
                         Binder,
-                        Ast.Call(
-                            Ast.RuntimeConstant(field),
-                            typeof(FieldInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object) }),
-                            field.IsStatic ? Ast.Constant(null) : Instance,
-                            Rule.Parameters[1]
+                        MakeReturnValue(
+                            Ast.Call(
+                                Ast.RuntimeConstant(field),
+                                typeof(FieldInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object) }),
+                                field.IsStatic ? Ast.Constant(null) : Instance,
+                                Rule.Parameters[1]
+                            )
                         )
                     )
                 );
@@ -183,16 +203,22 @@ namespace Microsoft.Scripting.Actions {
         private StandardRule<T> MakeSetCustomMemberRule(Type targetType) {
             Rule.SetTarget(
                 Rule.MakeReturn(Binder,
-                    Ast.Call(
-                        Ast.Cast(Rule.Parameters[0], typeof(ICustomMembers)),
-                        typeof(ICustomMembers).GetMethod("SetCustomMember"),
-                        Ast.CodeContext(),
-                        Ast.Constant(Action.Name),
-                        Rule.Parameters[1]
+                    MakeReturnValue(
+                        Ast.Call(
+                            Ast.Cast(Rule.Parameters[0], typeof(ICustomMembers)),
+                            typeof(ICustomMembers).GetMethod("SetCustomMember"),
+                            Ast.CodeContext(),
+                            Ast.Constant(Action.Name),
+                            Rule.Parameters[1]
+                        )
                     )
                 )
             );
             return Rule;
+        }
+
+        private Expression MakeReturnValue(Expression expression) {
+            return Ast.Comma(0, Rule.Parameters[1], expression);
         }
 
         /// <summary> if a member-injector is defined-on or registered-for this type call it </summary>
@@ -215,12 +241,12 @@ namespace Microsoft.Scripting.Actions {
 
         }
         private StandardRule<T> MakeMissingMemberError(Type type) {
-            Rule.SetTarget(Rule.MakeError(Binder, Binder.MakeMissingMemberError(type, StringName)));
+            Rule.SetTarget(Binder.MakeMissingMemberError(Rule, type, StringName));
             return Rule;
         }
 
         private StandardRule<T> MakeReadOnlyMemberError(Type type) {
-            Rule.SetTarget(Rule.MakeError(Binder, Binder.MakeReadOnlyMemberError(type, StringName)));
+            Rule.SetTarget(Binder.MakeReadOnlyMemberError(Rule, type, StringName));
             return Rule;
         }
     }

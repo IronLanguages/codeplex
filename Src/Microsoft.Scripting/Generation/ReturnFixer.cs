@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Generation {
         private readonly Slot _refSlot;
 
         private ReturnFixer(Slot refSlot, Slot argSlot) {
-            Debug.Assert(refSlot.Type.IsGenericType && refSlot.Type.GetGenericTypeDefinition() == typeof(Reference<>));
+            Debug.Assert(refSlot.Type.IsGenericType && refSlot.Type.GetGenericTypeDefinition() == typeof(StrongBox<>));
             Debug.Assert(argSlot.Type.IsByRef);
             this._refSlot = refSlot;
             this._argSlot = argSlot;
@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Generation {
             argSlot.EmitGet(cg);
             if (argSlot.Type.IsByRef) {
                 Type elementType = argSlot.Type.GetElementType();
-                Type concreteType = typeof(Reference<>).MakeGenericType(elementType);
+                Type concreteType = typeof(StrongBox<>).MakeGenericType(elementType);
                 Slot refSlot = cg.GetLocalTmp(concreteType);
                 cg.EmitLoadValueIndirect(elementType);
                 cg.EmitNew(concreteType, new Type[] { elementType });
@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Generation {
         public void FixReturn(CodeGen cg) {
             _argSlot.EmitGet(cg);
             _refSlot.EmitGet(cg);
-            cg.EmitCall(_refSlot.Type.GetProperty("Value").GetGetMethod());
+            cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetBox").MakeGenericMethod(_argSlot.Type.GetElementType()));
             cg.EmitStoreValueIndirect(_argSlot.Type.GetElementType());
         }
     }

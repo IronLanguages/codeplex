@@ -21,6 +21,9 @@ using Microsoft.Scripting.Actions;
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
+    /// <summary>
+    /// ArgBuilder which always produces null.  
+    /// </summary>
     public class NullArgBuilder : ArgBuilder {
         public NullArgBuilder() { }
 
@@ -32,8 +35,12 @@ namespace Microsoft.Scripting.Generation {
             return null;
         }
 
-        public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
             return Ast.Null();
+        }
+
+        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
+            return null;
         }
     }
 }

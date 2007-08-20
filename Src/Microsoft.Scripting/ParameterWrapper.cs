@@ -17,14 +17,15 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using System.Diagnostics;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
-    public class ParameterWrapper {
+    class ParameterWrapper {
         private Type _type;
-        private bool _prohibitNull, _isParams;
+        private bool _prohibitNull, _isParams, _isParamsDict;
         private ActionBinder _binder;
         private SymbolId _name;
 
@@ -54,9 +55,11 @@ namespace Microsoft.Scripting {
             _name = SymbolTable.StringToId(info.Name ?? "<unknown>");
             _prohibitNull = info.IsDefined(typeof(NotNullAttribute), false);
             _isParams = info.IsDefined(typeof(ParamArrayAttribute), false);
+            _isParamsDict = info.IsDefined(typeof(ParamDictionaryAttribute), false);
         }
 
         public static int? CompareParameters(IList<ParameterWrapper> parameters1, IList<ParameterWrapper> parameters2) {
+            Debug.Assert(parameters1.Count == parameters2.Count);
             int? ret = 0;
             for (int i = 0; i < parameters1.Count; i++) {
                 ParameterWrapper p1 = parameters1[i];
@@ -82,11 +85,13 @@ namespace Microsoft.Scripting {
             return ret;
         }
 
-        public virtual Type Type {
+        public Type Type {
             get { return _type; }
         }
 
         public bool HasConversionFrom(Type ty, NarrowingLevel allowNarrowing) {
+            if (ty == Type) return true;
+
             if (ty == None.Type) {
                 if (_prohibitNull) return false;
 
@@ -94,27 +99,10 @@ namespace Microsoft.Scripting {
                     return true;
                 }
                 return !Type.IsValueType;
-            } else if (ty.IsGenericType && ty.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
-                // like ref and out params the parameter types must match exactly - you cannot
-                // use a subtype or convertible type to make a StrongBox call.
-                return ty.GetGenericArguments()[0] == Type;
             } else {
                 return _binder.CanConvertFrom(ty, Type, allowNarrowing);
             }
         }
-
-        //public bool HasConversionFrom(DynamicType ty, NarrowingLevel allowNarrowing) {
-        //    if (ty.IsNull) {
-        //        if (_prohibitNull) return false;
-
-        //        if (Type.IsGenericType && Type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
-        //            return true;
-        //        }
-        //        return !Type.IsValueType;
-        //    } else {
-        //        return _binder.CanConvertFrom(ty.UnderlyingSystemType, Type, allowNarrowing);
-        //    }
-        //}
 
         public int? CompareTo(ParameterWrapper other) {
             Type t1 = Type;
@@ -144,9 +132,15 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public bool IsParameterArray {
+        public bool IsParamsArray {
             get {
                 return _isParams;
+            }
+        }
+
+        public bool IsParamsDict {
+            get {
+                return _isParamsDict;
             }
         }
 

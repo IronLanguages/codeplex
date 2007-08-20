@@ -288,7 +288,6 @@ namespace IronPython.Runtime.Types {
             if (PythonOps.TryGetBoundAttr(inst, Symbols.Init, out meth)) {
                 PythonOps.CallWithKeywordArgs(context, meth, args, names);
             } else {
-                Debug.Assert(names.Length != 0);
                 throw PythonOps.TypeError("this constructor takes no arguments");
             }
             return inst;
@@ -788,9 +787,49 @@ namespace IronPython.Runtime.Types {
                     return MakeMemberRule<T>((MemberAction)action, context, args);
                 case ActionKind.DoOperation:
                     return MakeOperationRule<T>((DoOperationAction)action, context, args);
+                case ActionKind.Call:
+                    return MakeCallRule<T>((CallAction)action, context, args);
                 default:
                     return null;
             }
+        }
+
+        private StandardRule<T> MakeCallRule<T>(CallAction callAction, CodeContext context, object[] args) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(OldInstance));
+            
+            // we could get better throughput w/ a more specific rule against our current custom old class but
+            // this favors less code generation.
+            Variable tmp = rule.GetTemporary(typeof(object), "callFunc");
+            Expression [] callParams = (Expression[])rule.Parameters.Clone();
+            callParams[0] = Ast.Read(tmp);
+            rule.SetTarget(
+                Ast.IfThenElse(
+                    Ast.Call(
+                        Ast.Cast(rule.Parameters[0], typeof(OldInstance)),
+                        typeof(OldInstance).GetMethod("TryGetBoundCustomMember"),
+                        Ast.CodeContext(),
+                        Ast.Constant(Symbols.Call),
+                        Ast.Read(tmp)
+                    ),
+                    rule.MakeReturn(context.LanguageContext.Binder,
+                        Ast.Action.Call(
+                            callAction,
+                            typeof(object),
+                            callParams
+                        )
+                    ),
+                    rule.MakeError(context.LanguageContext.Binder,
+                        Ast.Call(
+                            null,
+                            typeof(PythonOps).GetMethod("UncallableError"),
+                            rule.Parameters[0]
+                        )
+                    )
+                )
+            );
+
+            return rule;
         }
 
         private StandardRule<T> MakeMemberRule<T>(MemberAction action, CodeContext context, object[] args) {
@@ -1103,7 +1142,7 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object Call(CodeContext context) {
-            return Call(context, RuntimeHelpers.EmptyObjectArray);
+            return Call(context, ArrayUtils.EmptyObjects);
         }
 
         [SpecialName]

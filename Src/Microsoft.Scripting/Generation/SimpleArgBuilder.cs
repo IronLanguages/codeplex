@@ -15,37 +15,58 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Diagnostics;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
+    /// <summary>
+    /// SimpleArgBuilder produces the value produced by the user as the argument value.  It
+    /// also tracks information about the original parameter and is used to create extended
+    /// methods for params arrays and param dictionary functions.
+    /// </summary>
     public class SimpleArgBuilder : ArgBuilder {
         private int _index;
         private Type _parameterType;
-        private bool _isParams;
+        private bool _isParams, _isParamsDict;
 
         public SimpleArgBuilder(int index, Type parameterType) {
             _index = index;
             _parameterType = parameterType;
         }
 
-        public SimpleArgBuilder(int index, Type parameterType, bool isParams) {
+        public SimpleArgBuilder(int index, Type parameterType, bool isParams, bool isParamsDict) {
+            _index = index;
+            _parameterType = parameterType;
+            _isParams = isParams;
+            _isParamsDict = isParamsDict;
+        }
+
+        public SimpleArgBuilder(int index, Type parameterType, ParameterInfo paramInfo) {
             if (index < 0) throw new ArgumentOutOfRangeException("index");
             if (parameterType == null) throw new ArgumentNullException("parameterType");
 
             _index = index;
             _parameterType = parameterType;
-            _isParams = isParams;
+            _isParams = CompilerHelpers.IsParamArray(paramInfo);
+            _isParamsDict = CompilerHelpers.IsParamDictionary(paramInfo);
         }
 
         public override int Priority {
             get { return 0; }
         }
 
-        public bool IsParams {
+        public bool IsParamsArray {
             get {
                 return _isParams;
+            }
+        }
+
+        public bool IsParamsDict {
+            get {
+                return _isParamsDict;
             }
         }
 
@@ -53,8 +74,14 @@ namespace Microsoft.Scripting.Generation {
             return context.LanguageContext.Binder.Convert(args[_index], _parameterType);
         }
 
-        public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
-            return binder.ConvertExpression(parameters[_index], _parameterType);
+        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+            Debug.Assert(_index < parameters.Length);
+            Debug.Assert(parameters[_index] != null);
+            return context.ConvertExpression(parameters[_index], _parameterType);
+        }
+
+        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
+            return context.CheckExpression(parameters[_index], _parameterType);
         }
 
         public override AbstractValue AbstractBuild(AbstractContext context, IList<AbstractValue> parameters) {

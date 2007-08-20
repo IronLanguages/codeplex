@@ -57,7 +57,7 @@ namespace IronPython.Runtime.Types {
             if (com.TryGetAttr(DefaultContext.DefaultCLS, SymbolTable.StringToId(name), out value)) {
                 return value;
             }
-            return DBNull.Value;
+            return OperationFailed.Value;
         }
 
         [SpecialName]
@@ -769,7 +769,7 @@ namespace IronPython.Runtime.Types {
 
             if (methodDesc != null && methodDesc.IsPropertyGet) {
                 if (methodDesc.Parameters.Length == 0) {
-                    value = new ComDispatch.DispMethod(DispatchObject, methodDesc).Call(context, new object[0]);
+                    value = new ComDispatch.DispMethod(DispatchObject, methodDesc).Call(context, ArrayUtils.EmptyObjects);
                 } else {
                     value = new ComDispatch.DispIndexer(DispatchObject, methodDesc);
                 }
@@ -890,7 +890,6 @@ namespace IronPython.Runtime.Types {
                 return;
             }
 
-            string typeName;
             string typeDocString;
             int dwHelpContext;
             string helpFile;

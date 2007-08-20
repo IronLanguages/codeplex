@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Utils {
 
             for (int i = 0; i < array.Count; i++) {
                 if (array[i] == null) {
-                    throw new ArgumentNullException(System.String.Format("{0}[{1}]", arrayName, i));
+                    throw ExceptionUtils.MakeArgumentItemNullException(i, arrayName);
                 }
             }
         }

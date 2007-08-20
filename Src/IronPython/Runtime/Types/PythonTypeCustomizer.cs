@@ -356,7 +356,7 @@ namespace IronPython.Runtime.Types {
             Type sysType = Builder.UnfinishedType.UnderlyingSystemType;
             if (sysType == typeof(object)) return;
 
-            MethodInfo toStringMethod = sysType.GetMethod("ToString", ReflectionUtils.EmptyTypes);
+            MethodInfo toStringMethod = sysType.GetMethod("ToString", ArrayUtils.EmptyTypes);
 
             if (toStringMethod != null && toStringMethod.DeclaringType == sysType) {
                 AddProtocolMethod(Symbols.String, "ToStringMethod");

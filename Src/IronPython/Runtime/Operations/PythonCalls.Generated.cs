@@ -14,6 +14,8 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
+
 using DefaultContext = IronPython.Runtime.Calls.DefaultContext;
 
 namespace IronPython.Runtime.Operations {
@@ -27,7 +29,7 @@ namespace IronPython.Runtime.Operations {
             FastCallable fc = func as FastCallable;
             if (fc != null) return fc.Call(DefaultContext.Default);
 
-            return PythonCalls.Call(func, RuntimeHelpers.EmptyObjectArray);
+            return PythonCalls.Call(func, ArrayUtils.EmptyObjects);
         }
 
         public static object Call(object func, object arg0) {

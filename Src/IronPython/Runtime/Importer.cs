@@ -66,7 +66,7 @@ namespace IronPython.Runtime {
         /// a module and returns the module.
         /// </summary>
         public object Import(CodeContext context, string fullName, List from) {
-            return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.Globals(context), Builtin.Locals(context), from);
+            return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.globals(context), Builtin.locals(context), from);
         }
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object> MakeImportSite() {
@@ -267,7 +267,7 @@ namespace IronPython.Runtime {
 
             if (SystemState.Builtins.TryGetValue(module.ModuleName, out ty)) {
                 if (typeof(CustomSymbolDictionary).IsAssignableFrom(ty)) {
-                    CustomSymbolDictionary dict = (CustomSymbolDictionary)ty.GetConstructor(ReflectionUtils.EmptyTypes).Invoke(RuntimeHelpers.EmptyObjectArray);
+                    CustomSymbolDictionary dict = (CustomSymbolDictionary)ty.GetConstructor(ArrayUtils.EmptyTypes).Invoke(ArrayUtils.EmptyObjects);
                     //@todo share logic to copy old values in when not already there from reload
                     module.Execute();
                 } else {

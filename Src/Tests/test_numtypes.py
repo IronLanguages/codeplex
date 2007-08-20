@@ -177,11 +177,23 @@ def verify_u(a, op, x_s, x_v, g_s, g_v):
         # unary operator should never fail
         Assert(type(x_v) == type(g_v), get_messageun(a, op, x_s, x_v, g_s, g_v))
 
-def calc(op, *args):
+def calc_1(op, arg1):
     try:
-        return True, op(*args)
+        return True, op(arg1)
     except Exception, e:
-        return False, e
+        return False, e.clsException
+
+def calc_2(op, arg1, arg2):
+    try:
+        return True, op(arg1, arg2)
+    except Exception, e:
+        return False, e.clsException
+
+def calc_0(op):
+    try:
+        return True, op()
+    except Exception, e:
+        return False, e.clsException
 
 def verify_implemented_b(implemented, op, a, b):
     if not implemented:
@@ -206,14 +218,14 @@ def validate_binary_ops(all, biops):
             py_r, clr_r = r_rec
 
             for name, bin in biops:
-                x_s, x_v = calc(bin, py_l, py_r)
+                x_s, x_v = calc_2(bin, py_l, py_r)
 
                 for l in clr_l:
                     for r in clr_r:
                         implemented = False
 
                         # direct binary operator
-                        g_s, g_v = calc(bin, l, r)
+                        g_s, g_v = calc_2(bin, l, r)
                         if g_v != NotImplemented:
                             implemented = True
                             verify_b(l, r, name, x_s, x_v, g_s, g_v)
@@ -224,7 +236,7 @@ def validate_binary_ops(all, biops):
                         m_name = "__" + name + "__"
                         if hasattr(l, m_name):
                             m = getattr(l, m_name)
-                            g_s, g_v = calc(m, r)
+                            g_s, g_v = calc_1(m, r)
                             if g_v != NotImplemented:
                                 implemented = True
                                 verify_b(l, r, m_name, x_s, x_v, g_s, g_v)
@@ -234,7 +246,7 @@ def validate_binary_ops(all, biops):
                         m_name = "__r" + name + "__"
                         if hasattr(r, m_name):
                             m = getattr(r, m_name)
-                            g_s, g_v = calc(m, l)
+                            g_s, g_v = calc_1(m, l)
                             if g_v != NotImplemented:
                                 implemented = True
                                 verify_b(l, r, m_name, x_s, x_v, g_s, g_v)
@@ -254,13 +266,13 @@ def validate_unary_ops(all):
         py_l, clr_l = l_rec
 
         for name, un in unops:
-            x_s, x_v = calc(un, py_l)
+            x_s, x_v = calc_1(un, py_l)
 
             for l in clr_l:
                 implemented = False
 
                 # direct unary operator
-                g_s, g_v = calc(un, l)
+                g_s, g_v = calc_1(un, l)
                 if g_v != NotImplemented:
                     implemented = True
                     verify_u(l, name, x_s, x_v, g_s, g_v)
@@ -270,7 +282,7 @@ def validate_unary_ops(all):
                 m_name = "__" + name + "__"
                 if hasattr(l, m_name):
                     m = getattr(l, m_name)
-                    g_s, g_v = calc(m)
+                    g_s, g_v = calc_0(m)
                     if g_v != NotImplemented:
                         implemented = True
                         verify_u(l, m_name, x_s, x_v, g_s, g_v)

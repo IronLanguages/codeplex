@@ -30,6 +30,7 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
@@ -965,9 +966,13 @@ namespace IronPython.Runtime.Operations {
 
             object res;
             if (!DynamicHelpers.GetDynamicType(func).TryInvokeBinaryOperator(context, Operators.Call, func, args, out res))
-                throw PythonOps.TypeError("{0} is not callable", DynamicHelpers.GetDynamicType(func));
+                throw UncallableError(func);
 
             return res;
+        }
+
+        public static Exception UncallableError(object func) {
+            return PythonOps.TypeError("{0} is not callable", DynamicTypeOps.GetName(func));
         }
 
         /// <summary>
@@ -1927,7 +1932,7 @@ namespace IronPython.Runtime.Operations {
                         if (tc != null) {
                             Type nonGenericType;
                             if (!tc.TryGetNonGenericType(out nonGenericType)) {
-                                throw PythonOps.TypeError("cannot derive from open generic types " + Builtin.Repr(tc).ToString());
+                                throw PythonOps.TypeError("cannot derive from open generic types " + Builtin.repr(tc).ToString());
                             }
                             newBases[i] = DynamicHelpers.GetDynamicTypeFromType(nonGenericType);
                         } else {
@@ -1972,7 +1977,7 @@ namespace IronPython.Runtime.Operations {
         /// <param name="msg">Object representing the assertion message</param>
         public static void RaiseAssertionError(object msg) {
             if (msg == null) {
-                throw PythonOps.AssertionError(String.Empty, RuntimeHelpers.EmptyObjectArray);
+                throw PythonOps.AssertionError(String.Empty, ArrayUtils.EmptyObjects);
             } else {
                 string message = PythonOps.ToString(msg);
                 throw PythonOps.AssertionError("{0}", new object[] { message });

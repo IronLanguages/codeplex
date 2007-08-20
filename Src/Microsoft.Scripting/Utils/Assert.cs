@@ -57,5 +57,11 @@ namespace Microsoft.Scripting.Utils {
                 Debug.Assert(item != null);
             }
         }
+
+        [Conditional("DEBUG")]
+        public static void IsTrue(Function<bool> predicate) {
+            Contract.RequiresNotNull(predicate, "predicate");
+            Debug.Assert(predicate());
+        }
     }
 }

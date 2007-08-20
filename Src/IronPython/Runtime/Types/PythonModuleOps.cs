@@ -24,6 +24,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Types;
 
 using IronPython.Hosting;
@@ -274,7 +275,7 @@ namespace IronPython.Runtime.Types {
 
                 if (nt == NameType.None) continue;
 
-                dict[SymbolTable.StringToId(strName)] = pi.GetValue(null, RuntimeHelpers.EmptyObjectArray);
+                dict[SymbolTable.StringToId(strName)] = pi.GetValue(null, ArrayUtils.EmptyObjects);
             }
 
             foreach (Type t in type.GetNestedTypes(BindingFlags.Public)) {

@@ -42,7 +42,7 @@ namespace IronPython.Runtime.Types {
             if (reflectedAssembly.TryGetBoundCustomMember(DefaultContext.Default, SymbolTable.StringToId(name), out value)) {
                 return value;
             }
-            return DBNull.Value;
+            return OperationFailed.Value;
         }
 
         [SpecialName]

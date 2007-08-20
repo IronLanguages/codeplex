@@ -50,8 +50,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly Type _type;
         private readonly Expression _defaultValue;
 
-        private Type _knownType;
-
         private int _parameter;                     // parameter index
         private bool _parameterArray;               // should be part of parameter array
         private Storage _storage;                   // storage for the variable, used to create slots
@@ -116,11 +114,6 @@ namespace Microsoft.Scripting.Ast {
             get { return _unassigned; }
         }
 
-        public Type KnownType {
-            get { return _knownType; }
-            set { _knownType = value; }
-        }
-
         public void UnassignedUse() {
             _unassigned = true;
         }
@@ -175,7 +168,8 @@ namespace Microsoft.Scripting.Ast {
                             if (_defaultValue != null) {                                
                                 _defaultValue.EmitAs(cg, slot.Type);
                                 slot.EmitSet(cg);
-                            } else {
+                            } else if (_type == typeof(object)) {
+                                // Only set variables of type object to "Uninitialized"
                                 slot.EmitSetUninitialized(cg);
                             }
                         }

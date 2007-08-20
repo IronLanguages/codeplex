@@ -12,24 +12,18 @@
  *
  *
  * ***************************************************************************/
-
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-using Microsoft.Scripting.Actions;
-
 namespace Microsoft.Scripting {
-    public class ParamsMethodMaker {
-        private MethodCandidate _baseTarget;
+    /// <summary>
+    /// Singleton instance returned from an operator method when the operator method cannot provide a value.
+    /// </summary>
+    public class OperationFailed {
+        public static OperationFailed Value = new OperationFailed();
 
-        public ParamsMethodMaker(MethodCandidate baseTarget) {
-            this._baseTarget = baseTarget;
-        }
-
-        public MethodCandidate MakeTarget(ActionBinder binder, int count) {
-            return _baseTarget.MakeParamsExtended(binder, count);
+        private OperationFailed() {
         }
     }
-
 }

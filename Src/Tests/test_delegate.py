@@ -85,6 +85,8 @@ for x in [(IronPythonTest.DelegateTest.StaticEvent, IronPythonTest.DelegateTest.
     fire(glblSelf, glblArgs)
         
     AreEqual(handlerCalled, True)
+    
+    event -= Handler
 
 def ParamsHandler(self, args):
     global glblSelf, glblArgs, handlerCalled
@@ -108,6 +110,8 @@ for x in [(IronPythonTest.DelegateTest.StaticParamsEvent, IronPythonTest.Delegat
         fire(glblSelf, *tuple(range(x)))
         
         AreEqual(handlerCalled, True)
+        
+    event -= ParamsHandler
 
 def BigParamsHandler(self, a, b, c, d, args):
     global glblSelf, glblArgs, handlerCalled
@@ -136,6 +140,8 @@ for x in [(IronPythonTest.DelegateTest.StaticBigParamsEvent, IronPythonTest.Dele
         
         AreEqual(handlerCalled, True)
 
+    event -= BigParamsHandler        
+
 # out param
 def OutHandler(sender, ret):
     global glblSelf, handlerCalled
@@ -158,6 +164,8 @@ for x in [(IronPythonTest.DelegateTest.StaticOutEvent, IronPythonTest.DelegateTe
     AreEqual(fire(glblSelf), 23)
     
     AreEqual(handlerCalled, True)
+    
+    event -= OutHandler
 
 # ref param
 def RefHandler(sender, refArg):
@@ -182,6 +190,8 @@ for x in [(IronPythonTest.DelegateTest.StaticRefEvent, IronPythonTest.DelegateTe
     AreEqual(fire(glblSelf, 42), 23)
     
     AreEqual(handlerCalled, True)
+    
+    event -= RefHandler
 
 # out w/ return type
 def OutHandler(sender, ret):
@@ -208,6 +218,8 @@ for x in [(IronPythonTest.DelegateTest.StaticOutReturnEvent, IronPythonTest.Dele
     
     AreEqual(handlerCalled, True)
     
+    event -= OutHandler
+    
 # ref w/ a return type
 def RefHandler(sender, refArg):
     global glblSelf, handlerCalled
@@ -232,6 +244,8 @@ for x in [(IronPythonTest.DelegateTest.StaticRefReturnEvent, IronPythonTest.Dele
     AreEqual(fire(glblSelf, 42), (23, 42))
     
     AreEqual(handlerCalled, True)
+    
+    event -= RefHandler
 
 
 #######
@@ -644,6 +658,7 @@ def test_python_code_as_event_handler():
     IronPythonTest.Events.OtherStaticTest += myhandler
     IronPythonTest.Events.CallOtherStatic('abc', EventArgs.Empty)
     AreEqual(called, True)
+    IronPythonTest.Events.OtherStaticTest -= myhandler
 
 @disabled("http://www.codeplex.com/IronPython/WorkItem/View.aspx?WorkItemId=7992")
 def test_AddDelegateFromCSharpAndRemoveFromPython():
