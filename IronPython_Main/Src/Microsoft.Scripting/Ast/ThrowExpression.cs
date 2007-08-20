@@ -63,6 +63,12 @@ namespace Microsoft.Scripting.Ast {
             }
             walker.PostWalk(this);
         }
+
+        public Expression Exception {
+            get {
+                return _val;
+            }
+        }
     }
 
     public static partial class Ast {

@@ -104,16 +104,18 @@ namespace Microsoft.Scripting.Ast {
         public override void Emit(CodeGen cg) {
             // Codegen is affected by presence/absence of loop control statements
             // (break/continue) or return statement in finally clause
-            bool loopControl;
-            bool flowControl;
-            TryFlowAnalyzer.Analyze(FinallyStatement, out flowControl, out loopControl);
+            TryFlowResult flow = TryFlowAnalyzer.Analyze(FinallyStatement);
 
             //
             // Initialize the flow control flag
             //
-            Slot flowControlFlag = cg.GetLocalTmp(typeof(int));
-            cg.EmitInt(CodeGen.FinallyExitsNormally);
-            flowControlFlag.EmitSet(cg);
+            Slot flowControlFlag = null;
+
+            if (flow.Any) {
+                flowControlFlag = cg.GetLocalTmp(typeof(int));
+                cg.EmitInt(CodeGen.FinallyExitsNormally);
+                flowControlFlag.EmitSet(cg);
+            }
 
             /******************************************************************/
             // 1. ENTERING TRY
@@ -179,7 +181,9 @@ namespace Microsoft.Scripting.Ast {
 
             cg.PopTargets(TargetBlockType.Try);
 
-            if (cg.IsGenerator || flowControl) {
+            if (flow.Return || flow.Yield) {
+                Debug.Assert(flowControlFlag != null);
+
                 Label noReturn = cg.DefineLabel();
 
                 flowControlFlag.EmitGet(cg);
@@ -190,7 +194,7 @@ namespace Microsoft.Scripting.Ast {
                     // return true from the generator method
                     cg.Emit(OpCodes.Ldc_I4_1);
                     cg.EmitReturn();
-                } else if (flowControl) {
+                } else if (flow.Any) {
                     // return the actual value
                     cg.EmitReturnValue();
                     cg.EmitReturn();
@@ -198,7 +202,9 @@ namespace Microsoft.Scripting.Ast {
                 cg.MarkLabel(noReturn);
             }
 
-            if (loopControl) {
+            if (flow.Loop) {
+                Debug.Assert(flowControlFlag != null);
+
                 Label noReturn = cg.DefineLabel();
 
                 noReturn = cg.DefineLabel();

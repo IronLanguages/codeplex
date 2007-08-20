@@ -120,6 +120,40 @@ namespace Microsoft.Scripting.Ast {
             return result;
         }
 
+        internal override object EvaluateAssign(CodeContext context, object value) {
+            object result = null;
+            for (int index = 0; index < _expressions.Count; index++) {
+                Expression current = _expressions[index];
+
+                if (current != null) {
+                    if (index == _valueIndex) {
+                        result = current.EvaluateAssign(context, value);
+                    } else {
+                        current.Evaluate(context);
+                    }
+                }
+            }
+            return result;
+        }
+
+        internal override void EmitAddress(CodeGen cg, Type asType) {
+            for (int index = 0; index < _expressions.Count; index++) {
+                Expression current = _expressions[index];
+
+                // Emit the expression
+                if (index == _valueIndex) {
+                    current.EmitAddress(cg, asType);
+                } else {
+                    current.Emit(cg);
+                    // If we don't want the expression just emitted as the result,
+                    // pop it off of the stack, unless it is a void expression.
+                    if (current.ExpressionType != typeof(void)) {
+                        cg.Emit(OpCodes.Pop);
+                    }
+                }
+            }
+        }
+
         public override void Walk(Walker walker) {
             if (walker.Walk(this)) {
                 foreach (Expression e in _expressions) {

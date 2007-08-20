@@ -18,6 +18,8 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 
+using System.Diagnostics;
+
 namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Slot refers to a reference to an object. For eg, a global variable, a local variable, etc.
@@ -70,6 +72,9 @@ namespace Microsoft.Scripting.Generation {
 
             // Emit the following:
             //     <name> = Uninitialized.instance;
+
+            Debug.Assert(Type == typeof(object));
+
             cg.EmitUninitialized();
             EmitSet(cg);
         }

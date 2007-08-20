@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.Generation {
             get {
                 if (_initializer == null) {
                     _initializer = _myType.DefineTypeInitializer();
-                    _initGen = CreateCodeGen(_initializer, _initializer.GetILGenerator(), ReflectionUtils.EmptyTypes);
+                    _initGen = CreateCodeGen(_initializer, _initializer.GetILGenerator(), ArrayUtils.EmptyTypes);
                 }
                 return _initGen;
             }
@@ -119,7 +119,7 @@ namespace Microsoft.Scripting.Generation {
             FieldBuilder contextField = _myType.DefineField(CodeContext.ContextFieldName,
                     typeof(CodeContext),
                     FieldAttributes.Public | FieldAttributes.Static);
-            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(Reflection.EmptyTypes), Runtime.Operations.RuntimeHelpers.EmptyObjectArray));
+            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(ArrayUtils.EmptyTypes), Runtime.Operations.ArrayUtils.EmptyObjects));
             _contextSlot = new StaticFieldSlot(contextField);
         }
 
@@ -155,7 +155,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public PropertyBuilder DefineProperty(string name, PropertyAttributes attrs, Type returnType) {
-            return _myType.DefineProperty(name, attrs, returnType, ReflectionUtils.EmptyTypes);
+            return _myType.DefineProperty(name, attrs, returnType, ArrayUtils.EmptyTypes);
         }
 
         private const MethodAttributes MethodAttributesToEraseInOveride =
@@ -230,7 +230,7 @@ namespace Microsoft.Scripting.Generation {
 
         public CodeGen DefineStaticConstructor() {
             ConstructorBuilder cb = _myType.DefineTypeInitializer();
-            return CreateCodeGen(cb, cb.GetILGenerator(), ReflectionUtils.EmptyTypes);
+            return CreateCodeGen(cb, cb.GetILGenerator(), ArrayUtils.EmptyTypes);
         }
 
         public void SetCustomAttribute(Type type, object[] values) {

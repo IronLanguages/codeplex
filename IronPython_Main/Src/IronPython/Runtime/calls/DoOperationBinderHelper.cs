@@ -235,10 +235,10 @@ namespace IronPython.Runtime.Calls {
             rule.MakeTest(types);
 
             List<Statement> stmts = new List<Statement>();
-            if (MakeOneTarget(fTarget, rule, stmts, false)) {
-                if (MakeOneTarget(rTarget, rule, stmts, true)) {
-                    if (MakeOneCompare(fCmpTarget, rule, stmts, false)) {
-                        if (MakeOneCompare(rCmpTarget, rule, stmts, true)) {
+            if (MakeOneTarget(fTarget, rule, stmts, false, null)) {
+                if (MakeOneTarget(rTarget, rule, stmts, true, null)) {
+                    if (MakeOneCompare(fCmpTarget, rule, stmts, false, types)) {
+                        if (MakeOneCompare(rCmpTarget, rule, stmts, true, types)) {
                             stmts.Add(MakeFallbackCompare(rule));
                         }
                     }
@@ -371,8 +371,8 @@ namespace IronPython.Runtime.Calls {
             rule.MakeTest(types);
 
             List<Statement> stmts = new List<Statement>();
-            if (MakeOneTarget(fTarget, rule, stmts, false)) {
-                if (MakeOneTarget(rTarget, rule, stmts, false)) {
+            if (MakeOneTarget(fTarget, rule, stmts, false, types)) {
+                if (MakeOneTarget(rTarget, rule, stmts, false, types)) {
                     stmts.Add(MakeBinaryThrow(rule));
                 }
             }
@@ -411,6 +411,7 @@ namespace IronPython.Runtime.Calls {
 
                     if (Action.Operation == Operators.GetItem) {
                         call = cand.Target.MakeExpression(Binder,
+                            ret,
                             ret.Parameters,
                             CompilerHelpers.ConvertToTypes(types));
                     } else {
@@ -418,6 +419,7 @@ namespace IronPython.Runtime.Calls {
                             ret.Parameters[ret.Parameters.Length - 1],
                             cand.Target.MakeExpression(
                                 Binder,
+                                ret,
                                 ret.Parameters,
                                 CompilerHelpers.ConvertToTypes(types))
                         );
@@ -476,9 +478,13 @@ namespace IronPython.Runtime.Calls {
 
         private static Expression[] GetGetIndexParameters(StandardRule<T> ret) {
             return ArrayUtils.RemoveFirst(ret.Parameters);
-        }        
+        }
 
         private Expression MakeCall(MethodTarget target, StandardRule<T> block, bool reverse) {
+            return MakeCall(target, block, reverse, null);
+        }
+
+        private Expression MakeCall(MethodTarget target, StandardRule<T> block, bool reverse, DynamicType[] types) {
             Expression[] vars = block.Parameters;
             if (reverse) {
                 Expression[] newVars = new Expression[2];
@@ -486,9 +492,18 @@ namespace IronPython.Runtime.Calls {
                 newVars[1] = vars[0];
                 vars = newVars;
             }
-            return target.MakeExpression(Binder, vars);
+            
+            Type[] clrtypes = null;
+            if (types != null) {
+                clrtypes = CompilerHelpers.ConvertToTypes(types);
+                if (reverse) {
+                    Type temp = clrtypes[0];
+                    clrtypes[0] = clrtypes[1];
+                    clrtypes[1] = temp;
+                }
+            }
+            return target.MakeExpression(Binder, block, vars, clrtypes);
         }
-
 
         private bool MakeOneComparisonTarget(MethodTarget target, StandardRule<T> rule, List<Statement> stmts, bool reverse) {
             return MakeOneComparisonTarget(target, rule, stmts, reverse, null);
@@ -545,19 +560,19 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private bool MakeOneTarget(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse) {
+        private bool MakeOneTarget(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse, DynamicType [] types) {
             if (target == null) return true;
 
             if (ReturnsNotImplemented(target)) {
                 Variable tmp = block.GetTemporary(target.ReturnType, "tmp");
                 stmts.Add(Ast.IfThen(
                     Ast.NotEqual(
-                        Ast.Assign(tmp, MakeCall(target, block, reverse)),
+                        Ast.Assign(tmp, MakeCall(target, block, reverse, types)),
                         Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
                     block.MakeReturn(Binder, Ast.ReadDefined(tmp))));
                 return true;
             } else {
-                stmts.Add(block.MakeReturn(Binder, MakeCall(target, block, reverse)));
+                stmts.Add(block.MakeReturn(Binder, MakeCall(target, block, reverse, types)));
                 return false;
             }
         }
@@ -587,19 +602,19 @@ namespace IronPython.Runtime.Calls {
                     block.Parameters[0], block.Parameters[1])));
         }
 
-        private bool MakeOneCompare(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse) {
+        private bool MakeOneCompare(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse, DynamicType[] types) {
             if (target == null) return true;
 
             if (ReturnsNotImplemented(target)) {
                 Variable tmp = block.GetTemporary(target.ReturnType, "tmp");
                 stmts.Add(Ast.IfThen(
                     Ast.NotEqual(
-                        Ast.Assign(tmp, MakeCall(target, block, reverse)),
+                        Ast.Assign(tmp, MakeCall(target, block, reverse, types)),
                         Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
                     MakeCompareTest(Ast.ReadDefined(tmp), block, reverse)));
                 return true;
             } else {
-                stmts.Add(MakeCompareTest(MakeCall(target, block, reverse), block, reverse));
+                stmts.Add(MakeCompareTest(MakeCall(target, block, reverse, types), block, reverse));
                 return false;
             }
         }

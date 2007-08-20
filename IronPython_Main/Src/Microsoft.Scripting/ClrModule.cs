@@ -143,13 +143,9 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        private static DynamicType _referenceType;
         public DynamicType Reference {
             get {
-                if (_referenceType == null) {
-                    _referenceType  = DynamicHelpers.GetDynamicTypeFromType(typeof(Reference<>));
-                }
-                return _referenceType;
+                return StrongBox;
             }
         }
 

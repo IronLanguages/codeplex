@@ -20,6 +20,7 @@ using System.Text;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
@@ -121,7 +122,7 @@ namespace IronPython.Runtime {
         }
 
         public Tuple() {
-            this.data = RuntimeHelpers.EmptyObjectArray;
+            this.data = ArrayUtils.EmptyObjects;
         }
 
         internal Tuple(bool expandable, object[] items) {

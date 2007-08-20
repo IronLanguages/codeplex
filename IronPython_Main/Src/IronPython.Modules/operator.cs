@@ -147,11 +147,11 @@ namespace IronPython.Modules {
         }
         [PythonName("abs")]
         public static object Abs(CodeContext context, object o) {
-            return Builtin.Abs(context, o);
+            return Builtin.abs(context, o);
         }
         [PythonName("__abs__")]
         public static object OperatorAbs(CodeContext context, object o) {
-            return Builtin.Abs(context, o);
+            return Builtin.abs(context, o);
         }
         [PythonName("add")]
         public static object Add(object a, object b) {

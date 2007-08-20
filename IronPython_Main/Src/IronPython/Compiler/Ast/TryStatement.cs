@@ -31,7 +31,7 @@ namespace IronPython.Compiler.Ast {
         private Statement _else;
         private Statement _finally;
 
-        private bool GenerateNewTryStatement = false;
+        private static bool GenerateNewTryStatement = false;
 
         public TryStatement(Statement body, TryStatementHandler[] handlers, Statement else_, Statement finally_) {
             _body = body;

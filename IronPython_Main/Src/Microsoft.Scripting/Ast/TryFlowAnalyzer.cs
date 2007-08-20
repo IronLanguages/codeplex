@@ -16,21 +16,68 @@
 using System.Diagnostics;
 
 namespace Microsoft.Scripting.Ast {
+
     /// <summary>
-    /// AST walker to analyze control flow for the DynamicTryStatement code generation.
+    /// The structure to capture the result of the control flow for the
+    /// try statement code generation.
+    /// </summary>
+    struct TryFlowResult {
+        /// <summary>
+        /// There is a top level "break" in the analyzed statement.
+        /// Breaks nested in "switch" or loops do not count because they
+        /// do not exit the block of code being analyzed.
+        /// </summary>
+        private bool _break;
+
+        /// <summary>
+        /// There is a top level continue in the analyzed block.
+        /// Continue statement nested in the loop doesn't count as it
+        /// doesn't leave the block being analyzed.
+        /// </summary>
+        private bool _continue;
+
+        /// <summary>
+        /// There is a return statement in the analyzed block.
+        /// </summary>
+        private bool _return;
+
+        /// <summary>
+        /// There is a yield statement in the analyzed block of code.
+        /// </summary>
+        private bool _yield;
+
+        public bool Break {
+            get { return _break; }
+            set { _break = value; }
+        }
+        public bool Continue {
+            get { return _continue; }
+            set { _continue = value; }
+        }
+        public bool Return {
+            get { return _return; }
+            set { _return = value; }
+        }
+        public bool Yield {
+            get { return _yield; }
+            set { _yield = value; }
+        }
+        public bool Any {
+            get { return _break || _continue || _return || _yield; }
+        }
+        public bool Loop {
+            get { return _break || _continue; }
+        }
+    };
+
+    /// <summary>
+    /// AST walker to analyze control flow for the try statement code generation.
     /// </summary>
     class TryFlowAnalyzer : CodeBlockWalker {
         /// <summary>
-        /// Any control flow (return, break, continue)
+        /// Tracking the result of the analysis.
         /// </summary>
-        private bool _flow;
-
-        /// <summary>
-        /// Any loop control flow directly contained within
-        /// the try block (not in nested loops which don't
-        /// affect the try block)
-        /// </summary>
-        private bool _loop;
+        private TryFlowResult _result;
 
         /// <summary>
         /// Nested loops counter. We are only interested in
@@ -38,40 +85,49 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private int _nesting;
 
-        public static void Analyze(Statement statement, out bool flow, out bool loop) {
+        /// <summary>
+        /// Nested switch statement counter. We are only interested
+        /// in the top level "break" statement. One nested inside
+        /// switch is fully contained.
+        /// </summary>
+        private int _switch;
+
+        public static TryFlowResult Analyze(Statement statement) {
             if (statement == null) {
-                // No return in null statement
-                flow = loop = false;
+                return new TryFlowResult();
             } else {
                 // find it now.
                 TryFlowAnalyzer tfa = new TryFlowAnalyzer();
                 statement.Walk(tfa);
 
                 Debug.Assert(tfa._nesting == 0);
+                Debug.Assert(tfa._switch == 0);
 
-                flow = tfa._flow;
-                loop = tfa._loop;
+                return tfa._result;
             }
         }
 
         public override bool Walk(BreakStatement node) {
-            if (_nesting == 0) {
-                _flow = true;
-                _loop = true;
+            if (_nesting == 0 && _switch == 0) {
+                _result.Break = true;
             }
             return true;
         }
 
         public override bool Walk(ContinueStatement node) {
             if (_nesting == 0) {
-                _flow = true;
-                _loop = true;
+                _result.Continue = true;
             }
             return true;
         }
 
         public override bool Walk(ReturnStatement node) {
-            _flow = true;
+            _result.Return = true;
+            return true;
+        }
+
+        public override bool Walk(YieldStatement node) {
+            _result.Yield = true;
             return true;
         }
 
@@ -94,6 +150,14 @@ namespace Microsoft.Scripting.Ast {
 
         public override void PostWalk(DoStatement node) {
             _nesting--;
+        }
+
+        public override bool Walk(SwitchStatement node) {
+            _switch++;
+            return true;
+        }
+        public override void PostWalk(SwitchStatement node) {
+            _switch--;
         }
     }
 }

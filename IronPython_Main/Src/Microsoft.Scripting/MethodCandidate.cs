@@ -33,7 +33,9 @@ namespace Microsoft.Scripting {
             _narrowingLevel = narrowingLevel;
         }
 
-        public MethodCandidate(MethodTarget target, List<ParameterWrapper> parameters) {
+        internal MethodCandidate(MethodTarget target, List<ParameterWrapper> parameters) {
+            Debug.Assert(target != null);
+
             _target = target;
             _parameters = parameters;
             _narrowingLevel = NarrowingLevel.None;
@@ -45,6 +47,11 @@ namespace Microsoft.Scripting {
         }
 
         public bool IsApplicable(Type[] types, SymbolId[] names, NarrowingLevel allowNarrowing) {
+            foreach (ParameterWrapper pw in _parameters) {
+                // can't bind to methods that are params dictionaries, only to their extended forms.
+                if (pw.IsParamsDict) return false;
+            }
+
             if (!TryGetNormalizedArguments(types, names, out types)) {
                 return false;
             }
@@ -53,6 +60,8 @@ namespace Microsoft.Scripting {
         }
 
         public bool IsApplicable(Type[] types, NarrowingLevel allowNarrowing) {
+            Debug.Assert(types.Length == _parameters.Count);
+
             for (int i = 0; i < types.Length; i++) {
                 if (!_parameters[i].HasConversionFrom(types[i], allowNarrowing)) {
                     return false;
@@ -83,13 +92,13 @@ namespace Microsoft.Scripting {
                 args = argTypes;
                 return true;
             }
-            
+
             T[] res = new T[argTypes.Length];
             Array.Copy(argTypes, res, argTypes.Length - names.Length);
 
             for (int i = 0; i < names.Length; i++) {
                 bool found = false;
-                for(int j = 0; j<_parameters.Count; j++) {
+                for (int j = 0; j < _parameters.Count; j++) {
                     if (_parameters[j].Name == names[i]) {
                         if (res[j] != null) {
                             args = null;
@@ -108,7 +117,7 @@ namespace Microsoft.Scripting {
                     return false;
                 }
             }
-
+            
             args = res;
             return true;
         }
@@ -133,30 +142,67 @@ namespace Microsoft.Scripting {
             return 0;
         }
 
-        public MethodCandidate MakeParamsExtended(ActionBinder binder, int count) {
-            if (count < _parameters.Count - 1) return null;
+        /// <summary>
+        /// Builds a new MethodCandidate which takes count arguments and the provided list of keyword arguments.
+        /// 
+        /// The basic idea here is to figure out which parameters map to params or a dictionary params and
+        /// fill in those spots w/ extra ParameterWrapper's.  
+        /// </summary>
+        public MethodCandidate MakeParamsExtended(ActionBinder binder, int count, SymbolId[] names) {
+            List<ParameterWrapper> newParameters = new List<ParameterWrapper>(count);
+            // if we don't have a param array we'll have a param dict which is type object
+            Type elementType = null;  
+            int index = -1, kwIndex = -1;
 
-            List<ParameterWrapper> newParameters = new List<ParameterWrapper>(_parameters.Count - 1);
-            Type elementType = null;
-            int index = -1;
+            // keep track of which kw args map to a real argument, and which ones
+            // map to the params dictionary.
+            List<SymbolId> unusedNames = new List<SymbolId>(names);
+            List<int> unusedNameIndexes = new List<int>();
+            for (int i = 0; i < unusedNames.Count; i++) {
+                unusedNameIndexes.Add(i);
+            }
+
             for (int i = 0; i < _parameters.Count; i++) {
                 ParameterWrapper pw = _parameters[i];
 
-                if (!_parameters[i].IsParameterArray) {
-                    newParameters.Add(pw);
-                } else {
+                if (_parameters[i].IsParamsDict) {
+                    kwIndex = i;
+                } else if (_parameters[i].IsParamsArray) {
                     elementType = pw.Type.GetElementType();
                     index = i;
+                } else {
+                    for (int j = 0; j < unusedNames.Count; j++) {
+                        if (unusedNames[j] == _parameters[i].Name) {
+                            unusedNames.RemoveAt(j);
+                            unusedNameIndexes.RemoveAt(j);
+                            break;
+                        }
+                    }
+                    newParameters.Add(pw);
                 }
             }
-            Debug.Assert(elementType != null);
 
-            while (newParameters.Count < count) {
-                ParameterWrapper param = new ParameterWrapper(binder, elementType);
-                newParameters.Insert(index, param);
+            if (index != -1) {
+                while (newParameters.Count < (count - unusedNames.Count)) {
+                    ParameterWrapper param = new ParameterWrapper(binder, elementType);
+                    newParameters.Insert(System.Math.Min(index, newParameters.Count), param);
+                }
             }
 
-            return new MethodCandidate(_target.MakeParamsExtended(count), newParameters);
+            if (kwIndex != -1) {
+                foreach (SymbolId si in unusedNames) {
+                    ParameterWrapper pw = new ParameterWrapper(binder, typeof(object), si);
+                    newParameters.Add(pw);
+                }
+            } else if (unusedNames.Count != 0) {
+                // unbound kw args and no where to put them, can't call...
+                return null;
+            }
+
+            // if we have too many or too few args we also can't call
+            if(count != newParameters.Count) return null;
+
+            return new MethodCandidate(_target.MakeParamsExtended(count, unusedNames.ToArray(), unusedNameIndexes.ToArray()), newParameters);
         }
 
         public override string ToString() {
@@ -184,7 +230,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public IList<ParameterWrapper> Parameters {
+        internal IList<ParameterWrapper> Parameters {
             get {
                 return _parameters;
             }

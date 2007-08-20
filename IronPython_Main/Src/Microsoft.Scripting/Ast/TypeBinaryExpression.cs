@@ -86,6 +86,7 @@ namespace Microsoft.Scripting.Ast {
     public static partial class Ast {
         public static TypeBinaryExpression TypeIs(Expression expression, Type type) {
             if (!type.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
+            if (type.IsByRef) throw new ArgumentException("type must not be ByRef");
 
             return TypeIs(SourceSpan.None, expression, type);
         }

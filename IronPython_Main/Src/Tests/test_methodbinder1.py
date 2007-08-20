@@ -278,8 +278,10 @@ def test_bool_asked():
 def test_user_defined_conversion():
     class CP1: 
         def __int__(self): return 100
+    
     class CP2(object): 
         def __int__(self): return 99
+    
     class CP3: pass        
     cp1, cp2, cp3 = CP1(), CP2(), CP3()
 
@@ -406,7 +408,7 @@ IListInt Array IEnumerableInt IEnumeratorInt NullableInt
 def test_pass_in_clrReference():
     import clr        
     _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference[int]())
-    _repeat_with_one_arg('Object OutInt32', lambda : clr.Reference[object](None))
+    _repeat_with_one_arg('Object', lambda : clr.Reference[object](None))
     _repeat_with_one_arg('Object RefInt32  OutInt32', lambda : clr.Reference[int](10))
     _repeat_with_one_arg('Object ', lambda : clr.Reference[float](123.123))
     _repeat_with_one_arg('Object', lambda : clr.Reference[type](str)) # ref.Value = (type)
@@ -533,8 +535,8 @@ def test_other_concern():
     for (f, a, b, c, d) in [ 
         ('M850', False, False, True, False), 
         ('M851', False, False, False, True), 
-        ('M852', True, False, True, False), 
-        ('M853', True, False, False, True), 
+        ('M852', False, False, True, False), 
+        ('M853', False, False, False, True), 
     ]:
         expect = (f in 'M850 M852') and S1 or C1
         func = getattr(target, f)
@@ -551,7 +553,7 @@ def test_other_concern():
     AssertError(TypeError, target.M854, clr.Reference[int](10))
     
     # call 855
-    target.M855(clr.Reference[object]()); AreEqual(Flag.Value, 855)
+    AssertError(TypeError, target.M855, clr.Reference[object]())
     AssertError(TypeError, target.M855, clr.Reference[int](10))
     
     # call 854 and 855 with Reference[bool]

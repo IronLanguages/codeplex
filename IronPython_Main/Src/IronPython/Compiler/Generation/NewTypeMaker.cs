@@ -203,7 +203,7 @@ namespace IronPython.Compiler.Generation {
                     throw PythonOps.TypeError(typeName + ": unsupported base type for new-style class: " + baseCLIType);
                 }
 
-                IList<Type> baseInterfaces = ReflectionUtils.EmptyTypes;
+                IList<Type> baseInterfaces = ArrayUtils.EmptyTypes;
                 Type curTypeToExtend = curBasePythonType.ExtensionType;
                 if (curBasePythonType.ExtensionType.IsInterface) {
                     baseInterfaces = new Type[] { curTypeToExtend };
@@ -501,10 +501,10 @@ namespace IronPython.Compiler.Generation {
                 if (origIndex >= 0) {
                     if (pis[origIndex].IsDefined(typeof(ParamArrayAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
-                            typeof(ParamArrayAttribute).GetConstructor(ReflectionUtils.EmptyTypes), RuntimeHelpers.EmptyObjectArray));
+                            typeof(ParamArrayAttribute).GetConstructor(ArrayUtils.EmptyTypes), ArrayUtils.EmptyObjects));
                     } else if (pis[origIndex].IsDefined(typeof(ParamDictionaryAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
-                            typeof(ParamDictionaryAttribute).GetConstructor(ReflectionUtils.EmptyTypes), RuntimeHelpers.EmptyObjectArray));
+                            typeof(ParamDictionaryAttribute).GetConstructor(ArrayUtils.EmptyTypes), ArrayUtils.EmptyObjects));
                     }
                 }
             }
@@ -843,7 +843,7 @@ namespace IronPython.Compiler.Generation {
                 CodeGen getter = _tg.DefineMethod(MethodAttributes.Public,
                         "get_$SlotValues",
                         tbp[0],
-                        ReflectionUtils.EmptyTypes,
+                        ArrayUtils.EmptyTypes,
                         ArrayUtils.EmptyStrings);
 
                 _slotsField.EmitGet(getter);

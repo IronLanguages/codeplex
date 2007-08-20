@@ -71,6 +71,31 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        public override bool IsConstant(object value) {
+            if (value == null) return false;
+
+            switch(_op) {
+                case BinaryOperators.AndAlso:
+                    if (value.Equals(true)) {
+                        return _left.IsConstant(true) && _right.IsConstant(true);
+                    }
+                    if (value.Equals(false)) {
+                        // if left isn't a constant it has to be evaluated
+                        return _left.IsConstant(false);
+                    }
+                    break;
+                case BinaryOperators.OrElse:
+                    if (value.Equals(true)) {
+                        return _left.IsConstant(true);
+                    }
+                    if (value.Equals(false)) {
+                        return _left.IsConstant(false) && _right.IsConstant(false);
+                    }
+                    break;
+            }
+            return false;
+        }
+
         public BinaryOperators Operator {
             get { return _op; }
         }

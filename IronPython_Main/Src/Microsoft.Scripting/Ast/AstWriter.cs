@@ -543,14 +543,6 @@ namespace Microsoft.Scripting.Ast {
             Pop();
         }
 
-        // TryFinallyStatement
-        public override bool Walk(TryFinallyStatement node) {
-            return DefaultWalk(node, "<statictryfinally>");
-        }
-        public override void PostWalk(TryFinallyStatement node) {
-            Pop();
-        }
-
         // CatchBlock
         public override bool Walk(CatchBlock node) {
             return DefaultWalk(node, "<catchblock>");

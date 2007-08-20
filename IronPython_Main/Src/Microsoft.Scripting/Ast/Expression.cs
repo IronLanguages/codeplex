@@ -113,7 +113,7 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
-        public virtual void EmitAddress(CodeGen cg, Type asType) {
+        internal virtual void EmitAddress(CodeGen cg, Type asType) {
             EmitAs(cg, asType);
             Slot tmp = cg.GetLocalTmp(asType);
             tmp.EmitSet(cg);
@@ -133,6 +133,10 @@ namespace Microsoft.Scripting.Ast {
                 ret[i] = items[i].Evaluate(context);
             }
             return ret;
+        }
+
+        internal virtual object EvaluateAssign(CodeContext context, object value) {
+            throw new InvalidOperationException("byref call w/ no address " + GetType());
         }
     }
 }

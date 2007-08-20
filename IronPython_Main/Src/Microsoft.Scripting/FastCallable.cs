@@ -29,33 +29,7 @@ namespace Microsoft.Scripting {
         ImplicitInstance,
     }
 
-    public abstract partial class FastCallable : DynamicTypeSlot, ICallableWithCodeContext {
-
-        public static Delegate MakeDelegate(MethodInfo mi) {
-            if (mi == null) throw new ArgumentNullException("mi");
-
-            if (mi.ReturnType != typeof(object)) return null;
-            if (!mi.IsStatic) return null;
-
-            ParameterInfo[] pis = mi.GetParameters();
-            int nargs = pis.Length;
-            bool needsContext = false;
-            int argIndex = 0;
-            //if (pis.Length > 0 && pis[0].ParameterType == typeof(IPythonContext)) {
-            //    needsContext = true;
-            //    nargs -= 1;
-            //    argIndex += 1;
-            //}
-
-            if (nargs > CallTargets.MaximumCallArgs) return null;
-
-            while (argIndex < pis.Length) {
-                if (pis[argIndex++].ParameterType != typeof(object)) return null;
-            }
-
-            return ReflectionUtils.CreateDelegate(mi, CallTargets.GetTargetType(needsContext, nargs));
-        }
-
+    public abstract partial class FastCallable : DynamicTypeSlot, ICallableWithCodeContext {        
         protected FastCallable() { }
 
         public abstract object Call(CodeContext context, params object[] args);

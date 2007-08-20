@@ -22,10 +22,12 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
+
 
 [assembly: PythonExtensionType(typeof(Array), typeof(ArrayOps))]
 namespace IronPython.Runtime.Operations {
@@ -258,7 +260,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static object[] GetSlice(object[] data, int start, int stop) {
-            if (stop <= start) return RuntimeHelpers.EmptyObjectArray;
+            if (stop <= start) return ArrayUtils.EmptyObjects;
 
             object[] ret = new object[stop - start];
             int index = 0;
@@ -289,7 +291,7 @@ namespace IronPython.Runtime.Operations {
 
             if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
                 if (data.GetType().GetElementType() == typeof(object))
-                    return RuntimeHelpers.EmptyObjectArray;
+                    return ArrayUtils.EmptyObjects;
                 
                 return Array.CreateInstance(data.GetType().GetElementType(), 0);
             }

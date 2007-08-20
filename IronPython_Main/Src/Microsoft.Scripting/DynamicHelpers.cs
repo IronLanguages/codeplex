@@ -245,7 +245,7 @@ namespace Microsoft.Scripting {
                 }
             }
 
-            return ReflectionUtils.EmptyTypes;
+            return ArrayUtils.EmptyTypes;
         }
     }
 }

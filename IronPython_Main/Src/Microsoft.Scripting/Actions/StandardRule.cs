@@ -36,6 +36,128 @@ namespace Microsoft.Scripting.Actions {
     /// <returns>Whether or not the rule should still be considered valid.</returns>
     public delegate bool Validator();
 
+    public abstract class StandardRule {
+        internal List<Validator> _validators;
+        internal Expression _test;
+        internal Statement _target;
+
+        // TODO revisit these fields and their uses when CodeBlock moves down
+        internal Expression[] _parameters;
+        internal Variable[] _paramVariables;
+        internal List<Variable> _temps;
+        internal VariableReference[] _references; 
+        
+        internal StandardRule() { }
+
+        /// <summary>
+        /// An expression that should return true iff Target should be executed
+        /// </summary>
+        public Expression Test {
+            get { return _test; }
+        }
+
+        /// <summary>
+        /// Gets the logical parameters to the dynamic site in the form of Expressions.
+        /// </summary>
+        public Expression[] Parameters {
+            get {
+                return _parameters;
+            }
+        }
+
+        /// <summary>
+        /// Allocates a temporary variable for use during the rule.
+        /// </summary>
+        public Variable GetTemporary(Type type, string name) {
+            if (_temps == null) {
+                _temps = new List<Variable>();
+            }
+            Variable ret = Variable.Temporary(SymbolTable.StringToId(name), null, type);
+            _temps.Add(ret);
+            return ret;
+        }
+
+        public void SetTest(Expression test) {
+            if (test == null) throw new ArgumentNullException("test");
+            if (_test != null) throw new InvalidOperationException();
+            _test = test;
+        }
+
+        public Statement MakeReturn(ActionBinder binder, Expression expr) {
+            // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
+            if (expr.ExpressionType != typeof(void)) {
+                Variable variable = GetTemporary(expr.ExpressionType, "$retVal");
+                return Ast.Return(
+                    Ast.Comma(
+                        1,
+                        Ast.Assign(variable, expr),
+                        binder.ConvertExpression(Ast.ReadDefined(variable), ReturnType)
+                    )
+                );
+            }
+            return Ast.Return(binder.ConvertExpression(expr, ReturnType));
+        }
+
+        public Statement MakeError(ActionBinder binder, Expression expr) {
+            return Ast.Statement(Ast.Throw(expr));
+        }
+
+        public void AddTest(Expression expression) {
+            Assert.NotNull(expression);
+            if (_test == null) {
+                _test = expression;
+            } else {
+                _test = Ast.AndAlso(_test, expression);
+            }
+        }
+
+        public void SetTarget(Statement target) {
+            if (target == null) throw new ArgumentNullException("test");
+            _target = target;
+        }
+
+        public void AddValidator(Validator validator) {
+            if (_validators == null) _validators = new List<Validator>();
+            _validators.Add(validator);
+        }
+
+        /// <summary>
+        /// The code to execute if the Test is true.
+        /// </summary>
+        public Statement Target {
+            get { return _target; }
+        }
+
+        /// <summary>
+        ///  Gets the temporary variables allocated by this rule.
+        /// </summary>
+        internal Variable[] TemporaryVariables {
+            get {
+                return _temps == null ? new Variable[] { } : _temps.ToArray();
+            }
+        }
+
+        /// <summary>
+        /// If not valid, this indicates that the given Test can never return true and therefore
+        /// this rule should be removed from any RuleSets when convenient in order to 
+        /// reduce memory usage and the number of active rules.
+        /// </summary>
+        public bool IsValid {
+            get {
+                if (_validators == null) return true;
+
+                foreach (Validator v in _validators) {
+                    if (!v()) return false;
+                }
+                return true;
+            }
+        }
+
+        public abstract Type ReturnType {
+            get;
+        }
+    }
+
     /// <summary>
     /// A rule is the mechanism that LanguageBinders use to specify both what code to execute (the Target)
     /// for a particular action on a particular set of objects, but also a Test that guards the Target.
@@ -47,19 +169,9 @@ namespace Microsoft.Scripting.Actions {
     /// probably change in the future as we unify around the notion of CodeBlocks.
     /// </summary>
     /// <typeparam name="T">The type of delegate for the DynamicSites this rule may apply to.</typeparam>
-    public class StandardRule<T> {
-        private List<Validator> _validators;
-        private Expression _test;
-        private Statement _target;
+    public class StandardRule<T> : StandardRule {
         private int _templateCount;
-
         private SmallRuleSet<T> _ruleSet;
-
-        // TODO revisit these fields and their uses when CodeBlock moves down
-        private Expression[] _parameters;
-        private Variable[] _paramVariables;
-        private List<Variable> _temps;
-        private VariableReference[] _references;
 
         public StandardRule() {
             int firstParameter = DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
@@ -97,45 +209,13 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary>
-        /// The code to execute if the Test is true.
-        /// </summary>
-        public Statement Target {
-            get { return _target; }
-        }
-
-        /// <summary>
-        /// An expression that should return true iff Target should be executed
-        /// </summary>
-        public Expression Test {
-            get { return _test; }
-        }
-
-        /// <summary>
-        /// Gets the logical parameters to the dynamic site in the form of Expressions.
-        /// </summary>
-        public Expression[] Parameters {
-            get {
-                return _parameters;
-            }
-        }
-
-        /// <summary>
         /// Gets the logical parameters to the dynamic site in the form of Variables.
         /// </summary>
         internal Variable[] ParamVariables {
             get {
                 return _paramVariables;
             }
-        }
-
-        /// <summary>
-        ///  Gets the temporary variables allocated by this rule.
-        /// </summary>
-        internal Variable[] TemporaryVariables {
-            get {
-                return _temps == null ? new Variable[] { } : _temps.ToArray();
-            }
-        }
+        }      
 
         /// <summary>
         /// Gets the number of logical parameters the dynamic site is provided with.
@@ -154,43 +234,6 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary>
-        /// Allocates a temporary variable for use during the rule.
-        /// </summary>
-        public Variable GetTemporary(Type type, string name) {
-            if (_temps == null) {
-                _temps = new List<Variable>();
-            }
-            Variable ret = Variable.Temporary(SymbolTable.StringToId(name), null, type);
-            _temps.Add(ret);
-            return ret;
-        }
-
-        public void SetTest(Expression test) {
-            if (test == null) throw new ArgumentNullException("test");
-            if (_test != null) throw new InvalidOperationException();
-            _test = test;
-        }
-
-        public void AddTest(Expression expression) {
-            Assert.NotNull(expression);
-            if (_test == null) {
-                _test = expression;
-            } else {
-                _test = Ast.AndAlso(_test, expression);
-            }
-        }
-
-        public void SetTarget(Statement target) {
-            if (target == null) throw new ArgumentNullException("test");
-            _target = target;
-        }
-
-        public void AddValidator(Validator validator) {
-            if (_validators == null) _validators = new List<Validator>();
-            _validators.Add(validator);
-        }
-
-        /// <summary>
         /// Each rule holds onto an immutable RuleSet that contains this rule only.
         /// This should heavily optimize monomorphic call sites.
         /// </summary>
@@ -202,23 +245,7 @@ namespace Microsoft.Scripting.Actions {
                 return _ruleSet;
             }
         }
-
-        /// <summary>
-        /// If not valid, this indicates that the given Test can never return true and therefore
-        /// this rule should be removed from any RuleSets when convenient in order to 
-        /// reduce memory usage and the number of active rules.
-        /// </summary>
-        public bool IsValid {
-            get {
-                if (_validators == null) return true;
-
-                foreach (Validator v in _validators) {
-                    if (!v()) return false;
-                }
-                return true;
-            }
-        }
-
+        
         public void Emit(CodeGen cg, Label ifFalse) {
             Assert.NotNull(_test, _target);
 
@@ -255,32 +282,24 @@ namespace Microsoft.Scripting.Actions {
             return string.Format("StandardRule({0})", _target);
         }
 
-        public Statement MakeError(ActionBinder binder, Expression expr) {
-            return Ast.Statement(Ast.Throw(expr));
-        }
-
-        public Statement MakeReturn(ActionBinder binder, Expression expr) {
-            // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
-            if (expr.ExpressionType != typeof(void)) {
-                Variable variable = GetTemporary(expr.ExpressionType, "$retVal");
-                return Ast.Return(
-                    Ast.Comma(
-                        1,
-                        Ast.Assign(variable, expr),
-                        binder.ConvertExpression(Ast.ReadDefined(variable), typeof(T).GetMethod("Invoke").ReturnType)
-                    )
-                );
+        public override Type ReturnType {
+            get {
+                return typeof(T).GetMethod("Invoke").ReturnType;
             }
-            return Ast.Return(binder.ConvertExpression(expr, typeof(T).GetMethod("Invoke").ReturnType));
-        }
+        }        
 
         public void MakeTest(params Type[] types) {
+            DynamicType[] dts = GetDynamicTypes(types);
+
+            MakeTest(dts);
+        }
+
+        private static DynamicType[] GetDynamicTypes(Type[] types) {
             DynamicType[] dts = new DynamicType[types.Length];
             for (int i = 0; i < types.Length; i++) {
                 dts[i] = DynamicHelpers.GetDynamicTypeFromType(types[i]);
             }
-
-            MakeTest(dts);
+            return dts;
         }
 
         /// <summary>
@@ -290,6 +309,10 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="types"></param>
         public void MakeTest(params DynamicType[] types) {
             _test = MakeTestForTypes(types, 0);
+        }
+
+        public Expression MakeTestForTypes(Type[] types, int index) {
+            return MakeTestForTypes(GetDynamicTypes(types), index);
         }
 
         public Expression MakeTestForTypes(DynamicType[] types, int index) {
@@ -379,10 +402,12 @@ namespace Microsoft.Scripting.Actions {
         }
 
         #region Factory Methods
-        public static StandardRule<T> Simple(ActionBinder binder, MethodTarget target, params DynamicType[] types) {
+        public static StandardRule<T> Simple(ActionBinder binder, MethodBase target, params DynamicType[] types) {
             StandardRule<T> ret = new StandardRule<T>();
+            MethodCandidate mc = MethodBinder.MakeBinder(binder, target.Name, new MethodBase[] { target }, BinderType.Normal).MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(types));
+            
             ret.MakeTest(types);
-            ret.SetTarget(ret.MakeReturn(binder, target.MakeExpression(binder, ret.Parameters, CompilerHelpers.ConvertToTypes(types))));
+            ret.SetTarget(ret.MakeReturn(binder, mc.Target.MakeExpression(binder, ret, ret.Parameters, CompilerHelpers.ConvertToTypes(types))));
             return ret;
         }
 

@@ -196,7 +196,7 @@ namespace Microsoft.Scripting {
                 _realArgs[i] = _arguments[i];
             }
             if (paramArrayIndex != -1 && !_haveArg[paramArrayIndex]) {
-                _realArgs[paramArrayIndex] = _targetsCls ? (object)RuntimeHelpers.EmptyObjectArray : (object)_ctx.LanguageContext.Binder.GetByRefArray(RuntimeHelpers.EmptyObjectArray);
+                _realArgs[paramArrayIndex] = _targetsCls ? (object)ArrayUtils.EmptyObjects : (object)_ctx.LanguageContext.Binder.GetByRefArray(ArrayUtils.EmptyObjects);
                 _haveArg[paramArrayIndex] = true;
             }
             return true;
@@ -214,7 +214,7 @@ namespace Microsoft.Scripting {
             for (int i = 0; i < _kwNames.Length; i++) {
                 int index = FindParamIndex(argNames, _kwNames[i]);
                 int argumentsIndex = i + _arguments.Length - _kwNames.Length;
-                if (index != -1 && index != kwDictIndex) {
+                if (index != -1 && index != kwDictIndex && index != paramArray) {
                     // attempt to bind to a real arg
                     if (_haveArg[index]) {
                         if (index == paramArray)

@@ -31,6 +31,12 @@ namespace Microsoft.Scripting.Utils {
         public T Value;
 
         /// <summary>
+        /// Creates a new StrongBox which can receive a value when used in a reference call.
+        /// </summary>
+        public StrongBox() {
+        }
+
+        /// <summary>
         /// Creates a new StrongBox with the specified value.
         /// </summary>
         /// <param name="value"></param>

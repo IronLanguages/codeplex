@@ -57,35 +57,30 @@ namespace IronPython.Runtime {
         public static object exit = "Use Ctrl-Z plus Return to exit";
         public static object quit = "Use Ctrl-Z plus Return to exit";
 
-        public static bool DebuggingEnabled {
-            [PythonName("__debug__")]
+        public static bool __debug__ {
             get {
                 return ScriptDomainManager.Options.DebugMode;
             }
         }
 
-        [PythonName("__import__")]
         [Documentation("__import__(name) -> module\n\nImport a module.")]
-        public static object Import(CodeContext context, string name) {
-            return Import(context, name, null, null, null);
+        public static object __import__(CodeContext context, string name) {
+            return __import__(context, name, null, null, null);
         }
 
-        [PythonName("__import__")]
         [Documentation("__import__(name, globals) -> module\n\nImport a module.")]
-        public static object Import(CodeContext context, string name, object globals) {
-            return Import(context, name, globals, null, null);
+        public static object __import__(CodeContext context, string name, object globals) {
+            return __import__(context, name, globals, null, null);
 
         }
 
-        [PythonName("__import__")]
         [Documentation("__import__(name, globals, locals) -> module\n\nImport a module.")]
-        public static object Import(CodeContext context, string name, object globals, object locals) {
-            return Import(context, name, globals, locals, null);
+        public static object __import__(CodeContext context, string name, object globals, object locals) {
+            return __import__(context, name, globals, locals, null);
         }
 
-        [PythonName("__import__")]
         [Documentation("__import__(name, globals, locals, fromlist) -> module\n\nImport a module.")]
-        public static object Import(CodeContext context, string name, object globals, object locals, object fromList) {
+        public static object __import__(CodeContext context, string name, object globals, object locals, object fromList) {
             //!!! remove suppress in GlobalSuppressions.cs when CodePlex 2704 is fixed.
             List from = fromList as List;
 
@@ -112,9 +107,8 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        [PythonName("abs")]
         [Documentation("abs(number) -> number\n\nReturn the absolute value of the argument.")]
-        public static object Abs(CodeContext context, object o) {
+        public static object abs(CodeContext context, object o) {
             if (o is int) return Int32Ops.Abs((int)o);
             if (o is long) return Int64Ops.Abs((long)o);
             if (o is double) return DoubleOps.Abs((double)o);
@@ -136,8 +130,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonVersion(2, 5)]
-        [PythonName("all")]
-        public static bool All(object x) {
+        public static bool all(object x) {
             IEnumerator i = PythonOps.GetEnumerator(x);
             while (i.MoveNext()) {
                 if (!PythonOps.IsTrue(i.Current)) return false;
@@ -146,8 +139,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonVersion(2, 5)]
-        [PythonName("any")]
-        public static bool Any(object x) {
+        public static bool any(object x) {
             IEnumerator i = PythonOps.GetEnumerator(x);
             while (i.MoveNext()) {
                 if (PythonOps.IsTrue(i.Current)) return true;
@@ -155,20 +147,17 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        [PythonName("apply")]
         [Documentation("apply(object[, args[, kwargs]]) -> value\n\nDeprecated.\nInstead, use:\n    function(*args, **keywords).")]
-        public static object Apply(CodeContext context, object func) {
+        public static object apply(CodeContext context, object func) {
             return PythonOps.CallWithContext(context, func);
         }
 
-        [PythonName("apply")]
-        public static object Apply(CodeContext context, object func, object args) {
-            return PythonOps.CallWithArgsTupleAndContext(context, func, RuntimeHelpers.EmptyObjectArray, args);
+        public static object apply(CodeContext context, object func, object args) {
+            return PythonOps.CallWithArgsTupleAndContext(context, func, ArrayUtils.EmptyObjects, args);
         }
 
-        [PythonName("apply")]
-        public static object Apply(CodeContext context, object func, object args, object kws) {
-            return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, RuntimeHelpers.EmptyObjectArray, ArrayUtils.EmptyStrings, args, kws);
+        public static object apply(CodeContext context, object func, object args, object kws) {
+            return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, ArrayUtils.EmptyObjects, ArrayUtils.EmptyStrings, args, kws);
         }
 
         public static object basestring = DynamicHelpers.GetDynamicTypeFromType(typeof(string));
@@ -178,15 +167,13 @@ namespace IronPython.Runtime {
 
         public static object buffer = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonBuffer));
 
-        [PythonName("callable")]
         [Documentation("callable(object) -> bool\n\nReturn whether the object is callable (i.e., some kind of function).")]
-        public static bool Callable(object o) {
+        public static bool callable(object o) {
             return PythonOps.IsCallable(o);
         }
 
-        [PythonName("chr")]
         [Documentation("chr(i) -> character\n\nReturn a string of one character with ordinal i; 0 <= i< 256.")]
-        public static string Chr(int value) {
+        public static string chr(int value) {
             if (value < 0 || value > 0xFF) {
                 throw PythonOps.ValueError("{0} is not in required range", value);
             }
@@ -205,9 +192,8 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        [PythonName("coerce")]
         [Documentation("coerce(x, y) -> (x1, y1)\n\nReturn a tuple consisting of the two numeric arguments converted to\na common type. If coercion is not possible, raise TypeError.")]
-        public static object Coerce(CodeContext context, object x, object y) {
+        public static object coerce(CodeContext context, object x, object y) {
             object converted;
 
             if (x == null && y == null) {
@@ -231,15 +217,14 @@ namespace IronPython.Runtime {
             }
             converted = TryCoerce(context, y, x);
             if (converted != null) {
-                return Tuple.Make(Reversed(converted));
+                return Tuple.Make(reversed(converted));
             }
 
             throw PythonOps.TypeError("coercion failed");
         }
 
-        [PythonName("compile")]
         [Documentation("compile a unit of source code.\n\nThe source can be compiled either as exec, eval, or single.\nexec compiles the code as if it were a file\neval compiles the code as if were an expression\nsingle compiles a single statement\n\n")]
-        public static object Compile(CodeContext context, string source, string filename, string kind, object flags, object dontInherit) {
+        public static object compile(CodeContext context, string source, string filename, string kind, object flags, object dontInherit) {
             bool inheritContext = GetCompilerInheritance(dontInherit);
             CompileFlags cflags = GetCompilerFlags(flags);
             PythonContext lc = GetCompilerLanguageContext(context, inheritContext, cflags);
@@ -259,44 +244,39 @@ namespace IronPython.Runtime {
             return new FunctionCode(compiledCode, cflags);
         }
 
-        [PythonName("compile")]
         [Documentation("compile a unit of source code.\n\nThe source can be compiled either as exec, eval, or single.\nexec compiles the code as if it were a file\neval compiles the code as if were an expression\nsingle compiles a single statement\n\n")]
-        public static object Compile(CodeContext context, string source, string filename, string kind, object flags) {
-            return Compile(context, source, filename, kind, flags, null);
+        public static object compile(CodeContext context, string source, string filename, string kind, object flags) {
+            return compile(context, source, filename, kind, flags, null);
         }
 
-        [PythonName("compile")]
         [Documentation("compile a unit of source code.\n\nThe source can be compiled either as exec, eval, or single.\nexec compiles the code as if it were a file\neval compiles the code as if were an expression\nsingle compiles a single statement\n\n")]
-        public static object Compile(CodeContext context, string source, string filename, string kind) {
-            return Compile(context, source, filename, kind, null, null);
+        public static object compile(CodeContext context, string source, string filename, string kind) {
+            return compile(context, source, filename, kind, null, null);
         }
 
         public static object classmethod = DynamicHelpers.GetDynamicTypeFromType(typeof(ClassMethod));
 
-        [PythonName("cmp")]
-        public static int Compare(CodeContext context, object x, object y) {
+        public static int cmp(CodeContext context, object x, object y) {
             return PythonOps.Compare(context, x, y);
         }
 
         public static object complex = DynamicHelpers.GetDynamicTypeFromType(typeof(Complex64));
 
-        [PythonName("delattr")]
-        public static void DelAttr(CodeContext context, object o, string name) {
+        public static void delattr(CodeContext context, object o, string name) {
             context.LanguageContext.DeleteMember(context, o, SymbolTable.StringToId(name));
         }
 
         public static object dict = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDictionary));
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods"), PythonName("dir")]
-        public static List Dir(CodeContext context) {
-            List res = List.Make(Locals(context).Keys);
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
+        public static List dir(CodeContext context) {
+            List res = List.Make(locals(context).Keys);
 
             res.Sort();
             return res;
         }
 
-        [PythonName("dir")]
-        public static List Dir(CodeContext context, object o) {
+        public static List dir(CodeContext context, object o) {
             IList<object> ret = PythonOps.GetAttrNames(context, o);
             List lret = new List(ret);
             lret.Sort();
@@ -305,8 +285,7 @@ namespace IronPython.Runtime {
 
         // Python has lots of optimizations for this method that we may want to implement in the future
         // In particular, this should be treated like the other binary operators
-        [PythonName("divmod")]
-        public static object DivMod(CodeContext context, object x, object y) {
+        public static object divmod(CodeContext context, object x, object y) {
             Debug.Assert(PythonOps.NotImplemented != null);
             object ret;
             if (DynamicHelpers.GetDynamicType(x).TryInvokeBinaryOperator(context, Operators.DivMod, x, y, out ret)
@@ -324,24 +303,21 @@ namespace IronPython.Runtime {
 
         public static object enumerate = DynamicHelpers.GetDynamicTypeFromType(typeof(Enumerate));
 
-        [PythonName("eval")]
-        public static object Eval(CodeContext context, FunctionCode code) {
+        public static object eval(CodeContext context, FunctionCode code) {
             Debug.Assert(context != null);
             if (code == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
-            return Eval(context, code, null);
+            return eval(context, code, null);
         }
 
-        [PythonName("eval")]
-        public static object Eval(CodeContext context, FunctionCode code, IAttributesCollection globals) {
+        public static object eval(CodeContext context, FunctionCode code, IAttributesCollection globals) {
             Debug.Assert(context != null);
             if (code == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
-            return Eval(context, code, globals, globals);
+            return eval(context, code, globals, globals);
         }
 
-        [PythonName("eval")]
-        public static object Eval(CodeContext context, FunctionCode code, IAttributesCollection globals, object locals) {
+        public static object eval(CodeContext context, FunctionCode code, IAttributesCollection globals, object locals) {
             Debug.Assert(context != null);
             if (code == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
@@ -354,31 +330,28 @@ namespace IronPython.Runtime {
         public static IAttributesCollection GetAttrLocals(CodeContext context, object locals) {
             IAttributesCollection attrLocals;
             if (locals == null) {
-                attrLocals = Locals(context);
+                attrLocals = Builtin.locals(context);
             } else {
                 attrLocals = locals as IAttributesCollection ?? new ObjectAttributesAdapter(locals);
             }
             return attrLocals;
         }
 
-        [PythonName("eval")]
-        public static object Eval(CodeContext context, string expression) {
+        public static object eval(CodeContext context, string expression) {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
-            return Eval(context, expression, Globals(context), Locals(context));
+            return eval(context, expression, globals(context), locals(context));
         }
 
-        [PythonName("eval")]
-        public static object Eval(CodeContext context, string expression, IAttributesCollection globals) {
+        public static object eval(CodeContext context, string expression, IAttributesCollection globals) {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
-            return Eval(context, expression, globals, globals);
+            return eval(context, expression, globals, globals);
         }
 
-        [PythonName("eval")]
-        public static object Eval(CodeContext context, string expression, IAttributesCollection globals, object locals) {
+        public static object eval(CodeContext context, string expression, IAttributesCollection globals, object locals) {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
@@ -397,18 +370,15 @@ namespace IronPython.Runtime {
 
 #if !SILVERLIGHT // files
 
-        [PythonName("execfile")]
-        public static void ExecFile(CodeContext context, object filename) {
-            ExecFile(context, filename, null, null);
+        public static void execfile(CodeContext context, object filename) {
+            execfile(context, filename, null, null);
         }
 
-        [PythonName("execfile")]
-        public static void ExecFile(CodeContext context, object filename, object globals) {
-            ExecFile(context, filename, globals, null);
+        public static void execfile(CodeContext context, object filename, object globals) {
+            execfile(context, filename, globals, null);
         }
 
-        [PythonName("execfile")]
-        public static void ExecFile(CodeContext context, object filename, object globals, object locals) {
+        public static void execfile(CodeContext context, object filename, object globals, object locals) {
             IAttributesCollection g = globals as IAttributesCollection;
             if (g == null && globals != null) {
                 throw PythonOps.TypeError("execfile: arg 2 must be dictionary");
@@ -439,8 +409,7 @@ namespace IronPython.Runtime {
         public static object file = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFile));
 #endif
 
-        [PythonName("filter")]
-        public static object Filter(object function, object list) {
+        public static object filter(object function, object list) {
             string str = list as string;
             if (str != null) {
                 if (function == null) return str;
@@ -449,7 +418,7 @@ namespace IronPython.Runtime {
                     if (PythonOps.IsTrue(PythonCalls.Call(function, RuntimeHelpers.CharToString(c)))) sb.Append(c);
                 }
                 return sb.ToString();
-            } else if (IsSubClass(DynamicHelpers.GetDynamicType(list), TypeCache.String)) {
+            } else if (issubclass(DynamicHelpers.GetDynamicType(list), TypeCache.String)) {
                 StringBuilder sb = new StringBuilder();
                 IEnumerator e = PythonOps.GetEnumerator(list);
                 while (e.MoveNext()) {
@@ -475,7 +444,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            if (IsInstance(list, DynamicHelpers.GetDynamicTypeFromType(typeof(Tuple)))) {
+            if (isinstance(list, DynamicHelpers.GetDynamicTypeFromType(typeof(Tuple)))) {
                 return Tuple.Make(ret);
             } else {
                 return ret;
@@ -484,43 +453,38 @@ namespace IronPython.Runtime {
 
         public static object @float = DynamicHelpers.GetDynamicTypeFromType(typeof(double));
 
-        [PythonName("getattr")]
-        public static object GetAttr(CodeContext context, object o, string name) {
+        public static object getattr(CodeContext context, object o, string name) {
             return PythonOps.GetBoundAttr(context, o, SymbolTable.StringToId(name));
         }
 
-        [PythonName("getattr")]
-        public static object GetAttr(CodeContext context, object o, string name, object def) {
+        public static object getattr(CodeContext context, object o, string name, object def) {
             object ret;
             if (PythonOps.TryGetBoundAttr(context, o, SymbolTable.StringToId(name), out ret)) return ret;
             else return def;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods"), PythonName("globals")]
-        public static IAttributesCollection Globals(CodeContext context) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
+        public static IAttributesCollection globals(CodeContext context) {
             return new GlobalsDictionary(context.Scope);
         }
 
-        [PythonName("hasattr")]
-        public static bool HasAttr(CodeContext context, object o, string name) {
+        public static bool hasattr(CodeContext context, object o, string name) {
             return PythonOps.HasAttr(context, o, SymbolTable.StringToId(name));
         }
 
-        [PythonName("hash")]
-        public static int Hash(object o) {
+        public static int hash(object o) {
             return PythonOps.Hash(o);
         }
 
-        [PythonName("help")]
-        public static void Help(CodeContext context, object o) {
+        public static void help(CodeContext context, object o) {
             StringBuilder doc = new StringBuilder();
             List<object> doced = new List<object>();  // document things only once
 
-            Help(context, doced, doc, 0, o);
+            help(context, doced, doc, 0, o);
 
             if (doc.Length == 0) {
                 if (!(o is string)) {
-                    Help(context, DynamicHelpers.GetDynamicType(o));
+                    help(context, DynamicHelpers.GetDynamicType(o));
                     return;
                 }
                 doc.Append("no documentation found for ");
@@ -539,7 +503,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        private static void Help(CodeContext context, List<object> doced, StringBuilder doc, int indent, object o) {
+        private static void help(CodeContext context, List<object> doced, StringBuilder doc, int indent, object o) {
             DynamicType dt;
             BuiltinFunction bf;
             PythonFunction pf;
@@ -589,9 +553,9 @@ namespace IronPython.Runtime {
                             continue;
                     }
 
-                    if (dt != null) Help(context, doced, doc, indent, dt);
-                    else if (bf != null) Help(context, doced, doc, indent, bf);
-                    else if (pf != null) Help(context, doced, doc, indent, pf);
+                    if (dt != null) help(context, doced, doc, indent, dt);
+                    else if (bf != null) help(context, doced, doc, indent, bf);
+                    else if (pf != null) help(context, doced, doc, indent, pf);
                 }
             } else if ((dt = o as DynamicType) != null) {
                 // find all the functions, and display their 
@@ -619,7 +583,7 @@ namespace IronPython.Runtime {
                     DynamicTypeSlot value;
                     object val;
                     if (dt.TryLookupSlot(context, name, out value) && value.TryGetValue(context, null, dt, out val)) {
-                        Help(context, doced, doc, indent + 1, val);
+                        help(context, doced, doc, indent + 1, val);
                     }
                 }
             } else if ((methodDesc = o as BuiltinMethodDescriptor) != null) {
@@ -653,7 +617,7 @@ namespace IronPython.Runtime {
 
                     object value;
                     if (sm.TryGetBoundCustomMember(context, SymbolTable.StringToId(name), out value)) {
-                        Help(context, doced, doc, indent + 1, value);
+                        help(context, doced, doc, indent + 1, value);
                     }
                 }
             } else if ((oc = o as OldClass) != null) {
@@ -678,7 +642,7 @@ namespace IronPython.Runtime {
                     object value;
 
                     if (oc.TryLookupSlot(SymbolTable.StringToId(name), out value))
-                        Help(context, doced, doc, indent + 1, value);
+                        help(context, doced, doc, indent + 1, value);
                 }
             }
         }
@@ -698,30 +662,25 @@ namespace IronPython.Runtime {
         }
 
         //??? type this to string
-        [PythonName("hex")]
-        public static object Hex(object o) {
+        public static object hex(object o) {
             return PythonOps.Hex(o);
         }
 
-        [PythonName("id")]
-        public static long Id(object o) {
+        public static long id(object o) {
             return PythonOps.Id(o);
         }
 
-        [PythonName("input")]
-        public static object Input(CodeContext context) {
-            return Input(context, null);
+        public static object input(CodeContext context) {
+            return input(context, null);
         }
 
-        [PythonName("input")]
-        public static object Input(CodeContext context, object prompt) {
-            return Eval(context, RawInput(context, prompt));
+        public static object input(CodeContext context, object prompt) {
+            return eval(context, raw_input(context, prompt));
         }
 
         public static object @int = DynamicHelpers.GetDynamicTypeFromType(typeof(int));
 
-        [PythonName("intern")]
-        public static string Intern(object o) {
+        public static string intern(object o) {
             string s = o as string;
             if (s == null) {
                 throw PythonOps.TypeError("intern: argument must be string");
@@ -729,36 +688,30 @@ namespace IronPython.Runtime {
             return string.Intern(s);
         }
 
-        [PythonName("isinstance")]
-        public static bool IsInstance(object o, object typeinfo) {
+        public static bool isinstance(object o, object typeinfo) {
             return PythonOps.IsInstance(o, typeinfo);
         }
 
-        [PythonName("issubclass")]
-        public static bool IsSubClass(OldClass c, object typeinfo) {
+        public static bool issubclass(OldClass c, object typeinfo) {
             return PythonOps.IsSubClass(c.TypeObject, typeinfo);
         }
 
-        [PythonName("issubclass")]
-        public static bool IsSubClass(DynamicType c, object typeinfo) {
+        public static bool issubclass(DynamicType c, object typeinfo) {
             return PythonOps.IsSubClass(c, typeinfo);
         }
 
-        [PythonName("iter")]
-        public static IEnumerator Iter(object o) {
+        public static IEnumerator iter(object o) {
             return PythonOps.GetEnumerator(o);
         }
 
-        [PythonName("iter")]
-        public static object Iter(object func, object sentinel) {
+        public static object iter(object func, object sentinel) {
             if (!PythonOps.IsCallable(func)) {
                 throw PythonOps.TypeError("iter(v, w): v must be callable");
             }
             return new SentinelIterator(func, sentinel);
         }
 
-        [PythonName("len")]
-        public static int Length(object o) {
+        public static int len(object o) {
             return PythonOps.Length(o);
         }
 
@@ -767,15 +720,14 @@ namespace IronPython.Runtime {
         public static object frozenset = DynamicHelpers.GetDynamicTypeFromType(typeof(FrozenSetCollection));
         public static object list = DynamicHelpers.GetDynamicTypeFromType(typeof(List));
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods"), PythonName("locals")]
-        public static IAttributesCollection Locals(CodeContext context) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
+        public static IAttributesCollection locals(CodeContext context) {
             return new LocalsDictionary(context.Scope);
         }
 
         public static object @long = DynamicHelpers.GetDynamicTypeFromType(typeof(BigInteger));
 
-        [PythonName("map")]
-        public static List Map(params object[] param) {
+        public static List map(params object[] param) {
             if (param == null || param.Length < 2) {
                 throw PythonOps.TypeError("at least 2 arguments required to map");
             }
@@ -823,8 +775,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        [PythonName("max")]
-        public static object Max(object x) {
+        public static object max(object x) {
             IEnumerator i = PythonOps.GetEnumerator(x);
             if (!i.MoveNext())
                 throw PythonOps.ValueError("max() arg is an empty sequence");
@@ -835,16 +786,14 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        [PythonName("max")]
-        public static object Max(object x, object y) {
+        public static object max(object x, object y) {
             return PythonSites.GreaterThanRetBool(x, y) ? x : y;
         }
 
-        [PythonName("max")]
-        public static object Max(params object[] args) {
+        public static object max(params object[] args) {
             if (args.Length > 0) {
                 object ret = args[0];
-                if (args.Length == 1) return Max(ret);
+                if (args.Length == 1) return max(ret);
                 for (int i = 1; i < args.Length; i++) {
                     if (PythonSites.GreaterThanRetBool(args[i], ret)) ret = args[i];
                 }
@@ -856,8 +805,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonVersion(2, 5)]
-        [PythonName("max")]
-        public static object Max(object x, [ParamDictionary] IAttributesCollection dict) {
+        public static object max(object x, [ParamDictionary] IAttributesCollection dict) {
             IEnumerator i = PythonOps.GetEnumerator(x);
             if (!i.MoveNext())
                 throw PythonOps.ValueError(" max() arg is an empty sequence");
@@ -876,17 +824,16 @@ namespace IronPython.Runtime {
 
         [PythonVersion(2, 5)]
         [PythonName("max")]
-        public static object Max(object x, object y, [ParamDictionary] IAttributesCollection dict) {
+        public static object max(object x, object y, [ParamDictionary] IAttributesCollection dict) {
             object method = GetMaxKwArg(dict);
             return PythonSites.GreaterThanRetBool(PythonCalls.Call(method, x), PythonCalls.Call(method, y)) ? x : y;
         }
 
         [PythonVersion(2, 5)]
-        [PythonName("max")]
-        public static object Max([ParamDictionary] IAttributesCollection dict, params object[] args) {
+        public static object max([ParamDictionary] IAttributesCollection dict, params object[] args) {
             if (args.Length > 0) {
                 int retIndex = 0;
-                if (args.Length == 1) return Max(args[retIndex], dict);
+                if (args.Length == 1) return max(args[retIndex], dict);
                 object method = GetMaxKwArg(dict);
                 object retValue = PythonCalls.Call(method, args[retIndex]);
                 for (int i = 1; i < args.Length; i++) {
@@ -909,8 +856,7 @@ namespace IronPython.Runtime {
             return VerifyKeys("max", dict);
         }
 
-        [PythonName("min")]
-        public static object Min(object x) {
+        public static object min(object x) {
             IEnumerator i = PythonOps.GetEnumerator(x);
             if (!i.MoveNext()) {
                 throw PythonOps.ValueError("empty sequence");
@@ -922,16 +868,14 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        [PythonName("min")]
-        public static object Min(object x, object y) {
+        public static object min(object x, object y) {
             return PythonSites.LessThanRetBool(x, y) ? x : y;
         }
 
-        [PythonName("min")]
-        public static object Min(params object[] args) {
+        public static object min(params object[] args) {
             if (args.Length > 0) {
                 object ret = args[0];
-                if (args.Length == 1) return Min(ret);
+                if (args.Length == 1) return min(ret);
                 for (int i = 1; i < args.Length; i++) {
                     if (PythonSites.LessThanRetBool(args[i], ret)) ret = args[i];
                 }
@@ -942,8 +886,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonVersion(2, 5)]
-        [PythonName("min")]
-        public static object Min(object x, [ParamDictionary] IAttributesCollection dict) {
+        public static object min(object x, [ParamDictionary] IAttributesCollection dict) {
             IEnumerator i = PythonOps.GetEnumerator(x);
             if (!i.MoveNext())
                 throw PythonOps.ValueError(" min() arg is an empty sequence");
@@ -962,17 +905,16 @@ namespace IronPython.Runtime {
 
         [PythonVersion(2, 5)]
         [PythonName("min")]
-        public static object Min(object x, object y, [ParamDictionary] IAttributesCollection dict) {
+        public static object min(object x, object y, [ParamDictionary] IAttributesCollection dict) {
             object method = GetMinKwArg(dict);
             return PythonSites.LessThanRetBool(PythonCalls.Call(method, x), PythonCalls.Call(method, y)) ? x : y;
         }
 
         [PythonVersion(2, 5)]
-        [PythonName("min")]
-        public static object Min([ParamDictionary] IAttributesCollection dict, params object[] args) {
+        public static object min([ParamDictionary] IAttributesCollection dict, params object[] args) {
             if (args.Length > 0) {
                 int retIndex = 0;
-                if (args.Length == 1) return Min(args[retIndex], dict);
+                if (args.Length == 1) return min(args[retIndex], dict);
                 object method = GetMinKwArg(dict);
                 object retValue = PythonCalls.Call(method, args[retIndex]);
                 for (int i = 1; i < args.Length; i++) {
@@ -1009,8 +951,7 @@ namespace IronPython.Runtime {
 
         public static object @object = DynamicHelpers.GetDynamicTypeFromType(typeof(object));
 
-        [PythonName("oct")]
-        public static object Oct(object o) {
+        public static object oct(object o) {
             return PythonOps.Oct(o);
         }
 
@@ -1018,8 +959,7 @@ namespace IronPython.Runtime {
         public static object open = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFile));
 #endif
 
-        [PythonName("ord")]
-        public static int Ord(object value) {
+        public static int ord(object value) {
             char ch;
 
             if (value is char) {
@@ -1043,12 +983,11 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("pow")]
-        public static object Pow(object x, object y) {
+        public static object pow(object x, object y) {
             return PythonSites.Power(x, y);
         }
 
-        [PythonName("pow")]
-        public static object Pow(object x, object y, object z) {
+        public static object pow(object x, object y, object z) {
             try {
                 return PythonOps.PowerMod(x, y, z);
             } catch (DivideByZeroException) {
@@ -1058,13 +997,11 @@ namespace IronPython.Runtime {
 
         public static object property = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonProperty));
 
-        [PythonName("range")]
-        public static List Range(int stop) {
+        public static List range(int stop) {
             return rangeWorker(stop);
         }
 
-        [PythonName("range")]
-        public static List Range(BigInteger stop) {
+        public static List range(BigInteger stop) {
             return rangeWorker(stop);
         }
 
@@ -1080,22 +1017,20 @@ namespace IronPython.Runtime {
 
         private static List rangeWorker(BigInteger stop) {
             if (stop < BigInteger.Zero) {
-                return Range(0);
+                return range(0);
             }
             int istop;
             if (stop.AsInt32(out istop)) {
-                return Range(istop);
+                return range(istop);
             }
             throw PythonOps.OverflowError("too many items in the range");
         }
 
-        [PythonName("range")]
-        public static List Range(int start, int stop) {
+        public static List range(int start, int stop) {
             return rangeWorker(start, stop);
         }
         
-        [PythonName("range")]
-        public static List Range(BigInteger start, BigInteger stop) {
+        public static List range(BigInteger start, BigInteger stop) {
             return rangeWorker(start, stop);
         }
 
@@ -1129,13 +1064,11 @@ namespace IronPython.Runtime {
             throw PythonOps.OverflowError("too many items in the range");
         }
 
-        [PythonName("range")]
-        public static List Range(int start, int stop, int step) {
+        public static List range(int start, int stop, int step) {
             return rangeWorker(start, stop, step);
         }
 
-        [PythonName("range")]
-        public static List Range(BigInteger start, BigInteger stop, BigInteger step) {
+        public static List range(BigInteger start, BigInteger stop, BigInteger step) {
             return rangeWorker(start, stop, step);
         }
 
@@ -1186,13 +1119,11 @@ namespace IronPython.Runtime {
             throw PythonOps.OverflowError("too many items for list");
         }
 
-        [PythonName("raw_input")]
-        public static string RawInput(CodeContext context) {
-            return RawInput(context, null);
+        public static string raw_input(CodeContext context) {
+            return raw_input(context, null);
         }
 
-        [PythonName("raw_input")]
-        public static string RawInput(CodeContext context, object prompt) {
+        public static string raw_input(CodeContext context, object prompt) {
             if (prompt != null) {
                 PythonOps.PrintNoNewline(prompt);
             }
@@ -1201,8 +1132,7 @@ namespace IronPython.Runtime {
             return line;
         }
 
-        [PythonName("reduce")]
-        public static object Reduce(object func, object seq) {
+        public static object reduce(object func, object seq) {
             IEnumerator i = PythonOps.GetEnumerator(seq);
             if (!i.MoveNext()) {
                 throw PythonOps.TypeError("reduce() of empty sequence with no initial value");
@@ -1214,8 +1144,7 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        [PythonName("reduce")]
-        public static object Reduce(object func, object seq, object initializer) {
+        public static object reduce(object func, object seq, object initializer) {
             IEnumerator i = PythonOps.GetEnumerator(seq);
             object ret = initializer;
             while (i.MoveNext()) {
@@ -1224,15 +1153,13 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        [PythonName("reload")]
-        public static object Reload(CodeContext context, ScriptModule module) {
+        public static object reload(CodeContext context, ScriptModule module) {
             PythonModuleOps.CheckReloadable(module);
             module.Reload();
             return module;
         }
 
-        [PythonName("reload")]
-        public static object Reload(CodeContext context, SystemState state) {
+        public static object reload(CodeContext context, SystemState state) {
             if (state == null) throw PythonOps.TypeError("unexpected type: NoneType");
 
             Debug.Assert(state == SystemState.Instance, "unexpected multiple instances of SystemState");
@@ -1241,8 +1168,7 @@ namespace IronPython.Runtime {
             return state;
         }
 
-        [PythonName("repr")]
-        public static object Repr(object o) {
+        public static object repr(object o) {
             object res = PythonOps.StringRepr(o);
 
             if (!(res is String) && !(res is ExtensibleString)) {
@@ -1252,8 +1178,7 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        [PythonName("reversed")]
-        public static object Reversed(object o) {
+        public static object reversed(object o) {
             object reversed;
             if (PythonOps.TryGetBoundAttr(o, Symbols.Reversed, out reversed)) {
                 return PythonCalls.Call(reversed);
@@ -1279,8 +1204,7 @@ namespace IronPython.Runtime {
             return new ReversedEnumerator((int)length, getitem);
         }
 
-        [PythonName("round")]
-        public static double Round(double x) {
+        public static double round(double x) {
 #if !SILVERLIGHT
             return Math.Round(x, MidpointRounding.AwayFromZero);
 #else
@@ -1288,8 +1212,7 @@ namespace IronPython.Runtime {
 #endif
         }
 
-        [PythonName("round")]
-        public static double Round(double x, int n) {
+        public static double round(double x, int n) {
             // values are rounded to 10 ^ n.  For negative values
             // we need to handle this ourselves.
             if (n < 0) {
@@ -1304,30 +1227,25 @@ namespace IronPython.Runtime {
             return Math.Round(x, n);
         }
 
-        [PythonName("setattr")]
-        public static void SetAttr(CodeContext context, object o, string name, object val) {
+        public static void setattr(CodeContext context, object o, string name, object val) {
             PythonOps.SetAttr(context, o, SymbolTable.StringToId(name), val);
         }
 
         public static object slice = DynamicHelpers.GetDynamicTypeFromType(typeof(Slice));
 
-        [PythonName("sorted")]
-        public static List Sorted(object iterable) {
-            return Sorted(iterable, null, null, false);
+        public static List sorted(object iterable) {
+            return sorted(iterable, null, null, false);
         }
 
-        [PythonName("sorted")]
-        public static List Sorted(object iterable, object cmp) {
-            return Sorted(iterable, cmp, null, false);
+        public static List sorted(object iterable, object cmp) {
+            return sorted(iterable, cmp, null, false);
         }
 
-        [PythonName("sorted")]
-        public static List Sorted(object iterable, object cmp, object key) {
-            return Sorted(iterable, cmp, key, false);
+        public static List sorted(object iterable, object cmp, object key) {
+            return sorted(iterable, cmp, key, false);
         }
 
-        [PythonName("sorted")]
-        public static List Sorted([DefaultParameterValueAttribute(null)] object iterable,
+        public static List sorted([DefaultParameterValueAttribute(null)] object iterable,
             [DefaultParameterValueAttribute(null)]object cmp,
             [DefaultParameterValueAttribute(null)]object key,
             [DefaultParameterValueAttribute(false)]bool reverse) {
@@ -1343,16 +1261,14 @@ namespace IronPython.Runtime {
 
         public static object staticmethod = DynamicHelpers.GetDynamicTypeFromType(typeof(StaticMethod));
 
-        [PythonName("sum")]
-        public static object Sum(object sequence) {
-            return Sum(sequence, 0);
+        public static object sum(object sequence) {
+            return sum(sequence, 0);
         }
 
         private static FastDynamicSite<object, object, object> addForSum =
             FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Add));
 
-        [PythonName("sum")]
-        public static object Sum(object sequence, object start) {
+        public static object sum(object sequence, object start) {
             IEnumerator i = PythonOps.GetEnumerator(sequence);
 
             if (start is string) {
@@ -1374,8 +1290,7 @@ namespace IronPython.Runtime {
 
         public static object type = DynamicHelpers.GetDynamicTypeFromType(typeof(DynamicType));
 
-        [PythonName("unichr")]
-        public static string Unichr(int i) {
+        public static string unichr(int i) {
             if (i < Char.MinValue || i > Char.MaxValue) {
                 throw PythonOps.ValueError("{0} is not in required range", i);
             }
@@ -1384,14 +1299,13 @@ namespace IronPython.Runtime {
 
         public static object unicode = DynamicHelpers.GetDynamicTypeFromType(typeof(string));
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods"), PythonName("vars")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
         [Documentation("vars([object]) -> dictionary\n\nWithout arguments, equivalent to locals().\nWith an argument, equivalent to object.__dict__.")]
-        public static object Vars(CodeContext context) {
-            return Locals(context);
+        public static object vars(CodeContext context) {
+            return locals(context);
         }
 
-        [PythonName("vars")]
-        public static object Vars(CodeContext context, object @object) {
+        public static object vars(CodeContext context, object @object) {
             object result;
             try {
                 result = new PythonDictionary(PythonOps.GetAttrDict(context, @object));
@@ -1405,8 +1319,7 @@ namespace IronPython.Runtime {
 
         public static object xrange = DynamicHelpers.GetDynamicTypeFromType(typeof(XRange)); //PyXRange.pytype;
 
-        [PythonName("zip")]
-        public static List Zip(object s0, object s1) {
+        public static List zip(object s0, object s1) {
             IEnumerator i0 = PythonOps.GetEnumerator(s0);
             IEnumerator i1 = PythonOps.GetEnumerator(s1);
             List ret = new List();
@@ -1418,12 +1331,11 @@ namespace IronPython.Runtime {
 
 
         //??? should we fastpath the 1,2,3 item cases???
-        [PythonName("zip")]
-        public static List Zip(params object[] seqs) {
+        public static List zip(params object[] seqs) {
             if (seqs == null) throw PythonOps.TypeError("zip argument must support iteration, got {0}", NoneTypeOps.TypeInstance);
 
             int N = seqs.Length;
-            if (N == 2) return Zip(seqs[0], seqs[1]);
+            if (N == 2) return zip(seqs[0], seqs[1]);
             if (N == 0) return List.Make();
             IEnumerator[] iters = new IEnumerator[N];
             for (int i = 0; i < N; i++) iters[i] = PythonOps.GetEnumerator(seqs[i]);
@@ -1477,13 +1389,13 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Gets a scope used for executing new code in optionally replacing the globals and locals dictionaries.
         /// </summary>
-        private static Microsoft.Scripting.Scope GetExecEvalScope(CodeContext context, IAttributesCollection globals, object locals) {
-            if (globals == null) globals = Globals(context);
-            if (locals == null) locals = Locals(context);
+        private static Microsoft.Scripting.Scope GetExecEvalScope(CodeContext context, IAttributesCollection globals, object localsDict) {
+            if (globals == null) globals = Builtin.globals(context);
+            if (localsDict == null) localsDict = locals(context);
 
             Microsoft.Scripting.Scope scope = new Microsoft.Scripting.Scope(
                 new Microsoft.Scripting.Scope(globals),
-                GetAttrLocals(context, locals));
+                GetAttrLocals(context, localsDict));
 
             if (!globals.ContainsKey(Symbols.Builtins)) {
                 globals[Symbols.Builtins] = SystemState.Instance.BuiltinModuleInstance;

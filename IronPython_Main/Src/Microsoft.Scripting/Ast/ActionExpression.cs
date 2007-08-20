@@ -218,6 +218,31 @@ namespace Microsoft.Scripting.Ast {
             }
 
             /// <summary>
+            /// Creates ActionExpression representing a GetMember action.
+            /// </summary>
+            /// <param name="name">The qualifier.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <param name="getMemberFlags">The binding flags for the get operation</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression GetMember(SymbolId name, GetMemberBindingFlags getMemberFlags, Type result, params Expression[] arguments) {
+                return GetMember(SourceSpan.None, name, getMemberFlags, result, arguments);
+            }
+
+            /// <summary>
+            /// Creates ActionExpression representing a GetMember action.
+            /// </summary>
+            /// <param name="span">SourceSpan to associate with the expression</param>
+            /// <param name="name">The qualifier.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <param name="getMemberFlags">The binding flags for the get operation</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression GetMember(SourceSpan span, SymbolId name, GetMemberBindingFlags getMemberFlags, Type result, params Expression[] arguments) {
+                return new ActionExpression(span, GetMemberAction.Make(name, getMemberFlags), arguments, result);
+            }
+
+            /// <summary>
             /// Creates ActionExpression representing a SetMember action.
             /// </summary>
             /// <param name="name">The qualifier.</param>

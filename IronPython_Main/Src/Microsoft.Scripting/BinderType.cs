@@ -19,9 +19,21 @@ using System.Text;
 
 namespace Microsoft.Scripting {
     public enum BinderType {
+        /// <summary>
+        /// The MethodBinder will perform normal method binding.
+        /// </summary>
         Normal,
+        /// <summary>
+        /// The MethodBinder will return the languages definition of NotImplemented if the arguments are
+        /// incompatible with the signature.
+        /// </summary>
         BinaryOperator,
-        ComparisonOperator
+        ComparisonOperator,
+        /// <summary>
+        /// The MethodBinder will set properties/fields for unused keyword arguments on the instance 
+        /// that gets returned from the method.
+        /// </summary>
+        Constructor
     }
 
 }

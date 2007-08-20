@@ -16,27 +16,64 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
-    public class ByRefReturnBuilder : ReturnBuilder {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
+    public class ByRefReturnBuilder : ReturnBuilder {    
         private IList<int> _returnArgs;
         private ActionBinder _binder;
 
         public ByRefReturnBuilder(ActionBinder binder, Type returnType, IList<int> returnArgs)
-            : base(returnType) {
+            : base(typeof(object)) {
             _returnArgs = returnArgs;
             _binder = binder;
         }
 
-        private static object GetValue(object[] args, object ret, int index) {
-            if (index == -1) return ConvertToObject(ret);
-            return ConvertToObject(args[index]);
-        }
+        internal override Expression ToExpression(MethodBinderContext context, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
+            if (_returnArgs.Count == 1) {
+                if (_returnArgs[0] == -1) {
+                    return ret;
+                }
+                return Ast.Comma(1, ret, args[_returnArgs[0]].ToReturnExpression(context));
+            } 
 
-        public override object Build(CodeContext context, object[] args, object ret) {
+            Expression[] retValues = new Expression[_returnArgs.Count];
+            int rIndex = 0;
+            bool usesRet = false;
+            foreach (int index in _returnArgs) {
+                if (index == -1) {
+                    usesRet = true;
+                    retValues[rIndex++] = ret;
+                } else {
+                    retValues[rIndex++] = args[index].ToReturnExpression(context);
+                }
+            }
+
+            Expression retArray = Ast.NewArray(typeof(object[]), retValues);
+            if (!usesRet) {
+                retArray = Ast.Comma(1, ret, retArray);
+            }
+
+            return Ast.Call(
+                Ast.ReadProperty(
+                    Ast.ReadProperty(
+                        Ast.CodeContext(),
+                        typeof(CodeContext).GetProperty("LanguageContext")
+                    ),
+                    typeof(LanguageContext).GetProperty("Binder")
+                ),
+                typeof(ActionBinder).GetMethod("GetByRefArray"),
+                retArray
+            );            
+        }
+        
+        public override object Build(CodeContext context, object[] args, object[] parameters, object ret) {
             if (_returnArgs.Count == 1) {
                 return GetValue(args, ret, _returnArgs[0]);
             } else {
@@ -49,18 +86,21 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
+        private static object GetValue(object[] args, object ret, int index) {
+            if (index == -1) return ConvertToObject(ret);
+            return ConvertToObject(args[index]);
+        }
+
+        private static Expression GetValue(Expression[] args, Expression ret, int index) {            
+            if (index == -1) return ret;
+            Debug.Assert(index < args.Length);
+            return args[index];
+        }
+
         public override int CountOutParams {
             get { return _returnArgs.Count; }
         }
 
-        public override bool CanGenerate {
-            get {
-                return false;
-            }
-        }
-
-        public override void Generate(CodeGen cg, IList<Slot> argSlots) {
-            throw new NotImplementedException();
-        }
+        
     }
 }

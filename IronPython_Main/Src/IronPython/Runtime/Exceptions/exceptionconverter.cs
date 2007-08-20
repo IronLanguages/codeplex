@@ -133,17 +133,17 @@ namespace IronPython.Runtime.Exceptions {
 
         static ExceptionConverter() {
             Debug.Assert(DefaultContext.Default != null);
-            exceptionInitMethod = new FunctionX(DefaultContext.Default, "__init__", new CallTargetWithContextN(ExceptionConverter.ExceptionInit), new string[] { "args" }, RuntimeHelpers.EmptyObjectArray, FunctionAttributes.ArgumentList);
-            exceptionGetItemMethod = new FunctionX(DefaultContext.Default, "__getitem__", new CallTargetWithContextN(ExceptionConverter.ExceptionGetItem), new string[] { "args" }, RuntimeHelpers.EmptyObjectArray, FunctionAttributes.ArgumentList);
-            exceptionStrMethod = new FunctionX(DefaultContext.Default, "__str__", new CallTargetWithContextN(ExceptionConverter.ExceptionToString), new string[] { "args" }, RuntimeHelpers.EmptyObjectArray, FunctionAttributes.ArgumentList);
-            exceptionGetStateMethod = new FunctionX(DefaultContext.Default, "__getstate__", new CallTargetWithContextN(ExceptionConverter.ExceptionGetState), new string[] { "args" }, RuntimeHelpers.EmptyObjectArray, FunctionAttributes.ArgumentList);
+            exceptionInitMethod = new FunctionX(DefaultContext.Default, "__init__", new CallTargetWithContextN(ExceptionConverter.ExceptionInit), new string[] { "args" }, ArrayUtils.EmptyObjects, FunctionAttributes.ArgumentList);
+            exceptionGetItemMethod = new FunctionX(DefaultContext.Default, "__getitem__", new CallTargetWithContextN(ExceptionConverter.ExceptionGetItem), new string[] { "args" }, ArrayUtils.EmptyObjects, FunctionAttributes.ArgumentList);
+            exceptionStrMethod = new FunctionX(DefaultContext.Default, "__str__", new CallTargetWithContextN(ExceptionConverter.ExceptionToString), new string[] { "args" }, ArrayUtils.EmptyObjects, FunctionAttributes.ArgumentList);
+            exceptionGetStateMethod = new FunctionX(DefaultContext.Default, "__getstate__", new CallTargetWithContextN(ExceptionConverter.ExceptionGetState), new string[] { "args" }, ArrayUtils.EmptyObjects, FunctionAttributes.ArgumentList);
             syntaxErrorStrMethod = new FunctionX(DefaultContext.Default, "__str__",
-                new CallTargetWithContextN(ExceptionConverter.SyntaxErrorToString), new string[] { "args" }, RuntimeHelpers.EmptyObjectArray, FunctionAttributes.ArgumentList);
+                new CallTargetWithContextN(ExceptionConverter.SyntaxErrorToString), new string[] { "args" }, ArrayUtils.EmptyObjects, FunctionAttributes.ArgumentList);
             unicodeErrorInit = new FunctionX(DefaultContext.Default,
                 "__init__",
                 new CallTargetWithContextN(ExceptionConverter.UnicodeErrorInit),
-                new string[] { "self", "encoding", "object", "start", "end", "reason" }, RuntimeHelpers.EmptyObjectArray, FunctionAttributes.None);
-            systemExitInitMethod = new FunctionX(DefaultContext.Default, "__init__", new CallTargetWithContextN(ExceptionConverter.SystemExitExceptionInit), new string[] { "args" }, RuntimeHelpers.EmptyObjectArray, FunctionAttributes.ArgumentList);
+                new string[] { "self", "encoding", "object", "start", "end", "reason" }, ArrayUtils.EmptyObjects, FunctionAttributes.None);
+            systemExitInitMethod = new FunctionX(DefaultContext.Default, "__init__", new CallTargetWithContextN(ExceptionConverter.SystemExitExceptionInit), new string[] { "args" }, ArrayUtils.EmptyObjects, FunctionAttributes.ArgumentList);
 
             for (int i = 0; i < exceptionMappings.Length; i++) {
                 CreateExceptionMapping(null, exceptionMappings[i]);
@@ -608,7 +608,7 @@ namespace IronPython.Runtime.Exceptions {
             if (PythonOps.IsInstance(value, type)) {
                 pyEx = value;
             } else if (value is Tuple) {
-                pyEx = PythonOps.CallWithArgsTuple(type, RuntimeHelpers.EmptyObjectArray, value);
+                pyEx = PythonOps.CallWithArgsTuple(type, ArrayUtils.EmptyObjects, value);
             } else {
                 pyEx = PythonCalls.Call(type, value);
             }

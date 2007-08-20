@@ -452,6 +452,12 @@ namespace IronPython.Hosting {
                 }
             }
             result += FormatStackTrace(new StackTrace(e, true), dynamicFrames, fsf);
+
+            //TODO: we would like to be able to assert this;
+            // right now, we cannot, because we are not using dynamic frames for non-interpreted dynamic methods.
+            // (we create the frames, but we do not consume them in FormatStackTrace.)
+            //Debug.Assert(dynamicFrames.Count == 0);
+            
             return result;
         }
 

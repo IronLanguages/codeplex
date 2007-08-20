@@ -22,6 +22,7 @@ using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Diagnostics;
 
     public class ParamsArgBuilder : ArgBuilder {
         private int _start;
@@ -49,14 +50,23 @@ namespace Microsoft.Scripting.Generation {
             return paramsArray;
         }
 
-        public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
             Expression[] elems = new Expression[_count];
             for (int i = 0; i < _count; i++) {
-                //TODO need type conversions here
-                elems[i] = binder.ConvertExpression(parameters[_start + i], _elementType);
+                elems[i] = context.ConvertExpression(parameters[_start + i], _elementType);
             }
 
             return Ast.NewArray(_elementType.MakeArrayType(), elems);
         }
-    }    
+
+        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
+            if (_count == 0) return null;
+
+            Expression res = context.CheckExpression(parameters[_start], _elementType);
+            for (int i = 1; i < _count; i++) {
+                res = Ast.AndAlso(res, context.CheckExpression(parameters[_start + i], _elementType));
+            }
+            return res;
+        }
+    }
 }

@@ -27,14 +27,14 @@ namespace Microsoft.Scripting.Generation {
     using Microsoft.Scripting.Utils;
 
     public class MethodTarget  {
-        private ActionBinder _binder;
+        private MethodBinder _binder;
         private MethodBase _method;
         private int _parameterCount;
         private IList<ArgBuilder> _argBuilders;
         private ArgBuilder _instanceBuilder;
         private ReturnBuilder _returnBuilder;
 
-        public MethodTarget(ActionBinder binder, MethodBase method, int parameterCount, ArgBuilder instanceBuilder, IList<ArgBuilder> argBuilders, ReturnBuilder returnBuilder) {
+        public MethodTarget(MethodBinder binder, MethodBase method, int parameterCount, ArgBuilder instanceBuilder, IList<ArgBuilder> argBuilders, ReturnBuilder returnBuilder) {
             this._binder = binder;
             this._method = method;
             this._parameterCount = parameterCount;
@@ -48,10 +48,6 @@ namespace Microsoft.Scripting.Generation {
         public MethodBase Method {
             get { return _method; }
             set { _method = value; }
-        }
-
-        public bool NeedsContext {
-            get { return _argBuilders.Count > 0 && _argBuilders[0].NeedsContext; }
         }
 
         public int ParameterCount {
@@ -110,22 +106,84 @@ namespace Microsoft.Scripting.Generation {
                 _argBuilders[i].UpdateFromReturn(callArgs[i], args);
             }
 
-            return _returnBuilder.Build(context, callArgs, result);
+            return _returnBuilder.Build(context, callArgs, args, result);
         }
 
-        public Expression MakeExpression(ActionBinder binder, Expression[] parameters) {
+        public Expression MakeExpression(ActionBinder binder, StandardRule rule, Expression[] parameters) {
+            MethodBinderContext context = new MethodBinderContext(binder, rule);
+
+            Expression check = Ast.Constant(true);
+            if (_binder.IsBinaryOperator) {
+                // TODO: only if we have a narrowing level
+
+                // need to emit check to see if args are convertible...
+                for (int i = 0; i < _argBuilders.Count; i++) {
+                    Expression checkedExpr = _argBuilders[i].CheckExpression(context, parameters);
+                    if(checkedExpr != null) {
+                        check = Ast.AndAlso(check, checkedExpr);
+                    }
+                }
+            }
+
             Expression[] args = new Expression[_argBuilders.Count];
             for (int i = 0; i < _argBuilders.Count; i++) {
-                args[i] = _argBuilders[i].ToExpression(binder, parameters);
+                args[i] = _argBuilders[i].ToExpression(context, parameters);
             }
 
             MethodInfo mi = Method as MethodInfo;
-            if (mi != null) {
-                Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(binder, parameters);
-                return Ast.Call(instance, mi, args);
+            Expression ret, call;
+            if (Method.IsPublic && Method.DeclaringType.IsVisible) {
+                // public method
+                if (mi != null) {
+                    Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(context, parameters);
+                    call = Ast.Call(instance, mi, args);
+                } else {
+                    call = Ast.New((ConstructorInfo)Method, args);
+                }
             } else {
-                return Ast.New((ConstructorInfo)Method, args);
+                // Private binding, invoke via reflection
+                if (mi != null) {
+                    Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(context, parameters);
+                    call = Ast.Call(
+                        Ast.RuntimeConstant(mi),
+                        typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) }),
+                        instance,
+                        Ast.NewArray(typeof(object[]), args)
+                    );
+                } else {
+                    call = Ast.Call(
+                        Ast.RuntimeConstant((ConstructorInfo)Method),
+                        typeof(ConstructorInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) }), 
+                        Ast.Constant(null), 
+                        Ast.NewArray(typeof(object[]), args)
+                    ); 
+                }
             }
+
+            ret = _returnBuilder.ToExpression(context, _argBuilders, parameters, call);
+
+            List<Expression> updates = null;
+            for (int i = 0; i < _argBuilders.Count; i++) {                
+                Expression next = _argBuilders[i].UpdateFromReturn(context, parameters);
+                if (next != null) {
+                    if (updates == null) updates = new List<Expression>();
+                    updates.Add(next);
+                }
+            }
+
+            if (updates != null) {
+                updates.Insert(0, ret);
+                ret = Ast.Comma(0, updates.ToArray());
+            }
+
+            if (!check.IsConstant(true)) {
+                ret = Ast.Condition(check, ret, GetNotImplemented());
+            }
+            return ret;
+        }
+
+        private static MethodCallExpression GetNotImplemented() {
+            return Ast.Call(Ast.ReadProperty(Ast.CodeContext(), typeof(CodeContext), "LanguageContext"), typeof(LanguageContext).GetMethod("GetNotImplemented"), Ast.NewArray(typeof(MethodCandidate[])));
         }
 
         /// <summary>
@@ -133,19 +191,23 @@ namespace Microsoft.Scripting.Generation {
         /// the types to the provided known types.
         /// </summary>
         /// <param name="binder"></param>
+        /// <param name="rule"></param>
         /// <param name="parameters"></param>
         /// <param name="knownTypes"></param>
         /// <returns></returns>
-        public Expression MakeExpression(ActionBinder binder, Expression[] parameters, Type[] knownTypes) {
-            Expression[] args = new Expression[parameters.Length];
-            for (int i = 0; i < args.Length; i++) {
-                args[i] = parameters[i];
-                if (!knownTypes[i].IsAssignableFrom(parameters[i].ExpressionType)) {
-                    args[i] = Ast.Cast(parameters[i], CompilerHelpers.GetVisibleType(knownTypes[i]));
+        public Expression MakeExpression(ActionBinder binder, StandardRule rule, Expression[] parameters, Type[] knownTypes) {
+            Expression[] args = parameters;
+            if (knownTypes != null) {
+                args = new Expression[parameters.Length];
+                for (int i = 0; i < args.Length; i++) {
+                    args[i] = parameters[i];
+                    if (knownTypes[i] != null && !knownTypes[i].IsAssignableFrom(parameters[i].ExpressionType)) {
+                        args[i] = Ast.Cast(parameters[i], CompilerHelpers.GetVisibleType(knownTypes[i]));
+                    }
                 }
             }
 
-            return MakeExpression(binder, args);
+            return MakeExpression(binder, rule, args);
         }
 
         public AbstractValue AbstractCall(AbstractContext context, IList<AbstractValue> args) {
@@ -179,9 +241,11 @@ namespace Microsoft.Scripting.Generation {
             return AbstractValue.LimitType(this.ReturnType, callExpr);
         }
 
-        private static int FindMaxPriority(IList<ArgBuilder> abs) {
-            int max = -1;
+        private static int FindMaxPriority(IList<ArgBuilder> abs, int ceiling) {
+            int max = 0;
             foreach (ArgBuilder ab in abs) {
+                if (ab.Priority > ceiling) continue;
+
                 max = System.Math.Max(max, ab.Priority);
             }
             return max;
@@ -210,12 +274,16 @@ namespace Microsoft.Scripting.Generation {
                 case -1: return 1;
             }
 
-            //prefer methods using earlier conversions rules to later ones
-            int maxPriorityThis = FindMaxPriority(this._argBuilders);
-            int maxPriorityOther = FindMaxPriority(other._argBuilders);
+            //prefer methods using earlier conversions rules to later ones            
+            for (int i = Int32.MaxValue; i >= 0; ) {
+                int maxPriorityThis = FindMaxPriority(this._argBuilders, i);
+                int maxPriorityOther = FindMaxPriority(other._argBuilders, i);
 
-            if (maxPriorityThis < maxPriorityOther) return +1;
-            if (maxPriorityOther < maxPriorityThis) return -1;
+                if (maxPriorityThis < maxPriorityOther) return +1;
+                if (maxPriorityOther < maxPriorityThis) return -1;
+
+                i = maxPriorityThis - 1;
+            }
 
             return 0;
         }
@@ -236,27 +304,24 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public MethodTarget MakeParamsExtended(int argCount) {
+        public MethodTarget MakeParamsExtended(int argCount, SymbolId[] names, int[] nameIndexes) {
             Debug.Assert(CompilerHelpers.IsParamsMethod(Method));
-
-            if (argCount < ParameterCount - 1) return null;
 
             List<ArgBuilder> newArgBuilders = new List<ArgBuilder>(_argBuilders.Count);
             
             // current argument that we consume, initially skip this if we have it.
-            int curArg = CompilerHelpers.IsStatic(_method) ? 0 : 1; 
+            int curArg = CompilerHelpers.IsStatic(_method) ? 0 : 1;
+            int kwIndex = -1;
 
             foreach (ArgBuilder ab in _argBuilders) {
                 SimpleArgBuilder sab = ab as SimpleArgBuilder;
                 if (sab != null) {
                     // we consume one or more incoming argument(s)
-                    if (!sab.IsParams) {
-                        // consume the next argument
-                        newArgBuilders.Add(new SimpleArgBuilder(curArg++, sab.Type));
-                    } else {
+                    if (sab.IsParamsArray) {
                         // consume all the extra arguments
                         int paramsUsed = argCount -
-                            GetConsumedArguments() +
+                            GetConsumedArguments() - 
+                            names.Length +
                             (CompilerHelpers.IsStatic(_method) ? 1 : 0);
 
                         newArgBuilders.Add(new ParamsArgBuilder(
@@ -265,6 +330,12 @@ namespace Microsoft.Scripting.Generation {
                             sab.Type.GetElementType()));
 
                         curArg += paramsUsed;
+                    } else if (sab.IsParamsDict) {
+                        // consume all the kw arguments
+                        kwIndex = newArgBuilders.Count;
+                    } else {
+                        // consume the next argument
+                        newArgBuilders.Add(new SimpleArgBuilder(curArg++, sab.Type));
                     }
                 } else {
                     // CodeContext, null, default, etc...  we don't consume an 
@@ -273,13 +344,18 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
+            if (kwIndex != -1) {
+                newArgBuilders.Insert(kwIndex, new ParamsDictArgBuilder(curArg, names, nameIndexes));
+            }
+
             return new MethodTarget(_binder, Method, argCount, _instanceBuilder, newArgBuilders, _returnBuilder);
         }
 
         private int GetConsumedArguments() {
             int consuming = 0;
             foreach (ArgBuilder argb in _argBuilders) {
-                if (argb is SimpleArgBuilder) consuming++;
+                SimpleArgBuilder sab = argb as SimpleArgBuilder;
+                if (sab != null && !sab.IsParamsDict) consuming++;
             }
             return consuming;
         }

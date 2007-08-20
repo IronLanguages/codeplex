@@ -26,8 +26,8 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public class NewExpression : Expression {
-        readonly ConstructorInfo _constructor;
-        readonly ReadOnlyCollection<Expression> _arguments;
+        private readonly ConstructorInfo _constructor;
+        private readonly ReadOnlyCollection<Expression> _arguments;
 
         internal NewExpression(SourceSpan span, ConstructorInfo constructor, IList<Expression> arguments)
             : base(span) {

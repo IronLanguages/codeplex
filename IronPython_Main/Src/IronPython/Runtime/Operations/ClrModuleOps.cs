@@ -74,7 +74,7 @@ namespace IronPython.Runtime.Operations {
         }
         #endregion
 
-        public class ArgChecker : ICallableWithCodeContext {
+        public class ArgChecker : ICallableWithCodeContext, IFancyCallable {
             private object[] expected;
 
             public ArgChecker(object[] prms) {
@@ -91,9 +91,21 @@ namespace IronPython.Runtime.Operations {
             }
 
             #endregion
+
+            #region IFancyCallable Members
+
+            public object Call(CodeContext context, object[] args, string[] names) {
+                if (names.Length == 0) {
+                    return Call(context, args);
+                }
+
+                throw new ArgumentTypeException("bad arg count");
+            }
+
+            #endregion
         }
 
-        public class RuntimeArgChecker : DynamicTypeSlot, ICallableWithCodeContext {
+        public class RuntimeArgChecker : DynamicTypeSlot, ICallableWithCodeContext, IFancyCallable {
             private object[] _expected;
             private object _func;
             private object _inst;
@@ -146,9 +158,23 @@ namespace IronPython.Runtime.Operations {
                 value = new RuntimeArgChecker(instance, _func, _expected);
                 return true;
             }
+
+            #region IFancyCallable Members
+
+            public object Call(CodeContext context, object[] args, string[] names) {
+                ValidateArgs(args);
+
+                if (_inst != null) {
+                    return PythonOps.CallWithKeywordArgs(context, _func, ArrayUtils.Insert(_inst, args), names);
+                } else {
+                    return PythonOps.CallWithKeywordArgs(context, _func, args, names);
+                }
+            }
+
+            #endregion
         }
 
-        public class ReturnChecker : ICallableWithCodeContext {
+        public class ReturnChecker : ICallableWithCodeContext, IFancyCallable {
             public object retType;
 
             public ReturnChecker(object returnType) {
@@ -165,9 +191,21 @@ namespace IronPython.Runtime.Operations {
             }
 
             #endregion
+
+            #region IFancyCallable Members
+
+            public object Call(CodeContext context, object[] args, string[] names) {
+                if (names.Length == 0) {
+                    return Call(context, args);
+                }
+
+                throw PythonOps.TypeError("bad arg count");
+            }
+
+            #endregion
         }
 
-        public class RuntimeReturnChecker : DynamicTypeSlot, ICallableWithCodeContext {
+        public class RuntimeReturnChecker : DynamicTypeSlot, ICallableWithCodeContext, IFancyCallable {
             private object _retType;
             private object _func;
             private object _inst;
@@ -223,6 +261,21 @@ namespace IronPython.Runtime.Operations {
                 value = GetAttribute(instance, owner);
                 return true;
             }
+
+            #region IFancyCallable Members
+
+            public object Call(CodeContext context, object[] args, string[] names) {
+                object ret;
+                if (_inst != null) {
+                    ret = PythonOps.CallWithKeywordArgs(context, _func, ArrayUtils.Insert(_inst, args), names);
+                } else {
+                    ret = PythonOps.CallWithKeywordArgs(context, _func, args, names);
+                }
+                ValidateReturn(ret);
+                return ret;
+            }
+
+            #endregion
         }
 
         // backwards compatibility w/ IronPython v1.x

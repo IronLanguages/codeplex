@@ -21,22 +21,26 @@ using Microsoft.Scripting.Actions;
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
+    /// <summary>
+    /// ArgBuilder which provides the CodeContext parameter to a method.
+    /// </summary>
     public class ContextArgBuilder : ArgBuilder {
         public ContextArgBuilder() { }
+
         public override object Build(CodeContext context, object[] args) {
             return context;
-        }
-
-        public override bool NeedsContext {
-            get { return true; }
         }
 
         public override int Priority {
             get { return -1; }
         }
 
-        public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
             return Ast.CodeContext();
+        }
+
+        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
+            return null;
         }
     }
 }

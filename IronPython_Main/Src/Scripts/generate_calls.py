@@ -428,7 +428,7 @@ public static object Call(%(params)s) {
 
 def gen_call_meth(nargs, cw):
     args = ["DefaultContext.Default"]+["arg%d" % i for i in range(nargs)]
-    argsArray = "RuntimeHelpers.EmptyObjectArray"
+    argsArray = "ArrayUtils.EmptyObjects"
     if nargs > 0:
         argsArray = "new object[] { %s }" % ", ".join(args[1:])
 
@@ -441,7 +441,7 @@ def gen_callcontext_meth(nparams, cw):
     cw.write("if (fc != null) return fc.Call("+ make_args1(nparams, ["context"]) +");")
     cw.write("")
     if nparams == 0:
-        cw.write("return RuntimeHelpers.CallWithContext(context, func, RuntimeHelpers.EmptyObjectArray);")
+        cw.write("return RuntimeHelpers.CallWithContext(context, func, ArrayUtils.EmptyObjects);")
     else:
         cw.write("return RuntimeHelpers.CallWithContext(context, func, new object[] " + gen_args_array(nparams) + ");")
     cw.exit_block()

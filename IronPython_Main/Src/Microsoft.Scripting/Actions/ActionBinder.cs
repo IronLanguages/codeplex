@@ -21,6 +21,8 @@ using System.Reflection;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Types;
+using System.Text;
+using System.Collections;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -95,7 +97,7 @@ namespace Microsoft.Scripting.Actions {
 #if DEBUG
             AstWriter.DumpRule(rule);
 #endif
-            ruleSet.AddRule(rule);
+            ruleSet.AddRule(args, rule);
             return rule;
         }
 
@@ -125,7 +127,7 @@ namespace Microsoft.Scripting.Actions {
         protected virtual StandardRule<T> MakeRule<T>(CodeContext callerContext, Action action, object[] args) {
             switch (action.Kind) {
                 case ActionKind.Call:
-                    return new CallBinderHelper<T>(callerContext, (CallAction)action).MakeRule(args);
+                    return new CallBinderHelper<T>(callerContext, (CallAction)action, args).MakeRule();
                 case ActionKind.GetMember:
                     return new GetMemberBinderHelper<T>(callerContext, (GetMemberAction)action, args).MakeNewRule();
                 case ActionKind.SetMember:
@@ -167,6 +169,13 @@ namespace Microsoft.Scripting.Actions {
         public abstract Expression ConvertExpression(Expression expr, Type toType);
 
         /// <summary>
+        /// Returns an expression which checks to see if the provided expression can be converted to the provided type.
+        /// 
+        /// TODO: Remove me when operator method binding disappears from the MethodBinder.
+        /// </summary>
+        public abstract Expression CheckExpression(Expression expr, Type toType);
+
+        /// <summary>
         /// Gets the return value when an object contains out / by-ref parameters.  
         /// </summary>
         /// <param name="args">The values of by-ref and out parameters that the called method produced.  This includes the normal return
@@ -196,10 +205,12 @@ namespace Microsoft.Scripting.Actions {
         /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
         /// doing this for the time being until we get a more robust error return mechanism.
         /// </summary>
-        public virtual Expression MakeMissingMemberError(Type type, string name) {
-            return Ast.Ast.New(
-                typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                Ast.Ast.Constant(name)
+        public virtual Statement MakeMissingMemberError<T>(StandardRule<T> rule, Type type, string name) {
+            return rule.MakeError(this,
+                Ast.Ast.New(
+                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                    Ast.Ast.Constant(name)
+                )
             );           
         }
 
@@ -207,11 +218,112 @@ namespace Microsoft.Scripting.Actions {
         /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
         /// doing this for the time being until we get a more robust error return mechanism.
         /// </summary>
-        public virtual Expression MakeReadOnlyMemberError(Type type, string name) {
-            return Ast.Ast.New(
-                typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                Ast.Ast.Constant(name)
+        public virtual Statement MakeReadOnlyMemberError<T>(StandardRule<T> rule, Type type, string name) {
+            return rule.MakeError(this,
+                Ast.Ast.New(
+                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                    Ast.Ast.Constant(name)
+                )
             );
+        }
+
+        public virtual Statement MakeInvalidParametersError(MethodBinder binder, CallAction action, CallType callType, MethodBase[] targets, StandardRule rule, object []args) {
+            int minArgs = Int32.MaxValue;
+            int maxArgs = Int32.MinValue;
+            int maxDflt = Int32.MinValue;
+            int argsProvided = args.Length - 1; // -1 to remove the object we're calling
+            bool hasArgList = false;
+            Dictionary<string, bool> namedArgs = new Dictionary<string, bool>();
+
+            if (action.HasDictionaryArgument()) {
+                argsProvided--;
+                IAttributesCollection iac = args[action.DictionaryIndex + 1] as IAttributesCollection;
+                if (iac != null) {
+                    foreach (KeyValuePair<object, object> kvp in iac) {
+                        namedArgs[(string)kvp.Key] = false;
+                    }
+                }
+            }
+            argsProvided += GetParamsArgumentCountAdjust(action, args);
+            foreach (SymbolId si in action.GetArgumentNames()) {
+                namedArgs[SymbolTable.IdToString(si)] = false;
+            }
+
+            foreach (MethodBase mb in targets) {
+                if (callType == CallType.ImplicitInstance && CompilerHelpers.IsStatic(mb)) continue;
+
+                ParameterInfo[] pis = mb.GetParameters();
+                int cnt = pis.Length;
+                int dflt = 0;
+
+                if (!CompilerHelpers.IsStatic(mb) && callType == CallType.None) {
+                    cnt++;
+                }
+
+                foreach (ParameterInfo pi in pis) {
+                    if (pi.ParameterType == typeof(CodeContext)) {
+                        cnt--;
+                    } else if (CompilerHelpers.IsParamArray(pi)) {
+                        cnt--;
+                        hasArgList = true;
+                    } else if (CompilerHelpers.IsParamDictionary(pi)) {
+                        cnt--;
+                    } else if (pi.DefaultValue != DBNull.Value || pi.IsOptional) {
+                        dflt++;
+                        cnt--;
+                    }
+
+                    namedArgs[pi.Name] = true;
+                }
+
+                minArgs = System.Math.Min(cnt, minArgs);
+                maxArgs = System.Math.Max(cnt, maxArgs);
+                maxDflt = System.Math.Max(dflt, maxDflt);
+            }
+
+            foreach (KeyValuePair<string, bool> kvp in namedArgs) {
+                if (kvp.Value == false) {
+                    // unbound named argument.
+                    return rule.MakeError(binder._binder,
+                        Ast.Ast.Call(
+                            null,
+                            typeof(RuntimeHelpers).GetMethod("TypeErrorForExtraKeywordArgument"),
+                            Ast.Ast.Constant(targets[0].Name),
+                            Ast.Ast.Constant(kvp.Key)
+                        )
+                    );
+                }
+            }
+
+            return rule.MakeError(binder._binder,
+                    Ast.Ast.Call(
+                        null,
+                        typeof(RuntimeHelpers).GetMethod("TypeErrorForIncorrectArgumentCount", new Type[] { typeof(string), typeof(int), typeof(int), typeof(int), typeof(int), typeof(bool), typeof(bool) }),
+                        Ast.Ast.Constant(targets[0].Name),  // name
+                        Ast.Ast.Constant(minArgs),          // min formal normal arg cnt
+                        Ast.Ast.Constant(maxArgs),          // max formal normal arg cnt
+                        Ast.Ast.Constant(maxDflt),          // default cnt
+                        Ast.Ast.Constant(argsProvided),      // args provided
+                        Ast.Ast.Constant(hasArgList),       // hasArgList
+                        Ast.Ast.Constant(action.HasNamedArgument())             // kwargs provided
+                    )
+                );
+        }
+
+        /// <summary>
+        /// Given a CallAction and its arguments gets the number by which the parameter count should
+        /// be adjusted due to the params array to get the logical number of parameters.
+        /// </summary>
+        protected static int GetParamsArgumentCountAdjust(CallAction action, object[] args) {
+            int paramsCount = 0;
+            if (action.HasParamsArgument()) {
+                paramsCount--;
+                IList<object> paramArgs = args[action.ParamsIndex + 1] as IList<object>;
+                if (paramArgs != null) {
+                    paramsCount += paramArgs.Count;
+                }
+            }
+            return paramsCount;
         }
 
         private static MemberInfo[] GetExtensionMembers(string name, Type type) {

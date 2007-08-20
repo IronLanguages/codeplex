@@ -26,6 +26,7 @@ using Microsoft.Scripting.Generation;
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using Microsoft.Scripting.Utils;
+    using System.Collections;
 
     public class BinderHelper<T, ActionType> where ActionType : Action {
         private CodeContext _context;
@@ -88,7 +89,7 @@ namespace Microsoft.Scripting.Actions {
             rule.MakeTest(targetType);
             return rule;
         }
-        
+
         /// <summary>
         /// Gets the expressions which correspond to each parameter on the calling method.
         /// </summary>
@@ -168,9 +169,13 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static bool IsStrongBox(object target) {
-            return target != null &&
-                target.GetType().IsGenericType &&
-                target.GetType().GetGenericTypeDefinition() == typeof(StrongBox<>);
+            Type t = CompilerHelpers.GetType(target);
+
+            return IsStrongBox(t);
+        }
+
+        public static bool IsStrongBox(Type t) {
+            return t.IsGenericType && t.GetGenericTypeDefinition() == typeof(StrongBox<>);
         }
 
         public static int ArgumentCount(CallAction action, StandardRule<T> rule) {
@@ -190,12 +195,22 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static Expression MakeParamsTest(StandardRule<T> rule, object[] args) {
-            return Ast.Equal(
-                Ast.ReadProperty(
-                    GetParamsList(rule),
-                    typeof(ICollection<object>).GetProperty("Count")
+            return MakeParamsTest(rule, args[args.Length - 1], GetParamsList(rule));
+        }
+
+        public static Expression MakeParamsTest(StandardRule<T> rule, object paramArg, Expression listArg) {
+            return Ast.AndAlso(
+                Ast.Equal(
+                    Ast.Call(listArg, typeof(object).GetMethod("GetType")),
+                    Ast.Constant(CompilerHelpers.GetType(paramArg))
                 ),
-                Ast.Constant(((IList<object>)args[args.Length - 1]).Count)
+                Ast.Equal(
+                    Ast.ReadProperty(
+                        Ast.Cast(listArg, typeof(ICollection<object>)),
+                        typeof(ICollection<object>).GetProperty("Count")
+                    ),
+                    Ast.Constant(((IList<object>)paramArg).Count)
+                )
             );
         }
 
@@ -210,14 +225,15 @@ namespace Microsoft.Scripting.Actions {
                         continue;
 
                     case ArgumentKind.List:
-                        Debug.Assert(i == args.Length - 1);
-
                         IList<object> list = args[i] as IList<object>;
                         if (list == null) return null;
 
                         for (int j = 0; j < list.Count; j++) {
                             res.Add(CompilerHelpers.GetType(list[j]));
                         }
+                        break;
+                    case ArgumentKind.Dictionary: 
+                        // caller needs to process these...
                         break;
                     default:
                         throw new NotImplementedException();
@@ -323,6 +339,7 @@ namespace Microsoft.Scripting.Actions {
                 if (testTypes != null) {
                     for (int i = 0; i < testTypes.Length; i++) {
                         if (testTypes[i] != null) {
+                            Debug.Assert(i < arguments.Length);
                             typeTest = Ast.AndAlso(typeTest, rule.MakeTypeTest(testTypes[i], arguments[i]));
                         }
                     }

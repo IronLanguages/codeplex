@@ -82,7 +82,7 @@ namespace IronPython.Modules {
             if (SystemState.Instance.modules.TryGetValue(name, out mod)) {
                 ScriptModule module = mod as ScriptModule;
                 if (module != null) {
-                    return Builtin.Reload(context, module);
+                    return Builtin.reload(context, module);
                 }
             }
             int type = Converter.ConvertToInt32(description[2]);

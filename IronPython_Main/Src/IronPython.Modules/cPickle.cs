@@ -23,6 +23,7 @@ using System.Runtime.InteropServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
@@ -1163,7 +1164,7 @@ namespace IronPython.Modules {
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.Module, out moduleName)) {
                     // TODO: Global SystemState
                     if (!PythonEngine.CurrentEngine.Importer.TryGetExistingModule(Converter.ConvertToString(moduleName), out module)) {
-                        module = Builtin.Import(context, Converter.ConvertToString(moduleName));
+                        module = Builtin.__import__(context, Converter.ConvertToString(moduleName));
                     }
 
                     object foundObj;
@@ -1399,7 +1400,7 @@ namespace IronPython.Modules {
             public object find_global(CodeContext context, object module, object attr) {
                 object moduleObject;
                 if (!PythonEngine.CurrentEngine.Importer.TryGetExistingModule(Converter.ConvertToString(module), out moduleObject)) {
-                    moduleObject = Builtin.Import(context, Converter.ConvertToString(module));
+                    moduleObject = Builtin.__import__(context, Converter.ConvertToString(module));
                 }
                 return PythonOps.GetBoundAttr(context, moduleObject, SymbolTable.StringToId(Converter.ConvertToString(attr)));
             }
@@ -1738,7 +1739,7 @@ namespace IronPython.Modules {
                         DynamicHelpers.GetDynamicType(args)
                     );
                 }
-                _stack.Append(PythonOps.CallWithArgsTupleAndContext(context, callable, RuntimeHelpers.EmptyObjectArray, args));
+                _stack.Append(PythonOps.CallWithArgsTupleAndContext(context, callable, ArrayUtils.EmptyObjects, args));
             }
 
             private void LoadSetItem(CodeContext context) {

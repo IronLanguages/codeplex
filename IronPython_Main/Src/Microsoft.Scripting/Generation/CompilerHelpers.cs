@@ -59,13 +59,17 @@ namespace Microsoft.Scripting.Generation {
         }
         public static bool IsParamsMethod(ParameterInfo[] pis) {
             foreach (ParameterInfo pi in pis) {
-                if (IsParamArray(pi)) return true;
+                if (IsParamArray(pi) || IsParamDictionary(pi)) return true;
             }
             return false;
         }
 
         public static bool IsParamArray(ParameterInfo parameter) {
-            return parameter.GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0;
+            return parameter.IsDefined(typeof(ParamArrayAttribute), false);
+        }
+
+        public static bool IsParamDictionary(ParameterInfo parameter) {
+            return parameter.IsDefined(typeof(ParamDictionaryAttribute), false);
         }
 
         public static bool IsOutParameter(ParameterInfo pi) {
@@ -90,6 +94,8 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static object GetMissingValue(Type type) {
+            if (type.IsByRef) type = type.GetElementType();
+
             if (type.IsEnum) return Activator.CreateInstance(type);
 
             switch (Type.GetTypeCode(type)) {
@@ -402,7 +408,10 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
-            // well, we couldn't do any better.
+            if (!ScriptDomainManager.Options.PrivateBinding) {
+                throw new InvalidOperationException(String.Format("{0}.{1} has no publiclly visible method", getter.DeclaringType, getter.Name));
+            }
+
             return getter;
         }
 
@@ -427,6 +436,6 @@ namespace Microsoft.Scripting.Generation {
                 t = t.BaseType;
             }
             return t;
-        }
+        }        
     }
 }

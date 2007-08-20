@@ -54,7 +54,7 @@ namespace IronPython.Compiler.Ast {
                     Ast.Call(
                         _item.Span,
                         null,                                                                  // instance
-                        AstGenerator.GetHelperMethod("MakeList", ReflectionUtils.EmptyTypes), // method
+                        AstGenerator.GetHelperMethod("MakeList", ArrayUtils.EmptyTypes), // method
                         new MSAst.Expression[0]                                                // arguments
                     )                    
                 );

@@ -17,6 +17,7 @@
 
 from lib.assert_util import *
 skiptest("win32")
+skiptest("interpreted") #Too slow
 from System import *
 from System.Threading import *
 

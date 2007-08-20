@@ -19,9 +19,12 @@ using System.Text;
 using System.Diagnostics;
 using System.Threading;
 using System.Reflection;
+using System.Collections;
 
 using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -40,7 +43,7 @@ namespace Microsoft.Scripting {
         public static readonly object True = true;
         /// <summary> Singleton boxed instance of False  We should never box additional instances. </summary>
         public static readonly object False = false;
-        public static readonly object[] EmptyObjectArray = new object[0];
+
         [ThreadStatic]
         internal static List<DynamicStackFrame> _stackFrames; 
 
@@ -106,22 +109,33 @@ namespace Microsoft.Scripting {
             int providedArgumentCount,
             bool hasArgList,
             bool keywordArgumentsProvided) {
+            return TypeErrorForIncorrectArgumentCount(methodName, formalNormalArgumentCount, formalNormalArgumentCount, defaultArgumentCount, providedArgumentCount, hasArgList, keywordArgumentsProvided);
+        }
+
+        public static ArgumentTypeException TypeErrorForIncorrectArgumentCount(
+            string methodName,
+            int minFormalNormalArgumentCount,
+            int maxFormalNormalArgumentCount,
+            int defaultArgumentCount,
+            int providedArgumentCount,
+            bool hasArgList,
+            bool keywordArgumentsProvided) {
 
             int formalCount;
             string formalCountQualifier;
             string nonKeyword = keywordArgumentsProvided ? "non-keyword " : "";
 
-            if (defaultArgumentCount > 0 || hasArgList) {
-                if (providedArgumentCount < formalNormalArgumentCount) {
+            if (defaultArgumentCount > 0 || hasArgList || minFormalNormalArgumentCount != maxFormalNormalArgumentCount) {
+                if (providedArgumentCount < minFormalNormalArgumentCount) {
                     formalCountQualifier = "at least";
-                    formalCount = formalNormalArgumentCount - defaultArgumentCount;
+                    formalCount = minFormalNormalArgumentCount - defaultArgumentCount;
                 } else {
                     formalCountQualifier = "at most";
-                    formalCount = formalNormalArgumentCount;
+                    formalCount = minFormalNormalArgumentCount;
                 }
             } else {
                 formalCountQualifier = "exactly";
-                formalCount = formalNormalArgumentCount;
+                formalCount = minFormalNormalArgumentCount;
             }
 
             return RuntimeHelpers.SimpleTypeError(string.Format(
@@ -140,6 +154,10 @@ namespace Microsoft.Scripting {
 
         public static ArgumentTypeException TypeErrorForIncorrectArgumentCount(string name, int expected, int received) {
             return TypeErrorForIncorrectArgumentCount(name, expected, 0, received);
+        }
+
+        public static ArgumentTypeException TypeErrorForExtraKeywordArgument(string name, string argumentName) {
+            return SimpleTypeError(String.Format("{0}() got an unexpected keyword argument '{1}'", name, argumentName));
         }
 
         public static ArgumentTypeException SimpleTypeError(string message) {
@@ -303,8 +321,6 @@ namespace Microsoft.Scripting {
 #endif
             context.LanguageContext.PopExceptionHandler();
 
-            _stackFrames = null;
-
             LanguageContext._currentExceptions.RemoveAt(LanguageContext._currentExceptions.Count - 1);
         }
 
@@ -395,6 +411,61 @@ namespace Microsoft.Scripting {
 
         public static ReflectedEvent.BoundEvent MakeBoundEvent(ReflectedEvent eventObj, object instance, Type type) {
             return new ReflectedEvent.BoundEvent(eventObj, instance, DynamicHelpers.GetDynamicTypeFromType(type));
+        }
+
+        /// <summary>
+        /// Helper function to combine an object array with a sequence of additional parameters that has been splatted for a function call.
+        /// </summary>
+        public static object[] GetCombinedParameters(object[] initialArgs, object additionalArgs) {
+            IList listArgs = additionalArgs as IList;
+            if (listArgs == null) {
+                IEnumerable ie = additionalArgs as IEnumerable;
+                if (ie == null) {
+                    throw new InvalidOperationException("args must be iterable");
+                }
+                listArgs = new List<object>();
+                foreach (object o in ie) {
+                    listArgs.Add(o);
+                }
+            }
+
+            object[] res = new object[initialArgs.Length + listArgs.Count];
+            Array.Copy(initialArgs, res, initialArgs.Length);
+            listArgs.CopyTo(res, initialArgs.Length);
+            return res;
+        }
+
+        public static object[] GetCombinedKeywordParameters(object[] initialArgs, IAttributesCollection additionalArgs, ref string[] extraNames) {
+            List<object> args = new List<object>(initialArgs);
+            List<string> newNames = extraNames == null ? new List<string>(additionalArgs.Count) : new List<string>(extraNames);
+            foreach(KeyValuePair<object, object> kvp in additionalArgs) {
+                if (kvp.Key is string) {
+                    newNames.Add((string)kvp.Key);
+                    args.Add(kvp.Value);
+                }
+            }
+            extraNames = newNames.ToArray();
+            return args.ToArray();
+        }
+
+        public static SymbolDictionary MakeSymbolDictionary(SymbolId[] names, object[] values) {
+            SymbolDictionary res = new SymbolDictionary();
+            for (int i = 0; i < names.Length; i++) {
+                ((IAttributesCollection)res)[names[i]] = values[i];
+            }
+            return res;
+        }
+
+        public static object IncorrectBoxType(Type expected, object received) {
+            throw new ArgumentTypeException(String.Format("Expected type {0}, got {1}", expected, CompilerHelpers.GetType(received)));
+        }
+
+        public static void UpdateBox<T>(StrongBox<T> box, T value) {
+            box.Value = value;
+        }
+
+        public static T GetBox<T>(StrongBox<T> box) {
+            return box.Value;
         }
     }
 }

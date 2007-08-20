@@ -303,6 +303,7 @@ def test_conversions():
     AreEqual(int(Single.Parse("3.14159")), 3)
     
 #----------------------------------------------------------------------------------  
+@skip("interpreted") #Too slow
 def test_operators():
     def operator_add(a, b) :
         return a + b

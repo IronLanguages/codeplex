@@ -24,13 +24,21 @@ namespace Microsoft.Scripting.Ast {
     /// TODO: Remove DynamicTryStatement and switch to all static exception handling.
     /// </summary>
     public class TryFinallyStatement : Statement {
-        private Statement _body;
-        private Statement _finally;
+        private readonly Statement _body;
+        private readonly Statement _finally;
 
         internal TryFinallyStatement(SourceSpan span, Statement body, Statement @finally)
             : base(span) {
             _body = body;
             _finally = @finally;
+        }
+
+        public Statement Body {
+            get { return _body; }
+        }
+
+        public Statement FinallyStatement {
+            get { return _finally; }
         }
 
         public override void Emit(CodeGen cg) {

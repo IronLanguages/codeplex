@@ -22,7 +22,14 @@ using System.Diagnostics;
 namespace Microsoft.Scripting.Utils {
     public static class ArrayUtils {
 
+#if SILVERLIGHT
+        public static readonly Type[] EmptyTypes = new Type[0];
+#else
+        public static readonly Type[] EmptyTypes = Type.EmptyTypes;
+#endif
+
         public static readonly string[] EmptyStrings = new string[0];
+        public static readonly object[] EmptyObjects = new object[0];
 
         public static TOutput[] ConvertAll<TInput, TOutput>(TInput[] input, Converter<TInput, TOutput> conv) {
 #if SILVERLIGHT
@@ -168,7 +175,7 @@ namespace Microsoft.Scripting.Utils {
             return array;
         }
 
-        internal static void SwapLastTwo<T>(T[] array) {
+        public static void SwapLastTwo<T>(T[] array) {
             Debug.Assert(array != null && array.Length >= 2);
 
             T temp = array[array.Length - 1];

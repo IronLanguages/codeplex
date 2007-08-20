@@ -360,6 +360,10 @@ def skiptest(*args):
     elif is_silverlight and 'silverlight' in args:
         print '... %s, skipping whole test module...' % sys.platform
         exit_module()
+        
+    elif is_interpreted() and 'interpreted' in args:
+        print '... %s, skipping whole test module under "interpreted" mode...' % sys.platform
+        exit_module()     
     
     if sys.platform in args: 
         print '... %s, skipping whole test module...' % sys.platform

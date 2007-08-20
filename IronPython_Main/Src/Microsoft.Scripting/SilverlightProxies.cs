@@ -146,7 +146,7 @@ namespace System {
 
             public bool Get(int index) {
                 if (index < 0 || index >= _count) {
-                    throw new IndexOutOfRangeException();
+                    throw new ArgumentOutOfRangeException();
                 }
                 int elem = index / 32, mask = 1 << (index % 32);
                 return (_data[elem] & mask) != 0;
@@ -154,7 +154,7 @@ namespace System {
 
             public void Set(int index, bool value) {
                 if (index < 0 || index >= _count) {
-                    throw new IndexOutOfRangeException();
+                    throw new ArgumentOutOfRangeException();
                 }
                 int elem = index / 32, mask = 1 << (index % 32);
                 if (value) {
@@ -171,7 +171,7 @@ namespace System {
                 }
             }
 
-            public void And(BitArray bits) {
+            public BitArray And(BitArray bits) {
                 if (bits == null) {
                     throw new ArgumentNullException();
                 } else if (bits._count != _count) {
@@ -180,9 +180,11 @@ namespace System {
                 for (int i = 0; i < _data.Length; ++i) {
                     _data[i] &= bits._data[i];
                 }
+
+                return this;
             }
 
-            public void Or(BitArray bits) {
+            public BitArray Or(BitArray bits) {
                 if (bits == null) {
                     throw new ArgumentNullException();
                 } else if (bits._count != _count) {
@@ -191,6 +193,8 @@ namespace System {
                 for (int i = 0; i < _data.Length; ++i) {
                     _data[i] |= bits._data[i];
                 }
+
+                return this;
             }
 
             public BitArray Not() {
@@ -205,7 +209,7 @@ namespace System {
 
     namespace Collections.Generic {
 
-        #region Stack<T>
+#region Stack<T>
 
         public class Stack<T> : IEnumerable<T> {
             List<T> _list;
@@ -270,9 +274,9 @@ namespace System {
         }
 
 
-        #endregion
+#endregion
 
-        #region LinkedList<T>, LinkedListNode<T>
+#region LinkedList<T>, LinkedListNode<T>
         public class LinkedListNode<T> {
             internal LinkedListNode<T> _previous, _next;
             internal T _value;
@@ -346,6 +350,11 @@ namespace System {
             }
 
             public void Remove(LinkedListNode<T> node) {
+                if (node==null) {
+                    throw new ArgumentNullException();
+                }
+
+
                 if (node._previous == null) {
                     _first = node._next;
                 } else {
@@ -362,9 +371,9 @@ namespace System {
             }
         }
 
-        #endregion
+#endregion
 
-        #region Queue<T>
+#region Queue<T>
 
         public class Queue<T> {
             private readonly static T[] _EmptyArray = new T[0];
@@ -409,7 +418,7 @@ namespace System {
             }
         }
 
-        #endregion
+#endregion
     }
 }
 

@@ -129,6 +129,15 @@ namespace Microsoft.Scripting {
             return ret;
         }
 
+        public static SymbolId[] StringsToIds(IList<string> strings) {
+            SymbolId[] ret = new SymbolId[strings.Count];
+            for (int i = 0; i < strings.Count; i++) {
+                if (strings[i] == null) ret[i] = SymbolId.Empty;
+                else ret[i] = StringToId(strings[i]);
+            }
+            return ret;
+        }
+
         public static bool StringHasId(string symbol) {
             if (symbol == null) {
                 throw new ArgumentNullException(Resources.NameMustBeString);

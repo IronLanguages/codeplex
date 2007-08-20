@@ -58,11 +58,11 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override object[] GetCustomAttributes(bool inherit) {
-            return RuntimeHelpers.EmptyObjectArray;
+            return Utils.ArrayUtils.EmptyObjects;
         }
 
         public override object[] GetCustomAttributes(Type attributeType, bool inherit) {
-            return RuntimeHelpers.EmptyObjectArray;
+            return Utils.ArrayUtils.EmptyObjects;
         }
     }
 

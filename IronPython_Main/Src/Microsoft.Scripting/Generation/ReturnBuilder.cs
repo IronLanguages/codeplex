@@ -15,8 +15,11 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
+    using Ast = Microsoft.Scripting.Ast.Ast;
     public class ReturnBuilder {
         private Type _returnType;
 
@@ -26,19 +29,24 @@ namespace Microsoft.Scripting.Generation {
         /// <param name="returnType">the type the ReturnBuilder will leave on the stack</param>
         public ReturnBuilder(Type returnType) { this._returnType = returnType; }
 
-        public virtual object Build(CodeContext context, object[] args, object ret) {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="args">The physical arguments being passed to the function</param>
+        /// <param name="parameters">The arguments the user provided to call the function</param>
+        /// <param name="ret">The return value of the function</param>
+        /// <returns></returns>
+        public virtual object Build(CodeContext context, object[] args, object[] parameters, object ret) {
             return ConvertToObject(ret);
+        }
+
+        internal virtual Expression ToExpression(MethodBinderContext context, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
+            return ret;
         }
 
         public virtual int CountOutParams {
             get { return 0; }
-        }
-
-        public virtual bool CanGenerate {
-            get { return true; }
-        }
-
-        public virtual void Generate(CodeGen cg, IList<Slot> argSlots) {
         }
 
         public Type ReturnType {
@@ -55,6 +63,5 @@ namespace Microsoft.Scripting.Generation {
             }
             return ret;
         }
-
     }
 }

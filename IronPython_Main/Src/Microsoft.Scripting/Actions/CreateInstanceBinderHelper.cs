@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Actions {
                 MethodCandidate cand = GetTypeConstructor(creating, GetArgumentTypes(Action, args));
                 if (cand != null) {
                     Expression[] parameters = GetArgumentExpressions(cand, Action, rule, args);
-                    Expression target = cand.Target.MakeExpression(Binder, parameters);
+                    Expression target = cand.Target.MakeExpression(Binder, rule, parameters);
                     rule.SetTest(MakeTestForTypeCall(creating, rule, args));
                     rule.SetTarget(rule.MakeReturn(Binder, target));
                     return rule;

@@ -60,6 +60,7 @@ def timer_helper(num_handlers=1, sleep_time=5, event_handlers=[], aTimer=None, e
         aTimer.Enabled = True
         sleep(sleep_time)
         aTimer.Enabled = False
+        sleep(sleep_time)  #give the other thread calling 'onTimedEvent' a chance to catch up
         
         #ensure the timer invoked our event handler a reasonable number of times
         Assert(COUNT >= int(sleep_time - sleep_time*error_margin) * (num_handlers+len(event_handlers)), str(COUNT))
@@ -131,6 +132,7 @@ def test_elapsed_event_args():
     aTimer.Enabled = True
     sleep(sleep_time)
     aTimer.Enabled = False
+    sleep(sleep_time)  #give the other thread calling 'onTimedEvent' a chance to catch up
     
     #make sure it was called at least once
     Assert(COUNT > 0)

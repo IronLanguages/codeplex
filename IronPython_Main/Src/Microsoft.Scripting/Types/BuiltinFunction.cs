@@ -165,83 +165,18 @@ namespace Microsoft.Scripting.Types {
         }
 
         public object CallHelper(CodeContext context, object[] args, string[] names, object instance) {
-            // we allow kw-arg binding to ctor's of arbitrary CLS types, but
-            // NOT Python built-in types.  After the ctor succeeds we'll set the kw args as
-            // arbitrary properties on the CLS type.  If this ends up being a built-in type we'll
-            // do the check when we're going to set the kw-args.  This accomplishes 2 things:
-            //      1. Our error messages match CPython more closely 
-            //      2. The attribute lookup is done lazily only if kw-args are supplied to a ctor
-
-            KwArgBinder kwArgBinder = new KwArgBinder(context, instance, args, names, _targets[0].IsConstructor);
-            MethodBase bestTarget = null;
-            object[] bestArgs = null;
-            List<UnboundArgument> bestUnboundArgs = null;
-
-            for (int i = 0; i < _targets.Length; i++) {
-                object[] realArgs = kwArgBinder.DoBind(_targets[i], Name);
-
-                if (realArgs != null) {
-                    if (!kwArgBinder.AllowUnboundArgs) {
-                        // we can have no better bindings!
-                        bestTarget = _targets[i];
-                        bestArgs = realArgs;
-
-                        break;
-                    }
-
-                    if (bestTarget == null ||
-                        (kwArgBinder.UnboundArgs == null ||
-                        (bestUnboundArgs != null && bestUnboundArgs.Count > kwArgBinder.UnboundArgs.Count))) {
-                        bestTarget = _targets[i];
-                        bestArgs = realArgs;
-
-                        bestUnboundArgs = kwArgBinder.UnboundArgs;
-                    }
-
-                }
+            BinderType binderType = BinderType.Normal;
+            if (_targets[0].IsConstructor &&
+                DynamicHelpers.GetDynamicTypeFromType(_targets[0].DeclaringType).AllowConstructorArguments(context.LanguageContext.ContextId)) {
+                binderType = BinderType.Constructor;
             }
 
-            if (bestTarget != null) {
-                object ret;
-                if (CompilerHelpers.IsStatic(bestTarget)) {
-                    ret = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodBase[] { bestTarget }, BinderType.Normal).CallReflected(context, CallType.None, bestArgs);
-                } else {
-                    ret = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodBase[] { bestTarget }, BinderType.Normal).
-                        CallReflected(context, CallType.ImplicitInstance, ArrayUtils.Insert(instance, bestArgs));
-                }
-
-                // any unbound arguments left over we assume the user
-                // wants to do a property set with.  We'll go ahead and try
-                // that - if they fail we'll throw.
-                if (bestUnboundArgs != null) {
-                    // if we had a constructor w/ a ref param then we'll try
-                    // updating the Tuple here instead of the user's object.
-
-                    if (!DynamicHelpers.GetDynamicTypeFromType(_targets[0].DeclaringType).AllowConstructorArguments(context.LanguageContext.ContextId)) {
-                        // calling ctor w/ kw-args w/ zero args, let it go, don't do any sets.
-                        if (args.Length == names.Length) return ret;
-
-                        throw RuntimeHelpers.SimpleTypeError(String.Format("'{0}' is an invalid keyword argument for this function",
-                            bestUnboundArgs[0].Name,
-                            Name));
-                    }
-
-                    for (int j = 0; j < bestUnboundArgs.Count; j++) {                   
-                        context.LanguageContext.SetMember(context, 
-                            ret, 
-                            SymbolTable.StringToId(bestUnboundArgs[j].Name), 
-                            bestUnboundArgs[j].Value);
-                    }
-                }
-
-                return ret;
-            }
-
-            if (kwArgBinder.GetError() != null) {
-                throw kwArgBinder.GetError();
-            }
-
-            throw RuntimeHelpers.SimpleTypeError(String.Format("bad number of arguments for function {0}", FriendlyName));
+            MethodBinder mb = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, _targets, binderType, SymbolTable.StringsToIds(names));
+            if (instance != null) {
+                return mb.CallInstanceReflected(context, instance, args);
+            } else {
+                return mb.CallReflected(context, CallType.None, args);
+            }            
         }
 
         /// <summary>

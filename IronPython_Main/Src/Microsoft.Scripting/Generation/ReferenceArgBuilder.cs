@@ -14,11 +14,19 @@
  * ***************************************************************************/
 
 using System;
+
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Diagnostics;
+
     public class ReferenceArgBuilder : SimpleArgBuilder {
         private Type _elementType;
+        private Variable _tmp;
+        
         public ReferenceArgBuilder(int index, Type parameterType)
             : base(index, parameterType) {
             _elementType = parameterType.GetGenericArguments()[0];
@@ -28,31 +36,76 @@ namespace Microsoft.Scripting.Generation {
             get { return 5; }
         }
 
-        //TODO tighten up typing rules when adding generation support
+        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+            if (_tmp == null) {
+                _tmp = context.GetTemporary(_elementType, "outParam");
+            }
+
+            // Ideally we'd pass in Ast.ReadField(parameters[Index], "Value") but due to
+            // a bug in partial trust we can't access the generic field.
+
+            // arg is boxType ? &_tmp : throw new ArgumentTypeException()
+            //   IncorrectBoxType throws the exception to avoid stack imbalance issues.
+            return Ast.Condition(
+                Ast.TypeIs(parameters[Index], BoxType),
+                Ast.Comma(
+                    1,
+                    Ast.Assign(
+                        _tmp, 
+                        Ast.Call(
+                            null,
+                            typeof(RuntimeHelpers).GetMethod("GetBox").MakeGenericMethod(_elementType),
+                            parameters[Index]
+                        )
+                    ),
+                    Ast.Read(_tmp)
+                ),
+                Ast.Call(                   
+                    null, 
+                    typeof(RuntimeHelpers).GetMethod("IncorrectBoxType"),
+                    Ast.Constant(BoxType),
+                    parameters[Index]
+                )
+            );
+        }
+
+        private Type BoxType {
+            get {
+                return typeof(StrongBox<>).MakeGenericType(_elementType);
+            }
+        }
+        
+        internal override Expression UpdateFromReturn(MethodBinderContext context, Expression[] parameters) {
+            return Ast.Call(
+                null,
+                typeof(RuntimeHelpers).GetMethod("UpdateBox").MakeGenericMethod(_elementType),
+                Ast.Cast(parameters[Index], BoxType),
+                Ast.Read(_tmp)
+            );
+        }
+
         public override object Build(CodeContext context, object[] args) {
             object arg = args[Index];
 
             if (arg == null) {
-                throw RuntimeHelpers.SimpleTypeError("expected Reference, but found null");
+                throw RuntimeHelpers.SimpleTypeError("expected StrongBox, but found null");
             }
             Type argType = arg.GetType();
-            if (!argType.IsGenericType || argType.GetGenericTypeDefinition() != typeof(Reference<>)) {
-                throw RuntimeHelpers.SimpleTypeError("expected Reference<>");
+            if (!argType.IsGenericType || argType.GetGenericTypeDefinition() != typeof(StrongBox<>)) {
+                throw RuntimeHelpers.SimpleTypeError("expected StrongBox<>");
+            }
+            if (argType.GetGenericArguments()[0] != _elementType) {
+                throw RuntimeHelpers.SimpleTypeError(String.Format("Expected type {0}, got {1}", typeof(StrongBox<>).MakeGenericType(_elementType).FullName, CompilerHelpers.GetType(arg).FullName));
             }
 
-            object value = ((IReference)arg).Value;
+            object value = ((IStrongBox)arg).Value;
 
             if (value == null) return null;
             return context.LanguageContext.Binder.Convert(value, _elementType);
         }
 
-        //    IReference r = (IReference)context.Binder.Convert(args[index], typeof(IReference)); // base.Build(context, args);
-        //    if (r == null) throw  //clr.Reference", arg);
-        //    return r.Value;
-        //}
-
         public override void UpdateFromReturn(object callArg, object[] args) {
-            ((IReference)args[Index]).Value = callArg;
+            ((IStrongBox)args[Index]).Value = callArg;
         }
     }
 }

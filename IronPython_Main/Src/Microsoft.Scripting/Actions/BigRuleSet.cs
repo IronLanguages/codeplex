@@ -37,13 +37,13 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public void AddRule<T>(StandardRule<T> newRule) {
+        public void AddRule<T>(object[] args, StandardRule<T> newRule) {
             RuleTree<T> rules = GetOrMakeTree<T>();
 
             // These locks are used to protect the internal dictionaries in the RuleTreeNode types
             // It should be investigated if there is a lock-free read design that could work here
             lock (rules) {
-                rules.AddRule(newRule);
+                rules.AddRule(args, newRule);
             }
         }
 

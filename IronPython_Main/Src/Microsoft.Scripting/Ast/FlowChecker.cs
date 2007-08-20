@@ -91,8 +91,37 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     class FlowChecker : Walker {
+
+        private struct ExitState {
+            readonly BitArray _exit;
+            readonly Statement _statement;
+
+            public ExitState(BitArray exit)
+                : this(exit, null) {
+            }
+
+            public ExitState(BitArray exit, Statement statement) {
+                _exit = exit;
+                _statement = statement;
+            }
+
+            public Statement Statement {
+                get { return _statement; }
+            }
+
+            public BitArray Exit {
+                get { return _exit; }
+            }
+
+            public void And(BitArray bits) {
+                if (_exit != null) {
+                    _exit.And(bits);
+                }
+            }
+        }
+
         private BitArray _bits;
-        private Stack<BitArray> _loops;
+        private List<ExitState> _exit;
 
         CodeBlock _block;
 
@@ -179,19 +208,34 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private void PushLoop(BitArray ba) {
-            if (_loops == null) {
-                _loops = new Stack<BitArray>();
+        private void PushStatement(BitArray ba) {
+            PushStatement(ba, null);
+        }
+
+        private void PushStatement(BitArray ba, Statement statement) {
+            if (_exit == null) {
+                _exit = new List<ExitState>();
             }
-            _loops.Push(ba);
+            _exit.Add(new ExitState(ba, statement));
         }
 
-        private BitArray PeekLoop() {
-            return _loops != null ? _loops.Peek() : null;
+        private ExitState PeekStatement(Statement statement) {
+            Debug.Assert(_exit != null && _exit.Count > 0);
+            if (statement == null) {
+                return _exit[_exit.Count - 1];
+            } else {
+                for (int i = _exit.Count - 1; i >= 0; i--) {
+                    if (_exit[i].Statement == statement) {
+                        return _exit[i];
+                    }
+                }
+                return default(ExitState);
+            }
         }
 
-        private void PopLoop() {
-            if (_loops != null) _loops.Pop();
+        private void PopStatement() {
+            Debug.Assert(_exit != null && _exit.Count > 0);
+            _exit.RemoveAt(_exit.Count - 1);
         }
 
         #region AstWalker Methods
@@ -221,10 +265,8 @@ namespace Microsoft.Scripting.Ast {
 
         // BreakStatement
         public override bool Walk(BreakStatement node) {
-            BitArray exit = PeekLoop();
-            if (exit != null) { // break outside loop
-                exit.And(_bits);
-            }
+            ExitState exit = PeekStatement(node.Statement);
+            exit.And(_bits);
             return true;
         }
 
@@ -270,7 +312,7 @@ namespace Microsoft.Scripting.Ast {
 
             // Prepare loop exit state
             BitArray exit = new BitArray(_bits.Length, true);
-            PushLoop(exit);
+            PushStatement(exit);
 
             // Loop will be flown starting from the current state
             _bits = loop;
@@ -281,7 +323,7 @@ namespace Microsoft.Scripting.Ast {
             node.Test.Walk(this);
 
             // Handle the loop exit
-            PopLoop();
+            PopStatement();
             _bits.And(exit);
 
             // Restore the state after walking the loop
@@ -389,12 +431,12 @@ namespace Microsoft.Scripting.Ast {
             BitArray opte = new BitArray(_bits);
             BitArray exit = new BitArray(_bits.Length, true);
 
-            PushLoop(exit);
+            PushStatement(exit);
             node.Body.Walk(this);
             if (node.Increment != null) {
                 node.Increment.Walk(this);
             }
-            PopLoop();
+            PopStatement();
 
             _bits.And(exit);
 
@@ -410,6 +452,149 @@ namespace Microsoft.Scripting.Ast {
             // Intersect
             _bits.And(opte);
 
+            return false;
+        }
+
+        // TryStatement
+        public override bool Walk(TryStatement node) {
+            // The try body is guaranteed to be entered, but not completed,
+            // the catch blocks are not guaranteed to be entered at all,
+            // the finally block is guaranteed to be entered
+            //
+            // Any catch can be preceded by partial execution of try block,
+            // so any 'damage' (deletes) the try block does must be affected
+            // in the entry to the catch block. All catches have identical
+            // starting situation.
+            //
+            // The finally can be preceded by partial execution of the try,
+            // and at most one of the catches (any of them) so again, the
+            // 'damage' the try and catch blocks do to the local state
+            // affects the entry to the finally block.
+            BitArray entry = _bits;
+            _bits = new BitArray(_bits);
+
+            // 1. Flow the body
+            node.Body.Walk(this);
+            entry.And(_bits);
+
+            // 2. Flow the catch clauses, starting always with the initial state,
+            //    but also including the 'damage' that try block could have done.
+            int handlerCount;
+            if (node.Handlers != null && (handlerCount = node.Handlers.Count) > 0) {
+                for (int i = 0; i < handlerCount; i++) {
+                    // Initialize the bits for flowing the catch clause
+                    _bits.SetAll(false);
+                    _bits.Or(entry);
+
+                    // Flow the catch clause and propagate the 'damage' to the state we'll use for finally.
+                    node.Handlers[i].Walk(this);
+                    entry.And(_bits);
+                }
+            }
+
+            // 3. Restore the state to the original (including the effects the body and catch clauses had)
+            _bits = entry;
+
+            // 4. Flow the finally clause, if present.
+            if (node.FinallyStatement != null) {
+                node.FinallyStatement.Walk(this);
+            }
+
+            return false;
+        }
+
+        // SwitchStatement
+        public override bool Walk(SwitchStatement node) {
+            // The expression is evaluated always.
+            // Then each case clause expression is evaluated until match is found.
+            // Therefore, the effects of the case clause expressions accumulate.
+            // Default clause is evaluated last (so all case clause expressions must
+            // accumulate first)
+            node.TestValue.Walk(this);
+
+            // Flow all the cases, they all start with the same initial state
+            int count;
+            List<SwitchCase> cases = node.Cases;
+            if (cases != null && (count = cases.Count) > 0) {
+                SwitchCase @default = null;
+                // Save the initial state
+                BitArray entry = _bits;
+                // The state to progressively accumualte effects of the case clause expressions
+                BitArray values = new BitArray(entry);
+                // State to flow the case clause bodies.
+                BitArray caseFlow = new BitArray(_bits.Length);
+                // The state to accumulate results into
+                BitArray result = new BitArray(_bits.Length, true);
+
+                PushStatement(result);
+
+                for (int i = 0; i < count; i++) {
+                    if (cases[i].Value == null) {
+                        Debug.Assert(@default == null);
+
+                        // postpone the default case
+                        @default = cases[i];
+                        continue;
+                    }
+
+                    // Walk the expression (accumulate effects in the values)
+                    _bits = values;
+                    cases[i].Value.Walk(this);
+
+                    // Set the state for the walking of the body
+                    caseFlow.SetAll(false);
+                    caseFlow.Or(values);
+
+                    // Walk the body
+                    _bits = caseFlow;
+                    cases[i].Body.Walk(this);
+
+                    // Accumulate the result into the overall case statement result.
+                    result.And(caseFlow);
+                }
+
+                // Walk the default at the end.
+                if (@default != null) {
+                    // Initialize
+                    caseFlow.SetAll(false);
+                    caseFlow.Or(values);
+
+                    // Walk the default body
+                    _bits = caseFlow;
+                    @default.Body.Walk(this);
+
+                    // Accumulate.
+                    result.And(caseFlow);
+
+                    // If there's a default clause, exactly one case got executed.
+                    // The final state is 'and' across all cases, stored in 'result'
+                    entry.SetAll(false);
+                    entry.Or(result);
+                } else {
+                    // In the absence of default clause, we may have executed case,
+                    // but didn't have to, so the result is an 'and' between the cases
+                    // and the initial state.
+                    entry.And(result);
+                }
+
+                PopStatement();
+
+                // Restore the original state.
+                _bits = entry;
+            }
+
+            return false;
+        }
+
+        // LabeledStatement
+        public override bool Walk(LabeledStatement node) {
+            BitArray exit = new BitArray(_bits.Length, true);
+            PushStatement(exit, node);
+
+            node.Statement.Walk(this);
+
+            PopStatement();
+            _bits.And(exit);
             return false;
         }
 

@@ -24,6 +24,9 @@ using Microsoft.Scripting.Actions;
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
+    /// <summary>
+    /// ArgBuilder which provides a default parameter value for a method call.
+    /// </summary>
     public class DefaultArgBuilder : ArgBuilder {
         private Type _argumentType;
         private object _defaultValue;
@@ -34,7 +37,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override int Priority {
-            get { return 3; }
+            get { return 2; }
         }
 
         public override object Build(CodeContext context, object[] args) {
@@ -102,13 +105,22 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override Expression ToExpression(ActionBinder binder, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
             object val = _defaultValue;
             if(val is Missing) {
                 val = CompilerHelpers.GetMissingValue(_argumentType);
-            } 
+            }
 
-            return binder.ConvertExpression(Ast.Constant(val), _argumentType);            
+            if (_argumentType.IsByRef) {
+                Variable tmp = context.GetTemporary(_argumentType.GetElementType(), "optRef");
+                return Ast.Comma(1, Ast.Assign(tmp, Ast.Constant(val)), Ast.Read(tmp));
+            }
+
+            return context.ConvertExpression(Ast.Constant(val), _argumentType);            
+        }
+
+        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
+            return null;
         }
     }
 }

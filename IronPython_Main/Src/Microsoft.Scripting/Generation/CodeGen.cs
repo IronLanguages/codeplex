@@ -1451,6 +1451,10 @@ namespace Microsoft.Scripting.Generation {
             Emit(OpCodes.Ldc_R8, value);
         }
 
+        private void EmitSingle(float value) {
+            Emit(OpCodes.Ldc_R4, value);
+        }
+
         private void EmitEnum(object value) {
             Debug.Assert(value != null);
             Debug.Assert(value.GetType().IsEnum);
@@ -1573,6 +1577,8 @@ namespace Microsoft.Scripting.Generation {
                 EmitInt((int)value);
             } else if (value is double) {
                 EmitDouble((double)value);
+            } else if (value is float) {
+                EmitSingle((float)value);
             } else if (value is long) {
                 EmitLong((long)value);
             } else if (value is Complex64) {
@@ -1608,14 +1614,24 @@ namespace Microsoft.Scripting.Generation {
             } else if (value is Type) {
                 EmitType((Type)value);
             } else if (value is RuntimeTypeHandle) {
-                Emit(OpCodes.Ldtoken,  Type.GetTypeFromHandle((RuntimeTypeHandle)value));
+                RuntimeTypeHandle rth = (RuntimeTypeHandle)value;
+                if (!rth.Equals(default(RuntimeTypeHandle))) {
+                    Emit(OpCodes.Ldtoken, Type.GetTypeFromHandle((RuntimeTypeHandle)value));
+                } else {
+                    EmitConstant(new RuntimeConstant(value));
+                }
             } else if (value is MethodInfo) {
                 Emit(OpCodes.Ldtoken, (MethodInfo)value);
                 EmitCall(typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
             } else if (value is RuntimeMethodHandle) {
-                Emit(OpCodes.Ldtoken, (MethodInfo)MethodBase.GetMethodFromHandle((RuntimeMethodHandle)value));
+                RuntimeMethodHandle rmh = (RuntimeMethodHandle)value;
+                if (rmh != default(RuntimeMethodHandle)) {
+                    Emit(OpCodes.Ldtoken, (MethodInfo)MethodBase.GetMethodFromHandle((RuntimeMethodHandle)value));
+                } else {
+                    EmitConstant(new RuntimeConstant(value));
+                }
             } else {
-                throw new NotImplementedException("generate: " + value + " type: " + value.GetType());
+                EmitConstant(new RuntimeConstant(value));
             }
         }
 

@@ -109,7 +109,10 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        // TODO: this is incorrect
+        /// <summary>
+        /// TODO: This is incorrect, don't call me.
+        /// </summary>
+        /// <returns></returns>
         public bool IsParamsCall() {
             if (IsSimple) return false;
 
@@ -150,6 +153,24 @@ namespace Microsoft.Scripting.Actions {
             return cnt;
         }
 
+        /// <summary>
+        /// True if the CallAction includes an ArgumentInfo of ArgumentKind.List
+        /// </summary>
+        public bool HasParamsArgument() {
+            if (IsSimple) return false;
+
+            foreach (ArgumentInfo info in _argumentInfos) {
+                if (info.Kind == ArgumentKind.List) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// True if the CallAction includes an ArgumentInfo of ArgumentKind.Dictionary or ArgumentKind.Named.
+        /// </summary>
         public bool HasKeywordArgument() {
             if (IsSimple) return false;
 
@@ -161,6 +182,23 @@ namespace Microsoft.Scripting.Actions {
             return false;
         }
 
+        /// <summary>
+        /// True if the CallAction includes an ArgumentInfo of ArgumentKind.Instance.
+        /// </summary>
+        public bool HasInstance() {
+            if (IsSimple) return false;
+
+            foreach (ArgumentInfo info in _argumentInfos) {
+                if (info.Kind == ArgumentKind.Instance) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// True if the CallAction includes an ArgumentInfo of ArgumentKind.Dictionary.
+        /// </summary>
         public bool HasDictionaryArgument() {
             if (IsSimple) return false;
 
@@ -172,6 +210,9 @@ namespace Microsoft.Scripting.Actions {
             return false;
         }
 
+        /// <summary>
+        /// True if the CallAction includes an ArgumentInfo of ArgumentKind.Named.
+        /// </summary>
         public bool HasNamedArgument() {
             if (IsSimple) return false;
 
@@ -197,6 +238,35 @@ namespace Microsoft.Scripting.Actions {
             return res.ToArray();
         }
 
+        /// <summary>
+        /// Returns the index which has a params dictionary or -1 if one does not exist.
+        /// </summary>
+        public int DictionaryIndex {
+            get {
+                return FindArgumentKindIndex(ArgumentKind.Dictionary);
+            }
+        }
+
+        /// <summary>
+        /// Gets the index which has a params array or -1 if one does not exist.
+        /// </summary>
+        public int ParamsIndex {
+            get {
+                return FindArgumentKindIndex(ArgumentKind.List);
+            }                       
+        }
+
+        private int FindArgumentKindIndex(ArgumentKind kind) {
+            if (!IsSimple) {
+
+                for (int i = 0; i < _argumentInfos.Length; i++) {
+                    if (this._argumentInfos[i].Kind == kind)
+                        return i;
+                }
+            }
+            return -1;
+        }
+        
         #endregion
     }
 

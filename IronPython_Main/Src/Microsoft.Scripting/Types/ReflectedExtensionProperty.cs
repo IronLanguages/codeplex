@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Types {
         public override bool TrySetValue(CodeContext context, object instance, DynamicMixin owner, object value) {
             if (Setter == null || instance == null) return false;
 
-            return CallSetter(context, instance, RuntimeHelpers.EmptyObjectArray, value);
+            return CallSetter(context, instance, Utils.ArrayUtils.EmptyObjects, value);
         }
 
         public override bool TryDeleteValue(CodeContext context, object instance, DynamicMixin owner) {

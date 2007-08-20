@@ -347,7 +347,7 @@ namespace IronPython.Modules {
         public static Tuple RawUnicodeEscapeDecode(CodeContext context, object input, [DefaultParameterValue("strict")]string errors) {
             return Tuple.MakeTuple(
                 StringOps.Decode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
-                Builtin.Length(input)
+                Builtin.len(input)
             );
         }
 
@@ -355,7 +355,7 @@ namespace IronPython.Modules {
         public static Tuple RawUnicodeEscapeEncode(CodeContext context, object input, [DefaultParameterValue("strict")]string errors) {
             return Tuple.MakeTuple(
                 StringOps.Encode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
-                Builtin.Length(input)
+                Builtin.len(input)
             );
         }
 

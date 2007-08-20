@@ -247,7 +247,7 @@ namespace Microsoft.Scripting.Types {
 
             public bool InvokeNotImpl(CodeContext context, object self, out object ret) {
                 if (Invoke(context, self, out ret)) {
-                    return ret != DBNull.Value;
+                    return ret != OperationFailed.Value;
                 }
                 return false;
             }
@@ -326,7 +326,7 @@ namespace Microsoft.Scripting.Types {
 
             public bool InvokeNotImpl(CodeContext context, object self, object other, out object ret) {
                 if (Invoke(context, self, other, out ret)) {
-                    return ret != DBNull.Value;
+                    return ret != OperationFailed.Value;
                 }
                 return false;
             }
@@ -405,7 +405,7 @@ namespace Microsoft.Scripting.Types {
 
             public bool InvokeNotImpl(CodeContext context, object self, object value1, object value2, out object ret) {
                 if (Invoke(context, self, value1, value2, out ret)) {
-                    return ret != DBNull.Value;
+                    return ret != OperationFailed.Value;
                 }
                 return false;
             }
@@ -470,7 +470,7 @@ namespace Microsoft.Scripting.Types {
             }
             if (type.IsValueType && !hasDefaultConstructor && type != typeof(void)) {
                 try {
-                    MethodInfo mi = typeof(RuntimeHelpers).GetMethod("CreateInstance", ReflectionUtils.EmptyTypes).MakeGenericMethod(type);
+                    MethodInfo mi = typeof(RuntimeHelpers).GetMethod("CreateInstance", ArrayUtils.EmptyTypes).MakeGenericMethod(type);
 
                     reflectedCtors = BuiltinFunction.MakeOrAdd(reflectedCtors, Builder.UnfinishedType.Name, mi, FunctionType.Function);
                 } catch (BadImageFormatException) {

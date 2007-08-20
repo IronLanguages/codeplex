@@ -111,12 +111,9 @@ namespace Microsoft.Scripting.Ast {
 
             // Codegen is affected by presence/absence of loop control statements
             // (break/continue) or return statement in finally clause
-            bool loopControl;
-            bool flowControl;
+            TryFlowResult flow = TryFlowAnalyzer.Analyze(FinallyStatement);
 
-            TryFlowAnalyzer.Analyze(FinallyStatement, out flowControl, out loopControl);
-
-            if (YieldInBlock(_finallyTargets) || flowControl) {
+            if (YieldInBlock(_finallyTargets) || flow.Any) {
                 temps += 1;
             }
 
@@ -166,6 +163,8 @@ namespace Microsoft.Scripting.Ast {
                                 }
                                 if (target != null) {
                                     rethrow = false;
+                                    // Only clear the stack frames if we successfully catch the exception.
+                                    RuntimeHelpers.ClearDynamicStackFrames();
                                     if (handler.Variable != null) {
                                         BoundAssignment.EvaluateAssign(context, handler.Variable, target);
                                     }
@@ -220,13 +219,10 @@ namespace Microsoft.Scripting.Ast {
 
             // Codegen is affected by presence/absence of loop control statements
             // (break/continue) or return statement in finally clause
-            bool loopControl;
-            bool flowControl;
-
-            TryFlowAnalyzer.Analyze(FinallyStatement, out flowControl, out loopControl);
+            TryFlowResult flow = TryFlowAnalyzer.Analyze(FinallyStatement);
 
             // Initialize exception rethrow logic, if needed
-            if (YieldInBlock(_finallyTargets) || flowControl) {
+            if (YieldInBlock(_finallyTargets) || flow.Any) {
                 rethrow = cg.GetTemporarySlot(typeof(bool));
                 cg.EmitNull();
                 cachedException.EmitSet(cg);
@@ -355,7 +351,7 @@ namespace Microsoft.Scripting.Ast {
             // 8. Start the catch block
             /******************************************************************/
 
-            if (_handlers != null || YieldInBlock(_finallyTargets) || flowControl) {
+            if (_handlers != null || YieldInBlock(_finallyTargets) || flow.Any) {
                 cg.BeginCatchBlock(typeof(Exception));
 
                 // If entering catch due to an exception in else block, rethrow
@@ -429,6 +425,8 @@ namespace Microsoft.Scripting.Ast {
                             cg.EmitBoolean(false);
                             rethrow.EmitSet(cg);
                         }
+                        // Since we are handling the exception, clear the dynamic stack frames
+                        cg.EmitCall(typeof(RuntimeHelpers), "ClearDynamicStackFrames");
 
                         handler.Body.Emit(cg);
 
@@ -480,7 +478,7 @@ namespace Microsoft.Scripting.Ast {
                 //     in order to do rethrows as we route execution to yield labels)
                 /******************************************************************/
 
-                if (YieldInBlock(_finallyTargets) || flowControl) {
+                if (YieldInBlock(_finallyTargets) || flow.Any) {
                     Label nothrow1 = cg.DefineLabel();
                     Label nothrow2 = cg.DefineLabel();
 
@@ -506,7 +504,7 @@ namespace Microsoft.Scripting.Ast {
 
             cg.PopTargets(TargetBlockType.Try);
 
-            if (cg.IsGenerator || flowControl) {
+            if (cg.IsGenerator || flow.Any) {
                 Label noReturn = cg.DefineLabel();
 
                 flowControlFlag.EmitGet(cg);
@@ -517,7 +515,7 @@ namespace Microsoft.Scripting.Ast {
                     // return true from the generator method
                     cg.Emit(OpCodes.Ldc_I4_1);
                     cg.EmitReturn();
-                } else if (flowControl) {
+                } else if (flow.Any) {
                     // return the actual value
                     cg.EmitReturnValue();
                     cg.EmitReturn();
@@ -525,7 +523,7 @@ namespace Microsoft.Scripting.Ast {
                 cg.MarkLabel(noReturn);
             }
 
-            if (loopControl) {
+            if (flow.Loop) {
                 Label noReturn = cg.DefineLabel();
 
                 noReturn = cg.DefineLabel();
