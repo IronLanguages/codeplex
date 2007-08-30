@@ -21,14 +21,15 @@ using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     public class BinaryExpression : Expression {
         private readonly Expression _left, _right;
         private readonly PythonOperator _op;
 
         public BinaryExpression(PythonOperator op, Expression left, Expression right) {
-            if (left == null) throw new ArgumentNullException("left");
-            if (right == null) throw new ArgumentNullException("right");
+            Contract.RequiresNotNull(left, "left");
+            Contract.RequiresNotNull(right, "right");
             if (op == PythonOperator.None) throw new ArgumentException("op");
 
             _op = op;
@@ -192,9 +193,9 @@ namespace IronPython.Compiler.Ast {
                 case PythonOperator.GreaterThanOrEqual:
                     return Operators.GreaterThanOrEqual;
                 case PythonOperator.Equal:
-                    return Operators.Equal;
+                    return Operators.Equals;
                 case PythonOperator.NotEqual:
-                    return Operators.NotEqual;
+                    return Operators.NotEquals;
 
                 case PythonOperator.In:
                 case PythonOperator.NotIn:

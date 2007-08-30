@@ -56,7 +56,8 @@ import sys
 from nt  import environ
 from nt  import listdir
 from nt  import getcwd
-
+import nt
+from System import Threading
 import System
 
 #--GLOBALS---------------------------------------------------------------------
@@ -207,38 +208,50 @@ def test_exit_code():
         System.Environment.Exit(1)
 
 
+def multireader(*streams):
+    """creates multiple threads to read std err/std out at the same time to avoid blocking"""
+    class reader(object):
+        def __init__(self, stream):
+            self.stream = stream
+        def __call__(self):
+            self.text = self.stream.readlines()
+    
+    threads = []
+    readers = []
+    for stream in streams:
+        curReader = reader(stream)
+        thread = Threading.Thread(Threading.ThreadStart(curReader))
+        readers.append(curReader)        
+        threads.append(thread)
+        thread.Start()
+        
+    for thread in threads:
+        thread.Join()
+        
+    return [curReader.text for curReader in readers]
+
+def run_one_command(*args):
+    """runs a single command, exiting if it doesn't return 0, redirecting std out"""
+    #print 'running', ' '.join(args)
+    inp, out, err = nt.popen3(' '.join(args))
+    print ' '.join(args)
+    output, err = multireader(out, err)
+    res = out.close()
+    if res:
+        print '%d running %s failed' % (res, ' '.join(args))
+        print 'output was', output
+        print 'err', err
+        sys.exit(res)        
+    return output, err, res
+
 def runTestSlow(test_name, mode):
     '''
     Helper function runs a test as a separate process.
     '''
     #run the actual test
-    process = System.Diagnostics.Process()
-    process.StartInfo.FileName = executable
-    process.StartInfo.Arguments = mode + " " + test_name
-    process.StartInfo.CreateNoWindow = True
-    process.StartInfo.UseShellExecute = False
-    process.StartInfo.RedirectStandardError = True
-    process.Start()
-    errors = process.StandardError.ReadToEnd()
-    process.WaitForExit()
-    ec = process.ExitCode
-    
-    #if it failed and there's no output, try to get sys.stdout this time.
-    #it seems we cannot get sys.stdout/sys.stderr both at the same time due to 
-    #deadlock issues.
-    if ec!=0 and errors=="":
-        process = System.Diagnostics.Process()
-        process.StartInfo.FileName = executable
-        process.StartInfo.Arguments = mode + " " + test_name
-        process.StartInfo.CreateNoWindow = True
-        process.StartInfo.UseShellExecute = False
-        process.StartInfo.RedirectStandardOutput = True
-        process.Start()
-        errors = process.StandardOutput.ReadToEnd()
-        process.WaitForExit()
-        ec = process.ExitCode    
-    return (ec, errors)
+    output, errors, ec = run_one_command(executable, mode, test_name)
 
+    return ec, errors
 
 def runTestFast(test_name):
     '''
@@ -293,7 +306,7 @@ def runTest(test_name, mode):
         (ec, errors) = runTestSlow(test_name, mode)
     
     #Error handling
-    if ec != 0:
+    if ec:
         if OUTPUT_LVL==OUTPUT_MIN:
             print "X" + test_name,
         else:

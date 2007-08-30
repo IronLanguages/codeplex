@@ -15,406 +15,419 @@
 
 from lib.assert_util import *
 import sys
-AreEqual(sys.exc_info(), (None, None, None))
-
-if is_cli or is_silverlight:
-    import System
-    
-    def RaiseSystemException():
-        raise System.SystemException()
-
-    AssertError(SystemError, RaiseSystemException)
 
 AreEqual(sys.exc_info(), (None, None, None))
 
 if is_cli or is_silverlight:
-    try:
-        def Raise1():
-            raise "some string"
+    def test_system_exception():
+        import System
         
+        def RaiseSystemException():
+            raise System.SystemException()
+
+        AssertError(SystemError, RaiseSystemException)
+
+    AreEqual(sys.exc_info(), (None, None, None))
+
+if is_cli or is_silverlight:
+    def test_raise():
         try:
-            Raise1()
-            Assert(False, "FAILED! Should have thrown string!")
-        except Exception, e:
-            Assert(False, "FAILED! Should not have caught string!")
-    except "some string":
-        pass
-    
-    try:
-        def Raise2():
-            raise "some string"
-        try:
-            Raise2()
-            Assert(False, "FAILED! Should have caught string!")
+            def Raise1():
+                raise "some string"
+            
+            try:
+                Raise1()
+                Assert(False, "FAILED! Should have thrown string!")
+            except Exception, e:
+                Assert(False, "FAILED! Should not have caught string!")
         except "some string":
             pass
-    except Exception, e:
-        Assert(False, "FAILED!")
-    
-    try:
-         Fail("Message")
-    except AssertionError, e:
-         AreEqual(e.__str__(), e.args[0])
-    else:
-        Fail("Expected exception")
-    
-    try:
-        def Raise3():
-            raise "some string"
+        
         try:
-            Raise3()
-            Assert(False, "FAILED! Should have thrown string!")
-        except "NOT some string":
-            Assert(False, "FAILED! Should not have caught this string!")
-    except "some string":
-        pass
+            def Raise2():
+                raise "some string"
+            try:
+                Raise2()
+                Assert(False, "FAILED! Should have caught string!")
+            except "some string":
+                pass
+        except Exception, e:
+            Assert(False, "FAILED!")
+        
+        try:
+             Fail("Message")
+        except AssertionError, e:
+             AreEqual(e.__str__(), e.args[0])
+        else:
+            Fail("Expected exception")
+        
+        try:
+            def Raise3():
+                raise "some string"
+            try:
+                Raise3()
+                Assert(False, "FAILED! Should have thrown string!")
+            except "NOT some string":
+                Assert(False, "FAILED! Should not have caught this string!")
+        except "some string":
+            pass
 
-def divide(a, b) :
-    try:
-        c = a / b
-        Fail("Expected ZeroDivisionError for %r / %r == %r" % (a, b, c))
-    except ZeroDivisionError:
-        pass
+def test_bigint_division():
+    def divide(a, b):
+        try:
+            c = a / b
+            Fail("Expected ZeroDivisionError for %r / %r == %r" % (a, b, c))
+        except ZeroDivisionError:
+            pass
 
-    try:
-        c = a % b
-        Fail("Expected ZeroDivisionError for %r %% %r == %r" % (a, b, c))
-    except ZeroDivisionError:
-        pass
+        try:
+            c = a % b
+            Fail("Expected ZeroDivisionError for %r %% %r == %r" % (a, b, c))
+        except ZeroDivisionError:
+            pass
 
-    try:
-        c = a // b
-        Fail("Expected ZeroDivisionError for %r // %r == %r" % (a, b, c))
-    except ZeroDivisionError:
-        pass
+        try:
+            c = a // b
+            Fail("Expected ZeroDivisionError for %r // %r == %r" % (a, b, c))
+        except ZeroDivisionError:
+            pass
 
+    big0 = 9999999999999999999999999999999999999999999999999999999999999999999999
+    big0 = big0-big0
 
-big0 = 9999999999999999999999999999999999999999999999999999999999999999999999
-big0 = big0-big0
+    pats = [0L, 0, 0.0, big0, (0+0j)]
+    nums = [42, 987654321, 7698736985726395723649587263984756239847562983745692837465928374569283746592837465923, 2352345324523532523, 5223523.3453, (10+25j)]
 
-pats = [0L, 0, 0.0, big0, (0+0j)]
-nums = [42, 987654321, 7698736985726395723649587263984756239847562983745692837465928374569283746592837465923, 2352345324523532523, 5223523.3453, (10+25j)]
-
-for divisor in pats:
-    for number in nums:
-        divide(number, divisor)
+    for divisor in pats:
+        for number in nums:
+            divide(number, divisor)
 
 
 # sys.exit() test
 
+def test_handlers():
+    handlers = []
 
-handlers = []
+    def a():
+        try:
+            b()
+        finally:
+            handlers.append("finally a")
 
-def a():
+    def b():
+        try:
+            c()
+        finally:
+            handlers.append("finally b")
+
+    def c():
+        try:
+            d()
+        finally:
+            handlers.append("finally c")
+
+    def d():
+        sys.exit("abnormal termination")
+
     try:
-        b()
-    finally:
-        handlers.append("finally a")
+        a()
+    except SystemExit, e:
+        handlers.append(e.args[0])
 
-def b():
+    Assert(handlers == ["finally c", "finally b", "finally a", "abnormal termination"])
+
+def test_sys_exit1():
     try:
-        c()
-    finally:
-        handlers.append("finally b")
+        sys.exit()
+        Assert(False)
+    except SystemExit, e:
+        AreEqual(len(e.args), 0)
 
-def c():
+def test_sys_exit2():
     try:
-        d()
-    finally:
-        handlers.append("finally c")
+        sys.exit(None)
+        Assert(False)
+    except SystemExit, e:
+        AreEqual(e.args, ())
 
-def d():
-    sys.exit("abnormal termination")
+    AreEqual(SystemExit(None).args, (None,))
 
-try:
-    a()
-except SystemExit, e:
-    handlers.append(e.args[0])
-
-Assert(handlers == ["finally c", "finally b", "finally a", "abnormal termination"])
-
-try:
-    sys.exit()
-    Assert(False)
-except Exception, e:
-    AreEqual(len(e.args), 0)
-
-try:
-    sys.exit(None)
-    Assert(False)
-except Exception, e:
-    AreEqual(e.args, ())
-
-AreEqual(SystemExit(None).args, (None,))
-
-try:
-    sys.exit(-10)
-except Exception, e:
-    AreEqual(e.code, -10)
-    AreEqual(e.args, (-10,))
-else:
-    Assert(False)
+def test_sys_exit3():
+    try:
+        sys.exit(-10)
+    except SystemExit, e:
+        AreEqual(e.code, -10)
+        AreEqual(e.args, (-10,))
+    else:
+        Assert(False)
 
 ################################
 # exception interop tests
 if is_cli or is_silverlight:
-    load_iron_python_test()
-    
-    from IronPythonTest import *
-    import System
-    
-    a = ExceptionsTest()
-    
-    try:
-        a.ThrowException()  # throws index out of range
-    except IndexError, e:
-        Assert(e.__class__ == IndexError)
-    
-    class MyTest(ExceptionsTest):
-        def VirtualFunc(self):
-            raise ex, "hello world"
-    
-    
-    ex = ValueError
-    
-    
-    a = MyTest()
-    
-    # raise in python, translate into .NET, catch in Python
-    try:
-        a.CallVirtual()
-    except ex, e:
-        Assert(e.__class__ == ValueError)
-        Assert(e.args[0] == "hello world")
-    
-    # raise in python, catch in .NET, verify .NET got an ArgumentException
-    
-    try:
-        x = a.CallVirtCatch()
-    except ex, e:
-        Assert(False)
-    
-    AreEqual(sys.exc_info(), (None, None, None))
-    
-    Assert(isinstance(x, System.ArgumentException))
-    
-    # call through the slow paths...
-    
-    try:
-        a.CallVirtualOverloaded('abc')
-    except ex,e:
-        Assert(e.__class__ == ex)
-        Assert(e.args[0] == "hello world")
-    
-    AreEqual(sys.exc_info(), (None, None, None))
-    
-    try:
-        a.CallVirtualOverloaded(5)
-    except ex,e:
-        Assert(e.__class__ == ex)
-        Assert(e.args[0] == "hello world")
-    
-    
-    AreEqual(sys.exc_info(), (None, None, None))
-    
-    try:
-        a.CallVirtualOverloaded(a)
-    except ex,e:
-        Assert(e.__class__ == ex)
-        Assert(e.args[0] == "hello world")
-    
-    
-    AreEqual(sys.exc_info(), (None, None, None))
-    # catch and re-throw (both throw again and rethrow)
-    
-    try:
-        a.CatchAndRethrow()
-    except ex,e:
-        Assert(e.__class__ == ex)
-        Assert(e.args[0] == "hello world")
-    AreEqual(sys.exc_info(), (None, None, None))
-    
-    try:
-        a.CatchAndRethrow2()
-    except ex,e:
-        Assert(e.__class__ == ex)
-        Assert(e.args[0] == "hello world")
-    
-    AreEqual(sys.exc_info(), (None, None, None))
-    
-    
-    class MyTest(ExceptionsTest):
-        def VirtualFunc(self):
-            self.ThrowException()
-    
-    AreEqual(sys.exc_info(), (None, None, None))
-    a = MyTest()
-    
-    # start in python, call CLS which calls Python which calls CLS which raises the exception
-    try:
-        a.CallVirtual()  # throws index out of range
-    except IndexError, e:
-        Assert(e.__class__ == IndexError)
-    
-    
-    AreEqual(sys.exc_info(), (None, None, None))
-    # verify we can throw arbitrary classes
-    class MyClass: pass
-    
-    try:
-        raise MyClass
-        Assert(False)
-    except MyClass, mc:
-        Assert(mc.__class__ == MyClass)
-    
-    # BUG 430 intern(None) should throw TypeError
-    try:
-        intern(None)
-        Assert(False)
-    except TypeError:
-        pass
-    # /BUG
-    
-    AreEqual(sys.exc_info(), (None, None, None))
-    
-    # BUG 424 except "string", <data>
-    try:
-        raise "foo", 32
-    except "foo", X:
-        Assert(X == 32)
-    # /BUG
-    
-    # BUG 393 exceptions throw when bad value passed to except
-    try:
-        try:
-            raise SyntaxError("foo")
-        except 12:
-            Assert(false)
-            pass
-    except SyntaxError:
-        pass
-    # /BUG
-    
-    AreEqual(sys.exc_info(), (None, None, None))
-    # BUG 319 IOError not raised.
-    if is_silverlight==False:
-        try:
-            fp = file('thisfiledoesnotexistatall.txt')
-        except IOError:
-            pass
-    # /BUG
-    
-    # verify we can raise & catch CLR exceptions
-    try:
-        raise System.Exception('Hello World')
-    except System.Exception, e:
-        Assert(type(e) == System.Exception)
-    AreEqual(sys.exc_info(), (None, None, None))
-    
-    
-    
-    # BUG 481 Trying to pass raise in Traceback should cause an error until it is implemented
-    try:
-        raise "BadTraceback", "somedata", "a string is not a traceback"
-        Assert (false, "fell through raise for some reason")
-    except "BadTraceback":
-        Assert(false)
-    except TypeError:
-        pass
-    
-    try:
-        raise TypeError
-    except:
+    def test_interop():
+        load_iron_python_test()
+        
+        from IronPythonTest import ExceptionsTest
+        import System
         import sys
-        if (sys.exc_traceback != None):
-            x = dir(sys.exc_traceback)
-            x.sort()
-            AreEqual(x,  ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'])
+        
+        a = ExceptionsTest()
+        
+        try:
+            a.ThrowException()  # throws index out of range
+        except IndexError, e:
+            Assert(e.__class__ == IndexError)
+        
+        class MyTest(ExceptionsTest):
+            def VirtualFunc(self):
+                raise ex, "hello world"
+        
+        
+        ex = ValueError
+        
+        
+        a = MyTest()
+        
+        # raise in python, translate into .NET, catch in Python
+        try:
+            a.CallVirtual()
+        except ex, e:
+            Assert(e.__class__ == ValueError)
+            Assert(e.args[0] == "hello world")
+        
+        # raise in python, catch in .NET, verify .NET got an ArgumentException
+        
+        try:
+            x = a.CallVirtCatch()
+        except ex, e:
+            Assert(False)
+        
+        AreEqual(sys.exc_info(), (None, None, None))
+        
+        Assert(isinstance(x, System.ArgumentException))
+        
+        # call through the slow paths...
+        
+        try:
+            a.CallVirtualOverloaded('abc')
+        except ex,e:
+            Assert(e.__class__ == ex)
+            Assert(e.args[0] == "hello world")
+        
+        AreEqual(sys.exc_info(), (None, None, None))
+        
+        try:
+            a.CallVirtualOverloaded(5)
+        except ex,e:
+            Assert(e.__class__ == ex)
+            Assert(e.args[0] == "hello world")
+        
+        
+        AreEqual(sys.exc_info(), (None, None, None))
+        
+        try:
+            a.CallVirtualOverloaded(a)
+        except ex,e:
+            Assert(e.__class__ == ex)
+            Assert(e.args[0] == "hello world")
+        
+        
+        AreEqual(sys.exc_info(), (None, None, None))
+        # catch and re-throw (both throw again and rethrow)
+        
+        try:
+            a.CatchAndRethrow()
+        except ex,e:
+            Assert(e.__class__ == ex)
+            Assert(e.args[0] == "hello world")
+        AreEqual(sys.exc_info(), (None, None, None))
+        
+        try:
+            a.CatchAndRethrow2()
+        except ex,e:
+            Assert(e.__class__ == ex)
+            Assert(e.args[0] == "hello world")
+        
+        AreEqual(sys.exc_info(), (None, None, None))
+        
+        
+        class MyTest(ExceptionsTest):
+            def VirtualFunc(self):
+                self.ThrowException()
+        
+        AreEqual(sys.exc_info(), (None, None, None))
+        a = MyTest()
+        
+        # start in python, call CLS which calls Python which calls CLS which raises the exception
+        try:
+            a.CallVirtual()  # throws index out of range
+        except IndexError, e:
+            Assert(e.__class__ == IndexError)
+        
+        
+        AreEqual(sys.exc_info(), (None, None, None))
+        # verify we can throw arbitrary classes
+        class MyClass: pass
+        
+        try:
+            raise MyClass
+            Assert(False)
+        except MyClass, mc:
+            Assert(mc.__class__ == MyClass)
+        
+        # BUG 430 intern(None) should throw TypeError
+        try:
+            intern(None)
+            Assert(False)
+        except TypeError:
+            pass
+        # /BUG
+        
+        AreEqual(sys.exc_info(), (None, None, None))
+        
+        # BUG 424 except "string", <data>
+        try:
+            raise "foo", 32
+        except "foo", X:
+            Assert(X == 32)
+        # /BUG
+        
+        # BUG 393 exceptions throw when bad value passed to except
+        try:
             try:
-                raise "foo", "Msg", sys.exc_traceback
-            except "foo", X:
+                raise SyntaxError("foo")
+            except 12:
+                Assert(false)
                 pass
-    
-                      
-    
-    try:
-        raise Exception(3,4,5)
-    except Exception, X:
-        AreEqual(X[0], 3)
-        AreEqual(X[1], 4)
-        AreEqual(X[2], 5)
-    
-    
-    try:
-        raise Exception
-    except:
-        import exceptions
-        AreEqual(sys.exc_info()[0], exceptions.Exception)    
-        AreEqual(sys.exc_info()[1].__class__, exceptions.Exception)
+        except SyntaxError:
+            pass
+        # /BUG
         
-    try:
-        Fail("message")
-    except AssertionError, e:
-        import exceptions
+        AreEqual(sys.exc_info(), (None, None, None))
+        # BUG 319 IOError not raised.
+        if is_silverlight==False:
+            try:
+                fp = file('thisfiledoesnotexistatall.txt')
+            except IOError:
+                pass
+        # /BUG
         
-        AreEqual(e.__class__, exceptions.AssertionError)
-        AreEqual(len(e.args), 1)
-        AreEqual(e.args[0], "message")
-    else:
-        Fail("Expected exception")
+        # verify we can raise & catch CLR exceptions
+        try:
+            raise System.Exception('Hello World')
+        except System.Exception, e:
+            Assert(type(e) == System.Exception)
+        AreEqual(sys.exc_info(), (None, None, None))
+        
+        
+        
+        # BUG 481 Trying to pass raise in Traceback should cause an error until it is implemented
+        try:
+            raise "BadTraceback", "somedata", "a string is not a traceback"
+            Assert (false, "fell through raise for some reason")
+        except "BadTraceback":
+            Assert(false)
+        except TypeError:
+            pass
+        
+        try:
+            raise TypeError
+        except:
+            import sys
+            if (sys.exc_traceback != None):
+                x = dir(sys.exc_traceback)
+                x.sort()
+                AreEqual(x,  ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'])
+                try:
+                    raise "foo", "Msg", sys.exc_traceback
+                except "foo", X:
+                    pass
+        
+                          
+        
+        try:
+            raise Exception(3,4,5)
+        except Exception, X:
+            AreEqual(X[0], 3)
+            AreEqual(X[1], 4)
+            AreEqual(X[2], 5)
+        
+        
+        try:
+            raise Exception
+        except:
+            import exceptions
+            AreEqual(sys.exc_info()[0], exceptions.Exception)    
+            AreEqual(sys.exc_info()[1].__class__, exceptions.Exception)
+            
+        try:
+            Fail("message")
+        except AssertionError, e:
+            import exceptions
+            
+            AreEqual(e.__class__, exceptions.AssertionError)
+            AreEqual(len(e.args), 1)
+            AreEqual(e.args[0], "message")
+        else:
+            Fail("Expected exception")
 
 #####################################################################################
 # __str__ behaves differently for exceptions because of implementation (ExceptionConverter.ExceptionToString)
 
-if is_silverlight==False:
-    import re
-    AssertErrorWithMatch(TypeError, re.escape("unbound method __str__() must be called with Exception instance as first argument (got ") + "*", Exception.__str__)
-    AssertErrorWithMatch(TypeError, re.escape("unbound method __str__() must be called with Exception instance as first argument (got ") + "*", Exception.__str__, list())
-    AssertErrorWithMessage(TypeError, "__str__() takes exactly 1 argument (2 given)", Exception.__str__, Exception(), 1)
-    AssertErrorWithMatch(TypeError, re.escape("unbound method __str__() must be called with Exception instance as first argument (got ") + "*", Exception.__str__, list(), 1)
+# TODO: doesn't work in IronPython
+#def test_str1():
+#    AssertErrorWithMessage(TypeError, "descriptor '__str__' of 'exceptions.BaseException' object needs an argument", Exception.__str__)
+#    AssertErrorWithMessage(TypeError, "descriptor '__str__' requires a 'exceptions.BaseException' object but received a 'list'", Exception.__str__, list())
+#    AssertErrorWithMessage(TypeError, "descriptor '__str__' requires a 'exceptions.BaseException' object but received a 'list'", Exception.__str__, list(), 1)
+#    AssertErrorWithMessage(TypeError, "expected 0 arguments, got 1", Exception.__str__, Exception(), 1)
 
-# verify we can assign to sys.exc_*
-sys.exc_traceback = None
-sys.exc_value = None
-sys.exc_type = None
+def test_str2():
+    # verify we can assign to sys.exc_*
+    sys.exc_traceback = None
+    sys.exc_value = None
+    sys.exc_type = None
 
-
-AreEqual(str(Exception()), '')
+    AreEqual(str(Exception()), '')
 
 #####################################################################
 
 if is_cli or is_silverlight:
-    import System
+    def test_array():
+        import System
+        try:
+            a = System.Array()
+        except Exception, e:
+            AreEqual(e.__class__, TypeError)
+        else: 
+            Assert(False, "FAILED!")
+
+def test_assert_error():
+    AssertError(ValueError, chr, -1)
+    AssertError(TypeError, None)
+
+def test_dir():
+    testingdir = 10
+    Assert('testingdir' in dir())
+    del testingdir
+    Assert(not 'testingdir' in dir())
+
+def test_assert():
     try:
-        a = System.Array()
-    except Exception, e:
-        AreEqual(e.__class__, TypeError)
+        Assert(False, "Failed message")
+    except AssertionError, e:
+        Assert(e.args[0] == "Failed message")
     else: 
-        Assert(False, "FAILED!")
+        Fail("should have thrown")
 
-AssertError(ValueError, chr, -1)
-AssertError(TypeError, None)
+    try:
+        Assert(False, "Failed message 2")
+    except AssertionError, e:
+        Assert(e.args[0] == "Failed message 2")
+    else: 
+        Fail("should have thrown")
 
-testingdir = 10
-Assert('testingdir' in dir())
-del testingdir
-Assert(not 'testingdir' in dir())
 
-try:
-    Assert(False, "Failed message")
-except AssertionError, e:
-    Assert(e.args[0] == "Failed message")
-else: 
-    Fail("should have thrown")
-
-try:
-    Assert(False, "Failed message 2")
-except AssertionError, e:
-    Assert(e.args[0] == "Failed message 2")
-else: 
-    Fail("should have thrown")
-
-def test_methsonexcepobject():
+def test_syntax_error_exception():
     try:
         compile("if 2==2: x=2\nelse:y=", "Error", "exec") 
     except SyntaxError, se:
@@ -427,8 +440,8 @@ def test_methsonexcepobject():
             l2 = dir(se.clsException)            
             Assert('Line' in l2)
             Assert('Column' in l2)
-            Assert('FileName' in l2)
-            Assert('LineText' in l2)
+            Assert('GetSymbolDocumentName' in l2)
+            Assert('GetCodeLine' in l2)
         AreEqual(se.lineno, 2)
         # Bug 1132
         #AreEqual(se.offset, 7)
@@ -437,10 +450,11 @@ def test_methsonexcepobject():
         if is_cli or is_silverlight:
             AreEqual(se.clsException.Line, 2)
             # Bug 1132
-            #AreEqual(se.clsException.offset, 7)
-            AreEqual(se.clsException.FileName, "Error") 
-            AreEqual(se.clsException.LineText, "else:y=")
+            #AreEqual(se.clsException.Column, 7)
+            AreEqual(se.clsException.GetSymbolDocumentName(), "Error") 
+            AreEqual(se.clsException.GetCodeLine(), "else:y=")
     
+def test_syntax_error_exception_exec():
     try:
         compile("if 2==2: x=", "Error", "exec") 
     except SyntaxError, se:
@@ -449,13 +463,8 @@ def test_methsonexcepobject():
         #AreEqual(se.offset, 11)
         AreEqual(se.filename, "Error")
         AreEqual(se.text, "if 2==2: x=")
-        if is_cli or is_silverlight:
-            AreEqual(se.clsException.Line, 1)
-            # Bug 1132
-            #AreEqual(se.clsException.offset, 11)
-            AreEqual(se.clsException.FileName, "Error")
-            AreEqual(se.clsException.LineText, "if 2==2: x=")
         
+def test_syntax_error_exception_eval():
     try:
         compile("if 2==2: x=", "Error", "eval")
     except SyntaxError, se:
@@ -464,12 +473,6 @@ def test_methsonexcepobject():
         #AreEqual(se.offset, 2)
         AreEqual(se.filename, "Error")
         AreEqual(se.text, "if 2==2: x=")
-        if is_cli or is_silverlight:
-            AreEqual(se.clsException.Line, 1)
-            # Bug 1132
-            #AreEqual(se.clsException.offset, 2)
-            AreEqual(se.clsException.FileName, "Error")
-            AreEqual(se.clsException.LineText, "if 2==2: x=")
 
 def test_return():    
     def test_func():
@@ -664,22 +667,10 @@ def test_break_and_continue():
     AreEqual(test_outer_for_with_finally(state, True), 42)
     AreEqual(state.finallyCalled, True)
 
-# Temporarily disabled in interpreted mode:
-# the traceback displayed on the console is correct, but the traceback
-# associated with clsException does not contain the expected string
-@skip('interpreted')
-def test_throw_from_compiled_clionly():
-    def bar(): return 1 + 'abc'
-    unique_string = "<this is unique string>"
-    c = compile('bar()', unique_string, 'single')
-    
-    try:    eval(c)
-    except: x = sys.exc_info()
-    Assert(unique_string in str(x[1].clsException))
-
 def test_serializable_clionly():
-    import clr        
+    import clr
     import System
+    from IronPythonTest import ExceptionsTest
     path = clr.GetClrType(ExceptionsTest).Assembly.Location
     mbro = System.AppDomain.CurrentDomain.CreateInstanceFromAndUnwrap(path, "IronPythonTest.EngineTest")
     AssertError(AssertionError, mbro.Run, 'raise AssertionError')
@@ -698,7 +689,10 @@ def test_sanity():
     
     #run a few sanity checks
     for exception_type in exception_types:
-        except_list = [exception_type(), exception_type("a single param"), exception_type("a single param", "another param")]        
+        if is_cli or is_silverlight:
+            except_list = [exception_type(), exception_type("a single param"), exception_type("a single param", "another param")]
+        else:
+            except_list = [exception_type(), exception_type("a single param")]
         
         for t_except in except_list:
             try:
@@ -734,8 +728,4 @@ def test_nested_exceptions():
 
         AreEqual(ei, ei2)
             
-        
-if not is_cli64: #BUG: Skip this test on 64bit only to work around VSWhidbey 560529
-    run_test(__name__)
-else:
-    print "Warning: Skipping test_exceptions on 64-bit machines"
+run_test(__name__)

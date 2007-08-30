@@ -46,8 +46,8 @@ namespace IronPythonTest {
             if (RootDirectory != null) {
                 ScriptTestDirectory = Path.Combine(RootDirectory, "Languages\\IronPython\\Tests");
             } else {
-                RootDirectory = System.Reflection.Assembly.GetEntryAssembly().GetFiles()[0].Name;
-                ScriptTestDirectory = Path.Combine(RootDirectory, "..\\..\\..\\Src\\Tests");
+                RootDirectory = new System.IO.FileInfo(System.Reflection.Assembly.GetEntryAssembly().GetFiles()[0].Name).Directory.FullName;
+                ScriptTestDirectory = Path.Combine(RootDirectory, "Src\\Tests");
             }
             InputTestDirectory = Path.Combine(ScriptTestDirectory, "Inputs");
         }
@@ -197,17 +197,17 @@ namespace IronPythonTest {
             AreEqual((int)DefaultModule.LookupVariable(clspartName), 1);
 
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Execute((Microsoft.Scripting.SourceCodeUnit)null, null, null);
+                pe.Execute((SourceUnit)null, null, null);
             });
 
-            Microsoft.Scripting.SourceUnit su = new Microsoft.Scripting.SourceCodeUnit(pe, "");
+            SourceUnit su = SourceUnit.CreateSnippet(pe, "");
             AssertExceptionThrown<ArgumentNullException>(delegate() {
                 pe.Execute(su, null, null);
             });
 
-            Microsoft.Scripting.ScriptModule sm = Microsoft.Scripting.ScriptDomainManager.CurrentManager.CreateModule("empty");
+            ScriptModule sm = Microsoft.Scripting.ScriptDomainManager.CurrentManager.CreateModule("empty");
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Execute((Microsoft.Scripting.SourceUnit)null, sm, null);
+                pe.Execute((SourceUnit)null, sm, null);
             });
         }
 
@@ -361,7 +361,7 @@ namespace IronPythonTest {
         public void ScenarioCustomDictionary() {
             CustomDictionary customGlobals = new CustomDictionary();
             ScriptModule customModule = pe.CreateModule("customContext", customGlobals, ModuleOptions.PublishModule);
-            PythonContext customContext = new PythonContext(pe);
+            PythonContext customContext = new PythonContext(pe, false);
 
             // Evaluate
             AreEqual(pe.EvaluateAs<int>("customSymbol + 1", customModule), CustomDictionary.customSymbolValue + 1);
@@ -558,12 +558,12 @@ global_variable = 300", DefaultModule, locals);
                 sw.WriteLine("clsPart.Property = clsPart.Field * 5");
                 sw.WriteLine("clsPart.Event += (lambda x: x*x)");
 
-                tempFile1 = new SourceFileUnit(pe, "", "", sw.ToString());
+                tempFile1 = SourceUnit.CreateFileUnit(pe, "", sw.ToString());
             }
 
             ClsPart clsPart = new ClsPart();
             DefaultModule.SetVariable(clspartName, clsPart);
-            tempFile1.Compile().Execute();
+            pe.ExecuteSourceUnit(tempFile1, null);
 
             using (StringWriter sw = new StringWriter()) {
                 sw.WriteLine("if var1[0] != 10: raise AssertionError('test failed')");
@@ -573,10 +573,10 @@ global_variable = 300", DefaultModule, locals);
                 sw.WriteLine("var2 = clsPart.Method(var1[0])");
                 sw.WriteLine("if var2 != 10 * 10: raise AssertionError('test failed')");
 
-                tempFile2 = new SourceFileUnit(pe, "", "", sw.ToString());
+                tempFile2 = SourceUnit.CreateFileUnit(pe, "", sw.ToString());
             }
 
-            tempFile2.Compile().Execute();
+            pe.ExecuteSourceUnit(tempFile2, null); 
         }
 #endif
 
@@ -598,10 +598,10 @@ global_variable = 300", DefaultModule, locals);
                 sw.WriteLine("class C2:");
                 sw.WriteLine("    def M(): return +1");
 
-                tempFile1 = new SourceFileUnit(pe, "", "", sw.ToString());
+                tempFile1 = SourceUnit.CreateFileUnit(pe, "", sw.ToString());
             }
 
-            tempFile1.Compile().Execute();
+            pe.ExecuteSourceUnit(tempFile1, null);
 
             AreEqual(-1, pe.EvaluateAs<int>("M1()"));
             AreEqual(+1, pe.EvaluateAs<int>("M2()"));
@@ -773,26 +773,6 @@ global_variable = 300", DefaultModule, locals);
 
 #endif
 
-        public void ScenarioErrorSinkThrowsCompilerException() {
-            bool origVal = ((PythonErrorSink)pe.GetDefaultErrorSink()).ThrowExceptionOnError;
-
-            //needed to hit IronPython.Compiler.CompilerException
-            ((PythonErrorSink)pe.GetDefaultErrorSink()).ThrowExceptionOnError = true;
-            try
-            {
-                pe.Execute("a = \"a broken string'");
-                throw new Exception("We should not reach here");
-            }
-            catch (CompilerException e) {
-                AreEqual(null, e.Filename);
-                AreEqual(null, e.Node);
-                AreEqual("Error:EOL while scanning single-quoted string at <string>1:5-1:22", e.Message);
-            }
-
-            ((PythonErrorSink)pe.GetDefaultErrorSink()).ThrowExceptionOnError = origVal;
-        }
-
-        
         // Compile and Run
         public void ScenarioCompileAndRun() {
             ClsPart clsPart = new ClsPart();
@@ -959,7 +939,7 @@ global_variable = 300", DefaultModule, locals);
             //Set variables in each context
             globals["x"] = 1;
 
-            SourceFileUnit tempFile1 = new SourceFileUnit(pe, "", "MyVirtualFile", "y = 2");
+            SourceUnit tempFile1 = SourceUnit.CreateFileUnit(pe, "MyVirtualFile.py", "y = 2");
             pe.Execute(tempFile1, module1, locals);
 
             locals["z"] = 3;

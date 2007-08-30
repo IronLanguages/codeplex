@@ -50,7 +50,7 @@ namespace IronPython.Compiler {
         }
 
         public PythonTokenCategorizer() {
-            _tokenizer = new Tokenizer(new PythonErrorSink(false), true);
+            _tokenizer = new Tokenizer(new CompilerErrorSink(), true);
         }
 
         public override void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation) {

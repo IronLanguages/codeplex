@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -26,6 +26,12 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
+        public static void Requires(bool precondition, string paramName) {
+            if (!precondition) {
+                throw new ArgumentException("Invalid argument value", paramName);
+            }
+        }
+
         public static void Requires(bool precondition, string paramName, string message) {
             if (!precondition) {
                 throw new ArgumentException(message, paramName);
@@ -35,6 +41,20 @@ namespace Microsoft.Scripting.Utils {
         public static void RequiresNotNull(object value, string paramName) {
             if (value == null) {
                 throw new ArgumentNullException(paramName);
+            }
+        }
+
+        public static void RequiresNotEmpty(string str, string paramName) {
+            RequiresNotNull(str, paramName);
+            if (str.Length == 0) {
+                throw new ArgumentException("Non-empty string required", paramName);
+            }
+        }
+
+        public static void RequiresNotEmpty(System.Collections.ICollection collection, string paramName) {
+            RequiresNotNull(collection, paramName);
+            if (collection.Count == 0) {
+                throw new ArgumentException("Non-empty collection required", paramName);
             }
         }
 

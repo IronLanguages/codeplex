@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -15,8 +15,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
+using System.Reflection;
+using System.Threading;
+
+using Microsoft.Scripting.Shell;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -24,6 +27,23 @@ namespace Microsoft.Scripting {
     /// </summary>
     public static class ExceptionHelpers {
         private const string prevStackTraces = "PreviousStackTraces";
+
+        [ThreadStatic]
+        internal static List<Exception> _currentExceptions;
+
+        [ThreadStatic]
+        internal static List<DynamicStackFrame> _stackFrames;
+
+        /// <summary>
+        /// Gets the list of exceptions that are currently being handled by the user. 
+        /// 
+        /// These represent active catch blocks on the stack.
+        /// </summary>
+        public static List<Exception> CurrentExceptions {
+            get {
+                return _currentExceptions;
+            }
+        }
 
         /// <summary>
         /// Updates an exception before it's getting re-thrown so
@@ -61,6 +81,50 @@ namespace Microsoft.Scripting {
         public static IList<StackTrace> GetExceptionStackTraces(Exception rethrow) {
             List<StackTrace> result;
             return TryGetAssociatedStackTraces(rethrow, out result) ? result : null;
+        }
+
+        public static void UpdateStackTrace(CodeContext context, MethodBase method, string funcName, string filename, int line) {
+            if (_stackFrames == null) _stackFrames = new List<DynamicStackFrame>();
+
+            if (line == SourceLocation.None.Line) {
+                line = 0;
+            }
+            _stackFrames.Add(new DynamicStackFrame(context, method, funcName, filename, line));
+        }
+
+        public static List<DynamicStackFrame> AssociateDynamicStackFrames(Exception clrException) {
+            if (_stackFrames != null) {
+                Utils.ExceptionUtils.GetDataDictionary(clrException)[typeof(DynamicStackFrame)] = _stackFrames;
+            }
+            return _stackFrames;
+        }
+
+        public static void ClearDynamicStackFrames() {
+            _stackFrames = null;
+        }
+
+        public static void PushExceptionHandler(Exception clrException) {
+            // _currentExceptions is thread static
+            if (_currentExceptions == null) {
+                _currentExceptions = new List<Exception>();
+            }
+            _currentExceptions.Add(clrException);
+
+            AssociateDynamicStackFrames(clrException);
+        }
+
+        public static void PopExceptionHandler() {
+            // _currentExceptions is thread static
+            Debug.Assert(_currentExceptions != null);
+            Debug.Assert(_currentExceptions.Count != 0);
+
+#if !SILVERLIGHT
+            ThreadAbortException tae = _currentExceptions[_currentExceptions.Count - 1] as ThreadAbortException;
+            if (tae != null && tae.ExceptionState is KeyboardInterruptException) {
+                Thread.ResetAbort();
+            }
+#endif
+            _currentExceptions.RemoveAt(_currentExceptions.Count - 1);
         }
     }
 }

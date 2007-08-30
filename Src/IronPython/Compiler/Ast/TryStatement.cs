@@ -31,8 +31,6 @@ namespace IronPython.Compiler.Ast {
         private Statement _else;
         private Statement _finally;
 
-        private static bool GenerateNewTryStatement = false;
-
         public TryStatement(Statement body, TryStatementHandler[] handlers, Statement else_, Statement finally_) {
             _body = body;
             _handlers = handlers;
@@ -61,71 +59,84 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            if (GenerateNewTryStatement) {
-                return TransformToTryStatement(ag);
-            } else {
-                return Ast.DynamicTry(
-                    Span,
-                    _header,
-                    ag.Transform(_body),
-                    ag.Transform(_handlers),
-                    ag.Transform(_else),
-                    ag.Transform(_finally)
+            MSAst.Statement body = ag.Transform(_body);
+            MSAst.Statement @else = ag.Transform(_else);
+            MSAst.Statement @finally = ag.Transform(_finally);
+
+            MSAst.Variable exception;
+            MSAst.Statement @catch = TransformHandlers(ag, out exception);
+
+            // We have else clause, must generate guard around it
+            if (@else != null) {
+                Debug.Assert(@catch != null);
+
+                MSAst.BoundExpression runElse = ag.MakeGeneratorTempExpression("run_else", typeof(bool), SourceSpan.None);
+
+                //  run_else = true;
+                //  try {
+                //      try_body
+                //  } catch ( ... ) {
+                //      run_else = false;
+                //      catch_body
+                //  }
+                //  if (run_else) {
+                //      else_body
+                //  }
+                MSAst.Statement result =
+                    Ast.Block(
+                        Ast.Write(runElse.Variable, Ast.True()),
+                        Ast.Try(
+                            Span, _header, body
+                        ).Catch(exception.Type, exception,
+                            Ast.Write(runElse.Variable, Ast.False()),
+                            @catch
+                        ),
+                        Ast.IfThen(runElse,
+                            @else
+                        )
+                    );
+
+                // If we have both "else" and "finally", wrap the whole result in
+                // another try .. finally
+                if (@finally != null) {
+                    result = Ast.Try(
+                         result
+                    ).Finally(
+                        @finally
+                    );
+                }
+                return result;
+            } else {        // no "else" clause
+                //  try {
+                //      <try body>
+                //  } catch (Exception e) {
+                //      ... catch handling ...
+                //  } finally {
+                //      ... finally body ...
+                //  }
+                //
+                //  Either catch or finally may be absent, but not both.
+                //
+                return Ast.TryCatchFinally(
+                    Span, _header,
+                    body,
+                    @catch != null ? new MSAst.CatchBlock[] { Ast.Catch(exception.Type, exception, @catch) } : null,
+                    @finally
                 );
             }
         }
 
-        private MSAst.Statement TransformToTryStatement(AstGenerator ag) {
-            return Ast.TryCatchFinally(
-                Span,
-                _header,
-                ag.Transform(_body),
-                TransformCatch(ag),
-                ag.Transform(_finally)
-            );
-        }
-
-        private MSAst.CatchBlock[] TransformCatch(AstGenerator ag) {
-            if (_handlers == null) {
+        private MSAst.Statement TransformHandlers(AstGenerator ag, out MSAst.Variable variable) {
+            if (_handlers == null || _handlers.Length == 0) {
+                variable = null;
                 return null;
-            } else {
-                return new MSAst.CatchBlock[] {
-                    TransformCatchBlocks(ag)
-                };
             }
-        }
-
-        private MSAst.CatchBlock TransformCatchBlocks(AstGenerator ag) {
-            Debug.Assert(_handlers != null);
 
             MSAst.BoundExpression exception = ag.MakeTempExpression("exception", typeof(Exception), SourceSpan.None);
-            MSAst.BoundExpression extracted = ag.MakeTempExpression("extracted", SourceSpan.None);
+            MSAst.BoundExpression extracted = ag.MakeTempExpression("extracted", typeof(object), SourceSpan.None);
 
-            //
-            // extracted = PushExceptionHandler(context, exception)
-            //
-            MSAst.Statement init = Ast.Statement(
-                Ast.Assign(
-                    extracted.Variable,
-                    Ast.Call(
-                        null,
-                        AstGenerator.GetHelperMethod("PushExceptionHandler"),
-                        Ast.CodeContext(),
-                        exception
-                    )
-                )
-            );
-
-            //
-            // PopExceptionHandler(context)
-            //
-            MSAst.Statement done = Ast.Statement(
-                Ast.Call(
-                    null,
-                    AstGenerator.GetHelperMethod("PopExceptionHandler"),
-                    Ast.CodeContext()
-                )
-            );
+            // The variable where the runtime will store the exception.
+            variable = exception.Variable;
 
             List<MSAst.IfStatementTest> tests = new List<MSAst.IfStatementTest>(_handlers.Length);
             MSAst.BoundExpression converted = null;
@@ -141,12 +152,11 @@ namespace IronPython.Compiler.Ast {
                     //      except Test ...
                     //
                     //  generate following AST for the Test (common part):
-                    //      CheckException(context, exception, Test)
+                    //      CheckException(exception, Test)
                     MSAst.Expression test =
                         Ast.Call(
                             null,
                             AstGenerator.GetHelperMethod("CheckException"),
-                            Ast.CodeContext(),
                             extracted,
                             ag.TransformAsObject(tsh.Test)
                         );
@@ -156,7 +166,8 @@ namespace IronPython.Compiler.Ast {
                         //      except Test, Target:
                         //          <body>
                         //  into:
-                        //      if ((converted = CheckException(context, exception, Test)) != null) {
+                        //      if ((converted = CheckException(exception, Test)) != null) {
+                        //          ClearDynamicStackFrames();
                         //          Target = converted;
                         //          <body>
                         //      }
@@ -166,11 +177,13 @@ namespace IronPython.Compiler.Ast {
                         }
 
                         ist = Ast.IfCondition(
+                            tsh.Span, tsh.Header,
                             Ast.NotEqual(
                                 Ast.Assign(converted.Variable, test),
                                 Ast.Null()
                             ),
                             Ast.Block(
+                                ClearDynamicStackFramesAst(SourceSpan.None),
                                 tsh.Target.TransformSet(ag, converted, Operators.None),
                                 ag.Transform(tsh.Body)
                             )
@@ -180,15 +193,20 @@ namespace IronPython.Compiler.Ast {
                         //      except Test:
                         //          <body>
                         //  into:
-                        //      if (CheckException(context, exception, Test) != null) {
+                        //      if (CheckException(exception, Test) != null) {
+                        //          ClearDynamicStackFrames();
                         //          <body>
                         //      }
                         ist = Ast.IfCondition(
+                            tsh.Span, tsh.Header,
                             Ast.NotEqual(
                                 test,
                                 Ast.Null()
                             ),
-                            ag.Transform(tsh.Body)
+                            Ast.Block(
+                                ClearDynamicStackFramesAst(SourceSpan.None),
+                                ag.Transform(tsh.Body)
+                            )
                         );
                     }
 
@@ -202,8 +220,15 @@ namespace IronPython.Compiler.Ast {
                     //      except:
                     //          <body>
                     //  into:
+                    //  {
+                    //      ClearDynamicStackFrames();
                     //      <body>
-                    catchAll = ag.Transform(tsh.Body);
+                    //  }
+
+                    catchAll = Ast.Block(
+                        ClearDynamicStackFramesAst(new SourceSpan(tsh.Start, tsh.Header)),
+                        ag.Transform(tsh.Body)
+                    );
                 }
             }
 
@@ -226,20 +251,38 @@ namespace IronPython.Compiler.Ast {
                 body = catchAll;
             }
 
-            MSAst.TryStatement handler = Ast.TryFinally(
-                Span,
-                _header,
-                Ast.Block(
-                    init,
-                    body
+            //  try {
+            //      extracted = PushExceptionHandler(exception)
+            //      < dynamic exception analysis >
+            //  } finally {
+            //      PopExceptionHandler()
+            //  }
+            return Ast.Try(
+                Ast.Statement(
+                    Ast.Assign(
+                        extracted.Variable,
+                        Ast.Call(
+                            null,
+                            AstGenerator.GetHelperMethod("PushExceptionHandler"),
+                            exception
+                        )
+                    )
                 ),
-                done
+                body
+            ).Finally(
+                Ast.Statement(
+                    Ast.Call(
+                        null,
+                        AstGenerator.GetHelperMethod("PopExceptionHandler")
+                    )
+                )
             );
+        }
 
-            return Ast.Catch(
-                typeof(Exception),
-                exception.Variable,
-                handler
+        private static MSAst.Statement ClearDynamicStackFramesAst(SourceSpan span) {
+            return Ast.Statement(
+                span,
+                Ast.Call(null, AstGenerator.GetHelperMethod("ClearDynamicStackFrames"))
             );
         }
 
@@ -276,6 +319,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         public SourceLocation Header {
+            get { return _header; }
             set { _header = value; }
         }
 
@@ -289,31 +333,6 @@ namespace IronPython.Compiler.Ast {
 
         public Statement Body {
             get { return _body; }
-        }
-
-        internal MSAst.DynamicTryStatementHandler Transform(AstGenerator ag) {
-            if (_target != null) {
-                MSAst.BoundExpression target = ag.MakeTempExpression("exception_target", _target.Span);
-                return new MSAst.DynamicTryStatementHandler(
-                    ag.Transform(_test),
-                    target.Variable,
-                    Ast.Block(
-                        _body.Span,
-                        _target.TransformSet(ag, target, Operators.None),
-                        ag.Transform(_body)
-                    ),
-                    Span,
-                    _header
-                );
-            } else {
-                return new MSAst.DynamicTryStatementHandler(
-                    ag.Transform(_test),
-                    null,
-                    ag.Transform(_body),
-                    Span,
-                    _header
-                );
-            }
         }
 
         public override void Walk(PythonWalker walker) {

@@ -52,6 +52,9 @@ namespace IronPython.Runtime.Operations {
         [ThreadStatic]
         private static List<object> InfiniteRepr;
 
+        [ThreadStatic]
+        internal static Exception RawException;
+
         /// <summary> Singleton NotImplemented object of NotImplementedType.  Initialized after type has been created in static constructor </summary>
         public static readonly object NotImplemented;
         public static readonly object Ellipsis;
@@ -596,7 +599,7 @@ namespace IronPython.Runtime.Operations {
 
         // TODO: Remove this method, assemblies get registered as packages?
         private static void MakeDynamicTypesTable() {
-            DynamicHelpers.RegisterAssembly(Assembly.GetExecutingAssembly());
+            DynamicHelpers.RegisterLanguageAssembly(Assembly.GetExecutingAssembly());
 
             // TODO: Remove impersonation
             DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(typeof(SymbolDictionary))).SetImpersonationType(typeof(PythonDictionary));
@@ -644,13 +647,13 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static FastDynamicSite<object, object, object> EqualSharedSite =
-            FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equal));
+            FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equals));
 
         public static object Equal(object x, object y) {
             return EqualSharedSite.Invoke(x, y);
         }
         private static FastDynamicSite<object, object, bool> EqualBooleanSharedSite =
-            FastDynamicSite<object, object, bool>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equal));
+            FastDynamicSite<object, object, bool>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equals));
 
         public static bool EqualRetBool(object x, object y) {
             //TODO just can't seem to shake these fast paths
@@ -780,7 +783,7 @@ namespace IronPython.Runtime.Operations {
         public static object RichEqualsHelper(object self, object other) {
             object res;
 
-            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.Equal, self, other, out res))
+            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.Equals, self, other, out res))
                 return res;
 
             return PythonOps.NotImplemented;
@@ -1762,18 +1765,29 @@ namespace IronPython.Runtime.Operations {
             return new PythonSystemExitException();
         }
 
-        public static Exception SyntaxError(string msg, string filename, int line, int column, string lineText, int errorCode, Severity severity) {
-            return new SyntaxErrorException(msg, filename, line, column, lineText, errorCode, severity);
+        public static Exception SyntaxWarning(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode) {
+            int line = span.Start.Line;
+            string fileName = sourceUnit.GetSymbolDocument(line) ?? "?";
+
+            if (sourceUnit != null) {
+                message = String.Format("{0} ({1}, line {2})", message, fileName, line);
+            }
+
+            return SyntaxWarning(message, fileName, span.Start.Line, span.Start.Column, sourceUnit.GetCodeLine(line), Severity.FatalError);
         }
 
-        public static Exception IndentationError(string msg, string filename, int line, int column, string lineText, int errorCode, Severity severity) {
-            return new PythonIndentationError(msg, filename, line, column, lineText, errorCode, severity);
-        }
+        public static SyntaxErrorException SyntaxError(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode) {
+            switch (errorCode & ErrorCodes.ErrorMask) {
+                case ErrorCodes.IndentationError:
+                    return new PythonIndentationError(message, sourceUnit, span, errorCode, Severity.FatalError);
 
-        public static Exception TabError(string msg, string filename, int line, int column, string lineText, int errorCode, Severity severity) {
-            return new PythonTabError(msg, filename, line, column, lineText, errorCode, severity);
-        }
+                case ErrorCodes.TabError:
+                    return new PythonTabError(message, sourceUnit, span, errorCode, Severity.FatalError);
 
+                default:
+                    return new SyntaxErrorException(message, sourceUnit, span, errorCode, Severity.FatalError);
+            }
+        }
 
         #endregion
 
@@ -1986,13 +2000,6 @@ namespace IronPython.Runtime.Operations {
         }
 
         /// <summary>
-        /// Support for with statement
-        /// </summary>
-        public static Tuple ExtractSysExcInfo(CodeContext context) {
-            return SystemState.Instance.ExceptionInfo(context);
-        }
-      
-        /// <summary>
         /// Python runtime helper to create instance of Python List object.
         /// </summary>
         /// <returns>New instance of List</returns>
@@ -2071,11 +2078,6 @@ namespace IronPython.Runtime.Operations {
         /// <returns>Slice</returns>
         public static object MakeSlice(object start, object stop, object step) {
             return new Slice(start, stop, step);
-        }
-
-        public static Exception MakeException(CodeContext context, object type, object value, object traceback) {
-            PythonContext pc = (PythonContext)context.LanguageContext;
-            return pc.MakeException(type, value, traceback);
         }
 
         #region Standard I/O support
@@ -2359,7 +2361,7 @@ namespace IronPython.Runtime.Operations {
 
             if (str_code != null) {
                 ScriptEngine engine = PythonEngine.CurrentEngine;
-                SourceCodeUnit code_unit = new SourceCodeUnit(engine, str_code);
+                SourceUnit code_unit = SourceUnit.CreateSnippet(engine, str_code);
                 // in accordance to CPython semantics:
                 code_unit.DisableLineFeedLineSeparator = line_feed;
 
@@ -2406,17 +2408,187 @@ namespace IronPython.Runtime.Operations {
             return DefaultContext.Default.LanguageContext;
         }
 
-        public static object PushExceptionHandler(CodeContext context, Exception clrException) {
-            return RuntimeHelpers.PushExceptionHandler(context, clrException);
+        #region Exception handling
+
+        public static object PushExceptionHandler(Exception clrException) {
+            ExceptionHelpers.PushExceptionHandler(clrException);
+
+            RawException = clrException;
+            GetExceptionInfo(); // force update of non-thread static exception info...
+            return ExceptionConverter.ToPython(clrException);
         }
 
-        public static void PopExceptionHandler(CodeContext context) {
-            RuntimeHelpers.PopExceptionHandler(context);
+        public static void PopExceptionHandler() {
+            ExceptionHelpers.PopExceptionHandler();
+
+            // only clear after the last exception is out, we
+            // leave the last thrown exception as our current
+            // exception
+            List<Exception> exceptions = ExceptionHelpers.CurrentExceptions;
+            if (exceptions == null || exceptions.Count == 0) {
+                PythonOps.RawException = null;
+            }
         }
 
-        public static object CheckException(CodeContext context, object exception, object test) {
-            return RuntimeHelpers.CheckException(context, exception, test);
+        public static object CheckException(object exception, object test) {
+            Debug.Assert(exception != null);
+
+            StringException strex;
+            if (test is Tuple) {
+                // we handle multiple exceptions, we'll check them one at a time.
+                Tuple tt = test as Tuple;
+                for (int i = 0; i < tt.Count; i++) {
+                    object res = CheckException(exception, tt[i]);
+                    if (res != null) return res;
+                }
+            } else if ((strex = exception as StringException) != null) {
+                // catching a string
+                if (test.GetType() != typeof(string)) return null;
+                if (strex.Message == (string)test) {
+                    if (strex.Value == null) return strex.Message;
+                    return strex.Value;
+                }
+                return null;
+            } else if (test is OldClass) {
+                if (PythonOps.IsInstance(exception, test)) {
+                    // catching a Python type.
+                    return exception;
+                }
+            } else if (test is DynamicType) {
+                if (PythonOps.IsSubClass(test as DynamicType, DynamicHelpers.GetDynamicTypeFromType(typeof(Exception)))) {
+                    // catching a CLR exception type explicitly.
+                    Exception clrEx = ExceptionConverter.ToClr(exception);
+                    if (PythonOps.IsInstance(clrEx, test)) return clrEx;
+                }
+            }
+
+            return null;
         }
+
+        private static TraceBack CreateTraceBack(Exception e) {
+            // user provided trace back
+            object result;
+            if (ExceptionUtils.TryGetData(e, typeof(TraceBack), out result)) {
+                return (TraceBack)result;
+            }
+
+            DynamicStackFrame[] frames = DynamicHelpers.GetDynamicStackFrames(e);
+            TraceBack tb = null;
+            for (int i = frames.Length - 1; i >= 0; i--) {
+                DynamicStackFrame frame = frames[i];
+
+                PythonFunction fx = new Function0(frame.CodeContext, frame.GetMethodName(), null, ArrayUtils.EmptyStrings, ArrayUtils.EmptyObjects);
+
+                TraceBackFrame tbf = new TraceBackFrame(
+                    new GlobalsDictionary(frame.CodeContext.Scope),
+                    new LocalsDictionary(frame.CodeContext.Scope),
+                    fx.FunctionCode);
+
+                fx.FunctionCode.SetFilename(frame.GetFileName());
+                fx.FunctionCode.SetLineNumber(frame.GetFileLineNumber());
+                tb = new TraceBack(tb, tbf);
+                tb.SetLine(frame.GetFileLineNumber());
+            }
+
+            return tb;
+        }
+
+        /// <summary>
+        /// Support for exception handling (called directly by with statement)
+        /// </summary>
+        public static Tuple GetExceptionInfo() {
+            if (RawException == null) {
+                return Tuple.MakeTuple(null, null, null);
+            }
+
+            object pyExcep = ExceptionConverter.ToPython(RawException);
+
+            TraceBack tb = CreateTraceBack(RawException);
+            SystemState.Instance.ExceptionTraceBack = tb;
+
+            StringException se = pyExcep as StringException;
+            if (se == null) {
+                object excType = PythonOps.GetBoundAttr(DefaultContext.Default, pyExcep, Symbols.Class);
+                SystemState.Instance.ExceptionType = excType;
+                SystemState.Instance.ExceptionValue = pyExcep;
+
+                return Tuple.MakeTuple(
+                    excType,
+                    pyExcep,
+                    tb);
+            }
+
+            // string exceptions are special...  there tuple looks
+            // like string, argument, traceback instead of
+            //      type,   instance, traceback
+            SystemState.Instance.ExceptionType = pyExcep;
+            SystemState.Instance.ExceptionValue = se.Value;
+
+            return Tuple.MakeTuple(
+                pyExcep,
+                se.Value,
+                tb);
+        }
+
+        /// <summary>
+        /// helper function for non-re-raise exceptions.
+        /// 
+        /// type is the type of exception to throwo or an instance.  If it 
+        /// is an instance then value should be null.  
+        /// 
+        /// If type is a type then value can either be an instance of type,
+        /// a Tuple, or a single value.  This case is handled by EC.CreateThrowable.
+        /// </summary>
+        public static Exception MakeException(object type, object value, object traceback) {
+            Exception throwable;
+
+            if (type == null && value == null && traceback == null) {
+                // rethrow
+                Tuple t = GetExceptionInfo();
+                type = t[0];
+                value = t[1];
+                traceback = t[2];
+            }
+
+            if (type is Exception) {
+                throwable = type as Exception;
+            } else if (PythonOps.IsInstance(type, PythonEngine.CurrentEngine._exceptionType)) {
+                throwable = ExceptionConverter.ToClr(type);
+            } else if (type is string) {
+                throwable = new StringException(type.ToString(), value);
+            } else if (type is OldClass) {
+                if (value == null) {
+                    throwable = ExceptionConverter.CreateThrowable(type);
+                } else {
+                    throwable = ExceptionConverter.CreateThrowable(type, value);
+                }
+            } else if (type is OldInstance) {
+                throwable = ExceptionConverter.ToClr(type);
+            } else {
+                throwable = PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetDynamicType(type));
+            }
+
+            IDictionary dict = ExceptionUtils.GetDataDictionary(throwable);
+
+            if (traceback != null) {
+                TraceBack tb = traceback as TraceBack;
+                if (tb == null) throw PythonOps.TypeError("traceback argument must be a traceback object");
+
+                dict[typeof(TraceBack)] = tb;
+            } else if (dict.Contains(typeof(TraceBack))) {
+                dict.Remove(typeof(TraceBack));
+            }
+
+            PerfTrack.NoteEvent(PerfTrack.Categories.Exceptions, throwable);
+
+            return throwable;
+        }
+
+        public static void ClearDynamicStackFrames() {
+            ExceptionHelpers.ClearDynamicStackFrames();
+        }
+
+        #endregion
 
         public static IAttributesCollection CopyAndVerifyDictionary(PythonFunction function, IDictionary dict) {
             foreach (object o in dict.Keys) {
@@ -2544,6 +2716,13 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
+        public static void CheckUserParamsZero(PythonFunction function, object sequence) {
+            int len = PythonOps.Length(sequence); 
+            if(len != 0) {
+                throw function.BadArgumentError(len + function.NormalArgumentCount);
+            }
+        }
+
         public static void CheckDictionaryZero(PythonFunction function, IDictionary dict) {
             if (dict.Count != 0) {
                 IDictionaryEnumerator ie = dict.GetEnumerator();                
@@ -2565,6 +2744,40 @@ namespace IronPython.Runtime.Operations {
         public static bool IsClsVisible(CodeContext context) {
             PythonModuleContext pmc = context.ModuleContext as PythonModuleContext;
             return pmc == null || pmc.ShowCls;
+        }
+
+        public static object GetInitMember(CodeContext context, DynamicType type, object instance) {
+            object value;
+            bool res = type.TryGetNonCustomBoundMember(context, instance, Symbols.Init, out value);
+            Debug.Assert(res);
+
+            return value;
+        }
+
+        public static object GetMixedMember(CodeContext context, DynamicType type, object instance, SymbolId name) {
+            foreach (DynamicType t in type.ResolutionOrder) {
+                if (Mro.IsOldStyle(t)) {
+                    OldClass oc = (OldClass)ToPythonType(t);
+                    object ret;
+                    if (oc.__dict__.TryGetValue(name, out ret)) {
+                        if (instance != null) return oc.GetOldStyleDescriptor(context, ret, instance, oc);
+                        return ret;
+                    }
+                } else {
+                    DynamicTypeSlot dts;
+                    if (t.TryLookupSlot(context, name, out dts)) {
+                        if (instance != null) {
+                            object ret;
+                            if (dts.TryGetBoundValue(context, instance, type, out ret)) {
+                                return ret;
+                            }
+                        }
+                        return dts;
+                    }
+                }
+            }
+
+            throw AttributeErrorForMissingAttribute(type, name);
         }
     }
 }

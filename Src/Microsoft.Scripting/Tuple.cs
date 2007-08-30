@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Reflection;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     public abstract class NewTuple {
@@ -71,7 +72,7 @@ namespace Microsoft.Scripting {
         /// (e.g. a Tuple`2 which contains a Tuple`128 and a Tuple`8 if we had a size of 136).
         /// </summary>
         public static Type MakeTupleType(params Type[] types) {
-            if (types == null) throw new ArgumentNullException("types");
+            Contract.RequiresNotNull(types, "types");
 
             return MakeTupleType(types, 0, types.Length);
         }
@@ -80,7 +81,7 @@ namespace Microsoft.Scripting {
         /// Gets the number of usable slots in the provided Tuple type including slots available in nested tuples.
         /// </summary>
         public static int GetSize(Type tupleType) {
-            if (tupleType == null) throw new ArgumentNullException("tupleType");
+            Contract.RequiresNotNull(tupleType, "tupleType");
 
             int count = 0;
             lock(_sizeDict) if (_sizeDict.TryGetValue(tupleType, out count)) return count;
@@ -110,8 +111,8 @@ namespace Microsoft.Scripting {
         /// tuple the values are added in their nested forms.
         /// </summary>
         public static NewTuple MakeTuple(Type tupleType, params object[] args) {
-            if (tupleType == null) throw new ArgumentNullException("tupleType");
-            if (args == null) throw new ArgumentNullException("args");
+            Contract.RequiresNotNull(tupleType, "tupleType");
+            Contract.RequiresNotNull(args, "args");
 
             return MakeTuple(tupleType, 0, args.Length, args);
         }
@@ -120,7 +121,7 @@ namespace Microsoft.Scripting {
         /// Gets the values from a tuple including unpacking nested values.
         /// </summary>
         public static object[] GetTupleValues(NewTuple tuple) {
-            if (tuple == null) throw new ArgumentNullException("tuple");
+            Contract.RequiresNotNull(tuple, "tuple");
 
             List<object> res = new List<object>();
 
@@ -133,7 +134,7 @@ namespace Microsoft.Scripting {
         /// Gets the series of properties that needs to be accessed to access a logical item in a potentially nested tuple.
         /// </summary>
         public static IEnumerable<PropertyInfo> GetAccessPath(Type tupleType, int index) {
-            if (tupleType == null) throw new ArgumentNullException("tupleType");
+            Contract.RequiresNotNull(tupleType, "tupleType");
 
             int size = GetSize(tupleType);
             if (index < 0 || index >= size) throw new ArgumentNullException("index");

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -19,6 +19,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -37,8 +38,8 @@ namespace Microsoft.Scripting.Generation {
 
         // Must override at least one of these two methods or get infinite loop
         public virtual void EmitSet(CodeGen cg, Slot val) {
-            if (val == null) throw new ArgumentNullException("val");
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(val, "val");
+            Contract.RequiresNotNull(cg, "cg");
 
             val.EmitGet(cg);
             EmitSet(cg);
@@ -46,7 +47,7 @@ namespace Microsoft.Scripting.Generation {
 
         // This override assumes that the IL stack already holds the value to be assigned from.
         public virtual void EmitSet(CodeGen cg) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             // localTmpVal = <top of IL stack>
             Slot localTmpVal = cg.GetLocalTmp(typeof(object));
@@ -68,7 +69,7 @@ namespace Microsoft.Scripting.Generation {
         // which means that it should virtually not exist
 
         public virtual void EmitSetUninitialized(CodeGen cg) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             // Emit the following:
             //     <name> = Uninitialized.instance;
@@ -80,7 +81,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public virtual void EmitDelete(CodeGen cg, SymbolId name, bool check) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             // First check that the Name exists. Otherwise, deleting it
             // should cause a NameError
@@ -94,7 +95,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public virtual void EmitCheck(CodeGen cg, SymbolId name) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             Label endCheck = cg.DefineLabel();
             cg.Emit(OpCodes.Dup);
@@ -113,8 +114,8 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitGetAs(CodeGen cg, Type asType) {
-            if (cg == null) throw new ArgumentNullException("cg");
-            if (asType == null) throw new ArgumentNullException("asType");
+            Contract.RequiresNotNull(cg, "cg");
+            Contract.RequiresNotNull(asType, "asType");
 
             EmitGet(cg);
             if (asType == typeof(object) && this.Type.IsValueType) {

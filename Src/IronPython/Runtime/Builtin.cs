@@ -229,13 +229,14 @@ namespace IronPython.Runtime {
             CompileFlags cflags = GetCompilerFlags(flags);
             PythonContext lc = GetCompilerLanguageContext(context, inheritContext, cflags);
             ScriptEngine engine = context.LanguageContext.Engine;
-            SourceCodeUnit sourceUnit;
+            SourceUnit sourceUnit;
             
             switch (kind) {
-                case "exec": sourceUnit = new SourceCodeUnit(engine, source, filename); break;
-                case "eval": sourceUnit = new ExpressionSourceCode(engine, source, filename); break;
-                case "single": sourceUnit = new StatementSourceCode(engine, source, filename); break;
-                default: throw PythonOps.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
+                case "exec": sourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.Default); break;
+                case "eval": sourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.Expression); break;
+                case "single": sourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.SingleStatement); break;
+                default: 
+                    throw PythonOps.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
             }
 
             ScriptCode compiledCode = PythonModuleOps.CompileFlowTrueDivision(sourceUnit, lc);
@@ -254,7 +255,7 @@ namespace IronPython.Runtime {
             return compile(context, source, filename, kind, null, null);
         }
 
-        public static object classmethod = DynamicHelpers.GetDynamicTypeFromType(typeof(ClassMethod));
+        public static object classmethod = DynamicHelpers.GetDynamicTypeFromType(typeof(classmethod));
 
         public static int cmp(CodeContext context, object x, object y) {
             return PythonOps.Compare(context, x, y);
@@ -362,7 +363,7 @@ namespace IronPython.Runtime {
             Microsoft.Scripting.Scope scope = GetExecEvalScope(context, globals, locals);
 
             // TODO: remove TrimStart
-            SourceUnit expr_code = new ExpressionSourceCode(context.LanguageContext.Engine, expression.TrimStart(' ', '\t'));
+            SourceUnit expr_code = SourceUnit.CreateSnippet(context.LanguageContext.Engine, expression.TrimStart(' ', '\t'), SourceCodeKind.Expression);
 
             return PythonModuleOps.CompileFlowTrueDivision(expr_code, context.LanguageContext).Run(scope, context.ModuleContext, true);
         }
@@ -391,14 +392,20 @@ namespace IronPython.Runtime {
 
             if (l == null) l = g;
 
+            PythonEngine engine = PythonEngine.CurrentEngine;
+
             Scope execScope = GetExecEvalScope(context, g, l);
-            string str_filename = Converter.ConvertToString(filename);
-            SourceFileUnit file_unit = new SourceFileUnit(context.LanguageContext.Engine, str_filename, SystemState.Instance.DefaultEncoding);
+            string path = Converter.ConvertToString(filename);
+            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, path, engine.SystemState.DefaultEncoding);
+
+            if (sourceUnit == null) {
+                throw PythonOps.IOError("execfile: specified file doesn't exist");
+            }
 
             ScriptCode code;
 
             try {
-                code = PythonModuleOps.CompileFlowTrueDivision(file_unit, context.LanguageContext);
+                code = PythonModuleOps.CompileFlowTrueDivision(sourceUnit, context.LanguageContext);
             } catch (UnauthorizedAccessException x) {
                 throw PythonOps.IOError(x);
             }
@@ -751,6 +758,7 @@ namespace IronPython.Runtime {
                 }
 
                 object[] args = new object[enums.Length];
+                FastDynamicSite<object, object[], object> mapSite = null;
                 while (true) {
                     bool done = true;
                     for (int i = 0; i < enums.Length; i++) {
@@ -766,7 +774,8 @@ namespace IronPython.Runtime {
                     }
                     if (func != null) {
                         // splat call w/ args, can't use site here yet...
-                        ret.AddNoLock(PythonOps.CallWithContext(DefaultContext.Default, func, args));
+                        if (mapSite == null) mapSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, CallAction.Make(new ArgumentInfo(ArgumentKind.List)));
+                        ret.AddNoLock(mapSite.Invoke(func, args));
                     } else {
                         ret.AddNoLock(Tuple.MakeTuple(args));
                         args = new object[enums.Length];    // Tuple does not copy the array, allocate new one.
@@ -1154,7 +1163,7 @@ namespace IronPython.Runtime {
         }
 
         public static object reload(CodeContext context, ScriptModule module) {
-            PythonModuleOps.CheckReloadable(module);
+            ((PythonContext)DefaultContext.Default.LanguageContext).CheckReloadable(module);
             module.Reload();
             return module;
         }
@@ -1259,7 +1268,7 @@ namespace IronPython.Runtime {
             return l;
         }
 
-        public static object staticmethod = DynamicHelpers.GetDynamicTypeFromType(typeof(StaticMethod));
+        public static object staticmethod = DynamicHelpers.GetDynamicTypeFromType(typeof(staticmethod));
 
         public static object sum(object sequence) {
             return sum(sequence, 0);

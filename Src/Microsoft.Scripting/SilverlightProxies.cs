@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Globalization;
 using System.IO;
 using System.Collections;
+using Microsoft.Scripting.Utils;
 
 #if SILVERLIGHT // Proxies
 
@@ -211,68 +212,16 @@ namespace System {
 
 #region Stack<T>
 
-        public class Stack<T> : IEnumerable<T> {
-            List<T> _list;
-            int _version;
-
-            public Stack() {
-                _list = new List<T>();
+        public class Stack<T> : ListStack<T> {
+            public Stack() : base() {
             }
 
-            public Stack(int capacity) {
-                _list = new List<T>(capacity);
+            public Stack(int capacity) : base(capacity) {
             }
 
-            public Stack(IEnumerable<T> collection) {
-                _list = new List<T>(collection);
-            }
-
-            public T Peek() {
-                if (_list.Count == 0) throw new InvalidOperationException();
-                return _list[_list.Count - 1];
-            }
-
-            public T Pop() {
-                if (_list.Count == 0) throw new InvalidOperationException();
-                T result = _list[_list.Count - 1];
-                _version++;
-                _list.RemoveAt(_list.Count - 1);
-                return result;
-            }
-
-            public bool Contains(T t) {
-                return _list.Contains(t);
-            }
-
-            public void Clear() {
-                _version++;
-                _list.Clear();
-            }
-
-            public void Push(T item) {
-                _version++;
-                _list.Add(item);
-            }
-
-            public int Count {
-                get { return _list.Count; }
-            }
-
-            public IEnumerator<T> GetEnumerator() {
-                int version = _version;
-                for (int i = _list.Count - 1; i >= 0; i--) {
-                    yield return _list[i];
-                    if (_version != version) {
-                        throw new InvalidOperationException("Stack changed while enumerating");
-                    }
-                }
-            }
-
-            IEnumerator IEnumerable.GetEnumerator() {
-                return GetEnumerator();
+            public Stack(IEnumerable<T> collection) : base(collection) {
             }
         }
-
 
 #endregion
 

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -87,13 +87,13 @@ namespace Microsoft.Scripting.Utils {
         #endregion
 
         public static string GetSuffix(string str, char separator, bool includeSeparator) {
-            if (str == null) throw new ArgumentNullException("str");
+            Contract.RequiresNotNull(str, "str");
             int last = str.LastIndexOf(separator);
             return (last != -1) ? str.Substring(includeSeparator ? last : last + 1) : null;
         }
 
         public static string GetLongestPrefix(string str, char separator, bool includeSeparator) {
-            if (str == null) throw new ArgumentNullException("str");
+            Contract.RequiresNotNull(str, "str");
             int last = str.LastIndexOf(separator);
             return (last != -1) ? str.Substring(0, (includeSeparator || last == 0) ? last : last - 1) : null;
         }
@@ -111,8 +111,8 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static string[] Split(string str, string separator, int maxComponents, StringSplitOptions options) {
+            Contract.RequiresNotNull(str, "str");
 #if SILVERLIGHT
-            if (str == null) throw new ArgumentNullException("str");
             if (string.IsNullOrEmpty(separator)) throw new ArgumentNullException("separator");
 
             bool keep_empty = (options & StringSplitOptions.RemoveEmptyEntries) != StringSplitOptions.RemoveEmptyEntries;
@@ -142,8 +142,8 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static string[] Split(string str, char[] separators, int maxComponents, StringSplitOptions options) {
+            Contract.RequiresNotNull(str, "str");
 #if SILVERLIGHT
-            if (str == null) throw new ArgumentNullException("str");
             if (separators == null) return SplitOnWhiteSpace(str, maxComponents, options);
 
             bool keep_empty = (options & StringSplitOptions.RemoveEmptyEntries) != StringSplitOptions.RemoveEmptyEntries;
@@ -174,7 +174,7 @@ namespace Microsoft.Scripting.Utils {
 
 #if SILVERLIGHT
         public static string[] SplitOnWhiteSpace(string str, int maxComponents, StringSplitOptions options) {
-            if (str == null) throw new ArgumentNullException("str");
+            Contract.RequiresNotNull(str, "str");
 
             bool keep_empty = (options & StringSplitOptions.RemoveEmptyEntries) != StringSplitOptions.RemoveEmptyEntries;
 
@@ -200,7 +200,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static int IndexOfWhiteSpace(string str, int start) {
-            if (str == null) throw new ArgumentNullException("str");
+            Contract.RequiresNotNull(str, "str");
             if (start < 0 || start > str.Length) throw new ArgumentOutOfRangeException("start");
 
             while (start < str.Length && !Char.IsWhiteSpace(str[start])) start++;
@@ -213,7 +213,7 @@ namespace Microsoft.Scripting.Utils {
         /// Splits text and optionally indents first lines - breaks along words, not characters.
         /// </summary>
         public static string SplitWords(string text, bool indentFirst, int lineWidth) {
-            if (text == null) throw new ArgumentNullException("text");
+            Contract.RequiresNotNull(text, "text");
 
             const string indent = "    ";
 
@@ -249,7 +249,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static string AddSlashes(string str) {
-            if (str == null) throw new ArgumentNullException("str");
+            Contract.RequiresNotNull(str, "str");
 
             // TODO: optimize
             StringBuilder result = new StringBuilder(str.Length);

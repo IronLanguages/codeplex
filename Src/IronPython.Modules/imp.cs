@@ -163,6 +163,8 @@ namespace IronPython.Modules {
             return false;
         }
 
+#if !SILVERLIGHT
+
         [PythonName("load_compiled")]
         public static object LoadCompiled(string name, string pathname) {
             return null;
@@ -183,11 +185,17 @@ namespace IronPython.Modules {
             return null;
         }
 
+#endif
+
         [PythonName("load_source")]
         public static object LoadSource(CodeContext context, string name, string pathname) {
-            ScriptEngine engine = PythonEngine.CurrentEngine;
-            SourceFileUnit code_unit = new SourceFileUnit(engine, pathname, name, SystemState.Instance.DefaultEncoding);
-            return GenerateAndInitializeModule(context, code_unit);
+            PythonEngine engine = PythonEngine.CurrentEngine;
+
+            // TODO: is this supposed to open PythonFile with Python-specific behavior?
+            // we may need to insert additional layer to SourceUnit content provider if so
+            SourceUnit codeUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, pathname, engine.SystemState.DefaultEncoding);
+
+            return GenerateAndInitializeModule(context, name, pathname, codeUnit);
         }
 
         [PythonName("load_source")]
@@ -255,31 +263,32 @@ namespace IronPython.Modules {
 
         private static ScriptModule LoadPythonSource(CodeContext context, string name, PythonFile file, string filename) {
             ScriptEngine engine = PythonEngine.CurrentEngine;
-            SourceFileUnit file_unit = new SourceFileUnit(engine, filename, name, file.Read());
-            return GenerateAndInitializeModule(context, file_unit);
+            SourceUnit sourceUnit = SourceUnit.CreateFileUnit(engine, filename, file.Read());
+            return GenerateAndInitializeModule(context, name, filename, sourceUnit);
         }
 
-        private static ScriptModule GenerateAndInitializeModule(CodeContext context, SourceFileUnit sourceUnit) {
-            ScriptModule module = sourceUnit.CompileToModule();
-            PythonModuleOps.SetFileName(module, sourceUnit.Path);
-            PythonModuleOps.SetName(module, sourceUnit.Name);
+        private static ScriptModule GenerateAndInitializeModule(CodeContext context, string moduleName, string path, SourceUnit sourceUnit) {
+            ScriptModule module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, sourceUnit);
+            
+            PythonModuleOps.SetFileName(module, path);
+            PythonModuleOps.SetName(module, moduleName);
 
-            return PythonEngine.CurrentEngine.Importer.InitializeModule(sourceUnit.Path, module, true);
+            return PythonEngine.CurrentEngine.Importer.InitializeModule(moduleName, module, true);
         }
 
 #if !SILVERLIGHT // files
-        private static ScriptModule LoadPackageDirectory(CodeContext context, string name, string filename) {
+        private static ScriptModule LoadPackageDirectory(CodeContext context, string moduleName, string path) {
             
-            string init = Path.Combine(filename, "__init__.py");
-            ScriptEngine engine = PythonEngine.CurrentEngine;
-            SourceFileUnit code_unit = new SourceFileUnit(engine, init, name, SystemState.Instance.DefaultEncoding);
+            string initPath = Path.Combine(path, "__init__.py");
+            
+            PythonEngine engine = PythonEngine.CurrentEngine;
+            SourceUnit codeUnit = SourceUnit.CreateFileUnit(engine, initPath, engine.SystemState.DefaultEncoding);
+            ScriptModule module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, codeUnit);
 
-            ScriptModule module = code_unit.CompileToModule();
+            module.FileName = initPath;
+            module.ModuleName = moduleName;
 
-            module.FileName = init;
-            module.ModuleName = name;
-
-            return PythonEngine.CurrentEngine.Importer.InitializeModule(init, module, true);
+            return PythonEngine.CurrentEngine.Importer.InitializeModule(initPath, module, true);
         }
 #endif
 

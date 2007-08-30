@@ -366,20 +366,20 @@ namespace IronPython.Runtime {
                 return _OperatorGreaterThanOrEqual;
             }
         }
-        private static SymbolId _OperatorEqual;
+        private static SymbolId _OperatorEquals;
         ///<summary>SymbolId for '__eq__'</summary>
-        public static SymbolId OperatorEqual {
+        public static SymbolId OperatorEquals {
             get {
-                if (_OperatorEqual == SymbolId.Empty) _OperatorEqual = MakeSymbolId("__eq__");
-                return _OperatorEqual;
+                if (_OperatorEquals == SymbolId.Empty) _OperatorEquals = MakeSymbolId("__eq__");
+                return _OperatorEquals;
             }
         }
-        private static SymbolId _OperatorNotEqual;
+        private static SymbolId _OperatorNotEquals;
         ///<summary>SymbolId for '__ne__'</summary>
-        public static SymbolId OperatorNotEqual {
+        public static SymbolId OperatorNotEquals {
             get {
-                if (_OperatorNotEqual == SymbolId.Empty) _OperatorNotEqual = MakeSymbolId("__ne__");
-                return _OperatorNotEqual;
+                if (_OperatorNotEquals == SymbolId.Empty) _OperatorNotEquals = MakeSymbolId("__ne__");
+                return _OperatorNotEquals;
             }
         }
         private static SymbolId _OperatorLessThanGreaterThan;
@@ -1293,8 +1293,8 @@ namespace IronPython.Runtime {
                 case Operators.GreaterThan: return Symbols.OperatorGreaterThan;
                 case Operators.LessThanOrEqual: return Symbols.OperatorLessThanOrEqual;
                 case Operators.GreaterThanOrEqual: return Symbols.OperatorGreaterThanOrEqual;
-                case Operators.Equal: return Symbols.OperatorEqual;
-                case Operators.NotEqual: return Symbols.OperatorNotEqual;
+                case Operators.Equals: return Symbols.OperatorEquals;
+                case Operators.NotEquals: return Symbols.OperatorNotEquals;
                 case Operators.LessThanGreaterThan: return Symbols.OperatorLessThanGreaterThan;
 
                 // *** END GENERATED CODE ***
@@ -1343,8 +1343,8 @@ namespace IronPython.Runtime {
                 case Operators.LessThanOrEqual: return Symbols.OperatorGreaterThanOrEqual;
                 case Operators.GreaterThan: return Symbols.OperatorLessThan;
                 case Operators.GreaterThanOrEqual: return Symbols.OperatorLessThanOrEqual;
-                case Operators.Equal: return Symbols.OperatorEqual;
-                case Operators.NotEqual: return Symbols.OperatorNotEqual;
+                case Operators.Equals: return Symbols.OperatorEquals;
+                case Operators.NotEquals: return Symbols.OperatorNotEquals;
 
                 // *** END GENERATED CODE ***
 

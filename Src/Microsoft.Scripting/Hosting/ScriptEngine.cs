@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -49,12 +49,12 @@ namespace Microsoft.Scripting.Hosting {
         // configuration:
         void SetSourceUnitSearchPaths(string[] paths);
         CompilerOptions GetDefaultCompilerOptions();
+        SourceCodeProperties GetCodeProperties(string code, SourceCodeKind kind);
+        SourceCodeProperties GetCodeProperties(string code, SourceCodeKind kind, ErrorSink errorSink);
         
         int ExecuteProgram(SourceUnit sourceUnit);
         void PublishModule(IScriptModule module);
         void Shutdown();
-
-        InteractiveCodeProperties GetInteractiveCodeProperties(string code);
 
         // convenience API:
         void Execute(string code);
@@ -66,9 +66,11 @@ namespace Microsoft.Scripting.Hosting {
         void ExecuteCommand(string code, IScriptModule module);
         void ExecuteInteractiveCode(string code);
         void ExecuteInteractiveCode(string code, IScriptModule module);
+        void ExecuteSourceUnit(SourceUnit sourceUnit, IScriptModule module);
 
         object Evaluate(string expression);
         object Evaluate(string expression, IScriptModule module);
+        object EvaluateSourceUnit(SourceUnit sourceUnit, IScriptModule module);
 
         // code sense:
         bool TryGetVariable(string name, IScriptModule module, out object obj);
@@ -85,15 +87,17 @@ namespace Microsoft.Scripting.Hosting {
         object CallObject(object obj, params object[] args);
         object CallObject(object obj, IScriptModule module, params object[] args);
 
-        IScriptModule CompileFile(string path);
+        IScriptModule CompileFile(string path, string moduleName);
         ICompiledCode CompileFileContent(string path);
         ICompiledCode CompileFileContent(string path, IScriptModule module);
         ICompiledCode CompileCode(string code);
         ICompiledCode CompileCode(string code, IScriptModule module);
         ICompiledCode CompileExpression(string expression, IScriptModule module);
-        ICompiledCode CompileStatement(string statement, IScriptModule module);
+        ICompiledCode CompileStatements(string statement, IScriptModule module);
         ICompiledCode CompileInteractiveCode(string code);
         ICompiledCode CompileInteractiveCode(string code, IScriptModule module);
+        ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, IScriptModule module);
+        ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink);
 
 #if !SILVERLIGHT
 
@@ -124,35 +128,34 @@ namespace Microsoft.Scripting.Hosting {
                 
         // TODO: (internal)
         CompilerOptions GetModuleCompilerOptions(ScriptModule module);
-        
+
         // TODO: output
         TextWriter GetOutputWriter(bool isErrorOutput);
 
-        // TODO: source unit
-        StreamReader GetSourceReader(Stream stream, ref Encoding encoding);
-
         // TODO: this shouldn't be here:
         ActionBinder DefaultBinder { get; }
-
+        
         // TODO:
-        SourceUnit CreateStandardInputSourceUnit(string code);
-        ErrorSink GetDefaultErrorSink();
+        ErrorSink GetCompilerErrorSink();
     }
 
     public abstract class ScriptEngine : IScriptEngine, ILocalObject {
         private readonly LanguageProvider _provider;
         private readonly EngineOptions _options;
+        private readonly LanguageContext _languageContext;
 
         #region Properties
 
         protected virtual string DefaultSourceCodeUnitName { get { return "<string>"; } }
 
-        public abstract ScriptCompiler Compiler { get; }
-
         public LanguageProvider LanguageProvider {
             get {
                 return _provider;
             }
+        }
+
+        internal protected LanguageContext LanguageContext {
+            get { return _languageContext; }
         }
 
         public EngineOptions Options {
@@ -184,14 +187,15 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        // TODO: provide default implementation
+        // TODO: provide default implementation, remove from engine
         public abstract ActionBinder DefaultBinder { get; }
 
         #endregion
 
-        protected ScriptEngine(LanguageProvider provider, EngineOptions engineOptions) {
-            if (provider == null) throw new ArgumentNullException("provider");
-            if (engineOptions == null) throw new ArgumentNullException("engineOptions");
+        protected ScriptEngine(LanguageProvider provider, EngineOptions engineOptions, LanguageContext languageContext) {
+            Contract.RequiresNotNull(provider, "provider");
+            Contract.RequiresNotNull(engineOptions, "engineOptions");
+            Contract.RequiresNotNull(languageContext, "languageContext");
 
 #if !SILVERLIGHT // SecurityPermission
             if (engineOptions.ClrDebuggingEnabled) {
@@ -201,6 +205,7 @@ namespace Microsoft.Scripting.Hosting {
 #endif
             _provider = provider;
             _options = engineOptions;
+            _languageContext = languageContext;
         }
 
         #region IScriptEngine Members
@@ -237,7 +242,7 @@ namespace Microsoft.Scripting.Hosting {
         }
         
         public string[] GetObjectMemberNames(object obj, IScriptModule module) {
-            if (obj == null) throw new ArgumentNullException("obj");
+            Contract.RequiresNotNull(obj, "obj");
             return FormatObjectMemberNames(Ops_GetAttrNames(GetCodeContext(module), obj));
         }
 
@@ -265,7 +270,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public bool TryGetObjectMemberValue(object obj, string name, IScriptModule module, out object value) {
-            if (obj == null) throw new ArgumentNullException("obj");
+            Contract.RequiresNotNull(obj, "obj");
             return Ops_TryGetAttr(GetCodeContext(module), obj, SymbolTable.StringToId(name), out value);
         }
 
@@ -274,7 +279,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public bool IsObjectCallable(object obj, IScriptModule module) {
-            if (obj == null) throw new ArgumentNullException("obj");
+            Contract.RequiresNotNull(obj, "obj");
 
             return Ops_IsCallable(GetCodeContext(module), obj);
         }
@@ -284,8 +289,8 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public object CallObject(object obj, IScriptModule module, params object[] args) {
-            if (obj == null) throw new ArgumentNullException("obj");
-            if (args == null) throw new ArgumentNullException("args");
+            Contract.RequiresNotNull(obj, "obj");
+            Contract.RequiresNotNull(args, "args");
 
             return Ops_Call(GetCodeContext(module), obj, args);
         }
@@ -310,11 +315,13 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public object Evaluate(string expression, IScriptModule module) {
-            if (expression == null) throw new ArgumentNullException("expression");
-            if (module == null) module = ScriptDomainManager.CurrentManager.Host.DefaultModule;
+            Contract.RequiresNotNull(expression, "expression");
+            return CompileExpression(expression, module).Evaluate(module);      
+        }
 
-            SourceCodeUnit unit = new ExpressionSourceCode(this, expression.TrimStart(' ', '\t'), "");
-            return unit.Compile(module.GetCompilerOptions(this)).Evaluate(module);        
+        public object EvaluateSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+            return CompileSourceUnit(sourceUnit, module).Evaluate(module);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
@@ -331,14 +338,24 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Parsing
 
-        public virtual InteractiveCodeProperties GetInteractiveCodeProperties(string code) {
-            if (code == null) throw new ArgumentNullException("code");
+        public SourceCodeProperties GetCodeProperties(string code, SourceCodeKind kind) {
+            return GetCodeProperties(code, kind, null);
+        }
+
+        public SourceCodeProperties GetCodeProperties(string code, SourceCodeKind kind, ErrorSink errorSink) {
+            Contract.RequiresNotNull(code, "code");
+            SourceUnit sourceUnit = SourceUnit.CreateSnippet(this, code, kind);
             
-            // TODO:
-            InteractiveCodeProperties result;
-            CompilerContext compilerContext;
-            new SourceCodeUnit(this, code).ParseInteractive(null, null, true, out result, out compilerContext);
-            return result;
+            // create compiler context with null error sink:
+            CompilerContext compilerContext = new CompilerContext(sourceUnit, null, errorSink ?? new ErrorSink());
+            
+            _languageContext.UpdateSourceCodeProperties(compilerContext);
+
+            if (!sourceUnit.CodeProperties.HasValue) {
+                throw new InvalidImplementationException();
+            }
+
+            return sourceUnit.CodeProperties.Value;
         }
 
         #endregion
@@ -359,7 +376,7 @@ namespace Microsoft.Scripting.Hosting {
             return GetDefaultCompilerOptions();
         }
 
-        public virtual ErrorSink GetDefaultErrorSink() {
+        public virtual ErrorSink GetCompilerErrorSink() {
             return new ErrorSink();
         }
 
@@ -367,8 +384,9 @@ namespace Microsoft.Scripting.Hosting {
         /// Execute a source unit as a program and return its exit code.
         /// </summary>
         public virtual int ExecuteProgram(SourceUnit sourceUnit) {
-            if (sourceUnit == null) throw new ArgumentNullException("sourceUnit");
-            sourceUnit.Compile().Execute();
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+
+            ExecuteSourceUnit(sourceUnit, null);
             return 0;
         }
 
@@ -413,7 +431,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Execute a script file in a new module. Convenience API.
         /// </summary>
         public void ExecuteFile(string path) {
-            CompileFile(path).Execute();
+            CompileFile(path, Path.GetFileNameWithoutExtension(path)).Execute();
         }
 
         public void ExecuteFileContent(string path) {
@@ -443,12 +461,26 @@ namespace Microsoft.Scripting.Hosting {
         /// Execute a snippet of code within the scope of the specified module. Convenience API.
         /// </summary>
         public void Execute(string code, IScriptModule module) {
-            if (code == null) throw new ArgumentNullException("code");
-            if (module == null) module = ScriptDomainManager.CurrentManager.Host.DefaultModule;
-
-            new SourceCodeUnit(this, code).Compile(module.GetCompilerOptions(this), null).Execute(module);
+            Contract.RequiresNotNull(code, "code");
+            ExecuteSourceUnit(SourceUnit.CreateSnippet(this, code), module);
         }
 
+        public void ExecuteSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+            CompileSourceUnit(sourceUnit, module).Execute(module);
+        }
+
+        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+            CompilerOptions options = (module != null) ? module.GetCompilerOptions(this) : GetDefaultCompilerOptions();
+            return new CompiledCode(_languageContext.CompileSourceCode(sourceUnit, options));
+        }
+
+        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+            return new CompiledCode(_languageContext.CompileSourceCode(sourceUnit, options, errorSink));
+        }
+        
         /// <summary>
         /// Convenience hosting API.
         /// </summary>
@@ -460,38 +492,44 @@ namespace Microsoft.Scripting.Hosting {
         /// Convenience hosting API.
         /// </summary>
         public ICompiledCode CompileCode(string code, IScriptModule module) {
-            if (code == null) throw new ArgumentNullException("code");
-            
-            CompilerOptions options = (module != null) ? module.GetCompilerOptions(this) : GetDefaultCompilerOptions();
-            return new SourceCodeUnit(this, code).Compile(options, null);
+            Contract.RequiresNotNull(code, "code");
+            return CompileSourceUnit(SourceUnit.CreateSnippet(this, code), module);
         }
 
         /// <summary>
         /// Comvenience hosting API.
         /// </summary>
         public ICompiledCode CompileExpression(string expression, IScriptModule module) {
-            if (expression == null) throw new ArgumentNullException("expression");
+            Contract.RequiresNotNull(expression, "expression");
             
             // TODO: remove TrimStart
-            CompilerOptions options = (module != null) ? module.GetCompilerOptions(this) : GetDefaultCompilerOptions();
-            return new ExpressionSourceCode(this, expression.TrimStart(' ', '\t'), "").Compile(options);
+            return CompileSourceUnit(SourceUnit.CreateSnippet(this, expression.TrimStart(' ', '\t'), SourceCodeKind.Expression), module);
         }
 
         /// <summary>
         /// Comvenience hosting API.
         /// </summary>
-        public ICompiledCode CompileStatement(string statement, IScriptModule module) {
-            if (statement == null) throw new ArgumentNullException("statement");
-
-            CompilerOptions options = (module != null) ? module.GetCompilerOptions(this) : GetDefaultCompilerOptions();
-            return new StatementSourceCode(this, statement, "").Compile(options);
+        public ICompiledCode CompileStatements(string statement, IScriptModule module) {
+            Contract.RequiresNotNull(statement, "statement");
+            return CompileSourceUnit(SourceUnit.CreateSnippet(this, statement, SourceCodeKind.Statements), module);
         }
 
         /// <summary>
         /// Convenience hosting API.
         /// </summary>
-        public IScriptModule CompileFile(string path) {
-            return new SourceFileUnit(this, path, Encoding.Default).CompileToModule();
+        public IScriptModule CompileFile(string path, string moduleName) {
+            Contract.RequiresNotNull(path, "path");
+            
+            if (moduleName == null) {
+                moduleName = Path.GetFileNameWithoutExtension(path);
+            }
+
+            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(this, path, Encoding.Default);
+            if (sourceUnit == null) {
+                throw new FileNotFoundException();
+            }
+
+            return ScriptDomainManager.CurrentManager.CompileModule(moduleName, sourceUnit);
         }
 
         public ICompiledCode CompileFileContent(string path) {
@@ -499,10 +537,14 @@ namespace Microsoft.Scripting.Hosting {
         }
         
         public ICompiledCode CompileFileContent(string path, IScriptModule module) {
-            if (path == null) throw new ArgumentNullException("path");
-            if (module == null) module = ScriptDomainManager.CurrentManager.Host.DefaultModule;
+            Contract.RequiresNotNull(path, "path");
             
-            return new SourceFileUnit(this, path, Encoding.Default).Compile(module.GetCompilerOptions(this), null);
+            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(this, path, Encoding.Default);
+            if (sourceUnit == null) {
+                throw new FileNotFoundException();
+            }
+
+            return CompileSourceUnit(sourceUnit, module);
         }
         
         public ICompiledCode CompileInteractiveCode(string code) {
@@ -510,21 +552,16 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public ICompiledCode CompileInteractiveCode(string code, IScriptModule module) {
-            if (code == null) throw new ArgumentNullException("code");
-            if (module == null) module = ScriptDomainManager.CurrentManager.Host.DefaultModule;
-
-            InteractiveCodeProperties properties;
-
-            return new SourceCodeUnit(this, code).CompileInteractive(RemoteWrapper.TryGetLocal<ScriptModule>(module), module.GetCompilerOptions(this), null, false, out properties);
+            Contract.RequiresNotNull(code, "code");
+            return CompileSourceUnit(SourceUnit.CreateSnippet(this, code, SourceCodeKind.InteractiveCode), module);
         }
 
 #if !SILVERLIGHT
         public ICompiledCode CompileCodeDom(System.CodeDom.CodeMemberMethod code, IScriptModule module) {
-            if (code == null) throw new ArgumentNullException("code");
+            Contract.RequiresNotNull(code, "code");
 
             CompilerOptions options = (module != null) ? module.GetCompilerOptions(this) : GetDefaultCompilerOptions();
-
-            return Compiler.ParseCodeDom(code).Compile(options);
+            return CompileSourceUnit(_languageContext.GenerateSourceCode(code), module);
         }
 #endif
 
@@ -548,7 +585,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         public string[] GetObjectCallSignatures(IObjectHandle obj) {
-            if (obj == null) throw new ArgumentNullException("obj");
+            Contract.RequiresNotNull(obj, "obj");
             return GetObjectCallSignatures(obj.Unwrap());
         }
 
@@ -572,7 +609,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
         /// <exception cref="ArgumentNullException"><paramref name="obj"/></exception>
         public string[] GetObjectMemberNames(IObjectHandle obj, IScriptModule module) {
-            if (obj == null) throw new ArgumentNullException("obj");
+            Contract.RequiresNotNull(obj, "obj");
             return GetObjectMemberNames(obj.Unwrap(), module);
         }
 
@@ -584,7 +621,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         public string GetObjectDocumentation(IObjectHandle obj) {
-            if (obj == null) throw new ArgumentNullException("obj");
+            Contract.RequiresNotNull(obj, "obj");
             return GetObjectDocumentation(obj.Unwrap());
         }
 
@@ -612,7 +649,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
         /// <exception cref="ArgumentNullException"><paramref name="obj"/>, <paramref name="name"/></exception>
         public bool TryGetObjectMemberValue(IObjectHandle obj, string name, IScriptModule module, out IObjectHandle value) {
-            if (obj == null) throw new ArgumentNullException("obj");
+            Contract.RequiresNotNull(obj, "obj");
             object v;
             return Utilities.MakeHandle(TryGetObjectMemberValue(obj.Unwrap(), name, module, out v), v, out value);
         }
@@ -637,7 +674,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         public bool IsObjectCallable(IObjectHandle obj, IScriptModule module) {
-            if (obj == null) throw new ArgumentNullException("obj");
+            Contract.RequiresNotNull(obj, "obj");
             return IsObjectCallable(obj.Unwrap(), module);
         }
 
@@ -663,8 +700,8 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="System.Runtime.Serialization.SerializationException">obj, args[i]</exception>
         /// <exception cref="ArgumentNullException">obj, args</exception>
         public IObjectHandle CallObject(IObjectHandle obj, IScriptModule module, params object[] args) {
-            if (obj == null) throw new ArgumentNullException("obj");
-            if (args == null) throw new ArgumentNullException("args");
+            Contract.RequiresNotNull(obj, "obj");
+            Contract.RequiresNotNull(args, "args");
 
             object local_obj = obj.Unwrap();
             object[] local_args = new object[args.Length];
@@ -701,6 +738,8 @@ namespace Microsoft.Scripting.Hosting {
 #endif
         #endregion
 
+        #region CodeContext/LangaugeContext - TODO: move to LanguageContext
+
         // Gets a LanguageContext for the specified module that captures the current state 
         // of the module which will be used for compilation and execution of the next piece of code against the module.
         private CodeContext GetCodeContext(IScriptModule module) {
@@ -709,20 +748,22 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         internal protected CodeContext GetCodeContext(ScriptModule module) {
-            if (module == null) throw new ArgumentNullException("module");
+            Contract.RequiresNotNull(module, "module");
             LanguageContext languageContext = GetLanguageContext(module);
             ModuleContext moduleContext = languageContext.EnsureModuleContext(module);
             return new CodeContext(module.Scope, languageContext, moduleContext);
         }
 
         internal protected virtual LanguageContext GetLanguageContext(ScriptModule module) {
-            if (module == null) throw new ArgumentNullException("module");
+            Contract.RequiresNotNull(module, "module");
             return GetLanguageContext(module.GetCompilerOptions(this));
         }
         
         internal protected virtual LanguageContext GetLanguageContext(CompilerOptions compilerOptions) {
             return InvariantContext.Instance;
         }
+
+        #endregion
 
         public virtual void PublishModule(IScriptModule module) {
             // nop
@@ -731,12 +772,12 @@ namespace Microsoft.Scripting.Hosting {
         #region Exception handling
 
         public virtual string FormatException(Exception exception) {
-            if (exception == null) throw new ArgumentNullException("exception");
+            Contract.RequiresNotNull(exception, "exception");
             return exception.ToString();
         }
 
         public virtual void GetExceptionMessage(Exception exception, out string message, out string typeName) {
-            if (exception == null) throw new ArgumentNullException("exception");
+            Contract.RequiresNotNull(exception, "exception");
             message = exception.ToString();
             typeName = exception.GetType().Name;
         }
@@ -745,19 +786,9 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Console Support
 
-        // TODO: unused, remove
-        public virtual SourceUnit CreateStandardInputSourceUnit(string code) {
-            return new SourceCodeUnit(this, code);
-        }
-
         public virtual TextWriter GetOutputWriter(bool isErrorOutput) {
             return isErrorOutput ? Console.Error : Console.Out;
         }
-
-        public virtual StreamReader GetSourceReader(Stream stream, ref Encoding encoding) {
-            return new StreamReader(stream, encoding);
-        }
-
 
         #endregion
 

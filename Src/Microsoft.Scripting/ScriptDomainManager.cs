@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -260,7 +260,7 @@ namespace Microsoft.Scripting {
         }
 
         public void RegisterLanguageProvider(string assemblyName, string typeName, bool overrideExistingIds, params string[] identifiers) {
-            if (identifiers == null) throw new ArgumentNullException("identifiers");
+            Contract.RequiresNotNull(identifiers, "identifiers");
 
             LanguageProviderDesc singleton_desc;
             bool add_singleton_desc = false;
@@ -294,7 +294,7 @@ namespace Microsoft.Scripting {
         }
 
         public bool RemoveLanguageMapping(string identifier) {
-            if (identifier == null) throw new ArgumentNullException("identifier");
+            Contract.RequiresNotNull(identifier, "identifier");
             
             lock (_languageProvidersLock) {
                 return _languageIds.Remove(identifier);
@@ -309,7 +309,7 @@ namespace Microsoft.Scripting {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public LanguageProvider GetLanguageProvider(Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
             if (!type.IsSubclassOf(typeof(LanguageProvider))) throw new ArgumentException("Invalid type - should be subclass of LanguageProvider"); // TODO
 
             LanguageProviderDesc desc = null;
@@ -359,7 +359,7 @@ namespace Microsoft.Scripting {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public bool TryGetLanguageProvider(string languageId, out LanguageProvider provider) {
-            if (languageId == null) throw new ArgumentNullException("languageId");
+            Contract.RequiresNotNull(languageId, "languageId");
 
             bool result;
             LanguageProviderDesc desc;
@@ -378,7 +378,7 @@ namespace Microsoft.Scripting {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public LanguageProvider GetLanguageProvider(string languageId) {
-            if (languageId == null) throw new ArgumentNullException("languageId");
+            Contract.RequiresNotNull(languageId, "languageId");
 
             LanguageProvider result;
 
@@ -513,10 +513,14 @@ namespace Microsoft.Scripting {
         /// </summary>
         /// <param name="name">an opaque parameter which has meaning to the host.  Typically a filename without an extension.</param>
         public ScriptModule UseModule(string name) {
-            if (name == null) throw new ArgumentNullException("name");
-            SourceFileUnit su = _host.ResolveSourceFileUnit(name);
+            Contract.RequiresNotNull(name, "name");
+            
+            SourceUnit su = _host.ResolveSourceFileUnit(name);
+            if (su == null) {
+                return null;
+            }
 
-            return CompileAndPublishModule(su);
+            return CompileAndPublishModule(name, su);
         }
 
         /// <summary>
@@ -532,15 +536,15 @@ namespace Microsoft.Scripting {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public ScriptModule UseModule(string path, string languageId) {
-            if (path == null) throw new ArgumentNullException("path");
+            Contract.RequiresNotNull(path, "path");
             ScriptEngine engine = GetLanguageProvider(languageId).GetEngine();
 
-            SourceFileUnit su = _host.TryGetSourceFileUnit(engine, path, Path.GetFileNameWithoutExtension(path));
+            SourceUnit su = _host.TryGetSourceFileUnit(engine, path, null);
             if (su == null) {
                 return null;
             }
 
-            return CompileAndPublishModule(su);
+            return CompileAndPublishModule(Path.GetFileNameWithoutExtension(path), su);
         }
 
         /// <summary>
@@ -560,16 +564,17 @@ namespace Microsoft.Scripting {
         }
 
         public void PublishModule(ScriptModule module) {
-            if (module == null) throw new ArgumentNullException("module");
-            PublishModule(module, GetPublicPath(module.FileName));
+            Contract.RequiresNotNull(module, "module");
+            if (module.FileName == null) throw new ArgumentException("module");
+            PublishModule(module, module.FileName);
         }
         
         /// <summary>
         /// Sets the ScriptModule that is registered for the given SourceUnit.
         /// </summary>
         public void PublishModule(ScriptModule module, string publicName) {
-            if (module == null) throw new ArgumentNullException("module");
-            if (publicName == null) throw new ArgumentNullException("publicName");
+            Contract.RequiresNotNull(module, "module");
+            Contract.RequiresNotNull(publicName, "publicName");
 
             EnsureModules();
 
@@ -597,7 +602,8 @@ namespace Microsoft.Scripting {
             return res;
         }
 
-        private Dictionary<SourceFileUnit, LoadInfo> _loading = new Dictionary<SourceFileUnit,LoadInfo>();
+        private Dictionary<string, LoadInfo> _loading = new Dictionary<string, LoadInfo>();
+
         class LoadInfo {
             public ScriptModule Module;
             public Thread Thread;
@@ -606,29 +612,28 @@ namespace Microsoft.Scripting {
             public ManualResetEvent Mre;
         }
 
-        private ScriptModule CompileAndPublishModule(SourceFileUnit su) {
-            if (su == null) return null;
+        private ScriptModule CompileAndPublishModule(string moduleName, SourceUnit su) {
+            Assert.NotNull(moduleName, su);
 
             EnsureModules();
 
-            string public_path = GetPublicPath(su.Path);
-            Debug.Assert(public_path != null);
+            string key = su.Id ?? moduleName;
 
             // check if we've already published this SourceUnit
             lock (_modules) {
-                ScriptModule tmp = GetCachedModuleNoLock(public_path);
+                ScriptModule tmp = GetCachedModuleNoLock(key);
                 if (tmp != null) return tmp;
             }
 
             // compile and initialize the module...
-            ScriptModule mod = su.CompileToModule();
+            ScriptModule mod = CompileModule(moduleName, su);
             lock (_modules) {
                 // check if someone else compiled it first...
-                ScriptModule tmp = GetCachedModuleNoLock(public_path);
+                ScriptModule tmp = GetCachedModuleNoLock(key);
                 if (tmp != null) return tmp;
 
                 LoadInfo load;
-                if (_loading.TryGetValue(su, out load)) {
+                if (_loading.TryGetValue(key, out load)) {
                     if (load.Thread == Thread.CurrentThread) {
                         return load.Module;
                     }
@@ -657,7 +662,7 @@ namespace Microsoft.Scripting {
                 load = new LoadInfo();
                 load.Module = mod;
                 load.Thread = Thread.CurrentThread;
-                _loading[su] = load;
+                _loading[key] = load;
 
                 bool success = false;
 
@@ -679,8 +684,8 @@ namespace Microsoft.Scripting {
                     throw e;
                 } finally {
                     Monitor.Enter(_modules);
-                    _loading.Remove(su);
-                    if(success) _modules[public_path] = new WeakReference(mod);
+                    _loading.Remove(key);
+                    if (success) _modules[key] = new WeakReference(mod);
                 }
             }
         }
@@ -708,16 +713,8 @@ namespace Microsoft.Scripting {
             }
         }
 
-        private string GetPublicPath(string path) {
-            if (path == null) {
-                throw new ArgumentException("Cannot publish anonymous module"); // TODO: resource
-            }
-
-            try {
-                return _host.NormalizePath(path);
-            } catch (ArgumentException) {
-                throw new ArgumentException("Invalid name for publication"); // TODO: resource
-            }
+        public ScriptModule CompileModule(string name, SourceUnit sourceUnit) {
+            return CompileModule(name, ScriptModuleKind.Default, null, null, null, sourceUnit);
         }
 
         /// <summary>
@@ -735,12 +732,12 @@ namespace Microsoft.Scripting {
             // TODO: Two phases: parse/compile?
             
             // compiles all source units:
-            ScriptCode[] script_codes = new ScriptCode[sourceUnits.Length];
+            ScriptCode[] scriptCodes = new ScriptCode[sourceUnits.Length];
             for (int i = 0; i < sourceUnits.Length; i++) {
-                script_codes[i] = ScriptCode.FromCompiledCode(sourceUnits[i].Compile(options, errorSink));
+                scriptCodes[i] = LanguageContext.FromEngine(sourceUnits[i].Engine).CompileSourceCode(sourceUnits[i], options, errorSink);
             }
 
-            return CreateModule(name, kind, scope, script_codes);
+            return CreateModule(name, kind, scope, scriptCodes);
         }
 
         /// <summary>
@@ -788,7 +785,7 @@ namespace Microsoft.Scripting {
                     if (scriptCodes[0].LanguageContext.Engine.Options.InterpretedMode) {
                         scope = new Scope();
                     } else {
-                        generator = OptimizedModuleGenerator.Create(scriptCodes);
+                        generator = OptimizedModuleGenerator.Create(name, scriptCodes);
                         scope = generator.GenerateScope();
                     }
                 } else {
@@ -799,14 +796,8 @@ namespace Microsoft.Scripting {
             ScriptModule result = new ScriptModule(name, kind, scope, scriptCodes);
 
             // single source file unit modules have unique full path:
-            SourceFileUnit sfu;
-            if (scriptCodes.Length == 1 && (sfu = scriptCodes[0].SourceUnit as SourceFileUnit) != null) {
-                // TODO: remove normalization (test NessieFilenamesExecute shouldn't depend on it)
-                try {
-                    result.FileName = _host.NormalizePath(sfu.Path);
-                } catch (ArgumentException) {
-                    result.FileName = null;
-                }
+            if (scriptCodes.Length == 1) {
+                result.FileName = scriptCodes[0].SourceUnit.Id;
             } else {
                 result.FileName = null;
             }
@@ -860,7 +851,7 @@ namespace Microsoft.Scripting {
                 return _options;
             }
             set {
-                if (value == null) throw new ArgumentNullException("value");
+                Contract.RequiresNotNull(value, "value");
                 _options = value;
             }
         }

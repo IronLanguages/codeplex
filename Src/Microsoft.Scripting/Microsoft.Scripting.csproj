@@ -95,11 +95,12 @@
     <Compile Include="Actions\AbstractObject.cs" />
     <Compile Include="Actions\Action.cs" />
     <Compile Include="Actions\ActionBinder.cs" />
-    <Compile Include="Actions\BigRuleSet.cs" />
+    <Compile Include="Actions\RuleCache.cs" />
     <Compile Include="Actions\CallAction.cs" />
     <Compile Include="Actions\ConvertToAction.cs" />
     <Compile Include="Actions\CreateInstanceAction.cs" />
     <Compile Include="Actions\CreateInstanceBinderHelper.cs" />
+    <Compile Include="Actions\DoOperationBinderHelper.cs" />
     <Compile Include="Actions\DynamicSiteHelpers.Generated.cs" />
     <Compile Include="Actions\DoOperationAction.cs" />
     <Compile Include="Actions\DynamicSiteHelpers.cs" />
@@ -128,8 +129,6 @@
     <Compile Include="Ast\AbstractContext.cs" />
     <Compile Include="Ast\DeleteUnboundExpression.cs" />
     <Compile Include="Ast\DoStatementBuilder.cs" />
-    <Compile Include="Ast\DynamicTryStatement.cs" />
-    <Compile Include="Ast\DynamicTryStatementHandler.cs" />
     <Compile Include="Ast\FastEvalWalker.cs" />
     <Compile Include="Ast\IfStatementBuilder.cs" />
     <Compile Include="Ast\MemberAssignment.cs" />
@@ -144,14 +143,12 @@
     <Compile Include="Ast\TryStatementBuilder.cs" />
     <Compile Include="Ast\TypeBinaryExpression.cs" />
     <Compile Include="Ast\UnaryExpression.cs" />
-    <Compile Include="Ast\CallExpression.cs" />
     <Compile Include="Ast\CallWithThisExpression.cs" />
     <Compile Include="Ast\ClosureBinder.cs" />
     <Compile Include="Ast\CodeBlock.cs" />
     <Compile Include="Ast\CodeBlock.Generated.cs" />
     <Compile Include="Ast\CodeBlockExpression.cs" />
     <Compile Include="Ast\DeleteStatement.cs" />
-    <Compile Include="Ast\DynamicNewExpression.cs" />
     <Compile Include="Ast\FlowChecker.cs" />
     <Compile Include="Ast\GeneratorCodeBlock.cs" />
     <Compile Include="Ast\ActionExpression.cs" />
@@ -207,6 +204,13 @@
     <Compile Include="Ast\YieldTarget.cs" />
     <Compile Include="BinderHelper.cs" />
     <Compile Include="BinderType.cs" />
+    <Compile Include="Hosting\SourceCodeKind.cs" />
+    <Compile Include="Hosting\SourceCodeProperties.cs" />
+    <Compile Include="Hosting\SourceContentProvider.cs" />
+    <Compile Include="Hosting\SourceFileContentProvider.cs" />
+    <Compile Include="Hosting\SourceStringContentProvider.cs" />
+    <Compile Include="Hosting\SourceUnit.cs" />
+    <Compile Include="Hosting\SourceUnitReader.cs" />
     <Compile Include="Types\BuiltinFunction.cs" />
     <Compile Include="Types\BuiltinFunction.Generated.cs" />
     <Compile Include="Generation\ByRefReturnBuilder.cs" />
@@ -239,6 +243,7 @@
     <Compile Include="Generation\StubGenerator.cs" />
     <Compile Include="Generation\TupleSlotFactory.cs" />
     <Compile Include="Hosting\CodeDomCodeGen.cs" />
+    <Compile Include="Hosting\EngineOptions.cs" />
     <Compile Include="IParameterSequence.cs" />
     <Compile Include="KwArgBinder.cs" />
     <Compile Include="ModuleContext.cs" />
@@ -288,7 +293,6 @@
     <Compile Include="Hosting\CodeSenseProvider.Remote.cs" />
     <Compile Include="Hosting\CompiledCode.Remote.cs" />
     <Compile Include="Compilers\CompilerOptions.cs" />
-    <Compile Include="Hosting\ScriptCompiler.cs" />
     <Compile Include="Hosting\ScriptHost.Local.cs" />
     <Compile Include="Hosting\RemoteWrapper.cs" />
     <Compile Include="Hosting\ScriptDomainOptions.cs" />
@@ -315,7 +319,6 @@
     <Compile Include="Types\ReflectedProperty.cs" />
     <Compile Include="Types\ReflectedTypeBuilder.cs" />
     <Compile Include="ReflectionCache.cs" />
-    <Compile Include="RuntimeHelpers.Generated.cs" />
     <Compile Include="ScopeMemberAttributes.cs" />
     <Compile Include="ModuleChangeEventArgs.cs" />
     <Compile Include="ModuleChangeEventType.cs" />
@@ -348,7 +351,6 @@
     <Compile Include="ScriptModuleKind.cs" />
     <Compile Include="ScriptNameAttribute.cs" />
     <Compile Include="Types\ScriptTypeAttribute.cs" />
-    <Compile Include="SourceUnitReader.cs" />
     <Compile Include="DynamicStackFrame.cs" />
     <Compile Include="StaticExtensionMethodAttribute.cs" />
     <Compile Include="StaticThisAttribute.cs" />
@@ -366,7 +368,6 @@
     <Compile Include="TokenizerBuffer.cs" />
     <Compile Include="UnboundNameException.cs" />
     <Compile Include="Generation\StorageAllocator.cs" />
-    <Compile Include="EngineOptions.cs" />
     <Compile Include="Generator.cs" />
     <Compile Include="Generation\Snippets.cs" />
     <Compile Include="Hosting\PlatformAdaptationLayer.cs" />
@@ -383,7 +384,6 @@
     <Compile Include="RuntimeHelpers.cs" />
     <Compile Include="Shell\BasicConsole.cs" />
     <Compile Include="Shell\SuperConsole.cs" />
-    <Compile Include="SourceUnit.cs" />
     <Compile Include="Tuple.cs" />
     <Compile Include="DynamicTypeChangedEventArgs.cs" />
     <Compile Include="Generation\AssemblyGen.cs" />
@@ -469,6 +469,8 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

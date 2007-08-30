@@ -106,6 +106,19 @@ namespace IronPython.Runtime {
     }
 
     /// <summary>
+    /// New version of PythonTypeAttribute.  Marks a type as being a PythonType for purposes of member lookup,
+    /// creating instances, etc...  
+    /// 
+    /// Currently PythonSystemType's will only be treated differently for the purposes of creating instances.  These
+    /// types will go through the normal __new__ / __init__ protocol instead of the .NET call the ctor protocol.
+    ///
+    /// In the future this will also hide standard .NET methods such as Equals, GetHashCode, etc...
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Struct, Inherited = false)]
+    public sealed class PythonSystemTypeAttribute : Attribute {
+    }
+
+    /// <summary>
     /// PythonTypeAttribute is used for two purposes:
     /// 1. It can be used to specify the Python name of types in the engine which
     ///    implement built-in types. For eg. The type IronPython.Runtime.Set in the engine

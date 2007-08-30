@@ -18,7 +18,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    public class PythonReference {
+    class PythonReference {
         private SymbolId _name;
         private PythonVariable _variable;
 

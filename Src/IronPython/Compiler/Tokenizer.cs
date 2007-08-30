@@ -124,7 +124,7 @@ namespace IronPython.Compiler {
         public ErrorSink Errors { 
             get { return _errors; } 
             set {
-                if (value == null) throw new ArgumentNullException("value");
+                Contract.RequiresNotNull(value, "value");
                 _errors = value; 
             } 
         }
@@ -169,7 +169,7 @@ namespace IronPython.Compiler {
         }
 
         public Tokenizer(ErrorSink errorSink, bool verbatim) {
-            if (errorSink == null) throw new ArgumentNullException("errorSink");
+            Contract.RequiresNotNull(errorSink, "errorSink");
 
             _errors = errorSink;
             _verbatim = verbatim;
@@ -179,7 +179,7 @@ namespace IronPython.Compiler {
         }
 
         public void Initialize(SourceUnit sourceUnit) {
-            if (sourceUnit == null) throw new ArgumentNullException("sourceUnit");
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
 
             Initialize(null, sourceUnit.GetReader(), SourceLocation.MinValue, DefaultBufferCapacity);
         }
@@ -189,7 +189,7 @@ namespace IronPython.Compiler {
         }
 
         public void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation, int bufferCapacity) {
-            if (sourceReader == null) throw new ArgumentNullException("sourceReader");
+            Contract.RequiresNotNull(sourceReader, "sourceReader");
 
             if (state != null) {
                 if (!(state is State)) throw new ArgumentException();
@@ -920,12 +920,12 @@ namespace IronPython.Compiler {
         }
 
         private void ReportSyntaxError(SourceSpan span, string message, int errorCode) {
-            _errors.Add(_sourceUnit, message, span, errorCode, Severity.Error);
+            _errors.Add(_sourceUnit, message, span, errorCode, Severity.FatalError);
         }
 
         [Conditional("DUMP_TOKENS")]
         private void DumpBeginningOfUnit() {
-            Console.WriteLine("--- Source unit: '{0}' ---", _sourceUnit.Name);
+            Console.WriteLine("--- Source unit: '{0}' ---", _sourceUnit.Id);
         }
 
         [Conditional("DUMP_TOKENS")]
@@ -936,7 +936,7 @@ namespace IronPython.Compiler {
 #if !SILVERLIGHT
         public static TimeSpan Benchmark(string code) {
             Tokenizer t = new Tokenizer(new ErrorSink());
-            t.Initialize(new SourceCodeUnit(PythonEngine.CurrentEngine, code));
+            t.Initialize(SourceUnit.CreateSnippet(PythonEngine.CurrentEngine, code));
 
             Stopwatch watch = new Stopwatch();
             watch.Start();

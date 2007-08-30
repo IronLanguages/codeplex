@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -19,75 +19,80 @@ using System.Text;
 
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
    
     [Serializable]
     public class SyntaxErrorException : Exception {
-        int lineNo, columnNo;
-        string lineText, file;
-        Severity sev;
-        int error;
+        private SourceSpan _span;
+        private SourceUnit _sourceUnit;
+        private Severity _severity;
+        private int _mappedLine;
+        private int _errorCode;
 
         public SyntaxErrorException() : base() { }
-        public SyntaxErrorException(string msg) : base(msg) { }
+
+        public SyntaxErrorException(string message) : base(message) { }
+
         public SyntaxErrorException(string message, Exception innerException)
             : base(message, innerException) {
         }
-        public SyntaxErrorException(string msg, string fileName, int lineNumber, int columnNumber, string badLineText, int errorCode, Severity severity)
-            : base(msg) {
-            lineNo = lineNumber;
-            columnNo = columnNumber;
-            lineText = badLineText;
-            file = fileName;
-            sev = severity;
-            error = errorCode;
+
+        public SyntaxErrorException(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode, Severity severity)
+            : base(message) {
+            Contract.RequiresNotNull(message, "message");
+
+            _span = span;
+            _sourceUnit = sourceUnit;
+            _severity = severity;
+            _errorCode = errorCode;
+            _mappedLine = -1; // lazy
         }
 
-#if !SILVERLIGHT // SerializationInfo
-        protected SyntaxErrorException(SerializationInfo info, StreamingContext context)
-            : base(info, context) {
-            lineNo = info.GetInt32("line");
-            columnNo = info.GetInt32("column");
-            lineText = info.GetString("lineText");
-            file = info.GetString("file");
-            error = info.GetInt32("error");
-            sev = (Severity)info.GetInt32("severity");
-        }
-
-        public override void GetObjectData(SerializationInfo info, StreamingContext context) {
-            info.AddValue("line", lineNo);
-            info.AddValue("column", columnNo);
-            info.AddValue("lineText", lineText);
-            info.AddValue("file", file);
-            info.AddValue("error", error);
-            info.AddValue("severity", (int)sev);
-
-            base.GetObjectData(info, context);
-        }
+#if !SILVERLIGHT
+        protected SyntaxErrorException(SerializationInfo info, StreamingContext context) 
+            : base(info, context) { }
 #endif
-        public int Line {
-            get { return lineNo; }
+
+        /// <summary>
+        /// Unmapped span.
+        /// </summary>
+        public SourceSpan RawSpan {
+            get { return _span; }
         }
 
-        public int Column {
-            get { return columnNo; }
-        }
-
-        public string FileName {
-            get { return file; }
-        }
-
-        public string LineText {
-            get { return lineText; }
+        public SourceUnit SourceUnit {
+            get { return _sourceUnit; }
         }
 
         public Severity Severity {
-            get { return sev; }
+            get { return _severity; }
+        }
+
+        public int Line {
+            get {
+                if (_mappedLine == -1) {
+                    _mappedLine = (_sourceUnit != null) ? _sourceUnit.MapLine(_span.Start.Line) : _span.Start.Line;
+                }
+                return _mappedLine;
+            }
+        }
+
+        public int Column {
+            get { return _span.Start.Column; }
         }
 
         public int ErrorCode {
-            get { return error; }
+            get { return _errorCode; }
+        }
+
+        public string GetSymbolDocumentName() {
+            return (_sourceUnit != null) ? _sourceUnit.GetSymbolDocument(_span.Start.Line) : null;
+        }
+
+        public string GetCodeLine() {
+            return (_sourceUnit != null) ? _sourceUnit.GetCodeLine(Line) : null;
         }
     }
 }

@@ -67,7 +67,8 @@ def test_open():
     AssertError(TypeError, open, None) # arg must be string
     AssertError(TypeError, open, [])
     AssertError(TypeError, open, 1)
-    
+
+def test_compile():    
     def max(a,b):
         if a>b: return a
         else: return b

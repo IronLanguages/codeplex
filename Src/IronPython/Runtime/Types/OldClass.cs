@@ -134,7 +134,7 @@ namespace IronPython.Runtime.Types {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
         private void GetObjectData(SerializationInfo info, StreamingContext context) {
-            if (info == null) throw new ArgumentNullException("info");
+            Contract.RequiresNotNull(info, "info");
 
             info.AddValue("__bases__", _bases);
             info.AddValue("__name__", __name__);
@@ -518,6 +518,7 @@ namespace IronPython.Runtime.Types {
             switch(action.Kind ){
                 case ActionKind.GetMember:
                     return MakeGetMemberRule<T>((GetMemberAction)action, context, args);
+                case ActionKind.CreateInstance:
                 case ActionKind.Call:
                     return MakeCallRule<T>((CallAction)action, context, args);
                 default: return null;
@@ -533,19 +534,52 @@ namespace IronPython.Runtime.Types {
             for (int i = 0; i < args.Length - 1; i++) {
                 exprArgs[i] = rule.Parameters[i + 1];
             }
-
+            
             // TODO: If we know __init__ wasn't present we could construct the OldInstance directly.
+            Variable tmp = rule.GetTemporary(typeof(object), "init");
+            Variable instTmp = rule.GetTemporary(typeof(object), "inst");
             rule.SetTest(rule.MakeTypeTest(typeof(OldClass), 0));
-            rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder,
-                Ast.Call(
-                    Ast.Cast(
-                        rule.Parameters[0],
-                        typeof(OldClass)),
-                    typeof(OldClass).GetMethod("Call", new Type[] { typeof(CodeContext), typeof(object[]) }),
-                    Ast.CodeContext(),
-                    Ast.NewArray(typeof(object[]), exprArgs))));
+            rule.SetTarget(
+                rule.MakeReturn(context.LanguageContext.Binder,
+                    Ast.Comma(0,
+                        Ast.Assign(instTmp, Ast.New(typeof(OldInstance).GetConstructor(new Type[] { typeof(OldClass) }), rule.Parameters[0])),
+                        Ast.Condition(
+                            Ast.Call(
+                                rule.Parameters[0],
+                                typeof(OldClass).GetMethod("TryLookupInit"),
+                                Ast.Read(instTmp),
+                                Ast.Read(tmp)
+                            ),
+                            Ast.Action.Call(
+                                CallAction.Simple,
+                                typeof(object),
+                                ArrayUtils.Insert((Expression)Ast.Read(tmp), ArrayUtils.RemoveFirst(rule.Parameters))
+                            ),
+                            rule.Parameters.Length != 1 ?
+                                (Expression)Ast.Call(
+                                    rule.Parameters[0],
+                                    typeof(OldClass).GetMethod("MakeCallError")
+                                    ) :
+                                Ast.Constant(null)
+                        )
+                    )
+                )
+            );
 
             return rule;
+        }
+
+        public bool TryLookupInit(object inst, out object ret) {
+            if(TryLookupSlot(Symbols.Init, out ret)) {
+                ret = GetOldStyleDescriptor(DefaultContext.Default, ret, inst, this);
+                return true;
+            }
+
+            return false;
+        }
+
+        public object MakeCallError() {
+            throw PythonOps.TypeError("this constructor takes no arguments");
         }
 
         private static StandardRule<T> MakeGetMemberRule<T>(GetMemberAction action, CodeContext context, object[] args) {
@@ -738,7 +772,7 @@ namespace IronPython.Runtime.Types {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
         public void GetObjectData(SerializationInfo info, StreamingContext context) {
-            if (info == null) throw new ArgumentNullException("info");
+            Contract.RequiresNotNull(info, "info");
 
             info.AddValue("__class__", __class__);
             List<object> keys = new List<object>();
@@ -1546,7 +1580,7 @@ namespace IronPython.Runtime.Types {
             }
 
             if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.Cmp, out func) ||
-                PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorEqual, out func)) {
+                PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorEquals, out func)) {
                 throw PythonOps.TypeError("unhashable instance");
             }
 
@@ -1557,14 +1591,14 @@ namespace IronPython.Runtime.Types {
         [SpecialName, PythonName("__eq__")]
         public object RichEquals(object other) {
             object func;
-            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorEqual, out func)) {
+            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorEquals, out func)) {
                 object res = PythonOps.CallWithContext(DefaultContext.Default, func, other);
                 if (res != PythonOps.NotImplemented) {
                     return res;
                 }
             }
 
-            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, other, Symbols.OperatorEqual, out func)) {
+            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, other, Symbols.OperatorEquals, out func)) {
                 object res = PythonOps.CallWithContext(DefaultContext.Default, func, this);
                 if (res != PythonOps.NotImplemented) {
                     return res;
@@ -1585,7 +1619,7 @@ namespace IronPython.Runtime.Types {
         [SpecialName, PythonName("__ne__")]
         public object RichNotEquals(object other) {
             object func;
-            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorNotEqual, out func)) {
+            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorNotEquals, out func)) {
                 return PythonOps.CallWithContext(DefaultContext.Default, func, other);
             }
 

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -15,6 +15,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -22,19 +23,18 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Utils;
-    using System.Collections;
 
     public class BinderHelper<T, ActionType> where ActionType : Action {
         private CodeContext _context;
         private ActionType _action;
         
         public BinderHelper(CodeContext context, ActionType action) {
-            if (context == null) throw new ArgumentNullException("context");
-            if (action == null) throw new ArgumentNullException("action");
+            Contract.RequiresNotNull(context, "context");
+            Contract.RequiresNotNull(action, "action");
 
             _context = context;
             _action = action;
@@ -200,16 +200,13 @@ namespace Microsoft.Scripting.Actions {
 
         public static Expression MakeParamsTest(StandardRule<T> rule, object paramArg, Expression listArg) {
             return Ast.AndAlso(
-                Ast.Equal(
-                    Ast.Call(listArg, typeof(object).GetMethod("GetType")),
-                    Ast.Constant(CompilerHelpers.GetType(paramArg))
-                ),
+                Ast.TypeIs(listArg, typeof(ICollection<object>)),
                 Ast.Equal(
                     Ast.ReadProperty(
                         Ast.Cast(listArg, typeof(ICollection<object>)),
                         typeof(ICollection<object>).GetProperty("Count")
                     ),
-                    Ast.Constant(((IList<object>)paramArg).Count)
+                    rule.AddTemplatedConstant(typeof(int), ((IList<object>)paramArg).Count)
                 )
             );
         }
@@ -242,7 +239,7 @@ namespace Microsoft.Scripting.Actions {
             return res.ToArray();
         }
         
-        internal static MethodInfo GetMethod(Type type, string name) {
+        internal MethodInfo GetMethod(Type type, string name) {
             // declaring type takes precedence
             MethodInfo mi = type.GetMethod(name);
             if(mi != null) {
@@ -252,12 +249,12 @@ namespace Microsoft.Scripting.Actions {
             // then search extension types.
             Type curType = type;
             do {
-                Type[] extTypes = DynamicHelpers.GetExtensionTypes(curType);
+                IList<Type> extTypes = Binder.GetExtensionTypes(curType);
                 foreach (Type t in extTypes) {
                     MethodInfo next = t.GetMethod(name);
                     if (next != null) {
                         if (mi != null) {
-                            throw new AmbiguousMatchException();
+                            throw new AmbiguousMatchException(String.Format("Found multiple members for {0} on type {1}", name, curType));
                         }
 
                         mi = next;

@@ -90,7 +90,7 @@ namespace IronPython.Modules {
         }
         [PythonName("ne")]
         public static object NotEqual(object a, object b) {
-            return PythonSites.NotEqual(a, b);
+            return PythonSites.NotEquals(a, b);
         }
         [PythonName("ge")]
         public static object GreaterThanOrEqual(object a, object b) {
@@ -114,7 +114,7 @@ namespace IronPython.Modules {
         }
         [PythonName("__ne__")]
         public static object OperatorNotEqual(object a, object b) {
-            return PythonSites.NotEqual(a, b);
+            return PythonSites.NotEquals(a, b);
         }
         [PythonName("__ge__")]
         public static object OperatorGreaterThanOrEqual(object a, object b) {

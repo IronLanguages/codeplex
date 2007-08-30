@@ -43,7 +43,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         public StandardRule<T> MakeRule(object[] args) {
-            return MakeNewRule(CompilerHelpers.ObjectTypes(args));
+            return MakeNewRule(DynamicTypeOps.ObjectTypes(args));
         }
 
         public bool IsComparision {
@@ -270,8 +270,8 @@ namespace IronPython.Runtime.Calls {
 
             if (!TryGetBinder(types, Symbols.Cmp, SymbolId.Empty, out cbind)) return MakeDynamicMatchRule(types);
             if (!TryGetBinder(rTypes, Symbols.Cmp, SymbolId.Empty, out rcbind)) return MakeDynamicMatchRule(types);
-            if (!TryGetBinder(types, Symbols.OperatorEqual, SymbolId.Empty, out eqbind)) return MakeDynamicMatchRule(types);
-            if (!TryGetBinder(rTypes, Symbols.OperatorEqual, SymbolId.Empty, out reqbind)) return MakeDynamicMatchRule(types);
+            if (!TryGetBinder(types, Symbols.OperatorEquals, SymbolId.Empty, out eqbind)) return MakeDynamicMatchRule(types);
+            if (!TryGetBinder(rTypes, Symbols.OperatorEquals, SymbolId.Empty, out reqbind)) return MakeDynamicMatchRule(types);
             if (!TryGetBinder(types, Symbols.OperatorLessThan, SymbolId.Empty, out ltbind)) return MakeDynamicMatchRule(types);
             if (!TryGetBinder(rTypes, Symbols.OperatorGreaterThan, SymbolId.Empty, out rgtbind)) return MakeDynamicMatchRule(types);
             if (!TryGetBinder(types, Symbols.OperatorGreaterThan, SymbolId.Empty, out gtbind)) return MakeDynamicMatchRule(types);
@@ -630,8 +630,8 @@ namespace IronPython.Runtime.Calls {
             string name;
 
             switch (reverse ? CompilerHelpers.OperatorToReverseOperator(Action.Operation) : Action.Operation) {
-                case Operators.Equal: name = "CompareEqual"; break;
-                case Operators.NotEqual: name = "CompareNotEqual"; break;
+                case Operators.Equals: name = "CompareEqual"; break;
+                case Operators.NotEquals: name = "CompareNotEqual"; break;
                 case Operators.GreaterThan: name = "CompareGreaterThan"; break;
                 case Operators.GreaterThanOrEqual: name = "CompareGreaterThanOrEqual"; break;
                 case Operators.LessThan: name = "CompareLessThan"; break;
@@ -686,8 +686,8 @@ namespace IronPython.Runtime.Calls {
         private MethodInfo GetComparisonFallbackMethod(Operators op) {
             string name;
             switch (op) {
-                case Operators.Equal: name = "CompareTypesEqual"; break;
-                case Operators.NotEqual: name = "CompareTypesNotEqual"; break;
+                case Operators.Equals: name = "CompareTypesEqual"; break;
+                case Operators.NotEquals: name = "CompareTypesNotEqual"; break;
                 case Operators.GreaterThan: name = "CompareTypesGreaterThan"; break;
                 case Operators.LessThan: name = "CompareTypesLessThan"; break;
                 case Operators.GreaterThanOrEqual: name = "CompareTypesGreaterThanOrEqual"; break;
@@ -802,8 +802,8 @@ namespace IronPython.Runtime.Calls {
                 case Operators.LessThanOrEqual: return cmp <= 0;
                 case Operators.GreaterThan: return cmp > 0;
                 case Operators.GreaterThanOrEqual: return cmp >= 0;
-                case Operators.Equal: return cmp == 0;
-                case Operators.NotEqual: return cmp != 0;
+                case Operators.Equals: return cmp == 0;
+                case Operators.NotEquals: return cmp != 0;
             }
             throw new ArgumentException("op");
         }

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -16,6 +16,7 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class CatchBlock : Node {
@@ -26,9 +27,11 @@ namespace Microsoft.Scripting.Ast {
 
         private VariableReference _ref;
 
+        private bool _yield;        // The catch block contains a yield
+
         internal CatchBlock(SourceSpan span, SourceLocation header, Type test, Variable target, Statement body)
             : base(span) {
-            if (body == null) throw new ArgumentNullException("body");
+            Contract.RequiresNotNull(body, "body");
 
             _test = test;
             _var = target;
@@ -63,6 +66,11 @@ namespace Microsoft.Scripting.Ast {
 
         internal Slot Slot {
             get { return _ref.Slot; }
+        }
+
+        internal bool Yield {
+            get { return _yield; }
+            set { _yield = value; }
         }
 
         public override void Walk(Walker walker) {

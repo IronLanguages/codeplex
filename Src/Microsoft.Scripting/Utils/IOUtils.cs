@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting.Utils {
     public static class IOUtils {
@@ -28,7 +29,7 @@ namespace Microsoft.Scripting.Utils {
         /// character read from the reader will be the first one of the line - if there is any), <b>false</b> otherwise.
         /// </summary>
         public static bool SeekLine(TextReader reader, int line) {
-            if (reader == null) throw new ArgumentNullException("reader");
+            Contract.RequiresNotNull(reader, "reader");
             if (line < 1) throw new ArgumentOutOfRangeException("line");
             if (line == 1) return true;
 
@@ -60,7 +61,7 @@ namespace Microsoft.Scripting.Utils {
         /// Returns <c>null</c>, if the reader is at the end position.
         /// </summary>
         public static string ReadTo(TextReader reader, char terminator) {
-            if (reader == null) throw new ArgumentNullException("reader");
+            Contract.RequiresNotNull(reader, "reader");
 
             StringBuilder result = new StringBuilder();
             int ch;
@@ -81,7 +82,7 @@ namespace Microsoft.Scripting.Utils {
         /// <c>false</c> otherwise.
         /// </summary>
         public static bool SeekTo(TextReader reader, char c) {
-            if (reader == null) throw new ArgumentNullException("reader");
+            Contract.RequiresNotNull(reader, "reader");
 
             for (; ; ) {
                 int ch = reader.Read();
@@ -90,19 +91,49 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-        public static string ToValidFileName(string name) {
-            if (System.String.IsNullOrEmpty(name))
-                throw new ArgumentNullException("name");
+        public static string ToValidPath(string path) {
+            return ToValidPath(path, false, true);
+        }
 
-            StringBuilder sb = new StringBuilder(name);
-            foreach (char c in Path.GetInvalidPathChars())
-                sb.Replace(c, '_');
+        public static string ToValidPath(string path, bool isMask) {
+            return ToValidPath(path, isMask, true);
+        }
 
-            // GetInvalidNameChars not avaliable on Silverlight:
-            sb.Replace('\\', '_').Replace(':', '_').Replace('*', '_').Replace('/', '_').Replace('?', '_');
+        public static string ToValidFileName(string path) {
+            return ToValidPath(path, false, false);
+        }
+
+        private static string ToValidPath(string path, bool isMask, bool isPath) {
+            Debug.Assert(!isMask || isPath);
+
+            if (String.IsNullOrEmpty(path)) {
+                return "_";
+            }
+
+            StringBuilder sb = new StringBuilder(path);
+
+            if (isPath) {
+                foreach (char c in Path.GetInvalidPathChars()) {
+                    sb.Replace(c, '_');
+                }
+            } else {
+#if SILVERLIGHT
+                foreach (char c in Path.GetInvalidPathChars()) {
+                    sb.Replace(c, '_');
+                }
+                sb.Replace(':', '_').Replace('*', '_').Replace('?', '_').Replace('\\', '_').Replace('/', '_');
+#else
+                foreach (char c in Path.GetInvalidFileNameChars()) {
+                    sb.Replace(c, '_');
+                }
+#endif
+            }
+
+            if (!isMask) {
+                sb.Replace('*', '_').Replace('?', '_');
+            }
 
             return sb.ToString();
         }
-
     }
 }

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Ast {
         private SourceLocation _header;
 
         internal TryStatementBuilder(SourceSpan statementSpan, SourceLocation bodyLocation, Statement body) {
-            if (body == null) throw new ArgumentNullException("body");
+            Contract.RequiresNotNull(body, "body");
 
             _tryStatement = body;
             _header = bodyLocation;
@@ -47,13 +47,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public TryStatementBuilder Catch(Type type, Variable holder, Statement body) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (body == null) throw new ArgumentNullException("body");
-
             if (_skipNext) {
                 _skipNext = false;
                 return this;
             }
+
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(body, "body");
 
             if (_finallyStatement != null) throw new InvalidOperationException("Finally statement already defined");
             
@@ -70,15 +70,15 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public TryStatementBuilder Filter(Type type, Variable holder, Expression condition, Statement body) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (condition == null) throw new ArgumentNullException("condition");
-            if (holder == null) throw new ArgumentNullException("holder");
-            if (body == null) throw new ArgumentNullException("body");
-
             if (_skipNext) {
                 _skipNext = false;
                 return this;
             }
+
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(condition, "condition");
+            Contract.RequiresNotNull(holder, "holder");
+            Contract.RequiresNotNull(body, "body");
 
             if (_catchBlocks == null) {
                 _catchBlocks = new List<CatchBlock>();
@@ -89,17 +89,22 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public TryStatementBuilder Finally(params Statement[] body) {
+            // we need to skip befor creating Ast.Block (body might be null):
+            if (_skipNext) {
+                _skipNext = false;
+                return this;
+            } 
+            
             return Finally(Ast.Block(body));
         }
 
         public TryStatementBuilder Finally(Statement body) {
-            if (body == null) throw new ArgumentNullException("body");
-            
             if (_skipNext) {
                 _skipNext = false;
                 return this;
             }
-            
+
+            Contract.RequiresNotNull(body, "body");
             if (_finallyStatement != null) throw new InvalidOperationException("Finally statement already defined");
 
             _finallyStatement = body;
@@ -137,6 +142,9 @@ namespace Microsoft.Scripting.Ast {
             return new TryStatementBuilder(statementSpan, bodyLocation, body);
         }
 
+        public static TryStatementBuilder Try(SourceSpan span, SourceLocation location, params Statement[] body) {
+            return new TryStatementBuilder(span, location, new BlockStatement(SourceSpan.None, body));
+        }
 
         public static TryStatement TryCatch(SourceSpan span, SourceLocation header, Statement body, params CatchBlock[] handlers) {
             return TryCatchFinally(span, header, body, handlers, null);

@@ -438,27 +438,27 @@ namespace IronPython.Runtime.Operations {
             return x >= y;
         }
         [SpecialName]
-        public static bool Equal([NotNull]BigInteger x, [NotNull]BigInteger y) {
+        public static bool Equals([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual([NotNull]BigInteger x, [NotNull]BigInteger y) {
+        public static bool NotEquals([NotNull]BigInteger x, [NotNull]BigInteger y) {
             return x != y;
         }
         [SpecialName]
-        public static bool Equal([NotNull]BigInteger x, ulong y) {
+        public static bool Equals([NotNull]BigInteger x, ulong y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual([NotNull]BigInteger x, ulong y) {
+        public static bool NotEquals([NotNull]BigInteger x, ulong y) {
             return x != y;
         }
         [SpecialName]
-        public static bool Equal(ulong y, [NotNull]BigInteger x) {
+        public static bool Equals(ulong y, [NotNull]BigInteger x) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(ulong y, [NotNull]BigInteger x) {
+        public static bool NotEquals(ulong y, [NotNull]BigInteger x) {
             return x != y;
         }
 
@@ -479,11 +479,11 @@ namespace IronPython.Runtime.Operations {
             return DoubleOps.Compare(x, y) >= 0;
         }
         [SpecialName]
-        public static bool Equal(BigInteger x, double y) {
+        public static bool Equals(BigInteger x, double y) {
             return DoubleOps.Compare(x, y) == 0;
         }
         [SpecialName]
-        public static bool NotEqual(BigInteger x, double y) {
+        public static bool NotEquals(BigInteger x, double y) {
             return DoubleOps.Compare(x, y) != 0;
         }
 
@@ -504,11 +504,11 @@ namespace IronPython.Runtime.Operations {
             return DecimalOps.Compare(x, y) >= 0;
         }
         [SpecialName]
-        public static bool Equal(BigInteger x, decimal y) {
+        public static bool Equals(BigInteger x, decimal y) {
             return DecimalOps.Compare(x, y) == 0;
         }
         [SpecialName]
-        public static bool NotEqual(BigInteger x, decimal y) {
+        public static bool NotEquals(BigInteger x, decimal y) {
             return DecimalOps.Compare(x, y) != 0;
         }
 

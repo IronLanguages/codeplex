@@ -784,8 +784,8 @@ namespace IronPython.Runtime {
         }
 
         public static bool CanConvertFrom(Type fromType, Type toType, NarrowingLevel allowNarrowing) {
-            if (fromType == null) throw new ArgumentNullException("fromType");
-            if (toType == null) throw new ArgumentNullException("toType");
+            Contract.RequiresNotNull(fromType, "fromType");
+            Contract.RequiresNotNull(toType, "toType");
 
             if (toType == fromType) return true;
             if (toType.IsAssignableFrom(fromType)) return true;

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -31,8 +31,8 @@ namespace Microsoft.Scripting.Hosting {
         string[] GetSourceFileNames(string mask, string searchPattern);
         
         // source units:
-        SourceFileUnit TryGetSourceFileUnit(IScriptEngine engine, string path, string name);
-        SourceFileUnit ResolveSourceFileUnit(string name);
+        SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding);
+        SourceUnit ResolveSourceFileUnit(string name);
 
         // notifications:
         void EngineCreated(IScriptEngine engine);
@@ -78,7 +78,7 @@ namespace Microsoft.Scripting.Hosting {
         #region Construction
 
         public ScriptHost(IScriptEnvironment environment) {
-            if (environment == null) throw new ArgumentNullException("environment");
+            Contract.RequiresNotNull(environment, "environment");
             _environment = environment;
             _defaultModule = null;
         }
@@ -122,7 +122,7 @@ namespace Microsoft.Scripting.Hosting {
 
         #endregion
 
-        #region Source Unit Resolving
+        #region Source File Units Resolving and Creation
 
         public const string PathEnvironmentVariableName = "DLRPATH";
         
@@ -139,10 +139,14 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        public virtual SourceFileUnit TryGetSourceFileUnit(IScriptEngine engine, string path, string name) {
+        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding) {
+            Contract.RequiresNotNull(engine, "engine");
+            Contract.RequiresNotNull(path, "path");
+            
             if (ScriptDomainManager.CurrentManager.PAL.FileExists(path)) {
-                return new SourceFileUnit(engine, path, name, Encoding.Default);
+                return SourceUnit.CreateFileUnit(engine, path, encoding);
             }
+
             return null;
         }
 
@@ -155,21 +159,21 @@ namespace Microsoft.Scripting.Hosting {
         /// <param name="name"></param>
         /// <returns>A valid SourceUnit or null no module could be found.</returns>
         /// <exception cref="System.InvalidOperationException">An ambigious module match has occured</exception>
-        public virtual SourceFileUnit ResolveSourceFileUnit(string name) {
-            if (name == null) throw new ArgumentNullException("name");
+        public virtual SourceUnit ResolveSourceFileUnit(string name) {
+            Contract.RequiresNotNull(name, "name");
 
-            SourceFileUnit result = null;
+            SourceUnit result = null;
 
             foreach (string directory in SourceUnitResolutionPath) {
 
-                string final_path = null;
+                string finalPath = null;
 
                 foreach (string extension in _environment.GetRegisteredFileExtensions()) {
-                    string full_path = Path.Combine(directory, name + extension);
+                    string fullPath = Path.Combine(directory, name + extension);
 
-                    if (ScriptDomainManager.CurrentManager.PAL.FileExists(full_path)) {
+                    if (ScriptDomainManager.CurrentManager.PAL.FileExists(fullPath)) {
                         if (result != null) {
-                            throw new InvalidOperationException(String.Format(Resources.AmbigiousModule, full_path, final_path));
+                            throw new InvalidOperationException(String.Format(Resources.AmbigiousModule, fullPath, finalPath));
                         }
 
                         LanguageProvider provider;
@@ -178,8 +182,8 @@ namespace Microsoft.Scripting.Hosting {
                             continue;    
                         }
 
-                        result = new SourceFileUnit(provider.GetEngine(), full_path, name, Encoding.Default);
-                        final_path = full_path;
+                        result = SourceUnit.CreateFileUnit(provider.GetEngine(), NormalizePath(fullPath), Encoding.Default);
+                        finalPath = fullPath;
                     }
                 }
             }

@@ -236,9 +236,9 @@ compares = [('<', 'lt', 'ge', 'LessThan', 'GreaterThan', "false", "true", "false
             ('>', 'gt', 'le', 'GreaterThan', 'LessThan', "false", "false", "true"),
             ('<=', 'le', 'gt', 'LessThanOrEqual', 'GreaterThanOrEqual', "true", "true", "false"), 
             ('>=', 'ge', 'lt', 'GreaterThanOrEqual', 'LessThanOrEqual', "true", "false", "true"),
-            ('==', 'eq', 'eq', 'Equal', 'NotEqual', 'a', 'a', 'a'), 
-            ('!=', 'ne', 'ne', 'NotEqual', 'Equal', 'a', 'a', 'a'), 
-            ('<>', 'lg', 'lg', 'LessThanGreaterThan', 'Equal', 'a', 'a', 'a')]
+            ('==', 'eq', 'eq', 'Equals', 'NotEquals', 'a', 'a', 'a'), 
+            ('!=', 'ne', 'ne', 'NotEquals', 'Equals', 'a', 'a', 'a'), 
+            ('<>', 'lg', 'lg', 'LessThanGreaterThan', 'Equals', 'a', 'a', 'a')]
 for sym, name, rname,clrName,opposite, bool1, bool2, bool3 in compares:
     ops.append(Operator(sym, name, rname,clrName, opposite=opposite, bool1=bool1, bool2=bool2, bool3=bool3))
 

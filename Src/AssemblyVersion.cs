@@ -17,17 +17,5 @@ using System;
 using System.Reflection;
 
 #if !SILVERLIGHT
-[assembly: AssemblyVersion("2.0.0.300")]
+[assembly: AssemblyVersion("2.0.0.400")]
 #endif
-
-namespace IronPython {
-    static class VersionInfo {
-        public static string GetIronPythonAssembly(string baseName) {
-#if SIGNED
-            return baseName + ", Version=" + Assembly.GetExecutingAssembly().GetName().Version.ToString() + ", Culture=neutral, PublicKeyToken=31bf3856ad364e35";
-#else
-            return baseName;
-#endif
-        }
-    }
-}

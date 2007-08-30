@@ -23,58 +23,55 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Calls {
-    [PythonType("staticmethod")]
-    public class StaticMethod : DynamicTypeSlot {
+    public class staticmethod : DynamicTypeSlot {
         private object _func;
 
-        public StaticMethod(object func) {
+        public staticmethod(object func) {
             this._func = func;
         }
 
         public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
-            value = GetAttribute(instance, PythonOps.ToPythonType(owner));
+            value = __get__(instance, PythonOps.ToPythonType(owner));
             return true;
         }
 
         #region IDescriptor Members
-        [PythonName("__get__")]
-        public object GetAttribute(object instance) { return GetAttribute(instance, null); }
 
-        [PythonName("__get__")]
-        public object GetAttribute(object instance, object owner) {
+        public object __get__(object instance) { return __get__(instance, null); }
+
+        public object __get__(object instance, object owner) {
             return _func;
         }
+
         #endregion
     }
 
-    [PythonType("classmethod")]
-    public class ClassMethod : DynamicTypeSlot {
+    public class classmethod : DynamicTypeSlot {
         internal object func;
 
-        public ClassMethod(object func) {
+        public classmethod(object func) {
             if (!PythonOps.IsCallable(func))
                 throw PythonOps.TypeError("{0} object is not callable", DynamicTypeOps.GetName(func));
             this.func = func;
         }
 
         public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
-            value = GetAttribute(instance, PythonOps.ToPythonType(owner));
+            value = __get__(instance, PythonOps.ToPythonType(owner));
             return true;
         }
 
         #region IDescriptor Members
 
-        [PythonName("__get__")]
-        public object GetAttribute(object instance) { return GetAttribute(instance, null); }
+        public object __get__(object instance) { return __get__(instance, null); }
 
-        [PythonName("__get__")]
-        public object GetAttribute(object instance, object owner) {
+        public object __get__(object instance, object owner) {
             if (owner == null) {
                 if (instance == null) throw PythonOps.TypeError("__get__(None, None) is invalid");
                 owner = DynamicHelpers.GetDynamicType(instance);
             }
             return new Method(func, owner, DynamicHelpers.GetDynamicType(owner));
         }
+
         #endregion
     }
 

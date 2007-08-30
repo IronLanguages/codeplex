@@ -157,34 +157,6 @@ namespace IronPython.Runtime.Types {
             module.Scope.SetName(Symbols.File, module.FileName = value);
         }
 
-        internal static string GetReloadFilename(ScriptModule module, SourceFileUnit sourceUnit) {
-            PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.GetModuleContext(module);
-
-            //!!! TODO
-            if (sourceUnit == null || moduleContext != null && moduleContext.IsPythonCreatedModule) {
-                // We created the module and it only contains Python code. If the user changes
-                // __file__ we'll reload from that file.  
-                return GetFileName(module);
-            }
-
-            // multi-language scenario and we can re-load the file.
-            return sourceUnit.Path;
-        }
-
-        public static void CheckReloadable(ScriptModule module) {
-            PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.GetModuleContext(module);
-
-            // only check for Python requirements of reloading on modules created from Python.code.
-            if (moduleContext != null && moduleContext.IsPythonCreatedModule) {
-                if (!module.Scope.ContainsName(DefaultContext.Default.LanguageContext, Symbols.Name))
-                    throw PythonOps.SystemError("nameless module");
-
-                if (!SystemState.Instance.modules.ContainsKey(module.Scope.LookupName(DefaultContext.Default.LanguageContext, Symbols.Name))) {
-                    throw PythonOps.ImportError("module {0} not in sys.modules", module.Scope.LookupName(DefaultContext.Default.LanguageContext, Symbols.Name));
-                }
-            }
-        }
-
         public static void SetPythonCreated(ScriptModule module) {
             PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
             moduleContext.IsPythonCreatedModule = true;
@@ -196,9 +168,7 @@ namespace IronPython.Runtime.Types {
 
         public static ScriptCode CompileFlowTrueDivision(SourceUnit codeUnit, LanguageContext context) {
             // flow TrueDivision and bind to the current module, use default error sink:
-            ScriptCode result = ScriptCode.FromCompiledCode(codeUnit.Compile(context.GetCompilerOptions()));
-            // obsolete: result.LanguageContext.ModuleContext = context.ModuleContext;
-            return result;
+            return context.CompileSourceCode(codeUnit);
         }
 
         /// <summary>
@@ -207,7 +177,7 @@ namespace IronPython.Runtime.Types {
         /// Used for __builtins__ and the built-in modules (e.g. nt, re, etc...)
         /// </summary>
         internal static ScriptModule MakePythonModule(string name, Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
 
             // TODO: hack to enable __builtin__ reloading:
             //return MakePythonModule(name, new Scope(MakeModuleDictionary(type)), ModuleOptions.None);

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -16,6 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     public static class StubGenerator {
@@ -36,36 +39,46 @@ namespace Microsoft.Scripting.Generation {
                 }
                 cg.BeginExceptionBlock();
             }
-
-            cg.EmitCodeContext();
-            callTarget.EmitGet(cg);
-
-            // TODO: use dynamic call sites here
             
             List<ReturnFixer> fixers = new List<ReturnFixer>(0);
             IList<Slot> args = cg.ArgumentSlots;
             int nargs = args.Count - firstArg;
-            if (nargs <= CallTargets.MaximumCallArgs && (functionAttributes & CallType.ArgumentList) == 0) {
+            CallAction action = CallAction.Simple;
+            if ((functionAttributes & CallType.ArgumentList) != 0) {
+                ArgumentInfo[] ais = new ArgumentInfo[nargs];
+                for (int i = 0; i < nargs - 1; i++) {
+                    ais[i] = ArgumentInfo.Simple;
+                }
+                ais[nargs - 1] = new ArgumentInfo(ArgumentKind.List);
+                action = CallAction.Make(ais);
+            }
+            bool fast;
+            Slot site = cg.CreateDynamicSite(action, 
+                CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 2), 
+                out fast);
+
+            site.EmitGet(cg);
+            if(!fast) cg.EmitCodeContext();
+
+            if (DynamicSiteHelpers.IsBigTarget(site.Type)) {
+                cg.EmitTuple(site.Type.GetGenericArguments()[0], args.Count + 1, delegate(int index) {
+                    if (index == 0) {
+                        callTarget.EmitGet(cg);
+                    } else {
+                        ReturnFixer rf = ReturnFixer.EmitArgument(cg, args[index - 1]);
+                        if (rf != null) fixers.Add(rf);
+                    }
+                });
+            } else {
+                callTarget.EmitGet(cg);
+
                 for (int i = firstArg; i < args.Count; i++) {
                     ReturnFixer rf = ReturnFixer.EmitArgument(cg, args[i]);
                     if (rf != null) fixers.Add(rf);
                 }
-                cg.EmitCall(typeof(RuntimeHelpers), "CallWithContext", CreateSignatureWithContext(nargs + 1));
-            } else if ((functionAttributes & CallType.ArgumentList) == 0) {
-                cg.EmitArray(typeof(object), nargs, delegate(int index) {
-                    ReturnFixer rf = ReturnFixer.EmitArgument(cg, args[index + firstArg]);
-                    if (rf != null) fixers.Add(rf);
-                });
-                cg.EmitCall(typeof(RuntimeHelpers), "CallWithContext", new Type[] { typeof(CodeContext), typeof(object), typeof(object[]) });
-            } else {
-                cg.EmitArray(typeof(object), nargs - 1, delegate(int index) {
-                    ReturnFixer rf = ReturnFixer.EmitArgument(cg, args[index + firstArg]);
-                    if (rf != null) fixers.Add(rf);
-                });
-
-                args[args.Count - 1].EmitGet(cg);
-                cg.EmitCall(typeof(RuntimeHelpers), "CallWithArgsTuple");
             }
+
+            cg.EmitCall(site.Type, "Invoke"); 
 
             if (handler != null) {
                 Label ret = cg.DefineLabel();

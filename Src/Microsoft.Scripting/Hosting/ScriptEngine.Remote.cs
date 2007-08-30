@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -22,6 +22,7 @@ using Microsoft.Scripting.Actions;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Remoting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -33,7 +34,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public RemoteScriptEngine(ScriptEngine engine) {
-            if (engine == null) throw new ArgumentNullException("engine");
+            Contract.RequiresNotNull(engine, "engine");
 
             _engine = engine;
         }
@@ -65,11 +66,6 @@ namespace Microsoft.Scripting.Hosting {
 
         public void SetSourceUnitSearchPaths(string[] paths) {
             _engine.SetSourceUnitSearchPaths(paths);
-        }
-
-        // TODO: source unit
-        public StreamReader GetSourceReader(Stream stream, ref Encoding encoding) {
-            return _engine.GetSourceReader(stream, ref encoding);
         }
 
         // TODO: remove
@@ -157,6 +153,10 @@ namespace Microsoft.Scripting.Hosting {
             return _engine.CallObject(obj, module, args);
         }
 
+        public void ExecuteSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+            _engine.ExecuteSourceUnit(sourceUnit, module);
+        }
+        
         public void ExecuteFile(string code) {
             _engine.ExecuteFile(code);
         }
@@ -193,10 +193,18 @@ namespace Microsoft.Scripting.Hosting {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileInteractiveCode(code, module));
         }
 
-        public InteractiveCodeProperties GetInteractiveCodeProperties(string code) {
-            return _engine.GetInteractiveCodeProperties(code);
+        public SourceCodeProperties GetCodeProperties(string code, SourceCodeKind kind) {
+            return _engine.GetCodeProperties(code, kind);
         }
-        
+
+        public SourceCodeProperties GetCodeProperties(string code, SourceCodeKind kind, ErrorSink errorSink) {
+            return _engine.GetCodeProperties(code, kind, errorSink);
+        }
+
+        // throws SerializationException 
+        public object EvaluateSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+            return _engine.EvaluateSourceUnit(sourceUnit, module);
+        }
 
         // throws SerializationException 
         public object Evaluate(string expression) {
@@ -225,8 +233,8 @@ namespace Microsoft.Scripting.Hosting {
             return _engine.EvaluateAndWrap(expression, module);
         }
 
-        public IScriptModule CompileFile(string path) {
-            return RemoteWrapper.WrapRemotable<IScriptModule>(_engine.CompileFile(path));
+        public IScriptModule CompileFile(string path, string moduleName) {
+            return RemoteWrapper.WrapRemotable<IScriptModule>(_engine.CompileFile(path, moduleName));
         }
 
         public ICompiledCode CompileFileContent(string path) {
@@ -249,14 +257,22 @@ namespace Microsoft.Scripting.Hosting {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileExpression(expression, module));
         }
 
-        public ICompiledCode CompileStatement(string statement, IScriptModule module) {
-            return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileStatement(statement, module));
+        public ICompiledCode CompileStatements(string statement, IScriptModule module) {
+            return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileStatements(statement, module));
         }
 
         public ICompiledCode CompileCodeDom(System.CodeDom.CodeMemberMethod code, IScriptModule module) {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileCodeDom(code, module));
         }
 
+        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+            return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileSourceUnit(sourceUnit, module));
+        }
+
+        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
+            return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileSourceUnit(sourceUnit, options, errorSink));
+        }
+        
         public int ExecuteProgram(SourceUnit sourceUnit) {
             return _engine.ExecuteProgram(sourceUnit);
         }
@@ -273,13 +289,8 @@ namespace Microsoft.Scripting.Hosting {
             throw new NotImplementedException("TODO");
         }
 
-        // TODO: remove
-        public SourceUnit CreateStandardInputSourceUnit(string code) {
-            return _engine.CreateStandardInputSourceUnit(code);
-        }
-
-        public ErrorSink GetDefaultErrorSink() {
-            return _engine.GetDefaultErrorSink();
+        public ErrorSink GetCompilerErrorSink() {
+            return _engine.GetCompilerErrorSink();
         }
 
         public void Shutdown() {

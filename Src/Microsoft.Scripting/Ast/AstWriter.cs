@@ -1,11 +1,11 @@
-/* ****************************************************************************
+ /* ****************************************************************************
  *
  * Copyright (c) Microsoft Corporation. 
  *
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -27,18 +28,38 @@ using Microsoft.Scripting.Generation;
 namespace Microsoft.Scripting.Ast {
     class AstWriter : Walker {
 
+        private struct Block {
+            CodeBlock _block;
+            int _id;
+
+            public Block(CodeBlock block, int id) {
+                _block = block;
+                _id = id;
+            }
+
+            public CodeBlock CodeBlock {
+                get { return _block; }
+            }
+            public int Id {
+                get { return _id; }
+            }
+        }
+
         private int _depth = 0;
+
         private TextWriter _outFile;
+        private Queue<Block> _blocks;
+
+        private int _blockid;
 
         private AstWriter() {
-
         }
 
         /// <summary>
         /// Write out the given AST (only if ShowASTs or DumpASTs is enabled)
         /// </summary>
         public static void Dump(Node node, CompilerContext context) {
-            string descr = context.SourceUnit.Name;
+            string descr = context.SourceUnit.Id;
             if (ScriptDomainManager.Options.ShowASTs) {
                 AstWriter.ForceDump(node, descr, System.Console.Out);
             } else if (ScriptDomainManager.Options.DumpASTs) {
@@ -61,7 +82,7 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         public static void ForceDump(Node node, string descr, TextWriter outFile) {
             if (node != null) {
-                if (descr == null) descr = "<unknown>";
+                if (String.IsNullOrEmpty(descr)) descr = "<unknown>";
                 AstWriter dv = new AstWriter();
                 dv.DoDump(node, descr, outFile);
             }
@@ -82,9 +103,24 @@ namespace Microsoft.Scripting.Ast {
             _outFile = outFile;
             _depth = 0;
 
-            _outFile.WriteLine("# AST {0}", name);
+            _outFile.WriteLine("#\n# AST {0}\n#", name);
+
             node.Walk(this);
             Debug.Assert(_depth == 0);
+
+
+            while (_blocks != null && _blocks.Count > 0) {
+                Block b = _blocks.Dequeue();
+                Write("#");
+                Write(String.Format("# CODE BLOCK: {0} (# {1})", b.CodeBlock.Name, b.Id));
+                Write("#");
+
+                b.CodeBlock.Walk(this);
+
+                Write("");
+
+                Debug.Assert(_depth == 0);
+            }
         }
 
 
@@ -93,14 +129,27 @@ namespace Microsoft.Scripting.Ast {
             _depth++;
         }
 
+        private void Pop(string label) {
+            _depth--;
+            Write(label);
+        }
+
         private void Pop() {
             _depth--;
             Debug.Assert(_depth >= 0);
         }
+
+        private int Enqueue(CodeBlock block) {
+            if (_blocks == null) {
+                _blocks = new Queue<Block>();
+            }
+            _blocks.Enqueue(new Block(block, ++_blockid));
+            return _blockid;
+        }
+
         public void Write(string s) {
             _outFile.WriteLine(new string(' ', _depth * 3) + s);
         }
-
 
         private void Child(Node node) {
             if (node != null) node.Walk(this);
@@ -140,12 +189,11 @@ namespace Microsoft.Scripting.Ast {
 
         // ActionExpression
         public override bool Walk(ActionExpression node) {
-            Push("<action> Kind:" + FormatAction(node.Action));
-            return DefaultWalk(node, "<args>");
+            Push(".action " + FormatAction(node.Action) + "(");
+            return true;
         }
         public override void PostWalk(ActionExpression node) {
-            Pop();
-            Pop();
+            Pop(")");
         }
 
         // ArrayIndexAssignment
@@ -182,17 +230,16 @@ namespace Microsoft.Scripting.Ast {
 
         // ConversionExpression
         public override bool Walk(ConversionExpression node) {
-            return DefaultWalk(node, "<convert> Type:" + node.ExpressionType.ToString());
+            Push("(" + node.ExpressionType.ToString() + ")");
+            return true;
         }
         public override void PostWalk(ConversionExpression node) {
             Pop();
         }
 
-
         // BoundAssignment
         public override bool Walk(BoundAssignment node) {
-            Push("<boundassignment>");
-            Write(String.Format("{0} {1} ...", SymbolTable.IdToString(node.Variable.Name), AssignmentOp(node.Operator)));
+            Push(String.Format(".bound {0} {1} ...", SymbolTable.IdToString(node.Variable.Name), AssignmentOp(node.Operator)));
             return true;
         }
         public override void PostWalk(BoundAssignment node) {
@@ -201,16 +248,13 @@ namespace Microsoft.Scripting.Ast {
 
         // BoundExpression
         public override bool Walk(BoundExpression node) {
-            return DefaultWalk(node, "BoundExpression: " + node.Name.ToString());
-        }
-        public override void PostWalk(BoundExpression node) {
-            Pop();
+            Write(".bound (" + node.Name.ToString() + ")");
+            return true;
         }
 
         // UnboundAssignment
         public override bool Walk(UnboundAssignment node) {
-            Push("<unboundassignment>");
-            Write(String.Format("{0} {1} ...", SymbolTable.IdToString(node.Name), AssignmentOp(node.Operator)));
+            Push(String.Format(".unbound {0} {1} ...", SymbolTable.IdToString(node.Name), AssignmentOp(node.Operator)));
             return true;
         }
         public override void PostWalk(UnboundAssignment node) {
@@ -219,20 +263,8 @@ namespace Microsoft.Scripting.Ast {
 
         // UnboundExpression
         public override bool Walk(UnboundExpression node) {
-            return DefaultWalk(node, "UnboundExpression: " + node.Name.ToString());
-        }
-        public override void PostWalk(UnboundExpression node) {
-            Pop();
-        }
-        // CallExpression
-        public override bool Walk(CallExpression node) {
-            Push("<call>");
-            Child(node.Target);
-            return DefaultWalk(node, "<args>");
-        }
-        public override void PostWalk(CallExpression node) {
-            Pop();
-            Pop();
+            Write(".unbound (" + node.Name.ToString() + ")");
+            return true;
         }
 
         // CallWithThisExpression
@@ -242,15 +274,17 @@ namespace Microsoft.Scripting.Ast {
 
         // CodeBlockExpression
         public override bool Walk(CodeBlockExpression node) {
-            return DefaultWalk(node, "<codeblockexpr>");
-        }
-        public override void PostWalk(CodeBlockExpression node) {
-            Pop();
+            int id = Enqueue(node.Block);
+            Write(String.Format(".block ({0}   #{1}) {2}{3}{4}", node.Block.Name, id,
+                node.ForceWrapperMethod ? " ForceWrapperMethod" : "",
+                node.IsStronglyTyped ? " IsStronglyTyped" : "",
+                node.IsDeclarative ? " IsDeclarative" : ""));
+            return false;
         }
 
         // CodeContextExpression
         public override bool Walk(CodeContextExpression node) {
-            return DefaultWalk(node, "<codecontextexpr>");
+            return DefaultWalk(node, ".context");
         }
         public override void PostWalk(CodeContextExpression node) {
             Pop();
@@ -258,10 +292,10 @@ namespace Microsoft.Scripting.Ast {
 
         // CommaExpression
         public override bool Walk(CommaExpression node) {
-            return DefaultWalk(node, "<comma> Index:" + node.ValueIndex);
+            return DefaultWalk(node, ".comma (" + node.ValueIndex + ") {");
         }
         public override void PostWalk(CommaExpression node) {
-            Pop();
+            Pop("}");
         }
 
         // ConditionalExpression
@@ -291,9 +325,14 @@ namespace Microsoft.Scripting.Ast {
                 return cc.Name + " " + cc.Type + " " + value.ToString();
             } else if (node.Value is Type) {
                 return "Type: " + ((Type)node.Value).FullName;
-            } 
+            }
 
-            return "Constant " + node.Value.GetType().FullName + ": " + node.Value.ToString();
+            string cs = node.Value as string;
+            if (cs != null) {
+                return "(string) \"" + cs + "\"";
+            }
+
+            return "(" + node.Value.GetType().Name + ") " + node.Value.ToString();
         }
 
         public override void PostWalk(ConstantExpression node) {
@@ -318,26 +357,29 @@ namespace Microsoft.Scripting.Ast {
 
         // MethodCallExpression
         public override bool Walk(MethodCallExpression node) {
-            Push("<methodcall> Name:" + node.Method.ReflectedType.Name + "." + node.Method.Name);
-            Push("instance:");
-            Child(node.Instance);
-            Pop();
-            Push("args:");
+            Push(".call " + node.Method.ReflectedType.Name + "." + node.Method.Name + " (");
+            if (node.Instance != null) {
+                Push(".inst (");
+                Child(node.Instance);
+                Pop(")");
+            }
+            Push(".args (");
             foreach (Expression e in node.Arguments) {
                 Child(e);
             }
-            Pop();
-            Pop();
+            Pop(")");
+            Pop(")");
             return false;
         }
 
 
         // NewArrayExpression
         public override bool Walk(NewArrayExpression node) {
-            return DefaultWalk(node, "<newarray> Type:" + node.ExpressionType.FullName);
+            Push(".new (" + node.ExpressionType.FullName + ") = {");
+            return true;
         }
         public override void PostWalk(NewArrayExpression node) {
-            Pop();
+            Pop("}");
         }
 
         // NewExpression
@@ -363,10 +405,11 @@ namespace Microsoft.Scripting.Ast {
 
         // ParenthesisExpression
         public override bool Walk(ParenthesizedExpression node) {
-            return DefaultWalk(node, "<parens>");
+            Push("(");
+            return true;
         }
         public override void PostWalk(ParenthesizedExpression node) {
-            Pop();
+            Pop(")");
         }
 
         // ShortCircuitExpression
@@ -384,18 +427,17 @@ namespace Microsoft.Scripting.Ast {
 
         // BlockStatement
         public override bool Walk(BlockStatement node) {
-            return DefaultWalk(node, "<block>");
+            Push("{");
+            return true;
         }
         public override void PostWalk(BlockStatement node) {
-            Pop();
+            Pop("}");
         }
 
         // BreakStatement
         public override bool Walk(BreakStatement node) {
-            return DefaultWalk(node, "<break>");
-        }
-        public override void PostWalk(BreakStatement node) {
-            Pop();
+            Write(".break");
+            return false;
         }
 
         // ContinueStatement
@@ -408,17 +450,15 @@ namespace Microsoft.Scripting.Ast {
 
         // DebugStatement
         public override bool Walk(DebugStatement node) {
-            return DefaultWalk(node, "<trace> Marker:" + node.Marker);
-        }
-        public override void PostWalk(DebugStatement node) {
-            Pop();
+            Write(".trace \"" + node.Marker + "\"");
+            return false;
         }
 
         // DelStatement
         public override bool Walk(DeleteStatement node) {
-            string descr = "<del>";
+            string descr = ".del";
             if (node.Variable != null)
-                descr += " Name:" + SymbolTable.IdToString(node.Variable.Name);
+                descr += " " + SymbolTable.IdToString(node.Variable.Name);
             return DefaultWalk(node, descr);
         }
         public override void PostWalk(DeleteStatement node) {
@@ -427,10 +467,13 @@ namespace Microsoft.Scripting.Ast {
 
         // DoStatement
         public override bool Walk(DoStatement node) {
-            return DefaultWalk(node, "<do loop>");
-        }
-        public override void PostWalk(DoStatement node) {
+            Push(".do {");
+            node.Body.Walk(this);
             Pop();
+            Push("} .while (");
+            node.Test.Walk(this);
+            Pop(");");
+            return false;
         }
 
         // LoopStatement
@@ -443,29 +486,26 @@ namespace Microsoft.Scripting.Ast {
 
         // EmptyStatement
         public override bool Walk(EmptyStatement node) {
-            Push("<empty>");
-            Pop();
+            Write(";");
             return false;
-        }
-
-        // ExpressionStatement
-        public override bool Walk(ExpressionStatement node) {
-            return DefaultWalk(node, "<exprstmt>");
-        }
-        public override void PostWalk(ExpressionStatement node) {
-            Pop();
         }
 
         // IfStatement
         public override bool Walk(IfStatement node) {
-            Push("<if>");
-            foreach (IfStatementTest ist in node.Tests) {
-                Child(ist);
+            for (int i = 0; i < node.Tests.Count; i++) {
+                Push(i == 0 ? ".if (" : "} .else if (");
+                node.Tests[i].Test.Walk(this);
+                Write(") {");
+                node.Tests[i].Body.Walk(this);
+                Pop();
             }
-            Push("else:");
-            Child(node.ElseStatement);
-            Pop();
-            Pop();
+            if (node.ElseStatement != null) {
+                Push("} .else {");
+                Child(node.ElseStatement);
+                Pop("}");
+            } else {
+                Write("}");
+            }
             return false;
         }
 
@@ -479,10 +519,10 @@ namespace Microsoft.Scripting.Ast {
 
         // ReturnStatement
         public override bool Walk(ReturnStatement node) {
-            return DefaultWalk(node, "<return>");
+            return DefaultWalk(node, ".return (");
         }
         public override void PostWalk(ReturnStatement node) {
-            Pop();
+            Pop(")");
         }
 
         // SwitchStatement
@@ -506,41 +546,42 @@ namespace Microsoft.Scripting.Ast {
 
         // ThrowStatement
         public override bool Walk(ThrowExpression node) {
-            return DefaultWalk(node, "<throw>");
+            return DefaultWalk(node, ".throw (");
         }
         public override void PostWalk(ThrowExpression node) {
-            Pop();
-        }
-
-        // DynamicTryStatement
-        public override bool Walk(DynamicTryStatement node) {
-            Push("<try>");
-            Child(node.Body);
-            if (node.Handlers != null) {
-                foreach (DynamicTryStatementHandler tsh in node.Handlers) {
-                    Child(tsh);
-                }
-            }
-            if (node.ElseStatement != null) {
-                Push("else:");
-                Child(node.ElseStatement);
-                Pop();
-            }
-            if (node.FinallyStatement != null) {
-                Push("finally:");
-                Child(node.FinallyStatement);
-                Pop();
-            }
-            Pop();
-            return false;
+            Pop(")");
         }
 
         // TryStatement
         public override bool Walk(TryStatement node) {
-            return DefaultWalk(node, "<statictry>");
-        }
-        public override void PostWalk(TryStatement node) {
-            Pop();
+            Push(".try {");
+            node.Body.Walk(this);
+            if (node.Handlers != null) {
+                StringBuilder sb = new StringBuilder("} .catch (");
+
+                foreach (CatchBlock cb in node.Handlers) {
+                    Pop();
+                    sb.Append(cb.Test.Name);
+                    if (cb.Variable != null) {
+                        sb.Append(" ");
+                        sb.Append(cb.Variable.Name);
+                    }
+                    sb.Append(") {");
+
+                    Push(sb.ToString());
+                    cb.Body.Walk(this);
+                    sb.Length = 10;
+                }
+            }
+
+            if (node.FinallyStatement != null) {
+                Pop();
+                Push("} .finally {");
+                node.FinallyStatement.Walk(this);
+            }
+
+            Pop("}");
+            return false;
         }
 
         // CatchBlock
@@ -553,7 +594,8 @@ namespace Microsoft.Scripting.Ast {
 
         // YieldStatement
         public override bool Walk(YieldStatement node) {
-            return DefaultWalk(node, "<yield>");
+            Push(".yield");
+            return true;
         }
         public override void PostWalk(YieldStatement node) {
             Pop();
@@ -571,32 +613,62 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
+        private string GetCodeBlockInfo(CodeBlock block) {
+            string info = String.Format("{0} {1} (", block.ReturnType.Name, block.Name);
+
+            if (block.IsGlobal) {
+                info += "IsGlobal,";
+            }
+
+            if (!block.IsVisible) {
+                info += "IsVisible=false,";
+            }
+
+            if (block.IsClosure) {
+                info += "IsClosure,";
+            }
+
+            if (block.ParameterArray) {
+                info += "ParameterArray,";
+            }
+
+            if (block.HasEnvironment) {
+                info += "HasEnvironment,";
+            }
+
+            if (block.EmitLocalDictionary) {
+                info += "EmitLocalDictionary,";
+            }
+
+            info += ")";
+
+            return info;
+        }
 
         // CodeBlock
         public override bool Walk(CodeBlock node) {
-            Push("<codeblock> Name:" + node.Name);
-
-            Push("params:");
+            Push(".codeblock " + GetCodeBlockInfo(node) + " (");
             foreach (Variable v in node.Parameters) {
                 DumpVariable(v);
             }
-            Pop();
+            Write(")");
             
-            Push("vars:");
+            Push(".vars {");
             foreach (Variable v in node.Variables) {
                 DumpVariable(v);
             }
-            Pop();
+            Pop("}");
 
             Child(node.Body);
-            Pop();
+            Pop("}");
             return false;
         }
 
         private void DumpVariable(Variable v) {
-            string descr = String.Format("{0} Kind:{1} Type:{2}", SymbolTable.IdToString(v.Name), v.Kind.ToString(), v.Type.Name);
-            if (v.Lift) { descr += " Lift"; }
-            if (v.InParameterArray) { descr += " InParameterArray"; }            
+            string descr = String.Format("{2} {0} ({1}", SymbolTable.IdToString(v.Name), v.Kind.ToString(), v.Type.Name);
+            if (v.Lift) { descr += ",Lift"; }
+            if (v.InParameterArray) { descr += ",InParameterArray"; }
+            descr += ")";
             Push(descr);
 
             if (v.DefaultValue != null) {
@@ -607,14 +679,19 @@ namespace Microsoft.Scripting.Ast {
 
         // GeneratorCodeBlock
         public override bool Walk(GeneratorCodeBlock node) {
-            Push("<generator> Name:" + node.Name);
-            Push("params:");
+            Push(".generator " + GetCodeBlockInfo(node) + " (");
             foreach (Variable v in node.Parameters) {
                 DumpVariable(v);
             }
-            Pop();
+            Pop(")");
+            Push(".vars {");
+            foreach (Variable v in node.Variables) {
+                DumpVariable(v);
+            }
+            Pop("}");
+            Push("{");
             Child(node.Body);
-            Pop();
+            Pop("}");
             return false;
         }
 
@@ -624,14 +701,6 @@ namespace Microsoft.Scripting.Ast {
             return DefaultWalk(node, "<cond>");
         }
         public override void PostWalk(IfStatementTest node) {
-            Pop();
-        }
-
-        // DynamicTryStatementHandler
-        public override bool Walk(DynamicTryStatementHandler node) {
-            return DefaultWalk(node, "<catch>");
-        }
-        public override void PostWalk(DynamicTryStatementHandler node) {
             Pop();
         }
 
@@ -671,8 +740,8 @@ namespace Microsoft.Scripting.Ast {
                 case Operators.GreaterThan: return ">";
                 case Operators.LessThanOrEqual: return "<=";
                 case Operators.GreaterThanOrEqual: return ">=";
-                case Operators.Equal: return "=";
-                case Operators.NotEqual: return "!=";
+                case Operators.Equals: return "=";
+                case Operators.NotEquals: return "!=";
                 case Operators.LessThanGreaterThan: return "<>";
                 case Operators.InPlaceAdd: return "+=";
                 case Operators.InPlaceSubtract: return "-=";

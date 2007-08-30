@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Hosting {
                 return _languageProviders; 
             }
             set {
-                if (value == null) throw new ArgumentNullException("value");
+                Contract.RequiresNotNull(value, "value");
                 _languageProviders = value; 
             }
         }
@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.Hosting {
                 return _palType; 
             }
             set {
-                if (value == null) throw new ArgumentNullException("value");
+                Contract.RequiresNotNull(value, "value");
                 if (!value.IsSubclassOf(typeof(PlatformAdaptationLayer))) throw new ArgumentException("Invalid type", "value");
                 _palType = value; 
             }
@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Hosting {
                 return _hostType; 
             }
             set {
-                if (value == null) throw new ArgumentNullException("value");
+                Contract.RequiresNotNull(value, "value");
                 if (!value.IsSubclassOf(typeof(ScriptHost))) throw new ArgumentException("Invalid type", "value");
                 _hostType = value;
             }
@@ -99,19 +99,19 @@ namespace Microsoft.Scripting.Hosting {
                 return _localHostType;
             }
             set {
-                if (value == null) throw new ArgumentNullException("value");
+                Contract.RequiresNotNull(value, "value");
                 if (!value.IsSubclassOf(typeof(LocalScriptHost))) throw new ArgumentException("Invalid type", "value");
                 _localHostType = value;
             }
         }
 
         public void AssociateWithAppDomain(AppDomain domain) {
-            if (domain == null) throw new ArgumentNullException("domain");
+            Contract.RequiresNotNull(domain, "domain");
             domain.SetData(AppDomainDataKey, this);
         }
 
         public static ScriptEnvironmentSetup GetAppDomainAssociated(AppDomain domain) {
-            if (domain == null) throw new ArgumentNullException("domain");
+            Contract.RequiresNotNull(domain, "domain");
             return domain.GetData(AppDomainDataKey) as ScriptEnvironmentSetup;
         }
 
@@ -132,7 +132,7 @@ namespace Microsoft.Scripting.Hosting {
             if (addWellKnownLanguages) {
                 _languageProviders = new LanguageProviderSetup[] {
 #if SIGNED
-                    new LanguageProviderSetup("IronPython.Hosting.PythonLanguageProvider", "IronPython, Version=2.0.0.300, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".py", "py", "python", "ironpython"),
+                    new LanguageProviderSetup("IronPython.Hosting.PythonLanguageProvider", "IronPython, Version=2.0.0.400, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".py", "py", "python", "ironpython"),
                     new LanguageProviderSetup("Microsoft.JScript.Compiler.Hosting.LanguageProvider", "Microsoft.JScript.Compiler, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".jsx", ".js", "managedjscript", "js", "jscript"),
                     new LanguageProviderSetup("Ruby.Hosting.RubyLanguageProvider", "Ruby, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".rb", "rb", "ruby", "ironruby"),
                     new LanguageProviderSetup("Microsoft.VisualBasic.Scripting.Hosting.VisualBasicLanguageProvider", "Microsoft.VisualBasic.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", ".vbx", "vbx"),

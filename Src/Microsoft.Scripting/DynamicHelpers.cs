@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -32,7 +32,7 @@ namespace Microsoft.Scripting {
         private static Dictionary<Type, List<Type>> _extensionTypes = new Dictionary<Type, List<Type>>();
 
         public static DynamicType GetDynamicTypeFromType(Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
 
             PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "TypeLookup " + type.FullName);
 
@@ -54,8 +54,8 @@ namespace Microsoft.Scripting {
             if (frames == null) {
                 // we may have missed a dynamic catch, and our host is looking
                 // for the exception...
-                frames = RuntimeHelpers.AssociateDynamicStackFrames(e);
-                RuntimeHelpers.ClearDynamicStackFrames();
+                frames = ExceptionHelpers.AssociateDynamicStackFrames(e);
+                ExceptionHelpers.ClearDynamicStackFrames();
             }
 
             if (frames == null) {
@@ -116,23 +116,6 @@ namespace Microsoft.Scripting {
             return GetDynamicTypeFromType(o.GetType());
         }       
 
-        public static object CallWithContext(CodeContext context, object func, params object[] args) {
-            ICallableWithCodeContext icc = func as ICallableWithCodeContext;
-            if (icc != null) return icc.Call(context, args);
-
-            return SlowCallWithContext(context, func, args);
-        }
-
-        private static object SlowCallWithContext(CodeContext context, object func, object[] args) {
-            PerfTrack.NoteEvent(PerfTrack.Categories.OperatorInvoke, new KeyValuePair<Operators, DynamicType>(Operators.Call, GetDynamicType(func)));
-
-            object res;
-            if (!GetDynamicType(func).TryInvokeBinaryOperator(context, Operators.Call, func, args, out res))
-                throw RuntimeHelpers.SimpleTypeError(String.Format("{0} is not callable", GetDynamicType(func)));
-
-            return res;
-        }
-
         public static TopReflectedPackage TopPackage {
             get {
                 if (_topPackage == null)
@@ -142,8 +125,6 @@ namespace Microsoft.Scripting {
             }
         }
 
-
-
         // TODO: remove exceptionHandler param (Silverlight hack):
         /// <summary>
         /// Creates a delegate with a given signature that could be used to invoke this object from non-dynamic code (w/o code context).
@@ -152,7 +133,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         /// <returns>The delegate or a <c>null</c> reference if the object is not callable.</returns>
         public static Delegate GetDelegate(object callableObject, Type delegateType, Action<Exception> exceptionHandler) {
-            if (delegateType == null) throw new ArgumentNullException("delegateType");
+            Contract.RequiresNotNull(delegateType, "delegateType");
 
             Delegate result = callableObject as Delegate;
             if (result != null) {
@@ -212,6 +193,16 @@ namespace Microsoft.Scripting {
             }
         }
 
+        /// <summary>
+        /// Registers a set of extension methods from the provided assemly.
+        /// </summary>
+        public static void RegisterLanguageAssembly(Assembly assembly) {
+            object[] attrs = assembly.GetCustomAttributes(typeof(ExtensionTypeAttribute), false);
+            foreach (ExtensionTypeAttribute et in attrs) {
+                ExtendOneType(et, DynamicHelpers.GetDynamicTypeFromType(et.Extends), false);
+            }
+        }
+
         private static void RegisterOneExtension(Type extending, Type extension) {
             lock (_extensionTypes) {
                 List<Type> extensions;
@@ -223,8 +214,12 @@ namespace Microsoft.Scripting {
         }
 
         public static void ExtendOneType(ExtensionTypeAttribute et, DynamicType dt) {
+            ExtendOneType(et, dt, true);
+        }
+
+        public static void ExtendOneType(ExtensionTypeAttribute et, DynamicType dt, bool publish) {
             // new-style extensions:
-            RegisterOneExtension(et.Extends, et.Type);
+            if(publish) RegisterOneExtension(et.Extends, et.Type);
 
             ExtensionTypeAttribute.RegisterType(et.Extends, et.Type, dt);
 

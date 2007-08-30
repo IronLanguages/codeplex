@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -48,10 +48,6 @@ namespace Microsoft.Scripting.Ast {
         public virtual bool Walk(BoundExpression node) { return true; }
         public virtual void PostWalk(BoundExpression node) { }
 
-        // CallExpression
-        public virtual bool Walk(CallExpression node) { return true; }
-        public virtual void PostWalk(CallExpression node) { }
-
         // CallWithThisExpression
         public virtual bool Walk(CallWithThisExpression node) { return true; }
         public virtual void PostWalk(CallWithThisExpression node) { }
@@ -87,10 +83,6 @@ namespace Microsoft.Scripting.Ast {
         // DeleteUnboundExpression
         public virtual bool Walk(DeleteUnboundExpression node) { return true; }
         public virtual void PostWalk(DeleteUnboundExpression node) { }
-
-        // DynamicNewExpression
-        public virtual bool Walk(DynamicNewExpression node) { return true; }
-        public virtual void PostWalk(DynamicNewExpression node) { }
 
         // EnvironmentExpression
         public virtual bool Walk(EnvironmentExpression node) { return true; }
@@ -176,10 +168,6 @@ namespace Microsoft.Scripting.Ast {
         public virtual bool Walk(DoStatement node) { return true; }
         public virtual void PostWalk(DoStatement node) { }
 
-        // DynamicTryStatement
-        public virtual bool Walk(DynamicTryStatement node) { return true; }
-        public virtual void PostWalk(DynamicTryStatement node) { }
-
         // EmptyStatement
         public virtual bool Walk(EmptyStatement node) { return true; }
         public virtual void PostWalk(EmptyStatement node) { }
@@ -231,10 +219,6 @@ namespace Microsoft.Scripting.Ast {
         // CodeBlock
         public virtual bool Walk(CodeBlock node) { return true; }
         public virtual void PostWalk(CodeBlock node) { }
-
-        // DynamicTryStatementHandler
-        public virtual bool Walk(DynamicTryStatementHandler node) { return true; }
-        public virtual void PostWalk(DynamicTryStatementHandler node) { }
 
         // GeneratorCodeBlock
         public virtual bool Walk(GeneratorCodeBlock node) { return true; }

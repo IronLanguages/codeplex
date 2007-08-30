@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -56,7 +56,7 @@ namespace Microsoft.Scripting.Types {
         /// Gets the DynamicMixinBuilder for a pre-existing DynamicMixin.
         /// </summary>
         public static DynamicMixinBuilder GetBuilder(DynamicMixin mixin) {
-            if (mixin == null) throw new ArgumentNullException("mixin");
+            Contract.RequiresNotNull(mixin, "mixin");
 
             lock (mixin.SyncRoot) {
                 if (mixin.Builder == null) {
@@ -92,14 +92,14 @@ namespace Microsoft.Scripting.Types {
         /// Adds a new slot to the DynamicType being constructed
         /// </summary>
         public void AddSlot(SymbolId name, DynamicTypeSlot slot) {
-            if (slot == null) throw new ArgumentNullException("slot");
+            Contract.RequiresNotNull(slot, "slot");
             if (name == SymbolId.Empty) throw new ArgumentException(Resources.EmptySymbolId, "name");
 
             _building.AddSlot(name, slot);
         }
 
         public void AddSlot(ContextId context, SymbolId name, DynamicTypeSlot slot) {
-            if (slot == null) throw new ArgumentNullException("slot");
+            Contract.RequiresNotNull(slot, "slot");
             if (name == SymbolId.Empty) throw new ArgumentException(Resources.EmptySymbolId, "name");
 
             _building.AddSlot(context, name, slot);
@@ -200,7 +200,7 @@ namespace Microsoft.Scripting.Types {
         /// Sets the method resolution order that will be used for the type.
         /// </summary>
         public void SetResolutionOrder(IList<DynamicMixin> resolutionOrder) {
-            if (resolutionOrder == null) throw new ArgumentNullException("resolutionOrder");
+            Contract.RequiresNotNull(resolutionOrder, "resolutionOrder");
 
             _building.ResolutionOrder = resolutionOrder;
         }
@@ -243,7 +243,7 @@ namespace Microsoft.Scripting.Types {
         /// substantial way
         /// </summary>
         public void AddInitializer(TypeInitializer init) {
-            if (init == null) throw new ArgumentNullException("init");
+            Contract.RequiresNotNull(init, "init");
 
             if (_inits == null) _inits = new List<TypeInitializer>();
 

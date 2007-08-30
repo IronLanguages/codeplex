@@ -1,17 +1,3 @@
-/* ****************************************************************************
- *
- * Copyright (c) Microsoft Corporation. 
- *
- * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
- * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Permissive License.
- *
- * You must not remove this notice, or any other, from this software.
- *
- *
- * ***************************************************************************/
 
 /* ****************************************************************************
  *
@@ -20,7 +6,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -33,6 +19,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Reflection;
+using System.Collections;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
@@ -42,15 +29,15 @@ using Microsoft.Scripting.Types;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using System.Collections;
-
+    
     /// <summary>
     /// Creates rules for performing method calls.  Currently supports calling built-in functions, built-in method descriptors (w/o 
     /// a bound value) and bound built-in method descriptors (w/ a bound value), delegates, types defining a "Call" method marked
     /// with SpecialName, ICallableWithContext, IFancyCallable, and ICallableWithContextAndThis.
     /// </summary>
     /// <typeparam name="T">The type of the dynamic site</typeparam>
-    public class CallBinderHelper<T> : BinderHelper<T, CallAction> {
+    /// <typeparam name="ActionType">The specific type of CallAction</typeparam>
+    public class CallBinderHelper<T, ActionType> : BinderHelper<T, ActionType> where ActionType : CallAction {
         private object[] _args;                                     // the arguments the binder is binding to - args[0] is the target, args[1..n] are args to the target
         private Expression _instance;                               // the instance or null if this is a non-instance call
         private Type _instanceType;                                 // the type of the instance variable
@@ -58,20 +45,20 @@ namespace Microsoft.Scripting.Actions {
         private StandardRule<T> _rule = new StandardRule<T>();      // the rule we end up producing
         private bool _binaryOperator, _reversedOperator;            // if we're producing a binary operator or a reversed operator (should go away, Python specific).
 
-        public CallBinderHelper(CodeContext context, CallAction action, object[] args)
+        public CallBinderHelper(CodeContext context, ActionType action, object[] args)
             : base(context, action) {
-            if (args == null) throw new ArgumentNullException("args");
+            Contract.RequiresNotNull(args, "args");
             if (args.Length < 1) throw new ArgumentException("Must receive at least one argument, the target to call", "args");
 
             _args = args;
             _test = _rule.MakeTypeTest(CompilerHelpers.GetType(_args[0]), 0);
         }
 
-        public StandardRule<T> MakeRule() {
+        public virtual StandardRule<T> MakeRule() {
             Type t = CompilerHelpers.GetType(_args[0]);
 
             MethodBase[] targets = GetTargetMethods();
-            if (targets != null) {
+            if (targets != null && targets.Length > 0) {
                 // we're calling a well-known MethodBase
                 MakeMethodBaseRule(targets);
             } else if (typeof(ICallableWithCodeContext).IsAssignableFrom(t) || typeof(ICallableWithThis).IsAssignableFrom(t)) {
@@ -111,7 +98,7 @@ namespace Microsoft.Scripting.Actions {
             }
 
             // attempt to bind to an individual method
-            MethodBinder binder = MethodBinder.MakeBinder(Binder, targets[0].Name, targets, BinderType, argNames);
+            MethodBinder binder = MethodBinder.MakeBinder(Binder, GetTargetName(targets), targets, GetBinderType(targets), argNames);
             MethodCandidate cand = binder.MakeBindingTarget(callType, bindingArgs, out testTypes);
 
             if (cand != null) {
@@ -134,6 +121,10 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        private static string GetTargetName(MethodBase[] targets) {
+            return targets[0].IsConstructor ? targets[0].DeclaringType.Name : targets[0].Name;
+        }
+
         private Expression[] FinishTestForCandidate(Type[] testTypes, Type[] argTypes, MethodCandidate cand) {
             Expression[] exprargs = MakeArgumentExpressions();
 
@@ -151,7 +142,7 @@ namespace Microsoft.Scripting.Actions {
             return exprargs;
         }
 
-        private Expression[] MakeArgumentExpressions() {
+        protected Expression[] MakeArgumentExpressions() {
             List<Expression> exprargs = new List<Expression>();
             if (_instance != null) exprargs.Add(_instance);
             for (int i = 0; i < ArgumentCount(Action, _rule); i++) {
@@ -243,7 +234,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private Expression[] GetICallableParameters(Type t, StandardRule<T> rule) {
+        protected Expression[] GetICallableParameters(Type t, StandardRule<T> rule) {
             List<Expression> plainArgs = new List<Expression>();
             List<KeyValuePair<SymbolId, Expression>> named = new List<KeyValuePair<SymbolId, Expression>>();
             Expression splat = null, kwSplat = null;
@@ -325,7 +316,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Target acquisition
 
-        private MethodBase[] GetTargetMethods() {
+        protected virtual MethodBase[] GetTargetMethods() {
             object target = _args[0];
             MethodBase[] targets;
             BuiltinFunction bf;
@@ -409,7 +400,7 @@ namespace Microsoft.Scripting.Actions {
             if (!typeof(ICallableWithCodeContext).IsAssignableFrom(targetType) &&
                 !typeof(IFancyCallable).IsAssignableFrom(targetType)) {
 
-                MemberInfo[] callMembers = Binder.GetMember(targetType, "Call");
+                MemberInfo[] callMembers = Binder.GetMember(Action, targetType, "Call");
                 List<MethodBase> callTargets = new List<MethodBase>();
                 foreach (MemberInfo mi in callMembers) {
                     if (mi.MemberType == MemberTypes.Method) {
@@ -434,7 +425,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Makes test for param arrays and param dictionary parameters.
         /// </summary>
-        private void MakeSplatTests() {
+        protected void MakeSplatTests() {
             if (Action.HasParamsArgument()) {
                 MakeParamsArrayTest();
             }
@@ -453,28 +444,24 @@ namespace Microsoft.Scripting.Actions {
             IDictionaryEnumerator dictEnum = dict.GetEnumerator();
 
             // verify the dictionary has the same count and arguments.
-            // TODO: RuntimeConstant for string names and a loop?
-            _test = Ast.AndAlso(_test,
-                Ast.Equal(
-                    Ast.ReadProperty(
+
+            string[] names = new string[dict.Count];
+            int index = 0;
+            while (dictEnum.MoveNext()) {
+                names[index++] = (string)dictEnum.Entry.Key;
+            }
+
+            _test = Ast.AndAlso(
+                _test,
+                Ast.AndAlso(
+                    Ast.TypeIs(_rule.Parameters[_rule.Parameters.Length - 1], typeof(IDictionary)),
+                    Ast.Call(null,
+                        typeof(RuntimeHelpers).GetMethod("CheckDictionaryMembers"),
                         Ast.Cast(_rule.Parameters[_rule.Parameters.Length - 1], typeof(IDictionary)),
-                        typeof(ICollection).GetProperty("Count")
-                    ),
-                    Ast.Constant(dict.Count)
+                        _rule.AddTemplatedConstant(typeof(string[]), names)
+                    )
                 )
             );
-
-            while (dictEnum.MoveNext()) {
-                DictionaryEntry de = dictEnum.Entry;
-
-                _test = Ast.AndAlso(_test,
-                    Ast.Call(
-                        Ast.Cast(_rule.Parameters[_rule.Parameters.Length - 1], typeof(IDictionary)),
-                        typeof(IDictionary).GetMethod("Contains"),
-                        Ast.Constant((string)de.Key)
-                    )
-                );
-            }
         }
 
         private static BinaryExpression MakeFunctionTest(BuiltinFunction bf, Expression functionTarget) {
@@ -491,7 +478,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Error support
 
-        private void MakeCannotCallRule(Type type) {
+        protected virtual void MakeCannotCallRule(Type type) {
             _rule.SetTarget(
                 _rule.MakeError(Binder,
                     Ast.New(
@@ -530,7 +517,7 @@ namespace Microsoft.Scripting.Actions {
         /// Gets all of the argument names and types.  Non named arguments are returned at the beginning of the argTypes array
         /// and named arguments line up w/ argTypes.
         /// </summary>
-        private void GetArgumentNamesAndTypes(out SymbolId[] argNames, out Type[] argTypes) {
+        protected void GetArgumentNamesAndTypes(out SymbolId[] argNames, out Type[] argTypes) {
             argNames = Action.GetArgumentNames();
             argTypes = GetArgumentTypes(Action, _args);
             if (Action.HasDictionaryArgument()) {
@@ -560,83 +547,38 @@ namespace Microsoft.Scripting.Actions {
             argTypes = types.ToArray();
         }
 
-        private BinderType BinderType {
-            get {
-                return _binaryOperator ? BinderType.BinaryOperator : BinderType.Normal;
-            }
-        }
+        private BinderType GetBinderType(MethodBase[] targets) {
+            if (_binaryOperator) return BinderType.BinaryOperator;
 
-        #endregion
-
-        #region Dynamic call support - obsolete, only used externally
-
-        public static StandardRule<T> MakeDynamicCallRule(CallAction action, ActionBinder binder, DynamicType[] types) {
-            StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(types);
-            rule.SetTarget(rule.MakeReturn(binder, CallBinderHelper<T>.MakeDynamicTarget(rule, action)));
-            return rule;
-        }
-
-        /// <summary>
-        /// Makes a dynamic call rule.  Currently we just embed a normal CallExpression in which does the
-        /// fully dynamic call.  Supports all action types.
-        /// </summary>
-        public static Expression MakeDynamicTarget(StandardRule<T> rule, CallAction action) {
-            //Console.Error.WriteLine("Going dynamic: {0}", action);
-            List<Arg> args = new List<Arg>();
-            Expression instance = null;
-
-            bool argsTuple = false, keywordDict = false;
-            int kwCnt = 0, extraArgs = 0;
-            for (int i = 0; i < rule.ParameterCount - 1; i++) {
-                switch (action.GetArgumentKind(i)) {
-                    case ArgumentKind.Instance:
-                        instance = rule.Parameters[i + 1];
-                        break;
-
-                    case ArgumentKind.Dictionary:
-                        args.Add(Arg.Dictionary(rule.Parameters[i + 1]));
-                        keywordDict = true;
-                        extraArgs++;
-                        break;
-
-                    case ArgumentKind.List:
-                        args.Add(Arg.List(rule.Parameters[i + 1]));
-                        argsTuple = true;
-                        extraArgs++;
-                        break;
-
-                    case ArgumentKind.Named:
-                        args.Add(Arg.Named(action.GetArgumentName(i), rule.Parameters[i + 1]));
-                        kwCnt++;
-                        break;
-
-                    case ArgumentKind.Simple:
-                    default:
-                        args.Add(Arg.Simple(rule.Parameters[i + 1]));
-                        break;
-
+            foreach (MethodBase mb in targets) {
+                if (mb.IsConstructor) {
+                    return BinderType.Constructor;
                 }
             }
-
-            if (instance != null) {
-                return Ast.CallWithThis(
-                    rule.Parameters[0],
-                    instance,
-                    args.ToArray()
-                );
-            }
-
-            return Ast.DynamicCall(
-                rule.Parameters[0],
-                args.ToArray(),
-                argsTuple,
-                keywordDict,
-                kwCnt,
-                extraArgs
-            );
+            return BinderType.Normal;
         }
 
-        #endregion
+        protected object[] Arguments {
+            get {
+                return _args;
+            }
+        }
+
+        protected StandardRule<T> Rule {
+            get {
+                return _rule;
+            }
+        }
+
+        protected Expression Test {
+            get {
+                return _test;
+            }
+            set {
+                _test = value;
+            }
+        }
+
+        #endregion          
     }
 }

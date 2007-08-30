@@ -69,8 +69,8 @@ namespace IronPython.Runtime.Calls {
         }
 
         protected PythonFunction(CodeContext context, string name, string[] argNames, object[] defaults, FunctionAttributes flags) {
-            if (name == null) throw new ArgumentNullException("name");
-            if (context == null) throw new ArgumentNullException("context");
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(context, "context");
 
             _name = name;
             _argNames = argNames;
@@ -657,7 +657,7 @@ namespace IronPython.Runtime.Calls {
             /// Makes the test for our rule.
             /// </summary>
             private Expression MakeTest() {
-                if (!Action.HasNamedArgument()) {
+                if (!Action.HasNamedArgument() && !Action.HasDictionaryArgument()) {
                     return MakeSimpleTest();
                 } 
 
@@ -728,6 +728,7 @@ namespace IronPython.Runtime.Calls {
                             continue;
 
                         case ArgumentKind.Named:
+                            _extractedKeyword = true;
                             bool foundName = false;
                             for (int j = 0; j < _func.NormalArgumentCount; j++) {
                                 if (_func.ArgNames[j] == SymbolTable.IdToString(Action.ArgumentInfos[i].Name)) {
@@ -907,12 +908,21 @@ namespace IronPython.Runtime.Calls {
                     tests.Add(exprArgs[exprArgs.Length - 1]);
 
                     // test we've used all of the extra parameters
-                    if (_func.ExpandListPosition == -1 && _params != null) {
-                        tests.Add(Ast.Call(null,
-                            typeof(PythonOps).GetMethod("CheckParamsZero"),
-                            GetFunctionParam(),
-                            Ast.ReadDefined(_params)));
-                    }
+                    if (_func.ExpandListPosition == -1) {
+                        if (_params != null) {
+                            // we used some params, they should have gone down to zero...
+                            tests.Add(Ast.Call(null,
+                                typeof(PythonOps).GetMethod("CheckParamsZero"),
+                                GetFunctionParam(),
+                                Ast.ReadDefined(_params)));
+                        } else if(_userProvidedParams != null) {
+                            // the user provided params, we didn't need any, and they should be zero
+                            tests.Add(Ast.Call(null,
+                                typeof(PythonOps).GetMethod("CheckUserParamsZero"),
+                                GetFunctionParam(),
+                                _userProvidedParams));
+                        }
+                    } 
 
                     // test that we've used all the extra named arguments
                     if (_func.ExpandDictPosition == -1 && _dict != null) {
@@ -982,7 +992,7 @@ namespace IronPython.Runtime.Calls {
                     if (_userProvidedParams != null) {
                         EnsureParams();
                     }
-
+                    _extractedKeyword = true;
                     return Ast.Call(
                         null,
                         typeof(PythonOps).GetMethod("GetFunctionParameterValue"),

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -21,6 +21,7 @@ using System.Threading;
 
 using System.Reflection;
 using System.Globalization;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Types {
     public delegate bool TryGetMemberCustomizer(CodeContext context, object instance, SymbolId name, out object value);
@@ -681,7 +682,7 @@ namespace Microsoft.Scripting.Types {
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public bool TryInvokeUnaryOperator(CodeContext context, Operators op, object self, out object ret) {
-            if (context == null) throw new ArgumentNullException("context"); 
+            Contract.RequiresNotNull(context, "context"); 
             
             Initialize();
 
@@ -721,7 +722,7 @@ namespace Microsoft.Scripting.Types {
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public bool TryInvokeBinaryOperator(CodeContext context, Operators op, object self, object other, out object ret) {
-            if (context == null) throw new ArgumentNullException("context"); 
+            Contract.RequiresNotNull(context, "context"); 
             
             Initialize();
 
@@ -761,7 +762,7 @@ namespace Microsoft.Scripting.Types {
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public bool TryInvokeTernaryOperator(CodeContext context, Operators op, object self, object value1, object value2, out object ret) {
-            if (context == null) throw new ArgumentNullException("context");
+            Contract.RequiresNotNull(context, "context");
 
             Initialize();
 

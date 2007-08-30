@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Reflection.Emit;
 using System.Threading;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -56,8 +57,8 @@ namespace Microsoft.Scripting.Ast {
 
         public GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next)
             : base(span, name) {
-            if (generator == null) throw new ArgumentNullException("generator");
-            if (next == null) throw new ArgumentNullException("next");
+            Contract.RequiresNotNull(generator, "generator");
+            Contract.RequiresNotNull(next, "next");
             if (!typeof(Generator).IsAssignableFrom(generator)) throw new ArgumentException("The generator type must inherit from Generator");
 
             _generator = generator;

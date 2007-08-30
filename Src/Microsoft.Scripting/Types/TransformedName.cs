@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Types {
     /// <summary>
@@ -69,8 +70,8 @@ namespace Microsoft.Scripting.Types {
         private readonly CustomTransformer _custTransform;
 
         public TransformedName(string name, OperatorMapping op, ContextId context) {
-            if (name == null) throw new ArgumentNullException("name");
-            if (op == null) throw new ArgumentNullException("op");
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(op, "op");
 
             _name = name;
             _context = context;
@@ -78,15 +79,15 @@ namespace Microsoft.Scripting.Types {
         }
 
         public TransformedName(string name, ContextId context) {
-            if (name == null) throw new ArgumentNullException("name");
+            Contract.RequiresNotNull(name, "name");
 
             _name = name;
             _context = context;
         }
 
         public TransformedName(string name, CustomTransformer customTransformer, ContextId context) {
-            if (name == null) throw new ArgumentNullException("name");
-            if (customTransformer == null) throw new ArgumentNullException("customTransformer");
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(customTransformer, "customTransformer");
 
             _name = name;
             _context = context;
@@ -94,7 +95,7 @@ namespace Microsoft.Scripting.Types {
         }
 
         public TransformedName(OperatorMapping op, ContextId context) {
-            if (op == null) throw new ArgumentNullException("op");
+            Contract.RequiresNotNull(op, "op");
 
             _op = op;
             _context = context;

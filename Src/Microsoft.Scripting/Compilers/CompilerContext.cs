@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -20,6 +20,7 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
 
@@ -73,28 +74,20 @@ namespace Microsoft.Scripting {
         }
 
         public CompilerContext(SourceUnit sourceUnit)
-            : this(sourceUnit, GetDefaultOptions(sourceUnit), sourceUnit.Engine.GetDefaultErrorSink(), ParserSink.Null) {
-        }
-
-        private static CompilerOptions GetDefaultOptions(SourceUnit sourceUnit) {
-            if (sourceUnit == null) throw new ArgumentNullException("sourceUnit");
-            return sourceUnit.Engine.GetDefaultCompilerOptions();
+            : this(sourceUnit, null, null, null) {
         }
 
         public CompilerContext(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink)
-            : this(sourceUnit, options, errorSink, ParserSink.Null) {
+            : this(sourceUnit, options, errorSink, null) {
         }
 
         public CompilerContext(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink, ParserSink parserSink) {
-            if (sourceUnit == null) throw new ArgumentNullException("sourceUnit");
-            if (options == null) throw new ArgumentNullException("options");
-            if (errorSink == null) throw new ArgumentNullException("errorSink");
-            if (parserSink == null) throw new ArgumentNullException("parserSink");
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
 
             _sourceUnit = sourceUnit;
-            _options = options;
-            _errors = errorSink;
-            _parserSink = parserSink;
+            _options = options ?? sourceUnit.Engine.GetDefaultCompilerOptions();
+            _errors = errorSink ?? sourceUnit.Engine.GetCompilerErrorSink();
+            _parserSink = parserSink ?? ParserSink.Null;
         }
 
         public CompilerContext CopyWithNewSourceUnit(SourceUnit sourceUnit) {
@@ -124,7 +117,7 @@ namespace Microsoft.Scripting {
         }
 
         public void AddError(string message, Node node, Severity severity, int errorCode) {
-            if (node == null) throw new ArgumentNullException("node");
+            Contract.RequiresNotNull(node, "node");
 
             _errors.Add(SourceUnit, message, node.Span, errorCode, severity);
         }

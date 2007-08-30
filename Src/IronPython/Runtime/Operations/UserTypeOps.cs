@@ -551,12 +551,12 @@ namespace IronPython.Runtime.Operations {
                     rule.Parameters[1]);
             rule.SetTarget(rule.MakeReturn(PythonEngine.CurrentEngine.DefaultBinder, expr));
 
-            RuleBuilderCache<T>.ParameterizeSetMember(targetType.UnderlyingSystemType, altVersion, context, action, rule, version, action.Name);
+            RuleBuilderCache<T>.ParameterizeSetMember(targetType.UnderlyingSystemType, altVersion, context, action, rule);
             return rule;
         }
 
         private static class RuleBuilderCache<T> {
-            public static void ParameterizeSetMember(Type type, bool versionOrAltVersion, CodeContext context, Action action, StandardRule<T> rule, params object[] args) {
+            public static void ParameterizeSetMember(Type type, bool versionOrAltVersion, CodeContext context, Action action, StandardRule<T> rule) {
                 TemplatedRuleBuilder<T> builder;
 
                 lock (SetMemberBuilders) {
@@ -567,7 +567,7 @@ namespace IronPython.Runtime.Operations {
                     }
                 }
 
-                builder.CopyTemplateToRule(context, rule, args);                
+                builder.CopyTemplateToRule(context, rule);                
             }
 
             public static Dictionary<KeyValuePair<Type, bool>, TemplatedRuleBuilder<T>> SetMemberBuilders = new Dictionary<KeyValuePair<Type, bool>, TemplatedRuleBuilder<T>>();
@@ -585,7 +585,7 @@ namespace IronPython.Runtime.Operations {
 
                     SymbolId item = action.Operation == Operators.GetItem ? Symbols.GetItem : Symbols.SetItem;
 
-                    rule.MakeTest(CompilerHelpers.ObjectTypes(args));
+                    rule.MakeTest(DynamicTypeOps.ObjectTypes(args));
 
                     if (sdo.DynamicType.TryResolveSlot(context, item, out dts)) {
 
@@ -787,7 +787,7 @@ namespace IronPython.Runtime.Operations {
         private static object RichEqualsHelper(object self, object other) {
             object res;
 
-            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.Equal, self, other, out res))
+            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.Equals, self, other, out res))
                 return res;
 
             return PythonOps.NotImplemented;
@@ -795,7 +795,7 @@ namespace IronPython.Runtime.Operations {
 
         public static bool ValueNotEqualsHelper(object self, object other) {
             object res;
-            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.NotEqual, self, other, out res) && 
+            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.NotEquals, self, other, out res) && 
                 res != PythonOps.NotImplemented &&
                 res != null &&
                 res.GetType() == typeof(bool))

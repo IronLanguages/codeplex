@@ -12,25 +12,29 @@
  *
  *
  * ***************************************************************************/
+
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Text;
-using System.Reflection;
-using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
 
-using IronPython.Runtime.Types;
+using IronPython.Compiler;
 using IronPython.Runtime.Operations;
 
-[assembly: PythonExtensionType(typeof(Assembly), typeof(ReflectedAssemblyOps))]
-namespace IronPython.Runtime.Operations {
-    public static class ReflectedAssemblyOps {
-        [SpecialName, PythonName("__repr__")]
-        public static object Repr(Assembly self) {
-            Assembly asmSelf = self as Assembly;
+namespace IronPython.Hosting {
+    internal class CompilerErrorSink : ErrorSink {
+        public override void Add(SourceUnit sourceUnit, string message, SourceSpan span, int errorCode, Severity severity) {
+            CountError(severity);
 
-            return "<Assembly " + asmSelf.FullName + ">";
+            if (severity == Severity.Warning) {
+                throw PythonOps.SyntaxWarning(message, sourceUnit, span, errorCode);
+            } else {
+                throw PythonOps.SyntaxError(message, sourceUnit, span, errorCode);
+            }
         }
     }
 }

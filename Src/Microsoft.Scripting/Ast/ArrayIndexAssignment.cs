@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -15,6 +15,7 @@
 
 using System;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class ArrayIndexAssignment : Expression{
@@ -25,9 +26,9 @@ namespace Microsoft.Scripting.Ast {
 
         internal ArrayIndexAssignment(SourceSpan span, Expression array, Expression index, Expression value)
             : base(span) {
-            if (array == null) throw new ArgumentNullException("array");
-            if (index == null) throw new ArgumentNullException("index");
-            if (value == null) throw new ArgumentNullException("value");
+            Contract.RequiresNotNull(array, "array");
+            Contract.RequiresNotNull(index, "index");
+            Contract.RequiresNotNull(value, "value");
             Type arrayType = array.ExpressionType;
             if (!arrayType.IsArray) {
                 throw new NotSupportedException("Expression type of the array must be array (Type.IsArray)!");

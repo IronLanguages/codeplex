@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -23,8 +23,8 @@ namespace Microsoft.Scripting.Ast {
         private SourceSpan _statementSpan;
 
         internal IfStatementBuilder(SourceSpan statementSpan, SourceSpan conditionSpan, Expression condition, SourceLocation header, Statement body) {
-            if (condition == null) throw new ArgumentNullException("condition");
-            if (body == null) throw new ArgumentNullException("body");
+            Contract.RequiresNotNull(condition, "condition");
+            Contract.RequiresNotNull(body, "body");
 
             _clauses = CollectionUtils.MakeList(new IfStatementTest(conditionSpan, header, condition, body));
             _statementSpan = statementSpan;
@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public IfStatementBuilder ElseIf(SourceSpan span, Expression condition, SourceLocation bodyLocation, Statement body) {
-            if (body == null) throw new ArgumentNullException("body");
+            Contract.RequiresNotNull(body, "body");
 
             _clauses.Add(new IfStatementTest(span, bodyLocation, condition, body));
             return this;
@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public IfStatement Else(Statement body) {
-            if (body == null) throw new ArgumentNullException("body");
+            Contract.RequiresNotNull(body, "body");
 
             return new IfStatement(_statementSpan, _clauses.ToArray(), body);
         }

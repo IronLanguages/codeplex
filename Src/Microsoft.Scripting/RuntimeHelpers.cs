@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -43,9 +43,6 @@ namespace Microsoft.Scripting {
         public static readonly object True = true;
         /// <summary> Singleton boxed instance of False  We should never box additional instances. </summary>
         public static readonly object False = false;
-
-        [ThreadStatic]
-        internal static List<DynamicStackFrame> _stackFrames; 
 
         static RuntimeHelpers() {
             for (int i = 0; i < (MAX_CACHE - MIN_CACHE); i++) {
@@ -277,110 +274,16 @@ namespace Microsoft.Scripting {
             funcEnv.EnvironmentValues[0] = funcEnv;
         }       
 
-        #region Exception handling
-
-        public static void UpdateStackTrace(CodeContext context, MethodBase method, string funcName, string filename, int line) {
-            if (_stackFrames == null) _stackFrames = new List<DynamicStackFrame>();
-
-            if (line == SourceLocation.None.Line) {
-                line = 0;
-            }
-            _stackFrames.Add(new DynamicStackFrame(context, method, funcName, filename, line));
-        }
-
-        public static List<DynamicStackFrame> AssociateDynamicStackFrames(Exception clrException) {
-            if (_stackFrames != null) {
-                Utils.ExceptionUtils.GetDataDictionary(clrException)[typeof(DynamicStackFrame)] = _stackFrames;
-            }
-            return _stackFrames;
-        }
-        public static void ClearDynamicStackFrames() {
-            _stackFrames = null;
-        }
-
-        public static object PushExceptionHandler(CodeContext context, Exception clrException) {
-            // _currentExceptions is thread static
-            if (LanguageContext._currentExceptions == null) LanguageContext._currentExceptions = new List<Exception>();
-            LanguageContext._currentExceptions.Add(clrException);
-
-            AssociateDynamicStackFrames(clrException);
-
-            return context.LanguageContext.PushExceptionHandler(context, clrException);
-        }
-
-        public static void PopExceptionHandler(CodeContext context) {
-            // _currentExceptions is thread static
-            Debug.Assert(LanguageContext._currentExceptions != null);
-            Debug.Assert(LanguageContext._currentExceptions.Count != 0);
-
-#if !SILVERLIGHT
-            ThreadAbortException tae = LanguageContext._currentExceptions[LanguageContext._currentExceptions.Count - 1] as ThreadAbortException;
-            if (tae != null && tae.ExceptionState is KeyboardInterruptException) {
-                Thread.ResetAbort();
-            }
-#endif
-            context.LanguageContext.PopExceptionHandler();
-
-            LanguageContext._currentExceptions.RemoveAt(LanguageContext._currentExceptions.Count - 1);
-        }
-
-        public static object CheckException(CodeContext context, object exception, object test) {
-            return context.LanguageContext.CheckException(exception, test);
-        }
-
-        #endregion
-
-        #region Calls
-
-        public static object CallWithContext(CodeContext context, object func, params object[] args) {
-            FastCallable fc = func as FastCallable;
-            if (fc != null) return fc.Call(context, args);
-
-            return context.LanguageContext.Call(context, func, args);
-        }
-
-        /// <summary>
-        /// Called from generate code for the calls with arguments, tuple of extra arguments and keyword dictionary
-        /// </summary>
-        public static object CallWithArgsKeywordsTupleDict(CodeContext context, object func, object[] args, string[] names, object argsTuple, object kwDict) {
-            return context.LanguageContext.CallWithArgsKeywordsTupleDict(context, func, args, names, argsTuple, kwDict);
-        }
-
-        /// <summary>
-        /// Called from generated code for the calls with arguments and argument tuple
-        /// </summary>
-        public static object CallWithArgsTuple(CodeContext context, object func, object[] args, object argsTuple) {
-            return context.LanguageContext.CallWithArgsTuple(context, func, args, argsTuple);
-        }
-
-        /// <summary>
-        /// Called from the generated code to perform the call with keyword args
-        /// </summary>
-        public static object CallWithKeywordArgs(CodeContext context, object func, object[] args, string[] names) {
-            return context.LanguageContext.CallWithKeywordArgs(context, func, args, names);
-        }
-
-        /// <summary>
-        /// Called from the generated code to construct a new instance of the class,
-        /// or to call function with the new object instance
-        /// </summary>
-        public static object Construct(CodeContext context, object func, params object[] args) {
-            IConstructorWithCodeContext iConstructor = func as IConstructorWithCodeContext;
-            if (iConstructor != null) {
-                return iConstructor.Construct(context, args);
-            } else {
-                throw SimpleTypeError(String.Format("{0} object cannot be constructed", DynamicHelpers.GetDynamicType(func)));
-            }
-        }
-
-        #endregion
-
         /// <summary>
         /// Helper method to create an instance.  Work around for Silverlight where Activator.CreateInstance
         /// is SecuritySafeCritical.
         /// </summary>
         public static T CreateInstance<T>() {
             return default(T);
+        }
+
+        public static T[] CreateArray<T>(int args) {
+            return new T[args];
         }
 
         public static IAttributesCollection GetLocalDictionary(CodeContext context) {
@@ -466,6 +369,32 @@ namespace Microsoft.Scripting {
 
         public static T GetBox<T>(StrongBox<T> box) {
             return box.Value;
+        }
+
+        public static bool CheckDictionaryMembers(IDictionary dict, string[] names) {
+            if (dict.Count != names.Length) return false;
+
+            foreach (string name in names) {
+                if(!dict.Contains(name)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public static ArgumentTypeException BadArgumentsForOperation(Operators op, params object[] args) {
+            StringBuilder message = new StringBuilder("unsupported operand type(s) for operation ");
+            message.Append(op.ToString());
+            message.Append(": ");
+            string comma = "";
+
+            foreach (object o in args) {
+                message.Append(comma);
+                message.Append(CompilerHelpers.GetType(o));
+                comma = ", ";
+            }
+
+            throw new ArgumentTypeException(message.ToString());
         }
     }
 }

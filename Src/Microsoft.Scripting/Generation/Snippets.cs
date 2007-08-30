@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -81,6 +82,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         private AssemblyGen CreateNewAssembly(string name, AssemblyGenAttributes attrs) {
+            Debug.Assert(!String.IsNullOrEmpty(name));
             name = GenerateAssemblyName(name);
             return new AssemblyGen(name, null, name + ".dll", attrs);
         }

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -23,6 +23,7 @@ using System.Runtime.Remoting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     public class ModuleContext {
@@ -75,7 +76,7 @@ namespace Microsoft.Scripting {
         /// Copy constructor.
         /// </summary>
         protected ModuleContext(ModuleContext context) {
-            if (context == null) throw new ArgumentNullException("context");
+            Contract.RequiresNotNull(context, "context");
             _module = context._module;
             _showCls = context._showCls;
             _compilerContext = context._compilerContext;

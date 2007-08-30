@@ -24,6 +24,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -143,12 +144,13 @@ namespace IronPython.Runtime {
     /// this does as well and this will get finalized.  
     /// </summary>
     internal sealed class InstanceFinalizer : ICallableWithCodeContext {
-        object instance;
+        private object _instance;
+        private DynamicSite<object, object> _site = DynamicSite<object, object>.Create(CallAction.Simple);
 
         public InstanceFinalizer(object inst) {
             Debug.Assert(inst != null);
 
-            instance = inst;
+            _instance = inst;
         }
 
         #region ICallableWithCodeContext Members
@@ -156,13 +158,13 @@ namespace IronPython.Runtime {
         public object Call(CodeContext context, params object[] args) {
             object o;
 
-            IronPython.Runtime.Types.OldInstance oi = instance as IronPython.Runtime.Types.OldInstance;
+            IronPython.Runtime.Types.OldInstance oi = _instance as IronPython.Runtime.Types.OldInstance;
             if (oi != null) {
                 if (oi.TryGetCustomMember(context, Symbols.Unassign, out o)) {
-                    return PythonOps.CallWithContext(context, o);
+                    return _site.Invoke(context, o);
                 }
             } else {
-                DynamicHelpers.GetDynamicType(instance).TryInvokeUnaryOperator(context, Operators.Unassign, instance, out o);
+                DynamicHelpers.GetDynamicType(_instance).TryInvokeUnaryOperator(context, Operators.Unassign, _instance, out o);
             }
 
             return null;

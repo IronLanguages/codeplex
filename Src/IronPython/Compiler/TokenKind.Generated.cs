@@ -65,8 +65,8 @@ namespace IronPython.Compiler {
         GreaterThan = 57,
         LessThanOrEqual = 58,
         GreaterThanOrEqual = 59,
-        Equal = 60,
-        NotEqual = 61,
+        Equals = 60,
+        NotEquals = 61,
         LessThanGreaterThan = 62,
         LeftParenthesis = 63,
         RightParenthesis = 64,
@@ -163,8 +163,8 @@ namespace IronPython.Compiler {
         private static readonly Token symGreaterThanToken = new OperatorToken(TokenKind.GreaterThan, ">", -1);
         private static readonly Token symLessThanOrEqualToken = new OperatorToken(TokenKind.LessThanOrEqual, "<=", -1);
         private static readonly Token symGreaterThanOrEqualToken = new OperatorToken(TokenKind.GreaterThanOrEqual, ">=", -1);
-        private static readonly Token symEqualToken = new OperatorToken(TokenKind.Equal, "==", -1);
-        private static readonly Token symNotEqualToken = new OperatorToken(TokenKind.NotEqual, "!=", -1);
+        private static readonly Token symEqualsToken = new OperatorToken(TokenKind.Equals, "==", -1);
+        private static readonly Token symNotEqualsToken = new OperatorToken(TokenKind.NotEquals, "!=", -1);
         private static readonly Token symLessThanGreaterThanToken = new SymbolToken(TokenKind.LessThanGreaterThan, "<>");
         private static readonly Token symLeftParenthesisToken = new SymbolToken(TokenKind.LeftParenthesis, "(");
         private static readonly Token symRightParenthesisToken = new SymbolToken(TokenKind.RightParenthesis, ")");
@@ -292,12 +292,12 @@ namespace IronPython.Compiler {
             get { return symGreaterThanOrEqualToken; }
         }
 
-        public static Token EqualToken {
-            get { return symEqualToken; }
+        public static Token EqualsToken {
+            get { return symEqualsToken; }
         }
 
-        public static Token NotEqualToken {
-            get { return symNotEqualToken; }
+        public static Token NotEqualsToken {
+            get { return symNotEqualsToken; }
         }
 
         public static Token LessThanGreaterThanToken {

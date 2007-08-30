@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -21,6 +21,7 @@ using System.Reflection;
 using System.IO;
 using System.Diagnostics;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -44,7 +45,7 @@ namespace Microsoft.Scripting.Hosting {
         /// to the provided setup information or <c>true</c> and the existing one ignoring the specified setup information.
         /// </summary>
         internal static bool TryCreate(AppDomain domain, ScriptEnvironmentSetup setup, out RemoteScriptEnvironment environment) {
-            if (domain == null) throw new ArgumentNullException("domain");
+            Contract.RequiresNotNull(domain, "domain");
 
             // TODO: should be retrieved later in local.trycreate
             if (setup == null) setup = new ScriptEnvironmentSetup(true);
@@ -125,10 +126,6 @@ namespace Microsoft.Scripting.Hosting {
             return new RemoteLanguageProvider(_manager.GetLanguageProviderByFileExtension(extension));
         }
         
-        public SourceFileUnit CreateSourceFileUnit(string path) {
-            return _manager.Environment.CreateSourceFileUnit(path);
-        }
-
         public void RedirectIO(TextReader input, TextWriter output, TextWriter errorOutput) {
             _manager.Environment.RedirectIO(input, output, errorOutput);
         }
@@ -147,10 +144,6 @@ namespace Microsoft.Scripting.Hosting {
 
         public IScriptModule CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, params SourceUnit[] sourceUnits) {
             return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CompileModule(name, kind, options, errorSink, dictionary, sourceUnits));
-        }
-
-        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
-            return RemoteWrapper.WrapRemotable<ICompiledCode>(_manager.Environment.CompileSourceUnit(sourceUnit, options, errorSink));
         }
 
         public void PublishModule(IScriptModule module) {

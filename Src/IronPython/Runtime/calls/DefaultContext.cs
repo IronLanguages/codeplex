@@ -63,7 +63,7 @@ namespace IronPython.Runtime.Calls {
 
         private static CodeContext CreateDefaultContext(PythonEngine engine) {
             ScriptModule globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
-            return new CodeContext(globalMod.Scope, new PythonContext(engine), new PythonModuleContext(globalMod));
+            return new CodeContext(globalMod.Scope, new PythonContext(engine, false), new PythonModuleContext(globalMod));
         }
 
         private static CodeContext CreateTrueDivisionContext(PythonEngine engine) {
@@ -77,7 +77,7 @@ namespace IronPython.Runtime.Calls {
             PythonModuleContext moduleContext = new PythonModuleContext(globalMod);
             moduleContext.ShowCls = true;
 
-            return new CodeContext(globalMod.Scope, new PythonContext(engine), moduleContext);
+            return new CodeContext(globalMod.Scope, new PythonContext(engine, false), moduleContext);
         }
     }
 }

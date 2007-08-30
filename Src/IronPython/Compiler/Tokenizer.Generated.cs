@@ -105,12 +105,12 @@ namespace IronPython.Compiler {
                     return Tokens.XorToken;
                 case '=':
                     if (NextChar('=')) {
-                        return Tokens.EqualToken;
+                        return Tokens.EqualsToken;
                     }
                     return Tokens.AssignToken;
                 case '!':
                     if (NextChar('=')) {
-                        return Tokens.NotEqualToken;
+                        return Tokens.NotEqualsToken;
                     }
                     return BadChar(ch);
                 case '(':

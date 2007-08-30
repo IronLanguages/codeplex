@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -18,11 +18,14 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public enum UnaryOperators {
         Cast,
-        Not
+        Not,
+        Negate,
+        OnesComplement
     }
 
     public class UnaryExpression : Expression {
@@ -61,7 +64,14 @@ namespace Microsoft.Scripting.Ast {
                     cg.Emit(OpCodes.Ldc_I4_0);
                     cg.Emit(OpCodes.Ceq);
                     break;
-
+                case UnaryOperators.Negate:
+                    _operand.Emit(cg);
+                    cg.Emit(OpCodes.Neg);
+                    break;
+                case UnaryOperators.OnesComplement:
+                    _operand.Emit(cg);
+                    cg.Emit(OpCodes.Not);
+                    break;
                 default:
                     throw new NotImplementedException();
             }
@@ -77,6 +87,13 @@ namespace Microsoft.Scripting.Ast {
                 case UnaryOperators.Not:
                     return ((bool)context.LanguageContext.Binder.Convert(x, typeof(bool))) ? RuntimeHelpers.False : RuntimeHelpers.True;
 
+                case UnaryOperators.Negate:
+                    if (x is int) return (int)(-(int)x);
+                    if (x is long) return (long)(-(long)x);
+                    if (x is short) return (short)(-(short)x);
+                    if (x is float) return -(float)x;
+                    if (x is double) return -(double)x;
+                    throw new InvalidOperationException("can't negate type " + CompilerHelpers.GetType(x).Name);
                 default:
                     throw new NotImplementedException();
             }
@@ -99,11 +116,21 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static UnaryExpression Cast(SourceSpan span, Expression expression, Type type) {
-            if (expression == null) throw new ArgumentNullException("expression");
-            if (type == null) throw new ArgumentNullException("type");
-            if (!type.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
+            Contract.RequiresNotNull(expression, "expression");
+            Contract.RequiresNotNull(type, "type");
+            if (!type.IsVisible) throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
 
             return new UnaryExpression(span, expression, UnaryOperators.Cast, type);
+        }
+
+        public static UnaryExpression Negate(Expression expression) {
+            return Negate(SourceSpan.None, expression);
+        }
+
+        public static UnaryExpression Negate(SourceSpan span, Expression expression) {
+            Contract.RequiresNotNull(expression, "expression");
+
+            return new UnaryExpression(span, expression, UnaryOperators.Negate, expression.ExpressionType);
         }
 
         public static UnaryExpression Not(Expression expression) {
@@ -111,7 +138,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static UnaryExpression Not(SourceSpan span, Expression expression) {
-            if (expression == null) throw new ArgumentNullException("expression");
+            Contract.RequiresNotNull(expression, "expression");
 
             return new UnaryExpression(span, expression, UnaryOperators.Not, typeof(bool));
         }

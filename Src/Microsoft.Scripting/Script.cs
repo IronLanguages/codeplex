@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting.Hosting;
 using System.IO;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     
@@ -32,8 +33,8 @@ namespace Microsoft.Scripting {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public static void Execute(string languageId, string code) {
-            if (languageId == null) throw new ArgumentNullException("languageId");
-            if (code == null) throw new ArgumentNullException("code");
+            Contract.RequiresNotNull(languageId, "languageId");
+            Contract.RequiresNotNull(code, "code");
 
             ScriptDomainManager.CurrentManager.GetLanguageProvider(languageId).GetEngine().Execute(code);
         }
@@ -43,8 +44,8 @@ namespace Microsoft.Scripting {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public static object Evaluate(string languageId, string expression) {
-            if (languageId == null) throw new ArgumentNullException("languageId");
-            if (expression == null) throw new ArgumentNullException("expression");
+            Contract.RequiresNotNull(languageId, "languageId");
+            Contract.RequiresNotNull(expression, "expression");
 
             return ScriptDomainManager.CurrentManager.GetLanguageProvider(languageId).GetEngine().Evaluate(expression);
         }
@@ -56,7 +57,7 @@ namespace Microsoft.Scripting {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public static void ExecuteFile(string path) {
-            if (path == null) throw new ArgumentNullException("path");
+            Contract.RequiresNotNull(path, "path");
             ScriptDomainManager.CurrentManager.GetLanguageProviderByFileExtension(Path.GetExtension(path)).GetEngine().ExecuteFile(path);
         }
 
@@ -66,7 +67,7 @@ namespace Microsoft.Scripting {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public static void ExecuteFileContent(string path) {
-            if (path == null) throw new ArgumentNullException("path");
+            Contract.RequiresNotNull(path, "path");
             ScriptDomainManager.CurrentManager.GetLanguageProviderByFileExtension(Path.GetExtension(path)).GetEngine().ExecuteFileContent(path);
         }
 
@@ -95,7 +96,7 @@ namespace Microsoft.Scripting {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public static IScriptEngine GetEngine(string languageId) {
-            if (languageId == null) throw new ArgumentNullException("languageId");
+            Contract.RequiresNotNull(languageId, "languageId");
             
             return ScriptDomainManager.CurrentManager.GetLanguageProvider(languageId).GetEngine();
         }

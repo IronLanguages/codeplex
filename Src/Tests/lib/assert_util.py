@@ -97,12 +97,6 @@ else:
         basePyDir = 'Languages\\IronPython'
         if not rowan_root:
             rowan_root = sys.prefix
-            if rowan_root.endswith("\\Bin\\Debug"):
-                rowan_root = rowan_root[:-10]
-            elif rowan_root.endswith("\\Bin\\Release"):
-                rowan_root = rowan_root[:-12]
-            else:
-                raise AssertionError("Cannot find merlin_root environment variable")
             if is_cli:
                 if System.IO.Directory.Exists(path_combine(rowan_root, 'Src')):
                     basePyDir = 'Src'

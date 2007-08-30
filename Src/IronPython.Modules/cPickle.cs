@@ -263,6 +263,7 @@ namespace IronPython.Modules {
             + "    If protocol is not specified, then protocol 0 is used if bin is false, and\n"
             + "    protocol 1 is used if bin is true."
             )]
+        [PythonSystemType]
         public class Pickler {
 
             private const char LowestPrintableChar = (char)32;
@@ -1209,6 +1210,7 @@ namespace IronPython.Modules {
             + "file: an object (such as an open file or a StringIO) with read(num_chars) and\n"
             + "    readline() methods that return strings"
             )]
+        [PythonSystemType]
         public class Unpickler {
 
             private readonly object _mark = new object();

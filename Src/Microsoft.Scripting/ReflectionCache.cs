@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -40,8 +40,8 @@ namespace Microsoft.Scripting {
         /// no new methods under a given name will result in the same method group for both types.
         /// </summary>
         public static BuiltinFunction GetMethodGroup(Type type, string name) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (name == null) throw new ArgumentNullException("name");
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(name, "name");
 
             MemberInfo[] mems = type.FindMembers(MemberTypes.Method,
                 BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.InvokeMethod,

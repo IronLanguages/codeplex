@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -175,8 +175,8 @@ namespace Microsoft.Scripting.Utils {
         /// Creates an open delegate for the given (dynamic)method.
         /// </summary>
         public static Delegate CreateDelegate(MethodInfo methodInfo, Type delegateType) {
-            if (delegateType == null) throw new ArgumentNullException("delegateType");
-            if (methodInfo == null) throw new ArgumentNullException("methodInfo");
+            Contract.RequiresNotNull(delegateType, "delegateType");
+            Contract.RequiresNotNull(methodInfo, "methodInfo");
 
             DynamicMethod dm = methodInfo as DynamicMethod;
             if (dm != null) {
@@ -190,8 +190,8 @@ namespace Microsoft.Scripting.Utils {
         /// Creates a closed delegate for the given (dynamic)method.
         /// </summary>
         public static Delegate CreateDelegate(MethodInfo methodInfo, Type delegateType, object target) {
-            if (methodInfo == null) throw new ArgumentNullException("methodInfo");
-            if (delegateType == null) throw new ArgumentNullException("delegateType");
+            Contract.RequiresNotNull(methodInfo, "methodInfo");
+            Contract.RequiresNotNull(delegateType, "delegateType");
 
             DynamicMethod dm = methodInfo as DynamicMethod;
             if (dm != null) {
@@ -202,7 +202,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static void GetDelegateSignature(Type delegateType, out ParameterInfo[] parameterInfos, out ParameterInfo returnInfo) {
-            if (delegateType == null) throw new ArgumentNullException("delegateType");
+            Contract.RequiresNotNull(delegateType, "delegateType");
 
             MethodInfo invokeMethod = delegateType.GetMethod("Invoke");
             if (invokeMethod == null) {
@@ -282,6 +282,20 @@ namespace Microsoft.Scripting.Utils {
             }
 
             return method.ReturnType == requiredSignature[i];
+        }
+
+        internal static string ToValidTypeName(string str) {
+            if (String.IsNullOrEmpty(str)) {
+                return "_";
+            }
+
+            StringBuilder sb = new StringBuilder(str);
+            for (int i = 0; i < str.Length; i++) {
+                if (str[i] == '\0' || str[i] == '.' || str[i] == '*' || str[i] == '+' || str[i] == '[' || str[i] == ']' || str[i] == '\\') {
+                    sb[i] = '_';
+                }
+            }
+            return sb.ToString();
         }
     }
 }

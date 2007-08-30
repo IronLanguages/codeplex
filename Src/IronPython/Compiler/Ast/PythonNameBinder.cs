@@ -23,6 +23,8 @@ using MSAst = Microsoft.Scripting.Ast;
 using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Utils;
 
 /*
  * The name binding:
@@ -129,27 +131,30 @@ namespace IronPython.Compiler.Ast {
 
         #region Public surface
 
-        internal static PythonAst Bind(Statement root, CompilerContext context, bool module) {
+        internal static void BindAst(PythonAst ast, CompilerContext context) {
+            Assert.NotNull(ast, context);
+
             PythonNameBinder binder = new PythonNameBinder(context);
-            return binder.DoBind(root, module);
+            binder.Bind(ast);
         }
 
         #endregion
 
-        private PythonAst DoBind(Statement root, bool module) {
-            PythonAst gs = new PythonAst(root, module);
-            _currentScope = _globalScope = gs;
+        private void Bind(PythonAst unboundAst) {
+            Assert.NotNull(unboundAst);
+
+            _currentScope = _globalScope = unboundAst;
 
             // Find all scopes and variables
-            gs.Walk(this);
+            unboundAst.Walk(this);
 
             // Bind
             foreach (ScopeStatement scope in _scopes) {
                 scope.Bind(this);
             }
+
             // Finish the globals
-            gs.Bind(this);
-            return gs;
+            unboundAst.Bind(this);
         }
 
         private void PushScope(ScopeStatement node) {
@@ -181,17 +186,14 @@ namespace IronPython.Compiler.Ast {
             return variable;
         }
 
-        private void ReportSyntaxWarning(string message, Node node) {
-            ReportSyntaxError(message, node, Microsoft.Scripting.Hosting.Severity.Warning);
+        internal void ReportSyntaxWarning(string message, Node node) {
+            _context.Errors.Add(_context.SourceUnit, message, node.Span, -1, Microsoft.Scripting.Hosting.Severity.Warning);
+            throw PythonOps.SyntaxWarning(message, _context.SourceUnit, node.Span, -1);
         }
 
-        public void ReportSyntaxError(string message, Node node) {
-            ReportSyntaxError(message, node, Microsoft.Scripting.Hosting.Severity.Error);
-        }
-
-        private void ReportSyntaxError(string message, Node node, Microsoft.Scripting.Hosting.Severity serverity) {
+        internal void ReportSyntaxError(string message, Node node) {
             // TODO: Change the error code (-1)
-            _context.AddError(message, node.Start, node.End, serverity, -1);
+            throw _context.Errors.Add(PythonOps.SyntaxError(message, _context.SourceUnit, node.Span, -1));
         }
 
         #region AstBinder Overrides

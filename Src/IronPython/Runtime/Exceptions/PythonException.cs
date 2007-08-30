@@ -90,16 +90,18 @@ namespace IronPython.Runtime.Exceptions {
     }
 
     class PythonIndentationError : SyntaxErrorException {
-        public PythonIndentationError(string msg) : base(msg) { }
-        public PythonIndentationError(string msg, string filename, int lineNumber, int columnNumber, string badLineText, int errorCode, Severity severity)
-            : base(msg, filename, lineNumber, columnNumber, badLineText, errorCode, severity) { }
+        public PythonIndentationError(string message) : base(message) { }
+
+        public PythonIndentationError(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode, Severity severity)
+            : base(message, sourceUnit, span, errorCode, severity) { }
 
     }
 
     class PythonTabError : PythonIndentationError {
-        public PythonTabError(string msg) : base(msg) { }
-        public PythonTabError(string msg, string filename, int lineNumber, int columnNumber, string badLineText, int errorCode, Severity severity)
-            : base(msg, filename, lineNumber, columnNumber, badLineText, errorCode, severity) { }
+        public PythonTabError(string message) : base(message) { }
+
+        public PythonTabError(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode, Severity severity)
+            : base(message, sourceUnit, span, errorCode, severity) { }
     }
 
     //  Wrapper to allow throwing strings

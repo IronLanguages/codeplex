@@ -45,8 +45,7 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Statement Transform(AstGenerator ag) {
             MSAst.ThrowExpression expr;
             expr = Ast.Throw(
-                Ast.Call(null, typeof(PythonOps).GetMethod("MakeException"),
-                    Ast.CodeContext(),
+                Ast.Call(null, AstGenerator.GetHelperMethod("MakeException"),
                     ag.Transform(_type ?? new ConstantExpression(null)),
                     ag.Transform(_value ?? new ConstantExpression(null)),
                     ag.Transform(_traceback ?? new ConstantExpression(null))));

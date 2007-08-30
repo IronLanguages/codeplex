@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -28,6 +28,7 @@ using System.Globalization;
 using System.Collections.Generic;
 
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     public class AssemblyGen {
@@ -51,9 +52,8 @@ namespace Microsoft.Scripting.Generation {
             string outFile,
             AssemblyGenAttributes generationAttributes)
             :
-            this(moduleName, outDir, outFile, generationAttributes,
-            PortableExecutableKinds.ILOnly, ImageFileMachine.I386) 
-        { 
+            this(moduleName, outDir, outFile, generationAttributes, 
+            PortableExecutableKinds.ILOnly, ImageFileMachine.I386) { 
         }
 
         public AssemblyGen(string moduleName, 
@@ -63,10 +63,10 @@ namespace Microsoft.Scripting.Generation {
             PortableExecutableKinds peKind, 
             ImageFileMachine machine) {
 
-            Debug.Assert(moduleName != null);
-            Debug.Assert(outFile != null || !SaveAndReloadAssemblies);
+            Contract.Requires(!String.IsNullOrEmpty(moduleName), "moduleName", "Module name cannot be a null reference or an empty string.");
+            Contract.Requires(outFile != null || !SaveAndReloadAssemblies, "outFile", "SaveAssemblies mode requires non-null output file name.");
 
-            this._genAttrs = generationAttributes;
+            _genAttrs = generationAttributes;
 
             AssemblyName asmname = new AssemblyName();
 
@@ -83,8 +83,15 @@ namespace Microsoft.Scripting.Generation {
             // there is a single predefined module in Silverlight assembly (debug info ignored):
             _myModule = (ModuleBuilder)_myAssembly.ManifestModule;
 #else
-            if (SaveAndReloadAssemblies || VerifyAssemblies)
-                _outDir = outDir ?? Environment.CurrentDirectory;
+            try {
+                outDir = Path.GetFullPath(String.IsNullOrEmpty(outDir) ? Environment.CurrentDirectory : outDir);
+            } catch (Exception e) {
+                throw new ArgumentException("Invalid output directory", e);
+            }
+
+            if (SaveAndReloadAssemblies || VerifyAssemblies) {
+                _outDir = outDir;
+            }
 
             if (SaveAndReloadAssemblies) {
                 asmname.Name = Path.GetFileNameWithoutExtension(_outFileName);
@@ -129,7 +136,7 @@ namespace Microsoft.Scripting.Generation {
             if (EmitDebugInfo) {
                 Debug.Assert(sourceUnit.IsVisibleToDebugger);
                 _symbolWriter = _myModule.DefineDocument(
-                    sourceUnit.SymbolDocumentName,
+                    sourceUnit.Id,
                     sourceUnit.Engine.LanguageGuid,
                     sourceUnit.Engine.VendorGuid,
                     SymbolGuids.DocumentType_Text);
@@ -381,6 +388,7 @@ namespace Microsoft.Scripting.Generation {
         }
 #endif
         
+        // TODO: SourceUnit should provide writers for each symbol document file used in the unit
         public ISymbolDocumentWriter SymbolWriter {
             get { return _symbolWriter; }
             set { _symbolWriter = value; }

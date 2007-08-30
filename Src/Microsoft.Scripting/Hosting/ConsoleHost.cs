@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -100,7 +100,7 @@ namespace Microsoft.Scripting.Hosting {
 
             string[,] options_help = _options.GetHelp();
 
-            Console.WriteLine("{0}: {1} [<host-options>] [--] [<language-specific-command-line>]", Resources.Usage, ExeName);
+            Console.WriteLine("{0}: {1}.exe [<host-options>] [--] [<language-specific-command-line>]", Resources.Usage, ExeName);
             Console.WriteLine();
 
             if (options_help != null) {
@@ -111,17 +111,43 @@ namespace Microsoft.Scripting.Hosting {
             }
 
             if (_options.LanguageProvider != null) {
-                PrintLanguageSpecificOptions(_options.LanguageProvider);
+                Console.WriteLine("{0} command line:", _options.LanguageProvider.LanguageDisplayName);
+                Console.WriteLine();
+                PrintLanguageHelp(_options.LanguageProvider, Console.Out);
+                Console.WriteLine();
             }
         }
 
-        private void PrintLanguageSpecificOptions(ILanguageProvider provider) {
-            Debug.Assert(provider != null);
+        public void PrintLanguageHelp(ILanguageProvider provider, TextWriter output) {
+            Contract.RequiresNotNull(provider, "provider");
+            Contract.RequiresNotNull(output, "output");
 
-            Console.WriteLine("{0} command line:", provider.LanguageDisplayName);
-            Console.WriteLine();
-            provider.GetOptionsParser().PrintHelp(Console.Out);
-            Console.WriteLine();
+            string command_line, comments;
+            string[,] options, environment_variables;
+
+            provider.GetOptionsParser().GetHelp(out command_line, out options, out environment_variables, out comments);
+
+            if (command_line != null) {
+                output.WriteLine("{0}: {1}", Resources.Usage, command_line);
+                output.WriteLine();
+            }
+
+            if (options != null) {
+                output.WriteLine("{0}:", Resources.Options);
+                ArrayUtils.PrintTable(output, options);
+                output.WriteLine();
+            }
+
+            if (environment_variables != null) {
+                output.WriteLine("{0}:", Resources.EnvironmentVariables);
+                ArrayUtils.PrintTable(output, environment_variables);
+                output.WriteLine();
+            }
+
+            if (comments != null) {
+                output.Write(comments);
+                output.WriteLine();
+            }
         }
 
         #endregion
@@ -199,15 +225,19 @@ namespace Microsoft.Scripting.Hosting {
 
         private int RunFiles(OptionsParser optionsParser) {
 
-            EngineOptions engine_options = (optionsParser != null) ? optionsParser.EngineOptions : new EngineOptions();
+            EngineOptions engine_options = (optionsParser != null) ? optionsParser.EngineOptions : null;
 
             IScriptEngine engine = _options.LanguageProvider.GetEngine(engine_options);
 
             engine.SetSourceUnitSearchPaths(_options.SourceUnitSearchPaths);
 
             int result = 0;
-            foreach (string file_path in _options.Files) {
-                result = RunFile(engine, new SourceFileUnit(engine, file_path, Encoding.Default));
+            foreach (string filePath in _options.Files) {
+                SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, filePath, Encoding.Default);
+                if (sourceUnit == null) {
+                    throw new FileNotFoundException("Source file not found.");
+                }
+                result = RunFile(engine, sourceUnit);
             }
 
             return result;
@@ -247,7 +277,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         protected virtual int RunCommandLine(OptionsParser optionsParser) {
-            if (optionsParser == null) throw new ArgumentNullException("optionsParser");
+            Contract.RequiresNotNull(optionsParser, "optionsParser");
             
             CommandLine command_line;
             ConsoleOptions console_options;
@@ -267,7 +297,7 @@ namespace Microsoft.Scripting.Hosting {
 
             if (console_options.PrintUsageAndExit) {
                 if (optionsParser != null) {
-                    optionsParser.PrintHelp(Console.Out);
+                    PrintLanguageHelp(_options.LanguageProvider, Console.Out);
                 }
                 return 0;
             }

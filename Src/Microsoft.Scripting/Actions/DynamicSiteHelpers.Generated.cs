@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -65,58 +65,142 @@ namespace Microsoft.Scripting.Actions {
             bool result;
             switch (args.Length) {
                 case 1:
-                    StandardRule<DynamicSiteTarget<object, object>> rule1 = 
-                        binder.GetRule<DynamicSiteTarget<object, object>>(context, action, args);
+                    while(true) {
+                        StandardRule<DynamicSiteTarget<object, object>> rule1 = 
+                            binder.GetRule<DynamicSiteTarget<object, object>>(context, action, args);
 
-                    using (context.Scope.TemporaryVariableContext(rule1.TemporaryVariables, rule1.ParamVariables, args)) {
-                        result = (bool)rule1.Test.Evaluate(context);
-                        Debug.Assert(result);
-                        return rule1.Target.Execute(context);
+                        using (context.Scope.TemporaryVariableContext(rule1.TemporaryVariables, rule1.ParamVariables, args)) {
+                            result = (bool)rule1.Test.Evaluate(context);
+                            if (!result) {
+                                // The test may evaluate as false if:
+                                // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
+                                //    generating invalid rules.
+                                // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
+                                //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
+                                //    side-effects are visible to Execute below.
+                                // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
+                                // the interpreter and the language binders are flushed out
+                                Debug.Assert(result);
+                                continue;
+                            }
+
+                            return rule1.Target.Execute(context);
+                        }
                     }
                 case 2:
-                    StandardRule<DynamicSiteTarget<object, object, object>> rule2 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object>>(context, action, args);
+                    while(true) {
+                        StandardRule<DynamicSiteTarget<object, object, object>> rule2 = 
+                            binder.GetRule<DynamicSiteTarget<object, object, object>>(context, action, args);
 
-                    using (context.Scope.TemporaryVariableContext(rule2.TemporaryVariables, rule2.ParamVariables, args)) {
-                        result = (bool)rule2.Test.Evaluate(context);
-                        Debug.Assert(result);
-                        return rule2.Target.Execute(context);
+                        using (context.Scope.TemporaryVariableContext(rule2.TemporaryVariables, rule2.ParamVariables, args)) {
+                            result = (bool)rule2.Test.Evaluate(context);
+                            if (!result) {
+                                // The test may evaluate as false if:
+                                // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
+                                //    generating invalid rules.
+                                // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
+                                //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
+                                //    side-effects are visible to Execute below.
+                                // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
+                                // the interpreter and the language binders are flushed out
+                                Debug.Assert(result);
+                                continue;
+                            }
+
+                            return rule2.Target.Execute(context);
+                        }
                     }
                 case 3:
-                    StandardRule<DynamicSiteTarget<object, object, object, object>> rule3 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object, object>>(context, action, args);
+                    while(true) {
+                        StandardRule<DynamicSiteTarget<object, object, object, object>> rule3 = 
+                            binder.GetRule<DynamicSiteTarget<object, object, object, object>>(context, action, args);
 
-                    using (context.Scope.TemporaryVariableContext(rule3.TemporaryVariables, rule3.ParamVariables, args)) {
-                        result = (bool)rule3.Test.Evaluate(context);
-                        Debug.Assert(result);
-                        return rule3.Target.Execute(context);
+                        using (context.Scope.TemporaryVariableContext(rule3.TemporaryVariables, rule3.ParamVariables, args)) {
+                            result = (bool)rule3.Test.Evaluate(context);
+                            if (!result) {
+                                // The test may evaluate as false if:
+                                // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
+                                //    generating invalid rules.
+                                // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
+                                //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
+                                //    side-effects are visible to Execute below.
+                                // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
+                                // the interpreter and the language binders are flushed out
+                                Debug.Assert(result);
+                                continue;
+                            }
+
+                            return rule3.Target.Execute(context);
+                        }
                     }
                 case 4:
-                    StandardRule<DynamicSiteTarget<object, object, object, object, object>> rule4 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object>>(context, action, args);
+                    while(true) {
+                        StandardRule<DynamicSiteTarget<object, object, object, object, object>> rule4 = 
+                            binder.GetRule<DynamicSiteTarget<object, object, object, object, object>>(context, action, args);
 
-                    using (context.Scope.TemporaryVariableContext(rule4.TemporaryVariables, rule4.ParamVariables, args)) {
-                        result = (bool)rule4.Test.Evaluate(context);
-                        Debug.Assert(result);
-                        return rule4.Target.Execute(context);
+                        using (context.Scope.TemporaryVariableContext(rule4.TemporaryVariables, rule4.ParamVariables, args)) {
+                            result = (bool)rule4.Test.Evaluate(context);
+                            if (!result) {
+                                // The test may evaluate as false if:
+                                // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
+                                //    generating invalid rules.
+                                // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
+                                //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
+                                //    side-effects are visible to Execute below.
+                                // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
+                                // the interpreter and the language binders are flushed out
+                                Debug.Assert(result);
+                                continue;
+                            }
+
+                            return rule4.Target.Execute(context);
+                        }
                     }
                 case 5:
-                    StandardRule<DynamicSiteTarget<object, object, object, object, object, object>> rule5 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object>>(context, action, args);
+                    while(true) {
+                        StandardRule<DynamicSiteTarget<object, object, object, object, object, object>> rule5 = 
+                            binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object>>(context, action, args);
 
-                    using (context.Scope.TemporaryVariableContext(rule5.TemporaryVariables, rule5.ParamVariables, args)) {
-                        result = (bool)rule5.Test.Evaluate(context);
-                        Debug.Assert(result);
-                        return rule5.Target.Execute(context);
+                        using (context.Scope.TemporaryVariableContext(rule5.TemporaryVariables, rule5.ParamVariables, args)) {
+                            result = (bool)rule5.Test.Evaluate(context);
+                            if (!result) {
+                                // The test may evaluate as false if:
+                                // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
+                                //    generating invalid rules.
+                                // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
+                                //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
+                                //    side-effects are visible to Execute below.
+                                // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
+                                // the interpreter and the language binders are flushed out
+                                Debug.Assert(result);
+                                continue;
+                            }
+
+                            return rule5.Target.Execute(context);
+                        }
                     }
                 case 6:
-                    StandardRule<DynamicSiteTarget<object, object, object, object, object, object, object>> rule6 = 
-                        binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object, object>>(context, action, args);
+                    while(true) {
+                        StandardRule<DynamicSiteTarget<object, object, object, object, object, object, object>> rule6 = 
+                            binder.GetRule<DynamicSiteTarget<object, object, object, object, object, object, object>>(context, action, args);
 
-                    using (context.Scope.TemporaryVariableContext(rule6.TemporaryVariables, rule6.ParamVariables, args)) {
-                        result = (bool)rule6.Test.Evaluate(context);
-                        Debug.Assert(result);
-                        return rule6.Target.Execute(context);
+                        using (context.Scope.TemporaryVariableContext(rule6.TemporaryVariables, rule6.ParamVariables, args)) {
+                            result = (bool)rule6.Test.Evaluate(context);
+                            if (!result) {
+                                // The test may evaluate as false if:
+                                // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
+                                //    generating invalid rules.
+                                // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
+                                //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
+                                //    side-effects are visible to Execute below.
+                                // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
+                                // the interpreter and the language binders are flushed out
+                                Debug.Assert(result);
+                                continue;
+                            }
+
+                            return rule6.Target.Execute(context);
+                        }
                     }
                 default:
                     //TODO: use CompilerHelpers.GetTypes(args) instead?
@@ -124,21 +208,35 @@ namespace Microsoft.Scripting.Actions {
                     Type targetType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, typeof(object));
                     Type ruleType = typeof(StandardRule<>).MakeGenericType(targetType);
                     MethodInfo getRule = typeof(ActionBinder).GetMethod("GetRule").MakeGenericMethod(targetType);
-                    object ruleN = getRule.Invoke(binder, new object[] { context, action, args });
-                    Ast.Expression test = (Ast.Expression)ruleType.GetProperty("Test").GetValue(ruleN, null);
-                    Ast.Statement target = (Ast.Statement)ruleType.GetProperty("Target").GetValue(ruleN, null);
-                    Ast.Variable[] paramVars = (Ast.Variable[]) ruleType.GetProperty("ParamVariables",
-                        BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
-                    Ast.Variable[] tempVars = (Ast.Variable[])ruleType.GetProperty("TemporaryVariables",
-                        BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
+                    while(true) {
+                        object ruleN = getRule.Invoke(binder, new object[] { context, action, args });
+                        Ast.Expression test = (Ast.Expression)ruleType.GetProperty("Test").GetValue(ruleN, null);
+                        Ast.Statement target = (Ast.Statement)ruleType.GetProperty("Target").GetValue(ruleN, null);
+                        Ast.Variable[] paramVars = (Ast.Variable[]) ruleType.GetProperty("ParamVariables",
+                            BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
+                        Ast.Variable[] tempVars = (Ast.Variable[])ruleType.GetProperty("TemporaryVariables",
+                            BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
 
 
-                    NewTuple t = NewTuple.MakeTuple(tupleType, args);
-                    object[] tupArg = new object[] {t};
-                    using (context.Scope.TemporaryVariableContext(tempVars, paramVars, tupArg)) {
-                        result = (bool)test.Evaluate(context);
-                        Debug.Assert(result);
-                        return target.Execute(context);
+                        NewTuple t = NewTuple.MakeTuple(tupleType, args);
+                        object[] tupArg = new object[] {t};
+                        using (context.Scope.TemporaryVariableContext(tempVars, paramVars, tupArg)) {
+                            result = (bool)test.Evaluate(context);
+                            if (!result) {
+                                // The test may evaluate as false if:
+                                // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
+                                //    generating invalid rules.
+                                // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
+                                //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
+                                //    side-effects are visible to Execute below.
+                                // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
+                                // the interpreter and the language binders are flushed out
+                                Debug.Assert(result);
+                                continue;
+                            }
+
+                            return target.Execute(context);
+                        }
                     }
             }
         }

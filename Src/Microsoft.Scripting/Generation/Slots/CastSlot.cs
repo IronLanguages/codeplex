@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -16,6 +16,7 @@
 using System;
 using System.Reflection.Emit;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -27,16 +28,16 @@ namespace Microsoft.Scripting.Generation {
         private Type _type;
 
         public CastSlot(Slot instance, Type type) {
-            if (instance == null) throw new ArgumentNullException("instance");
-            if (type == null) throw new ArgumentNullException("type");
-            if (!type.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
+            Contract.RequiresNotNull(instance, "instance");
+            Contract.RequiresNotNull(type, "type");
+            if (!type.IsVisible) throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
 
             this._instance = instance;
             this._type = type;
         }
 
         public override void EmitGet(CodeGen cg) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             _instance.EmitGet(cg);
             if (!_type.IsAssignableFrom(_instance.Type)) {
@@ -54,7 +55,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override void EmitSet(CodeGen cg) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             if (_instance.Type.IsAssignableFrom(_type)) {
                 if (_type.IsValueType) {

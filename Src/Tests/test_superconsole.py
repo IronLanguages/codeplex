@@ -15,104 +15,243 @@
 
 from lib.assert_util import *
 skiptest("silverlight")
-import clr
+
+from   time import sleep
 import sys
 import re
-from System.Diagnostics import Process, ProcessWindowStyle
-from time import sleep
 
-doRun = True
+from   System.Diagnostics import Process, ProcessWindowStyle
+from   System.IO import File
+import clr
+
+#------------------------------------------------------------------------------
+#--Globals
+
+SNAP = 0
+if get_environ_variable("THISISSNAP")!=None: 
+    SNAP = 1
+
+#------------------------------------------------------------------------------
+#--Helper functions
+def getTestOutput():
+    '''
+    Returns stdout and stderr output for a console test.
+    '''
+    tfile = open('ip_session.log', 'r')
+    outlines = tfile.readlines()
+    tfile.close()
+    
+    errlines = []
+    if File.Exists('ip_session_stderr.log'):
+        tfile = open('ip_session_stderr.log', 'r')
+        errlines = tfile.readlines()
+        tfile.close()
+        
+    return (outlines, errlines)
+
+def removePrompts(lines):
+    return [line for line in lines if not line.startswith(">>>") and not line.startswith("...")]
+
+def verifyResults(lines, testRegex):
+    '''
+    Verifies that a set of lines match a regular expression.
+    '''
+    lines = removePrompts(lines)
+    chopped = ''.join([line[:-1] for line in lines])
+    Assert(re.match(testRegex, chopped))
+
+
+#------------------------------------------------------------------------------
+#--Preliminary setup
 
 sys.path.append(testpath.rowan_root + '\\Languages\\IronPython\\External\\Maui')
-
 try:
     clr.AddReference('Maui.Core.dll')
 except:
     print "test_superconsole.py failed: cannot load Maui.Core assembly"
-    doRun = False
+    sys.exit(SNAP)
 
-if doRun:
-    from Maui.Core import App
-    proc = Process()
-    proc.StartInfo.FileName = sys.executable
-    proc.StartInfo.WorkingDirectory = testpath.rowan_root + '\\Languages\\IronPython\\Tests'
-    proc.StartInfo.Arguments = '-X:TabCompletion -X:AutoIndent -X:ColorfulConsole'
-    proc.StartInfo.UseShellExecute = True	
-    proc.StartInfo.WindowStyle = ProcessWindowStyle.Normal
-    proc.StartInfo.CreateNoWindow = False
-    started = proc.Start()
+from Maui.Core import App
+proc = Process()
+proc.StartInfo.FileName = sys.executable
+proc.StartInfo.WorkingDirectory = testpath.rowan_root + '\\Languages\\IronPython\\Tests'
+proc.StartInfo.Arguments = '-X:TabCompletion -X:AutoIndent -X:ColorfulConsole'
+proc.StartInfo.UseShellExecute = True	
+proc.StartInfo.WindowStyle = ProcessWindowStyle.Normal
+proc.StartInfo.CreateNoWindow = False
+started = proc.Start()
 
-    try:
-        superConsole = App(proc.Id)
-    except:
-        print "test_superconsole.py failed: cannot initialize App object (probably running as service, or in minimized remote window"
-        proc.Kill()
-        doRun = False
-        #sys.exit(1)
+try:
+    superConsole = App(proc.Id)
+except:
+    print "test_superconsole.py failed: cannot initialize App object (probably running as service, or in minimized remote window"
+    proc.Kill()
+    #sys.exit(SNAP)
+    sys.exit(0)
+    
+superConsole.SendKeys('from pretest import *{ENTER}')
 
-if doRun:
-# (Test scaffolding is loaded into the SuperConsole by pretest.py)
-    superConsole.SendKeys('from pretest import *{ENTER}')
 
-# Store test regexp for the baseline
+#------------------------------------------------------------------------------
+#--Tests
+def test_newlines():
+    '''
+    Ensure empty lines do not break the console.
+    '''
+    #test
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys('{ENTER}')
+    superConsole.SendKeys('None{ENTER}')
+    superConsole.SendKeys('{ENTER}{ENTER}{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    
+    #verification
+    for lines in getTestOutput():
+        AreEqual(removePrompts(lines), [])
+
+def test_string_exception():
+    '''
+    An exception thrown should appear in stderr.
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    
+
+    superConsole.SendKeys('raise "Some string exception"{ENTER}')
+    print "CodePlex Work Item 12403"
+    expected = ["Traceback (most recent call last):",
+                "  File ", #CodePlex Work Item 12403
+                "Some string exception",
+                "", #CodePlex Work Item 12401
+                ]
+
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    #stdout should be empty
+    AreEqual(removePrompts(getTestOutput()[0]), 
+             [])
+    #stderr should contain the exception             
+    errlines = getTestOutput()[1]       
+    for i in xrange(len(errlines)):
+        Assert(errlines[i].startswith(expected[i]), str(errlines) + " != " + str(expected))         
+    
+
+@disabled("CodePlex Work Item 10928")
+def test_unique_prefix_completion():
+    '''
+    Ensure that an attribute with a prefix unique to the dictionary is 
+    properly completed.
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
     testRegex = ""
 
-# Test Case #1: ensure that an attribute with a prefix unique to the dictionary is properly completed.
-######################################################################################################
-    print "CodePlex Work Item 10928"
-    #superConsole.SendKeys('print z{TAB}{ENTER}')
-    #testRegex += 'zoltar'
-    #superConsole.SendKeys('print yo{TAB}{ENTER}')
-    #testRegex += 'yorick'
+    superConsole.SendKeys('print z{TAB}{ENTER}')
+    testRegex += 'zoltar'
+    superConsole.SendKeys('print yo{TAB}{ENTER}')
+    testRegex += 'yorick'
 
-# Test Case #2: ensure that tabbing on a non-unique prefix cycles through the available options
-######################################################################################################
-    print "CodePlex Work Item 10928"
-    #superConsole.SendKeys('print y{TAB}{ENTER}')
-    #superConsole.SendKeys('print y{TAB}{TAB}{ENTER}')
-    #testRegex += '(yorickyak|yakyorick)'
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
+    AreEqual(removePrompts(getTestOutput()[1]), 
+             [])  
 
+@disabled("CodePlex Work Item 10928")
+def test_nonunique_prefix_completion():
+    '''
+    Ensure that tabbing on a non-unique prefix cycles through the available
+    options.
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    testRegex = ""
+    
+    superConsole.SendKeys('print y{TAB}{ENTER}')
+    superConsole.SendKeys('print y{TAB}{TAB}{ENTER}')
+    testRegex += '(yorickyak|yakyorick)'
 
-# Test Case #3: ensure that tabbing after 'ident.' cycles through the available options
-######################################################################################################
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
+    AreEqual(removePrompts(getTestOutput()[1]), 
+             [])  
 
-# 3.1: identifier is valid, we can get dict
+def test_member_completion():
+    '''
+    Ensure that tabbing after 'ident.' cycles through the available options.
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    testRegex = ""
+
+    # 3.1: identifier is valid, we can get dict
     superConsole.SendKeys('print c.{TAB}{ENTER}')
 
-# it is *either* __doc__ ('Cdoc') or __module__ ('pretest')
+    # it is *either* __doc__ ('Cdoc') or __module__ ('pretest')
     testRegex += '(Cdoc|pretest)'
 
-# 3.2: identifier is not valid
+    # 3.2: identifier is not valid
     superConsole.SendKeys('try:{ENTER}')
 
-# autoindent
+    # autoindent
     superConsole.SendKeys('print f.{TAB}x{ENTER}')
 
-# backup from autoindent
+    # backup from autoindent
     superConsole.SendKeys('{BACKSPACE}except:{ENTER}')
     superConsole.SendKeys('print "EXC"{ENTER}{ENTER}{ENTER}')
     testRegex += 'EXC'
-
-# Test Case #4: auto-indent
-######################################################################################################
+    
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
+    
+def test_autoindent():
+    '''
+    Auto-indent
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    testRegex = ""
+    
     superConsole.SendKeys("def f{(}{)}:{ENTER}print 'f!'{ENTER}{ENTER}")
     superConsole.SendKeys('f{(}{)}{ENTER}')
     testRegex += 'f!'
 
-# Test Case #5: backspace and delete
-######################################################################################################
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
+
+def test_backspace_and_delete():
+    '''
+    Backspace and delete
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    testRegex = ""
+    
     superConsole.SendKeys("print 'IQ{BACKSPACE}P'{ENTER}")
     testRegex += "IP"
 
     superConsole.SendKeys("print 'FW'{LEFT}{LEFT}{DELETE}X{ENTER}")
     testRegex += "FX"
 
-# 5.3: backspace over auto-indentation
-#   a: all white space
-#   b: some non-whitespace characters
+    # 5.3: backspace over auto-indentation
+    #   a: all white space
+    #   b: some non-whitespace characters
 
-# Test Case #6: cursor keys
-######################################################################################################
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
+
+def test_cursor_keys():
+    '''
+    Cursor keys
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    testRegex = ""
+    
     superConsole.SendKeys("print 'up'{ENTER}")
     testRegex += 'up'
     superConsole.SendKeys("print 'down'{ENTER}")
@@ -130,42 +269,107 @@ if doRun:
     testRegex += 'good'
     superConsole.SendKeys("rint 'hom'{HOME}p{END}{LEFT}e{ENTER}")
     testRegex += 'home'
+    
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
 
-# Test Case #7: control-character rendering
-###########################################
+def test_control_character_rendering():
+    '''
+    Control-character rendering
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    testRegex = ""
 
-# Ctrl-D
+    # Ctrl-D
     superConsole.SendKeys('print "^(d)^(d){LEFT}{DELETE}"{ENTER}')
     testRegex += chr(4)
 
-# check that Ctrl-C breaks an infinite loop (the test is that subsequent things actually appear)
+    # check that Ctrl-C breaks an infinite loop (the test is that subsequent things actually appear)
     superConsole.SendKeys('while True: pass{ENTER}{ENTER}')
     superConsole.SendKeys('^(c)')
+    print "CodePlex Work Item 12401"
+    errors = [
+                "Traceback (most recent call last):", #CodePlex Work Item 12401
+                "  File", #CodePlex Work Item 12401
+                "  File", #CodePlex Work Item 12401
+                "KeyboardInterrupt",
+                "", #CodePlex Work Item 12401
+            ]
 
-# check that Ctrl-C breaks an infinite loop (the test is that subsequent things actually appear)
-    superConsole.SendKeys('def foo{(}{)}:{ENTER}try:{ENTER}while True: pass{ENTER}{BACKSPACE}{BACKSPACE}except KeyboardInterrupt:{ENTER}print "caught"{ENTER}{BACKSPACE}{ENTER}print "after"{ENTER}{BACKSPACE}{ENTER}foo{(}{)}{ENTER}')    
+    # check that Ctrl-C breaks an infinite loop (the test is that subsequent things actually appear)
+    superConsole.SendKeys('def foo{(}{)}:{ENTER}try:{ENTER}while True:{ENTER}pass{ENTER}')
+    superConsole.SendKeys('{BACKSPACE}{BACKSPACE}except KeyboardInterrupt:{ENTER}print "caught"{ENTER}{BACKSPACE}{ENTER}')
+    superConsole.SendKeys('print "after"{ENTER}{BACKSPACE}{ENTER}foo{(}{)}{ENTER}')    
     sleep(2)
     superConsole.SendKeys('^(c)')
     testRegex += 'caughtafter'
 
-# Test Case #8: tab insertion
-###########################################
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
+    #stderr should contain the exceptions       
+    errlines = getTestOutput()[1]
+    Assert("KeyboardInterrupt: " + newline in errlines, 
+           "KeyboardInterrupt not found in:" + str(errlines))  
+    #for i in xrange(len(errlines)):
+    #    Assert(errlines[i].startswith(errors[i]), str(errlines) + " != " + str(errors))
+
+def test_tab_insertion():
+    '''
+    Tab insertion
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    testRegex = ""
+    
     superConsole.SendKeys('print "x{TAB}{TAB}y"{ENTER}')
     testRegex += 'x    y'
-	
-# Test Case #9: make sure that home, delete, backspace, etc. at start have no effect
-###########################################
+
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
+    
+def test_noeffect_keys():
+    '''
+    Make sure that home, delete, backspace, etc. at start have no effect
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    testRegex = ""	
+    
     superConsole.SendKeys('{BACKSPACE}{DELETE}{HOME}{LEFT}print "start"{ENTER}')
     testRegex += 'start'
+    
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
 
-# Test Case #10: tab-completion is case-insensitive (wrt input)
-###########################################
+def test_tab_completion_caseinsensitive():
+    '''
+    Tab-completion is case-insensitive (wrt input)
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    testRegex = ""	
+    
     superConsole.SendKeys('import System{ENTER}')
     superConsole.SendKeys('print System.r{TAB}{ENTER}')
     testRegex += "<type 'Random'>"
+    
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
 
-# Test Case #11: history
-###########################################
+def test_history():
+    '''
+    Command history
+    '''
+    #setup
+    superConsole.SendKeys('outputRedirectStart{(}True{)}{ENTER}')
+    testRegex = ""	
+    
     superConsole.SendKeys('print "first"{ENTER}')
     testRegex += 'first'
     superConsole.SendKeys('print "second"{ENTER}')
@@ -196,21 +400,19 @@ if doRun:
     testRegex += 'sixth'
     superConsole.SendKeys('{UP}{DOWN}{DOWN}{DOWN}{DOWN}{DOWN}{DOWN}{ENTER}')
     testRegex += 'sixth'
+    
+    #verification
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    verifyResults(getTestOutput()[0], testRegex)
 
-# and finally test that F6 shuts it down
+#------------------------------------------------------------------------------
+#--__main__
+
+try:
+    run_test(__name__)
+finally:
+    # and finally test that F6 shuts it down
     superConsole.SendKeys('{F6}')
     superConsole.SendKeys('{ENTER}')
     sleep(5)
     Assert(not superConsole.IsRunning)
-
-# now verify the log file against the test regexp
-
-    f = open(testpath.rowan_root + '\\Languages\\IronPython\\Tests\\ip_session.log','r')
-    
-    chopped = ''.join([line[:-1] for line in f.readlines() if not line.startswith(">>>") and not line.startswith("...")])
-    f.close()
-
-    Assert(re.match(testRegex, chopped))
-    print "Passed."
-        
-

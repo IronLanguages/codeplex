@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -23,6 +23,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Types;
 using System.Text;
 using System.Collections;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -32,7 +33,7 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     public abstract class ActionBinder {
         private CodeContext _context;
-        private readonly Dictionary<Action, BigRuleSet> _rules = new Dictionary<Action,BigRuleSet>();
+        private readonly RuleCache _ruleCache = new RuleCache();
 
         protected ActionBinder(CodeContext context) {
             _context = context;
@@ -50,7 +51,7 @@ namespace Microsoft.Scripting.Actions {
 
         // TODO: internal and friendly UnitTests
         public void ClearRuleCache() {
-            _rules.Clear();
+            _ruleCache.Clear();
         }
 
         /// <summary>
@@ -62,22 +63,13 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="callerContext">The CodeContext that is requesting the rule and that should be used for conversions.</param>
         /// <returns>The new rule.</returns>
         public StandardRule<T> GetRule<T>(CodeContext callerContext, Action action, object[] args) {
-            if (action == null) throw new ArgumentNullException("action");
+            Contract.RequiresNotNull(action, "action");
             //Debug.Assert(action.Kind != ActionKind.GetMember || ((GetMemberAction)action).Name != SymbolTable.StringToId("x"));
 
-            BigRuleSet ruleSet;
-            lock (_rules) {
-                if (!_rules.TryGetValue(action, out ruleSet)) {
-                    ruleSet = new BigRuleSet(callerContext);
-                    _rules[action] = ruleSet;
-                }
-            }
-
-            StandardRule<T> rule = ruleSet.FindRule<T>(args);
-            if (rule != null && rule.IsValid) {
+            StandardRule<T> rule = _ruleCache.FindRule<T>(callerContext, action, args);
+            if (rule != null) {
                 return rule;
             }
-
 #if DEBUG
             string name = "";
             if (args[0] is DynamicType) {
@@ -97,7 +89,9 @@ namespace Microsoft.Scripting.Actions {
 #if DEBUG
             AstWriter.DumpRule(rule);
 #endif
-            ruleSet.AddRule(args, rule);
+
+            _ruleCache.AddRule(action, args, rule);
+
             return rule;
         }
 
@@ -127,14 +121,15 @@ namespace Microsoft.Scripting.Actions {
         protected virtual StandardRule<T> MakeRule<T>(CodeContext callerContext, Action action, object[] args) {
             switch (action.Kind) {
                 case ActionKind.Call:
-                    return new CallBinderHelper<T>(callerContext, (CallAction)action, args).MakeRule();
+                    return new CallBinderHelper<T, CallAction>(callerContext, (CallAction)action, args).MakeRule();
                 case ActionKind.GetMember:
                     return new GetMemberBinderHelper<T>(callerContext, (GetMemberAction)action, args).MakeNewRule();
                 case ActionKind.SetMember:
                     return new SetMemberBinderHelper<T>(callerContext, (SetMemberAction)action, args).MakeNewRule();
                 case ActionKind.CreateInstance:
-                    return new CreateInstanceBinderHelper<T>(callerContext, (CreateInstanceAction)action).MakeRule(args);
+                    return new CreateInstanceBinderHelper<T>(callerContext, (CreateInstanceAction)action, args).MakeRule();
                 case ActionKind.DoOperation:
+                    return new DoOperationBinderHelper<T>(callerContext, (DoOperationAction)action, args).MakeRule();
                 default:
                     throw new NotImplementedException(action.ToString());
             }
@@ -190,12 +185,12 @@ namespace Microsoft.Scripting.Actions {
         /// The default implemetnation first searches the type, then the flattened heirachy of the type, and then
         /// registered extension methods.
         /// </summary>
-        public virtual MemberInfo[] GetMember(Type type, string name) {
+        public virtual MemberInfo[] GetMember(Action action, Type type, string name) {
             MemberInfo[] members = type.GetMember(name);
             if (members.Length == 0) {
                 members = type.GetMember(name, BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
                 if (members.Length == 0) {
-                    members = GetExtensionMembers(name, type);
+                    members = GetExtensionMembers(type, name);
                 }
             }
             return members;
@@ -227,26 +222,34 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        public virtual Statement MakeInvalidParametersError(MethodBinder binder, CallAction action, CallType callType, MethodBase[] targets, StandardRule rule, object []args) {
+        public virtual Statement MakeInvalidParametersError(MethodBinder binder, Action action, CallType callType, MethodBase[] targets, StandardRule rule, object []args) {
             int minArgs = Int32.MaxValue;
             int maxArgs = Int32.MinValue;
             int maxDflt = Int32.MinValue;
             int argsProvided = args.Length - 1; // -1 to remove the object we're calling
-            bool hasArgList = false;
+            bool hasArgList = false, hasNamedArgument = false;
             Dictionary<string, bool> namedArgs = new Dictionary<string, bool>();
 
-            if (action.HasDictionaryArgument()) {
-                argsProvided--;
-                IAttributesCollection iac = args[action.DictionaryIndex + 1] as IAttributesCollection;
-                if (iac != null) {
-                    foreach (KeyValuePair<object, object> kvp in iac) {
-                        namedArgs[(string)kvp.Key] = false;
+            CallAction ca = action as CallAction;
+            if (ca != null) {
+                hasNamedArgument = ca.HasNamedArgument();
+
+                if (ca.HasDictionaryArgument()) {
+                    argsProvided--;
+                    IAttributesCollection iac = args[ca.DictionaryIndex + 1] as IAttributesCollection;
+                    if (iac != null) {
+                        foreach (KeyValuePair<object, object> kvp in iac) {
+                            namedArgs[(string)kvp.Key] = false;
+                        }
                     }
                 }
-            }
-            argsProvided += GetParamsArgumentCountAdjust(action, args);
-            foreach (SymbolId si in action.GetArgumentNames()) {
-                namedArgs[SymbolTable.IdToString(si)] = false;
+                argsProvided += GetParamsArgumentCountAdjust(ca, args);
+                foreach (SymbolId si in ca.GetArgumentNames()) {
+                    namedArgs[SymbolTable.IdToString(si)] = false;
+                }
+            } else {
+                maxArgs = minArgs = rule.Parameters.Length;
+                maxDflt = 0;
             }
 
             foreach (MethodBase mb in targets) {
@@ -288,7 +291,7 @@ namespace Microsoft.Scripting.Actions {
                         Ast.Ast.Call(
                             null,
                             typeof(RuntimeHelpers).GetMethod("TypeErrorForExtraKeywordArgument"),
-                            Ast.Ast.Constant(targets[0].Name),
+                            Ast.Ast.Constant(binder._name),
                             Ast.Ast.Constant(kvp.Key)
                         )
                     );
@@ -299,13 +302,13 @@ namespace Microsoft.Scripting.Actions {
                     Ast.Ast.Call(
                         null,
                         typeof(RuntimeHelpers).GetMethod("TypeErrorForIncorrectArgumentCount", new Type[] { typeof(string), typeof(int), typeof(int), typeof(int), typeof(int), typeof(bool), typeof(bool) }),
-                        Ast.Ast.Constant(targets[0].Name),  // name
+                        Ast.Ast.Constant(binder._name),  // name
                         Ast.Ast.Constant(minArgs),          // min formal normal arg cnt
                         Ast.Ast.Constant(maxArgs),          // max formal normal arg cnt
                         Ast.Ast.Constant(maxDflt),          // default cnt
                         Ast.Ast.Constant(argsProvided),      // args provided
                         Ast.Ast.Constant(hasArgList),       // hasArgList
-                        Ast.Ast.Constant(action.HasNamedArgument())             // kwargs provided
+                        Ast.Ast.Constant(hasNamedArgument)             // kwargs provided
                     )
                 );
         }
@@ -326,36 +329,41 @@ namespace Microsoft.Scripting.Actions {
             return paramsCount;
         }
 
-        private static MemberInfo[] GetExtensionMembers(string name, Type type) {
-                Type curType = type;
-                do {
-                    Type[] extTypes = DynamicHelpers.GetExtensionTypes(curType);
-                    List<MemberInfo> members = new List<MemberInfo>();
+        public MemberInfo[] GetExtensionMembers(Type type, string name) {
+            Type curType = type;
+            do {
+                IList<Type> extTypes = GetExtensionTypes(curType);
+                List<MemberInfo> members = new List<MemberInfo>();
 
-                    foreach (Type ext in extTypes) {
-                        foreach (MemberInfo mi in ext.GetMember(name)) {
-                            members.Add(mi);
-                        }
-
-                        foreach (MemberInfo mi in ext.GetMember("Get" + name)) {
-                            if (!mi.IsDefined(typeof(PropertyMethodAttribute), false)) continue;
-                            // TODO: ExtProperties
-                        }
-
-                        foreach (MemberInfo mi in ext.GetMember("Set" + name)) {
-                            if (!mi.IsDefined(typeof(PropertyMethodAttribute), false)) continue;
-                            // TODO: ExtProperties
-                        }
+                foreach (Type ext in extTypes) {
+                    foreach (MemberInfo mi in ext.GetMember(name)) {
+                        members.Add(mi);
                     }
 
-                    if (members.Count != 0) {
-                        return members.ToArray();
+                    foreach (MemberInfo mi in ext.GetMember("Get" + name)) {
+                        if (!mi.IsDefined(typeof(PropertyMethodAttribute), false)) continue;
+                        // TODO: ExtProperties
                     }
 
-                    curType = curType.BaseType;
-                } while (curType != null);
+                    foreach (MemberInfo mi in ext.GetMember("Set" + name)) {
+                        if (!mi.IsDefined(typeof(PropertyMethodAttribute), false)) continue;
+                        // TODO: ExtProperties
+                    }
+                }
 
-                return new MemberInfo[0];
-            }   
+                if (members.Count != 0) {
+                    return members.ToArray();
+                }
+
+                curType = curType.BaseType;
+            } while (curType != null);
+
+            return new MemberInfo[0];
+        }
+
+        protected internal virtual IList<Type> GetExtensionTypes(Type t) {
+            // consult globally registered types
+            return DynamicHelpers.GetExtensionTypes(t);
+        }
     }
 }

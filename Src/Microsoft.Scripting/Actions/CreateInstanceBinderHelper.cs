@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -23,118 +23,98 @@ using Microsoft.Scripting.Types;
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using System.Diagnostics;
+    using System.Reflection;
+    using Microsoft.Scripting.Utils;
 
-    public class CreateInstanceBinderHelper<T> : BinderHelper<T, CreateInstanceAction> {
-        public CreateInstanceBinderHelper(CodeContext context, CreateInstanceAction action)
-            : base(context, action) {
+    public class CreateInstanceBinderHelper<T> : CallBinderHelper<T, CreateInstanceAction> {
+        public CreateInstanceBinderHelper(CodeContext context, CreateInstanceAction action, object []args)
+            : base(context, action, args) {
         }
 
-        public StandardRule<T> MakeRule(object[] args) {
-            DynamicType[] types = CompilerHelpers.ObjectTypes(args);
-            DynamicType dt = args[0] as DynamicType;
+        public override StandardRule<T> MakeRule() {
+            DynamicType dt = Arguments[0] as DynamicType;
+            if (dt == null || !dt.IsSystemType) {   // base CreateInstance doesn't know how to create non-system types...
+                Type t = CompilerHelpers.GetType(Arguments[0]);
+                if (typeof(IConstructorWithCodeContext).IsAssignableFrom(t)) {
+                    // TODO: This should go away when IConstructorWCC goes away.
+                    Debug.Assert(!Action.HasKeywordArgument());
 
-            return MakeTypeCallRule(dt, types, args);
-        }
+                    Expression call = Ast.Call(Rule.Parameters[0], typeof(IConstructorWithCodeContext).GetMethod("Construct"), GetICallableParameters(t, Rule));
 
-        private StandardRule<T> MakeTypeCallRule(DynamicType creating, DynamicType[] types, object[] args) {
-            return MakeDotNetTypeCallRule(creating, args);
-        }
+                    Rule.SetTarget(Rule.MakeReturn(Binder, call));
+                    Rule.MakeTest(t);
 
-        /// <summary>
-        /// Creates a rule which calls a .NET constructor directly.
-        /// </summary>
-        private StandardRule<T> MakeDotNetTypeCallRule(DynamicType creating, object[] args) {
-            StandardRule<T> rule = new StandardRule<T>();
-
-            if (creating.UnderlyingSystemType.IsPublic || creating.UnderlyingSystemType.IsNestedPublic) {
-                MethodCandidate cand = GetTypeConstructor(creating, GetArgumentTypes(Action, args));
-                if (cand != null) {
-                    Expression[] parameters = GetArgumentExpressions(cand, Action, rule, args);
-                    Expression target = cand.Target.MakeExpression(Binder, rule, parameters);
-                    rule.SetTest(MakeTestForTypeCall(creating, rule, args));
-                    rule.SetTarget(rule.MakeReturn(Binder, target));
-                    return rule;
+                    return Rule;
                 }
             }
+            return base.MakeRule();
+        }
 
-            // parameters don't work or it's a private method/type, go dynamic.
+        protected override MethodBase[] GetTargetMethods() {
+            object target = Arguments[0];
+            Type t = GetTargetType(target);
+
+            if (t != null) {
+                Test = Ast.AndAlso(Test, Ast.Equal(Rule.Parameters[0], Ast.RuntimeConstant(target)));
+
+                if (t.IsArray) {
+                    // The JIT verifier doesn't like new int[](3) even though it appears as a ctor.
+                    // We could do better and return newarr in the future.
+                    return new MethodBase[] { GetArrayCtor(t) };
+                }
+
+                BindingFlags bf = BindingFlags.Instance | BindingFlags.Public;
+                if (ScriptDomainManager.Options.PrivateBinding) {
+                    bf |= BindingFlags.NonPublic;
+                }
+
+                ConstructorInfo[] ci = t.GetConstructors(bf);
+                
+                if (t.IsValueType) {
+                    // structs don't define a parameterless ctor, add a generic method for that.
+                    return ArrayUtils.Insert<MethodBase>(GetStructDefaultCtor(t), ci);
+                }
+
+                return ci;
+            }
+
             return null;
         }
-
-        private Expression MakeTestForTypeCall(DynamicType creating, StandardRule<T> rule, object[] args) {
-            return MakeTestForTypeCall(Action, creating, rule, args);
-        }
-
-        public static Expression MakeTestForTypeCall(CallAction action, DynamicType creating, StandardRule<T> rule, object[] args) {
-            Expression typeTest = MakeTypeTestForCreateInstance(creating, rule);
-
-            Expression test = Ast.AndAlso(rule.MakeTestForTypes(CompilerHelpers.ObjectTypes(args), 0), typeTest);
-
-            test = MakeTypeTestForParams(action, rule, args, test);
-            return test;
-        }
-
-        public static Expression MakeTypeTestForParams(CallAction action, StandardRule<T> rule, object[] args, Expression test) {
-            if (action.IsParamsCall()) {
-                test = Ast.AndAlso(test, MakeParamsTest(rule, args));
-                IList<object> listArgs = args[args.Length - 1] as IList<object>;
-
-                for (int i = 0; i < listArgs.Count; i++) {
-                    test = Ast.AndAlso(test,
-                        rule.MakeTypeTest(CompilerHelpers.GetType(listArgs[i]),
-                            Ast.Call(
-                                GetParamsList(rule),
-                                typeof(IList<object>).GetMethod("get_Item"),
-                                Ast.Constant(i)
-                            )
-                        )
-                    );
+        
+        private static Type GetTargetType(object target) {
+            Type t = target as Type;
+            if (t == null) {
+                DynamicType dt = target as DynamicType;
+                if (dt != null) {
+                    t = dt.UnderlyingSystemType;
                 }
             }
-            return test;
+            return t;
         }
 
-        public static Expression MakeTypeTestForCreateInstance(DynamicType creating, StandardRule<T> rule) {
-            Expression typeTest;
-            int version = creating.Version;
-            if (version != DynamicMixin.DynamicVersion) {
-                typeTest = Ast.Equal(
-                    Ast.ReadProperty(
-                        Ast.Cast(rule.Parameters[0], typeof(DynamicType)), 
-                        typeof(DynamicType).GetProperty("Version")),
-                    Ast.Constant(creating.Version)
-                );
-            } else {
-                Debug.Assert(creating.AlternateVersion != 0);
-                typeTest = Ast.Equal(
-                    Ast.ReadProperty(
-                        Ast.Cast(rule.Parameters[0], typeof(DynamicType)), 
-                        typeof(DynamicType).GetProperty("AlternateVersion")),
-                    Ast.Constant(creating.AlternateVersion)
-                );
-            }
-            return typeTest;
+        private MethodBase GetStructDefaultCtor(Type t) {
+            return typeof(RuntimeHelpers).GetMethod("CreateInstance").MakeGenericMethod(t);
         }
 
-        private MethodCandidate GetTypeConstructor(DynamicType creating, Type[] argTypes) {
-            return GetTypeConstructor(Binder, creating, argTypes);
+        private MethodBase GetArrayCtor(Type t) {
+            return typeof(RuntimeHelpers).GetMethod("CreateArray").MakeGenericMethod(t.GetElementType());
         }
 
-        /// <summary>
-        /// Generates an expression which calls a .NET constructor directly.
-        /// </summary>
-        public static MethodCandidate GetTypeConstructor(ActionBinder binder, DynamicType creating, Type[] argTypes) {
-            // type has no __new__ override, call .NET ctor directly
-            MethodBinder mb = MethodBinder.MakeBinder(binder,
-                creating.Name,
-                creating.UnderlyingSystemType.GetConstructors(),
-                BinderType.Normal);
+        protected override void MakeCannotCallRule(Type type) {
+            string name = type.Name;
+            DynamicType dt = Arguments[0] as DynamicType;
+            if (dt != null) name = dt.Name;
+            Type t = Arguments[0] as Type;
+            if (t != null) name = t.Name;
 
-            MethodCandidate mc = mb.MakeBindingTarget(CallType.None, argTypes);
-            if (mc != null && mc.Target.Method.IsPublic) {
-                return mc;
-            }
-            return null;
-        }     
+            Rule.SetTarget(
+                Rule.MakeError(Binder,
+                    Ast.New(
+                        typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                        Ast.Constant("Cannot create instances of " + name)
+                    )
+                )
+            );
+        }
     }
 }

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting.Generation {
     public class ConstantPool {
@@ -97,26 +98,22 @@ namespace Microsoft.Scripting.Generation {
         }
 
         private static int AddStaticData(object data) {
-            int index;
             lock (_staticData) {
-                index = _staticData.Count;
                 if (_empties != 0) {
-                    for (int i = _lastCheck; i < _staticData.Count; i++) {
-                        if (_staticData[i] == null) {
-                            _staticData[i] = data == null ? _nullVal : data;
-                            index = i;
+                    while(_lastCheck < _staticData.Count) {
+                        if (_staticData[_lastCheck] == null) {
+                            _staticData[_lastCheck] = data == null ? _nullVal : data;
                             _empties--;
-                            break;
+                            return _lastCheck;
                         }
+                        _lastCheck++;
                     }
                 }
 
-                if (index == _staticData.Count) {
-                    _lastCheck = 0;
-                    _staticData.Add(data == null ? _nullVal : data);
-                }
+                _lastCheck = 0;
+                _staticData.Add(data == null ? _nullVal : data);
+                return _staticData.Count - 1;
             }
-            return index;
         }
 
         public static object GetConstantData(int index) {
@@ -124,6 +121,15 @@ namespace Microsoft.Scripting.Generation {
                 object res = _staticData[index];
                 _staticData[index] = null;
                 _empties++;
+                Debug.Assert(res != null);
+                return res == _nullVal ? null : res;
+            }
+        }
+
+        public static object GetConstantDataReusable(int index) {
+            lock (_staticData) {
+                object res = _staticData[index];
+                Debug.Assert(res != null);
                 return res == _nullVal ? null : res;
             }
         }

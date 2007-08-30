@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Threading;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     
@@ -51,12 +52,12 @@ namespace Microsoft.Scripting.Hosting {
             return _remoteHost.GetSourceFileNames(mask, searchPattern);
         }
 
-        public virtual SourceFileUnit TryGetSourceFileUnit(IScriptEngine engine, string path, string name) {
+        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding) {
             Debug.Assert(_remoteHost != null);
-            return _remoteHost.TryGetSourceFileUnit(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), path, name);
+            return _remoteHost.TryGetSourceFileUnit(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), path, encoding);
         }
 
-        public virtual SourceFileUnit ResolveSourceFileUnit(string name) {
+        public virtual SourceUnit ResolveSourceFileUnit(string name) {
             Debug.Assert(_remoteHost != null);
             return _remoteHost.ResolveSourceFileUnit(name);
         }
@@ -65,13 +66,13 @@ namespace Microsoft.Scripting.Hosting {
         /// TODO: Called under a lock. Should work with the engine via the argument only.
         /// </summary>
         public virtual void EngineCreated(IScriptEngine engine) {
-            if (engine == null) throw new ArgumentNullException("engine");
+            Contract.RequiresNotNull(engine, "engine");
             Debug.Assert(_remoteHost != null);
             _remoteHost.EngineCreated(RemoteWrapper.WrapRemotable<IScriptEngine>(engine));
         }
 
         public virtual void ModuleCreated(IScriptModule module) {
-            if (module == null) throw new ArgumentNullException("module");
+            Contract.RequiresNotNull(module, "module");
             Debug.Assert(_remoteHost != null);
             _remoteHost.ModuleCreated(RemoteWrapper.WrapRemotable<IScriptModule>(module));
         }

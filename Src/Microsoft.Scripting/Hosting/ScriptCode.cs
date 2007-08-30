@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -45,12 +45,12 @@ namespace Microsoft.Scripting {
         private CallTargetWithContext0 _optimizedTarget;
         private Scope _optimizedScope;
 
-        public ScriptCode(CodeBlock code, LanguageContext languageContext, CompilerContext compilerContext) {
-            Debug.Assert(code != null && languageContext != null && compilerContext != null);
+        internal ScriptCode(CodeBlock code, LanguageContext languageContext, CompilerContext compilerContext) {
+            Assert.NotNull(code, languageContext, compilerContext);
             
-            this._code = code;
-            this._languageContext = languageContext;
-            this._compilerContext = compilerContext;
+            _code = code;
+            _languageContext = languageContext;
+            _compilerContext = compilerContext;
         }
 
         public LanguageContext LanguageContext {
@@ -116,32 +116,29 @@ namespace Microsoft.Scripting {
         }
 
         public object Run(ScriptModule module) {
-            Assert.NotNull(module);
-            
+            Contract.RequiresNotNull(module, "module");
+
             ModuleContext moduleContext = _languageContext.EnsureModuleContext(module);
             return Run(new CodeContext(module.Scope, _languageContext, moduleContext), false);
         }
 
         public object Run(Scope scope, ModuleContext moduleContext) {
-            Assert.NotNull(scope, moduleContext);
-
-            return Run(new CodeContext(scope, _languageContext, moduleContext), false);
+            return Run(scope, moduleContext, false);
         }
 
         public object Run(Scope scope, ModuleContext moduleContext, bool tryEvaluate) {
-            Assert.NotNull(scope, moduleContext);
+            Contract.RequiresNotNull(scope, "scope");
+            Contract.RequiresNotNull(moduleContext, "moduleContext");
 
             return Run(new CodeContext(scope, _languageContext, moduleContext), tryEvaluate);
         }
 
         public override string ToString() {
-            return string.Format("ScriptCode {0} from {1}", 
-                SourceUnit.Name, 
-                _languageContext.Engine.LanguageProvider.LanguageDisplayName);
+            return string.Format("ScriptCode '{0}' from {1}", SourceUnit, _languageContext.Engine.LanguageProvider.LanguageDisplayName);
         }
 
         public static ScriptCode FromCompiledCode(CompiledCode compiledCode) {
-            if (compiledCode == null) throw new ArgumentNullException("compiledCode");
+            Contract.RequiresNotNull(compiledCode, "compiledCode");
             return compiledCode.ScriptCode;
         }
     }

@@ -75,8 +75,8 @@ namespace IronPython.Runtime.Types {
             pyOp[Symbols.OperatorGreaterThan] = new OperatorMapping(Operators.GreaterThan, false, true, false, true);
             pyOp[Symbols.OperatorLessThanOrEqual] = new OperatorMapping(Operators.LessThanOrEqual, false, true, false, true);
             pyOp[Symbols.OperatorGreaterThanOrEqual] = new OperatorMapping(Operators.GreaterThanOrEqual, false, true, false, true);
-            pyOp[Symbols.OperatorEqual] = new OperatorMapping(Operators.Equal, false, true, false, true);
-            pyOp[Symbols.OperatorNotEqual] = new OperatorMapping(Operators.NotEqual, false, true, false, true);
+            pyOp[Symbols.OperatorEquals] = new OperatorMapping(Operators.Equals, false, true, false, true);
+            pyOp[Symbols.OperatorNotEquals] = new OperatorMapping(Operators.NotEquals, false, true, false, true);
             pyOp[Symbols.OperatorLessThanGreaterThan] = new OperatorMapping(Operators.LessThanGreaterThan, false, true, false, true);
 
             // *** END GENERATED CODE ***
